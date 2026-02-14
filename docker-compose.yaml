@@ -1,0 +1,35 @@
+services:
+  database:
+    image: postgres:15
+    container_name: tday_db
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypass
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  tday:
+    build: .
+    image: tday:latest
+    container_name: tday
+    restart: always
+    ports:
+      - "2525:3000"
+    env_file:
+      - .env.docker
+    command: sh -c "npx prisma migrate deploy && npm run start"
+    depends_on:
+      database:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
