@@ -1,0 +1,56 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace "cloud.ohmz.tday"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "cloud.ohmz.tday"
+        minSdk 19
+        targetSdk 35
+        versionCode 1
+        versionName "1.0.0"
+
+        // TWA asset statements for Digital Asset Links
+        manifestPlaceholders = [
+            hostName          : "tday.ohmz.cloud",
+            defaultUrl        : "https://tday.ohmz.cloud/",
+            launcherName      : "Tday",
+            assetStatements   : '[{"relation": ["delegate_permission/common.handle_all_urls"], "target": {"namespace": "web", "site": "https://tday.ohmz.cloud"}}]',
+            themeColor        : "#E77D4E",
+            navigationColor   : "#F3F5F9",
+            backgroundColor   : "#F3F5F9",
+            enableNotifications: "true",
+            splashScreenFadeOutDuration: 300
+        ]
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("../twa-keystore.keystore")
+            storePassword System.getenv("BUBBLEWRAP_KEYSTORE_PASSWORD") ?: "tday123"
+            keyAlias "tday"
+            keyPassword System.getenv("BUBBLEWRAP_KEY_PASSWORD") ?: "tday123"
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}
