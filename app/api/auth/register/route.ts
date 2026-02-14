@@ -10,6 +10,7 @@ import { sha256 } from "@noble/hashes/sha256";
 import { pbkdf2 } from "@noble/hashes/pbkdf2";
 import { randomBytes } from "@noble/hashes/utils";
 import { bytesToHex } from "@noble/hashes/utils";
+import { Prisma } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,19 +46,91 @@ export async function POST(req: NextRequest) {
     // Store salt:hash
     const hashedPassword = `${saltHex}:${passwordHex}`;
 
-    // create the user in database
-    const user = await prisma.user.create({
-      data: { name: fname + " " + lname, email, password: hashedPassword },
-    });
+    const fullName = [fname.trim(), lname?.trim() || ""].filter(Boolean).join(" ");
+
+    let createdWithinTransaction:
+      | {
+          user: {
+            id: string;
+            role: "ADMIN" | "USER";
+            approvalStatus: "APPROVED" | "PENDING";
+          };
+          isBootstrapAdmin: boolean;
+        }
+      | null = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        createdWithinTransaction = await prisma.$transaction(
+          async (tx) => {
+            const userCount = await tx.user.count();
+            const isFirstUser = userCount === 0;
+
+            const createdUser = await tx.user.create({
+              data: {
+                name: fullName,
+                email,
+                password: hashedPassword,
+                role: isFirstUser ? "ADMIN" : "USER",
+                approvalStatus: isFirstUser ? "APPROVED" : "PENDING",
+                approvedAt: isFirstUser ? new Date() : null,
+              },
+              select: {
+                id: true,
+                role: true,
+                approvalStatus: true,
+              },
+            });
+
+            return { user: createdUser, isBootstrapAdmin: isFirstUser };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+        break;
+      } catch (transactionError) {
+        const shouldRetry =
+          transactionError instanceof Prisma.PrismaClientKnownRequestError &&
+          transactionError.code === "P2034";
+        if (shouldRetry && attempt < 2) continue;
+        throw transactionError;
+      }
+    }
+
+    if (!createdWithinTransaction) {
+      throw new InternalError("unable to create account at this time");
+    }
+
+    const { user, isBootstrapAdmin } = createdWithinTransaction;
 
     // CASE user not created
     if (!user) {
       throw new InternalError("user account not created");
     }
 
-    return NextResponse.json({ message: "account created" }, { status: 200 });
+    const requiresApproval = user.approvalStatus === "PENDING";
+
+    return NextResponse.json(
+      {
+        message: requiresApproval
+          ? "Account registered. Waiting for admin approval."
+          : "account created",
+        requiresApproval,
+        isBootstrapAdmin,
+      },
+      { status: 200 },
+    );
   } catch (error) {
     console.log(error);
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { message: "this email is taken" },
+        { status: 400 },
+      );
+    }
 
     // handle custom error
     if (error instanceof BaseServerError) {

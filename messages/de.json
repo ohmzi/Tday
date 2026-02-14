@@ -302,6 +302,7 @@
     "calendar": "Kalender",
     "note": "Notiz",
     "settings": "Einstellungen",
+    "admin": "Admin",
     "settingMenu": {
       "logout": "Abmelden",
       "theme": "Design",
