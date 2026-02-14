@@ -1,4 +1,4 @@
-import { BadRequestError, UnauthorizedError } from "@/lib/customError";
+import { BadRequestError, ForbiddenError, UnauthorizedError } from "@/lib/customError";
 import { prisma } from "@/lib/prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { Priority } from "@prisma/client";
@@ -19,6 +19,17 @@ export async function PATCH(
 
     const { id } = await params;
     if (!id) throw new BadRequestError("Invalid request, ID is required");
+
+    const ownedTodo = await prisma.todo.findFirst({
+      where: {
+        id,
+        userID: user.id,
+      },
+      select: { id: true },
+    });
+    if (!ownedTodo) {
+      throw new ForbiddenError("you are not allowed to modify this todo");
+    }
 
     let body = await req.json();
 
@@ -47,7 +58,7 @@ export async function PATCH(
     await prisma.todoInstance.upsert({
       where: {
         todoId_instanceDate: {
-          todoId: id,
+          todoId: ownedTodo.id,
           instanceDate,
         },
       },
@@ -63,7 +74,7 @@ export async function PATCH(
             : undefined,
       },
       create: {
-        todoId: id,
+        todoId: ownedTodo.id,
         recurId: instanceDate.toISOString(),
         instanceDate: instanceDate,
         overriddenTitle: title,
@@ -73,7 +84,7 @@ export async function PATCH(
         overriddenDue: due,
         overriddenDurationMinutes:
           dtstart && due
-            ? (dtstart?.getTime() - due?.getTime()) / (1000 * 60)
+            ? (due?.getTime() - dtstart?.getTime()) / (1000 * 60)
             : undefined,
       },
     });
@@ -99,14 +110,25 @@ export async function DELETE(
     const instanceDate = new Date(
       Number(req.nextUrl.searchParams.get("instanceDate")),
     );
-    if (!id || !instanceDate)
+    if (!id || Number.isNaN(instanceDate.getTime()))
       throw new BadRequestError(
         "Invalid request, ID or instanceDate is required to do instance delete!",
       );
 
+    const ownedTodo = await prisma.todo.findFirst({
+      where: {
+        id,
+        userID: user.id,
+      },
+      select: { id: true, userID: true },
+    });
+    if (!ownedTodo) {
+      throw new ForbiddenError("you are not allowed to modify this todo");
+    }
+
     // Find and exadate the todo instance
     await prisma.todo.update({
-      where: { id },
+      where: { id: ownedTodo.id, userID: ownedTodo.userID },
       data: { exdates: { push: [instanceDate] } },
     });
 
