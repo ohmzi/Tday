@@ -302,6 +302,7 @@
     "calendar": "Календарь",
     "note": "Заметка",
     "settings": "Настройки",
+    "admin": "Admin",
     "settingMenu": {
       "logout": "Выйти",
       "theme": "Тема",
