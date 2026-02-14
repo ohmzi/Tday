@@ -29,6 +29,22 @@ model User {
   protectedSymmetricKey String?
   enableEncryption      Boolean     @default(true)
   timeZone  String?
+  role      UserRole       @default(USER)
+  approvalStatus ApprovalStatus @default(PENDING)
+  approvedAt DateTime?
+  approvedById String?
+  approvedBy User? @relation("UserApprovalAdmin", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedUsers User[] @relation("UserApprovalAdmin")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum ApprovalStatus {
+  APPROVED
+  PENDING
 }
 
 enum SortBy{
