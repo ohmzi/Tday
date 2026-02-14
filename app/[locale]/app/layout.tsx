@@ -17,6 +17,10 @@ export default async function Layout({
     redirect("/login");
   }
 
+  if (session.user.approvalStatus !== "APPROVED") {
+    redirect("/login?pending=1");
+  }
+
   const queryClient = new QueryClient();
 
   // Prefetch preferences

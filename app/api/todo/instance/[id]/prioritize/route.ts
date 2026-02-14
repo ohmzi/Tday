@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UnauthorizedError, BadRequestError } from "@/lib/customError";
+import { UnauthorizedError, BadRequestError, ForbiddenError } from "@/lib/customError";
 import { prisma } from "@/lib/prisma/client";
 import { auth } from "@/app/auth";
 import { errorHandler } from "@/lib/errorHandler";
@@ -29,15 +29,26 @@ export async function PATCH(
     if (
       !priority ||
       !["Low", "Medium", "High"].includes(priority) ||
-      !instanceDate
+      Number.isNaN(instanceDate.getTime())
     )
       throw new BadRequestError("invalid priority value or instance date");
+
+    const ownedTodo = await prisma.todo.findFirst({
+      where: {
+        id,
+        userID: user.id,
+      },
+      select: { id: true },
+    });
+    if (!ownedTodo) {
+      throw new ForbiddenError("you are not allowed to modify this todo");
+    }
 
     //upsert todo instance priority
     await prisma.todoInstance.upsert({
       where: {
         todoId_instanceDate: {
-          todoId: id,
+          todoId: ownedTodo.id,
           instanceDate: instanceDate,
         },
       },
@@ -45,7 +56,7 @@ export async function PATCH(
         overriddenPriority: priority,
       },
       create: {
-        todoId: id,
+        todoId: ownedTodo.id,
         instanceDate,
         recurId: instanceDate.toISOString(),
         overriddenPriority: priority,

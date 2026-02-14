@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/auth";
-import { UnauthorizedError, BadRequestError } from "@/lib/customError";
+import {
+  UnauthorizedError,
+  BadRequestError,
+  ForbiddenError,
+} from "@/lib/customError";
 import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@prisma/client";
 import { errorHandler } from "@/lib/errorHandler";
-import { TodoItemType } from "@/types";
 
 export async function PATCH(
   req: NextRequest,
@@ -19,44 +22,55 @@ export async function PATCH(
     const { id } = await params;
     if (!id) throw new BadRequestError("Invalid request, ID is required");
 
-    const body = (await req.json()) as TodoItemType;
+    const body = (await req.json()) as { instanceDate?: string | Date | null };
+    const instanceDate = body.instanceDate ? new Date(body.instanceDate) : null;
 
-    const todo: TodoItemType = {
-      ...body,
-      createdAt: new Date(body.createdAt),
-      dtstart: new Date(body.dtstart),
-      instanceDate: body.instanceDate ? new Date(body.instanceDate) : null,
-      due: new Date(body.due),
-    };
-
-    if (!todo.instanceDate)
-      throw new BadRequestError(
-        "invalid instance date recieved for this recurring todo",
-      );
-
-    if (!todo) throw new BadRequestError("bad request body recieved");
+    const todo = await prisma.todo.findFirst({
+      where: {
+        id,
+        userID: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        priority: true,
+        dtstart: true,
+        due: true,
+        rrule: true,
+      },
+    });
+    if (!todo) {
+      throw new ForbiddenError("you are not allowed to modify this todo");
+    }
 
     let upsertedTodoInstance = null;
     //if this is a one-off todo, mark the todo as complete
     if (!todo.rrule) {
       await prisma.todo.update({
-        where: { id, userID: user.id },
+        where: { id: todo.id, userID: user.id },
         data: { completed: true },
       });
     } else {
+      if (!instanceDate || Number.isNaN(instanceDate.getTime())) {
+        throw new BadRequestError(
+          "invalid instance date recieved for this recurring todo",
+        );
+      }
+
       //if this was a repeating todo, only create a overriding instance with completedAt
       upsertedTodoInstance = await prisma.todoInstance.upsert({
         where: {
           todoId_instanceDate: {
-            todoId: id,
-            instanceDate: todo.instanceDate,
+            todoId: todo.id,
+            instanceDate,
           },
         },
         update: { completedAt: new Date() },
         create: {
           todoId: todo.id,
-          recurId: todo.instanceDate.toISOString(),
-          instanceDate: todo.instanceDate,
+          recurId: instanceDate.toISOString(),
+          instanceDate,
           completedAt: new Date(),
         },
       });
@@ -88,8 +102,8 @@ export async function PATCH(
         completedOnTime,
         daysToComplete: new Prisma.Decimal(daysToComplete),
         rrule: todo.rrule,
-        userID: todo.userID,
-        instanceDate: todo.instanceDate,
+        userID: user.id,
+        instanceDate,
       },
     });
     return NextResponse.json(
