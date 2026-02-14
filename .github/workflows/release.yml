@@ -1,0 +1,186 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/ohmzi/tday
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=v${VERSION}" >> "$GITHUB_OUTPUT"
+          PREVIOUS=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "previous=$PREVIOUS" >> "$GITHUB_OUTPUT"
+
+      # ────────────────────────────────────────────
+      #  Docker Image
+      # ────────────────────────────────────────────
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/ohmzi/Tday
+            org.opencontainers.image.description=Tday - Personal task planner
+          build-args: |
+            DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ────────────────────────────────────────────
+      #  Android APK (TWA via Gradle)
+      # ────────────────────────────────────────────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Decode signing keystore
+        run: echo "${{ secrets.TWA_KEYSTORE_BASE64 }}" | base64 -d > twa/twa-keystore.keystore
+
+      - name: Build APK
+        working-directory: twa
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.TWA_STORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.TWA_KEY_PASSWORD }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+
+      - name: Rename APK with version
+        run: |
+          APK=$(find twa/ -name '*.apk' -type f | head -1)
+          if [ -n "$APK" ]; then
+            cp "$APK" "twa/tday-${{ steps.version.outputs.version }}.apk"
+          fi
+
+      # ────────────────────────────────────────────
+      #  Tag & Release
+      # ────────────────────────────────────────────
+      - name: Create tag
+        run: |
+          git tag ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
+
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PREVIOUS: ${{ steps.version.outputs.previous }}
+        run: |
+          # Auto-generate changelog from merged PRs
+          GENERATED=""
+          if [ -n "$PREVIOUS" ]; then
+            GENERATED=$(gh api repos/${{ github.repository }}/releases/generate-notes \
+              -f tag_name="$VERSION" \
+              -f previous_tag_name="$PREVIOUS" \
+              --jq '.body' 2>/dev/null) || GENERATED=""
+          fi
+
+          if [ -z "$GENERATED" ]; then
+            GENERATED=$(git log --merges --pretty=format:"* %s by @${{ github.actor }} in https://github.com/${{ github.repository }}" ${PREVIOUS:+$PREVIOUS..HEAD} HEAD 2>/dev/null)
+            if [ -z "$GENERATED" ]; then
+              GENERATED=$(git log --oneline --pretty=format:"* %s by @${{ github.actor }}" ${PREVIOUS:+$PREVIOUS..HEAD} -20 2>/dev/null)
+            fi
+          fi
+
+          if [ -z "$GENERATED" ]; then
+            GENERATED="* Initial release"
+          fi
+
+          # Build release body
+          {
+            echo "## What's Changed"
+            echo ""
+            echo "$GENERATED"
+            echo ""
+            if [ -n "$PREVIOUS" ]; then
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS}..${VERSION}"
+            else
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/commits/${VERSION}"
+            fi
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Downloads"
+            echo ""
+            echo "### Android APK"
+            echo ""
+            echo "Download \`tday-${VERSION}.apk\` from the release assets below and install on your Android device."
+            echo ""
+            echo "### Docker Compose"
+            echo ""
+            echo '```bash'
+            echo "docker compose pull && docker compose up -d"
+            echo '```'
+            echo ""
+            echo "### Docker"
+            echo ""
+            echo '```bash'
+            echo "docker pull ghcr.io/ohmzi/tday:latest"
+            echo ""
+            echo 'docker rm -f tday 2>/dev/null || true'
+            echo ""
+            echo "docker run -d \\"
+            echo "  --name tday \\"
+            echo "  -p 2525:3000 \\"
+            echo "  --env-file .env.docker \\"
+            echo "  --restart unless-stopped \\"
+            echo "  ghcr.io/ohmzi/tday:latest"
+            echo '```'
+            echo ""
+            echo "### Portainer"
+            echo ""
+            echo "1. In Portainer: **Containers** → select **tday**"
+            echo "2. Click **Recreate**"
+            echo "3. Enable **Re-pull image**"
+            echo "4. Click **Recreate**"
+          } > body.md
+
+      - name: Create release with APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK_FILE="twa/tday-${{ steps.version.outputs.version }}.apk"
+          if [ -f "$APK_FILE" ]; then
+            gh release create "${{ steps.version.outputs.version }}" \
+              "$APK_FILE" \
+              --title "${{ steps.version.outputs.version }}" \
+              --notes-file body.md
+          else
+            gh release create "${{ steps.version.outputs.version }}" \
+              --title "${{ steps.version.outputs.version }}" \
+              --notes-file body.md
+          fi
