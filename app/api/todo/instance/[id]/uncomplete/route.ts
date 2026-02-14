@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/auth";
-import { UnauthorizedError, BadRequestError } from "@/lib/customError";
+import {
+  UnauthorizedError,
+  BadRequestError,
+  ForbiddenError,
+} from "@/lib/customError";
 import { prisma } from "@/lib/prisma/client";
 import { errorHandler } from "@/lib/errorHandler";
-import { TodoItemType } from "@/types";
 
 export async function PATCH(
   req: NextRequest,
@@ -18,29 +21,31 @@ export async function PATCH(
     const { id } = await params;
     if (!id) throw new BadRequestError("Invalid request, ID is required");
 
-    const body = (await req.json()) as TodoItemType;
+    const body = (await req.json()) as { instanceDate?: string | Date | null };
+    const instanceDate = body.instanceDate ? new Date(body.instanceDate) : null;
 
-    const todo: TodoItemType = {
-      ...body,
-      createdAt: new Date(body.createdAt),
-      dtstart: new Date(body.dtstart),
-      instanceDate: body.instanceDate ? new Date(body.instanceDate) : null,
-      due: new Date(body.due),
-    };
-    if (!todo.instanceDate)
+    if (!instanceDate || Number.isNaN(instanceDate.getTime()))
       throw new BadRequestError(
         "invalid instance date recieved for this recurring todo",
       );
 
-    if (!todo) throw new BadRequestError("bad request body recieved");
+    const ownedTodo = await prisma.todo.findFirst({
+      where: {
+        id,
+        userID: user.id,
+      },
+      select: { id: true },
+    });
+    if (!ownedTodo) {
+      throw new ForbiddenError("you are not allowed to modify this todo");
+    }
 
-    console.log(id, todo.instanceDate);
     //update the overriding instance with completedAt
     await prisma.todoInstance.update({
       where: {
         todoId_instanceDate: {
-          todoId: id,
-          instanceDate: todo.instanceDate,
+          todoId: ownedTodo.id,
+          instanceDate,
         },
       },
       data: { completedAt: null },
@@ -48,8 +53,9 @@ export async function PATCH(
 
     await prisma.completedTodo.deleteMany({
       where: {
-        originalTodoID: id,
-        instanceDate: todo.instanceDate,
+        originalTodoID: ownedTodo.id,
+        userID: user.id,
+        instanceDate,
       },
     });
     return NextResponse.json(

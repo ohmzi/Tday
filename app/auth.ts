@@ -6,6 +6,11 @@ import { sha256 } from "@noble/hashes/sha256";
 import { pbkdf2 } from "@noble/hashes/pbkdf2";
 import { hexToBytes, bytesToHex } from "@noble/hashes/utils";
 import type { Adapter } from "next-auth/adapters";
+import { CredentialsSignin } from "@auth/core/errors";
+
+class PendingApprovalError extends CredentialsSignin {
+  code = "pending_approval";
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
@@ -56,9 +61,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             throw new Error("Please reset your password to continue.");
           }
 
+          if (user.approvalStatus !== "APPROVED") {
+            throw new PendingApprovalError();
+          }
+
           return user;
         } catch (error) {
           console.log(error);
+          if (error instanceof PendingApprovalError) {
+            throw error;
+          }
           throw new Error("Authentication failed.");
         }
       },
@@ -67,8 +79,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     jwt({ token, user, account }) {
       if (user) {
+        if (!user.id) {
+          throw new Error("Authentication failed.");
+        }
         token.id = user.id;
         token.timeZone = user.timeZone;
+        token.role = user.role;
+        token.approvalStatus = user.approvalStatus;
         if (account?.provider === "credentials") {
           token.name = user.name;
         }
@@ -76,8 +93,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     session({ session, token }) {
-      session.user.id = token.id as string;
-      session.user.timeZone = token.timeZone
+      if (!token.id || !token.role || !token.approvalStatus) {
+        throw new Error("Invalid session.");
+      }
+
+      session.user.id = token.id;
+      session.user.timeZone = token.timeZone ?? null;
+      session.user.role = token.role;
+      session.user.approvalStatus = token.approvalStatus;
       return session;
     },
   },
