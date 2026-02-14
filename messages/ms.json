@@ -302,6 +302,7 @@
     "calendar": "Kalendar",
     "note": "Nota",
     "settings": "Tetapan",
+    "admin": "Admin",
     "settingMenu": {
       "logout": "Log keluar",
       "theme": "Tema",
