@@ -28,6 +28,7 @@ export async function PATCH(req: NextRequest) {
       )})
       AS updates(id, new_order)
       WHERE "todos".id = updates.id
+      AND "todos"."userID" = ${user.id}
     `;
     // Check if all updates were successful
     const allUpdated = updatedTodos === changeMap.length;

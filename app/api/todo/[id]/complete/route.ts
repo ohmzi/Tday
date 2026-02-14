@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/auth";
-import { UnauthorizedError, BadRequestError } from "@/lib/customError";
+import {
+  UnauthorizedError,
+  BadRequestError,
+  ForbiddenError,
+} from "@/lib/customError";
 import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@prisma/client";
 import { errorHandler } from "@/lib/errorHandler";
-import { TodoItemType } from "@/types";
 
 export async function PATCH(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -19,19 +22,27 @@ export async function PATCH(
     const { id } = await params;
     if (!id) throw new BadRequestError("Invalid request, ID is required");
 
-    const body = (await req.json()) as TodoItemType;
-
-    const todo: TodoItemType = {
-      ...body,
-      createdAt: new Date(body.createdAt),
-      dtstart: new Date(body.dtstart),
-      due: new Date(body.due),
-    };
-
-    if (!todo) throw new BadRequestError("bad request body recieved");
+    const todo = await prisma.todo.findFirst({
+      where: {
+        id,
+        userID: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        priority: true,
+        dtstart: true,
+        due: true,
+        rrule: true,
+      },
+    });
+    if (!todo) {
+      throw new ForbiddenError("you are not allowed to modify this todo");
+    }
 
     await prisma.todo.update({
-      where: { id, userID: user.id },
+      where: { id: todo.id, userID: user.id },
       data: { completed: true },
     });
 
@@ -53,7 +64,7 @@ export async function PATCH(
         completedOnTime,
         daysToComplete: new Prisma.Decimal(daysToComplete),
         rrule: todo.rrule,
-        userID: todo.userID,
+        userID: user.id,
       },
     });
     return NextResponse.json(

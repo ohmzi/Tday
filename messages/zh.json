@@ -302,6 +302,7 @@
     "calendar": "日历",
     "note": "笔记",
     "settings": "设置",
+    "admin": "Admin",
     "settingMenu": {
       "logout": "退出登录",
       "theme": "主题",

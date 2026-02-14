@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import PendingApprovalDialog from "@/components/auth/PendingApprovalDialog";
 
 export default function Register() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pendingApprovalOpen, setPendingApprovalOpen] = useState(false);
 
   const clearError = () => {
     if (errorMessage) {
@@ -63,6 +65,11 @@ export default function Register() {
         return;
       }
 
+      if (body?.requiresApproval) {
+        setPendingApprovalOpen(true);
+        return;
+      }
+
       router.replace("/login");
       router.refresh();
     } catch (error) {
@@ -74,8 +81,9 @@ export default function Register() {
   };
 
   return (
-    <Card className="border-0 bg-card/80 shadow-xl backdrop-blur-sm">
-      <CardHeader className="space-y-4 pb-2 text-center">
+    <>
+      <Card className="border-0 bg-card/80 shadow-xl backdrop-blur-sm">
+        <CardHeader className="space-y-4 pb-2 text-center">
         <div className="mx-auto flex items-center justify-center">
           <Image src="/tday-icon.svg" alt="Tday" width={64} height={64} />
         </div>
@@ -86,7 +94,7 @@ export default function Register() {
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="pt-4">
+        <CardContent className="pt-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -213,7 +221,12 @@ export default function Register() {
             </Link>
           </p>
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      <PendingApprovalDialog
+        open={pendingApprovalOpen}
+        onOpenChange={setPendingApprovalOpen}
+      />
+    </>
   );
 }
