@@ -302,6 +302,7 @@
     "calendar": "Calendario",
     "note": "Nota",
     "settings": "Ajustes",
+    "admin": "Admin",
     "settingMenu": {
       "logout": "Cerrar sesión",
       "theme": "Tema",

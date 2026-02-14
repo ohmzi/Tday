@@ -302,6 +302,7 @@
     "calendar": "カレンダー",
     "note": "ノート",
     "settings": "設定",
+    "admin": "Admin",
     "settingMenu": {
       "logout": "ログアウト",
       "theme": "テーマ",
