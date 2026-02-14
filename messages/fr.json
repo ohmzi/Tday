@@ -302,6 +302,7 @@
     "calendar": "Calendrier",
     "note": "Note",
     "settings": "Paramètres",
+    "admin": "Admin",
     "settingMenu": {
       "logout": "Déconnexion",
       "theme": "Thème",

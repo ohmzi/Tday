@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { LogOut, Moon, Sun, Monitor, Settings } from "lucide-react";
+import { LogOut, Moon, Sun, Monitor, Settings, Shield } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -193,6 +193,15 @@ const UserCard = ({
           side={collapsed ? "right" : "top"}
           className="w-56 text-foreground"
         >
+          {user?.role === "ADMIN" ? (
+            <DropdownMenuItem
+              onClick={() => router.push("/app/admin")}
+              className="focus:bg-sidebar-accent/50 focus:text-sidebar-foreground"
+            >
+              <Shield className="h-4 w-4" />
+              <span>{sidebarDict("admin")}</span>
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             onClick={() => router.push("/app/settings")}
             className="focus:bg-sidebar-accent/50 focus:text-sidebar-foreground"

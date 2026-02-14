@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { Mail, Lock, Loader2 } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,13 +16,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import PendingApprovalDialog from "@/components/auth/PendingApprovalDialog";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [pendingApprovalOpen, setPendingApprovalOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("pending") === "1") {
+      setPendingApprovalOpen(true);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -36,6 +46,10 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
+        if (result.code === "pending_approval") {
+          setPendingApprovalOpen(true);
+          return;
+        }
         setErrorMessage("Invalid email or password.");
         return;
       }
@@ -51,8 +65,9 @@ export default function LoginPage() {
   };
 
   return (
-    <Card className="border-0 bg-card/80 shadow-xl backdrop-blur-sm">
-      <CardHeader className="space-y-4 pb-2 text-center">
+    <>
+      <Card className="border-0 bg-card/80 shadow-xl backdrop-blur-sm">
+        <CardHeader className="space-y-4 pb-2 text-center">
         <div className="mx-auto flex items-center justify-center">
           <Image src="/tday-icon.svg" alt="Tday" width={64} height={64} />
         </div>
@@ -63,7 +78,7 @@ export default function LoginPage() {
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="pt-4">
+        <CardContent className="pt-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -137,7 +152,12 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      <PendingApprovalDialog
+        open={pendingApprovalOpen}
+        onOpenChange={setPendingApprovalOpen}
+      />
+    </>
   );
 }
