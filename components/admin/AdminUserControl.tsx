@@ -103,7 +103,7 @@ export default function AdminUserControl() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5 px-4 pb-10 pt-6">
+    <div className="w-full space-y-5 pb-10 pt-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">

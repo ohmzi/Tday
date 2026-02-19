@@ -40,7 +40,7 @@ const CompletedTodoContainer = () => {
     <div className="mb-20">
       <MobileSearchHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-      <div className="mt-16 mb-6 sm:my-6 ml-[2px] flex items-center gap-2">
+      <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center gap-2">
         <CheckCircleIcon className="h-6 w-6 text-accent" />
         <h3 className="select-none text-2xl font-semibold tracking-tight">
           {completedDict("title")}
