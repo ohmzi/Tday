@@ -75,7 +75,7 @@
   "terms": {
     "title": "Terms of Service",
     "lastUpdated": "Last updated: January 19, 2026",
-    "intro": "By using Tday at https://tday.ohmz.cloud/ (the “Service”), you agree to these Terms of Service.",
+    "intro": "By using Tday (the “Service”), you agree to these Terms of Service.",
     "sections": {
       "1": {
         "title": "Use of the Service",
@@ -123,7 +123,7 @@
   "privacy": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated: January 19, 2026",
-    "intro": "Tday (“we”, “our”, or “us”) is a personal productivity app available at https://tday.ohmz.cloud/. This Privacy Policy explains what data we collect and how we use it.",
+    "intro": "Tday (“we”, “our”, or “us”) is a personal productivity app. This Privacy Policy explains what data we collect and how we use it.",
     "sections": {
       "1": {
         "title": "Information We Collect",
