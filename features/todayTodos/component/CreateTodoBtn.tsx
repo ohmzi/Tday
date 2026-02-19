@@ -34,7 +34,7 @@ const CreateTodoBtn = () => {
     };
   }, []);
   return (
-    <div className="sticky -top-20 mt-16 mb-10 sm:my-10 ml-[2px]">
+    <div className="sticky -top-20 mt-6 mb-8 sm:mt-8 sm:mb-10 lg:mt-10 ml-[2px]">
       {/* add more icon */}
       <button
         onClick={() => setDisplayForm(!displayForm)}

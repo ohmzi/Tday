@@ -140,7 +140,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5 px-4 pb-10 pt-6">
+    <div className="w-full space-y-5 pb-10 pt-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{sidebarDict("settings")}</h1>
         <p className="text-sm text-muted-foreground">Manage your account settings</p>

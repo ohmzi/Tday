@@ -398,7 +398,7 @@ const AllTasksTimelineContainer = () => {
           <div className="w-10 lg:hidden" />
         </header>
 
-        <div className="mt-16 mb-6 sm:my-6 ml-[2px] flex items-center gap-2">
+        <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center gap-2">
           <Sun className="h-6 w-6 text-accent" />
           <h3 className="select-none text-2xl font-semibold tracking-tight">
             {appDict("today")}
@@ -442,10 +442,13 @@ const AllTasksTimelineContainer = () => {
         {sections.map((section) => (
           <section
             key={section.key}
-            className={cn("mb-10", section.dayDiff === 0 && "mt-8")}
+            className={cn(
+              "mb-8 lg:mb-10",
+              section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
+            )}
           >
             {section.dayDiff !== 0 && (
-              <div className="mb-4 mt-10 flex items-center gap-2">
+              <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
                 <h3 className="select-none text-lg font-semibold tracking-tight">
                   {section.label}
                 </h3>
