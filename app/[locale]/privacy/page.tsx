@@ -63,12 +63,7 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="text-xl font-medium mb-2">9. {t("sections.9.title")}</h2>
-          <p>
-            {t("sections.9.content")}{" "}
-            <a href="mailto:zhengjiawen44@gmail.com" className="underline">
-              zhengjiawen44@gmail.com
-            </a>
-          </p>
+          <p>{t("sections.9.content")}</p>
         </section>
       </div>
     </main>

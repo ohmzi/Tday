@@ -75,7 +75,7 @@
   "terms": {
     "title": "Termos de Serviço",
     "lastUpdated": "Última atualização: 19 de janeiro de 2026",
-    "intro": "Ao utilizar o Tday em https://tday.ohmz.cloud/ (o “Serviço”), concorda com estes Termos de Serviço.",
+    "intro": "Ao utilizar o Tday (o “Serviço”), concorda com estes Termos de Serviço.",
     "sections": {
       "1": {
         "title": "Uso do Serviço",
@@ -116,14 +116,14 @@
       },
       "9": {
         "title": "Contacto",
-        "content": "Dúvidas? Envie e-mail para zhengjiawen44@gmail.com"
+        "content": "Dúvidas? Envie e-mail para support"
       }
     }
   },
   "privacy": {
     "title": "Política de Privacidade",
     "lastUpdated": "Última atualização: 19 de janeiro de 2026",
-    "intro": "O Tday (“nós”, ou “nosso”) é uma aplicação de produtividade pessoal disponível em https://tday.ohmz.cloud/. Esta Política de Privacidade explica quais os dados que recolhemos e como os utilizamos.",
+    "intro": "O Tday (“nós”, ou “nosso”) é uma aplicação de produtividade pessoal. Esta Política de Privacidade explica quais os dados que recolhemos e como os utilizamos.",
     "sections": {
       "1": {
         "title": "Informação que Recolhemos",
@@ -169,7 +169,7 @@
       },
       "9": {
         "title": "Contacto",
-        "content": "Dúvidas? Envie e-mail para zhengjiawen44@gmail.com"
+        "content": "Dúvidas? Envie e-mail para support"
       }
     }
   },
