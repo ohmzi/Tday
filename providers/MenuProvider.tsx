@@ -101,6 +101,16 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [mounted, sidebarReady, width]);
 
+  // Always close the mobile sidebar after route changes
+  useEffect(() => {
+    if (!mounted || !sidebarReady) return;
+
+    const isDesktop = width >= DESKTOP_BREAKPOINT;
+    if (!isDesktop) {
+      setShowMenuState(false);
+    }
+  }, [mounted, pathName, sidebarReady, width]);
+
   // Infer last visited tab from pathname or retrieve from local storage
   useEffect(() => {
     if (!mounted) return;
@@ -166,7 +176,7 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       document.removeEventListener("keydown", closeOnKey);
     };
-  }, []);
+  }, [setShowMenu]);
 
   return (
     <MenuContext.Provider

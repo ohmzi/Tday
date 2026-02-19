@@ -137,12 +137,6 @@ const BlogMainPage = () => {
               GitHub
             </a>
 
-            <a
-              href="mailto:zhengjiawen44@gmail.com"
-              className="opacity-60 hover:opacity-100 hover:text-[#2d5a3d] transition-all duration-300 text-sm"
-            >
-              Email
-            </a>
           </div>
         </footer>
       </div>

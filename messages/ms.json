@@ -75,7 +75,7 @@
   "terms": {
     "title": "Syarat Perkhidmatan",
     "lastUpdated": "Terakhir dikemas kini: 19 Januari 2026",
-    "intro": "Dengan menggunakan Tday di https://tday.ohmz.cloud/ (“Perkhidmatan”), anda bersetuju dengan Syarat Perkhidmatan ini.",
+    "intro": "Dengan menggunakan Tday (“Perkhidmatan”), anda bersetuju dengan Syarat Perkhidmatan ini.",
     "sections": {
       "1": {
         "title": "Penggunaan Perkhidmatan",
@@ -116,14 +116,14 @@
       },
       "9": {
         "title": "Hubungan",
-        "content": "Soalan? E-mel zhengjiawen44@gmail.com"
+        "content": "Soalan? E-mel support"
       }
     }
   },
   "privacy": {
     "title": "Dasar Privasi",
     "lastUpdated": "Terakhir dikemas kini: 19 Januari 2026",
-    "intro": "Tday (“kami”, atau “kita”) adalah aplikasi produktiviti peribadi yang tersedia di https://tday.ohmz.cloud/. Dasar Privasi ini menjelaskan data apa yang kami kumpul dan bagaimana kami menggunakannya.",
+    "intro": "Tday (“kami”, atau “kita”) adalah aplikasi produktiviti peribadi. Dasar Privasi ini menjelaskan data apa yang kami kumpul dan bagaimana kami menggunakannya.",
     "sections": {
       "1": {
         "title": "Maklumat Yang Kami Kumpul",
@@ -169,7 +169,7 @@
       },
       "9": {
         "title": "Hubungan",
-        "content": "Soalan? E-mel zhengjiawen44@gmail.com"
+        "content": "Soalan? E-mel support"
       }
     }
   },

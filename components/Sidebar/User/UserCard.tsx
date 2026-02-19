@@ -30,9 +30,11 @@ const railIconClass =
 const UserCard = ({
   className,
   collapsed = false,
+  onNavigate,
 }: {
   className?: string;
   collapsed?: boolean;
+  onNavigate?: () => void;
 }) => {
   const { data, status } = useSession();
   const sidebarDict = useTranslations("sidebar");
@@ -195,7 +197,10 @@ const UserCard = ({
         >
           {user?.role === "ADMIN" ? (
             <DropdownMenuItem
-              onClick={() => router.push("/app/admin")}
+              onClick={() => {
+                onNavigate?.();
+                router.push("/app/admin");
+              }}
               className="focus:bg-sidebar-accent/50 focus:text-sidebar-foreground"
             >
               <Shield className="h-4 w-4" />
@@ -203,7 +208,10 @@ const UserCard = ({
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem
-            onClick={() => router.push("/app/settings")}
+            onClick={() => {
+              onNavigate?.();
+              router.push("/app/settings");
+            }}
             className="focus:bg-sidebar-accent/50 focus:text-sidebar-foreground"
           >
             <Settings className="h-4 w-4" />
