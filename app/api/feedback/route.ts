@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
 
     const resendClient = new Resend(process.env.RESEND_API_KEY);
 
+    const sourceOrigin = req.nextUrl.origin || process.env.API_URL || "unknown";
+
     const data = await resendClient.emails.send({
       from: "Feedback <admin@toda.my>",
       to: "zhengjiawen44@gmail.com",
@@ -58,7 +60,7 @@ export async function POST(req: NextRequest) {
         Timezone: ${user.timeZone || "Unknown"}
 
         Source:
-        ${process.env.API_URL}
+        ${sourceOrigin}
         `.trim(),
     });
 
