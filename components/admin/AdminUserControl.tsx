@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Check, Loader2, RefreshCcw, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 
 type AdminUser = {
   id: string;
@@ -103,8 +104,12 @@ export default function AdminUserControl() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-5 px-4 pb-10 pt-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <div className="w-full space-y-5 pb-10">
+      <div className="lg:hidden">
+        <MobileSearchHeader />
+      </div>
+
+      <header className="mt-8 flex flex-wrap items-center justify-between gap-3 sm:mt-10 lg:mt-0">
         <div className="space-y-1">
           <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
             <Users className="h-5 w-5 text-accent" />

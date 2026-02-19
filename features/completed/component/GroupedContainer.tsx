@@ -30,9 +30,9 @@ export default function GroupedCompletedTodoContainer({
       : formatDate(completedTodos[0].completedAt);
 
   return (
-    <section className="mb-10">
+    <section className="mb-8 lg:mb-10">
       {/* Section heading — identical to Today page sections */}
-      <div className="mb-4 mt-10 flex items-center gap-2">
+      <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
         <h3 className="select-none text-lg font-semibold tracking-tight">
           {sectionLabel}
         </h3>
