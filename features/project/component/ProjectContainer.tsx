@@ -119,14 +119,16 @@ const ProjectContainer = ({ id }: { id: string }) => {
                 />
 
                 {/* Tag title with colored icon */}
-                <div className="mt-16 mb-6 sm:my-6 ml-[2px] flex items-center justify-between">
+                <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <ProjectTag id={id} className="h-6 w-6" />
                         <h3 className="select-none text-2xl font-semibold tracking-tight">
                             {tagName}
                         </h3>
                     </div>
-                    <TodoFilterBar containerHovered={containerHovered} />
+                    <div className="hidden lg:block">
+                        <TodoFilterBar containerHovered={containerHovered} />
+                    </div>
                 </div>
                 <LineSeparator className="flex-1 border-border/70" />
 
@@ -136,7 +138,7 @@ const ProjectContainer = ({ id }: { id: string }) => {
                 {/* Empty state — no tasks yet */}
                 {!projectTodosLoading && !searchQuery.trim() && projectTodos.length === 0 && (
                     <div className="mt-4 rounded-2xl border border-border/65 bg-card/95 px-4 py-6 text-sm text-muted-foreground">
-                        No tasks yet. Press <kbd className="mx-1 rounded border border-border bg-muted px-1.5 py-0.5 text-xs font-medium">Q</kbd> or tap the button below to add one.
+                        No tasks yet.
                     </div>
                 )}
 
@@ -168,23 +170,27 @@ const ProjectContainer = ({ id }: { id: string }) => {
 
                 {/* Pinned Todos */}
                 {pinnedTodos.length > 0 && (
-                    <TodoGroup
-                        className="relative my-8 rounded-2xl border border-border/65 bg-card/95 p-3 shadow-[0_8px_24px_hsl(var(--shadow)/0.11)]"
-                        todos={pinnedTodos}
-                    />
+                    <section className="mb-8 lg:mb-10 mt-5 sm:mt-6 lg:mt-8">
+                        <TodoGroup todos={pinnedTodos} />
+                    </section>
                 )}
 
                 {/* Grouped Todos */}
                 {Object.entries(sortedGroupedTodos).map(([key, todo]) =>
                     <div key={key}>
-                        <div className={clsx(key !== "-1" && "my-8")}>
-                            {key !== "-1" && <p className="text-sm text-muted-foreground">{preferences?.groupBy?.slice(0, 1).toUpperCase() + "" + preferences?.groupBy?.slice(1,)}<span className="text-lg">{" " + key} </span></p>}
-                            {key !== "-1" && <LineSeparator className="border-border/70" />}
+                        <section className={clsx("mb-8 lg:mb-10", key === "-1" && "mt-5 sm:mt-6 lg:mt-8")}>
+                            {key !== "-1" && (
+                                <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
+                                    <h3 className="select-none text-lg font-semibold tracking-tight">
+                                        {key}
+                                    </h3>
+                                    <LineSeparator className="flex-1 border-border/70" />
+                                </div>
+                            )}
                             <TodoGroup
                                 todos={todo}
-                                className="bg-transparent"
                             />
-                        </div>
+                        </section>
                     </div>
                 )}
 
