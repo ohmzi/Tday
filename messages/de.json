@@ -75,7 +75,7 @@
   "terms": {
     "title": "Nutzungsbedingungen",
     "lastUpdated": "Zuletzt aktualisiert: 19. Januar 2026",
-    "intro": "Durch die Nutzung von Tday auf https://tday.ohmz.cloud/ (der „Dienst“) erklären Sie sich mit diesen Nutzungsbedingungen einverstanden.",
+    "intro": "Durch die Nutzung von Tday (dem „Dienst“) erklären Sie sich mit diesen Nutzungsbedingungen einverstanden.",
     "sections": {
       "1": {
         "title": "Nutzung des Dienstes",
@@ -123,7 +123,7 @@
   "privacy": {
     "title": "Datenschutzbestimmungen",
     "lastUpdated": "Zuletzt aktualisiert: 19. Januar 2026",
-    "intro": "Tday („wir“, „unser“ oder „uns“) ist eine persönliche Produktivitäts-App, verfügbar unter https://tday.ohmz.cloud/. Diese Datenschutzbestimmung erklärt, welche Daten wir sammeln und wie wir sie verwenden.",
+    "intro": "Tday („wir“, „unser“ oder „uns“) ist eine persönliche Produktivitäts-App. Diese Datenschutzbestimmung erklärt, welche Daten wir sammeln und wie wir sie verwenden.",
     "sections": {
       "1": {
         "title": "Informationen, die wir sammeln",
