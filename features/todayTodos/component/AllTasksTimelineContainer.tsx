@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Command, Menu, Search, X } from "lucide-react";
+import { Command, Menu, Search, Sun, X } from "lucide-react";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
@@ -218,6 +218,10 @@ const AllTasksTimelineContainer = () => {
     () => toSections(visibleTimelineItems),
     [visibleTimelineItems],
   );
+  const hasTodayTasks = useMemo(
+    () => filteredTimelineItems.some((item) => item.dayDiff === 0),
+    [filteredTimelineItems],
+  );
 
   const hasMore = visibleCount < filteredTimelineItems.length;
 
@@ -394,12 +398,19 @@ const AllTasksTimelineContainer = () => {
           <div className="w-10 lg:hidden" />
         </header>
 
-        <CreateTodoBtn />
+        <div className="mt-16 mb-6 sm:my-6 ml-[2px] flex items-center gap-2">
+          <Sun className="h-6 w-6 text-accent" />
+          <h3 className="select-none text-2xl font-semibold tracking-tight">
+            {appDict("today")}
+          </h3>
+        </div>
+        <LineSeparator className="flex-1 border-border/70" />
+
         {todoLoading && <TodoListLoading heading={appDict("today")} />}
 
-        {!todoLoading && !searchQuery.trim() && filteredTimelineItems.length === 0 && (
+        {!todoLoading && !searchQuery.trim() && !hasTodayTasks && (
           <div className="mt-4 rounded-2xl border border-border/65 bg-card/95 px-4 py-6 text-sm text-muted-foreground">
-            No tasks yet.
+            No today tasks yet.
           </div>
         )}
 
@@ -429,13 +440,18 @@ const AllTasksTimelineContainer = () => {
         )}
 
         {sections.map((section) => (
-          <section key={section.key} className="mb-10">
-            <div className="mb-4 mt-10 flex items-center gap-2">
-              <h3 className="select-none text-lg font-semibold tracking-tight">
-                {section.label}
-              </h3>
-              <LineSeparator className="flex-1 border-border/70" />
-            </div>
+          <section
+            key={section.key}
+            className={cn("mb-10", section.dayDiff === 0 && "mt-8")}
+          >
+            {section.dayDiff !== 0 && (
+              <div className="mb-4 mt-10 flex items-center gap-2">
+                <h3 className="select-none text-lg font-semibold tracking-tight">
+                  {section.label}
+                </h3>
+                <LineSeparator className="flex-1 border-border/70" />
+              </div>
+            )}
             <TodoGroup todos={section.todos} overdue={section.dayDiff < 0} />
           </section>
         ))}
@@ -445,6 +461,8 @@ const AllTasksTimelineContainer = () => {
             <span className="text-xs text-muted-foreground">Loading more tasks...</span>
           </div>
         )}
+
+        <CreateTodoBtn />
       </div>
     </TodoMutationProvider>
   );
