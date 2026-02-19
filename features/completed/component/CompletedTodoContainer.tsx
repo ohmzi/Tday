@@ -7,7 +7,8 @@ import { useGroupedHistory } from "../hooks/useGroupedHistory";
 import GroupedCompletedTodoContainer from "./GroupedContainer";
 import { useTranslations } from "next-intl";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
-import { Search, X } from "lucide-react";
+import LineSeparator from "@/components/ui/lineSeparator";
+import { CheckCircleIcon, Search, X } from "lucide-react";
 
 const CompletedTodoContainer = () => {
   const completedDict = useTranslations("completed")
@@ -39,14 +40,13 @@ const CompletedTodoContainer = () => {
     <div className="mb-20">
       <MobileSearchHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-      {/* Title — same placement & visual weight as "+ Add a task" on Today page */}
-      <div className="mt-16 mb-10 sm:my-10 ml-[2px]">
-        <div className="flex w-fit items-center gap-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-muted/10 px-4 py-2.5">
-          <p className="text-[0.95rem] font-medium text-muted-foreground">
-            {completedDict("title")}
-          </p>
-        </div>
+      <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center gap-2">
+        <CheckCircleIcon className="h-6 w-6 text-accent" />
+        <h3 className="select-none text-2xl font-semibold tracking-tight">
+          {completedDict("title")}
+        </h3>
       </div>
+      <LineSeparator className="flex-1 border-border/70" />
 
       {searchQuery.trim() && filteredTodos.length === 0 && (
         <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">

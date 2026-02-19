@@ -75,7 +75,7 @@
   "terms": {
     "title": "服务条款",
     "lastUpdated": "最后更新：2026年1月19日",
-    "intro": "通过在 https://tday.ohmz.cloud/ 使用 Tday（“服务”），即表示您同意这些服务条款。",
+    "intro": "通过使用 Tday（“服务”），即表示您同意这些服务条款。",
     "sections": {
       "1": {
         "title": "服务使用",
@@ -116,14 +116,14 @@
       },
       "9": {
         "title": "联系方式",
-        "content": "有问题？发送电子邮件至 zhengjiawen44@gmail.com"
+        "content": "有问题？发送电子邮件至 support"
       }
     }
   },
   "privacy": {
     "title": "隐私政策",
     "lastUpdated": "最后更新：2026年1月19日",
-    "intro": "Tday（“我们”或“我们的”）是一款个人生产力应用，可在 https://tday.ohmz.cloud/ 访问。本隐私政策解释了我们收集哪些数据以及如何使用这些数据。",
+    "intro": "Tday（“我们”或“我们的”）是一款个人生产力应用。本隐私政策解释了我们收集哪些数据以及如何使用这些数据。",
     "sections": {
       "1": {
         "title": "我们收集的信息",
@@ -169,7 +169,7 @@
       },
       "9": {
         "title": "联系方式",
-        "content": "有问题？发送电子邮件至 zhengjiawen44@gmail.com"
+        "content": "有问题？发送电子邮件至 support"
       }
     }
   },
