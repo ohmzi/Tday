@@ -336,7 +336,7 @@ function ExpandedSidebarContent({
         </div>
 
         <div className="border-t border-sidebar-border/80 p-3">
-          <UserCard />
+          <UserCard onNavigate={onNavigate} />
         </div>
       </div>
     </div>
@@ -482,7 +482,7 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <div className="border-t border-sidebar-border/80 p-3">
-        <UserCard collapsed />
+        <UserCard collapsed onNavigate={onNavigate} />
       </div>
     </div>
   );
