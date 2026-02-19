@@ -8,8 +8,6 @@ import { usePathname } from "next/navigation";
 import {
   Calendar1Icon,
   CheckCircleIcon,
-  ChevronLeft,
-  ChevronRight,
   Plus,
   Sun,
 } from "lucide-react";
@@ -20,7 +18,6 @@ import useWindowSize from "@/hooks/useWindowSize";
 import UserCard from "./User/UserCard";
 import LineSeparator from "../ui/lineSeparator";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import TagSidebarSection from "./Tag/TagSidebarSection";
 import {
@@ -126,6 +123,7 @@ const SidebarContainer = () => {
           <CollapsedSidebarContent onNavigate={handleSidebarNavigate} />
         ) : (
           <ExpandedSidebarContent
+            isDesktop={isDesktop}
             todosCount={todos.length}
             completedCount={completedTodos.length}
             isTodoActive={Boolean(isTodoActive)}
@@ -148,6 +146,7 @@ const SidebarContainer = () => {
       >
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <ExpandedSidebarContent
+          isDesktop={isDesktop}
           todosCount={todos.length}
           completedCount={completedTodos.length}
           isTodoActive={Boolean(isTodoActive)}
@@ -163,6 +162,7 @@ const SidebarContainer = () => {
 export default SidebarContainer;
 
 function ExpandedSidebarContent({
+  isDesktop,
   todosCount,
   completedCount,
   isTodoActive,
@@ -170,6 +170,7 @@ function ExpandedSidebarContent({
   isCalendarActive,
   onNavigate,
 }: {
+  isDesktop: boolean;
   todosCount: number;
   completedCount: number;
   isTodoActive: boolean;
@@ -182,43 +183,47 @@ function ExpandedSidebarContent({
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
       <div className="flex h-16 items-center border-b border-sidebar-border/80 px-3">
-        <Link
-          href="/app/tday"
-          onClick={() => {
-            setActiveMenu({ name: "Todo" });
-            onNavigate?.();
-          }}
-          className="flex min-w-0 w-full items-center gap-3 transition-opacity hover:opacity-90"
-        >
-          <span className={railIconSlot}>
-            <Image
-              src="/tday-icon.svg"
-              alt="Tday"
-              width={36}
-              height={36}
-            />
-          </span>
-          <span className="min-w-0 truncate text-xl font-bold text-sidebar-foreground">
-            Tday
-          </span>
-        </Link>
-      </div>
-
-      <div className="flex h-12 items-center border-b border-sidebar-border/80 px-3">
-        <button
-          type="button"
-          onClick={() => setShowMenu(false)}
-          className={cn(
-            expandedNavButtonBase,
-            "border border-transparent text-sidebar-foreground/70 hover:bg-accent/15 hover:text-accent active:bg-accent/25",
-          )}
-          aria-label="Collapse sidebar"
-        >
-          <span className={railIconSlot}>
-            <ChevronLeft className={railIconClass} />
-          </span>
-          <span className="truncate whitespace-nowrap">Collapse sidebar</span>
-        </button>
+        {isDesktop ? (
+          <button
+            type="button"
+            onClick={() => setShowMenu(false)}
+            className="flex min-w-0 w-full items-center gap-3 transition-opacity hover:opacity-90"
+            aria-label="Collapse sidebar"
+          >
+            <span className={railIconSlot}>
+              <Image
+                src="/tday-icon.svg"
+                alt="Tday"
+                width={36}
+                height={36}
+              />
+            </span>
+            <span className="min-w-0 truncate text-xl font-bold text-sidebar-foreground">
+              Tday
+            </span>
+          </button>
+        ) : (
+          <Link
+            href="/app/tday"
+            onClick={() => {
+              setActiveMenu({ name: "Todo" });
+              onNavigate?.();
+            }}
+            className="flex min-w-0 w-full items-center gap-3 transition-opacity hover:opacity-90"
+          >
+            <span className={railIconSlot}>
+              <Image
+                src="/tday-icon.svg"
+                alt="Tday"
+                width={36}
+                height={36}
+              />
+            </span>
+            <span className="min-w-0 truncate text-xl font-bold text-sidebar-foreground">
+              Tday
+            </span>
+          </Link>
+        )}
       </div>
 
       <div className="px-3 pb-2 pt-4">
@@ -350,13 +355,11 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex h-16 items-center border-b border-sidebar-border/80 px-3">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Link
-              href="/app/tday"
-              onClick={() => {
-                setActiveMenu({ name: "Todo" });
-                onNavigate?.();
-              }}
+            <button
+              type="button"
+              onClick={() => setShowMenu(true)}
               className="flex h-10 w-10 items-center justify-center rounded-xl transition-opacity hover:opacity-90"
+              aria-label="Expand sidebar"
             >
               <span
                 className={cn(
@@ -372,29 +375,7 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 className="h-9 w-9 shrink-0 rounded-md object-cover"
               />
               </span>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={10}>
-            Tday
-          </TooltipContent>
-        </Tooltip>
-      </div>
-
-        <div className="flex h-12 items-center border-b border-sidebar-border/80 px-3">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setShowMenu(true)}
-              className={cn(
-                collapsedRailButtonBase,
-                "hover:bg-accent/15 hover:text-accent active:bg-accent/25",
-              )}
-              aria-label="Expand sidebar"
-            >
-              <ChevronRight className={railIconClass} />
-            </Button>
+            </button>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={10}>
             Expand sidebar
