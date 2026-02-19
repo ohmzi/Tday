@@ -11,6 +11,7 @@ import {
   Languages,
   Loader2,
   Lock,
+  Settings,
   User,
 } from "lucide-react";
 import KeyboardShortcuts from "@/components/KeyboardShortcut";
@@ -34,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import packageJson from "../../../../../package.json";
 
 const localeOptions = [
@@ -140,9 +142,16 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="w-full space-y-5 pb-10 pt-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{sidebarDict("settings")}</h1>
+    <div className="w-full space-y-5 pb-10">
+      <div className="lg:hidden">
+        <MobileSearchHeader />
+      </div>
+
+      <header className="mt-8 space-y-1 sm:mt-10 lg:mt-0">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
+          <Settings className="h-5 w-5 text-accent" />
+          {sidebarDict("settings")}
+        </h1>
         <p className="text-sm text-muted-foreground">Manage your account settings</p>
       </header>
 
