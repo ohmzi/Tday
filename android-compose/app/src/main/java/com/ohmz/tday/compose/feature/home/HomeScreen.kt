@@ -59,6 +59,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -216,135 +217,142 @@ fun HomeScreen(
             )
         },
     ) { padding ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .onGloballyPositioned { coordinates ->
-                    rootInRoot = coordinates.boundsInRoot().topLeft
-                }
-                .pointerInput(searchExpanded, searchBarBounds, rootInRoot) {
-                    if (!searchExpanded) return@pointerInput
-                    awaitEachGesture {
-                        val down = awaitFirstDown(pass = PointerEventPass.Final)
-                        val tapInRoot = down.position + rootInRoot
-                        val tappedSearchBar = searchBarBounds?.contains(tapInRoot) == true
-                        val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
-                        if (up != null && !tappedSearchBar) {
-                            searchExpanded = false
-                        }
-                    }
-                },
+                .padding(padding),
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                item {
-                    TopSearchBar(
-                        searchExpanded = searchExpanded,
-                        onSearchExpandedChange = { searchExpanded = it },
-                        onSearchBarBoundsChanged = { bounds -> searchBarBounds = bounds },
-                        onCreateList = {
-                            closeSearch()
-                            showCreateList = true
-                        },
-                        onOpenSettings = {
-                            closeSearch()
-                            onOpenSettings()
-                        },
-                    )
-                }
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CategoryGrid(
-                            todayCount = uiState.summary.todayCount,
-                            scheduledCount = uiState.summary.scheduledCount,
-                            allCount = uiState.summary.allCount,
-                            priorityCount = uiState.summary.priorityCount,
-                            completedCount = uiState.summary.completedCount,
-                            onOpenToday = {
-                                closeSearch()
-                                onOpenToday()
-                            },
-                            onOpenScheduled = {
-                                closeSearch()
-                                onOpenScheduled()
-                            },
-                            onOpenAll = {
-                                closeSearch()
-                                onOpenAll()
-                            },
-                            onOpenPriority = {
-                                closeSearch()
-                                onOpenPriority()
-                            },
-                            onOpenCompleted = {
-                                closeSearch()
-                                onOpenCompleted()
-                            },
-                        )
-
-                        CategoryCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = calendarTileColor(colorScheme),
-                            icon = Icons.Rounded.CalendarToday,
-                            backgroundGrid = true,
-                            title = "Calendar",
-                            count = uiState.summary.scheduledCount,
-                            onClick = {
-                                closeSearch()
-                                onOpenCalendar()
-                            },
-                        )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned { coordinates ->
+                        rootInRoot = coordinates.boundsInRoot().topLeft
                     }
-                }
-
-                if (uiState.summary.lists.isNotEmpty()) {
-                    item {
-                        AnimatedVisibility(
-                            visible = visibleListCount > 0,
-                            enter = listSectionEnterTransition(),
-                        ) {
-                            Text(
-                                text = "My Lists",
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = colorScheme.onBackground,
-                                fontWeight = FontWeight.Bold,
-                            )
+                    .pointerInput(searchExpanded, searchBarBounds, rootInRoot) {
+                        if (!searchExpanded) return@pointerInput
+                        awaitEachGesture {
+                            val down = awaitFirstDown(pass = PointerEventPass.Final)
+                            val tapInRoot = down.position + rootInRoot
+                            val tappedSearchBar = searchBarBounds?.contains(tapInRoot) == true
+                            val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
+                            if (up != null && !tappedSearchBar) {
+                                searchExpanded = false
+                            }
                         }
+                    },
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    item {
+                        TopSearchBar(
+                            searchExpanded = searchExpanded,
+                            onSearchExpandedChange = { searchExpanded = it },
+                            onSearchBarBoundsChanged = { bounds -> searchBarBounds = bounds },
+                            onCreateList = {
+                                closeSearch()
+                                showCreateList = true
+                            },
+                            onOpenSettings = {
+                                closeSearch()
+                                onOpenSettings()
+                            },
+                        )
                     }
-                    itemsIndexed(uiState.summary.lists, key = { _, list -> list.id }) { index, list ->
-                        AnimatedVisibility(
-                            visible = index < visibleListCount,
-                            enter = listSectionEnterTransition(),
-                        ) {
-                            ListRow(
-                                name = list.name,
-                                colorKey = list.color,
-                                iconKey = list.iconKey,
-                                count = list.todoCount,
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            CategoryGrid(
+                                todayCount = uiState.summary.todayCount,
+                                scheduledCount = uiState.summary.scheduledCount,
+                                allCount = uiState.summary.allCount,
+                                priorityCount = uiState.summary.priorityCount,
+                                completedCount = uiState.summary.completedCount,
+                                onOpenToday = {
+                                    closeSearch()
+                                    onOpenToday()
+                                },
+                                onOpenScheduled = {
+                                    closeSearch()
+                                    onOpenScheduled()
+                                },
+                                onOpenAll = {
+                                    closeSearch()
+                                    onOpenAll()
+                                },
+                                onOpenPriority = {
+                                    closeSearch()
+                                    onOpenPriority()
+                                },
+                                onOpenCompleted = {
+                                    closeSearch()
+                                    onOpenCompleted()
+                                },
+                            )
+
+                            CategoryCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = calendarTileColor(colorScheme),
+                                icon = Icons.Rounded.CalendarToday,
+                                backgroundGrid = true,
+                                title = "Calendar",
+                                count = uiState.summary.scheduledCount,
                                 onClick = {
                                     closeSearch()
-                                    onOpenList(list.id, list.name)
+                                    onOpenCalendar()
                                 },
                             )
                         }
                     }
-                }
 
-                uiState.errorMessage?.let { message ->
-                    item {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                    if (uiState.summary.lists.isNotEmpty()) {
+                        item {
+                            AnimatedVisibility(
+                                visible = visibleListCount > 0,
+                                enter = listSectionEnterTransition(),
+                            ) {
+                                Text(
+                                    text = "My Lists",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = colorScheme.onBackground,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+                        itemsIndexed(uiState.summary.lists, key = { _, list -> list.id }) { index, list ->
+                            AnimatedVisibility(
+                                visible = index < visibleListCount,
+                                enter = listSectionEnterTransition(),
+                            ) {
+                                ListRow(
+                                    name = list.name,
+                                    colorKey = list.color,
+                                    iconKey = list.iconKey,
+                                    count = list.todoCount,
+                                    onClick = {
+                                        closeSearch()
+                                        onOpenList(list.id, list.name)
+                                    },
+                                )
+                            }
+                        }
                     }
-                }
 
-                item { Spacer(Modifier.height(96.dp)) }
+                    uiState.errorMessage?.let { message ->
+                        item {
+                            Text(
+                                text = message,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+
+                    item { Spacer(Modifier.height(96.dp)) }
+                }
             }
         }
     }
