@@ -203,6 +203,14 @@ class TdayRepository @Inject constructor(
 
     fun getServerUrl(): String? = secureConfigStore.getServerUrl()
 
+    fun hasCachedData(): Boolean {
+        val state = loadOfflineState()
+        return state.todos.isNotEmpty() ||
+            state.lists.isNotEmpty() ||
+            state.completedItems.isNotEmpty() ||
+            state.pendingMutations.isNotEmpty()
+    }
+
     suspend fun saveServerUrl(rawUrl: String): Result<String> = runCatching {
         val normalizedServerUrl = secureConfigStore.normalizeServerUrl(rawUrl)
             ?: throw ServerProbeException.InvalidUrl()
@@ -253,7 +261,6 @@ class TdayRepository @Inject constructor(
     }
 
     suspend fun fetchDashboardSummary(): DashboardSummary {
-        refreshCacheForRead()
         return buildDashboardSummary(loadOfflineState())
     }
 
@@ -292,7 +299,6 @@ class TdayRepository @Inject constructor(
     }
 
     suspend fun fetchTodos(mode: TodoListMode, listId: String? = null): List<TodoItem> {
-        refreshCacheForRead()
         return buildTodosForMode(
             state = loadOfflineState(),
             mode = mode,
@@ -623,6 +629,7 @@ class TdayRepository @Inject constructor(
 
     suspend fun completeTodo(todo: TodoItem) {
         val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
         updateOfflineState { state ->
             val updatedTodos = state.todos.map {
                 if (it.canonicalId == todo.canonicalId) {
@@ -660,7 +667,7 @@ class TdayRepository @Inject constructor(
                 todos = updatedTodos,
                 completedItems = state.completedItems + completedItem,
                 pendingMutations = state.pendingMutations + PendingMutationRecord(
-                    mutationId = UUID.randomUUID().toString(),
+                    mutationId = mutationId,
                     kind = mutationKind,
                     targetId = todo.canonicalId,
                     timestampEpochMs = timestampMs,
@@ -669,11 +676,39 @@ class TdayRepository @Inject constructor(
             )
         }
 
-        runCatching { syncLocalCache(force = true) }
+        if (todo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
+
+        runCatching {
+            if (todo.isRecurring && todo.instanceDateEpochMillis != null) {
+                requireBody(
+                    api.completeTodoByBody(
+                        TodoCompleteRequest(
+                            id = todo.canonicalId,
+                            instanceDate = todo.instanceDateEpochMillis,
+                        ),
+                    ),
+                    "Could not complete recurring task",
+                )
+            } else {
+                requireBody(
+                    api.completeTodoByBody(
+                        TodoCompleteRequest(
+                            id = todo.canonicalId,
+                        ),
+                    ),
+                    "Could not complete task",
+                )
+            }
+        }.onSuccess {
+            updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        }
     }
 
     suspend fun fetchCompletedItems(): List<CompletedItem> {
-        refreshCacheForRead()
         return loadOfflineState().completedItems.map(::completedFromCache)
     }
 
@@ -682,6 +717,7 @@ class TdayRepository @Inject constructor(
             ?: throw IllegalStateException("Completed todo is missing original todo id")
         val timestampMs = System.currentTimeMillis()
         val instanceDateEpochMs = item.instanceDate?.toEpochMilli()
+        val mutationId = UUID.randomUUID().toString()
 
         updateOfflineState { state ->
             val updatedTodos = state.todos.map {
@@ -703,7 +739,7 @@ class TdayRepository @Inject constructor(
                 todos = updatedTodos,
                 completedItems = state.completedItems.filterNot { it.id == item.id },
                 pendingMutations = state.pendingMutations + PendingMutationRecord(
-                    mutationId = UUID.randomUUID().toString(),
+                    mutationId = mutationId,
                     kind = MutationKind.UNCOMPLETE_TODO,
                     targetId = originalTodoId,
                     timestampEpochMs = timestampMs,
@@ -712,7 +748,25 @@ class TdayRepository @Inject constructor(
             )
         }
 
-        runCatching { syncLocalCache(force = true) }
+        if (originalTodoId.startsWith(LOCAL_TODO_PREFIX)) return
+
+        runCatching {
+            requireBody(
+                api.uncompleteTodoByBody(
+                    TodoUncompleteRequest(
+                        id = originalTodoId,
+                        instanceDate = instanceDateEpochMs,
+                    ),
+                ),
+                "Could not restore task",
+            )
+        }.onSuccess {
+            updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        }
     }
 
     suspend fun fetchNotes(): List<NoteItem> {
@@ -738,7 +792,6 @@ class TdayRepository @Inject constructor(
     }
 
     suspend fun fetchLists(): List<ListSummary> {
-        refreshCacheForRead()
         val state = loadOfflineState()
         val todoCountsByList = state.todos
             .asSequence()
@@ -763,6 +816,7 @@ class TdayRepository @Inject constructor(
 
         val localListId = "$LOCAL_LIST_PREFIX${UUID.randomUUID()}"
         val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
         updateOfflineState { state ->
             val newList = CachedListRecord(
                 id = localListId,
@@ -775,7 +829,7 @@ class TdayRepository @Inject constructor(
             state.copy(
                 lists = state.lists + newList,
                 pendingMutations = state.pendingMutations + PendingMutationRecord(
-                    mutationId = UUID.randomUUID().toString(),
+                    mutationId = mutationId,
                     kind = MutationKind.CREATE_LIST,
                     targetId = localListId,
                     timestampEpochMs = timestampMs,
@@ -786,18 +840,44 @@ class TdayRepository @Inject constructor(
             )
         }
 
-        runCatching { syncLocalCache(force = true) }
-    }
-
-    private suspend fun refreshCacheForRead() {
-        val existing = loadOfflineState()
-        val hadAnyCache = existing.todos.isNotEmpty() ||
-            existing.lists.isNotEmpty() ||
-            existing.completedItems.isNotEmpty()
-
-        val syncResult = runCatching { syncLocalCache(force = false) }
-        if (syncResult.isFailure && !hadAnyCache) {
-            throw syncResult.exceptionOrNull() ?: IllegalStateException("Could not load data")
+        runCatching {
+            requireBody(
+                api.createList(
+                    CreateListRequest(
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                    ),
+                ),
+                "Could not create list",
+            ).list
+        }.onSuccess { createdList ->
+            if (createdList == null) return@onSuccess
+            val createdAt = parseOptionalInstant(createdList.updatedAt)?.toEpochMilli() ?: timestampMs
+            updateOfflineState { state ->
+                val remapped = replaceLocalListId(
+                    state = state,
+                    localListId = localListId,
+                    serverListId = createdList.id,
+                )
+                val todoCount = remapped.todos.count { !it.completed && it.listId == createdList.id }
+                remapped.copy(
+                    lists = remapped.lists.map { list ->
+                        if (list.id == createdList.id) {
+                            list.copy(
+                                name = createdList.name,
+                                color = createdList.color,
+                                iconKey = createdList.iconKey ?: list.iconKey,
+                                todoCount = todoCount,
+                                updatedAtEpochMs = createdAt,
+                            )
+                        } else {
+                            list
+                        }
+                    },
+                    pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
         }
     }
 
