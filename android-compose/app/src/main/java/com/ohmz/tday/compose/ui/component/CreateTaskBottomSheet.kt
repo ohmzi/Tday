@@ -96,6 +96,8 @@ private enum class RepeatPreset(
 fun CreateTaskBottomSheet(
     lists: List<ListSummary>,
     defaultListId: String? = null,
+    initialStartEpochMs: Long? = null,
+    initialDueEpochMs: Long? = null,
     onDismiss: () -> Unit,
     onCreateTask: (CreateTaskPayload) -> Unit,
 ) {
@@ -114,8 +116,21 @@ fun CreateTaskBottomSheet(
     var selectedListId by rememberSaveable(defaultListId, listIdsKey) {
         mutableStateOf(defaultListId?.takeIf { id -> lists.any { it.id == id } })
     }
-    var startEpochMs by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
-    var dueEpochMs by rememberSaveable { mutableStateOf(System.currentTimeMillis() + 3L * 60L * 60L * 1000L) }
+    val nowEpochMs = remember { System.currentTimeMillis() }
+    val resolvedStartEpochMs = initialStartEpochMs ?: nowEpochMs
+    val resolvedDueEpochMs = initialDueEpochMs ?: (resolvedStartEpochMs + 3L * 60L * 60L * 1000L)
+    var startEpochMs by rememberSaveable(initialStartEpochMs, initialDueEpochMs) {
+        mutableStateOf(resolvedStartEpochMs)
+    }
+    var dueEpochMs by rememberSaveable(initialStartEpochMs, initialDueEpochMs) {
+        mutableStateOf(
+            if (resolvedDueEpochMs > resolvedStartEpochMs) {
+                resolvedDueEpochMs
+            } else {
+                resolvedStartEpochMs + 3L * 60L * 60L * 1000L
+            },
+        )
+    }
     var selectedRepeat by rememberSaveable { mutableStateOf(RepeatPreset.NONE.name) }
 
     var listMenuExpanded by remember { mutableStateOf(false) }
