@@ -121,6 +121,7 @@ class AppViewModel @Inject constructor(
     fun saveServerUrl(
         rawUrl: String,
         onSuccess: () -> Unit,
+        onFailure: (String) -> Unit = {},
     ) {
         viewModelScope.launch {
             val result = repository.saveServerUrl(rawUrl)
@@ -134,11 +135,13 @@ class AppViewModel @Inject constructor(
                 }
                 onSuccess()
             }.onFailure { error ->
+                val message = error.message ?: "Invalid server URL"
                 _uiState.update {
                     it.copy(
-                        error = error.message ?: "Invalid server URL",
+                        error = message,
                     )
                 }
+                onFailure(message)
             }
         }
     }
