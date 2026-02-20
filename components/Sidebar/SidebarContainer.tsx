@@ -19,7 +19,7 @@ import UserCard from "./User/UserCard";
 import LineSeparator from "../ui/lineSeparator";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import TagSidebarSection from "./Tag/TagSidebarSection";
+import ListSidebarSection from "./List/ListSidebarSection";
 import {
   Sheet,
   SheetContent,
@@ -332,7 +332,7 @@ function ExpandedSidebarContent({
 
         <LineSeparator className="mx-3 my-0 border-sidebar-border/80" />
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto overflow-x-hidden text-muted-foreground">
-          <TagSidebarSection mode="expanded" onNavigate={onNavigate} />
+          <ListSidebarSection mode="expanded" onNavigate={onNavigate} />
         </div>
 
         <div className="border-t border-sidebar-border/80 p-3">
@@ -477,7 +477,7 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
         <LineSeparator className="mx-3 my-0 border-sidebar-border/80" />
         <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
-          <TagSidebarSection mode="collapsed" onNavigate={onNavigate} />
+          <ListSidebarSection mode="collapsed" onNavigate={onNavigate} />
         </div>
       </div>
 

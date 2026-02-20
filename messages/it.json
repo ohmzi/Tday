@@ -261,7 +261,7 @@
       "error": "Intervallo di date non valido: l'ora di fine deve essere successiva a quella di inizio."
     },
     "priority": "Priorità",
-    "project": "Progetto",
+    "list": "Progetto",
     "overdue": "Scaduto",
     "normal": "Normale",
     "important": "Importante",

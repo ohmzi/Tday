@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Options, RRule } from "rrule";
-import { AlignLeft, Clock, Flag, Repeat, Hash } from "lucide-react";
+import { AlignLeft, Clock, Flag, Repeat, Circle } from "lucide-react";
 import { TodoItemType, NonNullableDateRange } from "@/types";
 import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
 import DateDropdownMenu from "../../FormFields/Dropdowns/DateDropdown/DateDropdownMenu";
@@ -15,7 +15,7 @@ import {
   ModalFooter,
 } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
-import ProjectDropdownMenu from "@/components/todo/component/TodoForm/ProjectDropdownMenu";
+import ListDropdownMenu from "@/components/todo/component/TodoForm/ListDropdownMenu";
 import NLPTitleInput from "@/components/todo/component/TodoForm/NLPTitleInput";
 import deriveRepeatType from "@/lib/deriveRepeatType";
 type CreateCalendarFormProps = {
@@ -42,7 +42,7 @@ const CreateCalendarForm = ({
     to: end,
   });
   const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(null);
-  const [projectID, setProjectID] = useState<string | null>(null);
+  const [listID, setListID] = useState<string | null>(null);
   const derivedRepeatType = deriveRepeatType({ rruleOptions });
 
   const titleRef = useRef(null);
@@ -99,14 +99,14 @@ const CreateCalendarForm = ({
                   dtstart: dateRange.from || start,
                   due: dateRange.to || end,
                   rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
-                  projectID: projectID
+                  listID,
                 });
               }}
             >
               {/* Title */}
               <div className="flex items-start gap-4">
                 <NLPTitleInput
-                  setProjectID={setProjectID}
+                  setListID={setListID}
                   titleRef={titleRef}
                   title={title}
                   setTitle={setTitle}
@@ -138,15 +138,15 @@ const CreateCalendarForm = ({
                 </div>
               </div>
 
-              {/* Project */}
+              {/* List */}
               <div className="flex items-center gap-3">
-                <Hash className="w-4 h-4 text-muted-foreground mt-1" />
+                <Circle className="w-4 h-4 text-muted-foreground mt-1" />
                 <div className="flex-1">
-                  <ProjectDropdownMenu
-                    projectID={projectID}
-                    setProjectID={setProjectID}
+                  <ListDropdownMenu
+                    listID={listID}
+                    setListID={setListID}
                     className="bg-popover border text-foreground text-sm flex justify-center items-center gap-2 hover:bg-popover-border rounded-md"
-                    variant={"noHash"}
+                    variant={"compact"}
                   />
                 </div>
               </div>
@@ -202,9 +202,6 @@ const CreateCalendarForm = ({
 };
 
 export default CreateCalendarForm;
-
-
-
 
 
 

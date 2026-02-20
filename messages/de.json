@@ -261,7 +261,7 @@
       "error": "Ungültiger Datumsbereich: Die Endzeit muss nach der Startzeit liegen."
     },
     "priority": "Priorität",
-    "project": "Projekt",
+    "list": "Projekt",
     "overdue": "Überfällig",
     "normal": "Normal",
     "important": "Wichtig",

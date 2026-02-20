@@ -14,7 +14,7 @@ type Props = {
 
 export const metadata: Metadata = {
   title: "Tday",
-  description: "Organize your tasks, schedule your day, and plan projects with Tday, a secure and easy-to-use task planner.",
+  description: "Organize your tasks, schedule your day, and plan lists with Tday, a secure and easy-to-use task planner.",
   themeColor: "#E77D4E",
 };
 

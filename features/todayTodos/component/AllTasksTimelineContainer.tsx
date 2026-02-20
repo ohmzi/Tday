@@ -18,7 +18,7 @@ import { useEditTodoInstance } from "../query/update-todo-instance";
 import { useReorderTodo } from "../query/reorder-todo";
 import CreateTodoBtn from "./CreateTodoBtn";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
-import { useProjectMetaData } from "@/components/Sidebar/Project/query/get-project-meta";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useMenu } from "@/providers/MenuProvider";
@@ -150,15 +150,15 @@ const toSections = (items: TimelineItem[]) => {
   return sections;
 };
 
-const normalizeTagName = (name: string | null | undefined) =>
-  (name || "").replace(/^#+\s*/, "").trim();
+const normalizeListName = (name: string | null | undefined) =>
+  (name || "").trim();
 
 const AllTasksTimelineContainer = () => {
   const locale = useLocale();
   const appDict = useTranslations("app");
   const userTZ = useUserTimezone();
   const { setShowMenu } = useMenu();
-  const { projectMetaData } = useProjectMetaData();
+  const { listMetaData } = useListMetaData();
   const { todos, todoLoading } = useTodoTimeline();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -199,16 +199,17 @@ const AllTasksTimelineContainer = () => {
     return timelineItems.filter(({ todo }) => {
       const title = todo.title.toLowerCase();
       const description = (todo.description || "").toLowerCase();
-      const tagName = normalizeTagName(projectMetaData[todo.projectID || ""]?.name)
+      const listId = todo.listID ?? "";
+      const listName = normalizeListName(listMetaData[listId]?.name)
         .toLowerCase();
 
       return (
         title.includes(query) ||
         description.includes(query) ||
-        tagName.includes(query)
+        listName.includes(query)
       );
     });
-  }, [projectMetaData, searchQuery, timelineItems]);
+  }, [listMetaData, searchQuery, timelineItems]);
 
   const visibleTimelineItems = useMemo(
     () => filteredTimelineItems.slice(0, visibleCount),

@@ -8,7 +8,7 @@ export const CompletedTodoItemContainer = ({
 }: {
   completedTodoItem: CompletedTodoItemType;
 }) => {
-  const { title, description, projectName, projectColour } = completedTodoItem;
+  const { title, description, listName, listColor } = completedTodoItem;
   const { mutateUnComplete } = useUnCompleteTodo();
 
   return (
@@ -35,14 +35,14 @@ export const CompletedTodoItemContainer = ({
           )}
           <div className="flex flex-wrap items-center justify-start gap-2 text-xs sm:text-sm">
             <p className="text-lime">Completed</p>
-            {projectName && (
+            {listName && (
               <p className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
                 <span
                   className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: projectColour || "currentColor" }}
+                  style={{ backgroundColor: listColor || "currentColor" }}
                 />
                 <span className="max-w-14 truncate sm:max-w-24 md:max-w-52 lg:max-w-none">
-                  {projectName}
+                  {listName}
                 </span>
               </p>
             )}

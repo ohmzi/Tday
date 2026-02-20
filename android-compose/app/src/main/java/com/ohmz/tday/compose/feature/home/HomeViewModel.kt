@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.TdayRepository
 import com.ohmz.tday.compose.core.model.DashboardSummary
-import com.ohmz.tday.compose.core.model.ProjectSummary
+import com.ohmz.tday.compose.core.model.ListSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +21,7 @@ data class HomeUiState(
         allCount = 0,
         flaggedCount = 0,
         completedCount = 0,
-        projects = emptyList(),
+        lists = emptyList(),
     ),
     val errorMessage: String? = null,
 )
@@ -62,10 +62,14 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun createList(name: String) {
+    fun createList(
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+    ) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            runCatching { repository.createProject(name) }
+            runCatching { repository.createList(name, color = color, iconKey = iconKey) }
                 .onSuccess { refresh() }
                 .onFailure { error ->
                     _uiState.update {
@@ -75,10 +79,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun createTask(title: String) {
+    fun createTask(title: String, listId: String? = null) {
         if (title.isBlank()) return
         viewModelScope.launch {
-            runCatching { repository.createTodo(title = title, projectId = null) }
+            runCatching { repository.createTodo(title = title, listId = listId) }
                 .onSuccess { refresh() }
                 .onFailure { error ->
                     _uiState.update {
@@ -88,6 +92,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    val projects: List<ProjectSummary>
-        get() = _uiState.value.summary.projects
+    val lists: List<ListSummary>
+        get() = _uiState.value.summary.lists
 }

@@ -86,6 +86,7 @@ export async function PATCH(
       })
       .safeParse({
         ...rawBody,
+        listID: rawBody.listID ?? undefined,
         dtstart: rawBody.dtstart ? new Date(rawBody.dtstart) : undefined,
         due: rawBody.due ? new Date(rawBody.due) : undefined,
         instanceDate: rawBody.instanceDate
@@ -108,7 +109,7 @@ export async function PATCH(
       rrule,
       dateChanged,
       rruleChanged,
-      projectID,
+      listID,
     } = parsed.data;
 
     if (dateChanged && !dtstart) {
@@ -133,7 +134,7 @@ export async function PATCH(
             ? (due?.getTime() - dtstart?.getTime()) / (1000 * 60)
             : undefined,
         rrule,
-        projectID,
+        listID,
       },
     });
 
