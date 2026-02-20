@@ -39,7 +39,7 @@ class TodoListViewModel @Inject constructor(
                     TodoListMode.TODAY -> "Today"
                     TodoListMode.SCHEDULED -> "Scheduled"
                     TodoListMode.ALL -> "All Tasks"
-                    TodoListMode.FLAGGED -> "Flagged"
+                    TodoListMode.PRIORITY -> "Priority"
                     TodoListMode.LIST -> listName ?: "List"
                 },
             )
