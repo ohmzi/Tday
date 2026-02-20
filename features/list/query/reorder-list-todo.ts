@@ -3,7 +3,7 @@ import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { TodoItemType } from "@/types";
 
-export type changeMapType = {
+type changeMapType = {
   id: string;
   order: number;
 };

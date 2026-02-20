@@ -5,7 +5,7 @@ import { todoSchema } from "@/schema";
 import { TodoItemType } from "@/types";
 import { endOfDay } from "date-fns";
 
-export interface TodoItemTypeWithDateChecksum extends TodoItemType {
+interface TodoItemTypeWithDateChecksum extends TodoItemType {
   dateRangeChecksum: string;
   rruleChecksum: string | null;
 }
