@@ -1,19 +1,6 @@
-import { Prisma } from "@prisma/client";
 import type { ListColorType } from "@/schema";
 
 export type ListColor = ListColorType;
-
-export interface RegisterFormProp {
-  fname: string;
-  lname?: string;
-  email: string;
-  password: string;
-}
-
-export interface LoginFormProp {
-  email: string;
-  password: string;
-}
 
 export interface NoteItemType {
   id: string;
@@ -43,16 +30,6 @@ export type NonNullableDateRange = {
   from: Date;
   to: Date;
 };
-
-export type User = Prisma.UserGetPayload<{
-  include: {
-    accounts: true;
-    Todos: true;
-    CompletedTodo: true;
-    Note: true;
-    File: true;
-  };
-}>;
 
 export interface TodoItemType {
   id: string;

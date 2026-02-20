@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 import { startOfToday, endOfToday } from "date-fns";
 
-export const getTodo = async () => {
+const getTodo = async () => {
   const data = await api.GET({
     url: `/api/todo?start=${startOfToday().getTime()}&end=${endOfToday().getTime()}`,
   });

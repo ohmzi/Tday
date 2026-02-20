@@ -1,4 +1,3 @@
-import { test, expect } from "@jest/globals";
 import { genRule } from "@/lib/generateTodosFromRRule";
 
 /**
@@ -11,7 +10,7 @@ test("daily repeat generates 5 correct occurences", () => {
   const startedAt = new Date("2025-10-11T16:00:00Z"); // Oct-12-00:00 in China
   const rruleStr = "FREQ=DAILY;WKST=MO";
   const rule = genRule(rruleStr, startedAt, "Asia/Shanghai");
-  const occurences = rule.all((_, i) => i < 5);
+  const occurences = rule.all((_occ: Date, i: number) => i < 5);
   expect(occurences).toEqual([
     new Date("2025-10-11T16:00:00.000Z"),
     new Date("2025-10-12T16:00:00.000Z"),
@@ -26,7 +25,7 @@ test("weekly repeat on Tuesdays generates 5 correct occurences", () => {
   const rruleStr = "FREQ=WEEKLY;BYDAY=TU";
   const timeZone = "Asia/Shanghai";
   const rule = genRule(rruleStr, startedAt, timeZone);
-  const occurences = rule.all((_, i) => i < 5);
+  const occurences = rule.all((_occ: Date, i: number) => i < 5);
   expect(occurences).toEqual([
     new Date("2025-12-01T16:00:00.000Z"),
     new Date("2025-12-08T16:00:00.000Z"),
@@ -41,7 +40,7 @@ test("weekly repeat on Tuesdays and Thursdays generates 5 correct occurences", (
   const rruleStr = "FREQ=WEEKLY;BYDAY=TU,TH";
   const timeZone = "Asia/Shanghai";
   const rule = genRule(rruleStr, startedAt, timeZone);
-  const occurences = rule.all((_, i) => i < 5);
+  const occurences = rule.all((_occ: Date, i: number) => i < 5);
   expect(occurences).toEqual([
     new Date("2025-12-01T16:00:00.000Z"),
     new Date("2025-12-03T16:00:00.000Z"),
@@ -55,7 +54,7 @@ test("daily repeat at midnight boundary generates correct occurrences", () => {
   const startedAt = new Date("2025-10-11T16:00:00Z"); // Oct-12-00:00 in China
   const rruleStr = "FREQ=DAILY;WKST=MO";
   const rule = genRule(rruleStr, startedAt, "Asia/Shanghai");
-  const occurences = rule.all((_, i) => i < 5);
+  const occurences = rule.all((_occ: Date, i: number) => i < 5);
   expect(occurences).toEqual([
     new Date("2025-10-11T16:00:00.000Z"),
     new Date("2025-10-12T16:00:00.000Z"),
@@ -69,7 +68,7 @@ test("every January on Satuday generates correct occurrences", () => {
   const startedAt = new Date("2025-01-12T16:00:00Z"); // Jan-13-00:00 Mo in China
   const rruleStr = "FREQ=MONTHLY;COUNT=30;WKST=MO;BYDAY=SA;BYMONTH=1";
   const rule = genRule(rruleStr, startedAt, "Asia/Shanghai");
-  const occurences = rule.all((_, i) => i < 5);
+  const occurences = rule.all((_occ: Date, i: number) => i < 5);
   expect(occurences).toEqual([
     new Date("2025-01-17T16:00:00.000Z"),
     new Date("2025-01-24T16:00:00.000Z"),
@@ -101,7 +100,7 @@ test("Weekly repeat with until date set to 2 weeks from now", () => {
   const rruleStr = "FREQ=WEEKLY;UNTIL=20251230T020000;WKST=MO"; //until Dec-30 02:00 Tu in China (until is already local time)
   const timeZone = "Asia/Shanghai";
   const rule = genRule(rruleStr, startedAt, timeZone);
-  const occurences = rule.all((_, i) => i < 5);
+  const occurences = rule.all((_occ: Date, i: number) => i < 5);
   expect(occurences).toEqual([
     new Date("2025-12-01T17:00:00.000Z"),
     new Date("2025-12-08T17:00:00.000Z"),
