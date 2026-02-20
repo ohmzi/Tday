@@ -85,7 +85,7 @@ export const noteSchema = z.object({
     .min(1, { message: "title cannot be left empty" }),
   content: z.string().nullable().optional(),
 });
-export const ListColor = [
+const listColorValues = [
   "RED",
   "ORANGE",
   "YELLOW",
@@ -108,18 +108,18 @@ const listBaseSchema = z.object({
     .string({ message: "title cannot be left empty" })
     .trim()
     .min(1, { message: "title cannot be left empty" }),
-  color: z.enum(ListColor).nullable(),
+  color: z.enum(listColorValues).nullable(),
   iconKey: z.string().trim().min(1).nullable().optional(),
 });
 
 export const listCreateSchema = listBaseSchema.pick({
   name: true,
 }).extend({
-  color: z.enum(ListColor).optional(),
+  color: z.enum(listColorValues).optional(),
   iconKey: z.string().trim().min(1).max(64).optional(),
 });
 
-export type ListColorType = (typeof ListColor)[number];
+export type ListColorType = (typeof listColorValues)[number];
 
 export const listPatchSchema = listBaseSchema.partial().extend({
   name: z
@@ -127,7 +127,7 @@ export const listPatchSchema = listBaseSchema.partial().extend({
     .trim()
     .min(1, { message: "title cannot be left empty" })
     .optional(),
-  color: z.enum(ListColor).optional(),
+  color: z.enum(listColorValues).optional(),
   iconKey: z.string().trim().min(1).max(64).optional(),
 });
 
