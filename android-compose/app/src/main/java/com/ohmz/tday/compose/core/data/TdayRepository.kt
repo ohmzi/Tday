@@ -276,7 +276,7 @@ class TdayRepository @Inject constructor(
             todayCount = todayTodos.size,
             scheduledCount = timelineTodos.count { LocalDate.ofInstant(it.due, zoneId) != todayDate },
             allCount = timelineTodos.size,
-            flaggedCount = timelineTodos.count { it.priority.equals("High", ignoreCase = true) },
+            priorityCount = timelineTodos.count { isPriorityTodo(it.priority) },
             completedCount = completedTodos.size,
             lists = lists,
         )
@@ -299,7 +299,7 @@ class TdayRepository @Inject constructor(
                 timelineTodos.filter { LocalDate.ofInstant(it.due, zoneId) != todayDate }
             }
 
-            TodoListMode.FLAGGED -> timelineTodos.filter { it.priority.equals("High", ignoreCase = true) }
+            TodoListMode.PRIORITY -> timelineTodos.filter { isPriorityTodo(it.priority) }
 
             TodoListMode.LIST -> {
                 if (listId.isNullOrBlank()) {
@@ -1062,6 +1062,14 @@ class TdayRepository @Inject constructor(
         val start = Instant.ofEpochMilli(startOfTodayMillis())
         val end = Instant.ofEpochMilli(endOfTodayMillis())
         return todo.due >= start && todo.dtstart <= end
+    }
+
+    private fun isPriorityTodo(priority: String?): Boolean {
+        val normalized = priority?.trim()?.lowercase() ?: return false
+        return normalized == "medium" ||
+            normalized == "high" ||
+            normalized == "important" ||
+            normalized == "urgent"
     }
 
     private fun todoToCache(todo: TodoItem): CachedTodoRecord {
