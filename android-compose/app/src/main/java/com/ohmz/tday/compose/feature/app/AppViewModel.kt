@@ -25,6 +25,7 @@ data class AppUiState(
     val user: SessionUser? = null,
     val error: String? = null,
     val canResetServerTrust: Boolean = false,
+    val pendingApprovalMessage: String? = null,
 )
 
 @HiltViewModel
@@ -56,6 +57,7 @@ class AppViewModel @Inject constructor(
                         user = null,
                         error = null,
                         canResetServerTrust = false,
+                        pendingApprovalMessage = null,
                     )
                 }
                 return@launch
@@ -72,6 +74,7 @@ class AppViewModel @Inject constructor(
                         user = sessionUser,
                         error = null,
                         canResetServerTrust = false,
+                        pendingApprovalMessage = null,
                     )
                 }
                 repository.syncTimezone()
@@ -97,13 +100,29 @@ class AppViewModel @Inject constructor(
                                 user = authed,
                                 error = null,
                                 canResetServerTrust = false,
+                                pendingApprovalMessage = null,
                             )
                         }
                         return@launch
                     }
 
-                    is com.ohmz.tday.compose.core.model.AuthResult.Error,
                     com.ohmz.tday.compose.core.model.AuthResult.PendingApproval -> {
+                        _uiState.update {
+                            it.copy(
+                                loading = false,
+                                authenticated = false,
+                                requiresServerSetup = false,
+                                serverUrl = repository.getServerUrl(),
+                                user = null,
+                                error = null,
+                                canResetServerTrust = false,
+                                pendingApprovalMessage = "Account pending admin approval.",
+                            )
+                        }
+                        return@launch
+                    }
+
+                    is com.ohmz.tday.compose.core.model.AuthResult.Error -> {
                         // fall through to login screen
                     }
                 }
@@ -118,6 +137,7 @@ class AppViewModel @Inject constructor(
                     user = null,
                     error = null,
                     canResetServerTrust = false,
+                    pendingApprovalMessage = null,
                 )
             }
         }
@@ -139,6 +159,7 @@ class AppViewModel @Inject constructor(
                         serverUrl = normalized,
                         error = null,
                         canResetServerTrust = false,
+                        pendingApprovalMessage = null,
                     )
                 }
                 onSuccess()
@@ -148,6 +169,7 @@ class AppViewModel @Inject constructor(
                     it.copy(
                         error = message,
                         canResetServerTrust = error is ServerProbeException.CertificateChanged,
+                        pendingApprovalMessage = null,
                     )
                 }
                 onFailure(message)
@@ -167,6 +189,7 @@ class AppViewModel @Inject constructor(
                     it.copy(
                         error = null,
                         canResetServerTrust = false,
+                        pendingApprovalMessage = null,
                     )
                 }
                 onSuccess()
@@ -176,6 +199,7 @@ class AppViewModel @Inject constructor(
                     it.copy(
                         error = message,
                         canResetServerTrust = false,
+                        pendingApprovalMessage = null,
                     )
                 }
                 onFailure(message)
@@ -194,6 +218,7 @@ class AppViewModel @Inject constructor(
                     error = null,
                     loading = false,
                     canResetServerTrust = false,
+                    pendingApprovalMessage = null,
                 )
             }
         }
@@ -202,6 +227,10 @@ class AppViewModel @Inject constructor(
     fun setThemeMode(mode: AppThemeMode) {
         themePreferenceStore.setThemeMode(mode)
         _uiState.update { it.copy(themeMode = mode) }
+    }
+
+    fun clearPendingApprovalNotice() {
+        _uiState.update { it.copy(pendingApprovalMessage = null) }
     }
 
     private fun toServerSetupMessage(error: Throwable): String {

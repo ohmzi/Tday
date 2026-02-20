@@ -37,7 +37,10 @@ export async function POST(req: NextRequest) {
     // validate the body with zod
     const parsedObj = registrationSchema.safeParse(body);
     if (!parsedObj.success) {
-      throw new BadRequestError();
+      throw new BadRequestError(
+        parsedObj.error.errors[0]?.message ??
+          "The server recieved bad/malformed values",
+      );
     }
     const { fname, lname, email, password } = parsedObj.data;
 
