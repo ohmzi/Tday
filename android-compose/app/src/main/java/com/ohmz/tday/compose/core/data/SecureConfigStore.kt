@@ -7,6 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.util.UUID
 
 data class SavedCredentials(
     val email: String,
@@ -41,6 +42,68 @@ class SecureConfigStore @Inject constructor(
         return Result.success(normalized)
     }
 
+    fun normalizeServerUrl(raw: String): String? {
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) return null
+
+        val withScheme = when {
+            trimmed.startsWith("https://", ignoreCase = true) -> trimmed
+            trimmed.startsWith("http://", ignoreCase = true) -> trimmed
+            else -> "https://$trimmed"
+        }
+
+        val parsed = withScheme.toHttpUrlOrNull() ?: return null
+        val pathless = parsed.newBuilder()
+            .encodedPath("/")
+            .query(null)
+            .fragment(null)
+            .build()
+            .toString()
+
+        return pathless.removeSuffix("/")
+    }
+
+    fun getOrCreateDeviceId(): String {
+        val existing = prefs.getString(KEY_DEVICE_ID, null)
+        if (!existing.isNullOrBlank()) return existing
+
+        val created = UUID.randomUUID().toString()
+        prefs.edit().putString(KEY_DEVICE_ID, created).apply()
+        return created
+    }
+
+    fun serverTrustKeyForUrl(rawUrl: String): String? {
+        val normalized = normalizeServerUrl(rawUrl) ?: return null
+        val parsed = normalized.toHttpUrlOrNull() ?: return null
+        val usesDefaultPort = (parsed.scheme == "https" && parsed.port == 443) ||
+            (parsed.scheme == "http" && parsed.port == 80)
+        val authority = if (usesDefaultPort) parsed.host else "${parsed.host}:${parsed.port}"
+        return "${parsed.scheme}://$authority"
+    }
+
+    fun getTrustedServerFingerprint(serverTrustKey: String): String? {
+        return prefs.getString(fingerprintPrefKey(serverTrustKey), null)
+    }
+
+    fun saveTrustedServerFingerprint(
+        serverTrustKey: String,
+        fingerprint: String,
+    ) {
+        prefs.edit()
+            .putString(fingerprintPrefKey(serverTrustKey), fingerprint)
+            .apply()
+    }
+
+    fun clearTrustedServerFingerprintForUrl(rawUrl: String): Result<Unit> {
+        val serverTrustKey = serverTrustKeyForUrl(rawUrl)
+            ?: return Result.failure(IllegalArgumentException("Invalid server URL"))
+
+        prefs.edit()
+            .remove(fingerprintPrefKey(serverTrustKey))
+            .apply()
+        return Result.success(Unit)
+    }
+
     fun getSavedCredentials(): SavedCredentials? {
         val email = prefs.getString(KEY_EMAIL, null).orEmpty()
         val password = prefs.getString(KEY_PASSWORD, null).orEmpty()
@@ -68,25 +131,8 @@ class SecureConfigStore @Inject constructor(
         return "$base$normalizedPath"
     }
 
-    private fun normalizeServerUrl(raw: String): String? {
-        val trimmed = raw.trim()
-        if (trimmed.isBlank()) return null
-
-        val withScheme = when {
-            trimmed.startsWith("https://", ignoreCase = true) -> trimmed
-            trimmed.startsWith("http://", ignoreCase = true) -> trimmed
-            else -> "https://$trimmed"
-        }
-
-        val parsed = withScheme.toHttpUrlOrNull() ?: return null
-        val pathless = parsed.newBuilder()
-            .encodedPath("/")
-            .query(null)
-            .fragment(null)
-            .build()
-            .toString()
-
-        return pathless.removeSuffix("/")
+    private fun fingerprintPrefKey(serverTrustKey: String): String {
+        return "$KEY_CERT_FINGERPRINT_PREFIX$serverTrustKey"
     }
 
     private companion object {
@@ -94,5 +140,7 @@ class SecureConfigStore @Inject constructor(
         const val KEY_SERVER_URL = "server_url"
         const val KEY_EMAIL = "email"
         const val KEY_PASSWORD = "password"
+        const val KEY_DEVICE_ID = "device_id"
+        const val KEY_CERT_FINGERPRINT_PREFIX = "cert_fp_"
     }
 }

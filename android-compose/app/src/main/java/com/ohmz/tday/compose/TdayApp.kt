@@ -186,9 +186,19 @@ fun TdayApp() {
                         OnboardingWizardOverlay(
                             initialServerUrl = appUiState.serverUrl,
                             serverErrorMessage = appUiState.error,
+                            serverCanResetTrust = appUiState.canResetServerTrust,
                             authUiState = authUiState,
                             onConnectServer = { rawUrl, onResult ->
                                 appViewModel.saveServerUrl(
+                                    rawUrl = rawUrl,
+                                    onSuccess = { onResult(Result.success(Unit)) },
+                                    onFailure = { message ->
+                                        onResult(Result.failure(IllegalStateException(message)))
+                                    },
+                                )
+                            },
+                            onResetServerTrust = { rawUrl, onResult ->
+                                appViewModel.resetTrustedServer(
                                     rawUrl = rawUrl,
                                     onSuccess = { onResult(Result.success(Unit)) },
                                     onFailure = { message ->

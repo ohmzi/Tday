@@ -6,6 +6,10 @@ import {
   BadRequestError,
   InternalError,
 } from "@/lib/customError";
+import {
+  buildAuthThrottleResponse,
+  enforceAuthRateLimit,
+} from "@/lib/security/authThrottle";
 import { sha256 } from "@noble/hashes/sha256";
 import { pbkdf2 } from "@noble/hashes/pbkdf2";
 import { randomBytes } from "@noble/hashes/utils";
@@ -14,8 +18,21 @@ import { Prisma } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
-    // await the req body
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      throw new BadRequestError("invalid request body");
+    }
+
+    const throttleResult = await enforceAuthRateLimit({
+      action: "register",
+      request: req,
+      identifier: extractEmailCandidate(body),
+    });
+    if (!throttleResult.allowed) {
+      return buildAuthThrottleResponse(throttleResult);
+    }
 
     // validate the body with zod
     const parsedObj = registrationSchema.safeParse(body);
@@ -151,4 +168,11 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function extractEmailCandidate(body: unknown): string | null {
+  if (!body || typeof body !== "object") return null;
+  const candidate = (body as { email?: unknown }).email;
+  if (typeof candidate !== "string") return null;
+  return candidate;
 }

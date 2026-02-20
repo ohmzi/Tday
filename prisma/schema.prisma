@@ -229,6 +229,22 @@ model Project {
   updatedAt DateTime @updatedAt
   @@index([userID])
 }
+
+model AuthThrottle {
+  id            String    @id @default(cuid())
+  scope         String
+  bucketKey     String
+  requestCount  Int       @default(0)
+  failureCount  Int       @default(0)
+  windowStart   DateTime  @default(now())
+  lockUntil     DateTime?
+  lastFailureAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([scope, bucketKey])
+  @@index([scope, lockUntil])
+}
  
 model File{
   id            String          @id @default(cuid())
@@ -254,4 +270,3 @@ model eventLog{
     eventName   String
     log         String
   }
-
