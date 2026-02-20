@@ -19,7 +19,7 @@ const LandingPage = () => {
   const FEATURES = [
     {
       id: 1,
-      tag: dict("features.0.tag"),
+      list: dict("features.0.list"),
       title: dict("features.0.title"),
       description: dict("features.0.description"),
       bullets: [
@@ -32,7 +32,7 @@ const LandingPage = () => {
     },
     {
       id: 2,
-      tag: dict("features.1.tag"),
+      list: dict("features.1.list"),
       title: dict("features.1.title"),
       description: dict("features.1.description"),
       bullets: [
@@ -45,7 +45,7 @@ const LandingPage = () => {
     },
     {
       id: 3,
-      tag: dict("features.2.tag"),
+      list: dict("features.2.list"),
       title: dict("features.2.title"),
       description: dict("features.2.description"),
       bullets: [
@@ -58,7 +58,7 @@ const LandingPage = () => {
     },
     {
       id: 4,
-      tag: dict("features.3.tag"),
+      list: dict("features.3.list"),
       title: dict("features.3.title"),
       description: dict("features.3.description"),
       bullets: [
@@ -186,7 +186,7 @@ const LandingPage = () => {
                   </div>
 
                   <div className="text-xs sm:text-sm font-mono text-lime brightness-150 tracking-wider">
-                    {feature.tag}
+                    {feature.list}
                   </div>
                   <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
                     {feature.title}

@@ -11,8 +11,8 @@ import { Check } from "lucide-react";
 import { getDisplayDate } from "@/lib/date/displayDate";
 import { useLocale } from "next-intl";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
-import { useProjectMetaData } from "@/components/Sidebar/Project/query/get-project-meta";
-import ProjectTag from "@/components/ProjectTag";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
+import ListDot from "@/components/ListDot";
 import TodoItemMenuContainer from "./TodoItem/TodoMenu/TodoItemMenuContainer";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 
@@ -28,7 +28,7 @@ type TodoItemContainerProps = {
 }
 
 export const TodoItemContainer = ({ todoItem, overdue }: TodoItemContainerProps) => {
-  const { projectMetaData } = useProjectMetaData();
+  const { listMetaData } = useListMetaData();
   const { useCompleteTodo } = useTodoMutation();
   const { completeMutateFn } = useCompleteTodo();
   const locale = useLocale();
@@ -41,6 +41,7 @@ export const TodoItemContainer = ({ todoItem, overdue }: TodoItemContainerProps)
     transition,
   };
   const { title, description, completed, priority, rrule, dtstart } = todoItem;
+  const itemListID = todoItem.listID;
   const [displayForm, setDisplayForm] = useState(false);
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
@@ -111,11 +112,11 @@ export const TodoItemContainer = ({ todoItem, overdue }: TodoItemContainerProps)
             <p className={clsx(overdue ? "text-orange" : "text-lime")}>
               {getDisplayDate(dtstart, true, locale, userTimeZone?.timeZone)}
             </p>
-            {todoItem.projectID &&
+            {itemListID &&
               <p className='flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80'>
-                <ProjectTag id={todoItem.projectID} className="shrink-0 text-sm" />
+                <ListDot id={itemListID} className="shrink-0 text-sm" />
                 <span className="max-w-14 truncate sm:max-w-24 md:max-w-52 lg:max-w-none">
-                  {projectMetaData[todoItem.projectID]?.name}
+                  {listMetaData[itemListID]?.name}
                 </span>
               </p>
             }

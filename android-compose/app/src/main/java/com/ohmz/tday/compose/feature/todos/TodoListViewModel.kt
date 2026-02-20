@@ -17,7 +17,7 @@ data class TodoListUiState(
     val isLoading: Boolean = false,
     val title: String = "Tasks",
     val mode: TodoListMode = TodoListMode.TODAY,
-    val projectId: String? = null,
+    val listId: String? = null,
     val items: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
 )
@@ -30,17 +30,17 @@ class TodoListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TodoListUiState())
     val uiState: StateFlow<TodoListUiState> = _uiState.asStateFlow()
 
-    fun load(mode: TodoListMode, projectId: String? = null, projectName: String? = null) {
+    fun load(mode: TodoListMode, listId: String? = null, listName: String? = null) {
         _uiState.update {
             it.copy(
                 mode = mode,
-                projectId = projectId,
+                listId = listId,
                 title = when (mode) {
                     TodoListMode.TODAY -> "Today"
                     TodoListMode.SCHEDULED -> "Scheduled"
                     TodoListMode.ALL -> "All Tasks"
                     TodoListMode.FLAGGED -> "Flagged"
-                    TodoListMode.PROJECT -> projectName ?: "Project"
+                    TodoListMode.LIST -> listName ?: "List"
                 },
             )
         }
@@ -49,12 +49,12 @@ class TodoListViewModel @Inject constructor(
 
     fun refresh() {
         val mode = _uiState.value.mode
-        val projectId = _uiState.value.projectId
+        val listId = _uiState.value.listId
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching {
-                repository.fetchTodos(mode = mode, projectId = projectId)
+                repository.fetchTodos(mode = mode, listId = listId)
             }.onSuccess { todos ->
                 _uiState.update {
                     it.copy(
@@ -76,11 +76,11 @@ class TodoListViewModel @Inject constructor(
 
     fun addTask(title: String) {
         if (title.isBlank()) return
-        val projectId = _uiState.value.projectId
+        val listId = _uiState.value.listId
 
         viewModelScope.launch {
             runCatching {
-                repository.createTodo(title = title, projectId = projectId)
+                repository.createTodo(title = title, listId = listId)
             }.onSuccess {
                 refresh()
             }.onFailure { error ->

@@ -72,7 +72,7 @@ data class CreateTodoRequest(
     val dtstart: String,
     val due: String,
     val rrule: String? = null,
-    val projectID: String? = null,
+    val listID: String? = null,
 )
 
 @Serializable
@@ -87,7 +87,7 @@ data class TodoDto(
     val rrule: String? = null,
     val instanceDate: String? = null,
     val completed: Boolean = false,
-    val projectID: String? = null,
+    val listID: String? = null,
 )
 
 @Serializable
@@ -108,16 +108,28 @@ data class ReorderItemRequest(
 )
 
 @Serializable
-data class ProjectsResponse(
-    val projects: List<ProjectDto> = emptyList(),
+data class ListsResponse(
+    val lists: List<ListDto> = emptyList(),
 )
 
 @Serializable
-data class ProjectDto(
+data class CreateListRequest(
+    val name: String,
+    val color: String? = null,
+)
+
+@Serializable
+data class ListDto(
     val id: String,
     val name: String,
     val color: String? = null,
     val todoCount: Int = 0,
+)
+
+@Serializable
+data class CreateListResponse(
+    val message: String? = null,
+    val list: ListDto? = null,
 )
 
 @Serializable
@@ -155,8 +167,8 @@ data class CompletedTodoDto(
     val due: String,
     val rrule: String? = null,
     val instanceDate: String? = null,
-    val projectName: String? = null,
-    val projectColor: String? = null,
+    val listName: String? = null,
+    val listColor: String? = null,
 )
 
 @Serializable

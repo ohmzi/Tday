@@ -12,8 +12,8 @@ import Unpin from "@/components/ui/icon/unpin";
 import { TodoItemType } from "@/types";
 import { useTranslations } from "next-intl";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
-import { useProjectMetaData } from "@/components/Sidebar/Project/query/get-project-meta";
-import ProjectTag from "@/components/ProjectTag";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
+import ListDot from "@/components/ListDot";
 import { Flag } from "lucide-react";
 
 function TodoItemMeatballMenuContent({
@@ -33,7 +33,7 @@ function TodoItemMeatballMenuContent({
     const { editTodoMutateFn } = useEditTodo();
     const { deleteMutateFn, deletePending } = useDeleteTodo();
     const { pinMutateFn } = usePinTodo();
-    const { projectMetaData } = useProjectMetaData();
+    const { listMetaData } = useListMetaData();
     return (
         <>
             <DropdownMenuItem className="mx-1 p-1.5 px-2 gap-1.5" onClick={() => pinMutateFn(todo)}>
@@ -68,22 +68,27 @@ function TodoItemMeatballMenuContent({
 
             </DropdownMenuItem>
 
-            {/* move to project sub menu */}
+            {/* move to list sub menu */}
             <DropdownMenuSub>
                 <DropdownMenuSubTrigger className="bg-inherit hover:bg-popover mx-1">
                     <ArrowRightLeft strokeWidth={1.7} className="w-4! h-4!" />
                     {todayDict("menu.Move to")}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="max-h-56 overflow-scroll">
-                    {Object.entries(projectMetaData).map(([key, value]) => {
+                    {Object.entries(listMetaData).map(([key, value]) => {
                         const dateRangeChecksum = todo.dtstart.toISOString() + todo.due.toISOString();
                         const rruleChecksum = todo.rrule
                         return <DropdownMenuItem
                             key={key}
                             onClick={() => {
-                                editTodoMutateFn({ ...todo, projectID: key, dateRangeChecksum, rruleChecksum })
+                                editTodoMutateFn({
+                                    ...todo,
+                                    listID: key,
+                                    dateRangeChecksum,
+                                    rruleChecksum
+                                })
                             }}>
-                            <ProjectTag id={key} className="text-base pr-0" />{value.name}
+                            <ListDot id={key} className="text-base pr-0" />{value.name}
                         </DropdownMenuItem>
                     })}
                 </DropdownMenuSubContent>

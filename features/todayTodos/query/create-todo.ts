@@ -13,7 +13,7 @@ async function postTodo({ todo }: { todo: TodoItemType }) {
     dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
-    projectID: todo.projectID,
+    listID: todo.listID ?? null,
   });
 
   if (!parsedObj.success) {
@@ -41,12 +41,12 @@ export const useCreateTodo = () => {
     onMutate: async (newTodo) => {
       await queryClient.cancelQueries({ queryKey: ["todo"] });
       await queryClient.cancelQueries({ queryKey: ["todoTimeline"] });
-      await queryClient.cancelQueries({ queryKey: ["project"] });
+      await queryClient.cancelQueries({ queryKey: ["list"] });
 
       const oldTodos = queryClient.getQueryData(["todo"]);
-      const oldProjectTodos = queryClient.getQueryData<TodoItemType[]>([
-        "project",
-        newTodo.projectID,
+      const oldListTodos = queryClient.getQueryData<TodoItemType[]>([
+        "list",
+        newTodo.listID,
       ]);
 
       queryClient.setQueryData(["todo"], (old: TodoItemType[]) => [
@@ -58,29 +58,30 @@ export const useCreateTodo = () => {
         newTodo,
       ]);
 
-      if (newTodo.projectID) {
+      const targetListID = newTodo.listID;
+      if (targetListID) {
         queryClient.setQueriesData(
-          { queryKey: ["project", newTodo.projectID] },
+          { queryKey: ["list", targetListID] },
           (old: TodoItemType[]) => {
             return [...old, newTodo];
           },
         );
       }
 
-      return { oldTodos, oldProjectTodos };
+      return { oldTodos, oldListTodos };
     },
     //if fetch error then revert optimistic updates including form states
     onError: (error, newTodo, context) => {
       queryClient.setQueryData(["todo"], context?.oldTodos);
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
-      queryClient.setQueryData(["project"], context?.oldProjectTodos);
+      queryClient.setQueryData(["list"], context?.oldListTodos);
       toast({ description: error.message, variant: "destructive" });
     },
     onSettled: (_, error, newTodo) => {
       queryClient.invalidateQueries({ queryKey: ["todo"] });
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
       queryClient.invalidateQueries({
-        queryKey: ["project", newTodo.projectID],
+        queryKey: ["list", newTodo.listID],
       });
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
     },
@@ -91,9 +92,10 @@ export const useCreateTodo = () => {
       queryClient.setQueryData(["todoTimeline"], (old: TodoItemType[] = []) =>
         old.map((t) => (t.id === newTodo.id ? createdTodo : t)),
       );
-      if (createdTodo.projectID) {
+      const targetListID = createdTodo.listID;
+      if (targetListID) {
         queryClient.setQueryData(
-          ["project", createdTodo.projectID],
+          ["list", targetListID],
           (old: TodoItemType[] = []) =>
             old.map((t) => (t.id === newTodo.id ? createdTodo : t)),
         );
