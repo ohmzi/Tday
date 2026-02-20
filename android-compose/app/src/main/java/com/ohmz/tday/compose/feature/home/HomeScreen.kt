@@ -2,11 +2,13 @@ package com.ohmz.tday.compose.feature.home
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,13 +29,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.List
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -58,10 +61,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -175,6 +181,7 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         color = Color(0xFFA8B0B7),
                         icon = Icons.Rounded.CalendarToday,
+                        backgroundGrid = true,
                         title = "Calendar",
                         count = uiState.summary.scheduledCount,
                         onClick = onOpenCalendar,
@@ -262,10 +269,6 @@ private fun TopSearchBar(
 
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    val widthFraction by animateFloatAsState(
-        targetValue = if (searchExpanded) 1f else 0.5f,
-        label = "topSearchBarWidthFraction",
-    )
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
@@ -274,13 +277,18 @@ private fun TopSearchBar(
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.CenterEnd,
-    ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val collapsedWidth = 168.dp.coerceAtMost(maxWidth)
+        val expandedWidth = maxWidth
+        val animatedWidth by animateDpAsState(
+            targetValue = if (searchExpanded) expandedWidth else collapsedWidth,
+            label = "topSearchBarWidth",
+        )
+
         Row(
             modifier = Modifier
-                .fillMaxWidth(widthFraction)
+                .align(Alignment.CenterEnd)
+                .width(animatedWidth)
                 .clip(RoundedCornerShape(32.dp))
                 .background(colorScheme.surfaceVariant)
                 .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -291,13 +299,22 @@ private fun TopSearchBar(
                 icon = Icons.Rounded.Search,
                 contentDescription = "Search",
                 tint = colorScheme.onSurface,
-                onClick = { searchExpanded = true },
+                onClick = {
+                    if (searchExpanded) {
+                        searchExpanded = false
+                        focusManager.clearFocus(force = true)
+                        keyboardController?.hide()
+                    } else {
+                        searchExpanded = true
+                    }
+                },
             )
 
             if (searchExpanded) {
                 TextField(
                     modifier = Modifier
                         .weight(1f)
+                        .height(40.dp)
                         .focusRequester(focusRequester),
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -311,31 +328,20 @@ private fun TopSearchBar(
                         unfocusedIndicatorColor = Color.Transparent,
                     ),
                 )
-                PressableIconButton(
-                    icon = Icons.Rounded.Close,
-                    contentDescription = "Close search",
-                    tint = colorScheme.onSurface,
-                    onClick = {
-                        searchExpanded = false
-                        searchQuery = ""
-                        focusManager.clearFocus(force = true)
-                        keyboardController?.hide()
-                    },
-                )
-            } else {
-                PressableIconButton(
-                    icon = Icons.Rounded.List,
-                    contentDescription = "Notes",
-                    tint = colorScheme.onSurface,
-                    onClick = onOpenNotes,
-                )
-                PressableIconButton(
-                    icon = Icons.Rounded.MoreHoriz,
-                    contentDescription = "More",
-                    tint = colorScheme.onSurface,
-                    onClick = onOpenSettings,
-                )
             }
+
+            PressableIconButton(
+                icon = Icons.Rounded.List,
+                contentDescription = "Notes",
+                tint = colorScheme.onSurface,
+                onClick = onOpenNotes,
+            )
+            PressableIconButton(
+                icon = Icons.Rounded.MoreHoriz,
+                contentDescription = "More",
+                tint = colorScheme.onSurface,
+                onClick = onOpenSettings,
+            )
         }
     }
 }
@@ -398,7 +404,7 @@ private fun CategoryGrid(
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFF6EA8E1),
-                icon = Icons.Rounded.CalendarToday,
+                icon = Icons.Rounded.WbSunny,
                 title = "Today",
                 count = todayCount,
                 onClick = onOpenToday,
@@ -406,7 +412,7 @@ private fun CategoryGrid(
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFD48A8C),
-                icon = Icons.Rounded.CalendarToday,
+                icon = Icons.Rounded.Schedule,
                 title = "Scheduled",
                 count = scheduledCount,
                 onClick = onOpenScheduled,
@@ -446,6 +452,8 @@ private fun CategoryCard(
     modifier: Modifier,
     color: Color,
     icon: ImageVector,
+    backgroundWatermark: ImageVector? = null,
+    backgroundGrid: Boolean = false,
     title: String,
     count: Int,
     onClick: () -> Unit,
@@ -485,7 +493,7 @@ private fun CategoryCard(
         ),
         shape = RoundedCornerShape(26.dp),
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .drawWithCache {
@@ -500,6 +508,38 @@ private fun CategoryCard(
                             y = size.height * 0.2f,
                         ),
                         radius = size.maxDimension * 0.9f,
+                    )
+                    val pearlWash = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.12f),
+                            Color(0xFFE7F3FF).copy(alpha = 0.1f),
+                            Color(0xFFFFF2FA).copy(alpha = 0.08f),
+                            Color.Transparent,
+                        ),
+                        start = Offset(
+                            x = size.width * 0.05f,
+                            y = size.height * 0.04f,
+                        ),
+                        end = Offset(
+                            x = size.width * 0.9f,
+                            y = size.height * 0.75f,
+                        ),
+                    )
+                    val pearlBand = Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.16f),
+                            Color(0xFFDDF0FF).copy(alpha = 0.1f),
+                            Color.Transparent,
+                        ),
+                        start = Offset(
+                            x = size.width * 0.08f,
+                            y = 0f,
+                        ),
+                        end = Offset(
+                            x = size.width * 0.68f,
+                            y = size.height,
+                        ),
                     )
                     val depthShade = Brush.linearGradient(
                         colors = listOf(
@@ -517,33 +557,94 @@ private fun CategoryCard(
                     )
                     onDrawWithContent {
                         drawRect(iconSideGlow)
+                        drawRect(pearlWash)
+                        drawRect(pearlBand)
                         drawRect(depthShade)
                         drawContent()
                     }
                 }
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(icon, contentDescription = null, tint = Color.White)
-                Text(
-                    text = count.toString(),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Black,
+            if (backgroundGrid) {
+                val gridTint = lerp(color, Color.White, 0.32f)
+                Canvas(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 28.dp, y = 14.dp)
+                        .size(width = 172.dp, height = 116.dp)
+                        .graphicsLayer { alpha = 0.42f },
+                ) {
+                    val cols = 6
+                    val rows = 4
+                    val stroke = 1.2.dp.toPx()
+                    val lineColor = gridTint.copy(alpha = 0.85f)
+                    val borderColor = gridTint.copy(alpha = 0.95f)
+
+                    drawRoundRect(
+                        color = borderColor,
+                        cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
+                        style = Stroke(width = stroke),
+                    )
+
+                    for (i in 1 until cols) {
+                        val x = size.width * i / cols
+                        drawLine(
+                            color = lineColor,
+                            start = Offset(x, 0f),
+                            end = Offset(x, size.height),
+                            strokeWidth = stroke,
+                        )
+                    }
+                    for (j in 1 until rows) {
+                        val y = size.height * j / rows
+                        drawLine(
+                            color = lineColor,
+                            start = Offset(0f, y),
+                            end = Offset(size.width, y),
+                            strokeWidth = stroke,
+                        )
+                    }
+                }
+            }
+
+            if (backgroundWatermark != null) {
+                Icon(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 14.dp, y = 6.dp)
+                        .size(92.dp),
+                    imageVector = backgroundWatermark,
+                    contentDescription = null,
+                    tint = lerp(color, Color.White, 0.22f).copy(alpha = 0.35f),
                 )
             }
 
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(icon, contentDescription = null, tint = Color.White)
+                    Text(
+                        text = count.toString(),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }
