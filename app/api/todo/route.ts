@@ -38,7 +38,6 @@ const todoDeleteByIdSchema = z.object({
     .string({ message: "todo id is required" })
     .trim()
     .min(1, { message: "todo id is required" }),
-  instanceDate: z.number().int().positive().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -230,22 +229,7 @@ export async function DELETE(req: NextRequest) {
       throw new BadRequestError("Invalid request body");
     }
 
-    const { id, instanceDate } = parsed.data;
-    if (instanceDate) {
-      await prisma.todoInstance.deleteMany({
-        where: {
-          todoId: id,
-          instanceDate: new Date(instanceDate),
-          todo: {
-            userID: user.id,
-          },
-        },
-      });
-      return NextResponse.json(
-        { message: "todo instance deleted" },
-        { status: 200 },
-      );
-    }
+    const { id } = parsed.data;
 
     await prisma.todo.delete({
       where: {
