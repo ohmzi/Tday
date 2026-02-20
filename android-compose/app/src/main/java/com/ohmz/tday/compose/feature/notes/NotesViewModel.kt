@@ -27,6 +27,10 @@ class NotesViewModel @Inject constructor(
     val uiState: StateFlow<NotesUiState> = _uiState.asStateFlow()
 
     fun load() {
+        loadInternal(showLoading = false)
+    }
+
+    fun refresh() {
         loadInternal(showLoading = true)
     }
 

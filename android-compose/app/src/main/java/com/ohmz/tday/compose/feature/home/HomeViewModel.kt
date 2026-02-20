@@ -37,7 +37,7 @@ class HomeViewModel @Inject constructor(
     init {
         refreshInternal(
             forceSync = false,
-            showLoading = true,
+            showLoading = false,
         )
     }
 
