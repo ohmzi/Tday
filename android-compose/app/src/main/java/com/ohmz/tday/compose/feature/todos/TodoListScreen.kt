@@ -651,28 +651,39 @@ private fun buildTodaySections(
     zoneId: ZoneId,
 ): List<TodoSection> {
     val sorted = items.sortedBy { it.due }
-    fun inRange(startInclusive: Int, endInclusive: Int): (TodoItem) -> Boolean = { todo ->
-        val hour = todo.due.atZone(zoneId).hour
-        hour in startInclusive..endInclusive
+    val noon = LocalTime.NOON
+    val eveningStartBoundary = LocalTime.of(18, 0)
+
+    fun sectionOf(todo: TodoItem): TodaySectionSlot {
+        val dueTime = todo.due.atZone(zoneId).toLocalTime()
+        return when {
+            // Requested boundaries:
+            // Morning: 12:01 AM -> 12:00 PM (inclusive of 12:00 PM)
+            // Afternoon: 12:01 PM -> 6:00 PM
+            // Tonight: 6:01 PM -> end of day
+            dueTime <= noon -> TodaySectionSlot.MORNING
+            dueTime <= eveningStartBoundary -> TodaySectionSlot.AFTERNOON
+            else -> TodaySectionSlot.TONIGHT
+        }
     }
 
     return listOf(
         TodoSection(
             key = "today-morning",
             title = "Morning",
-            items = sorted.filter(inRange(0, 11)),
+            items = sorted.filter { sectionOf(it) == TodaySectionSlot.MORNING },
             quickAddSlot = TodaySectionSlot.MORNING,
         ),
         TodoSection(
             key = "today-afternoon",
             title = "Afternoon",
-            items = sorted.filter(inRange(12, 17)),
+            items = sorted.filter { sectionOf(it) == TodaySectionSlot.AFTERNOON },
             quickAddSlot = TodaySectionSlot.AFTERNOON,
         ),
         TodoSection(
             key = "today-tonight",
             title = "Tonight",
-            items = sorted.filter(inRange(18, 23)),
+            items = sorted.filter { sectionOf(it) == TodaySectionSlot.TONIGHT },
             quickAddSlot = TodaySectionSlot.TONIGHT,
         ),
     )
@@ -791,12 +802,17 @@ private fun quickAddDefaultsForTodaySection(
 ): Pair<Long, Long> {
     val today = LocalDate.now(zoneId)
     val dueTime = when (slot) {
-        TodaySectionSlot.MORNING -> LocalTime.of(11, 59)
-        TodaySectionSlot.AFTERNOON -> LocalTime.of(17, 59)
+        TodaySectionSlot.MORNING -> LocalTime.NOON
+        TodaySectionSlot.AFTERNOON -> LocalTime.of(18, 0)
         TodaySectionSlot.TONIGHT -> LocalTime.of(23, 59)
     }
+    val startTime = when (slot) {
+        TodaySectionSlot.MORNING -> dueTime.minusHours(1)
+        TodaySectionSlot.AFTERNOON -> dueTime.minusHours(1)
+        TodaySectionSlot.TONIGHT -> LocalTime.of(23, 0)
+    }
     val due = ZonedDateTime.of(today, dueTime, zoneId)
-    val start = due.minusHours(1)
+    val start = ZonedDateTime.of(today, startTime, zoneId)
     return start.toInstant().toEpochMilli() to due.toInstant().toEpochMilli()
 }
 
