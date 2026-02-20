@@ -11,7 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -32,7 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.core.model.NoteItem
@@ -46,17 +45,18 @@ fun NotesScreen(
     onCreate: (String) -> Unit,
     onDelete: (String) -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     var noteName by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
-        containerColor = Color(0xFF050507),
+        containerColor = colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Notes") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -69,8 +69,8 @@ fun NotesScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showCreateDialog = true },
-                containerColor = Color(0xFF4B9AF4),
-                contentColor = Color.White,
+                containerColor = colorScheme.primary,
+                contentColor = colorScheme.onPrimary,
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = "Add note")
             }
@@ -87,7 +87,7 @@ fun NotesScreen(
                 item {
                     Text(
                         text = if (uiState.isLoading) "Loading..." else "No notes yet",
-                        color = Color(0xFFB0B8CC),
+                        color = colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -151,22 +151,23 @@ private fun NoteRow(
     note: NoteItem,
     onDelete: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF171A22)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
                 text = note.name,
-                color = Color.White,
+                color = colorScheme.onSurface,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             note.content?.takeIf { it.isNotBlank() }?.let {
                 Text(
                     text = it,
-                    color = Color(0xFF9AA2B6),
+                    color = colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

@@ -25,3 +25,7 @@ Persistence:
 - Login credentials are stored encrypted after successful login.
 - On future app launches, the app reuses saved server + credentials and does not ask again.
 - Data is reset only if app data is cleared or app is uninstalled.
+
+Theme:
+- Theme mode can be changed in Settings: `System`, `Light`, or `Dark`.
+- Selection is persisted locally and applied immediately.
