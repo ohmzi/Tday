@@ -1,18 +1,9 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 import withBundleAnalyzer from "@next/bundle-analyzer";
-import withPWAInit from "@ducanh2912/next-pwa";
 
 const analyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
-});
-
-const withPWA = withPWAInit({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  register: true,
-  cacheOnFrontEndNav: true,
-  cacheStartUrl: true,
 });
 
 const nextConfig: NextConfig = {
@@ -61,4 +52,4 @@ const nextConfig: NextConfig = {
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
-export default withPWA(analyzer(withNextIntl(nextConfig)));
+export default analyzer(withNextIntl(nextConfig));
