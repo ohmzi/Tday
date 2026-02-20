@@ -42,6 +42,8 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching {
+                // Pull-to-refresh should force a remote sync before re-reading cached summary.
+                repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
                 repository.fetchDashboardSummary()
             }.onSuccess { summary ->
                 _uiState.update {

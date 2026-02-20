@@ -292,6 +292,7 @@ fun TdayApp() {
             composable(AppRoute.Calendar.route) {
                 CalendarScreen(
                     onBack = { navController.popBackStack() },
+                    isRefreshing = appUiState.loading,
                     onRefresh = appViewModel::refreshSession,
                     onOpenScheduled = {
                         navController.navigate(AppRoute.ScheduledTodos.route)
