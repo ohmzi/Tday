@@ -18,6 +18,9 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.network.TdayApiService
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -41,6 +44,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.TimeZone
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -184,6 +188,7 @@ class TdayRepository @Inject constructor(
                 "callbackUrl" to callbackUrl,
             ),
         )
+        secureConfigStore.clearOfflineSyncState()
     }
 
     suspend fun syncTimezone() {
@@ -230,7 +235,9 @@ class TdayRepository @Inject constructor(
         validateProbeContract(probeBody)
         verifyAndPersistServerTrust(parsedServerUrl, probeResponse)
 
-        secureConfigStore.saveServerUrl(normalizedServerUrl).getOrThrow()
+        val saved = secureConfigStore.saveServerUrl(normalizedServerUrl).getOrThrow()
+        secureConfigStore.clearOfflineSyncState()
+        saved
     }
 
     fun resetTrustedServer(rawUrl: String): Result<Unit> {
@@ -239,20 +246,35 @@ class TdayRepository @Inject constructor(
 
     fun getSavedCredentials(): SavedCredentials? = secureConfigStore.getSavedCredentials()
 
-    suspend fun fetchDashboardSummary(): DashboardSummary {
-        val todayTodos = fetchTodayTodos()
-        val timelineTodos = fetchTimelineTodos()
-        val completedTodos = fetchCompletedItems()
-        val lists = fetchLists()
+    suspend fun syncCachedData(force: Boolean = false): Result<Unit> = runCatching {
+        syncLocalCache(force = force)
+    }
 
-        val todayDate = LocalDate.now(zoneId)
-        val scheduledCount = timelineTodos.count {
-            LocalDate.ofInstant(it.due, zoneId) != todayDate
+    suspend fun fetchDashboardSummary(): DashboardSummary {
+        refreshCacheForRead()
+        val state = loadOfflineState()
+        val timelineTodos = state.todos
+            .asSequence()
+            .map(::todoFromCache)
+            .filterNot { it.completed }
+            .toList()
+        val todayTodos = timelineTodos.filter(::isTodayTodo)
+        val completedTodos = state.completedItems.map(::completedFromCache)
+        val todoCountsByList = timelineTodos
+            .groupingBy { it.listId }
+            .eachCount()
+
+        val lists = state.lists.map {
+            listFromCache(
+                cache = it,
+                todoCountOverride = todoCountsByList[it.id] ?: 0,
+            )
         }
 
+        val todayDate = LocalDate.now(zoneId)
         return DashboardSummary(
             todayCount = todayTodos.size,
-            scheduledCount = scheduledCount,
+            scheduledCount = timelineTodos.count { LocalDate.ofInstant(it.due, zoneId) != todayDate },
             allCount = timelineTodos.size,
             flaggedCount = timelineTodos.count { it.priority.equals("High", ignoreCase = true) },
             completedCount = completedTodos.size,
@@ -261,175 +283,273 @@ class TdayRepository @Inject constructor(
     }
 
     suspend fun fetchTodos(mode: TodoListMode, listId: String? = null): List<TodoItem> {
+        refreshCacheForRead()
+        val state = loadOfflineState()
+        val timelineTodos = state.todos
+            .asSequence()
+            .map(::todoFromCache)
+            .filterNot { it.completed }
+            .toList()
+
         return when (mode) {
-            TodoListMode.TODAY -> fetchTodayTodos()
-            TodoListMode.ALL -> fetchTimelineTodos()
+            TodoListMode.TODAY -> timelineTodos.filter(::isTodayTodo)
+            TodoListMode.ALL -> timelineTodos
             TodoListMode.SCHEDULED -> {
                 val todayDate = LocalDate.now(zoneId)
-                fetchTimelineTodos().filter {
-                    LocalDate.ofInstant(it.due, zoneId) != todayDate
-                }
+                timelineTodos.filter { LocalDate.ofInstant(it.due, zoneId) != todayDate }
             }
 
-            TodoListMode.FLAGGED -> fetchTimelineTodos().filter {
-                it.priority.equals("High", ignoreCase = true)
-            }
+            TodoListMode.FLAGGED -> timelineTodos.filter { it.priority.equals("High", ignoreCase = true) }
 
             TodoListMode.LIST -> {
                 if (listId.isNullOrBlank()) {
                     emptyList()
                 } else {
-                    fetchListTodos(listId)
+                    timelineTodos.filter { it.listId == listId }
                 }
             }
         }
     }
 
     suspend fun fetchTodayTodos(): List<TodoItem> {
-        val response = requireBody(
-            api.getTodos(
-                start = startOfTodayMillis(),
-                end = endOfTodayMillis(),
-            ),
-            "Could not load today tasks",
-        )
-
-        return response.todos.map(::mapTodo)
+        return fetchTodos(TodoListMode.TODAY)
     }
 
     suspend fun fetchTimelineTodos(): List<TodoItem> {
-        val response = requireBody(
-            api.getTodos(timeline = true),
-            "Could not load timeline tasks",
-        )
-
-        return response.todos.map(::mapTodo)
+        return fetchTodos(TodoListMode.ALL)
     }
 
     suspend fun fetchListTodos(listId: String): List<TodoItem> {
-        val response = requireBody(
-            api.getListTodos(
-                listId = listId,
-                start = startOfTodayMillis(),
-                end = endOfTodayMillis(),
-            ),
-            "Could not load list tasks",
-        )
-        return response.todos.map(::mapTodo)
+        return fetchTodos(TodoListMode.LIST, listId = listId)
     }
 
     suspend fun createTodo(title: String, listId: String? = null) {
+        val trimmedTitle = title.trim()
+        if (trimmedTitle.isBlank()) return
+
         val start = Instant.now()
         val due = start.plusSeconds(30 * 60)
-        val payload = CreateTodoRequest(
-            title = title.trim(),
-            description = null,
-            priority = "Low",
-            dtstart = start.toString(),
-            due = due.toString(),
-            rrule = null,
-            listID = listId,
-        )
+        val localTodoId = "$LOCAL_TODO_PREFIX${UUID.randomUUID()}"
+        val timestampMs = System.currentTimeMillis()
 
-        requireBody(api.createTodo(payload), "Could not create task")
+        updateOfflineState { state ->
+            val newTodo = CachedTodoRecord(
+                id = localTodoId,
+                canonicalId = localTodoId,
+                title = trimmedTitle,
+                description = null,
+                priority = "Low",
+                dtstartEpochMs = start.toEpochMilli(),
+                dueEpochMs = due.toEpochMilli(),
+                rrule = null,
+                instanceDateEpochMs = null,
+                pinned = false,
+                completed = false,
+                listId = listId,
+                updatedAtEpochMs = timestampMs,
+            )
+            state.copy(
+                todos = state.todos + newTodo,
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.CREATE_TODO,
+                    targetId = localTodoId,
+                    timestampEpochMs = timestampMs,
+                    title = trimmedTitle,
+                    description = null,
+                    priority = "Low",
+                    dtstartEpochMs = start.toEpochMilli(),
+                    dueEpochMs = due.toEpochMilli(),
+                    rrule = null,
+                    listId = listId,
+                ),
+            )
+        }
+
+        runCatching { syncLocalCache(force = true) }
     }
 
     suspend fun deleteTodo(todo: TodoItem) {
-        requireBody(api.deleteTodo(todo.canonicalId), "Could not delete task")
+        val timestampMs = System.currentTimeMillis()
+        val canonicalId = todo.canonicalId
+
+        updateOfflineState { state ->
+            val isLocalOnly = canonicalId.startsWith(LOCAL_TODO_PREFIX)
+            val prunedTodos = state.todos.filterNot { it.canonicalId == canonicalId }
+            val prunedCompleted = state.completedItems.filterNot { it.originalTodoId == canonicalId }
+
+            if (isLocalOnly) {
+                state.copy(
+                    todos = prunedTodos,
+                    completedItems = prunedCompleted,
+                    pendingMutations = state.pendingMutations.filterNot {
+                        it.targetId == canonicalId
+                    },
+                )
+            } else {
+                state.copy(
+                    todos = prunedTodos,
+                    completedItems = prunedCompleted,
+                    pendingMutations = state.pendingMutations + PendingMutationRecord(
+                        mutationId = UUID.randomUUID().toString(),
+                        kind = MutationKind.DELETE_TODO,
+                        targetId = canonicalId,
+                        timestampEpochMs = timestampMs,
+                    ),
+                )
+            }
+        }
+
+        runCatching { syncLocalCache(force = true) }
     }
 
     suspend fun setTodoPinned(todo: TodoItem, pinned: Boolean) {
-        requireBody(
-            api.patchTodo(
-                todoId = todo.canonicalId,
-                payload = buildJsonObject {
-                    put("pinned", pinned)
+        val timestampMs = System.currentTimeMillis()
+        updateOfflineState { state ->
+            state.copy(
+                todos = state.todos.map {
+                    if (it.canonicalId == todo.canonicalId) {
+                        it.copy(
+                            pinned = pinned,
+                            updatedAtEpochMs = timestampMs,
+                        )
+                    } else {
+                        it
+                    }
                 },
-            ),
-            "Could not update pin",
-        )
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.SET_PINNED,
+                    targetId = todo.canonicalId,
+                    timestampEpochMs = timestampMs,
+                    pinned = pinned,
+                ),
+            )
+        }
+
+        runCatching { syncLocalCache(force = true) }
     }
 
     suspend fun setTodoPriority(todo: TodoItem, priority: String) {
-        val instanceDateMillis = todo.instanceDateEpochMillis
-        if (todo.isRecurring && instanceDateMillis != null) {
-            requireBody(
-                api.prioritizeTodoInstance(
-                    todoId = todo.canonicalId,
+        val timestampMs = System.currentTimeMillis()
+        updateOfflineState { state ->
+            state.copy(
+                todos = state.todos.map {
+                    if (it.canonicalId == todo.canonicalId) {
+                        it.copy(
+                            priority = priority,
+                            updatedAtEpochMs = timestampMs,
+                        )
+                    } else {
+                        it
+                    }
+                },
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.SET_PRIORITY,
+                    targetId = todo.canonicalId,
+                    timestampEpochMs = timestampMs,
                     priority = priority,
-                    instanceDate = instanceDateMillis,
+                    instanceDateEpochMs = todo.instanceDateEpochMillis,
                 ),
-                "Could not update priority",
             )
-            return
         }
 
-        requireBody(
-            api.patchTodo(
-                todoId = todo.canonicalId,
-                payload = buildJsonObject {
-                    put("priority", priority)
-                },
-            ),
-            "Could not update priority",
-        )
+        runCatching { syncLocalCache(force = true) }
     }
 
     suspend fun completeTodo(todo: TodoItem) {
-        if (todo.isRecurring) {
-            requireBody(
-                api.completeTodoInstance(
-                    todoId = todo.canonicalId,
-                    payload = TodoInstanceRequest(instanceDate = todo.instanceDate?.toString()),
-                ),
-                "Could not complete recurring task",
+        val timestampMs = System.currentTimeMillis()
+        updateOfflineState { state ->
+            val updatedTodos = state.todos.map {
+                if (it.canonicalId == todo.canonicalId) {
+                    if (todo.isRecurring && todo.instanceDate != null) {
+                        if (it.instanceDateEpochMs == todo.instanceDate.toEpochMilli()) {
+                            it.copy(completed = true, updatedAtEpochMs = timestampMs)
+                        } else {
+                            it
+                        }
+                    } else {
+                        it.copy(completed = true, updatedAtEpochMs = timestampMs)
+                    }
+                } else {
+                    it
+                }
+            }
+            val completedId = "$LOCAL_COMPLETED_PREFIX${UUID.randomUUID()}"
+            val completedItem = CachedCompletedRecord(
+                id = completedId,
+                originalTodoId = todo.canonicalId,
+                title = todo.title,
+                priority = todo.priority,
+                dueEpochMs = todo.due.toEpochMilli(),
+                rrule = todo.rrule,
+                instanceDateEpochMs = todo.instanceDateEpochMillis,
             )
-            return
+
+            val mutationKind = if (todo.isRecurring && todo.instanceDate != null) {
+                MutationKind.COMPLETE_TODO_INSTANCE
+            } else {
+                MutationKind.COMPLETE_TODO
+            }
+
+            state.copy(
+                todos = updatedTodos,
+                completedItems = state.completedItems + completedItem,
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = mutationKind,
+                    targetId = todo.canonicalId,
+                    timestampEpochMs = timestampMs,
+                    instanceDateEpochMs = todo.instanceDateEpochMillis,
+                ),
+            )
         }
 
-        requireBody(
-            api.completeTodo(todoId = todo.canonicalId, payload = buildJsonObject {}),
-            "Could not complete task",
-        )
+        runCatching { syncLocalCache(force = true) }
     }
 
     suspend fun fetchCompletedItems(): List<CompletedItem> {
-        val response = requireBody(api.getCompletedTodos(), "Could not load completed tasks")
-        return response.completedTodos.map { dto ->
-            CompletedItem(
-                id = dto.id,
-                originalTodoId = dto.originalTodoID,
-                title = dto.title,
-                priority = dto.priority,
-                due = parseInstant(dto.due),
-                rrule = dto.rrule,
-                instanceDate = parseOptionalInstant(dto.instanceDate),
-            )
-        }
+        refreshCacheForRead()
+        return loadOfflineState().completedItems.map(::completedFromCache)
     }
 
     suspend fun uncomplete(item: CompletedItem) {
         val originalTodoId = item.originalTodoId
             ?: throw IllegalStateException("Completed todo is missing original todo id")
+        val timestampMs = System.currentTimeMillis()
+        val instanceDateEpochMs = item.instanceDate?.toEpochMilli()
 
-        if (!item.rrule.isNullOrBlank()) {
-            requireBody(
-                api.uncompleteTodoInstance(
-                    todoId = originalTodoId,
-                    payload = TodoInstanceRequest(instanceDate = item.instanceDate?.toString()),
+        updateOfflineState { state ->
+            val updatedTodos = state.todos.map {
+                if (it.canonicalId == originalTodoId) {
+                    if (instanceDateEpochMs != null) {
+                        if (it.instanceDateEpochMs == instanceDateEpochMs) {
+                            it.copy(completed = false, updatedAtEpochMs = timestampMs)
+                        } else {
+                            it
+                        }
+                    } else {
+                        it.copy(completed = false, updatedAtEpochMs = timestampMs)
+                    }
+                } else {
+                    it
+                }
+            }
+            state.copy(
+                todos = updatedTodos,
+                completedItems = state.completedItems.filterNot { it.id == item.id },
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.UNCOMPLETE_TODO,
+                    targetId = originalTodoId,
+                    timestampEpochMs = timestampMs,
+                    instanceDateEpochMs = instanceDateEpochMs,
                 ),
-                "Could not restore recurring task",
             )
-            return
         }
 
-        requireBody(
-            api.uncompleteTodo(
-                todoId = originalTodoId,
-                payload = buildJsonObject {},
-            ),
-            "Could not restore task",
-        )
+        runCatching { syncLocalCache(force = true) }
     }
 
     suspend fun fetchNotes(): List<NoteItem> {
@@ -455,14 +575,17 @@ class TdayRepository @Inject constructor(
     }
 
     suspend fun fetchLists(): List<ListSummary> {
-        val response = requireBody(api.getLists(), "Could not load lists")
-        return response.lists.map {
-            ListSummary(
-                id = it.id,
-                name = it.name,
-                color = it.color,
-                iconKey = secureConfigStore.getListIcon(it.id),
-                todoCount = it.todoCount,
+        refreshCacheForRead()
+        val state = loadOfflineState()
+        val todoCountsByList = state.todos
+            .asSequence()
+            .filterNot { it.completed }
+            .groupingBy { it.listId }
+            .eachCount()
+        return state.lists.map {
+            listFromCache(
+                cache = it,
+                todoCountOverride = todoCountsByList[it.id] ?: 0,
             )
         }
     }
@@ -472,32 +595,578 @@ class TdayRepository @Inject constructor(
         color: String? = null,
         iconKey: String? = null,
     ) {
-        val response = requireBody(
-            api.createList(
-                CreateListRequest(
-                    name = name.trim(),
+        val trimmedName = name.trim()
+        if (trimmedName.isBlank()) return
+
+        val localListId = "$LOCAL_LIST_PREFIX${UUID.randomUUID()}"
+        val timestampMs = System.currentTimeMillis()
+        updateOfflineState { state ->
+            val newList = CachedListRecord(
+                id = localListId,
+                name = trimmedName,
+                color = color,
+                iconKey = iconKey,
+                todoCount = 0,
+                updatedAtEpochMs = timestampMs,
+            )
+            state.copy(
+                lists = state.lists + newList,
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.CREATE_LIST,
+                    targetId = localListId,
+                    timestampEpochMs = timestampMs,
+                    name = trimmedName,
                     color = color,
+                    iconKey = iconKey,
                 ),
-            ),
-            "Could not create list",
-        )
-
-        val created = response.list
-
-        if (created?.id != null && !iconKey.isNullOrBlank()) {
-            secureConfigStore.saveListIcon(created.id, iconKey)
-        }
-
-        // Backward compatibility for older backend instances that may ignore color on create.
-        if (created?.id != null && !color.isNullOrBlank() && created.color != color) {
-            requireBody(
-                api.patchList(
-                    listId = created.id,
-                    payload = buildJsonObject { put("color", color) },
-                ),
-                "Could not apply list color",
             )
         }
+
+        runCatching { syncLocalCache(force = true) }
+    }
+
+    private suspend fun refreshCacheForRead() {
+        val existing = loadOfflineState()
+        val hadAnyCache = existing.todos.isNotEmpty() ||
+            existing.lists.isNotEmpty() ||
+            existing.completedItems.isNotEmpty()
+
+        val syncResult = runCatching { syncLocalCache(force = false) }
+        if (syncResult.isFailure && !hadAnyCache) {
+            throw syncResult.exceptionOrNull() ?: IllegalStateException("Could not load data")
+        }
+    }
+
+    private suspend fun syncLocalCache(force: Boolean) {
+        var state = loadOfflineState()
+        val now = System.currentTimeMillis()
+        val shouldSync = force ||
+            state.pendingMutations.isNotEmpty() ||
+            state.lastSuccessfulSyncEpochMs == 0L ||
+            (now - state.lastSyncAttemptEpochMs) >= OFFLINE_RESYNC_INTERVAL_MS
+
+        if (!shouldSync) return
+
+        state = state.copy(lastSyncAttemptEpochMs = now)
+        saveOfflineState(state)
+
+        val firstRemote = fetchRemoteSnapshot()
+        val afterPending = applyPendingMutations(state, firstRemote)
+        saveOfflineState(afterPending.copy(lastSyncAttemptEpochMs = now))
+        val latestRemote = fetchRemoteSnapshot()
+        val mergedState = mergeRemoteWithLocal(
+            localState = afterPending,
+            remote = latestRemote,
+        ).copy(
+            lastSyncAttemptEpochMs = now,
+            lastSuccessfulSyncEpochMs = now,
+        )
+
+        saveOfflineState(mergedState)
+    }
+
+    private suspend fun fetchRemoteSnapshot(): RemoteSnapshot {
+        val todos = requireBody(
+            api.getTodos(timeline = true),
+            "Could not load timeline tasks",
+        ).todos.map(::mapTodo)
+
+        val completed = requireBody(
+            api.getCompletedTodos(),
+            "Could not load completed tasks",
+        ).completedTodos.map { dto ->
+            CompletedItem(
+                id = dto.id,
+                originalTodoId = dto.originalTodoID,
+                title = dto.title,
+                priority = dto.priority,
+                due = parseInstant(dto.due),
+                rrule = dto.rrule,
+                instanceDate = parseOptionalInstant(dto.instanceDate),
+            )
+        }
+
+        val lists = requireBody(
+            api.getLists(),
+            "Could not load lists",
+        ).lists.map {
+            ListSummary(
+                id = it.id,
+                name = it.name,
+                color = it.color,
+                iconKey = it.iconKey ?: secureConfigStore.getListIcon(it.id),
+                todoCount = it.todoCount,
+                updatedAt = parseOptionalInstant(it.updatedAt),
+            )
+        }
+
+        return RemoteSnapshot(
+            todos = todos,
+            completedItems = completed,
+            lists = lists,
+        )
+    }
+
+    private suspend fun applyPendingMutations(
+        initialState: OfflineSyncState,
+        remoteSnapshot: RemoteSnapshot,
+    ): OfflineSyncState {
+        if (initialState.pendingMutations.isEmpty()) return initialState
+
+        var state = initialState
+        val pending = initialState.pendingMutations.sortedBy { it.timestampEpochMs }.toMutableList()
+        val resolvedTodoIds = mutableMapOf<String, String>()
+        val resolvedListIds = mutableMapOf<String, String>()
+        val remaining = mutableListOf<PendingMutationRecord>()
+
+        for (mutation in pending) {
+            val resolvedTargetId = resolveTargetId(
+                targetId = mutation.targetId,
+                todoIdMap = resolvedTodoIds,
+                listIdMap = resolvedListIds,
+            )
+
+            val success = runCatching {
+                when (mutation.kind) {
+                    MutationKind.CREATE_LIST -> {
+                        val localListId = mutation.targetId ?: return@runCatching false
+                        val response = requireBody(
+                            api.createList(
+                                CreateListRequest(
+                                    name = mutation.name?.trim().orEmpty(),
+                                    color = mutation.color,
+                                    iconKey = mutation.iconKey,
+                                ),
+                            ),
+                            "Could not create list",
+                        )
+                        val serverListId = response.list?.id ?: return@runCatching false
+                        resolvedListIds[localListId] = serverListId
+                        state = replaceLocalListId(state, localListId, serverListId)
+                        true
+                    }
+
+                    MutationKind.CREATE_TODO -> {
+                        val localTodoId = mutation.targetId ?: return@runCatching false
+                        val resolvedListId = mutation.listId?.let {
+                            resolvedListIds[it] ?: it
+                        }
+                        if (resolvedListId != null && resolvedListId.startsWith(LOCAL_LIST_PREFIX)) {
+                            return@runCatching false
+                        }
+                        val created = requireBody(
+                            api.createTodo(
+                                CreateTodoRequest(
+                                    title = mutation.title?.trim().orEmpty(),
+                                    description = mutation.description,
+                                    priority = mutation.priority ?: "Low",
+                                    dtstart = Instant.ofEpochMilli(
+                                        mutation.dtstartEpochMs ?: System.currentTimeMillis(),
+                                    ).toString(),
+                                    due = Instant.ofEpochMilli(
+                                        mutation.dueEpochMs ?: System.currentTimeMillis(),
+                                    ).toString(),
+                                    rrule = mutation.rrule,
+                                    listID = resolvedListId,
+                                ),
+                            ),
+                            "Could not create task",
+                        ).todo ?: return@runCatching false
+                        val createdTodo = mapTodo(created)
+                        resolvedTodoIds[localTodoId] = createdTodo.canonicalId
+                        state = replaceLocalTodoId(state, localTodoId, createdTodo.canonicalId)
+                        true
+                    }
+
+                    MutationKind.DELETE_TODO -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
+                        requireBody(api.deleteTodo(targetId), "Could not delete task")
+                        true
+                    }
+
+                    MutationKind.SET_PINNED -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
+                        requireBody(
+                            api.patchTodo(
+                                todoId = targetId,
+                                payload = buildJsonObject {
+                                    put("pinned", mutation.pinned ?: false)
+                                },
+                            ),
+                            "Could not update pin",
+                        )
+                        true
+                    }
+
+                    MutationKind.SET_PRIORITY -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
+
+                        val priority = mutation.priority ?: "Low"
+                        val instanceDateEpochMs = mutation.instanceDateEpochMs
+                        if (instanceDateEpochMs != null) {
+                            requireBody(
+                                api.prioritizeTodoInstance(
+                                    todoId = targetId,
+                                    priority = priority,
+                                    instanceDate = instanceDateEpochMs,
+                                ),
+                                "Could not update priority",
+                            )
+                        } else {
+                            requireBody(
+                                api.patchTodo(
+                                    todoId = targetId,
+                                    payload = buildJsonObject {
+                                        put("priority", priority)
+                                    },
+                                ),
+                                "Could not update priority",
+                            )
+                        }
+                        true
+                    }
+
+                    MutationKind.COMPLETE_TODO -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
+                        requireBody(
+                            api.completeTodo(
+                                todoId = targetId,
+                                payload = buildJsonObject {},
+                            ),
+                            "Could not complete task",
+                        )
+                        true
+                    }
+
+                    MutationKind.COMPLETE_TODO_INSTANCE -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val instanceDate = mutation.instanceDateEpochMs
+                            ?.let(Instant::ofEpochMilli)
+                            ?.toString()
+                        requireBody(
+                            api.completeTodoInstance(
+                                todoId = targetId,
+                                payload = TodoInstanceRequest(instanceDate = instanceDate),
+                            ),
+                            "Could not complete recurring task",
+                        )
+                        true
+                    }
+
+                    MutationKind.UNCOMPLETE_TODO -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val instanceDate = mutation.instanceDateEpochMs
+                            ?.let(Instant::ofEpochMilli)
+                            ?.toString()
+                        if (instanceDate != null) {
+                            requireBody(
+                                api.uncompleteTodoInstance(
+                                    todoId = targetId,
+                                    payload = TodoInstanceRequest(instanceDate = instanceDate),
+                                ),
+                                "Could not restore recurring task",
+                            )
+                        } else {
+                            requireBody(
+                                api.uncompleteTodo(
+                                    todoId = targetId,
+                                    payload = buildJsonObject {},
+                                ),
+                                "Could not restore task",
+                            )
+                        }
+                        true
+                    }
+                }
+            }.getOrElse { error ->
+                if (isLikelyConnectivityIssue(error)) {
+                    remaining.add(mutation)
+                    remaining.addAll(pending.dropWhile { it.mutationId != mutation.mutationId }.drop(1))
+                    saveOfflineState(state.copy(pendingMutations = remaining))
+                    return state.copy(pendingMutations = remaining)
+                }
+                false
+            }
+
+            if (!success) {
+                remaining.add(mutation)
+            }
+        }
+
+        return state.copy(pendingMutations = remaining)
+    }
+
+    private fun mergeRemoteWithLocal(
+        localState: OfflineSyncState,
+        remote: RemoteSnapshot,
+    ): OfflineSyncState {
+        val remoteTodos = remote.todos.map(::todoToCache).toMutableList()
+        val remoteCompleted = remote.completedItems.map(::completedToCache).toMutableList()
+        val remoteLists = remote.lists.map(::listToCache).toMutableList()
+
+        if (localState.pendingMutations.isNotEmpty()) {
+            val todoTargets = localState.pendingMutations.mapNotNull { it.targetId }.toSet()
+            val pendingListIds = localState.pendingMutations
+                .filter { it.kind == MutationKind.CREATE_LIST }
+                .mapNotNull { it.targetId }
+                .toSet()
+
+            todoTargets.forEach { targetId ->
+                val localTodos = localState.todos.filter { it.canonicalId == targetId }
+                if (localTodos.isNotEmpty()) {
+                    remoteTodos.removeAll { it.canonicalId == targetId }
+                    remoteTodos.addAll(localTodos)
+                }
+                val localCompleted = localState.completedItems.filter { it.originalTodoId == targetId }
+                if (localCompleted.isNotEmpty()) {
+                    remoteCompleted.removeAll { it.originalTodoId == targetId }
+                    remoteCompleted.addAll(localCompleted)
+                }
+            }
+
+            pendingListIds.forEach { listId ->
+                val localList = localState.lists.firstOrNull { it.id == listId } ?: return@forEach
+                remoteLists.removeAll { it.id == listId }
+                remoteLists.add(localList)
+            }
+        }
+
+        val todoCountByList = remoteTodos
+            .asSequence()
+            .filterNot { it.completed }
+            .groupingBy { it.listId }
+            .eachCount()
+
+        val normalizedLists = remoteLists.map {
+            it.copy(todoCount = todoCountByList[it.id] ?: 0)
+        }
+
+        return localState.copy(
+            todos = remoteTodos,
+            completedItems = remoteCompleted,
+            lists = normalizedLists,
+        )
+    }
+
+    private fun replaceLocalListId(
+        state: OfflineSyncState,
+        localListId: String,
+        serverListId: String,
+    ): OfflineSyncState {
+        return state.copy(
+            lists = state.lists.map {
+                if (it.id == localListId) {
+                    it.copy(id = serverListId)
+                } else {
+                    it
+                }
+            },
+            todos = state.todos.map {
+                if (it.listId == localListId) {
+                    it.copy(listId = serverListId)
+                } else {
+                    it
+                }
+            },
+            pendingMutations = state.pendingMutations.map {
+                it.copy(
+                    targetId = if (it.targetId == localListId) serverListId else it.targetId,
+                    listId = if (it.listId == localListId) serverListId else it.listId,
+                )
+            },
+        )
+    }
+
+    private fun replaceLocalTodoId(
+        state: OfflineSyncState,
+        localTodoId: String,
+        serverTodoId: String,
+    ): OfflineSyncState {
+        return state.copy(
+            todos = state.todos.map {
+                if (it.canonicalId == localTodoId) {
+                    it.copy(
+                        id = if (it.id == localTodoId) serverTodoId else it.id,
+                        canonicalId = serverTodoId,
+                    )
+                } else {
+                    it
+                }
+            },
+            pendingMutations = state.pendingMutations.map {
+                if (it.targetId == localTodoId) {
+                    it.copy(targetId = serverTodoId)
+                } else {
+                    it
+                }
+            },
+        )
+    }
+
+    private fun resolveTargetId(
+        targetId: String?,
+        todoIdMap: Map<String, String>,
+        listIdMap: Map<String, String>,
+    ): String? {
+        if (targetId == null) return null
+        return todoIdMap[targetId] ?: listIdMap[targetId] ?: targetId
+    }
+
+    private fun isLikelyConnectivityIssue(error: Throwable): Boolean {
+        val message = error.message.orEmpty().lowercase()
+        return message.contains("failed to connect") ||
+            message.contains("econnrefused") ||
+            message.contains("timed out") ||
+            message.contains("unable to resolve host") ||
+            message.contains("network is unreachable")
+    }
+
+    private fun updateOfflineState(transform: (OfflineSyncState) -> OfflineSyncState): OfflineSyncState {
+        val next = transform(loadOfflineState())
+        saveOfflineState(next)
+        return next
+    }
+
+    private fun loadOfflineState(): OfflineSyncState {
+        val raw = secureConfigStore.getOfflineSyncStateRaw().orEmpty()
+        if (raw.isBlank()) return OfflineSyncState()
+        return try {
+            json.decodeFromString<OfflineSyncState>(raw)
+        } catch (_: SerializationException) {
+            OfflineSyncState()
+        } catch (_: IllegalArgumentException) {
+            OfflineSyncState()
+        }
+    }
+
+    private fun saveOfflineState(state: OfflineSyncState) {
+        secureConfigStore.saveOfflineSyncStateRaw(json.encodeToString(state))
+    }
+
+    private fun isTodayTodo(todo: TodoItem): Boolean {
+        val start = Instant.ofEpochMilli(startOfTodayMillis())
+        val end = Instant.ofEpochMilli(endOfTodayMillis())
+        return todo.due >= start && todo.dtstart <= end
+    }
+
+    private fun todoToCache(todo: TodoItem): CachedTodoRecord {
+        return CachedTodoRecord(
+            id = todo.id,
+            canonicalId = todo.canonicalId,
+            title = todo.title,
+            description = todo.description,
+            priority = todo.priority,
+            dtstartEpochMs = todo.dtstart.toEpochMilli(),
+            dueEpochMs = todo.due.toEpochMilli(),
+            rrule = todo.rrule,
+            instanceDateEpochMs = todo.instanceDateEpochMillis,
+            pinned = todo.pinned,
+            completed = todo.completed,
+            listId = todo.listId,
+            updatedAtEpochMs = todo.updatedAt?.toEpochMilli() ?: 0L,
+        )
+    }
+
+    private fun todoFromCache(cache: CachedTodoRecord): TodoItem {
+        return TodoItem(
+            id = cache.id,
+            canonicalId = cache.canonicalId,
+            title = cache.title,
+            description = cache.description,
+            priority = cache.priority,
+            dtstart = Instant.ofEpochMilli(cache.dtstartEpochMs),
+            due = Instant.ofEpochMilli(cache.dueEpochMs),
+            rrule = cache.rrule,
+            instanceDate = cache.instanceDateEpochMs?.let(Instant::ofEpochMilli),
+            pinned = cache.pinned,
+            completed = cache.completed,
+            listId = cache.listId,
+            updatedAt = if (cache.updatedAtEpochMs > 0L) {
+                Instant.ofEpochMilli(cache.updatedAtEpochMs)
+            } else {
+                null
+            },
+        )
+    }
+
+    private fun listToCache(list: ListSummary): CachedListRecord {
+        return CachedListRecord(
+            id = list.id,
+            name = list.name,
+            color = list.color,
+            iconKey = list.iconKey,
+            todoCount = list.todoCount,
+            updatedAtEpochMs = list.updatedAt?.toEpochMilli() ?: 0L,
+        )
+    }
+
+    private fun listFromCache(
+        cache: CachedListRecord,
+        todoCountOverride: Int,
+    ): ListSummary {
+        return ListSummary(
+            id = cache.id,
+            name = cache.name,
+            color = cache.color,
+            iconKey = cache.iconKey,
+            todoCount = todoCountOverride,
+            updatedAt = if (cache.updatedAtEpochMs > 0L) {
+                Instant.ofEpochMilli(cache.updatedAtEpochMs)
+            } else {
+                null
+            },
+        )
+    }
+
+    private fun completedToCache(item: CompletedItem): CachedCompletedRecord {
+        return CachedCompletedRecord(
+            id = item.id,
+            originalTodoId = item.originalTodoId,
+            title = item.title,
+            priority = item.priority,
+            dueEpochMs = item.due.toEpochMilli(),
+            rrule = item.rrule,
+            instanceDateEpochMs = item.instanceDate?.toEpochMilli(),
+        )
+    }
+
+    private fun completedFromCache(cache: CachedCompletedRecord): CompletedItem {
+        return CompletedItem(
+            id = cache.id,
+            originalTodoId = cache.originalTodoId,
+            title = cache.title,
+            priority = cache.priority,
+            due = Instant.ofEpochMilli(cache.dueEpochMs),
+            rrule = cache.rrule,
+            instanceDate = cache.instanceDateEpochMs?.let(Instant::ofEpochMilli),
+        )
+    }
+
+    private data class RemoteSnapshot(
+        val todos: List<TodoItem>,
+        val completedItems: List<CompletedItem>,
+        val lists: List<ListSummary>,
+    ) {
+        val todoUpdatedAtByCanonical: Map<String, Long> = todos
+            .groupBy { it.canonicalId }
+            .mapValues { (_, entries) ->
+                entries.maxOfOrNull { it.updatedAt?.toEpochMilli() ?: 0L } ?: 0L
+            }
     }
 
     private fun mapTodo(dto: com.ohmz.tday.compose.core.model.TodoDto): TodoItem {
@@ -521,6 +1190,7 @@ class TdayRepository @Inject constructor(
             pinned = dto.pinned,
             completed = dto.completed,
             listId = dto.listID,
+            updatedAt = parseOptionalInstant(dto.updatedAt),
         )
     }
 
@@ -681,5 +1351,9 @@ class TdayRepository @Inject constructor(
         const val CSRF_PATH = "/api/auth/csrf"
         const val CREDENTIALS_PATH = "/api/auth/callback/credentials"
         const val REGISTER_PATH = "/api/auth/register"
+        const val OFFLINE_RESYNC_INTERVAL_MS = 5 * 60 * 1000L
+        const val LOCAL_TODO_PREFIX = "local-todo-"
+        const val LOCAL_LIST_PREFIX = "local-list-"
+        const val LOCAL_COMPLETED_PREFIX = "local-completed-"
     }
 }
