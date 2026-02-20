@@ -1,7 +1,12 @@
 package com.ohmz.tday.compose.feature.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,7 +33,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -36,7 +41,6 @@ import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Inbox
@@ -63,6 +67,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -94,6 +99,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,7 +143,31 @@ fun HomeScreen(
     var listColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR) }
     var listIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
+    var hasAnimatedListEntrance by rememberSaveable { mutableStateOf(false) }
+    var visibleListCount by rememberSaveable { mutableIntStateOf(0) }
     val closeSearch = { searchExpanded = false }
+    val listIds = uiState.summary.lists.map { it.id }
+
+    LaunchedEffect(listIds) {
+        if (listIds.isEmpty()) {
+            visibleListCount = 0
+            hasAnimatedListEntrance = false
+            return@LaunchedEffect
+        }
+
+        if (hasAnimatedListEntrance) {
+            visibleListCount = listIds.size
+            return@LaunchedEffect
+        }
+
+        visibleListCount = 0
+        delay(90)
+        listIds.forEachIndexed { index, _ ->
+            visibleListCount = index + 1
+            delay(65)
+        }
+        hasAnimatedListEntrance = true
+    }
 
     Scaffold(
         containerColor = colorScheme.background,
@@ -245,24 +275,34 @@ fun HomeScreen(
 
                 if (uiState.summary.lists.isNotEmpty()) {
                     item {
-                        Text(
-                            text = "My Lists",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        AnimatedVisibility(
+                            visible = visibleListCount > 0,
+                            enter = listSectionEnterTransition(),
+                        ) {
+                            Text(
+                                text = "My Lists",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = colorScheme.onBackground,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
-                    items(uiState.summary.lists, key = { it.id }) { list ->
-                        ListRow(
-                            name = list.name,
-                            colorKey = list.color,
-                            iconKey = list.iconKey,
-                            count = list.todoCount,
-                            onClick = {
-                                closeSearch()
-                                onOpenList(list.id, list.name)
-                            },
-                        )
+                    itemsIndexed(uiState.summary.lists, key = { _, list -> list.id }) { index, list ->
+                        AnimatedVisibility(
+                            visible = index < visibleListCount,
+                            enter = listSectionEnterTransition(),
+                        ) {
+                            ListRow(
+                                name = list.name,
+                                colorKey = list.color,
+                                iconKey = list.iconKey,
+                                count = list.todoCount,
+                                onClick = {
+                                    closeSearch()
+                                    onOpenList(list.id, list.name)
+                                },
+                            )
+                        }
                     }
                 }
 
@@ -800,6 +840,16 @@ private fun completedTileColor(colorScheme: ColorScheme): Color {
 
 private fun calendarTileColor(colorScheme: ColorScheme): Color {
     return lerp(completedTileColor(colorScheme), colorScheme.primary, 0.18f)
+}
+
+private fun listSectionEnterTransition(): EnterTransition {
+    val duration = 300
+    return fadeIn(
+        animationSpec = tween(durationMillis = duration),
+    ) + slideInVertically(
+        animationSpec = tween(durationMillis = duration),
+        initialOffsetY = { fullHeight -> (fullHeight * 0.22f).toInt().coerceAtLeast(18) },
+    )
 }
 
 @Composable
