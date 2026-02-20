@@ -67,7 +67,10 @@ class HomeViewModel @Inject constructor(
             runCatching {
                 if (forceSync) {
                     // Pull-to-refresh should force a remote sync before re-reading cached summary.
-                    repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
+                    repository.syncCachedData(
+                        force = true,
+                        replayPendingMutations = false,
+                    ).onFailure { /* fall back to local cache */ }
                 }
                 repository.fetchDashboardSummary()
             }.onSuccess { summary ->
