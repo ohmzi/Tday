@@ -31,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -43,6 +42,7 @@ fun AuthScreen(
     onLogin: (email: String, password: String) -> Unit,
     onNavigateRegister: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
@@ -61,8 +61,8 @@ fun AuthScreen(
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color(0xFF0A0C13),
-                        Color(0xFF151929),
+                        colorScheme.surfaceVariant,
+                        colorScheme.background,
                     ),
                 ),
             )
@@ -71,7 +71,7 @@ fun AuthScreen(
     ) {
         Card(
             shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1E2D)),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         ) {
             Column(
                 modifier = Modifier
@@ -83,12 +83,12 @@ fun AuthScreen(
                 Text(
                     text = "Tday",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = colorScheme.onSurface,
                 )
                 Text(
                     text = "Native Android app",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFA0A8C3),
+                    color = colorScheme.onSurfaceVariant,
                 )
 
                 OutlinedTextField(
@@ -125,7 +125,7 @@ fun AuthScreen(
                 uiState.infoMessage?.let {
                     Text(
                         text = it,
-                        color = Color(0xFF8FD3A8),
+                        color = colorScheme.tertiary,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -135,8 +135,8 @@ fun AuthScreen(
                     enabled = !uiState.isLoading,
                     onClick = { onLogin(email, password) },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF5EA2F3),
-                        contentColor = Color.White,
+                        containerColor = colorScheme.primary,
+                        contentColor = colorScheme.onPrimary,
                     ),
                 ) {
                     Text(if (uiState.isLoading) "Signing in..." else "Sign in")

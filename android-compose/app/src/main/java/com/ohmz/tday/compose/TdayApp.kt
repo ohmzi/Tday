@@ -37,6 +37,7 @@ import com.ohmz.tday.compose.feature.server.ServerSetupScreen
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
+import com.ohmz.tday.compose.ui.theme.TdayTheme
 
 @Composable
 fun TdayApp() {
@@ -98,166 +99,170 @@ fun TdayApp() {
         }
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = AppRoute.Splash.route,
-    ) {
-        composable(AppRoute.Splash.route) {
-            SplashScreen()
-        }
+    TdayTheme(themeMode = appUiState.themeMode) {
+        NavHost(
+            navController = navController,
+            startDestination = AppRoute.Splash.route,
+        ) {
+            composable(AppRoute.Splash.route) {
+                SplashScreen()
+            }
 
-        composable(AppRoute.ServerSetup.route) {
-            ServerSetupScreen(
-                errorMessage = appUiState.error,
-                onSave = { rawUrl ->
-                    appViewModel.saveServerUrl(rawUrl) {
-                        appViewModel.refreshSession()
-                    }
-                },
-            )
-        }
-
-        composable(AppRoute.Login.route) {
-            val authViewModel: AuthViewModel = hiltViewModel()
-            val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-            AuthScreen(
-                uiState = authUiState,
-                onLogin = { email, password ->
-                    authViewModel.login(email, password) {
-                        appViewModel.refreshSession()
-                    }
-                },
-                onNavigateRegister = {
-                    authViewModel.clearStatus()
-                    navController.navigate(AppRoute.Register.route)
-                },
-            )
-        }
-
-        composable(AppRoute.Register.route) {
-            val authViewModel: AuthViewModel = hiltViewModel()
-            val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-            RegisterScreen(
-                uiState = authUiState,
-                onBack = { navController.popBackStack() },
-                onRegister = { firstName, lastName, email, password, confirmPassword ->
-                    if (password != confirmPassword) {
-                        authViewModel.setError("Passwords do not match")
-                    } else {
-                        authViewModel.register(firstName, lastName, email, password) {
-                            navController.popBackStack()
+            composable(AppRoute.ServerSetup.route) {
+                ServerSetupScreen(
+                    errorMessage = appUiState.error,
+                    onSave = { rawUrl ->
+                        appViewModel.saveServerUrl(rawUrl) {
+                            appViewModel.refreshSession()
                         }
-                    }
-                },
-            )
-        }
+                    },
+                )
+            }
 
-        composable(AppRoute.Home.route) {
-            val homeViewModel: HomeViewModel = hiltViewModel()
-            val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
-            HomeScreen(
-                uiState = homeUiState,
-                onRefresh = homeViewModel::refresh,
-                onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
-                onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
-                onOpenAll = { navController.navigate(AppRoute.AllTodos.route) },
-                onOpenFlagged = { navController.navigate(AppRoute.FlaggedTodos.route) },
-                onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
-                onOpenNotes = { navController.navigate(AppRoute.Notes.route) },
-                onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
-                onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
-                onOpenProject = { id, name ->
-                    navController.navigate(AppRoute.ProjectTodos.create(id, name))
-                },
-                onCreateProject = homeViewModel::createList,
-            )
-        }
+            composable(AppRoute.Login.route) {
+                val authViewModel: AuthViewModel = hiltViewModel()
+                val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+                AuthScreen(
+                    uiState = authUiState,
+                    onLogin = { email, password ->
+                        authViewModel.login(email, password) {
+                            appViewModel.refreshSession()
+                        }
+                    },
+                    onNavigateRegister = {
+                        authViewModel.clearStatus()
+                        navController.navigate(AppRoute.Register.route)
+                    },
+                )
+            }
 
-        composable(AppRoute.TodayTodos.route) {
-            TodosRoute(
-                mode = TodoListMode.TODAY,
-                onBack = { navController.popBackStack() },
-            )
-        }
+            composable(AppRoute.Register.route) {
+                val authViewModel: AuthViewModel = hiltViewModel()
+                val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+                RegisterScreen(
+                    uiState = authUiState,
+                    onBack = { navController.popBackStack() },
+                    onRegister = { firstName, lastName, email, password, confirmPassword ->
+                        if (password != confirmPassword) {
+                            authViewModel.setError("Passwords do not match")
+                        } else {
+                            authViewModel.register(firstName, lastName, email, password) {
+                                navController.popBackStack()
+                            }
+                        }
+                    },
+                )
+            }
 
-        composable(AppRoute.ScheduledTodos.route) {
-            TodosRoute(
-                mode = TodoListMode.SCHEDULED,
-                onBack = { navController.popBackStack() },
-            )
-        }
+            composable(AppRoute.Home.route) {
+                val homeViewModel: HomeViewModel = hiltViewModel()
+                val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                HomeScreen(
+                    uiState = homeUiState,
+                    onRefresh = homeViewModel::refresh,
+                    onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
+                    onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
+                    onOpenAll = { navController.navigate(AppRoute.AllTodos.route) },
+                    onOpenFlagged = { navController.navigate(AppRoute.FlaggedTodos.route) },
+                    onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
+                    onOpenNotes = { navController.navigate(AppRoute.Notes.route) },
+                    onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
+                    onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
+                    onOpenProject = { id, name ->
+                        navController.navigate(AppRoute.ProjectTodos.create(id, name))
+                    },
+                    onCreateProject = homeViewModel::createList,
+                )
+            }
 
-        composable(AppRoute.AllTodos.route) {
-            TodosRoute(
-                mode = TodoListMode.ALL,
-                onBack = { navController.popBackStack() },
-            )
-        }
+            composable(AppRoute.TodayTodos.route) {
+                TodosRoute(
+                    mode = TodoListMode.TODAY,
+                    onBack = { navController.popBackStack() },
+                )
+            }
 
-        composable(AppRoute.FlaggedTodos.route) {
-            TodosRoute(
-                mode = TodoListMode.FLAGGED,
-                onBack = { navController.popBackStack() },
-            )
-        }
+            composable(AppRoute.ScheduledTodos.route) {
+                TodosRoute(
+                    mode = TodoListMode.SCHEDULED,
+                    onBack = { navController.popBackStack() },
+                )
+            }
 
-        composable(
-            route = AppRoute.ProjectTodos.route,
-            arguments = listOf(
-                navArgument("projectId") { type = NavType.StringType },
-                navArgument("projectName") { type = NavType.StringType },
-            ),
-        ) { entry ->
-            val projectId = entry.arguments?.getString("projectId").orEmpty()
-            val projectName = Uri.decode(entry.arguments?.getString("projectName").orEmpty())
-            TodosRoute(
-                mode = TodoListMode.PROJECT,
-                projectId = projectId,
-                projectName = projectName,
-                onBack = { navController.popBackStack() },
-            )
-        }
+            composable(AppRoute.AllTodos.route) {
+                TodosRoute(
+                    mode = TodoListMode.ALL,
+                    onBack = { navController.popBackStack() },
+                )
+            }
 
-        composable(AppRoute.Completed.route) {
-            val viewModel: CompletedViewModel = hiltViewModel()
-            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-            LaunchedEffect(Unit) { viewModel.load() }
-            CompletedScreen(
-                uiState = uiState,
-                onBack = { navController.popBackStack() },
-                onRefresh = viewModel::load,
-                onUncomplete = viewModel::uncomplete,
-            )
-        }
+            composable(AppRoute.FlaggedTodos.route) {
+                TodosRoute(
+                    mode = TodoListMode.FLAGGED,
+                    onBack = { navController.popBackStack() },
+                )
+            }
 
-        composable(AppRoute.Notes.route) {
-            val viewModel: NotesViewModel = hiltViewModel()
-            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-            LaunchedEffect(Unit) { viewModel.load() }
-            NotesScreen(
-                uiState = uiState,
-                onBack = { navController.popBackStack() },
-                onRefresh = viewModel::load,
-                onCreate = viewModel::create,
-                onDelete = viewModel::delete,
-            )
-        }
+            composable(
+                route = AppRoute.ProjectTodos.route,
+                arguments = listOf(
+                    navArgument("projectId") { type = NavType.StringType },
+                    navArgument("projectName") { type = NavType.StringType },
+                ),
+            ) { entry ->
+                val projectId = entry.arguments?.getString("projectId").orEmpty()
+                val projectName = Uri.decode(entry.arguments?.getString("projectName").orEmpty())
+                TodosRoute(
+                    mode = TodoListMode.PROJECT,
+                    projectId = projectId,
+                    projectName = projectName,
+                    onBack = { navController.popBackStack() },
+                )
+            }
 
-        composable(AppRoute.Calendar.route) {
-            CalendarScreen(
-                onBack = { navController.popBackStack() },
-                onOpenScheduled = {
-                    navController.navigate(AppRoute.ScheduledTodos.route)
-                },
-            )
-        }
+            composable(AppRoute.Completed.route) {
+                val viewModel: CompletedViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { viewModel.load() }
+                CompletedScreen(
+                    uiState = uiState,
+                    onBack = { navController.popBackStack() },
+                    onRefresh = viewModel::load,
+                    onUncomplete = viewModel::uncomplete,
+                )
+            }
 
-        composable(AppRoute.Settings.route) {
-            SettingsScreen(
-                user = appUiState.user,
-                onBack = { navController.popBackStack() },
-                onLogout = { appViewModel.logout() },
-            )
+            composable(AppRoute.Notes.route) {
+                val viewModel: NotesViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { viewModel.load() }
+                NotesScreen(
+                    uiState = uiState,
+                    onBack = { navController.popBackStack() },
+                    onRefresh = viewModel::load,
+                    onCreate = viewModel::create,
+                    onDelete = viewModel::delete,
+                )
+            }
+
+            composable(AppRoute.Calendar.route) {
+                CalendarScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenScheduled = {
+                        navController.navigate(AppRoute.ScheduledTodos.route)
+                    },
+                )
+            }
+
+            composable(AppRoute.Settings.route) {
+                SettingsScreen(
+                    user = appUiState.user,
+                    selectedThemeMode = appUiState.themeMode,
+                    onThemeModeSelected = appViewModel::setThemeMode,
+                    onBack = { navController.popBackStack() },
+                    onLogout = { appViewModel.logout() },
+                )
+            }
         }
     }
 }
