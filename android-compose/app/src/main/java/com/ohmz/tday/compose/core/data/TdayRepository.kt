@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.core.data
 
+import android.util.Log
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.AuthSession
 import com.ohmz.tday.compose.core.model.CompletedItem
@@ -15,6 +16,7 @@ import com.ohmz.tday.compose.core.model.TodoInstanceRequest
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.network.TdayApiService
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -26,9 +28,13 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import retrofit2.Response
 import java.net.URI
 import java.net.URLDecoder
+import java.security.MessageDigest
+import java.security.cert.X509Certificate
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -185,7 +191,46 @@ class TdayRepository @Inject constructor(
 
     fun getServerUrl(): String? = secureConfigStore.getServerUrl()
 
-    fun saveServerUrl(rawUrl: String): Result<String> = secureConfigStore.saveServerUrl(rawUrl)
+    suspend fun saveServerUrl(rawUrl: String): Result<String> = runCatching {
+        val normalizedServerUrl = secureConfigStore.normalizeServerUrl(rawUrl)
+            ?: throw ServerProbeException.InvalidUrl()
+        val parsedServerUrl = normalizedServerUrl.toHttpUrlOrNull()
+            ?: throw ServerProbeException.InvalidUrl()
+
+        ensureSecureTransport(parsedServerUrl)
+
+        val probeUrl = parsedServerUrl.newBuilder()
+            .encodedPath(PROBE_PATH)
+            .query(null)
+            .fragment(null)
+            .build()
+            .toString()
+
+        val probeResponse = withTimeout(PROBE_TIMEOUT_MS) {
+            api.probeServer(probeUrl = probeUrl)
+        }
+
+        if (!probeResponse.isSuccessful) {
+            throw IllegalStateException(
+                extractErrorMessage(
+                    probeResponse,
+                    "Could not verify server. Check URL and try again.",
+                ),
+            )
+        }
+
+        val probeBody = probeResponse.body()
+            ?: throw ServerProbeException.NotTdayServer()
+
+        validateProbeContract(probeBody)
+        verifyAndPersistServerTrust(parsedServerUrl, probeResponse)
+
+        secureConfigStore.saveServerUrl(normalizedServerUrl).getOrThrow()
+    }
+
+    fun resetTrustedServer(rawUrl: String): Result<Unit> {
+        return secureConfigStore.clearTrustedServerFingerprintForUrl(rawUrl)
+    }
 
     fun getSavedCredentials(): SavedCredentials? = secureConfigStore.getSavedCredentials()
 
@@ -478,6 +523,82 @@ class TdayRepository @Inject constructor(
             .toEpochMilli()
     }
 
+    private fun validateProbeContract(probeBody: com.ohmz.tday.compose.core.model.MobileProbeResponse) {
+        val serviceOk = probeBody.service.equals("tday", ignoreCase = true)
+        val versionOk = probeBody.version == "1"
+        val authOk = probeBody.auth.csrfPath == CSRF_PATH &&
+            probeBody.auth.credentialsPath == CREDENTIALS_PATH &&
+            probeBody.auth.registerPath == REGISTER_PATH
+
+        if (serviceOk && versionOk && authOk) {
+            return
+        }
+
+        Log.w(
+            LOG_TAG,
+            "probe_failed_contract service=${probeBody.service} version=${probeBody.version} auth=${probeBody.auth}",
+        )
+
+        if (!serviceOk || !versionOk) {
+            throw ServerProbeException.NotTdayServer()
+        }
+        throw ServerProbeException.AuthContractMismatch()
+    }
+
+    private fun verifyAndPersistServerTrust(
+        serverUrl: HttpUrl,
+        probeResponse: Response<*>,
+    ) {
+        if (serverUrl.scheme != "https") return
+
+        val serverTrustKey = secureConfigStore.serverTrustKeyForUrl(serverUrl.toString())
+            ?: throw ServerProbeException.InvalidUrl()
+
+        val certificate = probeResponse.raw()
+            .handshake
+            ?.peerCertificates
+            ?.firstOrNull() as? X509Certificate
+            ?: throw IllegalStateException("TLS certificate not available for server trust check")
+
+        val fingerprint = certificatePublicKeyFingerprint(certificate)
+        val trustedFingerprint = secureConfigStore.getTrustedServerFingerprint(serverTrustKey)
+
+        if (trustedFingerprint.isNullOrBlank()) {
+            secureConfigStore.saveTrustedServerFingerprint(
+                serverTrustKey = serverTrustKey,
+                fingerprint = fingerprint,
+            )
+            return
+        }
+
+        if (!trustedFingerprint.equals(fingerprint, ignoreCase = true)) {
+            throw ServerProbeException.CertificateChanged(serverTrustKey)
+        }
+    }
+
+    private fun ensureSecureTransport(serverUrl: HttpUrl) {
+        if (serverUrl.scheme == "https") return
+        if (isLocalDevelopmentHost(serverUrl.host)) return
+        throw ServerProbeException.InsecureTransport()
+    }
+
+    private fun isLocalDevelopmentHost(host: String): Boolean {
+        val normalizedHost = host.lowercase()
+        if (normalizedHost == "localhost") return true
+        if (normalizedHost == "10.0.2.2") return true
+        if (normalizedHost.endsWith(".local")) return true
+        if (normalizedHost.matches(Regex("^127\\.\\d+\\.\\d+\\.\\d+$"))) return true
+        if (normalizedHost.matches(Regex("^10\\.\\d+\\.\\d+\\.\\d+$"))) return true
+        if (normalizedHost.matches(Regex("^192\\.168\\.\\d+\\.\\d+$"))) return true
+        return normalizedHost.matches(Regex("^172\\.(1[6-9]|2\\d|3[0-1])\\.\\d+\\.\\d+$"))
+    }
+
+    private fun certificatePublicKeyFingerprint(certificate: X509Certificate): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(certificate.publicKey.encoded)
+        return digest.joinToString(":") { "%02X".format(it) }
+    }
+
     private fun parseQueryParams(url: String): Map<String, String> {
         if (url.isBlank()) return emptyMap()
         return runCatching {
@@ -523,5 +644,14 @@ class TdayRepository @Inject constructor(
                 else -> fallback
             }
         }.getOrElse { fallback }
+    }
+
+    private companion object {
+        const val LOG_TAG = "TdayRepository"
+        const val PROBE_TIMEOUT_MS = 7_000L
+        const val PROBE_PATH = "/api/mobile/probe"
+        const val CSRF_PATH = "/api/auth/csrf"
+        const val CREDENTIALS_PATH = "/api/auth/callback/credentials"
+        const val REGISTER_PATH = "/api/auth/register"
     }
 }
