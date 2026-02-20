@@ -75,6 +75,19 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun createTask(title: String) {
+        if (title.isBlank()) return
+        viewModelScope.launch {
+            runCatching { repository.createTodo(title = title, projectId = null) }
+                .onSuccess { refresh() }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(errorMessage = error.message ?: "Could not create task")
+                    }
+                }
+        }
+    }
+
     val projects: List<ProjectSummary>
         get() = _uiState.value.summary.projects
 }
