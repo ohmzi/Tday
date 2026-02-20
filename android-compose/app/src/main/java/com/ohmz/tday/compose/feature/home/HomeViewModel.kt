@@ -35,27 +35,51 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
-        refresh()
+        refreshInternal(
+            forceSync = false,
+            showLoading = true,
+        )
     }
 
     fun refresh() {
+        refreshInternal(
+            forceSync = true,
+            showLoading = true,
+        )
+    }
+
+    private fun refreshInternal(
+        forceSync: Boolean,
+        showLoading: Boolean,
+    ) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            if (showLoading) {
+                _uiState.update { current ->
+                    if (current.isLoading && current.errorMessage == null) current
+                    else current.copy(isLoading = true, errorMessage = null)
+                }
+            } else {
+                _uiState.update { current ->
+                    if (current.errorMessage == null) current else current.copy(errorMessage = null)
+                }
+            }
             runCatching {
-                // Pull-to-refresh should force a remote sync before re-reading cached summary.
-                repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
+                if (forceSync) {
+                    // Pull-to-refresh should force a remote sync before re-reading cached summary.
+                    repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
+                }
                 repository.fetchDashboardSummary()
             }.onSuccess { summary ->
-                _uiState.update {
-                    it.copy(
+                _uiState.update { current ->
+                    current.copy(
                         isLoading = false,
-                        summary = summary,
+                        summary = if (current.summary == summary) current.summary else summary,
                         errorMessage = null,
                     )
                 }
             }.onFailure { error ->
-                _uiState.update {
-                    it.copy(
+                _uiState.update { current ->
+                    current.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Failed to load dashboard",
                     )
@@ -72,7 +96,12 @@ class HomeViewModel @Inject constructor(
         if (name.isBlank()) return
         viewModelScope.launch {
             runCatching { repository.createList(name, color = color, iconKey = iconKey) }
-                .onSuccess { refresh() }
+                .onSuccess {
+                    refreshInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(errorMessage = error.message ?: "Could not create list")
@@ -85,7 +114,12 @@ class HomeViewModel @Inject constructor(
         if (title.isBlank()) return
         viewModelScope.launch {
             runCatching { repository.createTodo(title = title, listId = listId) }
-                .onSuccess { refresh() }
+                .onSuccess {
+                    refreshInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(errorMessage = error.message ?: "Could not create task")

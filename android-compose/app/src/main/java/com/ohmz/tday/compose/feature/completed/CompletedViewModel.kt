@@ -27,17 +27,47 @@ class CompletedViewModel @Inject constructor(
     val uiState: StateFlow<CompletedUiState> = _uiState.asStateFlow()
 
     fun load() {
+        loadInternal(
+            forceSync = true,
+            showLoading = true,
+        )
+    }
+
+    private fun loadInternal(
+        forceSync: Boolean,
+        showLoading: Boolean,
+    ) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            if (showLoading) {
+                _uiState.update { current ->
+                    if (current.isLoading && current.errorMessage == null) current
+                    else current.copy(isLoading = true, errorMessage = null)
+                }
+            } else {
+                _uiState.update { current ->
+                    if (current.errorMessage == null) current else current.copy(errorMessage = null)
+                }
+            }
             runCatching {
-                // Keep completed list aligned with latest server state on refresh.
-                repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
+                if (forceSync) {
+                    // Keep completed list aligned with latest server state on refresh.
+                    repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
+                }
                 repository.fetchCompletedItems()
             }.onSuccess { items ->
-                _uiState.update { it.copy(isLoading = false, items = items) }
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        items = if (current.items == items) current.items else items,
+                        errorMessage = null,
+                    )
+                }
             }.onFailure { error ->
-                _uiState.update {
-                    it.copy(isLoading = false, errorMessage = error.message ?: "Failed to load")
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        errorMessage = error.message ?: "Failed to load",
+                    )
                 }
             }
         }
@@ -46,7 +76,12 @@ class CompletedViewModel @Inject constructor(
     fun uncomplete(item: CompletedItem) {
         viewModelScope.launch {
             runCatching { repository.uncomplete(item) }
-                .onSuccess { load() }
+                .onSuccess {
+                    loadInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(errorMessage = error.message ?: "Could not restore task")

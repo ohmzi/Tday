@@ -27,15 +27,37 @@ class NotesViewModel @Inject constructor(
     val uiState: StateFlow<NotesUiState> = _uiState.asStateFlow()
 
     fun load() {
+        loadInternal(showLoading = true)
+    }
+
+    private fun loadInternal(showLoading: Boolean) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            if (showLoading) {
+                _uiState.update { current ->
+                    if (current.isLoading && current.errorMessage == null) current
+                    else current.copy(isLoading = true, errorMessage = null)
+                }
+            } else {
+                _uiState.update { current ->
+                    if (current.errorMessage == null) current else current.copy(errorMessage = null)
+                }
+            }
             runCatching {
                 repository.fetchNotes()
             }.onSuccess { notes ->
-                _uiState.update { it.copy(isLoading = false, notes = notes) }
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        notes = if (current.notes == notes) current.notes else notes,
+                        errorMessage = null,
+                    )
+                }
             }.onFailure { error ->
-                _uiState.update {
-                    it.copy(isLoading = false, errorMessage = error.message ?: "Failed to load notes")
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        errorMessage = error.message ?: "Failed to load notes",
+                    )
                 }
             }
         }
@@ -45,7 +67,7 @@ class NotesViewModel @Inject constructor(
         if (name.isBlank()) return
         viewModelScope.launch {
             runCatching { repository.createNote(name) }
-                .onSuccess { load() }
+                .onSuccess { loadInternal(showLoading = false) }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(errorMessage = error.message ?: "Could not create note")
@@ -57,7 +79,7 @@ class NotesViewModel @Inject constructor(
     fun delete(noteId: String) {
         viewModelScope.launch {
             runCatching { repository.deleteNote(noteId) }
-                .onSuccess { load() }
+                .onSuccess { loadInternal(showLoading = false) }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(errorMessage = error.message ?: "Could not delete note")
