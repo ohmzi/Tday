@@ -69,8 +69,10 @@ private enum class WizardViewState {
 fun OnboardingWizardOverlay(
     initialServerUrl: String?,
     serverErrorMessage: String?,
+    serverCanResetTrust: Boolean,
     authUiState: AuthUiState,
     onConnectServer: (String, (Result<Unit>) -> Unit) -> Unit,
+    onResetServerTrust: (String, (Result<Unit>) -> Unit) -> Unit,
     onLogin: (String, String) -> Unit,
     onCreateAccount: () -> Unit,
     onClearAuthStatus: () -> Unit,
@@ -86,6 +88,7 @@ fun OnboardingWizardOverlay(
     var password by rememberSaveable { mutableStateOf("") }
     var serverError by rememberSaveable { mutableStateOf<String?>(null) }
     var isConnecting by rememberSaveable { mutableStateOf(false) }
+    var isResettingTrust by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(initialServerUrl) {
         if (!initialServerUrl.isNullOrBlank()) {
@@ -221,13 +224,47 @@ fun OnboardingWizardOverlay(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = colorScheme.error,
                                         )
+
+                                        if (serverCanResetTrust) {
+                                            TextButton(
+                                                modifier = Modifier.padding(top = 4.dp),
+                                                onClick = {
+                                                    val value = serverUrl.trim()
+                                                    if (value.isBlank()) return@TextButton
+                                                    isResettingTrust = true
+                                                    onResetServerTrust(value) { resetResult ->
+                                                        isResettingTrust = false
+                                                        resetResult.onSuccess {
+                                                            serverError = null
+                                                            isConnecting = true
+                                                            onConnectServer(value) { connectResult ->
+                                                                isConnecting = false
+                                                                connectResult.onSuccess {
+                                                                    step = WizardStep.LOGIN
+                                                                    onClearAuthStatus()
+                                                                }.onFailure { error ->
+                                                                    step = WizardStep.SERVER
+                                                                    serverError = error.message
+                                                                        ?: "Could not connect to server"
+                                                                }
+                                                            }
+                                                        }.onFailure { error ->
+                                                            serverError = error.message
+                                                                ?: "Could not reset trusted server"
+                                                        }
+                                                    }
+                                                },
+                                            ) {
+                                                Text(if (isResettingTrust) "Resetting trust..." else "Reset trusted server")
+                                            }
+                                        }
                                     }
 
                                     Button(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(top = 14.dp),
-                                        enabled = serverUrl.isNotBlank(),
+                                        enabled = serverUrl.isNotBlank() && !isResettingTrust,
                                         onClick = {
                                             val value = serverUrl.trim()
                                             if (value.isBlank()) return@Button

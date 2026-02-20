@@ -2,12 +2,14 @@ package com.ohmz.tday.compose.feature.app
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.TdayRepository
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +24,7 @@ data class AppUiState(
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val user: SessionUser? = null,
     val error: String? = null,
+    val canResetServerTrust: Boolean = false,
 )
 
 @HiltViewModel
@@ -52,6 +55,7 @@ class AppViewModel @Inject constructor(
                         serverUrl = null,
                         user = null,
                         error = null,
+                        canResetServerTrust = false,
                     )
                 }
                 return@launch
@@ -67,6 +71,7 @@ class AppViewModel @Inject constructor(
                         serverUrl = repository.getServerUrl(),
                         user = sessionUser,
                         error = null,
+                        canResetServerTrust = false,
                     )
                 }
                 repository.syncTimezone()
@@ -91,6 +96,7 @@ class AppViewModel @Inject constructor(
                                 serverUrl = repository.getServerUrl(),
                                 user = authed,
                                 error = null,
+                                canResetServerTrust = false,
                             )
                         }
                         return@launch
@@ -111,6 +117,7 @@ class AppViewModel @Inject constructor(
                     serverUrl = repository.getServerUrl(),
                     user = null,
                     error = null,
+                    canResetServerTrust = false,
                 )
             }
         }
@@ -131,14 +138,44 @@ class AppViewModel @Inject constructor(
                         requiresServerSetup = false,
                         serverUrl = normalized,
                         error = null,
+                        canResetServerTrust = false,
                     )
                 }
                 onSuccess()
             }.onFailure { error ->
-                val message = error.message ?: "Invalid server URL"
+                val message = toServerSetupMessage(error)
                 _uiState.update {
                     it.copy(
                         error = message,
+                        canResetServerTrust = error is ServerProbeException.CertificateChanged,
+                    )
+                }
+                onFailure(message)
+            }
+        }
+    }
+
+    fun resetTrustedServer(
+        rawUrl: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            val result = repository.resetTrustedServer(rawUrl)
+            result.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        error = null,
+                        canResetServerTrust = false,
+                    )
+                }
+                onSuccess()
+            }.onFailure { error ->
+                val message = error.message ?: "Could not reset trusted server"
+                _uiState.update {
+                    it.copy(
+                        error = message,
+                        canResetServerTrust = false,
                     )
                 }
                 onFailure(message)
@@ -156,6 +193,7 @@ class AppViewModel @Inject constructor(
                     user = null,
                     error = null,
                     loading = false,
+                    canResetServerTrust = false,
                 )
             }
         }
@@ -164,5 +202,20 @@ class AppViewModel @Inject constructor(
     fun setThemeMode(mode: AppThemeMode) {
         themePreferenceStore.setThemeMode(mode)
         _uiState.update { it.copy(themeMode = mode) }
+    }
+
+    private fun toServerSetupMessage(error: Throwable): String {
+        return when (error) {
+            is TimeoutCancellationException -> "Server probe timed out. Check URL and network, then try again."
+            is ServerProbeException.InvalidUrl -> "Invalid server URL"
+            is ServerProbeException.InsecureTransport -> error.message ?: "Use HTTPS for remote server URLs."
+            is ServerProbeException.NotTdayServer ->
+                "Server is reachable but does not expose a valid Tday auth probe."
+            is ServerProbeException.AuthContractMismatch ->
+                "Server probe is incomplete. Required auth endpoints are missing."
+            is ServerProbeException.CertificateChanged ->
+                error.message ?: "Server certificate changed. Reset trusted server to continue."
+            else -> error.message ?: "Could not connect to server"
+        }
     }
 }
