@@ -651,10 +651,29 @@ class TdayRepository @Inject constructor(
         state = state.copy(lastSyncAttemptEpochMs = now)
         saveOfflineState(state)
 
+        val initialPendingCount = state.pendingMutations.size
         val firstRemote = fetchRemoteSnapshot()
+
+        if (initialPendingCount == 0) {
+            val mergedWithoutMutations = mergeRemoteWithLocal(
+                localState = state,
+                remote = firstRemote,
+            ).copy(
+                lastSyncAttemptEpochMs = now,
+                lastSuccessfulSyncEpochMs = now,
+            )
+            saveOfflineState(mergedWithoutMutations)
+            return
+        }
+
         val afterPending = applyPendingMutations(state, firstRemote)
         saveOfflineState(afterPending.copy(lastSyncAttemptEpochMs = now))
-        val latestRemote = fetchRemoteSnapshot()
+        val shouldRefetchRemote = afterPending.pendingMutations.size < initialPendingCount
+        val latestRemote = if (shouldRefetchRemote) {
+            fetchRemoteSnapshot()
+        } else {
+            firstRemote
+        }
         val mergedState = mergeRemoteWithLocal(
             localState = afterPending,
             remote = latestRemote,
