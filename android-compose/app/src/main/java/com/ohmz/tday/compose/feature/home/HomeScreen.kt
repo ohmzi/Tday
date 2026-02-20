@@ -794,7 +794,7 @@ private fun CategoryGrid(
             )
             CategoryCard(
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFD48A8C),
+                color = Color(0xFFDDB37D),
                 icon = Icons.Rounded.Schedule,
                 backgroundWatermark = Icons.Rounded.Schedule,
                 title = "Scheduled",
@@ -814,7 +814,7 @@ private fun CategoryGrid(
             )
             CategoryCard(
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFDDB37D),
+                color = Color(0xFFD48A8C),
                 icon = Icons.Rounded.Flag,
                 backgroundWatermark = Icons.Rounded.Flag,
                 title = "Flagged",
@@ -835,11 +835,11 @@ private fun CategoryGrid(
 }
 
 private fun completedTileColor(colorScheme: ColorScheme): Color {
-    return lerp(colorScheme.surfaceVariant, colorScheme.onSurface, 0.32f)
+    return Color(0xFFB4CDBA)
 }
 
 private fun calendarTileColor(colorScheme: ColorScheme): Color {
-    return lerp(completedTileColor(colorScheme), colorScheme.primary, 0.18f)
+    return Color(0xFFCEC2E2)
 }
 
 private fun listSectionEnterTransition(): EnterTransition {
