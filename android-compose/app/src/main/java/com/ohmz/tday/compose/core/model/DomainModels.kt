@@ -10,6 +10,16 @@ enum class TodoListMode {
     LIST,
 }
 
+data class CreateTaskPayload(
+    val title: String,
+    val description: String? = null,
+    val priority: String = "Low",
+    val dtstart: Instant,
+    val due: Instant,
+    val rrule: String? = null,
+    val listId: String? = null,
+)
+
 data class TodoItem(
     val id: String,
     val canonicalId: String,
