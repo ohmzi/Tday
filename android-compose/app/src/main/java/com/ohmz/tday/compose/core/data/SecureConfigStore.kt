@@ -163,6 +163,18 @@ class SecureConfigStore @Inject constructor(
         return "$base$normalizedPath"
     }
 
+    fun getOfflineSyncStateRaw(): String? {
+        return prefs.getString(KEY_OFFLINE_SYNC_STATE, null)
+    }
+
+    fun saveOfflineSyncStateRaw(raw: String) {
+        prefs.edit().putString(KEY_OFFLINE_SYNC_STATE, raw).apply()
+    }
+
+    fun clearOfflineSyncState() {
+        prefs.edit().remove(KEY_OFFLINE_SYNC_STATE).apply()
+    }
+
     private fun fingerprintPrefKey(serverTrustKey: String): String {
         return "$KEY_CERT_FINGERPRINT_PREFIX$serverTrustKey"
     }
@@ -186,5 +198,6 @@ class SecureConfigStore @Inject constructor(
         const val KEY_DEVICE_ID = "device_id"
         const val KEY_CERT_FINGERPRINT_PREFIX = "cert_fp_"
         const val KEY_LIST_ICON_MAP = "list_icon_map"
+        const val KEY_OFFLINE_SYNC_STATE = "offline_sync_state_v1"
     }
 }

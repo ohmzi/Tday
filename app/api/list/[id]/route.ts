@@ -28,12 +28,13 @@ export async function PATCH(
 
     if (!parsedObj.success) throw new BadRequestError();
 
-    const { name, color } = parsedObj.data;
+    const { name, color, iconKey } = parsedObj.data;
 
     const data: Prisma.ListUpdateInput = {};
 
     if (name !== undefined) data.name = name;
     if (color !== undefined) data.color = color;
+    if (iconKey !== undefined) data.iconKey = iconKey;
 
     if (Object.keys(data).length === 0) {
       throw new BadRequestError("No fields to update");
