@@ -9,7 +9,12 @@ export const useDeleteCalendarInstanceTodo = () => {
     useMutation({
       mutationFn: async (todo: TodoItemType) => {
         await api.DELETE({
-          url: `/api/todo/instance/${todo.id.split(":")[0]}?instanceDate=${todo.instanceDate!.getTime()}`,
+          url: "/api/todo/instance",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: todo.id.split(":")[0],
+            instanceDate: todo.instanceDate?.getTime() ?? null,
+          }),
         });
       },
       onMutate: async (todo: TodoItemType) => {

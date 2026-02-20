@@ -8,6 +8,8 @@ import com.ohmz.tday.compose.core.model.CreateListResponse
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.CreateTodoResponse
 import com.ohmz.tday.compose.core.model.CsrfResponse
+import com.ohmz.tday.compose.core.model.DeleteListRequest
+import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.MessageResponse
 import com.ohmz.tday.compose.core.model.MobileProbeResponse
 import com.ohmz.tday.compose.core.model.NotesResponse
@@ -17,8 +19,13 @@ import com.ohmz.tday.compose.core.model.ListsResponse
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.RegisterResponse
 import com.ohmz.tday.compose.core.model.ReorderItemRequest
-import com.ohmz.tday.compose.core.model.TodoInstanceRequest
+import com.ohmz.tday.compose.core.model.TodoCompleteRequest
+import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
+import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
+import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.TodosResponse
+import com.ohmz.tday.compose.core.model.UpdateListRequest
+import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.model.UpdateProfileRequest
 import com.ohmz.tday.compose.core.model.UserResponse
 import kotlinx.serialization.json.JsonElement
@@ -30,6 +37,7 @@ import retrofit2.http.FieldMap
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -81,27 +89,29 @@ interface TdayApiService {
         @Body payload: CreateTodoRequest,
     ): Response<CreateTodoResponse>
 
-    @PATCH("/api/todo/{id}")
-    suspend fun patchTodo(
-        @Path("id") todoId: String,
-        @Body payload: JsonObject,
+    @PATCH("/api/todo")
+    suspend fun patchTodoByBody(
+        @Body payload: UpdateTodoRequest,
     ): Response<MessageResponse>
 
-    @DELETE("/api/todo/{id}")
-    suspend fun deleteTodo(
-        @Path("id") todoId: String,
+    @HTTP(method = "DELETE", path = "/api/todo", hasBody = true)
+    suspend fun deleteTodoByBody(
+        @Body payload: DeleteTodoRequest,
     ): Response<MessageResponse>
 
-    @PATCH("/api/todo/{id}/complete")
-    suspend fun completeTodo(
-        @Path("id") todoId: String,
-        @Body payload: JsonObject,
+    @PATCH("/api/todo/complete")
+    suspend fun completeTodoByBody(
+        @Body payload: TodoCompleteRequest,
     ): Response<MessageResponse>
 
-    @PATCH("/api/todo/{id}/uncomplete")
-    suspend fun uncompleteTodo(
-        @Path("id") todoId: String,
-        @Body payload: JsonObject,
+    @PATCH("/api/todo/uncomplete")
+    suspend fun uncompleteTodoByBody(
+        @Body payload: TodoUncompleteRequest,
+    ): Response<MessageResponse>
+
+    @PATCH("/api/todo/prioritize")
+    suspend fun prioritizeTodoByBody(
+        @Body payload: TodoPrioritizeRequest,
     ): Response<MessageResponse>
 
     @PATCH("/api/todo/reorder")
@@ -115,35 +125,14 @@ interface TdayApiService {
         @Query("end") end: Long,
     ): Response<TodosResponse>
 
-    @PATCH("/api/todo/instance/{id}")
-    suspend fun patchTodoInstance(
-        @Path("id") todoId: String,
-        @Body payload: JsonObject,
+    @PATCH("/api/todo/instance")
+    suspend fun patchTodoInstanceByBody(
+        @Body payload: TodoInstanceUpdateRequest,
     ): Response<MessageResponse>
 
-    @DELETE("/api/todo/instance/{id}")
-    suspend fun deleteTodoInstance(
-        @Path("id") todoId: String,
-        @Query("instanceDate") instanceDate: Long,
-    ): Response<MessageResponse>
-
-    @PATCH("/api/todo/instance/{id}/complete")
-    suspend fun completeTodoInstance(
-        @Path("id") todoId: String,
-        @Body payload: TodoInstanceRequest,
-    ): Response<MessageResponse>
-
-    @PATCH("/api/todo/instance/{id}/uncomplete")
-    suspend fun uncompleteTodoInstance(
-        @Path("id") todoId: String,
-        @Body payload: TodoInstanceRequest,
-    ): Response<MessageResponse>
-
-    @PATCH("/api/todo/instance/{id}/prioritize")
-    suspend fun prioritizeTodoInstance(
-        @Path("id") todoId: String,
-        @Query("priority") priority: String,
-        @Query("instanceDate") instanceDate: Long,
+    @HTTP(method = "DELETE", path = "/api/todo/instance", hasBody = true)
+    suspend fun deleteTodoInstanceByBody(
+        @Body payload: DeleteTodoRequest,
     ): Response<MessageResponse>
 
     @GET("/api/completedTodo")
@@ -183,15 +172,14 @@ interface TdayApiService {
         @Body payload: CreateListRequest,
     ): Response<CreateListResponse>
 
-    @PATCH("/api/list/{id}")
-    suspend fun patchList(
-        @Path("id") listId: String,
-        @Body payload: JsonObject,
+    @PATCH("/api/list")
+    suspend fun patchListByBody(
+        @Body payload: UpdateListRequest,
     ): Response<MessageResponse>
 
-    @DELETE("/api/list/{id}")
-    suspend fun deleteList(
-        @Path("id") listId: String,
+    @HTTP(method = "DELETE", path = "/api/list", hasBody = true)
+    suspend fun deleteListByBody(
+        @Body payload: DeleteListRequest,
     ): Response<MessageResponse>
 
     @GET("/api/preferences")
