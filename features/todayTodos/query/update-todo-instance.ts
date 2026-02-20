@@ -24,7 +24,7 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
   const todoId = ghostTodo.id.split(":")[0];
 
   await api.PATCH({
-    url: `/api/todo/instance/${todoId}`,
+    url: "/api/todo/instance",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...parsedObj.data, id: todoId }),
   });

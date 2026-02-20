@@ -38,11 +38,13 @@ async function patchCalendarTodo({
     dateRangeChecksum !==
     todo.dtstart.toISOString() + "" + todo.due.toISOString();
 
+  const todoId = todo.id.split(":")[0];
   await api.PATCH({
-    url: `/api/todo/${todo.id.split(":")[0]}`,
+    url: "/api/todo",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...parsedObj.data,
+      id: todoId,
       instanceDate: todo.instanceDate?.getTime(),
       rruleChanged,
       dateChanged,

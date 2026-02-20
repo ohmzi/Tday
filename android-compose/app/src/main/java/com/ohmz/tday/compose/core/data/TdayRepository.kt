@@ -8,14 +8,18 @@ import com.ohmz.tday.compose.core.model.CreateNoteRequest
 import com.ohmz.tday.compose.core.model.CreateListRequest
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.DashboardSummary
+import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.NoteItem
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.RegisterOutcome
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.SessionUser
-import com.ohmz.tday.compose.core.model.TodoInstanceRequest
+import com.ohmz.tday.compose.core.model.TodoCompleteRequest
+import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
+import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.SerializationException
@@ -26,12 +30,10 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import retrofit2.Response
@@ -479,15 +481,19 @@ class TdayRepository @Inject constructor(
         runCatching {
             if (isRecurringInstanceDelete) {
                 requireBody(
-                    api.deleteTodoInstance(
-                        todoId = canonicalId,
-                        instanceDate = instanceDateEpochMs ?: return@runCatching,
+                    api.deleteTodoInstanceByBody(
+                        DeleteTodoRequest(
+                            id = canonicalId,
+                            instanceDate = instanceDateEpochMs ?: return@runCatching,
+                        ),
                     ),
                     "Could not delete recurring task instance",
                 )
             } else {
                 requireBody(
-                    api.deleteTodo(todoId = canonicalId),
+                    api.deleteTodoByBody(
+                        DeleteTodoRequest(id = canonicalId),
+                    ),
                     "Could not delete task",
                 )
             }
@@ -531,11 +537,11 @@ class TdayRepository @Inject constructor(
 
         runCatching {
             requireBody(
-                api.patchTodo(
-                    todoId = todo.canonicalId,
-                    payload = buildJsonObject {
-                        put("pinned", pinned)
-                    },
+                api.patchTodoByBody(
+                    UpdateTodoRequest(
+                        id = todo.canonicalId,
+                        pinned = pinned,
+                    ),
                 ),
                 "Could not update pin",
             )
@@ -550,6 +556,7 @@ class TdayRepository @Inject constructor(
 
     suspend fun setTodoPriority(todo: TodoItem, priority: String) {
         val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
         updateOfflineState { state ->
             state.copy(
                 todos = state.todos.map {
@@ -562,18 +569,56 @@ class TdayRepository @Inject constructor(
                         it
                     }
                 },
-                pendingMutations = state.pendingMutations + PendingMutationRecord(
-                    mutationId = UUID.randomUUID().toString(),
-                    kind = MutationKind.SET_PRIORITY,
-                    targetId = todo.canonicalId,
-                    timestampEpochMs = timestampMs,
-                    priority = priority,
-                    instanceDateEpochMs = todo.instanceDateEpochMillis,
-                ),
+                pendingMutations = state.pendingMutations
+                    .filterNot {
+                        it.kind == MutationKind.SET_PRIORITY &&
+                            it.targetId == todo.canonicalId &&
+                            it.instanceDateEpochMs == todo.instanceDateEpochMillis
+                    } +
+                    PendingMutationRecord(
+                        mutationId = mutationId,
+                        kind = MutationKind.SET_PRIORITY,
+                        targetId = todo.canonicalId,
+                        timestampEpochMs = timestampMs,
+                        priority = priority,
+                        instanceDateEpochMs = todo.instanceDateEpochMillis,
+                    ),
             )
         }
 
-        runCatching { syncLocalCache(force = true) }
+        if (todo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
+
+        runCatching {
+            val instanceDateEpochMs = todo.instanceDateEpochMillis
+            if (instanceDateEpochMs != null) {
+                requireBody(
+                    api.prioritizeTodoByBody(
+                        TodoPrioritizeRequest(
+                            id = todo.canonicalId,
+                            priority = priority,
+                            instanceDate = instanceDateEpochMs,
+                        ),
+                    ),
+                    "Could not update priority",
+                )
+            } else {
+                requireBody(
+                    api.patchTodoByBody(
+                        UpdateTodoRequest(
+                            id = todo.canonicalId,
+                            priority = priority,
+                        ),
+                    ),
+                    "Could not update priority",
+                )
+            }
+        }.onSuccess {
+            updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        }
     }
 
     suspend fun completeTodo(todo: TodoItem) {
@@ -929,9 +974,11 @@ class TdayRepository @Inject constructor(
                         val instanceDateEpochMs = mutation.instanceDateEpochMs
                         if (instanceDateEpochMs != null) {
                             requireBody(
-                                api.deleteTodoInstance(
-                                    todoId = targetId,
-                                    instanceDate = instanceDateEpochMs,
+                                api.deleteTodoInstanceByBody(
+                                    DeleteTodoRequest(
+                                        id = targetId,
+                                        instanceDate = instanceDateEpochMs,
+                                    ),
                                 ),
                                 "Could not delete recurring task instance",
                             )
@@ -940,7 +987,12 @@ class TdayRepository @Inject constructor(
 
                         val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
                         if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
-                        requireBody(api.deleteTodo(targetId), "Could not delete task")
+                        requireBody(
+                            api.deleteTodoByBody(
+                                DeleteTodoRequest(id = targetId),
+                            ),
+                            "Could not delete task",
+                        )
                         true
                     }
 
@@ -950,11 +1002,11 @@ class TdayRepository @Inject constructor(
                         val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
                         if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
                         requireBody(
-                            api.patchTodo(
-                                todoId = targetId,
-                                payload = buildJsonObject {
-                                    put("pinned", mutation.pinned ?: false)
-                                },
+                            api.patchTodoByBody(
+                                UpdateTodoRequest(
+                                    id = targetId,
+                                    pinned = mutation.pinned ?: false,
+                                ),
                             ),
                             "Could not update pin",
                         )
@@ -971,20 +1023,22 @@ class TdayRepository @Inject constructor(
                         val instanceDateEpochMs = mutation.instanceDateEpochMs
                         if (instanceDateEpochMs != null) {
                             requireBody(
-                                api.prioritizeTodoInstance(
-                                    todoId = targetId,
-                                    priority = priority,
-                                    instanceDate = instanceDateEpochMs,
+                                api.prioritizeTodoByBody(
+                                    TodoPrioritizeRequest(
+                                        id = targetId,
+                                        priority = priority,
+                                        instanceDate = instanceDateEpochMs,
+                                    ),
                                 ),
                                 "Could not update priority",
                             )
                         } else {
                             requireBody(
-                                api.patchTodo(
-                                    todoId = targetId,
-                                    payload = buildJsonObject {
-                                        put("priority", priority)
-                                    },
+                                api.patchTodoByBody(
+                                    UpdateTodoRequest(
+                                        id = targetId,
+                                        priority = priority,
+                                    ),
                                 ),
                                 "Could not update priority",
                             )
@@ -998,9 +1052,10 @@ class TdayRepository @Inject constructor(
                         val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
                         if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
                         requireBody(
-                            api.completeTodo(
-                                todoId = targetId,
-                                payload = buildJsonObject {},
+                            api.completeTodoByBody(
+                                TodoCompleteRequest(
+                                    id = targetId,
+                                ),
                             ),
                             "Could not complete task",
                         )
@@ -1010,13 +1065,12 @@ class TdayRepository @Inject constructor(
                     MutationKind.COMPLETE_TODO_INSTANCE -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
                         if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        val instanceDate = mutation.instanceDateEpochMs
-                            ?.let(Instant::ofEpochMilli)
-                            ?.toString()
                         requireBody(
-                            api.completeTodoInstance(
-                                todoId = targetId,
-                                payload = TodoInstanceRequest(instanceDate = instanceDate),
+                            api.completeTodoByBody(
+                                TodoCompleteRequest(
+                                    id = targetId,
+                                    instanceDate = mutation.instanceDateEpochMs,
+                                ),
                             ),
                             "Could not complete recurring task",
                         )
@@ -1026,26 +1080,15 @@ class TdayRepository @Inject constructor(
                     MutationKind.UNCOMPLETE_TODO -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
                         if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
-                        val instanceDate = mutation.instanceDateEpochMs
-                            ?.let(Instant::ofEpochMilli)
-                            ?.toString()
-                        if (instanceDate != null) {
-                            requireBody(
-                                api.uncompleteTodoInstance(
-                                    todoId = targetId,
-                                    payload = TodoInstanceRequest(instanceDate = instanceDate),
+                        requireBody(
+                            api.uncompleteTodoByBody(
+                                TodoUncompleteRequest(
+                                    id = targetId,
+                                    instanceDate = mutation.instanceDateEpochMs,
                                 ),
-                                "Could not restore recurring task",
-                            )
-                        } else {
-                            requireBody(
-                                api.uncompleteTodo(
-                                    todoId = targetId,
-                                    payload = buildJsonObject {},
-                                ),
-                                "Could not restore task",
-                            )
-                        }
+                            ),
+                            "Could not restore task",
+                        )
                         true
                     }
                 }

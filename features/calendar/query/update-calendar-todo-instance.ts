@@ -25,9 +25,10 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
   }
 
   await api.PATCH({
-    url: `/api/todo/instance/${ghostTodo.id.split(":")[0]}`,
+    url: "/api/todo/instance",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      id: ghostTodo.id.split(":")[0],
       ...parsedObj.data,
       instanceDate: parsedObj.data.instanceDate,
     }),
