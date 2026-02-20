@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.todos
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -18,14 +19,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,18 +56,25 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.time.YearMonth
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +88,33 @@ fun TodoListScreen(
     onTogglePin: (todo: TodoItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val isTodayScreen = uiState.mode == TodoListMode.TODAY
+    val titleColor = when (uiState.mode) {
+        TodoListMode.TODAY -> Color(0xFF3D7FEA)
+        TodoListMode.SCHEDULED -> Color(0xFFE25555)
+        else -> colorScheme.onSurface
+    }
+    val showSectionedTimeline = uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.SCHEDULED
+    val timelineSections = remember(uiState.mode, uiState.items) {
+        buildTimelineSections(
+            mode = uiState.mode,
+            items = uiState.items,
+        )
+    }
+    val listState = rememberLazyListState()
+    val todayCollapseProgressTarget by remember(isTodayScreen, listState) {
+        derivedStateOf {
+            if (!isTodayScreen) {
+                0f
+            } else {
+                computeTodayTitleCollapseProgress(listState)
+            }
+        }
+    }
+    val todayCollapseProgress by animateFloatAsState(
+        targetValue = todayCollapseProgressTarget,
+        label = "todayTitleCollapseProgress",
+    )
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
@@ -93,33 +134,55 @@ fun TodoListScreen(
     Scaffold(
         containerColor = colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = uiState.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
+            if (isTodayScreen) {
+                TodayTopBar(
+                    onBack = onBack,
+                    collapseProgress = todayCollapseProgress,
+                )
+            } else {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = uiState.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = titleColor,
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                )
+            }
         },
         floatingActionButton = {
-            CreateTaskButton(
-                modifier = Modifier
-                    .offset(y = fabOffsetY)
-                    .graphicsLayer {
-                        scaleX = fabScale
-                        scaleY = fabScale
-                    },
-                interactionSource = fabInteractionSource,
-                elevation = fabElevation,
-                onClick = { showCreateTaskSheet = true },
-            )
+            if (isTodayScreen) {
+                TodayCreateTaskButton(
+                    modifier = Modifier
+                        .offset(y = fabOffsetY)
+                        .graphicsLayer {
+                            scaleX = fabScale
+                            scaleY = fabScale
+                        },
+                    interactionSource = fabInteractionSource,
+                    elevation = fabElevation,
+                    onClick = { showCreateTaskSheet = true },
+                )
+            } else {
+                CreateTaskButton(
+                    modifier = Modifier
+                        .offset(y = fabOffsetY)
+                        .graphicsLayer {
+                            scaleX = fabScale
+                            scaleY = fabScale
+                        },
+                    interactionSource = fabInteractionSource,
+                    elevation = fabElevation,
+                    onClick = { showCreateTaskSheet = true },
+                )
+            }
         },
     ) { padding ->
         TdayPullToRefreshBox(
@@ -131,10 +194,15 @@ fun TodoListScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                state = listState,
+                contentPadding = if (isTodayScreen) {
+                    PaddingValues(horizontal = 18.dp, vertical = 8.dp)
+                } else {
+                    PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                },
+                verticalArrangement = Arrangement.spacedBy(if (isTodayScreen) 18.dp else 8.dp),
             ) {
-                if (uiState.items.isEmpty()) {
+                if (!showSectionedTimeline && uiState.items.isEmpty()) {
                     item {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
@@ -149,13 +217,33 @@ fun TodoListScreen(
                     }
                 }
 
-                items(uiState.items, key = { it.id }) { todo ->
-                    TodoRow(
-                        todo = todo,
-                        onComplete = { onComplete(todo) },
-                        onDelete = { onDelete(todo) },
-                        onPin = { onTogglePin(todo) },
-                    )
+                if (showSectionedTimeline) {
+                    items(timelineSections, key = { it.key }) { section ->
+                        TimelineSection(
+                            section = section,
+                            useMinimalStyle = isTodayScreen,
+                            onComplete = onComplete,
+                            onDelete = onDelete,
+                            onTogglePin = onTogglePin,
+                        )
+                    }
+                    if (uiState.items.isEmpty()) {
+                        item {
+                            EmptyTimelineState(
+                                message = "No Reminders",
+                                useMinimalStyle = isTodayScreen,
+                            )
+                        }
+                    }
+                } else {
+                    items(uiState.items, key = { it.id }) { todo ->
+                        TodoRow(
+                            todo = todo,
+                            onComplete = { onComplete(todo) },
+                            onDelete = { onDelete(todo) },
+                            onPin = { onTogglePin(todo) },
+                        )
+                    }
                 }
 
                 uiState.errorMessage?.let { message ->
@@ -183,6 +271,151 @@ fun TodoListScreen(
                 showCreateTaskSheet = false
             },
         )
+    }
+}
+
+@Composable
+private fun TodayTopBar(
+    onBack: () -> Unit,
+    collapseProgress: Float,
+) {
+    val progress = collapseProgress.coerceIn(0f, 1f)
+    val titleHandoffPoint = 0.52f
+    val density = LocalDensity.current
+    val expandedTitleHeight = lerp(64.dp, 8.dp, progress)
+    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
+    val collapsedTitleAlpha =
+        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
+    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
+    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 8.dp),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TodayHeaderButton(
+                    onClick = onBack,
+                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = "Back",
+                )
+                TodayHeaderButton(
+                    onClick = { },
+                    icon = Icons.Rounded.MoreHoriz,
+                    contentDescription = "More options",
+                )
+            }
+            if (collapsedTitleAlpha > 0.001f) {
+                Text(
+                    text = "Today",
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .graphicsLayer {
+                            alpha = collapsedTitleAlpha
+                            translationY = collapsedTitleShiftY
+                        },
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3D7FEA),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(lerp(18.dp, 4.dp, progress)))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(expandedTitleHeight),
+            contentAlignment = Alignment.BottomStart,
+        ) {
+            if (expandedTitleAlpha > 0.001f) {
+                Text(
+                    text = "Today",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF3D7FEA),
+                    modifier = Modifier.graphicsLayer {
+                        alpha = expandedTitleAlpha
+                        translationY = expandedTitleShiftY
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayHeaderButton(
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    Card(
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        shape = CircleShape,
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(56.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = colorScheme.onSurface,
+                modifier = Modifier.size(30.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TodayCreateTaskButton(
+    modifier: Modifier,
+    interactionSource: MutableInteractionSource,
+    elevation: Dp,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    Card(
+        modifier = modifier,
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        border = BorderStroke(1.25.dp, Color(0xFF2F4FD5)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF3E8AF4)),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = elevation,
+            pressedElevation = elevation,
+        ),
+    ) {
+        Box(
+            modifier = Modifier.size(72.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = "Create task",
+                tint = Color(0xFF9DEEFF),
+                modifier = Modifier.size(38.dp),
+            )
+        }
     }
 }
 
@@ -246,6 +479,328 @@ private fun CreateTaskButton(
                 modifier = Modifier.size(30.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun TimelineSection(
+    section: TodoSection,
+    useMinimalStyle: Boolean,
+    onComplete: (TodoItem) -> Unit,
+    onDelete: (TodoItem) -> Unit,
+    onTogglePin: (TodoItem) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = section.title,
+            color = if (useMinimalStyle) {
+                colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
+            } else {
+                colorScheme.onSurfaceVariant
+            },
+            style = if (useMinimalStyle) {
+                MaterialTheme.typography.headlineSmall
+            } else {
+                MaterialTheme.typography.titleMedium
+            },
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        if (section.items.isEmpty()) {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+            )
+        } else {
+            section.items.forEach { todo ->
+                if (useMinimalStyle) {
+                    TodayTodoRow(
+                        todo = todo,
+                        onComplete = { onComplete(todo) },
+                        onDelete = { onDelete(todo) },
+                        onPin = { onTogglePin(todo) },
+                    )
+                } else {
+                    TodoRow(
+                        todo = todo,
+                        onComplete = { onComplete(todo) },
+                        onDelete = { onDelete(todo) },
+                        onPin = { onTogglePin(todo) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyTimelineState(
+    message: String,
+    useMinimalStyle: Boolean = false,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                top = if (useMinimalStyle) 110.dp else 88.dp,
+                bottom = if (useMinimalStyle) 180.dp else 140.dp,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = message,
+            color = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.52f else 0.85f),
+            style = if (useMinimalStyle) {
+                MaterialTheme.typography.displaySmall
+            } else {
+                MaterialTheme.typography.headlineSmall
+            },
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+private data class TodoSection(
+    val key: String,
+    val title: String,
+    val items: List<TodoItem>,
+)
+
+private fun buildTimelineSections(
+    mode: TodoListMode,
+    items: List<TodoItem>,
+): List<TodoSection> {
+    val zoneId = ZoneId.systemDefault()
+    return when (mode) {
+        TodoListMode.TODAY -> buildTodaySections(items, zoneId)
+        TodoListMode.SCHEDULED -> buildScheduledSections(items, zoneId)
+        else -> emptyList()
+    }
+}
+
+private fun buildTodaySections(
+    items: List<TodoItem>,
+    zoneId: ZoneId,
+): List<TodoSection> {
+    val sorted = items.sortedBy { it.due }
+    fun inRange(startInclusive: Int, endInclusive: Int): (TodoItem) -> Boolean = { todo ->
+        val hour = todo.due.atZone(zoneId).hour
+        hour in startInclusive..endInclusive
+    }
+
+    return listOf(
+        TodoSection(
+            key = "today-morning",
+            title = "Morning",
+            items = sorted.filter(inRange(0, 11)),
+        ),
+        TodoSection(
+            key = "today-afternoon",
+            title = "Afternoon",
+            items = sorted.filter(inRange(12, 17)),
+        ),
+        TodoSection(
+            key = "today-tonight",
+            title = "Tonight",
+            items = sorted.filter(inRange(18, 23)),
+        ),
+    )
+}
+
+private fun buildScheduledSections(
+    items: List<TodoItem>,
+    zoneId: ZoneId,
+): List<TodoSection> {
+    val sorted = items.sortedBy { it.due }
+    val groupedByDate = sorted.groupBy { todo ->
+        LocalDate.ofInstant(todo.due, zoneId)
+    }
+    val today = LocalDate.now(zoneId)
+    val horizonStart = today.plusDays(7)
+    val currentMonth = YearMonth.from(today)
+
+    val sections = mutableListOf<TodoSection>()
+    fun daySection(date: LocalDate, title: String): TodoSection {
+        return TodoSection(
+            key = "day-$date",
+            title = title,
+            items = groupedByDate[date].orEmpty(),
+        )
+    }
+
+    val earlierItems = groupedByDate
+        .asSequence()
+        .filter { (date, _) -> date < today }
+        .flatMap { (_, dayItems) -> dayItems.asSequence() }
+        .sortedBy { it.due }
+        .toList()
+    if (earlierItems.isNotEmpty()) {
+        sections += TodoSection(
+            key = "earlier",
+            title = "Earlier",
+            items = earlierItems,
+        )
+    }
+
+    sections += daySection(today, "Today")
+    sections += daySection(today.plusDays(1), "Tomorrow")
+    for (offset in 2..6) {
+        val date = today.plusDays(offset.toLong())
+        sections += daySection(
+            date = date,
+            title = date.format(SCHEDULED_DAY_FORMATTER),
+        )
+    }
+
+    val restOfCurrentMonthItems = groupedByDate
+        .asSequence()
+        .filter { (date, _) ->
+            date >= horizonStart && YearMonth.from(date) == currentMonth
+        }
+        .flatMap { (_, dayItems) -> dayItems.asSequence() }
+        .sortedBy { it.due }
+        .toList()
+    val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+    sections += TodoSection(
+        key = "rest-$currentMonth",
+        title = "Rest of $monthName",
+        items = restOfCurrentMonthItems,
+    )
+
+    val futureMonthsWithData = groupedByDate.keys
+        .asSequence()
+        .filter { it >= horizonStart }
+        .map { YearMonth.from(it) }
+        .toSet()
+    val minimumFinalMonth = currentMonth.plusMonths(6)
+    val finalMonth = maxOf(
+        minimumFinalMonth,
+        futureMonthsWithData.maxOrNull() ?: minimumFinalMonth,
+    )
+
+    var targetMonth = currentMonth.plusMonths(1)
+    while (targetMonth <= finalMonth) {
+        val monthItems = groupedByDate
+            .asSequence()
+            .filter { (date, _) ->
+                date >= horizonStart && YearMonth.from(date) == targetMonth
+            }
+            .flatMap { (_, dayItems) -> dayItems.asSequence() }
+            .sortedBy { it.due }
+            .toList()
+        sections += TodoSection(
+            key = "month-$targetMonth",
+            title = monthTitle(targetMonth, currentMonth.year),
+            items = monthItems,
+        )
+        targetMonth = targetMonth.plusMonths(1)
+    }
+
+    return sections
+}
+
+private fun monthTitle(
+    month: YearMonth,
+    currentYear: Int,
+): String {
+    val monthName = month.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+    return if (month.year == currentYear) {
+        monthName
+    } else {
+        "$monthName ${month.year}"
+    }
+}
+
+private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE MMM d")
+
+private fun computeTodayTitleCollapseProgress(
+    listState: LazyListState,
+): Float {
+    if (listState.firstVisibleItemIndex > 0) return 1f
+    return (listState.firstVisibleItemScrollOffset / TODAY_TITLE_COLLAPSE_SCROLL_PX)
+        .coerceIn(0f, 1f)
+}
+
+private const val TODAY_TITLE_COLLAPSE_SCROLL_PX = 170f
+
+@Composable
+private fun TodayTodoRow(
+    todo: TodoItem,
+    onComplete: () -> Unit,
+    onDelete: () -> Unit,
+    onPin: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val dueText = DateTimeFormatter.ofPattern("HH:mm")
+        .withZone(ZoneId.systemDefault())
+        .format(todo.due)
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.CheckCircle,
+                contentDescription = "Complete",
+                tint = priorityColor(todo.priority),
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable { onComplete() },
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 10.dp),
+            ) {
+                Text(
+                    text = todo.title,
+                    color = colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = dueText,
+                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            IconButton(onClick = onPin) {
+                Icon(
+                    imageVector = Icons.Rounded.PushPin,
+                    contentDescription = "Pin",
+                    tint = if (todo.pinned) colorScheme.tertiary else colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Rounded.Delete,
+                    contentDescription = "Delete",
+                    tint = colorScheme.error,
+                )
+            }
+        }
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+        )
     }
 }
 
