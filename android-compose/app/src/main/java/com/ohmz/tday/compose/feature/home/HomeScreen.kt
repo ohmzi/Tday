@@ -65,16 +65,17 @@ fun HomeScreen(
     onOpenProject: (projectId: String, projectName: String) -> Unit,
     onCreateProject: (name: String) -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     var listName by rememberSaveable { mutableStateOf("") }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = Color(0xFF050507),
+        containerColor = colorScheme.background,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showCreateList = true },
-                containerColor = Color(0xFF4B9AF4),
-                contentColor = Color.White,
+                containerColor = colorScheme.primary,
+                contentColor = colorScheme.onPrimary,
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = "Create list")
             }
@@ -98,7 +99,7 @@ fun HomeScreen(
                 Text(
                     text = "Tday",
                     style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White,
+                    color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -120,7 +121,7 @@ fun HomeScreen(
 
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF171A21)),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(24.dp),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -136,20 +137,20 @@ fun HomeScreen(
                         Column {
                             Text(
                                 text = "Calendar",
-                                color = Color.White,
+                                color = colorScheme.onSurface,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Text(
                                 text = "Month/week/day views coming natively",
-                                color = Color(0xFFA0A6B4),
+                                color = colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
                         Icon(
                             imageVector = Icons.Rounded.CalendarToday,
                             contentDescription = null,
-                            tint = Color(0xFFBFD9FF),
+                            tint = colorScheme.primary,
                         )
                     }
                 }
@@ -159,7 +160,7 @@ fun HomeScreen(
                 Text(
                     text = "My Lists",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -228,25 +229,26 @@ private fun TopSearchBar(
     onOpenNotes: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(32.dp))
-            .background(Color(0xFF121316))
+            .background(colorScheme.surfaceVariant)
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = {}) {
-            Icon(Icons.Rounded.Search, contentDescription = "Search", tint = Color.White)
+            Icon(Icons.Rounded.Search, contentDescription = "Search", tint = colorScheme.onSurface)
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onOpenNotes) {
-                Icon(Icons.Rounded.List, contentDescription = "Notes", tint = Color.White)
+                Icon(Icons.Rounded.List, contentDescription = "Notes", tint = colorScheme.onSurface)
             }
             IconButton(onClick = onOpenSettings) {
-                Icon(Icons.Rounded.MoreHoriz, contentDescription = "More", tint = Color.White)
+                Icon(Icons.Rounded.MoreHoriz, contentDescription = "More", tint = colorScheme.onSurface)
             }
         }
     }
@@ -363,9 +365,10 @@ private fun ProjectRow(
     count: Int,
     onClick: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Card(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF171A21)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
@@ -388,13 +391,13 @@ private fun ProjectRow(
                     modifier = Modifier.padding(start = 12.dp),
                     text = name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
+                    color = colorScheme.onSurface,
                 )
             }
 
             Text(
                 text = count.toString(),
-                color = Color(0xFFADB3C1),
+                color = colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -404,9 +407,10 @@ private fun ProjectRow(
 
 @Composable
 private fun EmptyProjectCard(onCreate: () -> Unit) {
+    val colorScheme = MaterialTheme.colorScheme
     Card(
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF171A21)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -415,12 +419,12 @@ private fun EmptyProjectCard(onCreate: () -> Unit) {
         ) {
             Text(
                 text = "No lists yet",
-                color = Color.White,
+                color = colorScheme.onSurface,
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
                 text = "Create project lists to organize tasks like iOS Reminders.",
-                color = Color(0xFF9EA6B8),
+                color = colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
             TextButton(onClick = onCreate) {
