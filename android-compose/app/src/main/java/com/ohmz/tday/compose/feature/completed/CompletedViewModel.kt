@@ -28,6 +28,13 @@ class CompletedViewModel @Inject constructor(
 
     fun load() {
         loadInternal(
+            forceSync = false,
+            showLoading = false,
+        )
+    }
+
+    fun refresh() {
+        loadInternal(
             forceSync = true,
             showLoading = true,
         )
