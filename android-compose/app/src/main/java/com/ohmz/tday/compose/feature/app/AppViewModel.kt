@@ -10,10 +10,13 @@ import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 data class AppUiState(
@@ -36,6 +39,7 @@ class AppViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
+    private var resyncJob: Job? = null
 
     init {
         _uiState.update {
@@ -60,11 +64,13 @@ class AppViewModel @Inject constructor(
                         pendingApprovalMessage = null,
                     )
                 }
+                ensureResyncLoop(authenticated = false)
                 return@launch
             }
 
             val sessionUser = runCatching { repository.restoreSession() }.getOrNull()
             if (sessionUser?.id != null) {
+                runCatching { repository.syncCachedData(force = true) }
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -77,6 +83,7 @@ class AppViewModel @Inject constructor(
                         pendingApprovalMessage = null,
                     )
                 }
+                ensureResyncLoop(authenticated = true)
                 repository.syncTimezone()
                 return@launch
             }
@@ -90,6 +97,7 @@ class AppViewModel @Inject constructor(
                     )
                 ) {
                     com.ohmz.tday.compose.core.model.AuthResult.Success -> {
+                        runCatching { repository.syncCachedData(force = true) }
                         val authed = repository.restoreSession()
                         _uiState.update {
                             it.copy(
@@ -103,6 +111,7 @@ class AppViewModel @Inject constructor(
                                 pendingApprovalMessage = null,
                             )
                         }
+                        ensureResyncLoop(authenticated = authed?.id != null)
                         return@launch
                     }
 
@@ -119,6 +128,7 @@ class AppViewModel @Inject constructor(
                                 pendingApprovalMessage = "Account pending admin approval.",
                             )
                         }
+                        ensureResyncLoop(authenticated = false)
                         return@launch
                     }
 
@@ -140,6 +150,7 @@ class AppViewModel @Inject constructor(
                     pendingApprovalMessage = null,
                 )
             }
+            ensureResyncLoop(authenticated = false)
         }
     }
 
@@ -210,6 +221,7 @@ class AppViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             runCatching { repository.logout() }
+            ensureResyncLoop(authenticated = false)
             _uiState.update {
                 it.copy(
                     authenticated = false,
@@ -233,6 +245,23 @@ class AppViewModel @Inject constructor(
         _uiState.update { it.copy(pendingApprovalMessage = null) }
     }
 
+    private fun ensureResyncLoop(authenticated: Boolean) {
+        if (!authenticated) {
+            resyncJob?.cancel()
+            resyncJob = null
+            return
+        }
+
+        if (resyncJob?.isActive == true) return
+
+        resyncJob = viewModelScope.launch {
+            while (isActive) {
+                delay(RESYNC_INTERVAL_MS)
+                runCatching { repository.syncCachedData(force = true) }
+            }
+        }
+    }
+
     private fun toServerSetupMessage(error: Throwable): String {
         return when (error) {
             is TimeoutCancellationException -> "Server probe timed out. Check URL and network, then try again."
@@ -246,5 +275,9 @@ class AppViewModel @Inject constructor(
                 error.message ?: "Server certificate changed. Reset trusted server to continue."
             else -> error.message ?: "Could not connect to server"
         }
+    }
+
+    private companion object {
+        const val RESYNC_INTERVAL_MS = 5 * 60 * 1000L
     }
 }
