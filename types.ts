@@ -9,17 +9,11 @@ export interface NoteItemType {
   createdAt: Date;
 }
 
-export interface ListItemType {
+export interface ListItemMetaType {
   id: string;
   name: string;
   color?: ListColor;
   iconKey?: string | null;
-  todos: TodoItemType[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export type ListItemMetaType = Pick<ListItemType, "id" | "color" | "name"> & {
   todoCount?: number;
 };
 
