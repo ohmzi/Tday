@@ -28,7 +28,6 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
-import com.ohmz.tday.compose.feature.auth.RegisterScreen
 import com.ohmz.tday.compose.feature.calendar.CalendarScreen
 import com.ohmz.tday.compose.feature.completed.CompletedScreen
 import com.ohmz.tday.compose.feature.completed.CompletedViewModel
@@ -62,7 +61,6 @@ fun TdayApp() {
             val unauthenticatedRoutes = setOf(
                 AppRoute.Splash.route,
                 AppRoute.Login.route,
-                AppRoute.Register.route,
                 AppRoute.ServerSetup.route,
             )
             if (currentRoute in unauthenticatedRoutes) {
@@ -70,7 +68,6 @@ fun TdayApp() {
                     when (currentRoute) {
                         AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
                         AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
-                        AppRoute.Register.route -> popUpTo(AppRoute.Register.route) { inclusive = true }
                         AppRoute.ServerSetup.route -> popUpTo(AppRoute.ServerSetup.route) { inclusive = true }
                     }
                     launchSingleTop = true
@@ -79,7 +76,7 @@ fun TdayApp() {
             return@LaunchedEffect
         }
 
-        val onboardingRoutes = setOf(AppRoute.Home.route, AppRoute.Register.route)
+        val onboardingRoutes = setOf(AppRoute.Home.route)
         if (currentRoute !in onboardingRoutes) {
             navController.navigate(AppRoute.Home.route) {
                 when (currentRoute) {
@@ -108,24 +105,6 @@ fun TdayApp() {
 
             composable(AppRoute.Login.route) {
                 SplashScreen()
-            }
-
-            composable(AppRoute.Register.route) {
-                val authViewModel: AuthViewModel = hiltViewModel()
-                val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-                RegisterScreen(
-                    uiState = authUiState,
-                    onBack = { navController.popBackStack() },
-                    onRegister = { firstName, lastName, email, password, confirmPassword ->
-                        if (password != confirmPassword) {
-                            authViewModel.setError("Passwords do not match")
-                        } else {
-                            authViewModel.register(firstName, lastName, email, password) {
-                                navController.popBackStack()
-                            }
-                        }
-                    },
-                )
             }
 
             composable(AppRoute.Home.route) {
@@ -187,6 +166,7 @@ fun TdayApp() {
                             initialServerUrl = appUiState.serverUrl,
                             serverErrorMessage = appUiState.error,
                             serverCanResetTrust = appUiState.canResetServerTrust,
+                            pendingApprovalMessage = appUiState.pendingApprovalMessage,
                             authUiState = authUiState,
                             onConnectServer = { rawUrl, onResult ->
                                 appViewModel.saveServerUrl(
@@ -211,11 +191,21 @@ fun TdayApp() {
                                     appViewModel.refreshSession()
                                 }
                             },
-                            onCreateAccount = {
-                                authViewModel.clearStatus()
-                                navController.navigate(AppRoute.Register.route)
+                            onRegister = { firstName, email, password, onSuccess ->
+                                authViewModel.register(
+                                    firstName = firstName,
+                                    lastName = "",
+                                    email = email,
+                                    password = password,
+                                ) {
+                                    onSuccess()
+                                    appViewModel.refreshSession()
+                                }
                             },
-                            onClearAuthStatus = authViewModel::clearStatus,
+                            onClearAuthStatus = {
+                                authViewModel.clearStatus()
+                                appViewModel.clearPendingApprovalNotice()
+                            },
                         )
                     }
                 }

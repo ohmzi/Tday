@@ -159,6 +159,10 @@ class TdayRepository @Inject constructor(
         }
 
         val body = response.body()
+        secureConfigStore.saveCredentials(
+            email = email.trim(),
+            password = password,
+        )
         return RegisterOutcome(
             success = true,
             requiresApproval = body?.requiresApproval ?: false,
