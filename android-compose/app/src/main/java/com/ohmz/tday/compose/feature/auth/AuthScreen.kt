@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -72,6 +73,14 @@ fun AuthScreen(
         Card(
             shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    color = colorScheme.onSurface.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(28.dp),
+                ),
         ) {
             Column(
                 modifier = Modifier
@@ -86,7 +95,7 @@ fun AuthScreen(
                     color = colorScheme.onSurface,
                 )
                 Text(
-                    text = "Native Android app",
+                    text = "Sign in to your workspace",
                     style = MaterialTheme.typography.bodyMedium,
                     color = colorScheme.onSurfaceVariant,
                 )
