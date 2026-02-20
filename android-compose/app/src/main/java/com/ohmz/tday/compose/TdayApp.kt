@@ -133,7 +133,7 @@ fun TdayApp() {
                                 onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
                                 onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
                                 onOpenAll = { navController.navigate(AppRoute.AllTodos.route) },
-                                onOpenFlagged = { navController.navigate(AppRoute.FlaggedTodos.route) },
+                                onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
                                 onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
                                 onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
                                 onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
@@ -158,7 +158,7 @@ fun TdayApp() {
                                 onOpenToday = {},
                                 onOpenScheduled = {},
                                 onOpenAll = {},
-                                onOpenFlagged = {},
+                                onOpenPriority = {},
                                 onOpenCompleted = {},
                                 onOpenCalendar = {},
                                 onOpenSettings = {},
@@ -240,9 +240,9 @@ fun TdayApp() {
                 )
             }
 
-            composable(AppRoute.FlaggedTodos.route) {
+            composable(AppRoute.PriorityTodos.route) {
                 TodosRoute(
-                    mode = TodoListMode.FLAGGED,
+                    mode = TodoListMode.PRIORITY,
                     onBack = { navController.popBackStack() },
                 )
             }
@@ -361,7 +361,7 @@ private val UnauthenticatedHomeUiState = HomeUiState(
         todayCount = 0,
         scheduledCount = 0,
         allCount = 0,
-        flaggedCount = 0,
+        priorityCount = 0,
         completedCount = 0,
         lists = listOf(
             ListSummary(
