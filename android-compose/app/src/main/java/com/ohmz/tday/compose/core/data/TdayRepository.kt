@@ -6,6 +6,7 @@ import com.ohmz.tday.compose.core.model.AuthSession
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateNoteRequest
 import com.ohmz.tday.compose.core.model.CreateListRequest
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
@@ -357,12 +358,24 @@ class TdayRepository @Inject constructor(
         return fetchTodos(TodoListMode.LIST, listId = listId)
     }
 
-    suspend fun createTodo(title: String, listId: String? = null) {
-        val trimmedTitle = title.trim()
+    suspend fun createTodo(payload: CreateTaskPayload) {
+        val trimmedTitle = payload.title.trim()
         if (trimmedTitle.isBlank()) return
 
-        val start = Instant.now()
-        val due = start.plusSeconds(30 * 60)
+        val normalizedPriority = when (payload.priority.trim()) {
+            "Medium" -> "Medium"
+            "High" -> "High"
+            else -> "Low"
+        }
+        val normalizedStart = payload.dtstart
+        val normalizedDue = if (payload.due > normalizedStart) {
+            payload.due
+        } else {
+            normalizedStart.plusSeconds(3 * 60 * 60)
+        }
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+
         val localTodoId = "$LOCAL_TODO_PREFIX${UUID.randomUUID()}"
         val timestampMs = System.currentTimeMillis()
         val mutationId = UUID.randomUUID().toString()
@@ -372,15 +385,15 @@ class TdayRepository @Inject constructor(
                 id = localTodoId,
                 canonicalId = localTodoId,
                 title = trimmedTitle,
-                description = null,
-                priority = "Low",
-                dtstartEpochMs = start.toEpochMilli(),
-                dueEpochMs = due.toEpochMilli(),
-                rrule = null,
+                description = normalizedDescription,
+                priority = normalizedPriority,
+                dtstartEpochMs = normalizedStart.toEpochMilli(),
+                dueEpochMs = normalizedDue.toEpochMilli(),
+                rrule = payload.rrule,
                 instanceDateEpochMs = null,
                 pinned = false,
                 completed = false,
-                listId = listId,
+                listId = normalizedListId,
                 updatedAtEpochMs = timestampMs,
             )
             state.copy(
@@ -391,29 +404,29 @@ class TdayRepository @Inject constructor(
                     targetId = localTodoId,
                     timestampEpochMs = timestampMs,
                     title = trimmedTitle,
-                    description = null,
-                    priority = "Low",
-                    dtstartEpochMs = start.toEpochMilli(),
-                    dueEpochMs = due.toEpochMilli(),
-                    rrule = null,
-                    listId = listId,
+                    description = normalizedDescription,
+                    priority = normalizedPriority,
+                    dtstartEpochMs = normalizedStart.toEpochMilli(),
+                    dueEpochMs = normalizedDue.toEpochMilli(),
+                    rrule = payload.rrule,
+                    listId = normalizedListId,
                 ),
             )
         }
 
-        if (!listId.isNullOrBlank() && listId.startsWith(LOCAL_LIST_PREFIX)) return
+        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(LOCAL_LIST_PREFIX)) return
 
         runCatching {
             requireBody(
                 api.createTodo(
                     CreateTodoRequest(
                         title = trimmedTitle,
-                        description = null,
-                        priority = "Low",
-                        dtstart = start.toString(),
-                        due = due.toString(),
-                        rrule = null,
-                        listID = listId,
+                        description = normalizedDescription,
+                        priority = normalizedPriority,
+                        dtstart = normalizedStart.toString(),
+                        due = normalizedDue.toString(),
+                        rrule = payload.rrule,
+                        listID = normalizedListId,
                     ),
                 ),
                 "Could not create task",
