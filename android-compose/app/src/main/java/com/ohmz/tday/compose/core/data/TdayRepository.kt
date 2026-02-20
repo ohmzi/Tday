@@ -22,6 +22,8 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
@@ -59,6 +61,7 @@ class TdayRepository @Inject constructor(
 ) {
     private val zoneId: ZoneId
         get() = ZoneId.systemDefault()
+    private val syncMutex = Mutex()
 
     suspend fun restoreSession(): SessionUser? {
         val response = api.getSession()
@@ -257,8 +260,16 @@ class TdayRepository @Inject constructor(
 
     fun getSavedCredentials(): SavedCredentials? = secureConfigStore.getSavedCredentials()
 
-    suspend fun syncCachedData(force: Boolean = false): Result<Unit> = runCatching {
-        syncLocalCache(force = force)
+    suspend fun syncCachedData(
+        force: Boolean = false,
+        replayPendingMutations: Boolean = true,
+    ): Result<Unit> = runCatching {
+        syncMutex.withLock {
+            syncLocalCache(
+                force = force,
+                replayPendingMutations = replayPendingMutations,
+            )
+        }
     }
 
     suspend fun fetchDashboardSummary(): DashboardSummary {
@@ -894,11 +905,20 @@ class TdayRepository @Inject constructor(
         }
     }
 
-    private suspend fun syncLocalCache(force: Boolean) {
+    private suspend fun syncLocalCache(
+        force: Boolean,
+        replayPendingMutations: Boolean,
+    ) {
         var state = loadOfflineState()
         val now = System.currentTimeMillis()
+        if (force && (now - state.lastSyncAttemptEpochMs) < MIN_FORCE_SYNC_INTERVAL_MS) {
+            return
+        }
+
+        val shouldReplayPendingMutations = replayPendingMutations &&
+            state.pendingMutations.isNotEmpty()
         val shouldSync = force ||
-            state.pendingMutations.isNotEmpty() ||
+            shouldReplayPendingMutations ||
             state.lastSuccessfulSyncEpochMs == 0L ||
             (now - state.lastSyncAttemptEpochMs) >= OFFLINE_RESYNC_INTERVAL_MS
 
@@ -910,7 +930,7 @@ class TdayRepository @Inject constructor(
         val initialPendingCount = state.pendingMutations.size
         val firstRemote = fetchRemoteSnapshot()
 
-        if (initialPendingCount == 0) {
+        if (initialPendingCount == 0 || !shouldReplayPendingMutations) {
             val mergedWithoutMutations = mergeRemoteWithLocal(
                 localState = state,
                 remote = firstRemote,
@@ -1337,12 +1357,19 @@ class TdayRepository @Inject constructor(
     }
 
     private fun isLikelyUnrecoverableMutationError(error: Throwable): Boolean {
+        if (error is ApiCallException) {
+            return error.statusCode in 400..499 &&
+                error.statusCode != 408 &&
+                error.statusCode != 429
+        }
         val message = error.message.orEmpty().lowercase()
         return message.contains("bad request") ||
             message.contains("bad / malformed") ||
             message.contains("invalid request") ||
             message.contains("invalid request body") ||
             message.contains("you provided invalid values") ||
+            message.contains("method not allowed") ||
+            message.contains("http 405") ||
             message.contains("record to delete does not exist") ||
             message.contains("record to update not found") ||
             message.contains("todo id is required")
@@ -1647,7 +1674,10 @@ class TdayRepository @Inject constructor(
         if (response.isSuccessful && response.body() != null) {
             return response.body() as T
         }
-        throw IllegalStateException(extractErrorMessage(response, fallback))
+        throw ApiCallException(
+            statusCode = response.code(),
+            message = extractErrorMessage(response, fallback),
+        )
     }
 
     private fun extractErrorMessage(response: Response<*>, fallback: String): String {
@@ -1672,8 +1702,14 @@ class TdayRepository @Inject constructor(
         const val CREDENTIALS_PATH = "/api/auth/callback/credentials"
         const val REGISTER_PATH = "/api/auth/register"
         const val OFFLINE_RESYNC_INTERVAL_MS = 5 * 60 * 1000L
+        const val MIN_FORCE_SYNC_INTERVAL_MS = 1_200L
         const val LOCAL_TODO_PREFIX = "local-todo-"
         const val LOCAL_LIST_PREFIX = "local-list-"
         const val LOCAL_COMPLETED_PREFIX = "local-completed-"
     }
 }
+
+private class ApiCallException(
+    val statusCode: Int,
+    override val message: String,
+) : IllegalStateException(message)
