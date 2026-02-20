@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
@@ -440,7 +441,11 @@ private fun TopSearchBar(
                 .clip(RoundedCornerShape(32.dp))
                 .background(colorScheme.surfaceVariant)
                 .padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = if (searchExpanded) {
+                Arrangement.spacedBy(4.dp)
+            } else {
+                Arrangement.SpaceEvenly
+            },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PressableIconButton(
@@ -490,7 +495,7 @@ private fun TopSearchBar(
             }
 
             PressableIconButton(
-                icon = Icons.Rounded.Add,
+                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
                 contentDescription = "Create list",
                 tint = colorScheme.onSurface,
                 onClick = onCreateList,
