@@ -79,8 +79,9 @@ async function updateList({
   }
 
   await api.PATCH({
-    url: `/api/list/${id}`,
-    body: JSON.stringify({ name: normalizedName, color }),
+    url: "/api/list",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, name: normalizedName, color }),
   });
 }
 
@@ -89,7 +90,11 @@ async function deleteList(id: string) {
     throw new Error("List id is missing");
   }
 
-  await api.DELETE({ url: `/api/list/${id}` });
+  await api.DELETE({
+    url: "/api/list",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
 }
 
 export default function ListSidebarSection({

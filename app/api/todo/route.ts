@@ -17,6 +17,29 @@ import { recurringTodoItemType } from "@/types";
 import { getMovedInstances } from "@/lib/getMovedInstances";
 import { add, endOfDay, startOfDay } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { z } from "zod";
+
+const todoPatchByIdSchema = todoSchema
+  .partial()
+  .extend({
+    id: z
+      .string({ message: "todo id is required" })
+      .trim()
+      .min(1, { message: "todo id is required" }),
+    dateChanged: z.boolean().optional(),
+    rruleChanged: z.boolean().optional(),
+    pinned: z.boolean().optional(),
+    completed: z.boolean().optional(),
+    instanceDate: z.date().optional(),
+  });
+
+const todoDeleteByIdSchema = z.object({
+  id: z
+    .string({ message: "todo id is required" })
+    .trim()
+    .min(1, { message: "todo id is required" }),
+  instanceDate: z.number().int().positive().optional(),
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -86,6 +109,153 @@ export async function POST(req: NextRequest) {
       },
       { status: 500 },
     );
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      throw new UnauthorizedError("You must be logged in to do this");
+    }
+
+    const rawBody = await req.json();
+    const parsed = todoPatchByIdSchema.safeParse({
+      ...rawBody,
+      listID: rawBody.listID ?? undefined,
+      dtstart: rawBody.dtstart ? new Date(rawBody.dtstart) : undefined,
+      due: rawBody.due ? new Date(rawBody.due) : undefined,
+      instanceDate: rawBody.instanceDate
+        ? new Date(rawBody.instanceDate)
+        : undefined,
+    });
+
+    if (!parsed.success) {
+      throw new BadRequestError("Invalid request body");
+    }
+
+    const {
+      id,
+      title,
+      description,
+      priority,
+      pinned,
+      completed,
+      dtstart,
+      due,
+      instanceDate,
+      rrule,
+      dateChanged,
+      rruleChanged,
+      listID,
+    } = parsed.data;
+
+    if (dateChanged && !dtstart) {
+      throw new BadRequestError("dtstart is required when dateChanged is true");
+    }
+
+    await prisma.todo.update({
+      where: {
+        id,
+        userID: userId,
+      },
+      data: {
+        title,
+        description,
+        priority,
+        pinned,
+        completed,
+        dtstart: dateChanged || rruleChanged ? dtstart : undefined,
+        due: dateChanged || rruleChanged ? due : undefined,
+        durationMinutes:
+          dateChanged && dtstart && due
+            ? (due.getTime() - dtstart.getTime()) / (1000 * 60)
+            : undefined,
+        rrule,
+        listID,
+      },
+    });
+
+    if (rruleChanged && rrule == null) {
+      await prisma.todo.update({
+        where: {
+          id,
+          userID: userId,
+        },
+        data: {
+          instances: { deleteMany: {} },
+          exdates: [],
+        },
+      });
+    }
+
+    if (rrule && instanceDate) {
+      if (dateChanged || rruleChanged) {
+        await prisma.todoInstance.deleteMany({
+          where: { todoId: id },
+        });
+      } else {
+        await prisma.todoInstance.updateMany({
+          where: {
+            todoId: id,
+          },
+          data: {
+            overriddenTitle: title,
+            overriddenDescription: description,
+            overriddenPriority: priority,
+          },
+        });
+      }
+    }
+
+    return NextResponse.json({ message: "Todo updated" }, { status: 200 });
+  } catch (error) {
+    return errorHandler(error);
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await auth();
+    const user = session?.user;
+    if (!user?.id) {
+      throw new UnauthorizedError("you must be logged in to do this");
+    }
+
+    const rawBody = await req.json().catch(() => ({}));
+    const parsed = todoDeleteByIdSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      throw new BadRequestError("Invalid request body");
+    }
+
+    const { id, instanceDate } = parsed.data;
+    if (instanceDate) {
+      await prisma.todoInstance.deleteMany({
+        where: {
+          todoId: id,
+          instanceDate: new Date(instanceDate),
+          todo: {
+            userID: user.id,
+          },
+        },
+      });
+      return NextResponse.json(
+        { message: "todo instance deleted" },
+        { status: 200 },
+      );
+    }
+
+    await prisma.todo.delete({
+      where: {
+        id,
+        userID: user.id,
+      },
+    });
+    return NextResponse.json({ message: "todo deleted" }, { status: 200 });
+  } catch (error) {
+    return errorHandler(error);
   }
 }
 
