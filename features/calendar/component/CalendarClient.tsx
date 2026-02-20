@@ -30,7 +30,7 @@ import { useEditCalendarTodoInstance } from "../query/update-calendar-todo-insta
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import Spinner from "@/components/ui/spinner";
 import { subMilliseconds } from "date-fns";
-import { useProjectMetaData } from "@/components/Sidebar/Project/query/get-project-meta";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import CreateCalendarFormContainer from "./CalendarForm/CreateFormContainer";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { cn } from "@/lib/utils";
@@ -81,7 +81,7 @@ export default function CalendarClient() {
   const { todos: calendarTodos, todoLoading: calendarTodosLoading } = useCalendarTodo(calendarRange);
   const { editCalendarTodo } = useEditCalendarTodo();
   const { editCalendarTodoInstance } = useEditCalendarTodoInstance();
-  const { projectMetaData } = useProjectMetaData()
+  const { listMetaData } = useListMetaData()
 
   // Filter calendar events by search query
   const filteredCalendarTodos = useMemo(() => {
@@ -90,10 +90,11 @@ export default function CalendarClient() {
     return calendarTodos.filter((todo) => {
       const title = todo.title.toLowerCase();
       const description = (todo.description || "").toLowerCase();
-      const tagName = (projectMetaData[todo.projectID || ""]?.name || "").toLowerCase();
-      return title.includes(query) || description.includes(query) || tagName.includes(query);
+      const listId = todo.listID ?? "";
+      const listName = (listMetaData[listId]?.name || "").toLowerCase();
+      return title.includes(query) || description.includes(query) || listName.includes(query);
     });
-  }, [calendarTodos, projectMetaData, searchQuery]);
+  }, [calendarTodos, listMetaData, searchQuery]);
 
   // --- navigation & animation state ---
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -339,7 +340,13 @@ export default function CalendarClient() {
             // Day view header label: "Mon 13"
             dayHeaderFormat: (date) => format(date, "EEEE, MMM d"),
           }}
-          eventPropGetter={(event) => calendarEventPropStyles(event.priority, event.projectID ? projectMetaData[event.projectID]?.color : undefined)}
+          eventPropGetter={(event) => {
+            const listId = event.listID ?? "";
+            return calendarEventPropStyles(
+              event.priority,
+              listId ? listMetaData[listId]?.color : undefined,
+            );
+          }}
 
           onRangeChange={setCalendarRange}
           onEventResize={({ event: todo, ...resizeEvent }) => {

@@ -17,8 +17,8 @@ interface TodoFormContextType {
   desc: string;
   setDesc: React.Dispatch<SetStateAction<string>>;
   priority: "Low" | "Medium" | "High";
-  projectID: string | null;
-  setProjectID: React.Dispatch<SetStateAction<string | null>>;
+  listID: string | null;
+  setListID: React.Dispatch<SetStateAction<string | null>>;
   setPriority: React.Dispatch<SetStateAction<"Low" | "Medium" | "High">>;
   dateRange: NonNullableDateRange;
   setDateRange: React.Dispatch<SetStateAction<NonNullableDateRange>>;
@@ -42,7 +42,7 @@ interface TodoFormContextType {
 // Props for the provider
 interface TodoFormProviderProps {
   todoItem?: TodoItemType;
-  overrideFields?: { projectID?: string }
+  overrideFields?: { listID?: string };
   children: React.ReactNode;
 }
 
@@ -53,7 +53,11 @@ const TodoFormContext = createContext<TodoFormContextType | undefined>(
 const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProviderProps) => {
   const [title, setTitle] = useState<string>(todoItem?.title || "");
   const [desc, setDesc] = useState<string>(todoItem?.description || "");
-  const [projectID, setProjectID] = useState<string | null>(overrideFields?.projectID || todoItem?.projectID || null);
+  const [listID, setListID] = useState<string | null>(
+    overrideFields?.listID ??
+      todoItem?.listID ??
+      null,
+  );
   const [priority, setPriority] = useState<"Low" | "Medium" | "High">(
     todoItem?.priority || "Low",
   );
@@ -79,8 +83,6 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
     "UTC";
 
   const durationMinutes = useMemo(() => (dateRange.to.getTime() - dateRange.from.getTime()) / (60 * 1000), [dateRange])
-  console.log(durationMinutes)
-
   const derivedRepeatType = deriveRepeatType({ rruleOptions })
 
   //eslint-disable-next-line react-hooks/exhaustive-deps
@@ -93,8 +95,8 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
     setDesc,
     priority,
     setPriority,
-    projectID,
-    setProjectID,
+    listID,
+    setListID,
     dateRange,
     setDateRange,
     rruleOptions,

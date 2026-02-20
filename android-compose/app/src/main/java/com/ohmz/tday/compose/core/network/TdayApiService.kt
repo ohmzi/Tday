@@ -3,6 +3,8 @@ package com.ohmz.tday.compose.core.network
 import com.ohmz.tday.compose.core.model.ChangePasswordRequest
 import com.ohmz.tday.compose.core.model.CompletedTodosResponse
 import com.ohmz.tday.compose.core.model.CreateNoteRequest
+import com.ohmz.tday.compose.core.model.CreateListRequest
+import com.ohmz.tday.compose.core.model.CreateListResponse
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.CreateTodoResponse
 import com.ohmz.tday.compose.core.model.CsrfResponse
@@ -11,7 +13,7 @@ import com.ohmz.tday.compose.core.model.MobileProbeResponse
 import com.ohmz.tday.compose.core.model.NotesResponse
 import com.ohmz.tday.compose.core.model.PreferencesDto
 import com.ohmz.tday.compose.core.model.PreferencesResponse
-import com.ohmz.tday.compose.core.model.ProjectsResponse
+import com.ohmz.tday.compose.core.model.ListsResponse
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.RegisterResponse
 import com.ohmz.tday.compose.core.model.ReorderItemRequest
@@ -166,30 +168,30 @@ interface TdayApiService {
         @Path("id") noteId: String,
     ): Response<MessageResponse>
 
-    @GET("/api/project")
-    suspend fun getProjects(): Response<ProjectsResponse>
+    @GET("/api/list")
+    suspend fun getLists(): Response<ListsResponse>
 
-    @GET("/api/project/{id}")
-    suspend fun getProjectTodos(
-        @Path("id") projectId: String,
+    @GET("/api/list/{id}")
+    suspend fun getListTodos(
+        @Path("id") listId: String,
         @Query("start") start: Long,
         @Query("end") end: Long,
     ): Response<TodosResponse>
 
-    @POST("/api/project")
-    suspend fun createProject(
+    @POST("/api/list")
+    suspend fun createList(
+        @Body payload: CreateListRequest,
+    ): Response<CreateListResponse>
+
+    @PATCH("/api/list/{id}")
+    suspend fun patchList(
+        @Path("id") listId: String,
         @Body payload: JsonObject,
     ): Response<MessageResponse>
 
-    @PATCH("/api/project/{id}")
-    suspend fun patchProject(
-        @Path("id") projectId: String,
-        @Body payload: JsonObject,
-    ): Response<MessageResponse>
-
-    @DELETE("/api/project/{id}")
-    suspend fun deleteProject(
-        @Path("id") projectId: String,
+    @DELETE("/api/list/{id}")
+    suspend fun deleteList(
+        @Path("id") listId: String,
     ): Response<MessageResponse>
 
     @GET("/api/preferences")

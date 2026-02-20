@@ -23,7 +23,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ohmz.tday.compose.core.model.DashboardSummary
-import com.ohmz.tday.compose.core.model.ProjectSummary
+import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.feature.app.AppViewModel
@@ -137,11 +137,19 @@ fun TdayApp() {
                                 onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
                                 onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
                                 onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
-                                onOpenProject = { id, name ->
-                                    navController.navigate(AppRoute.ProjectTodos.create(id, name))
+                                onOpenList = { id, name ->
+                                    navController.navigate(AppRoute.ListTodos.create(id, name))
                                 },
-                                onCreateTask = homeViewModel::createTask,
-                                onCreateProject = homeViewModel::createList,
+                                onCreateTask = { title, listId ->
+                                    homeViewModel.createTask(title, listId)
+                                },
+                                onCreateList = { name, color, iconKey ->
+                                    homeViewModel.createList(
+                                        name = name,
+                                        color = color,
+                                        iconKey = iconKey,
+                                    )
+                                },
                             )
                         } else {
                             HomeScreen(
@@ -154,9 +162,9 @@ fun TdayApp() {
                                 onOpenCompleted = {},
                                 onOpenCalendar = {},
                                 onOpenSettings = {},
-                                onOpenProject = { _, _ -> },
-                                onCreateTask = {},
-                                onCreateProject = {},
+                                onOpenList = { _, _ -> },
+                                onCreateTask = { _, _ -> },
+                                onCreateList = { _, _, _ -> },
                             )
                         }
                     }
@@ -240,18 +248,18 @@ fun TdayApp() {
             }
 
             composable(
-                route = AppRoute.ProjectTodos.route,
+                route = AppRoute.ListTodos.route,
                 arguments = listOf(
-                    navArgument("projectId") { type = NavType.StringType },
-                    navArgument("projectName") { type = NavType.StringType },
+                    navArgument("listId") { type = NavType.StringType },
+                    navArgument("listName") { type = NavType.StringType },
                 ),
             ) { entry ->
-                val projectId = entry.arguments?.getString("projectId").orEmpty()
-                val projectName = Uri.decode(entry.arguments?.getString("projectName").orEmpty())
+                val listId = entry.arguments?.getString("listId").orEmpty()
+                val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
                 TodosRoute(
-                    mode = TodoListMode.PROJECT,
-                    projectId = projectId,
-                    projectName = projectName,
+                    mode = TodoListMode.LIST,
+                    listId = listId,
+                    listName = listName,
                     onBack = { navController.popBackStack() },
                 )
             }
@@ -307,14 +315,14 @@ fun TdayApp() {
 private fun TodosRoute(
     mode: TodoListMode,
     onBack: () -> Unit,
-    projectId: String? = null,
-    projectName: String? = null,
+    listId: String? = null,
+    listName: String? = null,
 ) {
     val viewModel: TodoListViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(mode, projectId, projectName) {
-        viewModel.load(mode = mode, projectId = projectId, projectName = projectName)
+    LaunchedEffect(mode, listId, listName) {
+        viewModel.load(mode = mode, listId = listId, listName = listName)
     }
 
     TodoListScreen(
@@ -355,11 +363,12 @@ private val UnauthenticatedHomeUiState = HomeUiState(
         allCount = 0,
         flaggedCount = 0,
         completedCount = 0,
-        projects = listOf(
-            ProjectSummary(
+        lists = listOf(
+            ListSummary(
                 id = "locked",
                 name = "Sign in to load your lists",
                 color = null,
+                iconKey = null,
                 todoCount = 0,
             ),
         ),

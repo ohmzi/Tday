@@ -41,6 +41,7 @@ export const useOverdueTodo = () => {
             dtstart: new Date(todo.dtstart),
             due: new Date(todo.due),
             instanceDate: todoInstanceDate,
+            listID: todo.listID ?? null,
           };
         },
       );

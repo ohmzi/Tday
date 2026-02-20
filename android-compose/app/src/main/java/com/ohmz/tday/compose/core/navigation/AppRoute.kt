@@ -11,9 +11,9 @@ sealed class AppRoute(val route: String) {
     data object ScheduledTodos : AppRoute("todos/scheduled")
     data object AllTodos : AppRoute("todos/all")
     data object FlaggedTodos : AppRoute("todos/flagged")
-    data object ProjectTodos : AppRoute("todos/project/{projectId}/{projectName}") {
-        fun create(projectId: String, projectName: String): String {
-            return "todos/project/$projectId/${Uri.encode(projectName)}"
+    data object ListTodos : AppRoute("todos/list/{listId}/{listName}") {
+        fun create(listId: String, listName: String): String {
+            return "todos/list/$listId/${Uri.encode(listName)}"
         }
     }
 
