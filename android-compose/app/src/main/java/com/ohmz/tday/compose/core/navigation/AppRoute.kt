@@ -6,7 +6,6 @@ sealed class AppRoute(val route: String) {
     data object Splash : AppRoute("splash")
     data object ServerSetup : AppRoute("server-setup")
     data object Login : AppRoute("login")
-    data object Register : AppRoute("register")
     data object Home : AppRoute("home")
     data object TodayTodos : AppRoute("todos/today")
     data object ScheduledTodos : AppRoute("todos/scheduled")

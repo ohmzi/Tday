@@ -151,6 +151,8 @@ class AuthViewModel @Inject constructor(
                     errorMessage = if (outcome.success) null else outcome.message,
                     infoMessage = if (outcome.success) outcome.message else null,
                     pendingApproval = outcome.requiresApproval,
+                    savedEmail = if (outcome.success) email.trim() else it.savedEmail,
+                    savedPassword = if (outcome.success) password else it.savedPassword,
                 )
             }
 
