@@ -23,7 +23,6 @@ import androidx.navigation.navArgument
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.feature.app.AppViewModel
-import com.ohmz.tday.compose.feature.auth.AuthScreen
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
 import com.ohmz.tday.compose.feature.auth.RegisterScreen
 import com.ohmz.tday.compose.feature.calendar.CalendarScreen
@@ -86,11 +85,12 @@ fun TdayApp() {
             return@LaunchedEffect
         }
 
-        val authRoutes = setOf(AppRoute.Login.route, AppRoute.Register.route)
-        if (currentRoute !in authRoutes) {
-            navController.navigate(AppRoute.Login.route) {
+        val onboardingRoutes = setOf(AppRoute.ServerSetup.route, AppRoute.Register.route)
+        if (currentRoute !in onboardingRoutes) {
+            navController.navigate(AppRoute.ServerSetup.route) {
                 when (currentRoute) {
                     AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
+                    AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
                     AppRoute.Home.route -> popUpTo(AppRoute.Home.route) { inclusive = true }
                     AppRoute.ServerSetup.route -> popUpTo(AppRoute.ServerSetup.route) { inclusive = true }
                 }
@@ -109,21 +109,21 @@ fun TdayApp() {
             }
 
             composable(AppRoute.ServerSetup.route) {
-                ServerSetupScreen(
-                    errorMessage = appUiState.error,
-                    onSave = { rawUrl ->
-                        appViewModel.saveServerUrl(rawUrl) {
-                            appViewModel.refreshSession()
-                        }
-                    },
-                )
-            }
-
-            composable(AppRoute.Login.route) {
                 val authViewModel: AuthViewModel = hiltViewModel()
                 val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-                AuthScreen(
-                    uiState = authUiState,
+                ServerSetupScreen(
+                    initialServerUrl = appUiState.serverUrl,
+                    serverErrorMessage = appUiState.error,
+                    authUiState = authUiState,
+                    onConnectServer = { rawUrl, onResult ->
+                        appViewModel.saveServerUrl(
+                            rawUrl = rawUrl,
+                            onSuccess = { onResult(Result.success(Unit)) },
+                            onFailure = { message ->
+                                onResult(Result.failure(IllegalStateException(message)))
+                            },
+                        )
+                    },
                     onLogin = { email, password ->
                         authViewModel.login(email, password) {
                             appViewModel.refreshSession()
