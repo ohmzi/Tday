@@ -46,7 +46,7 @@ class TodoListViewModel @Inject constructor(
         }
         refreshInternal(
             forceSync = false,
-            showLoading = true,
+            showLoading = false,
         )
     }
 

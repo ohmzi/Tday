@@ -271,7 +271,7 @@ fun TdayApp() {
                 CompletedScreen(
                     uiState = uiState,
                     onBack = { navController.popBackStack() },
-                    onRefresh = viewModel::load,
+                    onRefresh = viewModel::refresh,
                     onUncomplete = viewModel::uncomplete,
                 )
             }
@@ -283,7 +283,7 @@ fun TdayApp() {
                 NotesScreen(
                     uiState = uiState,
                     onBack = { navController.popBackStack() },
-                    onRefresh = viewModel::load,
+                    onRefresh = viewModel::refresh,
                     onCreate = viewModel::create,
                     onDelete = viewModel::delete,
                 )
@@ -292,8 +292,8 @@ fun TdayApp() {
             composable(AppRoute.Calendar.route) {
                 CalendarScreen(
                     onBack = { navController.popBackStack() },
-                    isRefreshing = appUiState.loading,
-                    onRefresh = appViewModel::refreshSession,
+                    isRefreshing = appUiState.isManualSyncing,
+                    onRefresh = appViewModel::syncNow,
                     onOpenScheduled = {
                         navController.navigate(AppRoute.ScheduledTodos.route)
                     },
