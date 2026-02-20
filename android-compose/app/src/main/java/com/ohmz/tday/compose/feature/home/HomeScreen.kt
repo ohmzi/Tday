@@ -109,7 +109,7 @@ fun HomeScreen(
     onOpenToday: () -> Unit,
     onOpenScheduled: () -> Unit,
     onOpenAll: () -> Unit,
-    onOpenFlagged: () -> Unit,
+    onOpenPriority: () -> Unit,
     onOpenCompleted: () -> Unit,
     onOpenCalendar: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -262,7 +262,7 @@ fun HomeScreen(
                             todayCount = uiState.summary.todayCount,
                             scheduledCount = uiState.summary.scheduledCount,
                             allCount = uiState.summary.allCount,
-                            flaggedCount = uiState.summary.flaggedCount,
+                            priorityCount = uiState.summary.priorityCount,
                             completedCount = uiState.summary.completedCount,
                             onOpenToday = {
                                 closeSearch()
@@ -276,9 +276,9 @@ fun HomeScreen(
                                 closeSearch()
                                 onOpenAll()
                             },
-                            onOpenFlagged = {
+                            onOpenPriority = {
                                 closeSearch()
-                                onOpenFlagged()
+                                onOpenPriority()
                             },
                             onOpenCompleted = {
                                 closeSearch()
@@ -798,12 +798,12 @@ private fun CategoryGrid(
     todayCount: Int,
     scheduledCount: Int,
     allCount: Int,
-    flaggedCount: Int,
+    priorityCount: Int,
     completedCount: Int,
     onOpenToday: () -> Unit,
     onOpenScheduled: () -> Unit,
     onOpenAll: () -> Unit,
-    onOpenFlagged: () -> Unit,
+    onOpenPriority: () -> Unit,
     onOpenCompleted: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -845,9 +845,9 @@ private fun CategoryGrid(
                 color = Color(0xFFD48A8C),
                 icon = Icons.Rounded.Flag,
                 backgroundWatermark = Icons.Rounded.Flag,
-                title = "Flagged",
-                count = flaggedCount,
-                onClick = onOpenFlagged,
+                title = "Priority",
+                count = priorityCount,
+                onClick = onOpenPriority,
             )
         }
         CategoryCard(

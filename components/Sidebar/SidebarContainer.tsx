@@ -8,11 +8,13 @@ import { usePathname } from "next/navigation";
 import {
   Calendar1Icon,
   CheckCircleIcon,
+  Flag,
   Plus,
   Sun,
 } from "lucide-react";
 import { useMenu } from "@/providers/MenuProvider";
 import { useTodo } from "@/features/todayTodos/query/get-todo";
+import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import useWindowSize from "@/hooks/useWindowSize";
 import UserCard from "./User/UserCard";
@@ -44,10 +46,19 @@ const railIconSlot = "flex h-10 w-10 shrink-0 items-center justify-center";
 const railIconClass =
   "h-4 w-4 transition-colors duration-200";
 
+const isPriorityTodo = (priority: string | null | undefined) => {
+  const normalized = (priority || "").trim().toLowerCase();
+  return normalized === "medium" ||
+    normalized === "high" ||
+    normalized === "important" ||
+    normalized === "urgent";
+};
+
 const SidebarContainer = () => {
   const { showMenu, sidebarReady, setShowMenu } = useMenu();
   const { width } = useWindowSize();
   const { todos } = useTodo();
+  const { todos: timelineTodos } = useTodoTimeline();
   const { completedTodos } = useCompletedTodo();
   const pathname = usePathname();
 
@@ -104,7 +115,12 @@ const SidebarContainer = () => {
 
   const isTodoActive = pathname?.includes("/app/tday") || pathname?.includes("/app/todo");
   const isCompletedActive = pathname?.includes("/app/completed");
+  const isPriorityActive = pathname?.includes("/app/priority");
   const isCalendarActive = pathname?.includes("/app/calendar");
+  const priorityCount = React.useMemo(
+    () => timelineTodos.filter((todo) => isPriorityTodo(todo.priority)).length,
+    [timelineTodos],
+  );
 
   // Desktop: standard sidebar with collapse/expand
   if (isDesktop) {
@@ -126,8 +142,10 @@ const SidebarContainer = () => {
             isDesktop={isDesktop}
             todosCount={todos.length}
             completedCount={completedTodos.length}
+            priorityCount={priorityCount}
             isTodoActive={Boolean(isTodoActive)}
             isCompletedActive={Boolean(isCompletedActive)}
+            isPriorityActive={Boolean(isPriorityActive)}
             isCalendarActive={Boolean(isCalendarActive)}
             onNavigate={handleSidebarNavigate}
           />
@@ -149,8 +167,10 @@ const SidebarContainer = () => {
           isDesktop={isDesktop}
           todosCount={todos.length}
           completedCount={completedTodos.length}
+          priorityCount={priorityCount}
           isTodoActive={Boolean(isTodoActive)}
           isCompletedActive={Boolean(isCompletedActive)}
+          isPriorityActive={Boolean(isPriorityActive)}
           isCalendarActive={Boolean(isCalendarActive)}
           onNavigate={handleSidebarNavigate}
         />
@@ -165,16 +185,20 @@ function ExpandedSidebarContent({
   isDesktop,
   todosCount,
   completedCount,
+  priorityCount,
   isTodoActive,
   isCompletedActive,
+  isPriorityActive,
   isCalendarActive,
   onNavigate,
 }: {
   isDesktop: boolean;
   todosCount: number;
   completedCount: number;
+  priorityCount: number;
   isTodoActive: boolean;
   isCompletedActive: boolean;
+  isPriorityActive: boolean;
   isCalendarActive: boolean;
   onNavigate?: () => void;
 }) {
@@ -310,6 +334,36 @@ function ExpandedSidebarContent({
           </Link>
 
           <Link
+            href="/app/priority"
+            onClick={() => {
+              setActiveMenu({ name: "Priority" });
+              onNavigate?.();
+            }}
+            className={cn(
+              expandedNavButtonBase,
+              isPriorityActive
+                ? expandedNavButtonActive
+                : expandedNavButtonIdle,
+            )}
+            aria-current={isPriorityActive ? "page" : undefined}
+          >
+            <span className={railIconSlot}>
+              <Flag className={railIconClass} />
+            </span>
+            <span className="truncate whitespace-nowrap">Priority</span>
+            <span
+              className={cn(
+                countBadgeBase,
+                isPriorityActive
+                  ? "text-sidebar-accent-foreground/80"
+                  : "text-sidebar-foreground/40",
+              )}
+            >
+              {priorityCount}
+            </span>
+          </Link>
+
+          <Link
             href="/app/calendar"
             onClick={() => {
               setActiveMenu({ name: "Calendar" });
@@ -348,6 +402,7 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const isTodoActive = pathname?.includes("/app/tday") || pathname?.includes("/app/todo");
   const isCompletedActive = pathname?.includes("/app/completed");
+  const isPriorityActive = pathname?.includes("/app/priority");
   const isCalendarActive = pathname?.includes("/app/calendar");
 
   return (
@@ -449,6 +504,28 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={10}>
               Completed
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/app/priority"
+                onClick={() => {
+                  setActiveMenu({ name: "Priority" });
+                  onNavigate?.();
+                }}
+                className={cn(
+                  collapsedRailButtonBase,
+                  isPriorityActive && expandedNavButtonActive,
+                )}
+                aria-label="Priority"
+              >
+                <Flag className={railIconClass} />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={10}>
+              Priority
             </TooltipContent>
           </Tooltip>
 

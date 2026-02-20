@@ -10,7 +10,7 @@ sealed class AppRoute(val route: String) {
     data object TodayTodos : AppRoute("todos/today")
     data object ScheduledTodos : AppRoute("todos/scheduled")
     data object AllTodos : AppRoute("todos/all")
-    data object FlaggedTodos : AppRoute("todos/flagged")
+    data object PriorityTodos : AppRoute("todos/priority")
     data object ListTodos : AppRoute("todos/list/{listId}/{listName}") {
         fun create(listId: String, listName: String): String {
             return "todos/list/$listId/${Uri.encode(listName)}"
