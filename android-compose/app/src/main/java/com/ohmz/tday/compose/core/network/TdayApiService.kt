@@ -7,6 +7,7 @@ import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.CreateTodoResponse
 import com.ohmz.tday.compose.core.model.CsrfResponse
 import com.ohmz.tday.compose.core.model.MessageResponse
+import com.ohmz.tday.compose.core.model.MobileProbeResponse
 import com.ohmz.tday.compose.core.model.NotesResponse
 import com.ohmz.tday.compose.core.model.PreferencesDto
 import com.ohmz.tday.compose.core.model.PreferencesResponse
@@ -31,8 +32,15 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Url
 
 interface TdayApiService {
+    @GET
+    suspend fun probeServer(
+        @Url probeUrl: String,
+        @Header("X-Tday-No-Rewrite") noRewrite: String = "1",
+    ): Response<MobileProbeResponse>
+
     @GET("/api/auth/csrf")
     suspend fun getCsrfToken(): Response<CsrfResponse>
 
