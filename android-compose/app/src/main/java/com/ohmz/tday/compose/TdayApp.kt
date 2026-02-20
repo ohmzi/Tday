@@ -141,6 +141,7 @@ fun TdayApp() {
                                 onOpenProject = { id, name ->
                                     navController.navigate(AppRoute.ProjectTodos.create(id, name))
                                 },
+                                onCreateTask = homeViewModel::createTask,
                                 onCreateProject = homeViewModel::createList,
                             )
                         } else {
@@ -156,6 +157,7 @@ fun TdayApp() {
                                 onOpenCalendar = {},
                                 onOpenSettings = {},
                                 onOpenProject = { _, _ -> },
+                                onCreateTask = {},
                                 onCreateProject = {},
                             )
                         }
