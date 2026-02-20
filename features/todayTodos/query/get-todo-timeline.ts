@@ -4,7 +4,7 @@ import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
-export const getTodoTimeline = async () => {
+const getTodoTimeline = async () => {
   const data = await api.GET({
     url: "/api/todo?timeline=true",
   });

@@ -1,5 +1,5 @@
 import { z } from "zod";
-export const todoItemSchema = z.object({
+const todoItemSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().nullable(),
@@ -39,7 +39,7 @@ export const registrationSchema = z.object({
     }),
 });
 
-export const loginSchema = z.object({
+const loginSchema = z.object({
   email: z
     .string({ message: "email cannot be left empty" })
     .trim()
@@ -101,7 +101,7 @@ export const ListColor = [
   "BRICK",
   "SLATE",
 ] as const;
-export const listBaseSchema = z.object({
+const listBaseSchema = z.object({
   id: z.string({ message: "id cannot be left empty" }),
   name: z
     .string({ message: "title cannot be left empty" })
