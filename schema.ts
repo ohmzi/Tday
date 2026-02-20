@@ -5,6 +5,7 @@ const todoItemSchema = z.object({
   description: z.string().nullable(),
   pinned: z.boolean(),
   createdAt: z.date(),
+  updatedAt: z.date().optional(),
   order: z.number(),
   priority: z.enum(["Low", "Medium", "High"]),
   dtstart: z.date(),
@@ -108,12 +109,14 @@ const listBaseSchema = z.object({
     .trim()
     .min(1, { message: "title cannot be left empty" }),
   color: z.enum(ListColor).nullable(),
+  iconKey: z.string().trim().min(1).nullable().optional(),
 });
 
 export const listCreateSchema = listBaseSchema.pick({
   name: true,
 }).extend({
   color: z.enum(ListColor).optional(),
+  iconKey: z.string().trim().min(1).max(64).optional(),
 });
 
 export type ListColorType = (typeof ListColor)[number];
@@ -125,6 +128,7 @@ export const listPatchSchema = listBaseSchema.partial().extend({
     .min(1, { message: "title cannot be left empty" })
     .optional(),
   color: z.enum(ListColor).optional(),
+  iconKey: z.string().trim().min(1).max(64).optional(),
 });
 
 export const userPreferencesSchema = z.object({

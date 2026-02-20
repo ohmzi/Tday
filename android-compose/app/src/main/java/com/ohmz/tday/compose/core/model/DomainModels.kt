@@ -23,6 +23,7 @@ data class TodoItem(
     val pinned: Boolean,
     val completed: Boolean,
     val listId: String?,
+    val updatedAt: Instant? = null,
 ) {
     val isRecurring: Boolean
         get() = !rrule.isNullOrBlank()
@@ -37,6 +38,7 @@ data class ListSummary(
     val color: String?,
     val iconKey: String?,
     val todoCount: Int,
+    val updatedAt: Instant? = null,
 )
 
 data class DashboardSummary(

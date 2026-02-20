@@ -88,6 +88,8 @@ data class TodoDto(
     val instanceDate: String? = null,
     val completed: Boolean = false,
     val listID: String? = null,
+    val updatedAt: String? = null,
+    val createdAt: String? = null,
 )
 
 @Serializable
@@ -116,6 +118,7 @@ data class ListsResponse(
 data class CreateListRequest(
     val name: String,
     val color: String? = null,
+    val iconKey: String? = null,
 )
 
 @Serializable
@@ -124,6 +127,9 @@ data class ListDto(
     val name: String,
     val color: String? = null,
     val todoCount: Int = 0,
+    val iconKey: String? = null,
+    val updatedAt: String? = null,
+    val createdAt: String? = null,
 )
 
 @Serializable
