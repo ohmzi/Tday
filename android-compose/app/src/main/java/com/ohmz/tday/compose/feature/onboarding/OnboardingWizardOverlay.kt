@@ -1,6 +1,8 @@
 package com.ohmz.tday.compose.feature.onboarding
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -8,7 +10,10 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +46,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -48,7 +55,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.feature.auth.AuthUiState
@@ -79,6 +89,8 @@ fun OnboardingWizardOverlay(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val consumeAllTouchesSource = remember { MutableInteractionSource() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     var step by rememberSaveable(initialServerUrl) {
         mutableStateOf(if (initialServerUrl.isNullOrBlank()) WizardStep.SERVER else WizardStep.LOGIN)
@@ -89,6 +101,36 @@ fun OnboardingWizardOverlay(
     var serverError by rememberSaveable { mutableStateOf<String?>(null) }
     var isConnecting by rememberSaveable { mutableStateOf(false) }
     var isResettingTrust by rememberSaveable { mutableStateOf(false) }
+    val passwordFocusRequester = remember { FocusRequester() }
+
+    val connectToServer: () -> Unit = connect@{
+        if (isResettingTrust) return@connect
+        val value = serverUrl.trim()
+        if (value.isBlank()) return@connect
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        serverError = null
+        isConnecting = true
+        onConnectServer(value) { result ->
+            isConnecting = false
+            result.onSuccess {
+                step = WizardStep.LOGIN
+                onClearAuthStatus()
+            }.onFailure { error ->
+                step = WizardStep.SERVER
+                serverError = error.message ?: "Could not connect to server"
+            }
+        }
+    }
+    val signIn: () -> Unit = signIn@{
+        if (authUiState.isLoading) return@signIn
+        val userEmail = email.trim()
+        if (userEmail.isBlank() || password.isBlank()) return@signIn
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        onClearAuthStatus()
+        onLogin(userEmail, password)
+    }
 
     LaunchedEffect(initialServerUrl) {
         if (!initialServerUrl.isNullOrBlank()) {
@@ -214,6 +256,11 @@ fun OnboardingWizardOverlay(
                                         label = { Text("Server URL") },
                                         placeholder = { Text("https://app.example.com") },
                                         singleLine = true,
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                                        keyboardActions = KeyboardActions(
+                                            onGo = { connectToServer() },
+                                            onDone = { connectToServer() },
+                                        ),
                                         colors = focusColors,
                                     )
 
@@ -265,23 +312,7 @@ fun OnboardingWizardOverlay(
                                             .fillMaxWidth()
                                             .padding(top = 14.dp),
                                         enabled = serverUrl.isNotBlank() && !isResettingTrust,
-                                        onClick = {
-                                            val value = serverUrl.trim()
-                                            if (value.isBlank()) return@Button
-                                            serverError = null
-                                            isConnecting = true
-                                            onConnectServer(value) { result ->
-                                                isConnecting = false
-                                                result.onSuccess {
-                                                    step = WizardStep.LOGIN
-                                                    onClearAuthStatus()
-                                                }.onFailure { error ->
-                                                    step = WizardStep.SERVER
-                                                    serverError =
-                                                        error.message ?: "Could not connect to server"
-                                                }
-                                            }
-                                        },
+                                        onClick = connectToServer,
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = colorScheme.primary,
                                             contentColor = colorScheme.onPrimary,
@@ -310,12 +341,17 @@ fun OnboardingWizardOverlay(
                                         },
                                         label = { Text("Email") },
                                         singleLine = true,
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                        keyboardActions = KeyboardActions(
+                                            onNext = { passwordFocusRequester.requestFocus() },
+                                        ),
                                         colors = focusColors,
                                     )
                                     OutlinedTextField(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(top = 10.dp),
+                                            .padding(top = 10.dp)
+                                            .focusRequester(passwordFocusRequester),
                                         value = password,
                                         onValueChange = {
                                             password = it
@@ -323,6 +359,10 @@ fun OnboardingWizardOverlay(
                                         },
                                         label = { Text("Password") },
                                         singleLine = true,
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                        keyboardActions = KeyboardActions(
+                                            onDone = { signIn() },
+                                        ),
                                         visualTransformation = PasswordVisualTransformation(),
                                         colors = focusColors,
                                     )
@@ -349,10 +389,7 @@ fun OnboardingWizardOverlay(
                                             .fillMaxWidth()
                                             .padding(top = 14.dp),
                                         enabled = email.isNotBlank() && password.isNotBlank() && !authUiState.isLoading,
-                                        onClick = {
-                                            onClearAuthStatus()
-                                            onLogin(email.trim(), password)
-                                        },
+                                        onClick = signIn,
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = colorScheme.primary,
                                             contentColor = colorScheme.onPrimary,
@@ -447,11 +484,27 @@ private fun WizardStepChip(
     color: Color,
     active: Boolean,
 ) {
+    val scale by animateFloatAsState(
+        targetValue = if (active) 1.04f else 1f,
+        animationSpec = tween(durationMillis = 180),
+        label = "wizardStepChipScale",
+    )
+    val borderWidth by animateDpAsState(
+        targetValue = if (active) 2.dp else 0.dp,
+        animationSpec = tween(durationMillis = 180),
+        label = "wizardStepChipBorderWidth",
+    )
+    val ringColor = lerp(color, Color.Black, 0.35f)
+
     Card(
-        modifier = modifier,
+        modifier = modifier.graphicsLayer(
+            scaleX = scale,
+            scaleY = scale,
+        ),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = color),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (active) 12.dp else 8.dp),
+        border = if (active) BorderStroke(borderWidth, ringColor) else null,
     ) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
