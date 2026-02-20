@@ -29,6 +29,7 @@ data class AppUiState(
     val error: String? = null,
     val canResetServerTrust: Boolean = false,
     val pendingApprovalMessage: String? = null,
+    val isManualSyncing: Boolean = false,
 )
 
 @HiltViewModel
@@ -50,7 +51,7 @@ class AppViewModel @Inject constructor(
 
     fun bootstrap() {
         viewModelScope.launch {
-            _uiState.update { it.copy(loading = true, error = null) }
+            _uiState.update { it.copy(loading = true, error = null, isManualSyncing = false) }
             if (!repository.hasServerConfigured()) {
                 _uiState.update {
                     it.copy(
@@ -62,6 +63,7 @@ class AppViewModel @Inject constructor(
                         error = null,
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
+                        isManualSyncing = false,
                     )
                 }
                 ensureResyncLoop(authenticated = false)
@@ -70,7 +72,6 @@ class AppViewModel @Inject constructor(
 
             val sessionUser = runCatching { repository.restoreSession() }.getOrNull()
             if (sessionUser?.id != null) {
-                runCatching { repository.syncCachedData(force = true) }
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -81,10 +82,11 @@ class AppViewModel @Inject constructor(
                         error = null,
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
+                        isManualSyncing = false,
                     )
                 }
                 ensureResyncLoop(authenticated = true)
-                repository.syncTimezone()
+                launchStartupSync()
                 return@launch
             }
 
@@ -97,7 +99,6 @@ class AppViewModel @Inject constructor(
                     )
                 ) {
                     com.ohmz.tday.compose.core.model.AuthResult.Success -> {
-                        runCatching { repository.syncCachedData(force = true) }
                         val authed = repository.restoreSession()
                         _uiState.update {
                             it.copy(
@@ -109,9 +110,13 @@ class AppViewModel @Inject constructor(
                                 error = null,
                                 canResetServerTrust = false,
                                 pendingApprovalMessage = null,
+                                isManualSyncing = false,
                             )
                         }
                         ensureResyncLoop(authenticated = authed?.id != null)
+                        if (authed?.id != null) {
+                            launchStartupSync()
+                        }
                         return@launch
                     }
 
@@ -126,6 +131,7 @@ class AppViewModel @Inject constructor(
                                 error = null,
                                 canResetServerTrust = false,
                                 pendingApprovalMessage = "Account pending admin approval.",
+                                isManualSyncing = false,
                             )
                         }
                         ensureResyncLoop(authenticated = false)
@@ -138,6 +144,33 @@ class AppViewModel @Inject constructor(
                 }
             }
 
+            if (savedCredentials != null && repository.hasCachedData()) {
+                val offlineName = savedCredentials.email
+                    .substringBefore('@')
+                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                    .ifBlank { "Offline" }
+                _uiState.update {
+                    it.copy(
+                        loading = false,
+                        authenticated = true,
+                        requiresServerSetup = false,
+                        serverUrl = repository.getServerUrl(),
+                        user = SessionUser(
+                            id = "offline-cached-user",
+                            name = offlineName,
+                            email = savedCredentials.email,
+                        ),
+                        error = null,
+                        canResetServerTrust = false,
+                        pendingApprovalMessage = null,
+                        isManualSyncing = false,
+                    )
+                }
+                ensureResyncLoop(authenticated = true)
+                launchStartupSync()
+                return@launch
+            }
+
             _uiState.update {
                 it.copy(
                     loading = false,
@@ -148,6 +181,7 @@ class AppViewModel @Inject constructor(
                     error = null,
                     canResetServerTrust = false,
                     pendingApprovalMessage = null,
+                    isManualSyncing = false,
                 )
             }
             ensureResyncLoop(authenticated = false)
@@ -231,8 +265,20 @@ class AppViewModel @Inject constructor(
                     loading = false,
                     canResetServerTrust = false,
                     pendingApprovalMessage = null,
+                    isManualSyncing = false,
                 )
             }
+        }
+    }
+
+    fun syncNow() {
+        if (!_uiState.value.authenticated) return
+        if (_uiState.value.isManualSyncing) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isManualSyncing = true) }
+            runCatching { repository.syncCachedData(force = true) }
+            _uiState.update { it.copy(isManualSyncing = false) }
         }
     }
 
@@ -259,6 +305,13 @@ class AppViewModel @Inject constructor(
                 delay(RESYNC_INTERVAL_MS)
                 runCatching { repository.syncCachedData(force = true) }
             }
+        }
+    }
+
+    private fun launchStartupSync() {
+        viewModelScope.launch {
+            runCatching { repository.syncCachedData(force = true) }
+            runCatching { repository.syncTimezone() }
         }
     }
 
