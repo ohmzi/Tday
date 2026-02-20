@@ -8,6 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarToday
@@ -48,8 +52,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -67,14 +69,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
@@ -110,8 +118,12 @@ fun HomeScreen(
         targetValue = if (fabPressed) 2.dp else 0.dp,
         label = "fabOffsetY",
     )
+    var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    var searchBarBounds by remember { mutableStateOf<Rect?>(null) }
+    var rootInRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     var listName by rememberSaveable { mutableStateOf("") }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
+    val closeSearch = { searchExpanded = false }
 
     Scaffold(
         containerColor = colorScheme.background,
@@ -139,90 +151,129 @@ fun HomeScreen(
             }
         },
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(padding)
+                .onGloballyPositioned { coordinates ->
+                    rootInRoot = coordinates.boundsInRoot().topLeft
+                }
+                .pointerInput(searchExpanded, searchBarBounds, rootInRoot) {
+                    if (!searchExpanded) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(pass = PointerEventPass.Final)
+                        val tapInRoot = down.position + rootInRoot
+                        val tappedSearchBar = searchBarBounds?.contains(tapInRoot) == true
+                        val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
+                        if (up != null && !tappedSearchBar) {
+                            searchExpanded = false
+                        }
+                    }
+                },
         ) {
-            item {
-                TopSearchBar(
-                    onOpenNotes = onOpenNotes,
-                    onOpenSettings = onOpenSettings,
-                )
-            }
-
-            item {
-                Text(
-                    text = "Tday",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = colorScheme.onBackground,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CategoryGrid(
-                        todayCount = uiState.summary.todayCount,
-                        scheduledCount = uiState.summary.scheduledCount,
-                        allCount = uiState.summary.allCount,
-                        flaggedCount = uiState.summary.flaggedCount,
-                        completedCount = uiState.summary.completedCount,
-                        onOpenToday = onOpenToday,
-                        onOpenScheduled = onOpenScheduled,
-                        onOpenAll = onOpenAll,
-                        onOpenFlagged = onOpenFlagged,
-                        onOpenCompleted = onOpenCompleted,
-                    )
-
-                    CategoryCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFFA8B0B7),
-                        icon = Icons.Rounded.CalendarToday,
-                        backgroundGrid = true,
-                        title = "Calendar",
-                        count = uiState.summary.scheduledCount,
-                        onClick = onOpenCalendar,
-                    )
-                }
-            }
-
-            item {
-                Text(
-                    text = "My Lists",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = colorScheme.onBackground,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-
-            if (uiState.summary.projects.isEmpty()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
                 item {
-                    EmptyProjectCard(onCreate = { showCreateList = true })
-                }
-            } else {
-                items(uiState.summary.projects, key = { it.id }) { project ->
-                    ProjectRow(
-                        name = project.name,
-                        count = project.todoCount,
-                        onClick = { onOpenProject(project.id, project.name) },
+                    TopSearchBar(
+                        searchExpanded = searchExpanded,
+                        onSearchExpandedChange = { searchExpanded = it },
+                        onSearchBarBoundsChanged = { bounds -> searchBarBounds = bounds },
+                        onOpenNotes = {
+                            closeSearch()
+                            onOpenNotes()
+                        },
+                        onOpenSettings = {
+                            closeSearch()
+                            onOpenSettings()
+                        },
                     )
                 }
-            }
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CategoryGrid(
+                            todayCount = uiState.summary.todayCount,
+                            scheduledCount = uiState.summary.scheduledCount,
+                            allCount = uiState.summary.allCount,
+                            flaggedCount = uiState.summary.flaggedCount,
+                            completedCount = uiState.summary.completedCount,
+                            onOpenToday = {
+                                closeSearch()
+                                onOpenToday()
+                            },
+                            onOpenScheduled = {
+                                closeSearch()
+                                onOpenScheduled()
+                            },
+                            onOpenAll = {
+                                closeSearch()
+                                onOpenAll()
+                            },
+                            onOpenFlagged = {
+                                closeSearch()
+                                onOpenFlagged()
+                            },
+                            onOpenCompleted = {
+                                closeSearch()
+                                onOpenCompleted()
+                            },
+                        )
 
-            uiState.errorMessage?.let { message ->
+                        CategoryCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color(0xFFA8B0B7),
+                            icon = Icons.Rounded.CalendarToday,
+                            backgroundGrid = true,
+                            title = "Calendar",
+                            count = uiState.summary.scheduledCount,
+                            onClick = {
+                                closeSearch()
+                                onOpenCalendar()
+                            },
+                        )
+                    }
+                }
+
                 item {
                     Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "My Lists",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
-            }
 
-            item { Spacer(Modifier.height(96.dp)) }
+                if (uiState.summary.projects.isEmpty()) {
+                    item {
+                        EmptyProjectCard(onCreate = { showCreateList = true })
+                    }
+                } else {
+                    items(uiState.summary.projects, key = { it.id }) { project ->
+                        ProjectRow(
+                            name = project.name,
+                            count = project.todoCount,
+                            onClick = {
+                                closeSearch()
+                                onOpenProject(project.id, project.name)
+                            },
+                        )
+                    }
+                }
+
+                uiState.errorMessage?.let { message ->
+                    item {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+
+                item { Spacer(Modifier.height(96.dp)) }
+            }
         }
     }
 
@@ -259,6 +310,9 @@ fun HomeScreen(
 
 @Composable
 private fun TopSearchBar(
+    searchExpanded: Boolean,
+    onSearchExpandedChange: (Boolean) -> Unit,
+    onSearchBarBoundsChanged: (Rect) -> Unit,
     onOpenNotes: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -267,13 +321,15 @@ private fun TopSearchBar(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
 
-    var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
             focusRequester.requestFocus()
             keyboardController?.show()
+        } else {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
         }
     }
 
@@ -285,10 +341,25 @@ private fun TopSearchBar(
             label = "topSearchBarWidth",
         )
 
+        if (!searchExpanded) {
+            Text(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 2.dp),
+                text = "Tday",
+                style = MaterialTheme.typography.headlineLarge,
+                color = colorScheme.onBackground,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+
         Row(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .width(animatedWidth)
+                .onGloballyPositioned { coordinates ->
+                    onSearchBarBoundsChanged(coordinates.boundsInRoot())
+                }
                 .clip(RoundedCornerShape(32.dp))
                 .background(colorScheme.surfaceVariant)
                 .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -301,17 +372,15 @@ private fun TopSearchBar(
                 tint = colorScheme.onSurface,
                 onClick = {
                     if (searchExpanded) {
-                        searchExpanded = false
-                        focusManager.clearFocus(force = true)
-                        keyboardController?.hide()
+                        onSearchExpandedChange(false)
                     } else {
-                        searchExpanded = true
+                        onSearchExpandedChange(true)
                     }
                 },
             )
 
             if (searchExpanded) {
-                TextField(
+                BasicTextField(
                     modifier = Modifier
                         .weight(1f)
                         .height(40.dp)
@@ -319,14 +388,27 @@ private fun TopSearchBar(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     singleLine = true,
-                    placeholder = { Text("Search") },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = colorScheme.onSurface,
                     ),
+                    cursorBrush = SolidColor(colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 2.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            if (searchQuery.isBlank()) {
+                                Text(
+                                    text = "Search",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            innerTextField()
+                        }
+                    },
                 )
             }
 
@@ -571,56 +653,60 @@ private fun CategoryCard(
         ) {
             if (backgroundGrid) {
                 val gridTint = lerp(color, Color.White, 0.32f)
-                Canvas(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .offset(x = 28.dp, y = 14.dp)
-                        .size(width = 172.dp, height = 116.dp)
-                        .graphicsLayer { alpha = 0.42f },
-                ) {
-                    val cols = 6
-                    val rows = 4
-                    val stroke = 1.2.dp.toPx()
-                    val lineColor = gridTint.copy(alpha = 0.85f)
-                    val borderColor = gridTint.copy(alpha = 0.95f)
+                Box(modifier = Modifier.matchParentSize()) {
+                    Canvas(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .offset(x = 28.dp, y = 14.dp)
+                            .size(width = 172.dp, height = 116.dp)
+                            .graphicsLayer { alpha = 0.42f },
+                    ) {
+                        val cols = 6
+                        val rows = 4
+                        val stroke = 1.2.dp.toPx()
+                        val lineColor = gridTint.copy(alpha = 0.85f)
+                        val borderColor = gridTint.copy(alpha = 0.95f)
 
-                    drawRoundRect(
-                        color = borderColor,
-                        cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
-                        style = Stroke(width = stroke),
-                    )
+                        drawRoundRect(
+                            color = borderColor,
+                            cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx()),
+                            style = Stroke(width = stroke),
+                        )
 
-                    for (i in 1 until cols) {
-                        val x = size.width * i / cols
-                        drawLine(
-                            color = lineColor,
-                            start = Offset(x, 0f),
-                            end = Offset(x, size.height),
-                            strokeWidth = stroke,
-                        )
-                    }
-                    for (j in 1 until rows) {
-                        val y = size.height * j / rows
-                        drawLine(
-                            color = lineColor,
-                            start = Offset(0f, y),
-                            end = Offset(size.width, y),
-                            strokeWidth = stroke,
-                        )
+                        for (i in 1 until cols) {
+                            val x = size.width * i / cols
+                            drawLine(
+                                color = lineColor,
+                                start = Offset(x, 0f),
+                                end = Offset(x, size.height),
+                                strokeWidth = stroke,
+                            )
+                        }
+                        for (j in 1 until rows) {
+                            val y = size.height * j / rows
+                            drawLine(
+                                color = lineColor,
+                                start = Offset(0f, y),
+                                end = Offset(size.width, y),
+                                strokeWidth = stroke,
+                            )
+                        }
                     }
                 }
             }
 
             if (backgroundWatermark != null) {
-                Icon(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .offset(x = 24.dp, y = 14.dp)
-                        .size(132.dp),
-                    imageVector = backgroundWatermark,
-                    contentDescription = null,
-                    tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
-                )
+                Box(modifier = Modifier.matchParentSize()) {
+                    Icon(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .offset(x = 24.dp, y = 14.dp)
+                            .size(132.dp),
+                        imageVector = backgroundWatermark,
+                        contentDescription = null,
+                        tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
+                    )
+                }
             }
 
             Column(
