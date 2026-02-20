@@ -47,6 +47,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -223,7 +224,7 @@ fun HomeScreen(
 
                         CategoryCard(
                             modifier = Modifier.fillMaxWidth(),
-                            color = Color(0xFFA8B0B7),
+                            color = calendarTileColor(colorScheme),
                             icon = Icons.Rounded.CalendarToday,
                             backgroundGrid = true,
                             title = "Calendar",
@@ -481,6 +482,9 @@ private fun CategoryGrid(
     onOpenFlagged: () -> Unit,
     onOpenCompleted: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val completedColor = completedTileColor(colorScheme)
+
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CategoryCard(
@@ -524,7 +528,7 @@ private fun CategoryGrid(
         }
         CategoryCard(
             modifier = Modifier.fillMaxWidth(),
-            color = Color(0xFFA8B0B7),
+            color = completedColor,
             icon = Icons.Rounded.Check,
             backgroundWatermark = Icons.Rounded.Check,
             title = "Completed",
@@ -532,6 +536,14 @@ private fun CategoryGrid(
             onClick = onOpenCompleted,
         )
     }
+}
+
+private fun completedTileColor(colorScheme: ColorScheme): Color {
+    return lerp(colorScheme.surfaceVariant, colorScheme.onSurface, 0.32f)
+}
+
+private fun calendarTileColor(colorScheme: ColorScheme): Color {
+    return lerp(completedTileColor(colorScheme), colorScheme.primary, 0.18f)
 }
 
 @Composable
