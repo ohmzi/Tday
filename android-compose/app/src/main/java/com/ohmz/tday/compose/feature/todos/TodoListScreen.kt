@@ -43,8 +43,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -56,10 +56,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -70,7 +74,9 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.YearMonth
@@ -102,12 +108,59 @@ fun TodoListScreen(
         )
     }
     val listState = rememberLazyListState()
-    val todayCollapseProgressTarget by remember(isTodayScreen, listState) {
-        derivedStateOf {
-            if (!isTodayScreen) {
-                0f
-            } else {
-                computeTodayTitleCollapseProgress(listState)
+    val density = LocalDensity.current
+    val maxTodayCollapsePx = with(density) { TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
+    var todayHeaderCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
+    val todayCollapseProgressTarget = if (isTodayScreen && maxTodayCollapsePx > 0f) {
+        (todayHeaderCollapsePx / maxTodayCollapsePx).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val todayNestedScrollConnection = remember(isTodayScreen, listState, maxTodayCollapsePx) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (!isTodayScreen) return Offset.Zero
+                val deltaY = available.y
+                if (deltaY < 0f) {
+                    val previous = todayHeaderCollapsePx
+                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
+                    val consumed = next - previous
+                    if (consumed > 0f) {
+                        todayHeaderCollapsePx = next
+                        return Offset(0f, -consumed)
+                    }
+                    return Offset.Zero
+                }
+
+                if (deltaY > 0f) {
+                    val isListAtTop =
+                        listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                    if (!isListAtTop) return Offset.Zero
+                    val previous = todayHeaderCollapsePx
+                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
+                    val consumed = previous - next
+                    if (consumed > 0f) {
+                        todayHeaderCollapsePx = next
+                        return Offset(0f, consumed)
+                    }
+                }
+
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (!isTodayScreen) return Velocity.Zero
+                if (available.y < 0f && todayHeaderCollapsePx < maxTodayCollapsePx) {
+                    todayHeaderCollapsePx = maxTodayCollapsePx
+                    return available
+                }
+                val isListAtTop =
+                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                if (available.y > 0f && isListAtTop && todayHeaderCollapsePx > 0f) {
+                    todayHeaderCollapsePx = 0f
+                    return available
+                }
+                return Velocity.Zero
             }
         }
     }
@@ -116,6 +169,8 @@ fun TodoListScreen(
         label = "todayTitleCollapseProgress",
     )
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
+    var quickAddStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
+    var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
@@ -168,7 +223,11 @@ fun TodoListScreen(
                         },
                     interactionSource = fabInteractionSource,
                     elevation = fabElevation,
-                    onClick = { showCreateTaskSheet = true },
+                    onClick = {
+                        quickAddStartEpochMs = null
+                        quickAddDueEpochMs = null
+                        showCreateTaskSheet = true
+                    },
                 )
             } else {
                 CreateTaskButton(
@@ -180,7 +239,11 @@ fun TodoListScreen(
                         },
                     interactionSource = fabInteractionSource,
                     elevation = fabElevation,
-                    onClick = { showCreateTaskSheet = true },
+                    onClick = {
+                        quickAddStartEpochMs = null
+                        quickAddDueEpochMs = null
+                        showCreateTaskSheet = true
+                    },
                 )
             }
         },
@@ -190,13 +253,20 @@ fun TodoListScreen(
             onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .then(
+                    if (isTodayScreen) {
+                        Modifier.nestedScroll(todayNestedScrollConnection)
+                    } else {
+                        Modifier
+                    },
+                ),
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
                 contentPadding = if (isTodayScreen) {
-                    PaddingValues(horizontal = 18.dp, vertical = 8.dp)
+                    PaddingValues(horizontal = 18.dp, vertical = 2.dp)
                 } else {
                     PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                 },
@@ -222,6 +292,18 @@ fun TodoListScreen(
                         TimelineSection(
                             section = section,
                             useMinimalStyle = isTodayScreen,
+                            onTapForQuickAdd = if (isTodayScreen) {
+                                section.quickAddSlot?.let { slot ->
+                                    {
+                                        val quickAdd = quickAddDefaultsForTodaySection(slot)
+                                        quickAddStartEpochMs = quickAdd.first
+                                        quickAddDueEpochMs = quickAdd.second
+                                        showCreateTaskSheet = true
+                                    }
+                                }
+                            } else {
+                                null
+                            },
                             onComplete = onComplete,
                             onDelete = onDelete,
                             onTogglePin = onTogglePin,
@@ -265,10 +347,18 @@ fun TodoListScreen(
         CreateTaskBottomSheet(
             lists = uiState.lists,
             defaultListId = null,
-            onDismiss = { showCreateTaskSheet = false },
+            initialStartEpochMs = quickAddStartEpochMs,
+            initialDueEpochMs = quickAddDueEpochMs,
+            onDismiss = {
+                showCreateTaskSheet = false
+                quickAddStartEpochMs = null
+                quickAddDueEpochMs = null
+            },
             onCreateTask = { payload ->
                 onAddTask(payload)
                 showCreateTaskSheet = false
+                quickAddStartEpochMs = null
+                quickAddDueEpochMs = null
             },
         )
     }
@@ -280,9 +370,9 @@ private fun TodayTopBar(
     collapseProgress: Float,
 ) {
     val progress = collapseProgress.coerceIn(0f, 1f)
-    val titleHandoffPoint = 0.52f
+    val titleHandoffPoint = 0.9f
     val density = LocalDensity.current
-    val expandedTitleHeight = lerp(64.dp, 8.dp, progress)
+    val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
     val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
     val collapsedTitleAlpha =
         ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
@@ -293,7 +383,7 @@ private fun TodayTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 8.dp),
+            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 2.dp),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -327,7 +417,7 @@ private fun TodayTopBar(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(lerp(18.dp, 4.dp, progress)))
+        Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -486,13 +576,27 @@ private fun CreateTaskButton(
 private fun TimelineSection(
     section: TodoSection,
     useMinimalStyle: Boolean,
+    onTapForQuickAdd: (() -> Unit)?,
     onComplete: (TodoItem) -> Unit,
     onDelete: (TodoItem) -> Unit,
     onTogglePin: (TodoItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val sectionInteractionSource = remember { MutableInteractionSource() }
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (onTapForQuickAdd != null) {
+                    Modifier.clickable(
+                        interactionSource = sectionInteractionSource,
+                        indication = null,
+                        onClick = onTapForQuickAdd,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
@@ -571,7 +675,14 @@ private data class TodoSection(
     val key: String,
     val title: String,
     val items: List<TodoItem>,
+    val quickAddSlot: TodaySectionSlot? = null,
 )
+
+private enum class TodaySectionSlot {
+    MORNING,
+    AFTERNOON,
+    TONIGHT,
+}
 
 private fun buildTimelineSections(
     mode: TodoListMode,
@@ -600,16 +711,19 @@ private fun buildTodaySections(
             key = "today-morning",
             title = "Morning",
             items = sorted.filter(inRange(0, 11)),
+            quickAddSlot = TodaySectionSlot.MORNING,
         ),
         TodoSection(
             key = "today-afternoon",
             title = "Afternoon",
             items = sorted.filter(inRange(12, 17)),
+            quickAddSlot = TodaySectionSlot.AFTERNOON,
         ),
         TodoSection(
             key = "today-tonight",
             title = "Tonight",
             items = sorted.filter(inRange(18, 23)),
+            quickAddSlot = TodaySectionSlot.TONIGHT,
         ),
     )
 }
@@ -721,15 +835,22 @@ private fun monthTitle(
 private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE MMM d")
 
-private fun computeTodayTitleCollapseProgress(
-    listState: LazyListState,
-): Float {
-    if (listState.firstVisibleItemIndex > 0) return 1f
-    return (listState.firstVisibleItemScrollOffset / TODAY_TITLE_COLLAPSE_SCROLL_PX)
-        .coerceIn(0f, 1f)
+private fun quickAddDefaultsForTodaySection(
+    slot: TodaySectionSlot,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Pair<Long, Long> {
+    val today = LocalDate.now(zoneId)
+    val dueTime = when (slot) {
+        TodaySectionSlot.MORNING -> LocalTime.of(11, 59)
+        TodaySectionSlot.AFTERNOON -> LocalTime.of(17, 59)
+        TodaySectionSlot.TONIGHT -> LocalTime.of(23, 59)
+    }
+    val due = ZonedDateTime.of(today, dueTime, zoneId)
+    val start = due.minusHours(3)
+    return start.toInstant().toEpochMilli() to due.toInstant().toEpochMilli()
 }
 
-private const val TODAY_TITLE_COLLAPSE_SCROLL_PX = 170f
+private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
 
 @Composable
 private fun TodayTodoRow(
