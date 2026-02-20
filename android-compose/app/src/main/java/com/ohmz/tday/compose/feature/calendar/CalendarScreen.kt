@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -21,7 +21,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -31,14 +30,15 @@ fun CalendarScreen(
     onBack: () -> Unit,
     onOpenScheduled: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Scaffold(
-        containerColor = Color(0xFF050507),
+        containerColor = colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Calendar") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
             )
@@ -53,26 +53,26 @@ fun CalendarScreen(
         ) {
             Card(
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF171A22)),
+                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
                     Icon(
                         imageVector = Icons.Rounded.CalendarMonth,
                         contentDescription = null,
-                        tint = Color(0xFF8DBBFF),
+                        tint = colorScheme.primary,
                     )
                     Text(
                         modifier = Modifier.padding(top = 10.dp),
                         text = "Native calendar views",
-                        color = Color.White,
+                        color = colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         modifier = Modifier.padding(top = 6.dp),
                         text = "Month / week / day screens are mapped and will be built next in Compose. For now use Scheduled timeline.",
-                        color = Color(0xFF9DA5B9),
+                        color = colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                     TextButton(onClick = onOpenScheduled) {
