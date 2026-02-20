@@ -135,7 +135,6 @@ fun TdayApp() {
                                 onOpenAll = { navController.navigate(AppRoute.AllTodos.route) },
                                 onOpenFlagged = { navController.navigate(AppRoute.FlaggedTodos.route) },
                                 onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
-                                onOpenNotes = { navController.navigate(AppRoute.Notes.route) },
                                 onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
                                 onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
                                 onOpenProject = { id, name ->
@@ -153,7 +152,6 @@ fun TdayApp() {
                                 onOpenAll = {},
                                 onOpenFlagged = {},
                                 onOpenCompleted = {},
-                                onOpenNotes = {},
                                 onOpenCalendar = {},
                                 onOpenSettings = {},
                                 onOpenProject = { _, _ -> },
