@@ -101,7 +101,7 @@ private fun CompletedRow(
     onUncomplete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = DateTimeFormatter.ofPattern("MMM d, HH:mm")
+    val due = DateTimeFormatter.ofPattern("MMM d, h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(item.due)
 

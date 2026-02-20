@@ -213,39 +213,21 @@ fun TodoListScreen(
             }
         },
         floatingActionButton = {
-            if (isTodayScreen) {
-                TodayCreateTaskButton(
-                    modifier = Modifier
-                        .offset(y = fabOffsetY)
-                        .graphicsLayer {
-                            scaleX = fabScale
-                            scaleY = fabScale
-                        },
-                    interactionSource = fabInteractionSource,
-                    elevation = fabElevation,
-                    onClick = {
-                        quickAddStartEpochMs = null
-                        quickAddDueEpochMs = null
-                        showCreateTaskSheet = true
+            CreateTaskButton(
+                modifier = Modifier
+                    .offset(y = fabOffsetY)
+                    .graphicsLayer {
+                        scaleX = fabScale
+                        scaleY = fabScale
                     },
-                )
-            } else {
-                CreateTaskButton(
-                    modifier = Modifier
-                        .offset(y = fabOffsetY)
-                        .graphicsLayer {
-                            scaleX = fabScale
-                            scaleY = fabScale
-                        },
-                    interactionSource = fabInteractionSource,
-                    elevation = fabElevation,
-                    onClick = {
-                        quickAddStartEpochMs = null
-                        quickAddDueEpochMs = null
-                        showCreateTaskSheet = true
-                    },
-                )
-            }
+                interactionSource = fabInteractionSource,
+                elevation = fabElevation,
+                onClick = {
+                    quickAddStartEpochMs = null
+                    quickAddDueEpochMs = null
+                    showCreateTaskSheet = true
+                },
+            )
         },
     ) { padding ->
         TdayPullToRefreshBox(
@@ -473,43 +455,6 @@ private fun TodayHeaderButton(
 }
 
 @Composable
-private fun TodayCreateTaskButton(
-    modifier: Modifier,
-    interactionSource: MutableInteractionSource,
-    elevation: Dp,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    Card(
-        modifier = modifier,
-        onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        border = BorderStroke(1.25.dp, Color(0xFF2F4FD5)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF3E8AF4)),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = elevation,
-            pressedElevation = elevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.size(72.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Add,
-                contentDescription = "Create task",
-                tint = Color(0xFF9DEEFF),
-                modifier = Modifier.size(38.dp),
-            )
-        }
-    }
-}
-
-@Composable
 private fun CreateTaskButton(
     modifier: Modifier,
     interactionSource: MutableInteractionSource,
@@ -582,37 +527,42 @@ private fun TimelineSection(
     onTogglePin: (TodoItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val sectionInteractionSource = remember { MutableInteractionSource() }
+    val headerInteractionSource = remember { MutableInteractionSource() }
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(
-                if (onTapForQuickAdd != null) {
-                    Modifier.clickable(
-                        interactionSource = sectionInteractionSource,
-                        indication = null,
-                        onClick = onTapForQuickAdd,
-                    )
-                } else {
-                    Modifier
-                },
-            ),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = section.title,
-            color = if (useMinimalStyle) {
-                colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
-            } else {
-                colorScheme.onSurfaceVariant
-            },
-            style = if (useMinimalStyle) {
-                MaterialTheme.typography.headlineSmall
-            } else {
-                MaterialTheme.typography.titleMedium
-            },
-            fontWeight = FontWeight.SemiBold,
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (onTapForQuickAdd != null) {
+                        Modifier.clickable(
+                            interactionSource = headerInteractionSource,
+                            indication = null,
+                            onClick = onTapForQuickAdd,
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = section.title,
+                color = if (useMinimalStyle) {
+                    colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
+                } else {
+                    colorScheme.onSurfaceVariant
+                },
+                style = if (useMinimalStyle) {
+                    MaterialTheme.typography.headlineSmall
+                } else {
+                    MaterialTheme.typography.titleMedium
+                },
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
 
         if (section.items.isEmpty()) {
             Spacer(
@@ -860,7 +810,7 @@ private fun TodayTodoRow(
     onPin: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val dueText = DateTimeFormatter.ofPattern("HH:mm")
+    val dueText = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(todo.due)
 
@@ -933,7 +883,7 @@ private fun TodoRow(
     onPin: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = DateTimeFormatter.ofPattern("MMM d, HH:mm")
+    val due = DateTimeFormatter.ofPattern("MMM d, h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(todo.due)
 
