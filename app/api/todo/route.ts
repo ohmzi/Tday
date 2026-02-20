@@ -56,6 +56,8 @@ export async function POST(req: NextRequest) {
       ...body,
       dtstart: new Date(body.dtstart),
       due: new Date(body.due),
+      rrule: body.rrule ?? null,
+      listID: body.listID ?? null,
     };
 
     const parsedObj = todoSchema.safeParse(body);
