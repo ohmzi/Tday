@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -22,12 +23,15 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,18 +40,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,8 +62,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -366,133 +369,341 @@ fun HomeScreen(
     }
 
     if (showCreateList) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(
-            onDismissRequest = { showCreateList = false },
-            sheetState = sheetState,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            containerColor = colorScheme.surface,
-            tonalElevation = 8.dp,
+        CreateListBottomSheet(
+            listName = listName,
+            onListNameChange = { listName = it },
+            listColor = listColor,
+            onListColorChange = { listColor = it },
+            listIconKey = listIconKey,
+            onListIconChange = { listIconKey = it },
+            onDismiss = { showCreateList = false },
+            onCreate = {
+                if (listName.isNotBlank()) {
+                    onCreateList(listName.trim(), listColor, listIconKey)
+                    listName = ""
+                    listColor = DEFAULT_LIST_COLOR
+                    listIconKey = DEFAULT_LIST_ICON_KEY
+                    showCreateList = false
+                }
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CreateListBottomSheet(
+    listName: String,
+    onListNameChange: (String) -> Unit,
+    listColor: String,
+    onListColorChange: (String) -> Unit,
+    listIconKey: String,
+    onListIconChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onCreate: () -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val colorScheme = MaterialTheme.colorScheme
+    val selectedAccent = listColorAccent(listColor)
+    val canCreate = listName.isNotBlank()
+    val selectedIcon = listIconForKey(listIconKey)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = null,
+        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+        containerColor = colorScheme.background,
+        tonalElevation = 0.dp,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.8f),
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Text(
-                    text = "New list",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                )
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = listName,
-                    onValueChange = { listName = it },
-                    singleLine = true,
-                    label = { Text("List name") },
+                ListSheetHeader(
+                    onClose = {
+                        focusManager.clearFocus(force = true)
+                        onDismiss()
+                    },
+                    onConfirm = {
+                        focusManager.clearFocus(force = true)
+                        if (canCreate) onCreate()
+                    },
+                    confirmEnabled = canCreate,
                 )
 
-                Text(
-                    text = "Color",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    LIST_COLOR_OPTIONS.forEach { option ->
-                        val selected = listColor == option.key
+                ListSheetSectionTitle("List")
+                ListSheetCard {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 18.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(if (selected) 34.dp else 30.dp)
+                                .size(86.dp)
                                 .clip(RoundedCornerShape(999.dp))
-                                .background(option.color)
-                                .clickable { listColor = option.key }
-                                .then(
-                                    if (selected) {
-                                        Modifier.padding(2.dp)
-                                    } else {
-                                        Modifier
-                                    },
-                                ),
+                                .background(selectedAccent),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = selectedIcon,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(42.dp),
+                            )
+                        }
+
+                        BasicTextField(
+                            value = listName,
+                            onValueChange = onListNameChange,
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.headlineSmall.copy(
+                                color = selectedAccent,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { innerTextField ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(colorScheme.surfaceVariant)
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (listName.isBlank()) {
+                                        Text(
+                                            text = "List name",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            },
                         )
                     }
                 }
 
-                Text(
-                    text = "Icon",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    LIST_ICON_OPTIONS.forEach { option ->
-                        val selected = listIconKey == option.key
-                        Card(
-                            onClick = { listIconKey = option.key },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (selected) {
-                                    listColorAccent(listColor).copy(alpha = 0.22f)
-                                } else {
-                                    colorScheme.surfaceVariant
-                                },
-                            ),
-                        ) {
+                ListSheetSectionTitle("Color")
+                ListSheetCard {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        LIST_COLOR_OPTIONS.forEach { option ->
+                            val selected = listColor == option.key
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp),
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(option.color)
+                                    .border(
+                                        width = if (selected) 3.dp else 0.dp,
+                                        color = if (selected) colorScheme.onBackground.copy(alpha = 0.32f) else Color.Transparent,
+                                        shape = RoundedCornerShape(999.dp),
+                                    )
+                                    .clickable { onListColorChange(option.key) },
+                            )
+                        }
+                    }
+                }
+
+                ListSheetSectionTitle("Icon")
+                ListSheetCard {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        LIST_ICON_OPTIONS.forEach { option ->
+                            val selected = listIconKey == option.key
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(
+                                        if (selected) {
+                                            selectedAccent.copy(alpha = 0.2f)
+                                        } else {
+                                            colorScheme.surfaceVariant
+                                        },
+                                    )
+                                    .border(
+                                        width = if (selected) 2.dp else 0.dp,
+                                        color = if (selected) selectedAccent.copy(alpha = 0.55f) else Color.Transparent,
+                                        shape = RoundedCornerShape(999.dp),
+                                    )
+                                    .clickable { onListIconChange(option.key) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     imageVector = option.icon,
                                     contentDescription = null,
-                                    tint = if (selected) {
-                                        listColorAccent(listColor)
-                                    } else {
-                                        colorScheme.onSurfaceVariant
-                                    },
+                                    tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(onClick = { showCreateList = false }) { Text("Cancel") }
-                    Button(
-                        onClick = {
-                            if (listName.isNotBlank()) {
-                                onCreateList(listName, listColor, listIconKey)
-                                listName = ""
-                                listColor = DEFAULT_LIST_COLOR
-                                listIconKey = DEFAULT_LIST_ICON_KEY
-                                showCreateList = false
-                            }
-                        },
-                        enabled = listName.isNotBlank(),
-                    ) {
-                        Text("Create")
-                    }
-                }
-
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(4.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun ListSheetHeader(
+    onClose: () -> Unit,
+    onConfirm: () -> Unit,
+    confirmEnabled: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ListSheetActionButton(
+            icon = Icons.Rounded.Close,
+            contentDescription = "Close",
+            enabled = true,
+            accentColor = Color(0xFFE35A5A),
+            onClick = onClose,
+        )
+
+        Text(
+            text = "New list",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+        )
+
+        ListSheetActionButton(
+            icon = Icons.Rounded.Check,
+            contentDescription = "Create list",
+            enabled = confirmEnabled,
+            accentColor = Color(0xFF2FA35B),
+            onClick = onConfirm,
+        )
+    }
+}
+
+@Composable
+private fun ListSheetActionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    accentColor: Color,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val colorScheme = MaterialTheme.colorScheme
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed && enabled) 0.93f else 1f,
+        label = "listSheetHeaderButtonScale",
+    )
+    val elevation by animateDpAsState(
+        targetValue = when {
+            pressed && enabled -> 2.dp
+            enabled -> 8.dp
+            else -> 5.dp
+        },
+        label = "listSheetHeaderButtonElevation",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed && enabled) 1.dp else 0.dp,
+        label = "listSheetHeaderButtonOffsetY",
+    )
+    val containerColor = colorScheme.surfaceVariant
+    val iconTint = colorScheme.onBackground.copy(alpha = if (enabled) 1f else 0.55f)
+    val borderColor = if (enabled) {
+        accentColor.copy(alpha = 0.55f)
+    } else {
+        accentColor.copy(alpha = 0.3f)
+    }
+
+    Card(
+        modifier = Modifier
+            .size(54.dp)
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .border(
+                width = 1.5.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(999.dp),
+            ),
+        onClick = {
+            if (enabled) performGentleHaptic(view)
+            onClick()
+        },
+        enabled = enabled,
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = elevation,
+            pressedElevation = elevation,
+        ),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = iconTint,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ListSheetSectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+}
+
+@Composable
+private fun ListSheetCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth(), content = content)
     }
 }
 
