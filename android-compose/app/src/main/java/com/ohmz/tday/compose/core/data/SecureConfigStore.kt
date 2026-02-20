@@ -46,13 +46,24 @@ class SecureConfigStore @Inject constructor(
         val trimmed = raw.trim()
         if (trimmed.isBlank()) return null
 
-        val withScheme = when {
-            trimmed.startsWith("https://", ignoreCase = true) -> trimmed
-            trimmed.startsWith("http://", ignoreCase = true) -> trimmed
-            else -> "https://$trimmed"
+        val parsed = when {
+            trimmed.startsWith("https://", ignoreCase = true) -> {
+                trimmed.toHttpUrlOrNull() ?: return null
+            }
+            trimmed.startsWith("http://", ignoreCase = true) -> {
+                trimmed.toHttpUrlOrNull() ?: return null
+            }
+            else -> {
+                // Local/private hosts should default to HTTP for LAN-only deployments.
+                val httpsCandidate = "https://$trimmed".toHttpUrlOrNull() ?: return null
+                if (isLocalDevelopmentHost(httpsCandidate.host)) {
+                    "http://$trimmed".toHttpUrlOrNull() ?: return null
+                } else {
+                    httpsCandidate
+                }
+            }
         }
 
-        val parsed = withScheme.toHttpUrlOrNull() ?: return null
         val pathless = parsed.newBuilder()
             .encodedPath("/")
             .query(null)
@@ -133,6 +144,17 @@ class SecureConfigStore @Inject constructor(
 
     private fun fingerprintPrefKey(serverTrustKey: String): String {
         return "$KEY_CERT_FINGERPRINT_PREFIX$serverTrustKey"
+    }
+
+    private fun isLocalDevelopmentHost(host: String): Boolean {
+        val normalizedHost = host.lowercase()
+        if (normalizedHost == "localhost") return true
+        if (normalizedHost == "10.0.2.2") return true
+        if (normalizedHost.endsWith(".local")) return true
+        if (normalizedHost.matches(Regex("^127\\.\\d+\\.\\d+\\.\\d+$"))) return true
+        if (normalizedHost.matches(Regex("^10\\.\\d+\\.\\d+\\.\\d+$"))) return true
+        if (normalizedHost.matches(Regex("^192\\.168\\.\\d+\\.\\d+$"))) return true
+        return normalizedHost.matches(Regex("^172\\.(1[6-9]|2\\d|3[0-1])\\.\\d+\\.\\d+$"))
     }
 
     private companion object {
