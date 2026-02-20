@@ -137,7 +137,6 @@ fun HomeScreen(
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchBarBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-    var taskListId by rememberSaveable { mutableStateOf<String?>(null) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
     var listName by rememberSaveable { mutableStateOf("") }
     var listColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR) }
@@ -210,7 +209,6 @@ fun HomeScreen(
                 interactionSource = fabInteractionSource,
                 elevation = fabElevation,
                 onClick = {
-                    taskListId = uiState.summary.lists.firstOrNull()?.id
                     showCreateTask = true
                 },
             )
@@ -359,7 +357,7 @@ fun HomeScreen(
     if (showCreateTask) {
         CreateTaskBottomSheet(
             lists = uiState.summary.lists,
-            defaultListId = taskListId,
+            defaultListId = null,
             onDismiss = { showCreateTask = false },
             onCreateTask = { payload ->
                 onCreateTask(payload)
