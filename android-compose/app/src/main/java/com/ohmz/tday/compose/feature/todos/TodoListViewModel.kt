@@ -104,15 +104,27 @@ class TodoListViewModel @Inject constructor(
     fun addTask(title: String) {
         if (title.isBlank()) return
         val listId = _uiState.value.listId
+        val mode = _uiState.value.mode
 
         viewModelScope.launch {
             runCatching {
                 repository.createTodo(title = title, listId = listId)
             }.onSuccess {
-                refreshInternal(
-                    forceSync = false,
-                    showLoading = false,
-                )
+                runCatching { repository.fetchTodosCached(mode = mode, listId = listId) }
+                    .onSuccess { todos ->
+                        _uiState.update { current ->
+                            current.copy(
+                                items = if (current.items == todos) current.items else todos,
+                                errorMessage = null,
+                            )
+                        }
+                    }
+                    .onFailure {
+                        refreshInternal(
+                            forceSync = false,
+                            showLoading = false,
+                        )
+                    }
             }.onFailure { error ->
                 _uiState.update { it.copy(errorMessage = error.message ?: "Could not create task") }
             }
@@ -148,6 +160,8 @@ class TodoListViewModel @Inject constructor(
 
     fun delete(todo: TodoItem) {
         val previousItems = _uiState.value.items
+        val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
         _uiState.update { current ->
             current.copy(
                 items = current.items.filterNot { it.id == todo.id },
@@ -158,10 +172,21 @@ class TodoListViewModel @Inject constructor(
             runCatching {
                 repository.deleteTodo(todo)
             }.onSuccess {
-                refreshInternal(
-                    forceSync = false,
-                    showLoading = false,
-                )
+                runCatching { repository.fetchTodosCached(mode = mode, listId = listId) }
+                    .onSuccess { todos ->
+                        _uiState.update { current ->
+                            current.copy(
+                                items = if (current.items == todos) current.items else todos,
+                                errorMessage = null,
+                            )
+                        }
+                    }
+                    .onFailure {
+                        refreshInternal(
+                            forceSync = false,
+                            showLoading = false,
+                        )
+                    }
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
