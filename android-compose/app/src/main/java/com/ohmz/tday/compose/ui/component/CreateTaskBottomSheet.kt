@@ -105,7 +105,7 @@ fun CreateTaskBottomSheet(
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val dateFormatter = remember {
-        DateTimeFormatter.ofPattern("EEE, MMM d • HH:mm").withZone(ZoneId.systemDefault())
+        DateTimeFormatter.ofPattern("EEE, MMM d • h:mm a").withZone(ZoneId.systemDefault())
     }
     val listIdsKey = remember(lists) { lists.joinToString(separator = "|") { it.id } }
 
@@ -712,7 +712,7 @@ private fun showDateTimePicker(
                 },
                 initial.hour,
                 initial.minute,
-                true,
+                false,
             ).show()
         },
         initial.year,
