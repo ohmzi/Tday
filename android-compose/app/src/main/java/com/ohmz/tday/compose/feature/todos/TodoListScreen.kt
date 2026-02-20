@@ -796,7 +796,7 @@ private fun quickAddDefaultsForTodaySection(
         TodaySectionSlot.TONIGHT -> LocalTime.of(23, 59)
     }
     val due = ZonedDateTime.of(today, dueTime, zoneId)
-    val start = due.minusHours(3)
+    val start = due.minusHours(1)
     return start.toInstant().toEpochMilli() to due.toInstant().toEpochMilli()
 }
 
