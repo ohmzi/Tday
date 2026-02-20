@@ -44,8 +44,6 @@ import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -101,10 +99,10 @@ fun HomeScreen(
     onOpenCalendar: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenProject: (projectId: String, projectName: String) -> Unit,
+    onCreateTask: (title: String) -> Unit,
     onCreateProject: (name: String) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
     val fabInteractionSource = remember { MutableInteractionSource() }
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
@@ -122,6 +120,8 @@ fun HomeScreen(
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchBarBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var taskTitle by rememberSaveable { mutableStateOf("") }
+    var showCreateTask by rememberSaveable { mutableStateOf(false) }
     var listName by rememberSaveable { mutableStateOf("") }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
     val closeSearch = { searchExpanded = false }
@@ -129,27 +129,17 @@ fun HomeScreen(
     Scaffold(
         containerColor = colorScheme.background,
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    performGentleHaptic(view)
-                    showCreateList = true
-                },
+            CreateTaskButton(
                 modifier = Modifier
                     .offset(y = fabOffsetY)
                     .graphicsLayer {
                         scaleX = fabScale
                         scaleY = fabScale
                     },
-                containerColor = colorScheme.primary,
-                contentColor = colorScheme.onPrimary,
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = fabElevation,
-                    pressedElevation = fabElevation,
-                ),
                 interactionSource = fabInteractionSource,
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Create list")
-            }
+                elevation = fabElevation,
+                onClick = { showCreateTask = true },
+            )
         },
     ) { padding ->
         Box(
@@ -278,6 +268,36 @@ fun HomeScreen(
         }
     }
 
+    if (showCreateTask) {
+        AlertDialog(
+            onDismissRequest = { showCreateTask = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (taskTitle.isNotBlank()) {
+                            onCreateTask(taskTitle)
+                            taskTitle = ""
+                            showCreateTask = false
+                        }
+                    },
+                ) { Text("Create") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateTask = false }) { Text("Cancel") }
+            },
+            title = { Text("New task") },
+            text = {
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = taskTitle,
+                    onValueChange = { taskTitle = it },
+                    singleLine = true,
+                    label = { Text("Task title") },
+                )
+            },
+        )
+    }
+
     if (showCreateList) {
         AlertDialog(
             onDismissRequest = { showCreateList = false },
@@ -306,6 +326,69 @@ fun HomeScreen(
                 )
             },
         )
+    }
+}
+
+@Composable
+private fun CreateTaskButton(
+    modifier: Modifier,
+    interactionSource: MutableInteractionSource,
+    elevation: androidx.compose.ui.unit.Dp,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val colorScheme = MaterialTheme.colorScheme
+
+    Card(
+        modifier = modifier,
+        onClick = {
+            performGentleHaptic(view)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.primary),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = elevation,
+            pressedElevation = elevation,
+        ),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(62.dp)
+                .drawWithCache {
+                    val pearlWash = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.18f),
+                            Color(0xFFE7F3FF).copy(alpha = 0.12f),
+                            Color.Transparent,
+                        ),
+                        start = Offset(size.width * 0.08f, size.height * 0.05f),
+                        end = Offset(size.width * 0.9f, size.height * 0.88f),
+                    )
+                    val depthShade = Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.12f),
+                        ),
+                        start = Offset(size.width * 0.4f, size.height * 0.3f),
+                        end = Offset(size.width, size.height),
+                    )
+                    onDrawWithContent {
+                        drawRect(pearlWash)
+                        drawRect(depthShade)
+                        drawContent()
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = "Create task",
+                tint = Color.White,
+                modifier = Modifier.size(30.dp),
+            )
+        }
     }
 }
 
