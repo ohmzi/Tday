@@ -277,7 +277,12 @@ class AppViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isManualSyncing = true) }
-            runCatching { repository.syncCachedData(force = true) }
+            runCatching {
+                repository.syncCachedData(
+                    force = true,
+                    replayPendingMutations = false,
+                )
+            }
             _uiState.update { it.copy(isManualSyncing = false) }
         }
     }
