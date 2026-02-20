@@ -3,6 +3,8 @@ package com.ohmz.tday.compose.feature.todos
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +20,7 @@ data class TodoListUiState(
     val title: String = "Tasks",
     val mode: TodoListMode = TodoListMode.TODAY,
     val listId: String? = null,
+    val lists: List<ListSummary> = emptyList(),
     val items: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
 )
@@ -81,11 +84,14 @@ class TodoListViewModel @Inject constructor(
                     // Pull-to-refresh should fetch latest server state first.
                     repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
                 }
-                repository.fetchTodos(mode = mode, listId = listId)
-            }.onSuccess { todos ->
+                val todos = repository.fetchTodos(mode = mode, listId = listId)
+                val lists = repository.fetchLists()
+                todos to lists
+            }.onSuccess { (todos, lists) ->
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
+                        lists = if (current.lists == lists) current.lists else lists,
                         items = if (current.items == todos) current.items else todos,
                         errorMessage = null,
                     )
@@ -101,19 +107,23 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
-    fun addTask(title: String) {
-        if (title.isBlank()) return
-        val listId = _uiState.value.listId
+    fun addTask(payload: CreateTaskPayload) {
+        if (payload.title.isBlank()) return
         val mode = _uiState.value.mode
+        val listId = payload.listId
 
         viewModelScope.launch {
             runCatching {
-                repository.createTodo(title = title, listId = listId)
+                repository.createTodo(payload)
             }.onSuccess {
-                runCatching { repository.fetchTodosCached(mode = mode, listId = listId) }
-                    .onSuccess { todos ->
+                runCatching {
+                    val todos = repository.fetchTodosCached(mode = mode, listId = listId)
+                    val lists = repository.fetchLists()
+                    todos to lists
+                }.onSuccess { (todos, lists) ->
                         _uiState.update { current ->
                             current.copy(
+                                lists = if (current.lists == lists) current.lists else lists,
                                 items = if (current.items == todos) current.items else todos,
                                 errorMessage = null,
                             )
@@ -172,10 +182,14 @@ class TodoListViewModel @Inject constructor(
             runCatching {
                 repository.deleteTodo(todo)
             }.onSuccess {
-                runCatching { repository.fetchTodosCached(mode = mode, listId = listId) }
-                    .onSuccess { todos ->
+                runCatching {
+                    val todos = repository.fetchTodosCached(mode = mode, listId = listId)
+                    val lists = repository.fetchLists()
+                    todos to lists
+                }.onSuccess { (todos, lists) ->
                         _uiState.update { current ->
                             current.copy(
+                                lists = if (current.lists == lists) current.lists else lists,
                                 items = if (current.items == todos) current.items else todos,
                                 errorMessage = null,
                             )
