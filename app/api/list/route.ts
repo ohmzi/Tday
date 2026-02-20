@@ -6,8 +6,24 @@ import {
   InternalError,
 } from "@/lib/customError";
 import { prisma } from "@/lib/prisma/client";
-import { listCreateSchema } from "@/schema";
+import { listCreateSchema, listPatchSchema } from "@/schema";
 import { auth } from "@/app/auth";
+import { errorHandler } from "@/lib/errorHandler";
+import { z } from "zod";
+
+const listPatchByIdSchema = listPatchSchema.extend({
+  id: z
+    .string({ message: "id cannot be left empty" })
+    .trim()
+    .min(1, { message: "id cannot be left empty" }),
+});
+
+const listDeleteByIdSchema = z.object({
+  id: z
+    .string({ message: "id cannot be left empty" })
+    .trim()
+    .min(1, { message: "id cannot be left empty" }),
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -111,5 +127,68 @@ export async function GET() {
       },
       { status: 500 },
     );
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await auth();
+    const user = session?.user;
+    if (!user?.id) {
+      throw new UnauthorizedError("you must be logged in to do this");
+    }
+
+    const body = await req.json();
+    const parsedObj = listPatchByIdSchema.safeParse(body);
+    if (!parsedObj.success) {
+      throw new BadRequestError("Invalid request body");
+    }
+
+    const { id, name, color, iconKey } = parsedObj.data;
+    const list = await prisma.list.update({
+      where: {
+        id,
+        userID: user.id,
+      },
+      data: {
+        ...(name !== undefined ? { name } : {}),
+        ...(color !== undefined ? { color } : {}),
+        ...(iconKey !== undefined ? { iconKey } : {}),
+      },
+    });
+
+    return NextResponse.json(
+      { message: "list updated", list },
+      { status: 200 },
+    );
+  } catch (error) {
+    return errorHandler(error);
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await auth();
+    const user = session?.user;
+    if (!user?.id) {
+      throw new UnauthorizedError("you must be logged in to do this");
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const parsedObj = listDeleteByIdSchema.safeParse(body);
+    if (!parsedObj.success) {
+      throw new BadRequestError("Invalid request body");
+    }
+
+    await prisma.list.delete({
+      where: {
+        id: parsedObj.data.id,
+        userID: user.id,
+      },
+    });
+
+    return NextResponse.json({ message: "list deleted" }, { status: 200 });
+  } catch (error) {
+    return errorHandler(error);
   }
 }

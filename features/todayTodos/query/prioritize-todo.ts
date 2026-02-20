@@ -18,17 +18,17 @@ export const usePrioritizeTodo = () => {
         isRecurring: boolean;
       }) => {
         const todoId = id.split(":")[0];
-        const instanceDate = id.split(":")[1];
-        if (isRecurring) {
-          await api.PATCH({
-            url: `/api/todo/instance/${todoId}/prioritize/?priority=${level}&instanceDate=${instanceDate}`,
-          });
-        } else {
-          await api.PATCH({
-            url: `/api/todo/${todoId}`,
-            body: JSON.stringify({ priority: level }),
-          });
-        }
+        const instanceDate = Number(id.split(":")[1]);
+        await api.PATCH({
+          url: "/api/todo/prioritize",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: todoId,
+            priority: level,
+            instanceDate:
+              isRecurring && Number.isFinite(instanceDate) ? instanceDate : null,
+          }),
+        });
       },
       onMutate: async ({
         id,
