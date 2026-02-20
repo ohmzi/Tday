@@ -54,6 +54,8 @@ class TodoListViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching {
+                // Pull-to-refresh should fetch latest server state first.
+                repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
                 repository.fetchTodos(mode = mode, listId = listId)
             }.onSuccess { todos ->
                 _uiState.update {
