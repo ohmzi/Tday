@@ -30,6 +30,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -80,11 +81,6 @@ fun TodoListScreen(
                         Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
-                actions = {
-                    TextButton(onClick = onRefresh) {
-                        Text("Refresh")
-                    }
-                },
             )
         },
         floatingActionButton = {
@@ -97,58 +93,62 @@ fun TodoListScreen(
             }
         },
     ) { padding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("Loading...", color = colorScheme.onBackground)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (uiState.items.isEmpty()) {
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                            shape = RoundedCornerShape(18.dp),
-                        ) {
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = onRefresh,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("Loading...", color = colorScheme.onBackground)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (uiState.items.isEmpty()) {
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(18.dp),
+                            ) {
+                                Text(
+                                    modifier = Modifier.padding(18.dp),
+                                    text = "No tasks yet.",
+                                    color = colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    items(uiState.items, key = { it.id }) { todo ->
+                        TodoRow(
+                            todo = todo,
+                            onComplete = { onComplete(todo) },
+                            onDelete = { onDelete(todo) },
+                            onPin = { onTogglePin(todo) },
+                        )
+                    }
+
+                    uiState.errorMessage?.let { message ->
+                        item {
                             Text(
-                                modifier = Modifier.padding(18.dp),
-                                text = "No tasks yet.",
-                                color = colorScheme.onSurfaceVariant,
+                                text = message,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
                             )
                         }
                     }
-                }
 
-                items(uiState.items, key = { it.id }) { todo ->
-                    TodoRow(
-                        todo = todo,
-                        onComplete = { onComplete(todo) },
-                        onDelete = { onDelete(todo) },
-                        onPin = { onTogglePin(todo) },
-                    )
+                    item { Spacer(Modifier.height(96.dp)) }
                 }
-
-                uiState.errorMessage?.let { message ->
-                    item {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-
-                item { Spacer(Modifier.height(96.dp)) }
             }
         }
     }
