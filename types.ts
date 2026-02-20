@@ -13,6 +13,7 @@ export interface ListItemType {
   id: string;
   name: string;
   color?: ListColor;
+  iconKey?: string | null;
   todos: TodoItemType[];
   createdAt: Date;
   updatedAt: Date;
