@@ -36,7 +36,6 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.List
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
@@ -95,7 +94,6 @@ fun HomeScreen(
     onOpenAll: () -> Unit,
     onOpenFlagged: () -> Unit,
     onOpenCompleted: () -> Unit,
-    onOpenNotes: () -> Unit,
     onOpenCalendar: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenProject: (projectId: String, projectName: String) -> Unit,
@@ -172,9 +170,9 @@ fun HomeScreen(
                         searchExpanded = searchExpanded,
                         onSearchExpandedChange = { searchExpanded = it },
                         onSearchBarBoundsChanged = { bounds -> searchBarBounds = bounds },
-                        onOpenNotes = {
+                        onCreateList = {
                             closeSearch()
-                            onOpenNotes()
+                            showCreateList = true
                         },
                         onOpenSettings = {
                             closeSearch()
@@ -227,20 +225,15 @@ fun HomeScreen(
                     }
                 }
 
-                item {
-                    Text(
-                        text = "My Lists",
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-
-                if (uiState.summary.projects.isEmpty()) {
+                if (uiState.summary.projects.isNotEmpty()) {
                     item {
-                        EmptyProjectCard(onCreate = { showCreateList = true })
+                        Text(
+                            text = "My Lists",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = colorScheme.onBackground,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
-                } else {
                     items(uiState.summary.projects, key = { it.id }) { project ->
                         ProjectRow(
                             name = project.name,
@@ -397,7 +390,7 @@ private fun TopSearchBar(
     searchExpanded: Boolean,
     onSearchExpandedChange: (Boolean) -> Unit,
     onSearchBarBoundsChanged: (Rect) -> Unit,
-    onOpenNotes: () -> Unit,
+    onCreateList: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -497,10 +490,10 @@ private fun TopSearchBar(
             }
 
             PressableIconButton(
-                icon = Icons.Rounded.List,
-                contentDescription = "Notes",
+                icon = Icons.Rounded.Add,
+                contentDescription = "Create list",
                 tint = colorScheme.onSurface,
-                onClick = onOpenNotes,
+                onClick = onCreateList,
             )
             PressableIconButton(
                 icon = Icons.Rounded.MoreHoriz,
@@ -906,43 +899,6 @@ private fun ProjectRow(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-        }
-    }
-}
-
-@Composable
-private fun EmptyProjectCard(onCreate: () -> Unit) {
-    val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
-    Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(
-                text = "No lists yet",
-                color = colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = "Create project lists to organize tasks like iOS Reminders.",
-                color = colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            TextButton(
-                onClick = {
-                    performGentleHaptic(view)
-                    onCreate()
-                },
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = null)
-                Text("Create first list")
-            }
         }
     }
 }
