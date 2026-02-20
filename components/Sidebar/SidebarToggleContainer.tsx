@@ -48,6 +48,7 @@ export default function SidebarToggleContainer() {
         gt: { path: "/app/tday", name: "Todo" },
         gc: { path: "/app/calendar", name: "Calendar" },
         gd: { path: "/app/completed", name: "Completed" },
+        gp: { path: "/app/priority", name: "Priority" },
       };
 
       const route = routes[seq as keyof typeof routes];
@@ -78,6 +79,7 @@ export default function SidebarToggleContainer() {
   const hasInlineMobileToggle =
     pathname?.includes("/app/tday") ||
     pathname?.includes("/app/completed") ||
+    pathname?.includes("/app/priority") ||
     pathname?.includes("/app/calendar") ||
     pathname?.includes("/app/add-task");
   const showMobileToggle =

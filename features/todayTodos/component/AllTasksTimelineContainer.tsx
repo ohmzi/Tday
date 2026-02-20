@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Command, Menu, Search, Sun, X } from "lucide-react";
+import { Command, Flag, Menu, Search, Sun, X } from "lucide-react";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
@@ -39,6 +39,8 @@ type TimelineSection = {
   dayDiff: number;
   todos: TodoItemType[];
 };
+
+type TimelineScope = "today" | "priority";
 
 const getTimeZoneDate = (date: Date, timeZone?: string) =>
   new Date(date.toLocaleString("en-US", { timeZone: timeZone || "UTC" }));
@@ -153,7 +155,19 @@ const toSections = (items: TimelineItem[]) => {
 const normalizeListName = (name: string | null | undefined) =>
   (name || "").trim();
 
-const AllTasksTimelineContainer = () => {
+const isPriorityTask = (priority: string | null | undefined) => {
+  const normalized = (priority || "").trim().toLowerCase();
+  return normalized === "medium" ||
+    normalized === "high" ||
+    normalized === "important" ||
+    normalized === "urgent";
+};
+
+const AllTasksTimelineContainer = ({
+  scope = "today",
+}: {
+  scope?: TimelineScope;
+}) => {
   const locale = useLocale();
   const appDict = useTranslations("app");
   const userTZ = useUserTimezone();
@@ -166,12 +180,21 @@ const AllTasksTimelineContainer = () => {
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const pageHeading = scope === "priority" ? appDict("priority") : appDict("today");
+  const emptyStateMessage = scope === "priority"
+    ? "No priority tasks yet."
+    : "No today tasks yet.";
   const isMac =
     typeof window !== "undefined" &&
     navigator.userAgent.toLowerCase().includes("mac");
 
+  const scopedTodos = useMemo(
+    () => (scope === "priority" ? todos.filter((todo) => isPriorityTask(todo.priority)) : todos),
+    [scope, todos],
+  );
+
   const timelineItems = useMemo(() => {
-    return todos
+    return scopedTodos
       .map((todo) => {
         const dayDiff = getDayDiff(todo.due, userTZ?.timeZone);
         return {
@@ -188,7 +211,7 @@ const AllTasksTimelineContainer = () => {
         };
       })
       .sort(compareTimelineItems);
-  }, [appDict, locale, todos, userTZ?.timeZone]);
+  }, [appDict, locale, scopedTodos, userTZ?.timeZone]);
 
   const filteredTimelineItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -219,10 +242,12 @@ const AllTasksTimelineContainer = () => {
     () => toSections(visibleTimelineItems),
     [visibleTimelineItems],
   );
-  const hasTodayTasks = useMemo(
-    () => filteredTimelineItems.some((item) => item.dayDiff === 0),
-    [filteredTimelineItems],
-  );
+  const hasScopedTasks = useMemo(() => {
+    if (scope === "priority") {
+      return filteredTimelineItems.length > 0;
+    }
+    return filteredTimelineItems.some((item) => item.dayDiff === 0);
+  }, [filteredTimelineItems, scope]);
 
   const hasMore = visibleCount < filteredTimelineItems.length;
 
@@ -400,18 +425,22 @@ const AllTasksTimelineContainer = () => {
         </header>
 
         <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center gap-2">
-          <Sun className="h-6 w-6 text-accent" />
+          {scope === "priority" ? (
+            <Flag className="h-6 w-6 text-accent" />
+          ) : (
+            <Sun className="h-6 w-6 text-accent" />
+          )}
           <h3 className="select-none text-2xl font-semibold tracking-tight">
-            {appDict("today")}
+            {pageHeading}
           </h3>
         </div>
         <LineSeparator className="flex-1 border-border/70" />
 
-        {todoLoading && <TodoListLoading heading={appDict("today")} />}
+        {todoLoading && <TodoListLoading heading={pageHeading} />}
 
-        {!todoLoading && !searchQuery.trim() && !hasTodayTasks && (
+        {!todoLoading && !searchQuery.trim() && !hasScopedTasks && (
           <div className="mt-4 rounded-2xl border border-border/65 bg-card/95 px-4 py-6 text-sm text-muted-foreground">
-            No today tasks yet.
+            {emptyStateMessage}
           </div>
         )}
 
