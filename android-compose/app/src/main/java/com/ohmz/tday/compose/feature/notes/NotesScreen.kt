@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,11 +60,6 @@ fun NotesScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
-                actions = {
-                    TextButton(onClick = onRefresh) {
-                        Text("Refresh")
-                    }
-                },
             )
         },
         floatingActionButton = {
@@ -76,36 +72,42 @@ fun NotesScreen(
             }
         },
     ) { padding ->
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (uiState.notes.isEmpty()) {
-                item {
-                    Text(
-                        text = if (uiState.isLoading) "Loading..." else "No notes yet",
-                        color = colorScheme.onSurfaceVariant,
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (uiState.notes.isEmpty()) {
+                    item {
+                        Text(
+                            text = if (uiState.isLoading) "Loading..." else "No notes yet",
+                            color = colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                items(uiState.notes, key = { it.id }) { note ->
+                    NoteRow(
+                        note = note,
+                        onDelete = { onDelete(note.id) },
                     )
                 }
-            }
 
-            items(uiState.notes, key = { it.id }) { note ->
-                NoteRow(
-                    note = note,
-                    onDelete = { onDelete(note.id) },
-                )
-            }
-
-            uiState.errorMessage?.let { message ->
-                item {
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                uiState.errorMessage?.let { message ->
+                    item {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
         }

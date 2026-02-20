@@ -18,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,42 +50,45 @@ fun CompletedScreen(
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
-                actions = {
-                    TextButton(onClick = onRefresh) { Text("Refresh") }
-                },
             )
         },
     ) { padding ->
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (uiState.items.isEmpty()) {
-                item {
-                    Text(
-                        text = if (uiState.isLoading) "Loading..." else "No completed tasks",
-                        color = colorScheme.onSurfaceVariant,
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (uiState.items.isEmpty()) {
+                    item {
+                        Text(
+                            text = if (uiState.isLoading) "Loading..." else "No completed tasks",
+                            color = colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                items(uiState.items, key = { it.id }) { item ->
+                    CompletedRow(
+                        item = item,
+                        onUncomplete = { onUncomplete(item) },
                     )
                 }
-            }
 
-            items(uiState.items, key = { it.id }) { item ->
-                CompletedRow(
-                    item = item,
-                    onUncomplete = { onUncomplete(item) },
-                )
-            }
-
-            uiState.errorMessage?.let { message ->
-                item {
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                uiState.errorMessage?.let { message ->
+                    item {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
         }
