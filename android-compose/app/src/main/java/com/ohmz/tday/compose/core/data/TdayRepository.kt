@@ -252,7 +252,14 @@ class TdayRepository @Inject constructor(
 
     suspend fun fetchDashboardSummary(): DashboardSummary {
         refreshCacheForRead()
-        val state = loadOfflineState()
+        return buildDashboardSummary(loadOfflineState())
+    }
+
+    suspend fun fetchDashboardSummaryCached(): DashboardSummary {
+        return buildDashboardSummary(loadOfflineState())
+    }
+
+    private fun buildDashboardSummary(state: OfflineSyncState): DashboardSummary {
         val timelineTodos = state.todos
             .asSequence()
             .map(::todoFromCache)
@@ -284,7 +291,26 @@ class TdayRepository @Inject constructor(
 
     suspend fun fetchTodos(mode: TodoListMode, listId: String? = null): List<TodoItem> {
         refreshCacheForRead()
-        val state = loadOfflineState()
+        return buildTodosForMode(
+            state = loadOfflineState(),
+            mode = mode,
+            listId = listId,
+        )
+    }
+
+    suspend fun fetchTodosCached(mode: TodoListMode, listId: String? = null): List<TodoItem> {
+        return buildTodosForMode(
+            state = loadOfflineState(),
+            mode = mode,
+            listId = listId,
+        )
+    }
+
+    private fun buildTodosForMode(
+        state: OfflineSyncState,
+        mode: TodoListMode,
+        listId: String?,
+    ): List<TodoItem> {
         val timelineTodos = state.todos
             .asSequence()
             .map(::todoFromCache)
@@ -331,6 +357,7 @@ class TdayRepository @Inject constructor(
         val due = start.plusSeconds(30 * 60)
         val localTodoId = "$LOCAL_TODO_PREFIX${UUID.randomUUID()}"
         val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
 
         updateOfflineState { state ->
             val newTodo = CachedTodoRecord(
@@ -351,7 +378,7 @@ class TdayRepository @Inject constructor(
             state.copy(
                 todos = state.todos + newTodo,
                 pendingMutations = state.pendingMutations + PendingMutationRecord(
-                    mutationId = UUID.randomUUID().toString(),
+                    mutationId = mutationId,
                     kind = MutationKind.CREATE_TODO,
                     targetId = localTodoId,
                     timestampEpochMs = timestampMs,
@@ -366,12 +393,52 @@ class TdayRepository @Inject constructor(
             )
         }
 
-        runCatching { syncLocalCache(force = true) }
+        if (!listId.isNullOrBlank() && listId.startsWith(LOCAL_LIST_PREFIX)) return
+
+        runCatching {
+            requireBody(
+                api.createTodo(
+                    CreateTodoRequest(
+                        title = trimmedTitle,
+                        description = null,
+                        priority = "Low",
+                        dtstart = start.toString(),
+                        due = due.toString(),
+                        rrule = null,
+                        listID = listId,
+                    ),
+                ),
+                "Could not create task",
+            ).todo
+        }.onSuccess { createdDto ->
+            if (createdDto == null) return@onSuccess
+            val createdTodo = mapTodo(createdDto)
+            updateOfflineState { state ->
+                val remapped = replaceLocalTodoId(
+                    state = state,
+                    localTodoId = localTodoId,
+                    serverTodoId = createdTodo.canonicalId,
+                )
+                remapped.copy(
+                    todos = remapped.todos.map {
+                        if (it.canonicalId == createdTodo.canonicalId) {
+                            todoToCache(createdTodo)
+                        } else {
+                            it
+                        }
+                    },
+                    pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        }
     }
 
     suspend fun deleteTodo(todo: TodoItem) {
         val timestampMs = System.currentTimeMillis()
         val canonicalId = todo.canonicalId
+        val mutationId = UUID.randomUUID().toString()
+        val instanceDateEpochMs = todo.instanceDateEpochMillis
+        val isRecurringInstanceDelete = todo.isRecurring && instanceDateEpochMs != null
 
         updateOfflineState { state ->
             val isLocalOnly = canonicalId.startsWith(LOCAL_TODO_PREFIX)
@@ -390,21 +457,52 @@ class TdayRepository @Inject constructor(
                 state.copy(
                     todos = prunedTodos,
                     completedItems = prunedCompleted,
-                    pendingMutations = state.pendingMutations + PendingMutationRecord(
-                        mutationId = UUID.randomUUID().toString(),
-                        kind = MutationKind.DELETE_TODO,
-                        targetId = canonicalId,
-                        timestampEpochMs = timestampMs,
-                    ),
+                    pendingMutations = state.pendingMutations
+                        .filterNot {
+                            it.kind == MutationKind.DELETE_TODO &&
+                                it.targetId == canonicalId &&
+                                it.instanceDateEpochMs == instanceDateEpochMs
+                        } +
+                        PendingMutationRecord(
+                            mutationId = mutationId,
+                            kind = MutationKind.DELETE_TODO,
+                            targetId = canonicalId,
+                            timestampEpochMs = timestampMs,
+                            instanceDateEpochMs = instanceDateEpochMs,
+                        ),
                 )
             }
         }
 
-        runCatching { syncLocalCache(force = true) }
+        if (canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
+
+        runCatching {
+            if (isRecurringInstanceDelete) {
+                requireBody(
+                    api.deleteTodoInstance(
+                        todoId = canonicalId,
+                        instanceDate = instanceDateEpochMs ?: return@runCatching,
+                    ),
+                    "Could not delete recurring task instance",
+                )
+            } else {
+                requireBody(
+                    api.deleteTodo(todoId = canonicalId),
+                    "Could not delete task",
+                )
+            }
+        }.onSuccess {
+            updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        }
     }
 
     suspend fun setTodoPinned(todo: TodoItem, pinned: Boolean) {
         val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
         updateOfflineState { state ->
             state.copy(
                 todos = state.todos.map {
@@ -417,17 +515,37 @@ class TdayRepository @Inject constructor(
                         it
                     }
                 },
-                pendingMutations = state.pendingMutations + PendingMutationRecord(
-                    mutationId = UUID.randomUUID().toString(),
-                    kind = MutationKind.SET_PINNED,
-                    targetId = todo.canonicalId,
-                    timestampEpochMs = timestampMs,
-                    pinned = pinned,
-                ),
+                pendingMutations = state.pendingMutations
+                    .filterNot { it.kind == MutationKind.SET_PINNED && it.targetId == todo.canonicalId } +
+                    PendingMutationRecord(
+                        mutationId = mutationId,
+                        kind = MutationKind.SET_PINNED,
+                        targetId = todo.canonicalId,
+                        timestampEpochMs = timestampMs,
+                        pinned = pinned,
+                    ),
             )
         }
 
-        runCatching { syncLocalCache(force = true) }
+        if (todo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
+
+        runCatching {
+            requireBody(
+                api.patchTodo(
+                    todoId = todo.canonicalId,
+                    payload = buildJsonObject {
+                        put("pinned", pinned)
+                    },
+                ),
+                "Could not update pin",
+            )
+        }.onSuccess {
+            updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        }
     }
 
     suspend fun setTodoPriority(todo: TodoItem, priority: String) {
@@ -750,6 +868,9 @@ class TdayRepository @Inject constructor(
                 when (mutation.kind) {
                     MutationKind.CREATE_LIST -> {
                         val localListId = mutation.targetId ?: return@runCatching false
+                        if (!localListId.startsWith(LOCAL_LIST_PREFIX)) return@runCatching true
+                        val localListExists = state.lists.any { it.id == localListId }
+                        if (!localListExists) return@runCatching true
                         val response = requireBody(
                             api.createList(
                                 CreateListRequest(
@@ -768,6 +889,9 @@ class TdayRepository @Inject constructor(
 
                     MutationKind.CREATE_TODO -> {
                         val localTodoId = mutation.targetId ?: return@runCatching false
+                        if (!localTodoId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching true
+                        val localTodoExists = state.todos.any { it.canonicalId == localTodoId }
+                        if (!localTodoExists) return@runCatching true
                         val resolvedListId = mutation.listId?.let {
                             resolvedListIds[it] ?: it
                         }
@@ -800,7 +924,20 @@ class TdayRepository @Inject constructor(
 
                     MutationKind.DELETE_TODO -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
-                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching true
+
+                        val instanceDateEpochMs = mutation.instanceDateEpochMs
+                        if (instanceDateEpochMs != null) {
+                            requireBody(
+                                api.deleteTodoInstance(
+                                    todoId = targetId,
+                                    instanceDate = instanceDateEpochMs,
+                                ),
+                                "Could not delete recurring task instance",
+                            )
+                            return@runCatching true
+                        }
+
                         val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
                         if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
                         requireBody(api.deleteTodo(targetId), "Could not delete task")
@@ -919,7 +1056,15 @@ class TdayRepository @Inject constructor(
                     saveOfflineState(state.copy(pendingMutations = remaining))
                     return state.copy(pendingMutations = remaining)
                 }
-                false
+                if (isLikelyUnrecoverableMutationError(error)) {
+                    Log.w(
+                        LOG_TAG,
+                        "Dropping unrecoverable mutation kind=${mutation.kind} target=${mutation.targetId}: ${error.message}",
+                    )
+                    true
+                } else {
+                    false
+                }
             }
 
             if (!success) {
@@ -1053,6 +1198,18 @@ class TdayRepository @Inject constructor(
             message.contains("timed out") ||
             message.contains("unable to resolve host") ||
             message.contains("network is unreachable")
+    }
+
+    private fun isLikelyUnrecoverableMutationError(error: Throwable): Boolean {
+        val message = error.message.orEmpty().lowercase()
+        return message.contains("bad request") ||
+            message.contains("bad / malformed") ||
+            message.contains("invalid request") ||
+            message.contains("invalid request body") ||
+            message.contains("you provided invalid values") ||
+            message.contains("record to delete does not exist") ||
+            message.contains("record to update not found") ||
+            message.contains("todo id is required")
     }
 
     private fun updateOfflineState(transform: (OfflineSyncState) -> OfflineSyncState): OfflineSyncState {
