@@ -30,6 +30,8 @@ class CompletedViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching {
+                // Keep completed list aligned with latest server state on refresh.
+                repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
                 repository.fetchCompletedItems()
             }.onSuccess { items ->
                 _uiState.update { it.copy(isLoading = false, items = items) }
