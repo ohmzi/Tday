@@ -34,7 +34,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -124,7 +124,7 @@ fun TodoListScreen(
             )
         },
     ) { padding ->
-        PullToRefreshBox(
+        TdayPullToRefreshBox(
             isRefreshing = uiState.isLoading,
             onRefresh = onRefresh,
             modifier = Modifier
