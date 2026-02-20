@@ -41,19 +41,15 @@ import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ColorScheme
@@ -99,6 +95,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import kotlinx.coroutines.delay
 
@@ -115,7 +113,7 @@ fun HomeScreen(
     onOpenCalendar: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenList: (listId: String, listName: String) -> Unit,
-    onCreateTask: (title: String, listId: String?) -> Unit,
+    onCreateTask: (payload: CreateTaskPayload) -> Unit,
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -136,9 +134,7 @@ fun HomeScreen(
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchBarBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-    var taskTitle by rememberSaveable { mutableStateOf("") }
     var taskListId by rememberSaveable { mutableStateOf<String?>(null) }
-    var taskListMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
     var listName by rememberSaveable { mutableStateOf("") }
     var listColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR) }
@@ -358,87 +354,13 @@ fun HomeScreen(
     }
 
     if (showCreateTask) {
-        val selectedTaskListName = uiState.summary.lists
-            .firstOrNull { it.id == taskListId }
-            ?.name
-            .orEmpty()
-        val canCreateTask = taskTitle.isNotBlank() &&
-            (uiState.summary.lists.isEmpty() || !taskListId.isNullOrBlank())
-
-        AlertDialog(
-            onDismissRequest = {
+        CreateTaskBottomSheet(
+            lists = uiState.summary.lists,
+            defaultListId = taskListId,
+            onDismiss = { showCreateTask = false },
+            onCreateTask = { payload ->
+                onCreateTask(payload)
                 showCreateTask = false
-                taskListMenuExpanded = false
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (canCreateTask) {
-                            onCreateTask(taskTitle, taskListId)
-                            taskTitle = ""
-                            showCreateTask = false
-                            taskListMenuExpanded = false
-                        }
-                    },
-                    enabled = canCreateTask,
-                ) { Text("Create") }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showCreateTask = false
-                        taskListMenuExpanded = false
-                    },
-                ) { Text("Cancel") }
-            },
-            title = { Text("New task") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = taskTitle,
-                        onValueChange = { taskTitle = it },
-                        singleLine = true,
-                        label = { Text("Task title") },
-                    )
-
-                    if (uiState.summary.lists.isNotEmpty()) {
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            OutlinedTextField(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { taskListMenuExpanded = true },
-                                value = selectedTaskListName,
-                                onValueChange = {},
-                                readOnly = true,
-                                singleLine = true,
-                                label = { Text("List") },
-                                placeholder = { Text("Select list") },
-                                trailingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Rounded.ExpandMore,
-                                        contentDescription = null,
-                                    )
-                                },
-                            )
-
-                            DropdownMenu(
-                                expanded = taskListMenuExpanded,
-                                onDismissRequest = { taskListMenuExpanded = false },
-                            ) {
-                                uiState.summary.lists.forEach { list ->
-                                    DropdownMenuItem(
-                                        text = { Text(list.name) },
-                                        onClick = {
-                                            taskListId = list.id
-                                            taskListMenuExpanded = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             },
         )
     }
