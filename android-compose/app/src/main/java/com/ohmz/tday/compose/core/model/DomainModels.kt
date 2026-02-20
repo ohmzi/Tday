@@ -6,7 +6,7 @@ enum class TodoListMode {
     TODAY,
     SCHEDULED,
     ALL,
-    FLAGGED,
+    PRIORITY,
     LIST,
 }
 
@@ -45,7 +45,7 @@ data class DashboardSummary(
     val todayCount: Int,
     val scheduledCount: Int,
     val allCount: Int,
-    val flaggedCount: Int,
+    val priorityCount: Int,
     val completedCount: Int,
     val lists: List<ListSummary>,
 )
