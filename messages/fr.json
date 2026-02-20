@@ -261,7 +261,7 @@
       "error": "Plage de dates invalide : l'heure de fin doit être après l'heure de début."
     },
     "priority": "Priorité",
-    "project": "Projet",
+    "list": "Projet",
     "overdue": "En retard",
     "normal": "Normale",
     "important": "Importante",

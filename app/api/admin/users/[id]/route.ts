@@ -100,7 +100,7 @@ export async function DELETE(
       await tx.note.deleteMany({ where: { userID: targetUser.id } });
       await tx.file.deleteMany({ where: { userID: targetUser.id } });
       await tx.todo.deleteMany({ where: { userID: targetUser.id } });
-      await tx.project.deleteMany({ where: { userID: targetUser.id } });
+      await tx.list.deleteMany({ where: { userID: targetUser.id } });
       await tx.userPreferences.deleteMany({ where: { userID: targetUser.id } });
       await tx.user.delete({ where: { id: targetUser.id } });
     });

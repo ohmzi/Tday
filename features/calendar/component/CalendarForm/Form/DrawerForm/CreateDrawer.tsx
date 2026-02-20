@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Options, RRule } from "rrule";
-import { Clock, Flag, Repeat, Check, Hash } from "lucide-react";
+import { Clock, Flag, Repeat, Check, Circle } from "lucide-react";
 import NestedDrawerItem from "@/components/mobile/NestedDrawerItem";
 import { TodoItemType, NonNullableDateRange } from "@/types";
 import { getDisplayDate } from "@/lib/date/displayDate";
@@ -19,9 +19,9 @@ import { DateDrawerMenu } from "../../FormFields/Drawers/DateDrawer/DateDrawerMe
 import RepeatDrawerMenu from "../../FormFields/Drawers/RepeatDrawer/RepeatDrawerMenu";
 import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
 import ConfirmCancelEditDrawer from "../../../ConfirmationModals/ConfirmCancelEditDrawer";
-import ProjectDrawer from "../../FormFields/Drawers/ProjectDrawer/ProjectDrawer";
-import { useProjectMetaData } from "@/components/Sidebar/Project/query/get-project-meta";
-import ProjectTag from "@/components/ProjectTag";
+import ListDrawer from "../../FormFields/Drawers/ListDrawer/ListDrawer";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
+import ListDot from "@/components/ListDot";
 import NLPTitleInput from "@/components/todo/component/TodoForm/NLPTitleInput";
 import deriveRepeatType from "@/lib/deriveRepeatType";
 
@@ -47,7 +47,7 @@ export default function CreateCalendarDrawer({
     const userTZ = useUserTimezone()
     const titleRef = useRef(null);
 
-    const { projectMetaData } = useProjectMetaData();
+    const { listMetaData } = useListMetaData();
     // Form State
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -57,7 +57,7 @@ export default function CreateCalendarDrawer({
         to: end,
     });
     const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(null);
-    const [projectID, setProjectID] = useState<string | null>(null);
+    const [listID, setListID] = useState<string | null>(null);
     const derivedRepeatType = deriveRepeatType({ rruleOptions });
 
     const [cancelEditDialogOpen, setCancelEditDialogOpen] = useState(false);
@@ -80,7 +80,7 @@ export default function CreateCalendarDrawer({
             dtstart: dateRange.from,
             due: dateRange.to,
             rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
-            projectID: projectID
+            listID,
         });
     };
 
@@ -119,7 +119,7 @@ export default function CreateCalendarDrawer({
                         <form className="flex flex-col gap-6 mt-2" onSubmit={handleSubmit}>
                             {/* Title Input */}
                             <NLPTitleInput
-                                setProjectID={setProjectID}
+                                setListID={setListID}
                                 titleRef={titleRef}
                                 title={title}
                                 setTitle={setTitle}
@@ -185,23 +185,23 @@ export default function CreateCalendarDrawer({
                                     />
                                 </NestedDrawerItem>
 
-                                {/* project */}
+                                {/* list */}
                                 <NestedDrawerItem
-                                    icon={<Hash className="w-4 h-4" />}
+                                    icon={<Circle className="w-4 h-4" />}
                                     label={
-                                        projectID
+                                        listID
                                             ?
                                             <>
-                                                <ProjectTag id={projectID} />
-                                                <span>{projectMetaData[projectID]?.name}</span>
+                                                <ListDot id={listID} />
+                                                <span>{listMetaData[listID]?.name}</span>
                                             </>
                                             :
-                                            "No project"
+                                            "No list"
                                     }
-                                    title={appDict("project")}
+                                    title="List"
                                 >
                                     <div className="p-4 space-y-2">
-                                        <ProjectDrawer projectID={projectID} setProjectID={setProjectID} />
+                                        <ListDrawer listID={listID} setListID={setListID} />
                                     </div>
                                 </NestedDrawerItem>
                             </div>
@@ -240,6 +240,3 @@ export default function CreateCalendarDrawer({
         </>
     );
 }
-
-
-

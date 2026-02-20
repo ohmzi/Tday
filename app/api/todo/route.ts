@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const parsedObj = todoSchema.safeParse(body);
     if (!parsedObj.success) throw new BadRequestError();
 
-    const { title, description, priority, dtstart, due, rrule, projectID } =
+    const { title, description, priority, dtstart, due, rrule, listID } =
       parsedObj.data;
     //create todo
     const todo = await prisma.todo.create({
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         dtstart,
         due,
         rrule,
-        projectID,
+        listID,
         durationMinutes: (due?.getTime() - dtstart?.getTime()) / (1000 * 60),
       },
     });
@@ -59,7 +59,10 @@ export async function POST(req: NextRequest) {
     // console.log(todo);
 
     return NextResponse.json(
-      { message: "todo created", todo },
+      {
+        message: "todo created",
+        todo,
+      },
       { status: 200 },
     );
   } catch (error) {

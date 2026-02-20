@@ -261,7 +261,7 @@
       "error": "Intervalo de datas inválido: A hora de fim deve ser após a hora de início."
     },
     "priority": "Prioridade",
-    "project": "Projeto",
+    "list": "Projeto",
     "overdue": "Atrasado",
     "normal": "Normal",
     "important": "Importante",

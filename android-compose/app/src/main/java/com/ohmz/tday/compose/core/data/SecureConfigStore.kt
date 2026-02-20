@@ -7,6 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.json.JSONObject
 import java.util.UUID
 
 data class SavedCredentials(
@@ -136,6 +137,26 @@ class SecureConfigStore @Inject constructor(
             .apply()
     }
 
+    fun getListIcon(listId: String): String? {
+        if (listId.isBlank()) return null
+        val raw = prefs.getString(KEY_LIST_ICON_MAP, null).orEmpty()
+        if (raw.isBlank()) return null
+        return runCatching {
+            JSONObject(raw).optString(listId).ifBlank { null }
+        }.getOrNull()
+    }
+
+    fun saveListIcon(listId: String, iconKey: String) {
+        if (listId.isBlank() || iconKey.isBlank()) return
+
+        val current = runCatching {
+            JSONObject(prefs.getString(KEY_LIST_ICON_MAP, null).orEmpty())
+        }.getOrElse { JSONObject() }
+
+        current.put(listId, iconKey)
+        prefs.edit().putString(KEY_LIST_ICON_MAP, current.toString()).apply()
+    }
+
     fun buildAbsoluteAppUrl(path: String): String? {
         val base = getServerUrl() ?: return null
         val normalizedPath = if (path.startsWith('/')) path else "/$path"
@@ -164,5 +185,6 @@ class SecureConfigStore @Inject constructor(
         const val KEY_PASSWORD = "password"
         const val KEY_DEVICE_ID = "device_id"
         const val KEY_CERT_FINGERPRINT_PREFIX = "cert_fp_"
+        const val KEY_LIST_ICON_MAP = "list_icon_map"
     }
 }
