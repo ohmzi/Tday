@@ -1,12 +1,12 @@
-import { ProjectColor } from "@prisma/client";
-import { projectColorMap } from "@/lib/projectColorMap";
+import type { ListColor } from "@/types";
+import { listColorMap } from "@/lib/listColorMap";
 export const calendarEventPropStyles = (
   priority: "High" | "Medium" | "Low",
-  projectColor: ProjectColor | undefined,
+  listColor: ListColor | undefined,
 ) => {
   let eventBgColor: string;
 
-  if (!projectColor) {
+  if (!listColor) {
     switch (priority) {
       case "Low":
         eventBgColor = "hsl(var(--calendar-lime))";
@@ -19,7 +19,7 @@ export const calendarEventPropStyles = (
         break;
     }
   } else {
-    const match = projectColorMap.find(({ value }) => value === projectColor);
+    const match = listColorMap.find(({ value }) => value === listColor);
     eventBgColor =
       `hsl(var(--${match?.tailwind.replace("bg-", "")})/0.7)` ||
       "hsl(var(--accent-blue)/0.7)";

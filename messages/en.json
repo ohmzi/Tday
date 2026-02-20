@@ -100,7 +100,7 @@
       },
       "5": {
         "title": "Availability",
-        "content": "Tday is a personal project provided on a best-effort basis. The Service may change, go offline, or be discontinued at any time."
+        "content": "Tday is a personal service provided on a best-effort basis. The Service may change, go offline, or be discontinued at any time."
       },
       "6": {
         "title": "Termination",
@@ -261,7 +261,7 @@
       "error": "Invalid date range: End time must be after start time."
     },
     "priority": "Priority",
-    "project": "Project",
+    "list": "List",
     "overdue": "Overdue",
     "normal": "Normal",
     "important": "Important",

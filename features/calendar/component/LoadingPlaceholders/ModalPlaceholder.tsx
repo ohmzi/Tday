@@ -27,7 +27,7 @@ export default function ModalPlaceholder() {
                             </div>
                         </div>
 
-                        {/* Project */}
+                        {/* List */}
                         <div className="flex items-center gap-3">
                             <div className="flex-1">
                                 <Skeleton className="h-8 w-20 bg-popover-accent" />

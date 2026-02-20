@@ -33,7 +33,7 @@ export default function Page() {
             This document defines the source of truth, data invariants, and
             instance-move semantics for the RRULE-based todo scheduling system.
             It follows RFC 5545 iCalendar behavior, adapted to this
-            project&quot;s schema and constraints.
+            list&quot;s schema and constraints.
           </p>
         </section>
 

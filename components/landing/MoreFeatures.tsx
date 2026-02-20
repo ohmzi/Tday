@@ -1,10 +1,10 @@
 import React from 'react'
 {/* 
 sort, group
-themable projects
+themable lists
 shortcuts
 adjustable calendar views
-nlp supported project, date time
+nlp supported list, date time
 repeat rrule logic
 privacy
 */}
@@ -12,7 +12,7 @@ privacy
 const featureMap = [
     {
         title: "Customizable page",
-        description: "Sort, filter and Group by priority, deadline, projects and many more to create your own personalized view"
+        description: "Sort, filter and group by priority, deadline, lists and many more to create your own personalized view"
     },
     {
         title: "Shortcuts",
@@ -20,11 +20,11 @@ const featureMap = [
     },
     {
         title: "NLP assisted task capture ",
-        description: "Frictionless creation of tasks with date ranges, projects, and priorities in a single line"
+        description: "Frictionless creation of tasks with date ranges, lists, and priorities in a single line"
     },
     {
         title: "Colorful tasks",
-        description: "Group your tasks into color rich projects and never get lost in a sea of tasks again"
+        description: "Group your tasks into color rich lists and never get lost in a sea of tasks again"
     },
     {
         title: "Repeat logic",

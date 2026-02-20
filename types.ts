@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
-import { ProjectColor } from "@prisma/client";
+import type { ListColorType } from "@/schema";
+
+export type ListColor = ListColorType;
 
 export interface RegisterFormProp {
   fname: string;
@@ -7,6 +9,7 @@ export interface RegisterFormProp {
   email: string;
   password: string;
 }
+
 export interface LoginFormProp {
   email: string;
   password: string;
@@ -19,23 +22,21 @@ export interface NoteItemType {
   createdAt: Date;
 }
 
-export interface ProjectItemType {
+export interface ListItemType {
   id: string;
   name: string;
-  color?: ProjectColor;
+  color?: ListColor;
   todos: TodoItemType[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-export type ProjectItemMetaType = Pick<
-  ProjectItemType,
-  "id" | "color" | "name"
-> & {
+export type ListItemMetaType = Pick<ListItemType, "id" | "color" | "name"> & {
   todoCount?: number;
 };
-export type ProjectItemMetaMapType = {
-  [id: string]: Omit<ProjectItemMetaType, "id">;
+
+export type ListItemMetaMapType = {
+  [id: string]: Omit<ListItemMetaType, "id">;
 };
 
 export type NonNullableDateRange = {
@@ -69,9 +70,9 @@ export interface TodoItemType {
   userID: string;
   completed: boolean;
   exdates: Date[];
-  instances: overridingInstance[] | null;
-  instanceDate: Date | null;
-  projectID: string | null;
+  instances?: overridingInstance[] | null;
+  instanceDate?: Date | null;
+  listID?: string | null;
 }
 
 export interface overridingInstance {
@@ -91,7 +92,6 @@ export interface overridingInstance {
 export interface recurringTodoItemType extends TodoItemType {
   rrule: string;
   instances: overridingInstance[];
-  instanceDate: Date;
 }
 
 export interface CompletedTodoItemType {
@@ -107,6 +107,6 @@ export interface CompletedTodoItemType {
   userID: string;
   rrule: string | null;
   instanceDate: Date | null;
-  projectName: string;
-  projectColour: string;
+  listName?: string;
+  listColor?: string;
 }

@@ -36,10 +36,11 @@ export async function PATCH(req: NextRequest) {
     const parsedObj = userPreferencesSchema.partial().safeParse(body);
 
     if (!parsedObj.success) throw new BadRequestError("Invalid request body");
-
     const updatedPreferences = await prisma.userPreferences.upsert({
       where: { userID: user.id },
-      update: parsedObj.data,
+      update: {
+        ...parsedObj.data,
+      },
       create: {
         userID: user.id,
         sortBy: parsedObj.data.sortBy,

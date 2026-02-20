@@ -11,7 +11,8 @@ type CreateTodoInput = Pick<
   | "dtstart"
   | "due"
   | "priority"
-  | "projectID"
+  | "listID"
+  | "listID"
 >;
 
 async function postTodo({ todo }: { todo: CreateTodoInput }) {
@@ -23,7 +24,7 @@ async function postTodo({ todo }: { todo: CreateTodoInput }) {
     dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
-    projectID: todo.projectID,
+    listID: todo.listID ?? null,
   });
 
   if (!parsedObj.success) {

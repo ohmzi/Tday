@@ -33,10 +33,10 @@ export async function getCompletedTodos() {
   return formatted;
 }
 
-export async function getProjectMetaData() {
+export async function getListMetaData() {
   const session = await auth();
   if (!session?.user?.id) return null;
-  const projects = await prisma.project.findMany({
+  const lists = await prisma.list.findMany({
     where: { userID: session.user.id },
     orderBy: { createdAt: "desc" },
     select: {
@@ -47,13 +47,13 @@ export async function getProjectMetaData() {
       _count: { select: { todos: true } },
     },
   });
-  const projectMap = Object.fromEntries(
-    projects.map(({ id, _count, ...rest }) => [
+  const listMap = Object.fromEntries(
+    lists.map(({ id, _count, ...rest }) => [
       id,
       { ...rest, todoCount: _count.todos },
     ]),
   );
-  return projectMap;
+  return listMap;
 }
 
 export async function getUserTimezone() {

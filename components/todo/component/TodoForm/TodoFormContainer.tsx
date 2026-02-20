@@ -8,7 +8,7 @@ interface TodoFormContainerProps {
   displayForm: boolean;
   setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
   todo?: TodoItemType;
-  overrideFields?: { projectID?: string }
+  overrideFields?: { listID?: string };
   persistent?: boolean;
 }
 const TodoFormContainer = ({

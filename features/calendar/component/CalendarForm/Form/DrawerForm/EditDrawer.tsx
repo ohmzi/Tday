@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { RRule } from "rrule";
-import { Clock, Flag, Repeat, Check, Hash } from "lucide-react";
+import { Clock, Flag, Repeat, Check, Circle } from "lucide-react";
 import NestedDrawerItem from "@/components/mobile/NestedDrawerItem";
 import { TodoItemType, NonNullableDateRange } from "@/types";
 import { getDisplayDate } from "@/lib/date/displayDate";
@@ -21,9 +21,9 @@ import RepeatDrawerMenu from "../../FormFields/Drawers/RepeatDrawer/RepeatDrawer
 import { useEditCalendarTodo } from "@/features/calendar/query/update-calendar-todo";
 import ConfirmEditAllDrawer from "../../../ConfirmationModals/ConfirmEditAllDrawer";
 import ConfirmCancelEditDrawer from "../../../ConfirmationModals/ConfirmCancelEditDrawer";
-import ProjectDrawer from "../../FormFields/Drawers/ProjectDrawer/ProjectDrawer";
-import ProjectTag from "@/components/ProjectTag";
-import { useProjectMetaData } from "@/components/Sidebar/Project/query/get-project-meta";
+import ListDrawer from "../../FormFields/Drawers/ListDrawer/ListDrawer";
+import ListDot from "@/components/ListDot";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import NLPTitleInput from "@/components/todo/component/TodoForm/NLPTitleInput";
 import deriveRepeatType from "@/lib/deriveRepeatType";
 // --- Types ---
@@ -45,7 +45,7 @@ export default function CreateCalendarDrawer({
     const titleRef = useRef(null);
     const locale = useLocale();
     const userTZ = useUserTimezone()
-    const { projectMetaData } = useProjectMetaData();
+    const { listMetaData } = useListMetaData();
 
     const dateRangeChecksum = useMemo(
         () => todo.dtstart.toISOString() + todo.due.toISOString(),
@@ -66,7 +66,9 @@ export default function CreateCalendarDrawer({
     const [rruleOptions, setRruleOptions] = useState(
         todo?.rrule ? RRule.parseString(todo.rrule) : null,
     );
-    const [projectID, setProjectID] = useState<string | null>(todo.projectID);
+    const [listID, setListID] = useState<string | null>(
+        todo.listID ?? null,
+    );
 
 
     const hasUnsavedChanges = useMemo(() => {
@@ -118,7 +120,7 @@ export default function CreateCalendarDrawer({
                     dtstart: dateRange.from,
                     due: dateRange.to,
                     rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
-                    projectID
+                    listID,
                 }}
                 rruleChecksum={rruleChecksum!}
                 dateRangeChecksum={dateRangeChecksum}
@@ -157,13 +159,13 @@ export default function CreateCalendarDrawer({
                                         priority,
                                         dtstart: dateRange.from,
                                         due: dateRange.to,
-                                        projectID
+                                        listID,
                                     });
                                 }
                             }}>
                             {/* Title Input */}
                             <NLPTitleInput
-                                setProjectID={setProjectID}
+                                setListID={setListID}
                                 titleRef={titleRef}
                                 title={title}
                                 setTitle={setTitle}
@@ -231,23 +233,23 @@ export default function CreateCalendarDrawer({
                                     </div>
                                 </NestedDrawerItem>
 
-                                {/* project */}
+                                {/* list */}
                                 <NestedDrawerItem
-                                    icon={<Hash className="w-4 h-4" />}
+                                    icon={<Circle className="w-4 h-4" />}
                                     label={
-                                        projectID
+                                        listID
                                             ?
                                             <>
-                                                <ProjectTag id={projectID} />
-                                                <span>{projectMetaData[projectID]?.name}</span>
+                                                <ListDot id={listID} />
+                                                <span>{listMetaData[listID]?.name}</span>
                                             </>
                                             :
-                                            "No project"
+                                            "No list"
                                     }
-                                    title={appDict("project")}
+                                    title="List"
                                 >
                                     <div className="p-4 space-y-2">
-                                        <ProjectDrawer projectID={projectID} setProjectID={setProjectID} />
+                                        <ListDrawer listID={listID} setListID={setListID} />
                                     </div>
                                 </NestedDrawerItem>
                             </div>
@@ -294,7 +296,7 @@ export default function CreateCalendarDrawer({
                                                 priority,
                                                 dtstart: dateRange.from,
                                                 due: dateRange.to,
-                                                projectID
+                                                listID,
                                             });
                                         }
                                     }}

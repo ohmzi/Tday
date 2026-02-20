@@ -7,7 +7,7 @@ enum class TodoListMode {
     SCHEDULED,
     ALL,
     FLAGGED,
-    PROJECT,
+    LIST,
 }
 
 data class TodoItem(
@@ -22,7 +22,7 @@ data class TodoItem(
     val instanceDate: Instant?,
     val pinned: Boolean,
     val completed: Boolean,
-    val projectId: String?,
+    val listId: String?,
 ) {
     val isRecurring: Boolean
         get() = !rrule.isNullOrBlank()
@@ -31,10 +31,11 @@ data class TodoItem(
         get() = instanceDate?.toEpochMilli()
 }
 
-data class ProjectSummary(
+data class ListSummary(
     val id: String,
     val name: String,
     val color: String?,
+    val iconKey: String?,
     val todoCount: Int,
 )
 
@@ -44,7 +45,7 @@ data class DashboardSummary(
     val allCount: Int,
     val flaggedCount: Int,
     val completedCount: Int,
-    val projects: List<ProjectSummary>,
+    val lists: List<ListSummary>,
 )
 
 data class CompletedItem(

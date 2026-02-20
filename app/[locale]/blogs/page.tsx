@@ -10,7 +10,7 @@ const BlogMainPage = () => {
       id: 1,
       title: "RRULE Todo Scheduling System — Instance Semantics & Overrides",
       excerpt:
-        "This document defines the source of truth, data invariants, and instance-move semantics for the RRULE-based todo scheduling system. It follows RFC 5545 iCalendar behavior, adapted to this project's schema and constraints.",
+        "This document defines the source of truth, data invariants, and instance-move semantics for the RRULE-based todo scheduling system. It follows RFC 5545 iCalendar behavior, adapted to this list's schema and constraints.",
       date: "2024-12-14",
       readTime: "8 min read",
       category: "documentation",
