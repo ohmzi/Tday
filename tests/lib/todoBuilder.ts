@@ -1,7 +1,7 @@
-import { TodoItemType } from "@/types";
+import { recurringTodoItemType } from "@/types";
 
 export class TodoBuilder {
-  public todo: TodoItemType;
+  public todo: recurringTodoItemType;
 
   constructor() {
     this.todo = {
@@ -64,7 +64,7 @@ export class TodoBuilder {
     return this;
   }
 
-  build(): TodoItemType {
+  build(): recurringTodoItemType {
     return { ...this.todo };
   }
 }

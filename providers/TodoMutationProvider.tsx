@@ -5,46 +5,46 @@ import { QueryStatus, UseMutateFunction } from "@tanstack/react-query";
 import React, { createContext, useContext } from "react";
 
 // hook types
-export type UseDeleteTodoType = () => {
+type UseDeleteTodoType = () => {
     deleteMutateFn: (variables: { id: string }) => void;
     deletePending: boolean;
 }
-export type useCompleteTodoType = () => {
+type UseCompleteTodoType = () => {
     completeMutateFn: UseMutateFunction<void, Error, TodoItemType, { oldTodos: TodoItemType[]; }>;
     completePending: boolean
 }
-export type usePinTodoType = () => {
+type UsePinTodoType = () => {
     pinMutateFn: UseMutateFunction<void, Error, TodoItemType, { oldTodos: unknown; }>;
     pinPending: boolean
 }
-export type usePrioritizeTodoType = () => {
+type UsePrioritizeTodoType = () => {
     prioritizeMutateFn: UseMutateFunction<void, Error, { id: string; level: "Low" | "Medium" | "High"; isRecurring: boolean; }, { oldTodos: TodoItemType[] | undefined; }>;
     prioritizePending: boolean
 }
 
-export type useReorderTodoType = () => {
+type UseReorderTodoType = () => {
     reorderMutateFn: UseMutateFunction<void, Error, changeMapType[], unknown>;
     reorderPending: boolean
 }
 
-export type useEditTodoType = () => {
+type UseEditTodoType = () => {
     editTodoMutateFn: UseMutateFunction<void, Error, TodoItemTypeWithDateChecksum, { oldTodos: TodoItemType[] | undefined; }>
     editTodoStatus: QueryStatus | "idle"
 }
 
-export type useEditTodoInstanceType = (setEditInstanceOnly: React.Dispatch<React.SetStateAction<boolean>> | undefined) => {
+type UseEditTodoInstanceType = (setEditInstanceOnly: React.Dispatch<React.SetStateAction<boolean>> | undefined) => {
     editTodoInstanceMutateFn: UseMutateFunction<void, Error, TodoItemType, { oldTodos: TodoItemType[] | undefined; }>
     editTodoInstanceStatus: QueryStatus | "idle"
 }
 
-export type TodoMutaionProviderProps = {
+type TodoMutaionProviderProps = {
     useDeleteTodo: UseDeleteTodoType,
-    useCompleteTodo: useCompleteTodoType,
-    usePinTodo: usePinTodoType,
-    usePrioritizeTodo: usePrioritizeTodoType,
-    useReorderTodo: useReorderTodoType,
-    useEditTodoInstance: useEditTodoInstanceType,
-    useEditTodo: useEditTodoType,
+    useCompleteTodo: UseCompleteTodoType,
+    usePinTodo: UsePinTodoType,
+    usePrioritizeTodo: UsePrioritizeTodoType,
+    useReorderTodo: UseReorderTodoType,
+    useEditTodoInstance: UseEditTodoInstanceType,
+    useEditTodo: UseEditTodoType,
     children: React.ReactNode
 }
 

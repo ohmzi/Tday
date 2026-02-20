@@ -122,6 +122,3 @@ export function useUserPreferences() {
     }
     return context;
 }
-
-// Re-export Prisma types for convenience
-export type { SortBy, GroupBy, Direction };

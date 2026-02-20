@@ -12,7 +12,7 @@ class PendingApprovalError extends CredentialsSignin {
   code = "pending_approval";
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const { handlers, auth } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
   session: { strategy: "jwt" },
   providers: [
