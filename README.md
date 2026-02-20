@@ -14,3 +14,11 @@ Built with Next.js, Postgres, and Prisma. Runs in Docker.
 ```bash
 docker compose up --build
 ```
+
+## Native Android (Compose)
+
+A new native Android client now lives in:
+
+`/home/ohmz/StudioProjects/Tday/android-compose`
+
+Open that folder in Android Studio to run the Kotlin + Jetpack Compose app.
