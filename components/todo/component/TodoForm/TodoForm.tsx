@@ -14,7 +14,7 @@ import NLPTitleInput from "./NLPTitleInput";
 import { useTranslations } from "next-intl";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
 import { useCreateTodo } from "@/features/todayTodos/query/create-todo";
-import ProjectDropdownMenu from "./ProjectDropdownMenu";
+import ListDropdownMenu from "./ListDropdownMenu";
 interface TodoFormProps {
   editInstanceOnly?: boolean;
   setEditInstanceOnly?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -39,8 +39,8 @@ const TodoForm = ({
     setDesc,
     dateRange,
     setDateRange,
-    projectID,
-    setProjectID,
+    listID,
+    setListID,
     rruleOptions,
     dateRangeChecksum,
     rruleChecksum,
@@ -83,7 +83,6 @@ const TodoForm = ({
             className="mt-5 px-3"
             title={title}
             setTitle={setTitle}
-            setProjectID={setProjectID}
             titleRef={titleRef}
             setDateRange={setDateRange}
             onSubmit={handleForm}
@@ -106,7 +105,7 @@ const TodoForm = ({
         <LineSeparator className="m-0! p-0!" />
         {/* form footer */}
         <div className="flex text-sm w-full justify-between items-center py-1.5 px-2">
-          <ProjectDropdownMenu projectID={projectID} setProjectID={setProjectID} />
+          <ListDropdownMenu listID={listID} setListID={setListID} />
           <div className="flex gap-3 w-fit">
             <Button
               variant={"outline"}
@@ -174,7 +173,7 @@ const TodoForm = ({
             due,
             durationMinutes,
             rrule,
-            projectID
+            listID,
           });
         }
       } else {
@@ -197,7 +196,7 @@ const TodoForm = ({
           exdates: [],
           instanceDate: rrule ? dtstart : null,
           instances: [],
-          projectID
+          listID: listID ?? null,
         });
       }
     } catch (error) {

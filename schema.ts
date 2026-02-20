@@ -59,7 +59,7 @@ export const todoSchema = z.object({
   dtstart: z.date({ message: "start date is not identified" }),
   due: z.date({ message: "end date is not identified" }),
   rrule: z.string().nullable(),
-  projectID: z.string().nullable().optional(),
+  listID: z.string().nullable().optional(),
 });
 
 export const todoInstanceSchema = z.object({
@@ -84,7 +84,7 @@ export const noteSchema = z.object({
     .min(1, { message: "title cannot be left empty" }),
   content: z.string().nullable().optional(),
 });
-export const ProjectColor = [
+export const ListColor = [
   "RED",
   "ORANGE",
   "YELLOW",
@@ -101,28 +101,30 @@ export const ProjectColor = [
   "BRICK",
   "SLATE",
 ] as const;
-export const projectBaseSchema = z.object({
+export const listBaseSchema = z.object({
   id: z.string({ message: "id cannot be left empty" }),
   name: z
     .string({ message: "title cannot be left empty" })
     .trim()
     .min(1, { message: "title cannot be left empty" }),
-  color: z.enum(ProjectColor).nullable(),
+  color: z.enum(ListColor).nullable(),
 });
 
-export const projectCreateSchema = projectBaseSchema.pick({
+export const listCreateSchema = listBaseSchema.pick({
   name: true,
+}).extend({
+  color: z.enum(ListColor).optional(),
 });
 
-export type ProjectColorType = (typeof ProjectColor)[number];
+export type ListColorType = (typeof ListColor)[number];
 
-export const projectPatchSchema = projectBaseSchema.partial().extend({
+export const listPatchSchema = listBaseSchema.partial().extend({
   name: z
     .string({ message: "title cannot be left empty" })
     .trim()
     .min(1, { message: "title cannot be left empty" })
     .optional(),
-  color: z.enum(ProjectColor).optional(),
+  color: z.enum(ListColor).optional(),
 });
 
 export const userPreferencesSchema = z.object({
@@ -131,7 +133,7 @@ export const userPreferencesSchema = z.object({
     .nullable()
     .optional(),
   groupBy: z
-    .enum(["dtstart", "due", "duration", "priority", "rrule", "project"])
+    .enum(["dtstart", "due", "duration", "priority", "rrule", "list"])
     .nullable()
     .optional(),
   direction: z.enum(["Ascending", "Descending"]).nullable().optional(),

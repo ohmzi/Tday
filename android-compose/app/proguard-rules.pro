@@ -1,1 +1,1 @@
-# Add project specific ProGuard rules here when release shrinking is enabled.
+# Add app-specific ProGuard rules here when release shrinking is enabled.
