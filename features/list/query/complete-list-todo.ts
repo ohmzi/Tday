@@ -8,25 +8,14 @@ export const useCompleteListTodo = () => {
     const { mutate: completeMutateFn, isPending: completePending } = useMutation({
         mutationFn: async (todoItem: TodoItemType) => {
             const todoId = todoItem.id.split(":")[0];
-            if (todoItem.rrule) {
-                await api.PATCH({
-                    url: `/api/todo/instance/${todoId}/complete`,
-                    body: JSON.stringify({
-                        ...todoItem,
-                        id: todoId,
-                        completed: !todoItem.completed,
-                    }),
-                });
-            } else {
-                await api.PATCH({
-                    url: `/api/todo/${todoId}/complete`,
-                    body: JSON.stringify({
-                        ...todoItem,
-                        id: todoId,
-                        completed: !todoItem.completed,
-                    }),
-                });
-            }
+            await api.PATCH({
+                url: "/api/todo/complete",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: todoId,
+                    instanceDate: todoItem.rrule ? todoItem.instanceDate?.getTime() : null,
+                }),
+            });
         },
         onMutate: async (todoItem: TodoItemType) => {
             await queryClient.cancelQueries({ queryKey: ["list"] });

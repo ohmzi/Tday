@@ -7,6 +7,7 @@ type fetchOptions = {
 const fetchApi = async (url: string, options: fetchOptions) => {
   const res = await fetch(url, {
     method: options.method,
+    headers: options.headers as HeadersInit | undefined,
     body: options.body,
   });
 
@@ -33,8 +34,16 @@ export const api = {
   }) {
     return fetchApi(url, { method: "PATCH", headers, body });
   },
-  DELETE({ url }: { url: string }) {
-    return fetchApi(url, { method: "DELETE" });
+  DELETE({
+    url,
+    headers,
+    body,
+  }: {
+    url: string;
+    headers?: fetchOptions["headers"];
+    body?: fetchOptions["body"];
+  }) {
+    return fetchApi(url, { method: "DELETE", headers, body });
   },
   POST({
     url,

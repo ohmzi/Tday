@@ -99,6 +99,60 @@ data class CreateTodoResponse(
 )
 
 @Serializable
+data class UpdateTodoRequest(
+    val id: String,
+    val title: String? = null,
+    val description: String? = null,
+    val pinned: Boolean? = null,
+    val priority: String? = null,
+    val completed: Boolean? = null,
+    val dtstart: String? = null,
+    val due: String? = null,
+    val rrule: String? = null,
+    val listID: String? = null,
+    val dateChanged: Boolean? = null,
+    val rruleChanged: Boolean? = null,
+    val instanceDate: String? = null,
+)
+
+@Serializable
+data class DeleteTodoRequest(
+    val id: String,
+    val instanceDate: Long? = null,
+)
+
+@Serializable
+data class TodoInstanceUpdateRequest(
+    val id: String,
+    val title: String? = null,
+    val description: String? = null,
+    val priority: String? = null,
+    val dtstart: String? = null,
+    val due: String? = null,
+    val rrule: String? = null,
+    val instanceDate: String,
+)
+
+@Serializable
+data class TodoCompleteRequest(
+    val id: String,
+    val instanceDate: Long? = null,
+)
+
+@Serializable
+data class TodoUncompleteRequest(
+    val id: String,
+    val instanceDate: Long? = null,
+)
+
+@Serializable
+data class TodoPrioritizeRequest(
+    val id: String,
+    val priority: String,
+    val instanceDate: Long? = null,
+)
+
+@Serializable
 data class TodoInstanceRequest(
     val instanceDate: String? = null,
 )
@@ -136,6 +190,19 @@ data class ListDto(
 data class CreateListResponse(
     val message: String? = null,
     val list: ListDto? = null,
+)
+
+@Serializable
+data class UpdateListRequest(
+    val id: String,
+    val name: String? = null,
+    val color: String? = null,
+    val iconKey: String? = null,
+)
+
+@Serializable
+data class DeleteListRequest(
+    val id: String,
 )
 
 @Serializable
