@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.ui.component
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.graphics.Color as AndroidColor
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -77,6 +78,8 @@ import java.time.format.DateTimeFormatter
 private enum class TaskSheetPage {
     MAIN,
     DETAILS,
+    LIST,
+    PRIORITY,
 }
 
 private enum class RepeatPreset(
@@ -134,9 +137,9 @@ fun CreateTaskBottomSheet(
         )
     }
     var selectedRepeat by rememberSaveable { mutableStateOf(RepeatPreset.NONE.name) }
+    var listReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN.name) }
+    var priorityReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
 
-    var listMenuExpanded by remember { mutableStateOf(false) }
-    var priorityMenuExpanded by remember { mutableStateOf(false) }
     var repeatMenuExpanded by remember { mutableStateOf(false) }
 
     val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
@@ -186,15 +189,25 @@ fun CreateTaskBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 SheetHeader(
-                    title = if (page == TaskSheetPage.MAIN) "New task" else "Details",
-                    leftIcon = if (page == TaskSheetPage.MAIN) Icons.Rounded.Close else Icons.AutoMirrored.Rounded.ArrowBack,
+                    title = when (page) {
+                        TaskSheetPage.MAIN -> "New task"
+                        TaskSheetPage.DETAILS -> "Details"
+                        TaskSheetPage.LIST -> "List"
+                        TaskSheetPage.PRIORITY -> "Priority"
+                    },
+                    leftIcon = if (page == TaskSheetPage.MAIN) {
+                        Icons.Rounded.Close
+                    } else {
+                        Icons.AutoMirrored.Rounded.ArrowBack
+                    },
                     leftContentDescription = if (page == TaskSheetPage.MAIN) "Close" else "Back",
                     onLeftClick = {
                         focusManager.clearFocus(force = true)
-                        if (page == TaskSheetPage.MAIN) {
-                            onDismiss()
-                        } else {
-                            page = TaskSheetPage.MAIN
+                        when (page) {
+                            TaskSheetPage.MAIN -> onDismiss()
+                            TaskSheetPage.DETAILS -> page = TaskSheetPage.MAIN
+                            TaskSheetPage.LIST -> page = TaskSheetPage.valueOf(listReturnPage)
+                            TaskSheetPage.PRIORITY -> page = TaskSheetPage.valueOf(priorityReturnPage)
                         }
                     },
                     onConfirm = {
@@ -245,35 +258,15 @@ fun CreateTaskBottomSheet(
                         SectionHeading("More Options")
                         GroupCard {
                             if (lists.isNotEmpty()) {
-                                Box(modifier = Modifier.fillMaxWidth()) {
-                                    SheetRow(
-                                        icon = Icons.AutoMirrored.Rounded.List,
-                                        title = "List",
-                                        value = selectedListName,
-                                        onClick = { listMenuExpanded = true },
-                                    )
-                                DropdownMenu(
-                                    expanded = listMenuExpanded,
-                                    onDismissRequest = { listMenuExpanded = false },
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("No list") },
-                                        onClick = {
-                                            selectedListId = null
-                                            listMenuExpanded = false
-                                        },
-                                    )
-                                    lists.forEach { list ->
-                                        DropdownMenuItem(
-                                            text = { Text(list.name) },
-                                            onClick = {
-                                                    selectedListId = list.id
-                                                    listMenuExpanded = false
-                                                },
-                                            )
-                                        }
-                                    }
-                                }
+                                SheetRow(
+                                    icon = Icons.AutoMirrored.Rounded.List,
+                                    title = "List",
+                                    value = selectedListName,
+                                    onClick = {
+                                        listReturnPage = TaskSheetPage.MAIN.name
+                                        page = TaskSheetPage.LIST
+                                    },
+                                )
                                 RowDivider()
                             }
                             SheetRow(
@@ -339,60 +332,77 @@ fun CreateTaskBottomSheet(
 
                         SectionHeading("Organization")
                         GroupCard {
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                SheetRow(
-                                    icon = Icons.Rounded.LowPriority,
-                                    title = "Priority",
-                                    value = selectedPriority,
-                                    onClick = { priorityMenuExpanded = true },
-                                )
-                                DropdownMenu(
-                                    expanded = priorityMenuExpanded,
-                                    onDismissRequest = { priorityMenuExpanded = false },
-                                ) {
-                                    listOf("Low", "Medium", "High").forEach { option ->
-                                        DropdownMenuItem(
-                                            text = { Text(option) },
-                                            onClick = {
-                                                selectedPriority = option
-                                                priorityMenuExpanded = false
-                                            },
-                                        )
-                                    }
-                                }
-                            }
+                            SheetRow(
+                                icon = Icons.Rounded.LowPriority,
+                                title = "Priority",
+                                value = selectedPriority,
+                                onClick = {
+                                    priorityReturnPage = TaskSheetPage.DETAILS.name
+                                    page = TaskSheetPage.PRIORITY
+                                },
+                            )
 
                             if (lists.isNotEmpty()) {
                                 RowDivider()
-                                Box(modifier = Modifier.fillMaxWidth()) {
-                                    SheetRow(
-                                        icon = Icons.AutoMirrored.Rounded.List,
-                                        title = "List",
-                                        value = selectedListName,
-                                        onClick = { listMenuExpanded = true },
-                                    )
-                                DropdownMenu(
-                                    expanded = listMenuExpanded,
-                                    onDismissRequest = { listMenuExpanded = false },
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("No list") },
-                                        onClick = {
-                                            selectedListId = null
-                                            listMenuExpanded = false
-                                        },
-                                    )
-                                    lists.forEach { list ->
-                                        DropdownMenuItem(
-                                            text = { Text(list.name) },
-                                            onClick = {
-                                                    selectedListId = list.id
-                                                    listMenuExpanded = false
-                                                },
-                                            )
-                                        }
-                                    }
+                                SheetRow(
+                                    icon = Icons.AutoMirrored.Rounded.List,
+                                    title = "List",
+                                    value = selectedListName,
+                                    onClick = {
+                                        listReturnPage = TaskSheetPage.DETAILS.name
+                                        page = TaskSheetPage.LIST
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    TaskSheetPage.LIST -> {
+                        SectionHeading("Choose List")
+                        GroupCard {
+                            ListSelectionRow(
+                                title = "No list",
+                                swatchColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.95f),
+                                selected = selectedListId == null,
+                                onClick = {
+                                    selectedListId = null
+                                    page = TaskSheetPage.valueOf(listReturnPage)
+                                },
+                            )
+                            lists.forEach { list ->
+                                RowDivider()
+                                ListSelectionRow(
+                                    title = list.name,
+                                    swatchColor = parseListColorOrFallback(
+                                        raw = list.color,
+                                        fallback = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
+                                    ),
+                                    selected = selectedListId == list.id,
+                                    onClick = {
+                                        selectedListId = list.id
+                                        page = TaskSheetPage.valueOf(listReturnPage)
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    TaskSheetPage.PRIORITY -> {
+                        SectionHeading("Choose Priority")
+                        GroupCard {
+                            listOf("Low", "Medium", "High").forEachIndexed { index, option ->
+                                if (index > 0) {
+                                    RowDivider()
                                 }
+                                ListSelectionRow(
+                                    title = option,
+                                    swatchColor = prioritySwatchColor(option),
+                                    selected = selectedPriority == option,
+                                    onClick = {
+                                        selectedPriority = option
+                                        page = TaskSheetPage.valueOf(priorityReturnPage)
+                                    },
+                                )
                             }
                         }
                     }
@@ -673,6 +683,62 @@ private fun SheetRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun ListSelectionRow(
+    title: String,
+    swatchColor: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .background(
+                    color = swatchColor,
+                    shape = RoundedCornerShape(999.dp),
+                ),
+        )
+        Spacer(modifier = Modifier.size(12.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = colorScheme.onSurface,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+        if (selected) {
+            Icon(
+                imageVector = Icons.Rounded.Check,
+                contentDescription = null,
+                tint = colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+private fun parseListColorOrFallback(raw: String?, fallback: Color): Color {
+    if (raw.isNullOrBlank()) return fallback
+    return runCatching { Color(AndroidColor.parseColor(raw)) }
+        .getOrDefault(fallback)
+}
+
+private fun prioritySwatchColor(priority: String): Color {
+    return when (priority.lowercase()) {
+        "high" -> Color(0xFFE56A6A)
+        "medium" -> Color(0xFFE3B368)
+        else -> Color(0xFF6FBF86)
     }
 }
 
