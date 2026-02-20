@@ -60,11 +60,12 @@ fun TodoListScreen(
     onDelete: (todo: TodoItem) -> Unit,
     onTogglePin: (todo: TodoItem) -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var newTaskTitle by rememberSaveable { mutableStateOf("") }
 
     Scaffold(
-        containerColor = Color(0xFF050507),
+        containerColor = colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -89,8 +90,8 @@ fun TodoListScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = Color(0xFF4B9AF4),
-                contentColor = Color.White,
+                containerColor = colorScheme.primary,
+                contentColor = colorScheme.onPrimary,
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = "Add")
             }
@@ -103,7 +104,7 @@ fun TodoListScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("Loading...", color = Color.White)
+                Text("Loading...", color = colorScheme.onBackground)
             }
         } else {
             LazyColumn(
@@ -116,13 +117,13 @@ fun TodoListScreen(
                 if (uiState.items.isEmpty()) {
                     item {
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF141822)),
+                            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
                             shape = RoundedCornerShape(18.dp),
                         ) {
                             Text(
                                 modifier = Modifier.padding(18.dp),
                                 text = "No tasks yet.",
-                                color = Color(0xFFB6BED3),
+                                color = colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -194,12 +195,13 @@ private fun TodoRow(
     onDelete: () -> Unit,
     onPin: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val due = DateTimeFormatter.ofPattern("MMM d, HH:mm")
         .withZone(ZoneId.systemDefault())
         .format(todo.due)
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161A24)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -226,13 +228,13 @@ private fun TodoRow(
                 Column(modifier = Modifier.padding(start = 12.dp)) {
                     Text(
                         text = todo.title,
-                        color = Color.White,
+                        color = colorScheme.onSurface,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         text = due,
-                        color = Color(0xFF98A2B8),
+                        color = colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -243,14 +245,14 @@ private fun TodoRow(
                     Icon(
                         imageVector = Icons.Rounded.PushPin,
                         contentDescription = "Pin",
-                        tint = if (todo.pinned) Color(0xFFF5B95C) else Color(0xFF6E778E),
+                        tint = if (todo.pinned) colorScheme.tertiary else colorScheme.onSurfaceVariant,
                     )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         imageVector = Icons.Rounded.Delete,
                         contentDescription = "Delete",
-                        tint = Color(0xFFDA7676),
+                        tint = colorScheme.error,
                     )
                 }
             }
