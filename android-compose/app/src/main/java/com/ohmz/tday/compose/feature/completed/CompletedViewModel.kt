@@ -58,7 +58,10 @@ class CompletedViewModel @Inject constructor(
             runCatching {
                 if (forceSync) {
                     // Keep completed list aligned with latest server state on refresh.
-                    repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
+                    repository.syncCachedData(
+                        force = true,
+                        replayPendingMutations = false,
+                    ).onFailure { /* fall back to local cache */ }
                 }
                 repository.fetchCompletedItems()
             }.onSuccess { items ->
