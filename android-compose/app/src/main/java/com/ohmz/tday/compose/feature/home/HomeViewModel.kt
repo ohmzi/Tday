@@ -19,7 +19,7 @@ data class HomeUiState(
         todayCount = 0,
         scheduledCount = 0,
         allCount = 0,
-        flaggedCount = 0,
+        priorityCount = 0,
         completedCount = 0,
         lists = emptyList(),
     ),
