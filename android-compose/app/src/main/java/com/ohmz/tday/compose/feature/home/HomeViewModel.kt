@@ -115,10 +115,21 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { repository.createTodo(title = title, listId = listId) }
                 .onSuccess {
-                    refreshInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
+                    runCatching { repository.fetchDashboardSummaryCached() }
+                        .onSuccess { summary ->
+                            _uiState.update { current ->
+                                current.copy(
+                                    summary = if (current.summary == summary) current.summary else summary,
+                                    errorMessage = null,
+                                )
+                            }
+                        }
+                        .onFailure {
+                            refreshInternal(
+                                forceSync = false,
+                                showLoading = false,
+                            )
+                        }
                 }
                 .onFailure { error ->
                     _uiState.update {
