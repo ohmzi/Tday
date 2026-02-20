@@ -3,7 +3,9 @@ package com.ohmz.tday.compose.feature.app
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +19,7 @@ data class AppUiState(
     val authenticated: Boolean = false,
     val requiresServerSetup: Boolean = false,
     val serverUrl: String? = null,
+    val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val user: SessionUser? = null,
     val error: String? = null,
 )
@@ -24,12 +27,16 @@ data class AppUiState(
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val repository: TdayRepository,
+    private val themePreferenceStore: ThemePreferenceStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
     init {
+        _uiState.update {
+            it.copy(themeMode = themePreferenceStore.getThemeMode())
+        }
         bootstrap()
     }
 
@@ -149,5 +156,10 @@ class AppViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    fun setThemeMode(mode: AppThemeMode) {
+        themePreferenceStore.setThemeMode(mode)
+        _uiState.update { it.copy(themeMode = mode) }
     }
 }
