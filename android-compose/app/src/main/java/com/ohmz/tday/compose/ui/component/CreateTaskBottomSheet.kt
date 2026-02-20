@@ -112,7 +112,7 @@ fun CreateTaskBottomSheet(
     var notes by rememberSaveable { mutableStateOf("") }
     var selectedPriority by rememberSaveable { mutableStateOf("Low") }
     var selectedListId by rememberSaveable(defaultListId, listIdsKey) {
-        mutableStateOf(defaultListId ?: lists.firstOrNull()?.id)
+        mutableStateOf(defaultListId?.takeIf { id -> lists.any { it.id == id } })
     }
     var startEpochMs by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
     var dueEpochMs by rememberSaveable { mutableStateOf(System.currentTimeMillis() + 3L * 60L * 60L * 1000L) }
@@ -122,9 +122,9 @@ fun CreateTaskBottomSheet(
     var priorityMenuExpanded by remember { mutableStateOf(false) }
     var repeatMenuExpanded by remember { mutableStateOf(false) }
 
-    val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name.orEmpty()
+    val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
     val repeatPreset = RepeatPreset.valueOf(selectedRepeat)
-    val canCreate = title.isNotBlank() && (lists.isEmpty() || !selectedListId.isNullOrBlank())
+    val canCreate = title.isNotBlank()
 
     fun submitTask() {
         val start = Instant.ofEpochMilli(startEpochMs)
@@ -240,14 +240,21 @@ fun CreateTaskBottomSheet(
                                         value = selectedListName,
                                         onClick = { listMenuExpanded = true },
                                     )
-                                    DropdownMenu(
-                                        expanded = listMenuExpanded,
-                                        onDismissRequest = { listMenuExpanded = false },
-                                    ) {
-                                        lists.forEach { list ->
-                                            DropdownMenuItem(
-                                                text = { Text(list.name) },
-                                                onClick = {
+                                DropdownMenu(
+                                    expanded = listMenuExpanded,
+                                    onDismissRequest = { listMenuExpanded = false },
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("No list") },
+                                        onClick = {
+                                            selectedListId = null
+                                            listMenuExpanded = false
+                                        },
+                                    )
+                                    lists.forEach { list ->
+                                        DropdownMenuItem(
+                                            text = { Text(list.name) },
+                                            onClick = {
                                                     selectedListId = list.id
                                                     listMenuExpanded = false
                                                 },
@@ -357,14 +364,21 @@ fun CreateTaskBottomSheet(
                                         value = selectedListName,
                                         onClick = { listMenuExpanded = true },
                                     )
-                                    DropdownMenu(
-                                        expanded = listMenuExpanded,
-                                        onDismissRequest = { listMenuExpanded = false },
-                                    ) {
-                                        lists.forEach { list ->
-                                            DropdownMenuItem(
-                                                text = { Text(list.name) },
-                                                onClick = {
+                                DropdownMenu(
+                                    expanded = listMenuExpanded,
+                                    onDismissRequest = { listMenuExpanded = false },
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("No list") },
+                                        onClick = {
+                                            selectedListId = null
+                                            listMenuExpanded = false
+                                        },
+                                    )
+                                    lists.forEach { list ->
+                                        DropdownMenuItem(
+                                            text = { Text(list.name) },
+                                            onClick = {
                                                     selectedListId = list.id
                                                     listMenuExpanded = false
                                                 },

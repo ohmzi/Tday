@@ -176,7 +176,7 @@ fun TodoListScreen(
     if (showCreateTaskSheet) {
         CreateTaskBottomSheet(
             lists = uiState.lists,
-            defaultListId = uiState.listId ?: uiState.lists.firstOrNull()?.id,
+            defaultListId = null,
             onDismiss = { showCreateTaskSheet = false },
             onCreateTask = { payload ->
                 onAddTask(payload)
