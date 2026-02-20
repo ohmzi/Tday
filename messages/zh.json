@@ -261,7 +261,7 @@
       "error": "日期范围无效：结束时间必须在开始时间之后。"
     },
     "priority": "优先级",
-    "project": "项目",
+    "list": "项目",
     "overdue": "已逾期",
     "normal": "普通",
     "important": "重要",

@@ -5,10 +5,11 @@ import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.AuthSession
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateNoteRequest
+import com.ohmz.tday.compose.core.model.CreateListRequest
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.NoteItem
-import com.ohmz.tday.compose.core.model.ProjectSummary
+import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.RegisterOutcome
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.SessionUser
@@ -242,7 +243,7 @@ class TdayRepository @Inject constructor(
         val todayTodos = fetchTodayTodos()
         val timelineTodos = fetchTimelineTodos()
         val completedTodos = fetchCompletedItems()
-        val projects = fetchProjects()
+        val lists = fetchLists()
 
         val todayDate = LocalDate.now(zoneId)
         val scheduledCount = timelineTodos.count {
@@ -255,11 +256,11 @@ class TdayRepository @Inject constructor(
             allCount = timelineTodos.size,
             flaggedCount = timelineTodos.count { it.priority.equals("High", ignoreCase = true) },
             completedCount = completedTodos.size,
-            projects = projects,
+            lists = lists,
         )
     }
 
-    suspend fun fetchTodos(mode: TodoListMode, projectId: String? = null): List<TodoItem> {
+    suspend fun fetchTodos(mode: TodoListMode, listId: String? = null): List<TodoItem> {
         return when (mode) {
             TodoListMode.TODAY -> fetchTodayTodos()
             TodoListMode.ALL -> fetchTimelineTodos()
@@ -274,11 +275,11 @@ class TdayRepository @Inject constructor(
                 it.priority.equals("High", ignoreCase = true)
             }
 
-            TodoListMode.PROJECT -> {
-                if (projectId.isNullOrBlank()) {
+            TodoListMode.LIST -> {
+                if (listId.isNullOrBlank()) {
                     emptyList()
                 } else {
-                    fetchProjectTodos(projectId)
+                    fetchListTodos(listId)
                 }
             }
         }
@@ -305,19 +306,19 @@ class TdayRepository @Inject constructor(
         return response.todos.map(::mapTodo)
     }
 
-    suspend fun fetchProjectTodos(projectId: String): List<TodoItem> {
+    suspend fun fetchListTodos(listId: String): List<TodoItem> {
         val response = requireBody(
-            api.getProjectTodos(
-                projectId = projectId,
+            api.getListTodos(
+                listId = listId,
                 start = startOfTodayMillis(),
                 end = endOfTodayMillis(),
             ),
-            "Could not load project tasks",
+            "Could not load list tasks",
         )
         return response.todos.map(::mapTodo)
     }
 
-    suspend fun createTodo(title: String, projectId: String? = null) {
+    suspend fun createTodo(title: String, listId: String? = null) {
         val start = Instant.now()
         val due = start.plusSeconds(30 * 60)
         val payload = CreateTodoRequest(
@@ -327,7 +328,7 @@ class TdayRepository @Inject constructor(
             dtstart = start.toString(),
             due = due.toString(),
             rrule = null,
-            projectID = projectId,
+            listID = listId,
         )
 
         requireBody(api.createTodo(payload), "Could not create task")
@@ -453,27 +454,50 @@ class TdayRepository @Inject constructor(
         requireBody(api.deleteNote(noteId), "Could not delete note")
     }
 
-    suspend fun fetchProjects(): List<ProjectSummary> {
-        val response = requireBody(api.getProjects(), "Could not load lists")
-        return response.projects.map {
-            ProjectSummary(
+    suspend fun fetchLists(): List<ListSummary> {
+        val response = requireBody(api.getLists(), "Could not load lists")
+        return response.lists.map {
+            ListSummary(
                 id = it.id,
                 name = it.name,
                 color = it.color,
+                iconKey = secureConfigStore.getListIcon(it.id),
                 todoCount = it.todoCount,
             )
         }
     }
 
-    suspend fun createProject(name: String) {
-        requireBody(
-            api.createProject(
-                buildJsonObject {
-                    put("name", name.trim())
-                },
+    suspend fun createList(
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+    ) {
+        val response = requireBody(
+            api.createList(
+                CreateListRequest(
+                    name = name.trim(),
+                    color = color,
+                ),
             ),
             "Could not create list",
         )
+
+        val created = response.list
+
+        if (created?.id != null && !iconKey.isNullOrBlank()) {
+            secureConfigStore.saveListIcon(created.id, iconKey)
+        }
+
+        // Backward compatibility for older backend instances that may ignore color on create.
+        if (created?.id != null && !color.isNullOrBlank() && created.color != color) {
+            requireBody(
+                api.patchList(
+                    listId = created.id,
+                    payload = buildJsonObject { put("color", color) },
+                ),
+                "Could not apply list color",
+            )
+        }
     }
 
     private fun mapTodo(dto: com.ohmz.tday.compose.core.model.TodoDto): TodoItem {
@@ -496,7 +520,7 @@ class TdayRepository @Inject constructor(
             instanceDate = explicitInstance ?: suffixInstance,
             pinned = dto.pinned,
             completed = dto.completed,
-            projectId = dto.projectID,
+            listId = dto.listID,
         )
     }
 

@@ -261,7 +261,7 @@
       "error": "Rango de fechas inválido: la hora de fin debe ser posterior a la de inicio."
     },
     "priority": "Prioridad",
-    "project": "Proyecto",
+    "list": "Proyecto",
     "overdue": "Vencido",
     "normal": "Normal",
     "important": "Importante",

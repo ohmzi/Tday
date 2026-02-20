@@ -22,7 +22,7 @@ model User {
   CompletedTodo CompletedTodo[]
   Note          Note[]
   File          File[]
-  Project       Project[]
+  lists         List[]
   UserPreferences       UserPreferences[]
   maxStorage    Decimal             @default(1000000.0) //default 100 mb of storage
   usedStoraged  Decimal             @default(0.0)
@@ -60,7 +60,7 @@ enum GroupBy{
   duration
   priority
   rrule
-  project
+  list @map("project")
 }
 
 enum Direction{
@@ -140,12 +140,12 @@ model Todo {
 
   completed         Boolean   @default(false)
   instances         TodoInstance[]
-  project           Project?   @relation(fields: [projectID], references: [id], onDelete: SetNull)
-  projectID         String?
+  list              List?      @relation(fields: [listID], references: [id], onDelete: SetNull)
+  listID            String?    @map("projectID")
 
   @@index([userID])
-  @@index([projectID])
-  @@index([userID, projectID])
+  @@index([listID])
+  @@index([userID, listID])
   @@map("todos")
 }
 
@@ -185,8 +185,8 @@ model CompletedTodo{
   user          User            @relation(fields: [userID], references: [id])
   userID        String
   instanceDate  DateTime?
-  projectName   String?
-  projectColor  String?
+  listName      String? @map("projectName")
+  listColor     String? @map("projectColor")
 
   @@index([userID])
 }
@@ -200,7 +200,7 @@ model Note{
   userID        String
 }
 
-enum ProjectColor {
+enum ListColor {
   RED
   ORANGE
   YELLOW
@@ -216,18 +216,20 @@ enum ProjectColor {
   LIGHT_RED
   BRICK
   SLATE
+  @@map("ProjectColor")
 }
 
-model Project {
+model List {
   id        String   @id @default(cuid())
   name      String
-  color     ProjectColor?
+  color     ListColor?
   user      User     @relation(fields: [userID], references: [id])
   userID    String
   todos     Todo[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([userID])
+  @@map("Project")
 }
 
 model AuthThrottle {

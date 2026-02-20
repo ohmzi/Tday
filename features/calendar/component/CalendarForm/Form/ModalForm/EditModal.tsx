@@ -5,7 +5,7 @@ import DateDropdownMenu from "../../FormFields/Dropdowns/DateDropdown/DateDropdo
 import { NonNullableDateRange } from "@/types";
 import { RRule } from "rrule";
 import RepeatDropdownMenu from "../../FormFields/Dropdowns/RepeatDropdown/RepeatDropdownMenu";
-import { AlignLeft, Clock, Flag, Hash, Repeat } from "lucide-react";
+import { AlignLeft, Clock, Flag, Circle, Repeat } from "lucide-react";
 import ConfirmCancelEditDialog from "../../../ConfirmationModals/ConfirmCancelEdit";
 import ConfirmEditAllDialog from "../../../ConfirmationModals/ConfirmEditAll";
 import { useEditCalendarTodo } from "@/features/calendar/query/update-calendar-todo";
@@ -17,7 +17,7 @@ import {
   ModalFooter,
 } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
-import ProjectDropdownMenu from "@/components/todo/component/TodoForm/ProjectDropdownMenu";
+import ListDropdownMenu from "@/components/todo/component/TodoForm/ListDropdownMenu";
 import NLPTitleInput from "@/components/todo/component/TodoForm/NLPTitleInput";
 import deriveRepeatType from "@/lib/deriveRepeatType";
 
@@ -54,7 +54,9 @@ const CalendarForm = ({
   const [rruleOptions, setRruleOptions] = useState(
     todo?.rrule ? RRule.parseString(todo.rrule) : null,
   );
-  const [projectID, setProjectID] = useState<string | null>(todo.projectID);
+  const [listID, setListID] = useState<string | null>(
+    todo.listID ?? null,
+  );
   const derivedRepeatType = deriveRepeatType({ rruleOptions });
 
   const hasUnsavedChanges = useMemo(() => {
@@ -105,7 +107,7 @@ const CalendarForm = ({
           dtstart: dateRange.from,
           due: dateRange.to,
           rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
-          projectID
+          listID,
         }}
         rruleChecksum={rruleChecksum!}
         dateRangeChecksum={dateRangeChecksum}
@@ -134,7 +136,7 @@ const CalendarForm = ({
                     priority,
                     dtstart: dateRange.from,
                     due: dateRange.to,
-                    projectID
+                    listID,
                   });
                 }
               }}
@@ -142,7 +144,7 @@ const CalendarForm = ({
               {/* Title */}
               <div className="flex min-w-0 items-center gap-4">
                 <NLPTitleInput
-                  setProjectID={setProjectID}
+                  setListID={setListID}
                   titleRef={titleRef}
                   title={title}
                   setTitle={setTitle}
@@ -175,15 +177,15 @@ const CalendarForm = ({
                   </div>
                 </div>
 
-                {/* Project */}
+                {/* List */}
                 <div className="flex items-center gap-4">
-                  <Hash className="w-4 h-4 text-muted-foreground mt-1" />
+                  <Circle className="w-4 h-4 text-muted-foreground mt-1" />
                   <div className="flex-1">
-                    <ProjectDropdownMenu
-                      projectID={projectID}
-                      setProjectID={setProjectID}
+                    <ListDropdownMenu
+                      listID={listID}
+                      setListID={setListID}
                       className="bg-popover border text-foreground text-sm flex justify-center items-center gap-2 hover:bg-popover-border rounded-md"
-                      variant={"noHash"}
+                      variant={"compact"}
                     />
                   </div>
                 </div>

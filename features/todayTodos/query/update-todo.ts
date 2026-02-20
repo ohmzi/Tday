@@ -21,7 +21,7 @@ async function patchTodo({ todo }: { todo: TodoItemTypeWithDateChecksum }) {
     dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
-    projectID: todo.projectID,
+    listID: todo.listID ?? null,
   });
   if (!parsedObj.success) {
     console.log(parsedObj.error.errors[0]);
@@ -43,7 +43,7 @@ async function patchTodo({ todo }: { todo: TodoItemTypeWithDateChecksum }) {
       instanceDate: todo.instanceDate,
       dateChanged,
       rruleChanged,
-      projectID: todo.projectID,
+      listID: todo.listID ?? null,
     }),
   });
 }
@@ -79,7 +79,7 @@ export const useEditTodo = () => {
               due: newTodo.due,
               dtstart: newTodo.dtstart,
               rrule: newTodo.rrule,
-              projectID: newTodo.projectID,
+              listID: newTodo.listID ?? null,
               durationMinutes: newTodo.durationMinutes,
             };
           }
@@ -99,7 +99,7 @@ export const useEditTodo = () => {
               due: newTodo.due,
               dtstart: newTodo.dtstart,
               rrule: newTodo.rrule,
-              projectID: newTodo.projectID,
+              listID: newTodo.listID ?? null,
               durationMinutes: newTodo.durationMinutes,
             };
           }

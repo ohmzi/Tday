@@ -44,6 +44,7 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
           dtstart: new Date(todo.dtstart),
           due: new Date(todo.due),
           instanceDate: todoInstanceDate,
+          listID: todo.listID ?? null,
           instances:
             todo.instances?.map((instance) => ({
               ...instance,

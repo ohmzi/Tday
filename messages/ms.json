@@ -261,7 +261,7 @@
       "error": "Julat tarikh tidak sah: Masa tamat mestilah selepas masa mula."
     },
     "priority": "Keutamaan",
-    "project": "Projek",
+    "list": "Projek",
     "overdue": "Tunggakan",
     "normal": "Normal",
     "important": "Penting",

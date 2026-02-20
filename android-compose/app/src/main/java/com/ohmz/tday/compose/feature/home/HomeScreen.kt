@@ -8,9 +8,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +37,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Circle
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.MoreHoriz
@@ -42,15 +45,21 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -86,6 +95,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
@@ -97,9 +107,9 @@ fun HomeScreen(
     onOpenCompleted: () -> Unit,
     onOpenCalendar: () -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenProject: (projectId: String, projectName: String) -> Unit,
-    onCreateTask: (title: String) -> Unit,
-    onCreateProject: (name: String) -> Unit,
+    onOpenList: (listId: String, listName: String) -> Unit,
+    onCreateTask: (title: String, listId: String?) -> Unit,
+    onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val fabInteractionSource = remember { MutableInteractionSource() }
@@ -120,8 +130,12 @@ fun HomeScreen(
     var searchBarBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     var taskTitle by rememberSaveable { mutableStateOf("") }
+    var taskListId by rememberSaveable { mutableStateOf<String?>(null) }
+    var taskListMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
     var listName by rememberSaveable { mutableStateOf("") }
+    var listColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR) }
+    var listIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
     val closeSearch = { searchExpanded = false }
 
@@ -137,7 +151,10 @@ fun HomeScreen(
                     },
                 interactionSource = fabInteractionSource,
                 elevation = fabElevation,
-                onClick = { showCreateTask = true },
+                onClick = {
+                    taskListId = uiState.summary.lists.firstOrNull()?.id
+                    showCreateTask = true
+                },
             )
         },
     ) { padding ->
@@ -226,7 +243,7 @@ fun HomeScreen(
                     }
                 }
 
-                if (uiState.summary.projects.isNotEmpty()) {
+                if (uiState.summary.lists.isNotEmpty()) {
                     item {
                         Text(
                             text = "My Lists",
@@ -235,13 +252,15 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                         )
                     }
-                    items(uiState.summary.projects, key = { it.id }) { project ->
-                        ProjectRow(
-                            name = project.name,
-                            count = project.todoCount,
+                    items(uiState.summary.lists, key = { it.id }) { list ->
+                        ListRow(
+                            name = list.name,
+                            colorKey = list.color,
+                            iconKey = list.iconKey,
+                            count = list.todoCount,
                             onClick = {
                                 closeSearch()
-                                onOpenProject(project.id, project.name)
+                                onOpenList(list.id, list.name)
                             },
                         )
                     }
@@ -263,54 +282,112 @@ fun HomeScreen(
     }
 
     if (showCreateTask) {
+        val selectedTaskListName = uiState.summary.lists
+            .firstOrNull { it.id == taskListId }
+            ?.name
+            .orEmpty()
+        val canCreateTask = taskTitle.isNotBlank() &&
+            (uiState.summary.lists.isEmpty() || !taskListId.isNullOrBlank())
+
         AlertDialog(
-            onDismissRequest = { showCreateTask = false },
+            onDismissRequest = {
+                showCreateTask = false
+                taskListMenuExpanded = false
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (taskTitle.isNotBlank()) {
-                            onCreateTask(taskTitle)
+                        if (canCreateTask) {
+                            onCreateTask(taskTitle, taskListId)
                             taskTitle = ""
                             showCreateTask = false
+                            taskListMenuExpanded = false
                         }
                     },
+                    enabled = canCreateTask,
                 ) { Text("Create") }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateTask = false }) { Text("Cancel") }
+                TextButton(
+                    onClick = {
+                        showCreateTask = false
+                        taskListMenuExpanded = false
+                    },
+                ) { Text("Cancel") }
             },
             title = { Text("New task") },
             text = {
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = taskTitle,
-                    onValueChange = { taskTitle = it },
-                    singleLine = true,
-                    label = { Text("Task title") },
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = taskTitle,
+                        onValueChange = { taskTitle = it },
+                        singleLine = true,
+                        label = { Text("Task title") },
+                    )
+
+                    if (uiState.summary.lists.isNotEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { taskListMenuExpanded = true },
+                                value = selectedTaskListName,
+                                onValueChange = {},
+                                readOnly = true,
+                                singleLine = true,
+                                label = { Text("List") },
+                                placeholder = { Text("Select list") },
+                                trailingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ExpandMore,
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+
+                            DropdownMenu(
+                                expanded = taskListMenuExpanded,
+                                onDismissRequest = { taskListMenuExpanded = false },
+                            ) {
+                                uiState.summary.lists.forEach { list ->
+                                    DropdownMenuItem(
+                                        text = { Text(list.name) },
+                                        onClick = {
+                                            taskListId = list.id
+                                            taskListMenuExpanded = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             },
         )
     }
 
     if (showCreateList) {
-        AlertDialog(
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
             onDismissRequest = { showCreateList = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (listName.isNotBlank()) {
-                            onCreateProject(listName)
-                            listName = ""
-                            showCreateList = false
-                        }
-                    },
-                ) { Text("Create") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCreateList = false }) { Text("Cancel") }
-            },
-            title = { Text("New list") },
-            text = {
+            sheetState = sheetState,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            containerColor = colorScheme.surface,
+            tonalElevation = 8.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(
+                    text = "New list",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                )
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = listName,
@@ -318,8 +395,106 @@ fun HomeScreen(
                     singleLine = true,
                     label = { Text("List name") },
                 )
-            },
-        )
+
+                Text(
+                    text = "Color",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    LIST_COLOR_OPTIONS.forEach { option ->
+                        val selected = listColor == option.key
+                        Box(
+                            modifier = Modifier
+                                .size(if (selected) 34.dp else 30.dp)
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(option.color)
+                                .clickable { listColor = option.key }
+                                .then(
+                                    if (selected) {
+                                        Modifier.padding(2.dp)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Icon",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    LIST_ICON_OPTIONS.forEach { option ->
+                        val selected = listIconKey == option.key
+                        Card(
+                            onClick = { listIconKey = option.key },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (selected) {
+                                    listColorAccent(listColor).copy(alpha = 0.22f)
+                                } else {
+                                    colorScheme.surfaceVariant
+                                },
+                            ),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = option.icon,
+                                    contentDescription = null,
+                                    tint = if (selected) {
+                                        listColorAccent(listColor)
+                                    } else {
+                                        colorScheme.onSurfaceVariant
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = { showCreateList = false }) { Text("Cancel") }
+                    Button(
+                        onClick = {
+                            if (listName.isNotBlank()) {
+                                onCreateList(listName, listColor, listIconKey)
+                                listName = ""
+                                listColor = DEFAULT_LIST_COLOR
+                                listIconKey = DEFAULT_LIST_ICON_KEY
+                                showCreateList = false
+                            }
+                        },
+                        enabled = listName.isNotBlank(),
+                    ) {
+                        Text("Create")
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+            }
+        }
     }
 }
 
@@ -834,8 +1009,10 @@ private fun CategoryCard(
 }
 
 @Composable
-private fun ProjectRow(
+private fun ListRow(
     name: String,
+    colorKey: String?,
+    iconKey: String?,
     count: Int,
     onClick: () -> Unit,
 ) {
@@ -845,15 +1022,15 @@ private fun ProjectRow(
     val isPressed by interactionSource.collectIsPressedAsState()
     val animatedScale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
-        label = "projectRowScale",
+        label = "listRowScale",
     )
     val animatedOffsetY by animateDpAsState(
         targetValue = if (isPressed) 1.dp else 0.dp,
-        label = "projectRowOffsetY",
+        label = "listRowOffsetY",
     )
     val animatedElevation by animateDpAsState(
         targetValue = if (isPressed) 2.dp else 10.dp,
-        label = "projectRowElevation",
+        label = "listRowElevation",
     )
 
     Card(
@@ -884,12 +1061,21 @@ private fun ProjectRow(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val accent = listColorAccent(colorKey)
                 Box(
                     modifier = Modifier
-                        .size(14.dp)
+                        .size(22.dp)
                         .clip(RoundedCornerShape(999.dp))
-                        .background(Color(0xFFE9A03B)),
-                )
+                        .background(accent.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = listIconForKey(iconKey),
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
                 Text(
                     modifier = Modifier.padding(start = 12.dp),
                     text = name,
@@ -910,4 +1096,54 @@ private fun ProjectRow(
 
 private fun performGentleHaptic(view: android.view.View) {
     ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+}
+
+private data class ListColorOption(
+    val key: String,
+    val color: Color,
+)
+
+private data class ListIconOption(
+    val key: String,
+    val icon: ImageVector,
+)
+
+private const val DEFAULT_LIST_COLOR = "BLUE"
+private const val DEFAULT_LIST_ICON_KEY = "inbox"
+
+private val LIST_COLOR_OPTIONS = listOf(
+    ListColorOption("RED", Color(0xFFE65E52)),
+    ListColorOption("ORANGE", Color(0xFFF29F38)),
+    ListColorOption("YELLOW", Color(0xFFF3D04A)),
+    ListColorOption("LIME", Color(0xFF8ACF56)),
+    ListColorOption("BLUE", Color(0xFF5C9FE7)),
+    ListColorOption("PURPLE", Color(0xFF8D6CE2)),
+    ListColorOption("PINK", Color(0xFFDF6DAA)),
+    ListColorOption("TEAL", Color(0xFF4EB5B0)),
+    ListColorOption("CORAL", Color(0xFFE3876D)),
+    ListColorOption("GOLD", Color(0xFFCFAB57)),
+    ListColorOption("DEEP_BLUE", Color(0xFF4B73D6)),
+    ListColorOption("ROSE", Color(0xFFD9799A)),
+    ListColorOption("LIGHT_RED", Color(0xFFE48888)),
+    ListColorOption("BRICK", Color(0xFFB86A5C)),
+    ListColorOption("SLATE", Color(0xFF7B8593)),
+)
+
+private val LIST_ICON_OPTIONS = listOf(
+    ListIconOption("inbox", Icons.Rounded.Inbox),
+    ListIconOption("sun", Icons.Rounded.WbSunny),
+    ListIconOption("calendar", Icons.Rounded.CalendarToday),
+    ListIconOption("schedule", Icons.Rounded.Schedule),
+    ListIconOption("flag", Icons.Rounded.Flag),
+    ListIconOption("check", Icons.Rounded.Check),
+)
+
+private fun listColorAccent(colorKey: String?): Color {
+    return LIST_COLOR_OPTIONS.firstOrNull { it.key == colorKey }?.color
+        ?: Color(0xFFE9A03B)
+}
+
+private fun listIconForKey(iconKey: String?): ImageVector {
+    return LIST_ICON_OPTIONS.firstOrNull { it.key == iconKey }?.icon
+        ?: Icons.Rounded.Inbox
 }

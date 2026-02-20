@@ -120,10 +120,13 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    if (pathName.includes("tag")) {
+    if (
+      pathName.includes("/list/") ||
+      pathName.includes("/list/")
+    ) {
       const path = pathName.split("/");
-      const tagID = path[path.length - 1];
-      setActiveMenu({ name: "Tag", open: true, children: { name: tagID } });
+      const listID = path[path.length - 1];
+      setActiveMenu({ name: "List", open: true, children: { name: listID } });
       return;
     }
 
