@@ -143,30 +143,58 @@ fun HomeScreen(
     var listColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR) }
     var listIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
-    var hasAnimatedListEntrance by rememberSaveable { mutableStateOf(false) }
+    var hasCapturedInitialListSnapshot by rememberSaveable { mutableStateOf(false) }
+    var hasShownListDataOnce by rememberSaveable { mutableStateOf(false) }
+    var lastListSignature by rememberSaveable { mutableStateOf("") }
     var visibleListCount by rememberSaveable { mutableIntStateOf(0) }
     val closeSearch = { searchExpanded = false }
-    val listIds = uiState.summary.lists.map { it.id }
+    val listSignature = uiState.summary.lists.joinToString(separator = "|") { list ->
+        buildString {
+            append(list.id)
+            append(':')
+            append(list.name)
+            append(':')
+            append(list.todoCount)
+            append(':')
+            append(list.color.orEmpty())
+            append(':')
+            append(list.iconKey.orEmpty())
+        }
+    }
 
-    LaunchedEffect(listIds) {
-        if (listIds.isEmpty()) {
-            visibleListCount = 0
-            hasAnimatedListEntrance = false
+    LaunchedEffect(listSignature) {
+        val lists = uiState.summary.lists
+        if (!hasCapturedInitialListSnapshot) {
+            visibleListCount = lists.size
+            hasCapturedInitialListSnapshot = true
+            hasShownListDataOnce = lists.isNotEmpty()
+            lastListSignature = listSignature
             return@LaunchedEffect
         }
 
-        if (hasAnimatedListEntrance) {
-            visibleListCount = listIds.size
+        if (listSignature == lastListSignature) {
+            visibleListCount = lists.size
+            return@LaunchedEffect
+        }
+
+        lastListSignature = listSignature
+        if (lists.isEmpty()) {
+            visibleListCount = 0
+            return@LaunchedEffect
+        }
+
+        if (!hasShownListDataOnce) {
+            visibleListCount = lists.size
+            hasShownListDataOnce = true
             return@LaunchedEffect
         }
 
         visibleListCount = 0
-        delay(90)
-        listIds.forEachIndexed { index, _ ->
+        delay(70)
+        lists.forEachIndexed { index, _ ->
             visibleListCount = index + 1
-            delay(65)
+            delay(55)
         }
-        hasAnimatedListEntrance = true
     }
 
     Scaffold(
