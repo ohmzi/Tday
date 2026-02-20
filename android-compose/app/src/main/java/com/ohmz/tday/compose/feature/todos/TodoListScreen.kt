@@ -27,7 +27,6 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,9 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,7 +55,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -69,14 +68,13 @@ fun TodoListScreen(
     uiState: TodoListUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
-    onAddTask: (title: String) -> Unit,
+    onAddTask: (payload: CreateTaskPayload) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
     onTogglePin: (todo: TodoItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    var showAddDialog by rememberSaveable { mutableStateOf(false) }
-    var newTaskTitle by rememberSaveable { mutableStateOf("") }
+    var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
@@ -120,7 +118,7 @@ fun TodoListScreen(
                     },
                 interactionSource = fabInteractionSource,
                 elevation = fabElevation,
-                onClick = { showAddDialog = true },
+                onClick = { showCreateTaskSheet = true },
             )
         },
     ) { padding ->
@@ -175,36 +173,14 @@ fun TodoListScreen(
         }
     }
 
-    if (showAddDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("Add task") },
-            text = {
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = newTaskTitle,
-                    onValueChange = { newTaskTitle = it },
-                    label = { Text("Task title") },
-                    singleLine = true,
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (newTaskTitle.isNotBlank()) {
-                            onAddTask(newTaskTitle)
-                            newTaskTitle = ""
-                            showAddDialog = false
-                        }
-                    },
-                ) {
-                    Text("Create")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel")
-                }
+    if (showCreateTaskSheet) {
+        CreateTaskBottomSheet(
+            lists = uiState.lists,
+            defaultListId = uiState.listId ?: uiState.lists.firstOrNull()?.id,
+            onDismiss = { showCreateTaskSheet = false },
+            onCreateTask = { payload ->
+                onAddTask(payload)
+                showCreateTaskSheet = false
             },
         )
     }

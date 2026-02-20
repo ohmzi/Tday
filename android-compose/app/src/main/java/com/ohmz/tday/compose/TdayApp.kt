@@ -140,8 +140,8 @@ fun TdayApp() {
                                 onOpenList = { id, name ->
                                     navController.navigate(AppRoute.ListTodos.create(id, name))
                                 },
-                                onCreateTask = { title, listId ->
-                                    homeViewModel.createTask(title, listId)
+                                onCreateTask = { payload ->
+                                    homeViewModel.createTask(payload)
                                 },
                                 onCreateList = { name, color, iconKey ->
                                     homeViewModel.createList(
@@ -163,7 +163,7 @@ fun TdayApp() {
                                 onOpenCalendar = {},
                                 onOpenSettings = {},
                                 onOpenList = { _, _ -> },
-                                onCreateTask = { _, _ -> },
+                                onCreateTask = { _ -> },
                                 onCreateList = { _, _, _ -> },
                             )
                         }

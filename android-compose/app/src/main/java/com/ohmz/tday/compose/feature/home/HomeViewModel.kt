@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -110,10 +111,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun createTask(title: String, listId: String? = null) {
-        if (title.isBlank()) return
+    fun createTask(payload: CreateTaskPayload) {
+        if (payload.title.isBlank()) return
         viewModelScope.launch {
-            runCatching { repository.createTodo(title = title, listId = listId) }
+            runCatching { repository.createTodo(payload) }
                 .onSuccess {
                     runCatching { repository.fetchDashboardSummaryCached() }
                         .onSuccess { summary ->
