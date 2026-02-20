@@ -21,9 +21,9 @@ export async function POST(req: NextRequest) {
     const parsedObj = listCreateSchema.safeParse(body);
     if (!parsedObj.success) throw new BadRequestError();
 
-    const { name, color } = parsedObj.data;
+    const { name, color, iconKey } = parsedObj.data;
     const list = await prisma.list.create({
-      data: { name, color, userID: user.id },
+      data: { name, color, iconKey, userID: user.id },
     });
     if (!list)
       throw new InternalError("note cannot be created at this time");
@@ -70,7 +70,9 @@ export async function GET() {
         id: true,
         name: true,
         createdAt: true,
+        updatedAt: true,
         color: true,
+        iconKey: true,
         _count: { select: { todos: true } },
       },
     });
