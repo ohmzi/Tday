@@ -25,7 +25,7 @@ export default function generateTodosFromRRule(
     try {
       const durationMs = parent.due.getTime() - parent.dtstart.getTime();
 
-      const ruleSet = genRuleSet(
+      const ruleSet = genRule(
         parent.rrule,
         parent.dtstart,
         timeZone,
@@ -40,15 +40,23 @@ export default function generateTodosFromRRule(
         true,
       );
 
-      return occurrences.map((occ) => {
-        return {
-          ...parent,
-          dtstart: occ,
-          durationMinutes: durationMs / 60000,
-          due: addMilliseconds(occ, durationMs),
-          instanceDate: occ,
-        };
-      });
+      return occurrences
+        .map((occ) => {
+          return {
+            ...parent,
+            dtstart: occ,
+            durationMinutes: durationMs / 60000,
+            due: addMilliseconds(occ, durationMs),
+            instanceDate: occ,
+          };
+        })
+        .filter((instance) => {
+          // Keep only occurrences that overlap the requested range.
+          return (
+            instance.due.getTime() > bounds.dateRangeStart.getTime() &&
+            instance.dtstart.getTime() <= bounds.dateRangeEnd.getTime()
+          );
+        });
     } catch (e) {
       console.error(`Error parsing RRULE for Todo ${parent.id}:`, e);
       return [];
@@ -64,7 +72,7 @@ export default function generateTodosFromRRule(
  * @returns RRule object
  */
 
-export function genRuleSet(
+export function genRule(
   rrule: string,
   dtStart: Date,
   timeZone: string,

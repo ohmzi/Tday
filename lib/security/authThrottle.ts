@@ -9,8 +9,8 @@ import {
 } from "@/lib/security/clientSignals";
 import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
 
-export type AuthThrottleAction = "credentials" | "register" | "csrf";
-export type AuthThrottleReasonCode =
+type AuthThrottleAction = "credentials" | "register" | "csrf";
+type AuthThrottleReasonCode =
   | "auth_limit_ip"
   | "auth_limit_email"
   | "auth_lockout";
