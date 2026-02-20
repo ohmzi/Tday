@@ -9,10 +9,13 @@ export const useCompleteCalendarTodoInstance = () => {
   const { mutate, isPending } = useMutation({
     mutationFn: async ({ todoItem }: { todoItem: TodoItemType }) => {
       const todoId = todoItem.id.split(":")[0];
-      const url = `/api/todo/instance/${todoId}/complete`;
       await api.PATCH({
-        url,
-        body: JSON.stringify({ ...todoItem, id: todoId }),
+        url: "/api/todo/complete",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: todoId,
+          instanceDate: todoItem.instanceDate?.getTime() ?? null,
+        }),
       });
     },
 

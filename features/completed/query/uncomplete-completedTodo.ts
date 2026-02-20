@@ -7,25 +7,14 @@ export const useUnCompleteTodo = () => {
   const queryClient = useQueryClient();
   const { mutate: mutateUnComplete, isPending } = useMutation({
     mutationFn: async (todoItem: CompletedTodoItemType) => {
-      if (todoItem.rrule) {
-        await api.PATCH({
-          url: `/api/todo/instance/${todoItem.originalTodoID}/uncomplete`,
-          body: JSON.stringify({
-            ...todoItem,
-            id: todoItem.originalTodoID,
-            completed: false,
-          }),
-        });
-      } else {
-        await api.PATCH({
-          url: `/api/todo/${todoItem.originalTodoID}/uncomplete`,
-          body: JSON.stringify({
-            ...todoItem,
-            id: todoItem.originalTodoID,
-            completed: false,
-          }),
-        });
-      }
+      await api.PATCH({
+        url: "/api/todo/uncomplete",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: todoItem.originalTodoID,
+          instanceDate: todoItem.rrule ? todoItem.instanceDate?.getTime() : null,
+        }),
+      });
     },
     onMutate: async (todoItem: CompletedTodoItemType) => {
       await queryClient.cancelQueries({ queryKey: ["completedTodo"] });
