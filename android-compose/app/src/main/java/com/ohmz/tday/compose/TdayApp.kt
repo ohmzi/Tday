@@ -12,6 +12,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
@@ -20,6 +22,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.ohmz.tday.compose.core.model.DashboardSummary
+import com.ohmz.tday.compose.core.model.ProjectSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.feature.app.AppViewModel
@@ -29,10 +33,11 @@ import com.ohmz.tday.compose.feature.calendar.CalendarScreen
 import com.ohmz.tday.compose.feature.completed.CompletedScreen
 import com.ohmz.tday.compose.feature.completed.CompletedViewModel
 import com.ohmz.tday.compose.feature.home.HomeScreen
+import com.ohmz.tday.compose.feature.home.HomeUiState
 import com.ohmz.tday.compose.feature.home.HomeViewModel
 import com.ohmz.tday.compose.feature.notes.NotesScreen
 import com.ohmz.tday.compose.feature.notes.NotesViewModel
-import com.ohmz.tday.compose.feature.server.ServerSetupScreen
+import com.ohmz.tday.compose.feature.onboarding.OnboardingWizardOverlay
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
@@ -49,20 +54,9 @@ fun TdayApp() {
     LaunchedEffect(
         appUiState.loading,
         appUiState.authenticated,
-        appUiState.requiresServerSetup,
         currentRoute,
     ) {
         if (appUiState.loading) return@LaunchedEffect
-
-        if (appUiState.requiresServerSetup) {
-            if (currentRoute != AppRoute.ServerSetup.route) {
-                navController.navigate(AppRoute.ServerSetup.route) {
-                    popUpTo(AppRoute.Splash.route) { inclusive = true }
-                    launchSingleTop = true
-                }
-            }
-            return@LaunchedEffect
-        }
 
         if (appUiState.authenticated) {
             val unauthenticatedRoutes = setOf(
@@ -85,9 +79,9 @@ fun TdayApp() {
             return@LaunchedEffect
         }
 
-        val onboardingRoutes = setOf(AppRoute.ServerSetup.route, AppRoute.Register.route)
+        val onboardingRoutes = setOf(AppRoute.Home.route, AppRoute.Register.route)
         if (currentRoute !in onboardingRoutes) {
-            navController.navigate(AppRoute.ServerSetup.route) {
+            navController.navigate(AppRoute.Home.route) {
                 when (currentRoute) {
                     AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
                     AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
@@ -109,31 +103,11 @@ fun TdayApp() {
             }
 
             composable(AppRoute.ServerSetup.route) {
-                val authViewModel: AuthViewModel = hiltViewModel()
-                val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-                ServerSetupScreen(
-                    initialServerUrl = appUiState.serverUrl,
-                    serverErrorMessage = appUiState.error,
-                    authUiState = authUiState,
-                    onConnectServer = { rawUrl, onResult ->
-                        appViewModel.saveServerUrl(
-                            rawUrl = rawUrl,
-                            onSuccess = { onResult(Result.success(Unit)) },
-                            onFailure = { message ->
-                                onResult(Result.failure(IllegalStateException(message)))
-                            },
-                        )
-                    },
-                    onLogin = { email, password ->
-                        authViewModel.login(email, password) {
-                            appViewModel.refreshSession()
-                        }
-                    },
-                    onNavigateRegister = {
-                        authViewModel.clearStatus()
-                        navController.navigate(AppRoute.Register.route)
-                    },
-                )
+                SplashScreen()
+            }
+
+            composable(AppRoute.Login.route) {
+                SplashScreen()
             }
 
             composable(AppRoute.Register.route) {
@@ -155,24 +129,86 @@ fun TdayApp() {
             }
 
             composable(AppRoute.Home.route) {
-                val homeViewModel: HomeViewModel = hiltViewModel()
-                val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
-                HomeScreen(
-                    uiState = homeUiState,
-                    onRefresh = homeViewModel::refresh,
-                    onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
-                    onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
-                    onOpenAll = { navController.navigate(AppRoute.AllTodos.route) },
-                    onOpenFlagged = { navController.navigate(AppRoute.FlaggedTodos.route) },
-                    onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
-                    onOpenNotes = { navController.navigate(AppRoute.Notes.route) },
-                    onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
-                    onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
-                    onOpenProject = { id, name ->
-                        navController.navigate(AppRoute.ProjectTodos.create(id, name))
-                    },
-                    onCreateProject = homeViewModel::createList,
-                )
+                val authViewModel: AuthViewModel = hiltViewModel()
+                val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+                val showOnboardingWizard = !appUiState.authenticated
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (showOnboardingWizard) {
+                                    Modifier.blur(14.dp)
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    ) {
+                        if (appUiState.authenticated) {
+                            val homeViewModel: HomeViewModel = hiltViewModel()
+                            val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                            HomeScreen(
+                                uiState = homeUiState,
+                                onRefresh = homeViewModel::refresh,
+                                onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
+                                onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
+                                onOpenAll = { navController.navigate(AppRoute.AllTodos.route) },
+                                onOpenFlagged = { navController.navigate(AppRoute.FlaggedTodos.route) },
+                                onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
+                                onOpenNotes = { navController.navigate(AppRoute.Notes.route) },
+                                onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
+                                onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
+                                onOpenProject = { id, name ->
+                                    navController.navigate(AppRoute.ProjectTodos.create(id, name))
+                                },
+                                onCreateProject = homeViewModel::createList,
+                            )
+                        } else {
+                            HomeScreen(
+                                uiState = UnauthenticatedHomeUiState,
+                                onRefresh = {},
+                                onOpenToday = {},
+                                onOpenScheduled = {},
+                                onOpenAll = {},
+                                onOpenFlagged = {},
+                                onOpenCompleted = {},
+                                onOpenNotes = {},
+                                onOpenCalendar = {},
+                                onOpenSettings = {},
+                                onOpenProject = { _, _ -> },
+                                onCreateProject = {},
+                            )
+                        }
+                    }
+
+                    if (showOnboardingWizard) {
+                        OnboardingWizardOverlay(
+                            initialServerUrl = appUiState.serverUrl,
+                            serverErrorMessage = appUiState.error,
+                            authUiState = authUiState,
+                            onConnectServer = { rawUrl, onResult ->
+                                appViewModel.saveServerUrl(
+                                    rawUrl = rawUrl,
+                                    onSuccess = { onResult(Result.success(Unit)) },
+                                    onFailure = { message ->
+                                        onResult(Result.failure(IllegalStateException(message)))
+                                    },
+                                )
+                            },
+                            onLogin = { email, password ->
+                                authViewModel.login(email, password) {
+                                    appViewModel.refreshSession()
+                                }
+                            },
+                            onCreateAccount = {
+                                authViewModel.clearStatus()
+                                navController.navigate(AppRoute.Register.route)
+                            },
+                            onClearAuthStatus = authViewModel::clearStatus,
+                        )
+                    }
+                }
             }
 
             composable(AppRoute.TodayTodos.route) {
@@ -310,3 +346,23 @@ private fun SplashScreen() {
         }
     }
 }
+
+private val UnauthenticatedHomeUiState = HomeUiState(
+    isLoading = false,
+    summary = DashboardSummary(
+        todayCount = 0,
+        scheduledCount = 0,
+        allCount = 0,
+        flaggedCount = 0,
+        completedCount = 0,
+        projects = listOf(
+            ProjectSummary(
+                id = "locked",
+                name = "Sign in to load your lists",
+                color = null,
+                todoCount = 0,
+            ),
+        ),
+    ),
+    errorMessage = null,
+)
