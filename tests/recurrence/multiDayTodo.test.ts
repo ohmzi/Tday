@@ -98,7 +98,7 @@ test("2-day todo is not returned after its due", () => {
   const { todo } = new TodoBuilder()
     .withdtstart(new Date("2025-12-31T16:00:00Z")) // Jan-1 in China
     .withRRule("FREQ=WEEKLY")
-    .withdue(new Date("2026-01-02T15:59:99Z")); //Jan-2 in China
+    .withdue(new Date("2026-01-02T15:59:59Z")); //Jan-2 in China
   const bounds = getTodayBoundaries(todo.timeZone);
   const occurences = generateTodosFromRRule([todo], todo.timeZone, bounds);
   //expecting the previous todo to appear today too
