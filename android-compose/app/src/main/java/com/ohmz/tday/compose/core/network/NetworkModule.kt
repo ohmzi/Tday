@@ -59,8 +59,9 @@ object NetworkModule {
             .followSslRedirects(false)
             .addInterceptor { chain ->
                 val request = chain.request()
+                val bypassRewrite = request.header("X-Tday-No-Rewrite") == "1"
                 val baseUrl = secureConfigStore.getServerUrl()?.toHttpUrlOrNull()
-                val rewrittenUrl = if (baseUrl != null) {
+                val rewrittenUrl = if (!bypassRewrite && baseUrl != null) {
                     request.url.newBuilder()
                         .scheme(baseUrl.scheme)
                         .host(baseUrl.host)
@@ -72,8 +73,12 @@ object NetworkModule {
 
                 val updated = request.newBuilder()
                     .url(rewrittenUrl)
+                    .removeHeader("X-Tday-No-Rewrite")
                     .header("Accept", "application/json")
                     .header("X-User-Timezone", TimeZone.getDefault().id)
+                    .header("X-Tday-Client", "android-compose")
+                    .header("X-Tday-App-Version", BuildConfig.VERSION_NAME)
+                    .header("X-Tday-Device-Id", secureConfigStore.getOrCreateDeviceId())
                     .build()
                 chain.proceed(updated)
             }
