@@ -15,13 +15,7 @@ type Props = {
 export const metadata: Metadata = {
   title: "Tday",
   description: "Organize your tasks, schedule your day, and plan projects with Tday, a secure and easy-to-use task planner.",
-  manifest: "/manifest.json",
   themeColor: "#E77D4E",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Tday",
-  },
 };
 
 const inter = Inter({
