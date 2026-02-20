@@ -1,0 +1,182 @@
+package com.ohmz.tday.compose.core.model
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class MessageResponse(
+    val message: String? = null,
+)
+
+@Serializable
+data class CsrfResponse(
+    val csrfToken: String,
+)
+
+@Serializable
+data class AuthSession(
+    val user: SessionUser? = null,
+    val expires: String? = null,
+)
+
+@Serializable
+data class SessionUser(
+    val id: String? = null,
+    val name: String? = null,
+    val email: String? = null,
+    val image: String? = null,
+    val timeZone: String? = null,
+    val role: String? = null,
+    val approvalStatus: String? = null,
+)
+
+@Serializable
+data class RegisterRequest(
+    val fname: String,
+    val lname: String? = null,
+    val email: String,
+    val password: String,
+)
+
+@Serializable
+data class RegisterResponse(
+    val message: String? = null,
+    val requiresApproval: Boolean = false,
+    val isBootstrapAdmin: Boolean = false,
+)
+
+@Serializable
+data class TodosResponse(
+    val todos: List<TodoDto> = emptyList(),
+)
+
+@Serializable
+data class CreateTodoRequest(
+    val title: String,
+    val description: String? = null,
+    val priority: String = "Low",
+    val dtstart: String,
+    val due: String,
+    val rrule: String? = null,
+    val projectID: String? = null,
+)
+
+@Serializable
+data class TodoDto(
+    val id: String,
+    val title: String = "",
+    val description: String? = null,
+    val pinned: Boolean = false,
+    val priority: String = "Low",
+    val dtstart: String,
+    val due: String,
+    val rrule: String? = null,
+    val instanceDate: String? = null,
+    val completed: Boolean = false,
+    val projectID: String? = null,
+)
+
+@Serializable
+data class CreateTodoResponse(
+    val message: String? = null,
+    val todo: TodoDto? = null,
+)
+
+@Serializable
+data class TodoInstanceRequest(
+    val instanceDate: String? = null,
+)
+
+@Serializable
+data class ReorderItemRequest(
+    val id: String,
+    val order: Int,
+)
+
+@Serializable
+data class ProjectsResponse(
+    val projects: List<ProjectDto> = emptyList(),
+)
+
+@Serializable
+data class ProjectDto(
+    val id: String,
+    val name: String,
+    val color: String? = null,
+    val todoCount: Int = 0,
+)
+
+@Serializable
+data class NotesResponse(
+    val notes: List<NoteDto> = emptyList(),
+)
+
+@Serializable
+data class NoteDto(
+    val id: String,
+    val name: String,
+    val content: String? = null,
+    val createdAt: String? = null,
+)
+
+@Serializable
+data class CreateNoteRequest(
+    val name: String,
+    val content: String? = null,
+)
+
+@Serializable
+data class CompletedTodosResponse(
+    val completedTodos: List<CompletedTodoDto> = emptyList(),
+)
+
+@Serializable
+data class CompletedTodoDto(
+    val id: String,
+    val originalTodoID: String? = null,
+    val title: String,
+    val description: String? = null,
+    val priority: String = "Low",
+    val dtstart: String,
+    val due: String,
+    val rrule: String? = null,
+    val instanceDate: String? = null,
+    val projectName: String? = null,
+    val projectColor: String? = null,
+)
+
+@Serializable
+data class PreferencesResponse(
+    val userPreferences: PreferencesDto? = null,
+)
+
+@Serializable
+data class PreferencesDto(
+    val sortBy: String? = null,
+    val groupBy: String? = null,
+    val direction: String? = null,
+)
+
+@Serializable
+data class UserResponse(
+    val message: String? = null,
+    val queriedUser: QueriedUser? = null,
+)
+
+@Serializable
+data class QueriedUser(
+    val maxStorage: String? = null,
+    val usedStoraged: String? = null,
+    val enableEncryption: Boolean = true,
+    val protectedSymmetricKey: String? = null,
+)
+
+@Serializable
+data class UpdateProfileRequest(
+    val name: String,
+)
+
+@Serializable
+data class ChangePasswordRequest(
+    val currentPassword: String,
+    val newPassword: String,
+)
