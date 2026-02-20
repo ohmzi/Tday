@@ -405,6 +405,7 @@ private fun CategoryGrid(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFF6EA8E1),
                 icon = Icons.Rounded.WbSunny,
+                backgroundWatermark = Icons.Rounded.WbSunny,
                 title = "Today",
                 count = todayCount,
                 onClick = onOpenToday,
@@ -413,6 +414,7 @@ private fun CategoryGrid(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFD48A8C),
                 icon = Icons.Rounded.Schedule,
+                backgroundWatermark = Icons.Rounded.Schedule,
                 title = "Scheduled",
                 count = scheduledCount,
                 onClick = onOpenScheduled,
@@ -423,6 +425,7 @@ private fun CategoryGrid(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFF4E4E50),
                 icon = Icons.Rounded.Inbox,
+                backgroundWatermark = Icons.Rounded.Inbox,
                 title = "All",
                 count = allCount,
                 onClick = onOpenAll,
@@ -431,6 +434,7 @@ private fun CategoryGrid(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFDDB37D),
                 icon = Icons.Rounded.Flag,
+                backgroundWatermark = Icons.Rounded.Flag,
                 title = "Flagged",
                 count = flaggedCount,
                 onClick = onOpenFlagged,
@@ -440,6 +444,7 @@ private fun CategoryGrid(
             modifier = Modifier.fillMaxWidth(),
             color = Color(0xFFA8B0B7),
             icon = Icons.Rounded.Check,
+            backgroundWatermark = Icons.Rounded.Check,
             title = "Completed",
             count = completedCount,
             onClick = onOpenCompleted,
@@ -610,11 +615,11 @@ private fun CategoryCard(
                 Icon(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .offset(x = 14.dp, y = 6.dp)
-                        .size(92.dp),
+                        .offset(x = 24.dp, y = 14.dp)
+                        .size(132.dp),
                     imageVector = backgroundWatermark,
                     contentDescription = null,
-                    tint = lerp(color, Color.White, 0.22f).copy(alpha = 0.35f),
+                    tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
                 )
             }
 
