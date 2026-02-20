@@ -91,6 +91,8 @@ private enum class RepeatPreset(
     YEARLY("Yearly", "RRULE:FREQ=YEARLY;INTERVAL=1"),
 }
 
+private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateTaskBottomSheet(
@@ -118,7 +120,7 @@ fun CreateTaskBottomSheet(
     }
     val nowEpochMs = remember { System.currentTimeMillis() }
     val resolvedStartEpochMs = initialStartEpochMs ?: nowEpochMs
-    val resolvedDueEpochMs = initialDueEpochMs ?: (resolvedStartEpochMs + 3L * 60L * 60L * 1000L)
+    val resolvedDueEpochMs = initialDueEpochMs ?: (resolvedStartEpochMs + DEFAULT_TASK_DURATION_MS)
     var startEpochMs by rememberSaveable(initialStartEpochMs, initialDueEpochMs) {
         mutableStateOf(resolvedStartEpochMs)
     }
@@ -127,7 +129,7 @@ fun CreateTaskBottomSheet(
             if (resolvedDueEpochMs > resolvedStartEpochMs) {
                 resolvedDueEpochMs
             } else {
-                resolvedStartEpochMs + 3L * 60L * 60L * 1000L
+                resolvedStartEpochMs + DEFAULT_TASK_DURATION_MS
             },
         )
     }
@@ -146,7 +148,7 @@ fun CreateTaskBottomSheet(
         val due = if (dueEpochMs > startEpochMs) {
             Instant.ofEpochMilli(dueEpochMs)
         } else {
-            start.plusSeconds(3L * 60L * 60L)
+            start.plusSeconds(DEFAULT_TASK_DURATION_MS / 1000L)
         }
 
         onCreateTask(
@@ -222,9 +224,7 @@ fun CreateTaskBottomSheet(
                                 onClick = {
                                     showDateTimePicker(context, startEpochMs) { picked ->
                                         startEpochMs = picked
-                                        if (dueEpochMs <= picked) {
-                                            dueEpochMs = picked + 3L * 60L * 60L * 1000L
-                                        }
+                                        dueEpochMs = picked + DEFAULT_TASK_DURATION_MS
                                     }
                                 },
                             )
@@ -235,11 +235,8 @@ fun CreateTaskBottomSheet(
                                 value = dateFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
                                 onClick = {
                                     showDateTimePicker(context, dueEpochMs) { picked ->
-                                        dueEpochMs = if (picked > startEpochMs) {
-                                            picked
-                                        } else {
-                                            startEpochMs + 3L * 60L * 60L * 1000L
-                                        }
+                                        dueEpochMs = picked
+                                        startEpochMs = picked - DEFAULT_TASK_DURATION_MS
                                     }
                                 },
                             )
@@ -299,9 +296,7 @@ fun CreateTaskBottomSheet(
                                 onClick = {
                                     showDateTimePicker(context, startEpochMs) { picked ->
                                         startEpochMs = picked
-                                        if (dueEpochMs <= picked) {
-                                            dueEpochMs = picked + 3L * 60L * 60L * 1000L
-                                        }
+                                        dueEpochMs = picked + DEFAULT_TASK_DURATION_MS
                                     }
                                 },
                             )
@@ -312,11 +307,8 @@ fun CreateTaskBottomSheet(
                                 value = dateFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
                                 onClick = {
                                     showDateTimePicker(context, dueEpochMs) { picked ->
-                                        dueEpochMs = if (picked > startEpochMs) {
-                                            picked
-                                        } else {
-                                            startEpochMs + 3L * 60L * 60L * 1000L
-                                        }
+                                        dueEpochMs = picked
+                                        startEpochMs = picked - DEFAULT_TASK_DURATION_MS
                                     }
                                 },
                             )
