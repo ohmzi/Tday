@@ -1,7 +1,11 @@
 package com.ohmz.tday.compose.feature.todos
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,7 +31,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,13 +43,22 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.view.HapticFeedbackConstantsCompat
+import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.TodoItem
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -64,6 +77,20 @@ fun TodoListScreen(
     val colorScheme = MaterialTheme.colorScheme
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var newTaskTitle by rememberSaveable { mutableStateOf("") }
+    val fabInteractionSource = remember { MutableInteractionSource() }
+    val fabPressed by fabInteractionSource.collectIsPressedAsState()
+    val fabScale by animateFloatAsState(
+        targetValue = if (fabPressed) 0.93f else 1f,
+        label = "todoFabScale",
+    )
+    val fabElevation by animateDpAsState(
+        targetValue = if (fabPressed) 4.dp else 14.dp,
+        label = "todoFabElevation",
+    )
+    val fabOffsetY by animateDpAsState(
+        targetValue = if (fabPressed) 2.dp else 0.dp,
+        label = "todoFabOffsetY",
+    )
 
     Scaffold(
         containerColor = colorScheme.background,
@@ -84,13 +111,17 @@ fun TodoListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            CreateTaskButton(
+                modifier = Modifier
+                    .offset(y = fabOffsetY)
+                    .graphicsLayer {
+                        scaleX = fabScale
+                        scaleY = fabScale
+                    },
+                interactionSource = fabInteractionSource,
+                elevation = fabElevation,
                 onClick = { showAddDialog = true },
-                containerColor = colorScheme.primary,
-                contentColor = colorScheme.onPrimary,
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add")
-            }
+            )
         },
     ) { padding ->
         PullToRefreshBox(
@@ -185,6 +216,69 @@ fun TodoListScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun CreateTaskButton(
+    modifier: Modifier,
+    interactionSource: MutableInteractionSource,
+    elevation: Dp,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val colorScheme = MaterialTheme.colorScheme
+
+    Card(
+        modifier = modifier,
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.primary),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = elevation,
+            pressedElevation = elevation,
+        ),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(62.dp)
+                .drawWithCache {
+                    val pearlWash = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.18f),
+                            Color(0xFFE7F3FF).copy(alpha = 0.12f),
+                            Color.Transparent,
+                        ),
+                        start = Offset(size.width * 0.08f, size.height * 0.05f),
+                        end = Offset(size.width * 0.9f, size.height * 0.88f),
+                    )
+                    val depthShade = Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.12f),
+                        ),
+                        start = Offset(size.width * 0.4f, size.height * 0.3f),
+                        end = Offset(size.width, size.height),
+                    )
+                    onDrawWithContent {
+                        drawRect(pearlWash)
+                        drawRect(depthShade)
+                        drawContent()
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = "Create task",
+                tint = Color.White,
+                modifier = Modifier.size(30.dp),
+            )
+        }
     }
 }
 
