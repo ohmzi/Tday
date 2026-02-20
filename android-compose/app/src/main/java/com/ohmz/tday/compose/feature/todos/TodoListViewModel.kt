@@ -82,7 +82,10 @@ class TodoListViewModel @Inject constructor(
             runCatching {
                 if (forceSync) {
                     // Pull-to-refresh should fetch latest server state first.
-                    repository.syncCachedData(force = true).onFailure { /* fall back to local cache */ }
+                    repository.syncCachedData(
+                        force = true,
+                        replayPendingMutations = false,
+                    ).onFailure { /* fall back to local cache */ }
                 }
                 val todos = repository.fetchTodos(mode = mode, listId = listId)
                 val lists = repository.fetchLists()
