@@ -91,7 +91,8 @@ class TdayRepository @Inject constructor(
 
         val callback = runCatching {
             api.signInWithCredentials(
-                payload = mapOf(
+                payload =
+                    mapOf(
                     "csrfToken" to csrf,
                     "email" to email,
                     "password" to password,
