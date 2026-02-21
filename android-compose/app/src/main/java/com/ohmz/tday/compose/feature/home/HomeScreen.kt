@@ -47,17 +47,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,6 +62,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -596,17 +591,24 @@ private fun CreateListBottomSheet(
                     ) {
                         LIST_COLOR_OPTIONS.forEach { option ->
                             val selected = listColor == option.key
+                            val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
-                                    .clip(RoundedCornerShape(999.dp))
+                                    .clip(CircleShape)
                                     .background(option.color)
                                     .border(
                                         width = if (selected) 3.dp else 0.dp,
                                         color = if (selected) colorScheme.onBackground.copy(alpha = 0.32f) else Color.Transparent,
-                                        shape = RoundedCornerShape(999.dp),
+                                        shape = CircleShape,
                                     )
-                                    .clickable { onListColorChange(option.key) },
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = ripple(
+                                            bounded = true,
+                                            radius = 21.dp,
+                                        ),
+                                    ) { onListColorChange(option.key) },
                             )
                         }
                     }
@@ -623,10 +625,11 @@ private fun CreateListBottomSheet(
                     ) {
                         LIST_ICON_OPTIONS.forEach { option ->
                             val selected = listIconKey == option.key
+                            val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
-                                    .clip(RoundedCornerShape(999.dp))
+                                    .clip(CircleShape)
                                     .background(
                                         if (selected) {
                                             selectedAccent.copy(alpha = 0.2f)
@@ -637,9 +640,15 @@ private fun CreateListBottomSheet(
                                     .border(
                                         width = if (selected) 2.dp else 0.dp,
                                         color = if (selected) selectedAccent.copy(alpha = 0.55f) else Color.Transparent,
-                                        shape = RoundedCornerShape(999.dp),
+                                        shape = CircleShape,
                                     )
-                                    .clickable { onListIconChange(option.key) },
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = ripple(
+                                            bounded = true,
+                                            radius = 23.dp,
+                                        ),
+                                    ) { onListIconChange(option.key) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -1495,6 +1504,68 @@ private val LIST_ICON_OPTIONS = listOf(
     ListIconOption("schedule", Icons.Rounded.Schedule),
     ListIconOption("flag", Icons.Rounded.Flag),
     ListIconOption("check", Icons.Rounded.Check),
+    ListIconOption("smile", Icons.Rounded.Mood),
+    ListIconOption("list", Icons.AutoMirrored.Rounded.List),
+    ListIconOption("bookmark", Icons.Rounded.Bookmark),
+    ListIconOption("key", Icons.Rounded.Key),
+    ListIconOption("gift", Icons.Rounded.CardGiftcard),
+    ListIconOption("cake", Icons.Rounded.Cake),
+    ListIconOption("school", Icons.Rounded.School),
+    ListIconOption("bag", Icons.Rounded.Backpack),
+    ListIconOption("edit", Icons.Rounded.Edit),
+    ListIconOption("document", Icons.Rounded.Description),
+    ListIconOption("book", Icons.AutoMirrored.Rounded.MenuBook),
+    ListIconOption("work", Icons.Rounded.Work),
+    ListIconOption("wallet", Icons.Rounded.AccountBalanceWallet),
+    ListIconOption("money", Icons.Rounded.Payments),
+    ListIconOption("fitness", Icons.Rounded.FitnessCenter),
+    ListIconOption("run", Icons.AutoMirrored.Rounded.DirectionsRun),
+    ListIconOption("food", Icons.Rounded.Restaurant),
+    ListIconOption("drink", Icons.Rounded.LocalBar),
+    ListIconOption("health", Icons.Rounded.Medication),
+    ListIconOption("monitor", Icons.Rounded.DesktopWindows),
+    ListIconOption("music", Icons.Rounded.MusicNote),
+    ListIconOption("computer", Icons.Rounded.Computer),
+    ListIconOption("game", Icons.Rounded.SportsEsports),
+    ListIconOption("headphones", Icons.Rounded.Headphones),
+    ListIconOption("eco", Icons.Rounded.Eco),
+    ListIconOption("pets", Icons.Rounded.Pets),
+    ListIconOption("child", Icons.Rounded.ChildCare),
+    ListIconOption("family", Icons.Rounded.FamilyRestroom),
+    ListIconOption("basket", Icons.Rounded.ShoppingBasket),
+    ListIconOption("cart", Icons.Rounded.ShoppingCart),
+    ListIconOption("mall", Icons.Rounded.LocalMall),
+    ListIconOption("inventory", Icons.Rounded.Inventory),
+    ListIconOption("soccer", Icons.Rounded.SportsSoccer),
+    ListIconOption("baseball", Icons.Rounded.SportsBaseball),
+    ListIconOption("basketball", Icons.Rounded.SportsBasketball),
+    ListIconOption("football", Icons.Rounded.SportsFootball),
+    ListIconOption("tennis", Icons.Rounded.SportsTennis),
+    ListIconOption("train", Icons.Rounded.Train),
+    ListIconOption("flight", Icons.Rounded.Flight),
+    ListIconOption("boat", Icons.Rounded.DirectionsBoat),
+    ListIconOption("car", Icons.Rounded.DirectionsCar),
+    ListIconOption("umbrella", Icons.Rounded.BeachAccess),
+    ListIconOption("drop", Icons.Rounded.WaterDrop),
+    ListIconOption("snow", Icons.Rounded.AcUnit),
+    ListIconOption("fire", Icons.Rounded.Whatshot),
+    ListIconOption("tools", Icons.Rounded.Build),
+    ListIconOption("scissors", Icons.Rounded.ContentCut),
+    ListIconOption("architecture", Icons.Rounded.Architecture),
+    ListIconOption("code", Icons.Rounded.Code),
+    ListIconOption("idea", Icons.Rounded.Lightbulb),
+    ListIconOption("chat", Icons.Rounded.ChatBubbleOutline),
+    ListIconOption("alert", Icons.Rounded.PriorityHigh),
+    ListIconOption("star", Icons.Rounded.Star),
+    ListIconOption("heart", Icons.Rounded.Favorite),
+    ListIconOption("circle", Icons.Rounded.Circle),
+    ListIconOption("square", Icons.Rounded.Square),
+    ListIconOption("triangle", Icons.Rounded.ChangeHistory),
+    ListIconOption("home", Icons.Rounded.Home),
+    ListIconOption("city", Icons.Rounded.LocationCity),
+    ListIconOption("bank", Icons.Rounded.AccountBalance),
+    ListIconOption("camera", Icons.Rounded.CameraAlt),
+    ListIconOption("palette", Icons.Rounded.Palette),
 )
 
 private fun listColorAccent(colorKey: String?): Color {
