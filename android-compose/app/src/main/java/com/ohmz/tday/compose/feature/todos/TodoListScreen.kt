@@ -37,18 +37,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +52,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -69,6 +62,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -788,11 +782,19 @@ private fun ListSettingsBottomSheet(
                         LIST_SETTINGS_COLOR_KEYS.forEach { colorKey ->
                             val selected = listColor == colorKey
                             val swatchColor = listAccentColor(colorKey)
+                            val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
+                                    .clip(CircleShape)
                                     .background(swatchColor, CircleShape)
-                                    .clickable { onListColorChange(colorKey) }
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = ripple(
+                                            bounded = true,
+                                            radius = 21.dp,
+                                        ),
+                                    ) { onListColorChange(colorKey) }
                                     .then(
                                         if (selected) {
                                             Modifier.border(
@@ -831,9 +833,11 @@ private fun ListSettingsBottomSheet(
                     ) {
                         LIST_SETTINGS_ICON_OPTIONS.forEach { option ->
                             val selected = listIconKey == option.key
+                            val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
+                                    .clip(CircleShape)
                                     .background(
                                         color = if (selected) {
                                             selectedAccent.copy(alpha = 0.2f)
@@ -842,7 +846,13 @@ private fun ListSettingsBottomSheet(
                                         },
                                         shape = CircleShape,
                                     )
-                                    .clickable { onListIconChange(option.key) }
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = ripple(
+                                            bounded = true,
+                                            radius = 23.dp,
+                                        ),
+                                    ) { onListIconChange(option.key) }
                                     .then(
                                         if (selected) {
                                             Modifier.border(
@@ -1505,4 +1515,66 @@ private val LIST_SETTINGS_ICON_OPTIONS = listOf(
     ListSettingsIconOption("schedule", Icons.Rounded.Schedule),
     ListSettingsIconOption("flag", Icons.Rounded.Flag),
     ListSettingsIconOption("check", Icons.Rounded.Check),
+    ListSettingsIconOption("smile", Icons.Rounded.Mood),
+    ListSettingsIconOption("list", Icons.AutoMirrored.Rounded.List),
+    ListSettingsIconOption("bookmark", Icons.Rounded.Bookmark),
+    ListSettingsIconOption("key", Icons.Rounded.Key),
+    ListSettingsIconOption("gift", Icons.Rounded.CardGiftcard),
+    ListSettingsIconOption("cake", Icons.Rounded.Cake),
+    ListSettingsIconOption("school", Icons.Rounded.School),
+    ListSettingsIconOption("bag", Icons.Rounded.Backpack),
+    ListSettingsIconOption("edit", Icons.Rounded.Edit),
+    ListSettingsIconOption("document", Icons.Rounded.Description),
+    ListSettingsIconOption("book", Icons.AutoMirrored.Rounded.MenuBook),
+    ListSettingsIconOption("work", Icons.Rounded.Work),
+    ListSettingsIconOption("wallet", Icons.Rounded.AccountBalanceWallet),
+    ListSettingsIconOption("money", Icons.Rounded.Payments),
+    ListSettingsIconOption("fitness", Icons.Rounded.FitnessCenter),
+    ListSettingsIconOption("run", Icons.AutoMirrored.Rounded.DirectionsRun),
+    ListSettingsIconOption("food", Icons.Rounded.Restaurant),
+    ListSettingsIconOption("drink", Icons.Rounded.LocalBar),
+    ListSettingsIconOption("health", Icons.Rounded.Medication),
+    ListSettingsIconOption("monitor", Icons.Rounded.DesktopWindows),
+    ListSettingsIconOption("music", Icons.Rounded.MusicNote),
+    ListSettingsIconOption("computer", Icons.Rounded.Computer),
+    ListSettingsIconOption("game", Icons.Rounded.SportsEsports),
+    ListSettingsIconOption("headphones", Icons.Rounded.Headphones),
+    ListSettingsIconOption("eco", Icons.Rounded.Eco),
+    ListSettingsIconOption("pets", Icons.Rounded.Pets),
+    ListSettingsIconOption("child", Icons.Rounded.ChildCare),
+    ListSettingsIconOption("family", Icons.Rounded.FamilyRestroom),
+    ListSettingsIconOption("basket", Icons.Rounded.ShoppingBasket),
+    ListSettingsIconOption("cart", Icons.Rounded.ShoppingCart),
+    ListSettingsIconOption("mall", Icons.Rounded.LocalMall),
+    ListSettingsIconOption("inventory", Icons.Rounded.Inventory),
+    ListSettingsIconOption("soccer", Icons.Rounded.SportsSoccer),
+    ListSettingsIconOption("baseball", Icons.Rounded.SportsBaseball),
+    ListSettingsIconOption("basketball", Icons.Rounded.SportsBasketball),
+    ListSettingsIconOption("football", Icons.Rounded.SportsFootball),
+    ListSettingsIconOption("tennis", Icons.Rounded.SportsTennis),
+    ListSettingsIconOption("train", Icons.Rounded.Train),
+    ListSettingsIconOption("flight", Icons.Rounded.Flight),
+    ListSettingsIconOption("boat", Icons.Rounded.DirectionsBoat),
+    ListSettingsIconOption("car", Icons.Rounded.DirectionsCar),
+    ListSettingsIconOption("umbrella", Icons.Rounded.BeachAccess),
+    ListSettingsIconOption("drop", Icons.Rounded.WaterDrop),
+    ListSettingsIconOption("snow", Icons.Rounded.AcUnit),
+    ListSettingsIconOption("fire", Icons.Rounded.Whatshot),
+    ListSettingsIconOption("tools", Icons.Rounded.Build),
+    ListSettingsIconOption("scissors", Icons.Rounded.ContentCut),
+    ListSettingsIconOption("architecture", Icons.Rounded.Architecture),
+    ListSettingsIconOption("code", Icons.Rounded.Code),
+    ListSettingsIconOption("idea", Icons.Rounded.Lightbulb),
+    ListSettingsIconOption("chat", Icons.Rounded.ChatBubbleOutline),
+    ListSettingsIconOption("alert", Icons.Rounded.PriorityHigh),
+    ListSettingsIconOption("star", Icons.Rounded.Star),
+    ListSettingsIconOption("heart", Icons.Rounded.Favorite),
+    ListSettingsIconOption("circle", Icons.Rounded.Circle),
+    ListSettingsIconOption("square", Icons.Rounded.Square),
+    ListSettingsIconOption("triangle", Icons.Rounded.ChangeHistory),
+    ListSettingsIconOption("home", Icons.Rounded.Home),
+    ListSettingsIconOption("city", Icons.Rounded.LocationCity),
+    ListSettingsIconOption("bank", Icons.Rounded.AccountBalance),
+    ListSettingsIconOption("camera", Icons.Rounded.CameraAlt),
+    ListSettingsIconOption("palette", Icons.Rounded.Palette),
 )
