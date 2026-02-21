@@ -42,6 +42,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -50,6 +51,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
@@ -64,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
@@ -929,22 +932,51 @@ private fun ThemedDatePickerDialog(
             .toEpochMilli()
     }
     val pickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateEpochMs)
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = colorScheme.background.luminance() < 0.5f
+    val pickerAccent = if (isDark) Color(0xFF75AEFF) else Color(0xFF2E73D6)
+    val pickerContainer = if (isDark) Color(0xFF1F2532) else Color(0xFFFFFFFF)
+    val pickerSurface = if (isDark) Color(0xFF2A3244) else Color(0xFFF3F6FC)
+    val primaryText = if (isDark) colorScheme.onSurface else Color(0xFF1D2638)
+    val mutedText = if (isDark) colorScheme.onSurfaceVariant else Color(0xFF5D6E8A)
+    val pickerColors = DatePickerDefaults.colors(
+        containerColor = pickerContainer,
+        titleContentColor = mutedText,
+        headlineContentColor = primaryText,
+        weekdayContentColor = mutedText,
+        subheadContentColor = mutedText,
+        navigationContentColor = primaryText,
+        yearContentColor = primaryText,
+        currentYearContentColor = pickerAccent,
+        selectedYearContentColor = Color.White,
+        selectedYearContainerColor = pickerAccent,
+        dayContentColor = primaryText,
+        selectedDayContentColor = Color.White,
+        selectedDayContainerColor = pickerAccent,
+        todayContentColor = pickerAccent,
+        todayDateBorderColor = pickerAccent.copy(alpha = 0.75f),
+        dayInSelectionRangeContentColor = primaryText,
+        dayInSelectionRangeContainerColor = pickerAccent.copy(alpha = 0.16f),
+        dividerColor = mutedText.copy(alpha = 0.25f),
+    )
 
     DatePickerDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(28.dp),
+        tonalElevation = 0.dp,
+        colors = pickerColors,
         confirmButton = {
             TextButton(
                 onClick = {
                     onConfirm(pickerState.selectedDateMillis ?: initialDateEpochMs)
                 },
             ) {
-                Text("Done")
+                Text(text = "Done", color = pickerAccent)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(text = "Cancel", color = pickerAccent)
             }
         },
     ) {
@@ -953,6 +985,9 @@ private fun ThemedDatePickerDialog(
             showModeToggle = false,
             title = null,
             headline = null,
+            colors = pickerColors.copy(
+                containerColor = pickerSurface,
+            ),
         )
     }
 }
@@ -973,15 +1008,43 @@ private fun ThemedTimePickerDialog(
         initialMinute = initial.minute,
         is24Hour = false,
     )
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = colorScheme.background.luminance() < 0.5f
+    val pickerAccent = if (isDark) Color(0xFF75AEFF) else Color(0xFF2E73D6)
+    val pickerContainer = if (isDark) Color(0xFF1F2532) else Color(0xFFFFFFFF)
+    val pickerSurface = if (isDark) Color(0xFF2A3244) else Color(0xFFF3F6FC)
+    val primaryText = if (isDark) colorScheme.onSurface else Color(0xFF1D2638)
+    val mutedText = if (isDark) colorScheme.onSurfaceVariant else Color(0xFF5D6E8A)
+    val pickerColors = TimePickerDefaults.colors(
+        clockDialColor = pickerSurface,
+        clockDialSelectedContentColor = Color.White,
+        clockDialUnselectedContentColor = primaryText.copy(alpha = 0.88f),
+        selectorColor = pickerAccent,
+        containerColor = pickerContainer,
+        periodSelectorBorderColor = mutedText.copy(alpha = 0.35f),
+        periodSelectorSelectedContainerColor = pickerAccent.copy(alpha = 0.2f),
+        periodSelectorUnselectedContainerColor = pickerSurface,
+        periodSelectorSelectedContentColor = pickerAccent,
+        periodSelectorUnselectedContentColor = primaryText.copy(alpha = 0.78f),
+        timeSelectorSelectedContainerColor = pickerAccent.copy(alpha = 0.2f),
+        timeSelectorUnselectedContainerColor = pickerSurface,
+        timeSelectorSelectedContentColor = pickerAccent,
+        timeSelectorUnselectedContentColor = primaryText,
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(28.dp),
+        containerColor = pickerContainer,
+        tonalElevation = 0.dp,
+        titleContentColor = primaryText,
+        textContentColor = primaryText,
         title = {
             Text(
                 text = "Select time",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
+                color = primaryText,
             )
         },
         text = {
@@ -989,7 +1052,10 @@ private fun ThemedTimePickerDialog(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
-                TimePicker(state = pickerState)
+                TimePicker(
+                    state = pickerState,
+                    colors = pickerColors,
+                )
             }
         },
         confirmButton = {
@@ -1003,12 +1069,12 @@ private fun ThemedTimePickerDialog(
                     onConfirm(selected.toInstant().toEpochMilli())
                 },
             ) {
-                Text("Done")
+                Text(text = "Done", color = pickerAccent)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(text = "Cancel", color = pickerAccent)
             }
         },
     )
