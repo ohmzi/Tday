@@ -28,6 +28,7 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
+import com.ohmz.tday.compose.feature.calendar.CalendarViewModel
 import com.ohmz.tday.compose.feature.calendar.CalendarScreen
 import com.ohmz.tday.compose.feature.completed.CompletedScreen
 import com.ohmz.tday.compose.feature.completed.CompletedViewModel
@@ -290,13 +291,13 @@ fun TdayApp() {
             }
 
             composable(AppRoute.Calendar.route) {
+                val viewModel: CalendarViewModel = hiltViewModel()
+                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { viewModel.load() }
                 CalendarScreen(
+                    uiState = uiState,
                     onBack = { navController.popBackStack() },
-                    isRefreshing = appUiState.isManualSyncing,
-                    onRefresh = appViewModel::syncNow,
-                    onOpenScheduled = {
-                        navController.navigate(AppRoute.ScheduledTodos.route)
-                    },
+                    onRefresh = viewModel::refresh,
                 )
             }
 
