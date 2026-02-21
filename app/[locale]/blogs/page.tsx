@@ -45,7 +45,7 @@ const BlogMainPage = () => {
             className="font-serif text-5xl md:text-6xl font-bold mb-4 tracking-tight"
             style={{ fontFamily: "'Libre Baskerville', serif" }}
           >
-            Tday Blog
+            {"T'Day Blog"}
           </h1>
           <p className="text-lg font-light tracking-wide opacity-70"></p>
         </header>

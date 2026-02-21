@@ -6,7 +6,7 @@
       "login": "Log masuk"
     },
     "hero": {
-      "title": "Tday",
+      "title": "T'Day",
       "subtitle": "Pisau tentera Swiss untuk perancangan peribadi — dengan editor gaya Notion, muat naik fail disulitkan rahsia besar, dan pelbagai tambahan menarik!",
       "readDocs": "Baca dokumentasi",
       "start": "Mulakan"
@@ -75,11 +75,11 @@
   "terms": {
     "title": "Syarat Perkhidmatan",
     "lastUpdated": "Terakhir dikemas kini: 19 Januari 2026",
-    "intro": "Dengan menggunakan Tday (“Perkhidmatan”), anda bersetuju dengan Syarat Perkhidmatan ini.",
+    "intro": "Dengan menggunakan T'Day (“Perkhidmatan”), anda bersetuju dengan Syarat Perkhidmatan ini.",
     "sections": {
       "1": {
         "title": "Penggunaan Perkhidmatan",
-        "content": "Tday adalah aplikasi produktiviti percuma untuk mengurus tugasan, nota, dan fail. Anda bersetuju untuk menggunakan Perkhidmatan secara sah dan tidak menyalahgunakan atau mengganggunya."
+        "content": "T'Day adalah aplikasi produktiviti percuma untuk mengurus tugasan, nota, dan fail. Anda bersetuju untuk menggunakan Perkhidmatan secara sah dan tidak menyalahgunakan atau mengganggunya."
       },
       "2": {
         "title": "Akaun",
@@ -87,7 +87,7 @@
       },
       "3": {
         "title": "Kandungan Anda",
-        "content": "Anda mengekalkan pemilikan kandungan anda. Dengan menggunakan Tday, anda memberi kebenaran untuk menyimpan dan memprosesnya hanya untuk mengendalikan Perkhidmatan."
+        "content": "Anda mengekalkan pemilikan kandungan anda. Dengan menggunakan T'Day, anda memberi kebenaran untuk menyimpan dan memprosesnya hanya untuk mengendalikan Perkhidmatan."
       },
       "4": {
         "title": "Penggunaan Diterima",
@@ -100,15 +100,15 @@
       },
       "5": {
         "title": "Ketersediaan",
-        "content": "Tday adalah projek peribadi yang disediakan atas dasar usaha terbaik. Perkhidmatan mungkin berubah, luar talian, atau dihentikan pada bila-bila masa."
+        "content": "T'Day adalah projek peribadi yang disediakan atas dasar usaha terbaik. Perkhidmatan mungkin berubah, luar talian, atau dihentikan pada bila-bila masa."
       },
       "6": {
         "title": "Penamatan",
-        "content": "Anda boleh berhenti menggunakan Tday pada bila-bila masa. Kami boleh menggantung akses jika Syarat ini dilanggar."
+        "content": "Anda boleh berhenti menggunakan T'Day pada bila-bila masa. Kami boleh menggantung akses jika Syarat ini dilanggar."
       },
       "7": {
         "title": "Penafian",
-        "content": "Tday disediakan “seadanya”. Kami tidak bertanggungjawab atas kehilangan data, gangguan, atau kerosakan yang disebabkan oleh penggunaan Perkhidmatan."
+        "content": "T'Day disediakan “seadanya”. Kami tidak bertanggungjawab atas kehilangan data, gangguan, atau kerosakan yang disebabkan oleh penggunaan Perkhidmatan."
       },
       "8": {
         "title": "Perubahan",
@@ -123,7 +123,7 @@
   "privacy": {
     "title": "Dasar Privasi",
     "lastUpdated": "Terakhir dikemas kini: 19 Januari 2026",
-    "intro": "Tday (“kami”, atau “kita”) adalah aplikasi produktiviti peribadi. Dasar Privasi ini menjelaskan data apa yang kami kumpul dan bagaimana kami menggunakannya.",
+    "intro": "T'Day (“kami”, atau “kita”) adalah aplikasi produktiviti peribadi. Dasar Privasi ini menjelaskan data apa yang kami kumpul dan bagaimana kami menggunakannya.",
     "sections": {
       "1": {
         "title": "Maklumat Yang Kami Kumpul",
@@ -137,7 +137,7 @@
       "2": {
         "title": "Bagaimana Kami Menggunakan Data Anda",
         "content": [
-          "Menyediakan dan mengendalikan Tday",
+          "Menyediakan dan mengendalikan T'Day",
           "Mengesahkan pengguna",
           "Menyimpan dan menyinkronkan kandungan anda",
           "Menjaga keselamatan dan mencegah penyalahgunaan"
@@ -145,11 +145,11 @@
       },
       "3": {
         "title": "Penyimpanan & Keselamatan Data",
-        "content": "Tday menggunakan NextAuth untuk pengesahan, NeonDB untuk penyimpanan, dan Vercel untuk pengehosan. Fail disulitkan di mana berkenaan. Walaupun tiada sistem yang benar-benar selamat, langkah-langkah munasabah diambil untuk melindungi data anda."
+        "content": "T'Day menggunakan NextAuth untuk pengesahan, NeonDB untuk penyimpanan, dan Vercel untuk pengehosan. Fail disulitkan di mana berkenaan. Walaupun tiada sistem yang benar-benar selamat, langkah-langkah munasabah diambil untuk melindungi data anda."
       },
       "4": {
         "title": "Perkongsian Data",
-        "content": "Kami hanya berkongsi data dengan penyedia perkhidmatan yang diperlukan untuk mengendalikan Tday. Kami tidak menjual data peribadi anda."
+        "content": "Kami hanya berkongsi data dengan penyedia perkhidmatan yang diperlukan untuk mengendalikan T'Day. Kami tidak menjual data peribadi anda."
       },
       "5": {
         "title": "Kuki",

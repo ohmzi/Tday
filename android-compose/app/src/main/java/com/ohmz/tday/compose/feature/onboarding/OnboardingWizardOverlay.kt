@@ -302,7 +302,7 @@ fun OnboardingWizardOverlay(
 
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Set Up Tday",
+                        text = "Set Up T'Day",
                         style = MaterialTheme.typography.headlineSmall,
                         color = colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
