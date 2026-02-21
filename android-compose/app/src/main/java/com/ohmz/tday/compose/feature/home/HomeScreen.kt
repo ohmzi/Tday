@@ -7,6 +7,8 @@ import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -67,6 +69,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
@@ -106,7 +109,7 @@ import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
@@ -251,47 +254,48 @@ fun HomeScreen(
             )
         },
     ) { padding ->
-        TdayPullToRefreshBox(
-            isRefreshing = uiState.isLoading,
-            onRefresh = onRefresh,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            Box(
+        CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+            TdayPullToRefreshBox(
+                isRefreshing = uiState.isLoading,
+                onRefresh = onRefresh,
                 modifier = Modifier
                     .fillMaxSize()
-                    .then(
-                        if (searchExpanded) {
-                            Modifier
-                                .onGloballyPositioned { coordinates ->
-                                    val topLeft = coordinates.boundsInRoot().topLeft
-                                    if (rootInRoot != topLeft) {
-                                        rootInRoot = topLeft
-                                    }
-                                }
-                                .pointerInput(searchBarBounds, rootInRoot) {
-                                    awaitEachGesture {
-                                        val down = awaitFirstDown(pass = PointerEventPass.Final)
-                                        val tapInRoot = down.position + rootInRoot
-                                        val tappedSearchBar = searchBarBounds?.contains(tapInRoot) == true
-                                        val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
-                                        if (up != null && !tappedSearchBar) {
-                                            closeSearch()
+                    .padding(padding),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (searchExpanded) {
+                                Modifier
+                                    .onGloballyPositioned { coordinates ->
+                                        val topLeft = coordinates.boundsInRoot().topLeft
+                                        if (rootInRoot != topLeft) {
+                                            rootInRoot = topLeft
                                         }
                                     }
-                                }
-                        } else {
-                            Modifier
-                        }
-                    ),
-            ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                                    .pointerInput(searchBarBounds, rootInRoot) {
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(pass = PointerEventPass.Final)
+                                            val tapInRoot = down.position + rootInRoot
+                                            val tappedSearchBar = searchBarBounds?.contains(tapInRoot) == true
+                                            val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
+                                            if (up != null && !tappedSearchBar) {
+                                                closeSearch()
+                                            }
+                                        }
+                                    }
+                            } else {
+                                Modifier
+                            }
+                        ),
                 ) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
                     item {
                         TopSearchBar(
                             searchExpanded = searchExpanded,
@@ -424,6 +428,7 @@ fun HomeScreen(
                     }
 
                     item { Spacer(Modifier.height(96.dp)) }
+                    }
                 }
             }
         }
