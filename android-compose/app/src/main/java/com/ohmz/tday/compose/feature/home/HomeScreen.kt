@@ -1387,7 +1387,7 @@ private fun ListRow(
     )
     val accent = listColorAccent(colorKey)
     val icon = listIconForKey(iconKey)
-    val containerColor = lerp(colorScheme.surfaceVariant, colorScheme.surface, 0.32f)
+    val containerColor = lerp(colorScheme.surfaceVariant, accent, 0.30f)
 
     Card(
         modifier = Modifier
@@ -1404,7 +1404,6 @@ private fun ListRow(
         },
         interactionSource = interactionSource,
         shape = RoundedCornerShape(26.dp),
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.14f)),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
             defaultElevation = animatedElevation,
@@ -1415,26 +1414,36 @@ private fun ListRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .drawWithCache {
-                    val accentGlow = Brush.radialGradient(
+                    val iconSideGlow = Brush.radialGradient(
                         colors = listOf(
-                            accent.copy(alpha = 0.26f),
-                            accent.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.08f),
                             Color.Transparent,
                         ),
-                        center = Offset(size.width * 0.16f, size.height * 0.84f),
-                        radius = size.maxDimension * 0.92f,
+                        center = Offset(
+                            x = size.width * 0.22f,
+                            y = size.height * 0.22f,
+                        ),
+                        radius = size.maxDimension * 0.88f,
                     )
                     val pearlWash = Brush.linearGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.24f),
-                            Color.White.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.16f),
+                            Color(0xFFE7F3FF).copy(alpha = 0.1f),
+                            Color(0xFFFFF2FA).copy(alpha = 0.08f),
                             Color.Transparent,
                         ),
-                        start = Offset(size.width * 0.03f, size.height * 0.94f),
-                        end = Offset(size.width * 0.9f, size.height * 0.08f),
+                        start = Offset(
+                            x = size.width * 0.05f,
+                            y = size.height * 0.04f,
+                        ),
+                        end = Offset(
+                            x = size.width * 0.9f,
+                            y = size.height * 0.78f,
+                        ),
                     )
                     onDrawWithContent {
-                        drawRect(accentGlow)
+                        drawRect(iconSideGlow)
                         drawRect(pearlWash)
                         drawContent()
                     }
@@ -1443,10 +1452,10 @@ private fun ListRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = lerp(accent, Color.White, 0.5f).copy(alpha = 0.20f),
+                tint = lerp(accent, Color.White, 0.32f).copy(alpha = 0.34f),
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .offset(x = (-10).dp, y = 12.dp)
+                    .align(Alignment.CenterEnd)
+                    .offset(x = 14.dp, y = 8.dp)
                     .size(82.dp),
             )
 
@@ -1459,26 +1468,18 @@ private fun ListRow(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(accent.copy(alpha = 0.20f))
-                            .border(
-                                width = 1.dp,
-                                color = accent.copy(alpha = 0.34f),
-                                shape = CircleShape,
-                            ),
+                        modifier = Modifier.size(32.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(22.dp),
                         )
                     }
                     Text(
-                        modifier = Modifier.padding(start = 12.dp),
+                        modifier = Modifier.padding(start = 5.dp),
                         text = name,
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
