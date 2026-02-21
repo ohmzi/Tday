@@ -1,8 +1,8 @@
 package com.ohmz.tday.compose.ui.component
 
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -67,14 +67,18 @@ private fun TdayPullToRefreshIndicator(
         animationSpec = tween(durationMillis = 220),
         label = "pullRefreshAlpha",
     )
-    val spin by rememberInfiniteTransition(label = "pullRefreshSpin").animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearEasing),
-        ),
-        label = "pullRefreshIconRotation",
-    )
+    val spin = if (isRefreshing) {
+        rememberInfiniteTransition(label = "pullRefreshSpin").animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 900, easing = LinearEasing),
+            ),
+            label = "pullRefreshIconRotation",
+        ).value
+    } else {
+        0f
+    }
 
     Box(
         modifier = modifier
