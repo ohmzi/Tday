@@ -929,6 +929,7 @@ class TdayRepository @Inject constructor(
         )
 
         val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
         if (listId.startsWith(LOCAL_LIST_PREFIX)) {
             updateOfflineState { state ->
                 state.copy(
@@ -936,7 +937,7 @@ class TdayRepository @Inject constructor(
                         if (list.id == listId) {
                             list.copy(
                                 name = trimmedName,
-                                color = color,
+                                color = color ?: list.color,
                                 iconKey = iconKey ?: list.iconKey,
                                 updatedAtEpochMs = timestampMs,
                             )
@@ -948,7 +949,7 @@ class TdayRepository @Inject constructor(
                         if (mutation.kind == MutationKind.CREATE_LIST && mutation.targetId == listId) {
                             mutation.copy(
                                 name = trimmedName,
-                                color = color,
+                                color = color ?: mutation.color,
                                 iconKey = iconKey ?: mutation.iconKey,
                                 timestampEpochMs = timestampMs,
                             )
@@ -970,23 +971,6 @@ class TdayRepository @Inject constructor(
             return
         }
 
-        Log.d(LOG_TAG, "updateList patch /api/list listId=$listId")
-        requireBody(
-            api.patchListByBody(
-                UpdateListRequest(
-                    id = listId,
-                    name = trimmedName,
-                    color = color,
-                    iconKey = iconKey,
-                ),
-            ),
-            "Could not update list",
-        )
-
-        iconKey?.takeIf { it.isNotBlank() }?.let {
-            secureConfigStore.saveListIcon(listId, it)
-        }
-
         updateOfflineState { state ->
             state.copy(
                 lists = state.lists.map { list ->
@@ -1001,9 +985,65 @@ class TdayRepository @Inject constructor(
                         list
                     }
                 },
+                pendingMutations = state.pendingMutations
+                    .filterNot { it.kind == MutationKind.UPDATE_LIST && it.targetId == listId } +
+                    PendingMutationRecord(
+                        mutationId = mutationId,
+                        kind = MutationKind.UPDATE_LIST,
+                        targetId = listId,
+                        timestampEpochMs = timestampMs,
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                    ),
             )
         }
-        Log.d(LOG_TAG, "updateList success listId=$listId")
+
+        Log.d(LOG_TAG, "updateList patch /api/list listId=$listId")
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.UPDATE_LIST,
+            targetId = listId,
+            timestampEpochMs = timestampMs,
+            name = trimmedName,
+            color = color,
+            iconKey = iconKey,
+        )
+        val immediateError = runCatching {
+            requireBody(
+                api.patchListByBody(
+                    UpdateListRequest(
+                        id = listId,
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                    ),
+                ),
+                "Could not update list",
+            )
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(immediateError, pendingMutation)) {
+            throw immediateError
+        }
+
+        iconKey?.takeIf { it.isNotBlank() }?.let {
+            secureConfigStore.saveListIcon(listId, it)
+        }
+
+        if (immediateError == null) {
+            updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+            Log.d(LOG_TAG, "updateList success listId=$listId")
+        } else {
+            Log.w(
+                LOG_TAG,
+                "updateList deferred listId=$listId reason=${immediateError.message}",
+            )
+        }
     }
 
     private suspend fun syncLocalCache(
@@ -1143,6 +1183,25 @@ class TdayRepository @Inject constructor(
                         val serverListId = response.list?.id ?: return@runCatching false
                         resolvedListIds[localListId] = serverListId
                         state = replaceLocalListId(state, localListId, serverListId)
+                        true
+                    }
+
+                    MutationKind.UPDATE_LIST -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_LIST_PREFIX)) return@runCatching false
+                        val remoteUpdatedAt = remoteSnapshot.listUpdatedAtById[targetId] ?: 0L
+                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
+                        requireBody(
+                            api.patchListByBody(
+                                UpdateListRequest(
+                                    id = targetId,
+                                    name = mutation.name,
+                                    color = mutation.color,
+                                    iconKey = mutation.iconKey,
+                                ),
+                            ),
+                            "Could not update list",
+                        )
                         true
                     }
 
@@ -1350,7 +1409,10 @@ class TdayRepository @Inject constructor(
         if (localState.pendingMutations.isNotEmpty()) {
             val todoTargets = localState.pendingMutations.mapNotNull { it.targetId }.toSet()
             val pendingListIds = localState.pendingMutations
-                .filter { it.kind == MutationKind.CREATE_LIST }
+                .filter {
+                    it.kind == MutationKind.CREATE_LIST ||
+                        it.kind == MutationKind.UPDATE_LIST
+                }
                 .mapNotNull { it.targetId }
                 .toSet()
 
@@ -1480,7 +1542,11 @@ class TdayRepository @Inject constructor(
             if (error.statusCode == 401 || error.statusCode == 403) return false
 
             // Never aggressively drop offline create flows; preserve user-created local data.
-            if (mutation.kind == MutationKind.CREATE_LIST || mutation.kind == MutationKind.CREATE_TODO) {
+            if (
+                mutation.kind == MutationKind.CREATE_LIST ||
+                mutation.kind == MutationKind.CREATE_TODO ||
+                mutation.kind == MutationKind.UPDATE_LIST
+            ) {
                 return false
             }
 
@@ -1641,6 +1707,12 @@ class TdayRepository @Inject constructor(
     ) {
         val todoUpdatedAtByCanonical: Map<String, Long> = todos
             .groupBy { it.canonicalId }
+            .mapValues { (_, entries) ->
+                entries.maxOfOrNull { it.updatedAt?.toEpochMilli() ?: 0L } ?: 0L
+            }
+
+        val listUpdatedAtById: Map<String, Long> = lists
+            .groupBy { it.id }
             .mapValues { (_, entries) ->
                 entries.maxOfOrNull { it.updatedAt?.toEpochMilli() ?: 0L } ?: 0L
             }
