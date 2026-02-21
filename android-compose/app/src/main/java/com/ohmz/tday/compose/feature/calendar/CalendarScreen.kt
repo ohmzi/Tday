@@ -193,7 +193,7 @@ private fun CalendarTopBar(
             text = "Calendar",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFFA08BC9),
+            color = Color(0xFFCEC2E2),
         )
         Text(
             text = monthLabel,
