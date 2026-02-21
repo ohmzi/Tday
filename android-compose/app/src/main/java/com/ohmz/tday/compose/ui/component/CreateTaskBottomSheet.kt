@@ -41,8 +41,6 @@ import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -80,6 +78,7 @@ private enum class TaskSheetPage {
     DETAILS,
     LIST,
     PRIORITY,
+    REPEAT,
 }
 
 private enum class RepeatPreset(
@@ -139,8 +138,7 @@ fun CreateTaskBottomSheet(
     var selectedRepeat by rememberSaveable { mutableStateOf(RepeatPreset.NONE.name) }
     var listReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN.name) }
     var priorityReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
-
-    var repeatMenuExpanded by remember { mutableStateOf(false) }
+    var repeatReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
 
     val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
     val repeatPreset = RepeatPreset.valueOf(selectedRepeat)
@@ -194,6 +192,7 @@ fun CreateTaskBottomSheet(
                         TaskSheetPage.DETAILS -> "Details"
                         TaskSheetPage.LIST -> "List"
                         TaskSheetPage.PRIORITY -> "Priority"
+                        TaskSheetPage.REPEAT -> "Repeat"
                     },
                     leftIcon = if (page == TaskSheetPage.MAIN) {
                         Icons.Rounded.Close
@@ -208,6 +207,7 @@ fun CreateTaskBottomSheet(
                             TaskSheetPage.DETAILS -> page = TaskSheetPage.MAIN
                             TaskSheetPage.LIST -> page = TaskSheetPage.valueOf(listReturnPage)
                             TaskSheetPage.PRIORITY -> page = TaskSheetPage.valueOf(priorityReturnPage)
+                            TaskSheetPage.REPEAT -> page = TaskSheetPage.valueOf(repeatReturnPage)
                         }
                     },
                     onConfirm = {
@@ -306,28 +306,15 @@ fun CreateTaskBottomSheet(
                                 },
                             )
                             RowDivider()
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                SheetRow(
-                                    icon = Icons.Rounded.Repeat,
-                                    title = "Repeat",
-                                    value = repeatPreset.label,
-                                    onClick = { repeatMenuExpanded = true },
-                                )
-                                DropdownMenu(
-                                    expanded = repeatMenuExpanded,
-                                    onDismissRequest = { repeatMenuExpanded = false },
-                                ) {
-                                    RepeatPreset.entries.forEach { option ->
-                                        DropdownMenuItem(
-                                            text = { Text(option.label) },
-                                            onClick = {
-                                                selectedRepeat = option.name
-                                                repeatMenuExpanded = false
-                                            },
-                                        )
-                                    }
-                                }
-                            }
+                            SheetRow(
+                                icon = Icons.Rounded.Repeat,
+                                title = "Repeat",
+                                value = repeatPreset.label,
+                                onClick = {
+                                    repeatReturnPage = TaskSheetPage.DETAILS.name
+                                    page = TaskSheetPage.REPEAT
+                                },
+                            )
                         }
 
                         SectionHeading("Organization")
@@ -406,6 +393,26 @@ fun CreateTaskBottomSheet(
                             }
                         }
                     }
+
+                    TaskSheetPage.REPEAT -> {
+                        SectionHeading("Choose Repeat")
+                        GroupCard {
+                            RepeatPreset.entries.forEachIndexed { index, option ->
+                                if (index > 0) {
+                                    RowDivider()
+                                }
+                                ListSelectionRow(
+                                    title = option.label,
+                                    swatchColor = repeatSwatchColor(option),
+                                    selected = selectedRepeat == option.name,
+                                    onClick = {
+                                        selectedRepeat = option.name
+                                        page = TaskSheetPage.valueOf(repeatReturnPage)
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -438,7 +445,7 @@ private fun SheetHeader(
 
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
         )
@@ -539,7 +546,7 @@ private fun performGentleHaptic(view: android.view.View) {
 private fun SectionHeading(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.headlineSmall,
+        style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp),
@@ -602,7 +609,7 @@ private fun TaskField(
         value = value,
         onValueChange = onValueChange,
         singleLine = singleLine,
-        textStyle = MaterialTheme.typography.titleLarge.copy(
+        textStyle = MaterialTheme.typography.titleMedium.copy(
             color = colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold,
         ),
@@ -613,7 +620,7 @@ private fun TaskField(
             if (value.isEmpty()) {
                 Text(
                     text = placeholder,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -659,7 +666,7 @@ private fun SheetRow(
 
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f),
@@ -668,8 +675,9 @@ private fun SheetRow(
         if (value.isNotBlank()) {
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 8.dp),
@@ -714,7 +722,7 @@ private fun ListSelectionRow(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             color = colorScheme.onSurface,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.weight(1f),
         )
         if (selected) {
@@ -739,6 +747,17 @@ private fun prioritySwatchColor(priority: String): Color {
         "high" -> Color(0xFFE56A6A)
         "medium" -> Color(0xFFE3B368)
         else -> Color(0xFF6FBF86)
+    }
+}
+
+private fun repeatSwatchColor(preset: RepeatPreset): Color {
+    return when (preset) {
+        RepeatPreset.NONE -> Color(0xFFB7BCC8)
+        RepeatPreset.DAILY -> Color(0xFF6FBF86)
+        RepeatPreset.WEEKLY -> Color(0xFF6FA6E8)
+        RepeatPreset.WEEKDAYS -> Color(0xFF8C7AE6)
+        RepeatPreset.MONTHLY -> Color(0xFFE3B368)
+        RepeatPreset.YEARLY -> Color(0xFFE56A6A)
     }
 }
 
