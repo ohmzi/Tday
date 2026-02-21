@@ -6,6 +6,7 @@ import com.ohmz.tday.compose.core.data.TdayRepository
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -117,9 +118,10 @@ class HomeViewModel @Inject constructor(
         color: String? = null,
         iconKey: String? = null,
     ) {
-        if (name.isBlank()) return
+        val normalizedName = capitalizeFirstListLetter(name).trim()
+        if (normalizedName.isBlank()) return
         viewModelScope.launch {
-            runCatching { repository.createList(name, color = color, iconKey = iconKey) }
+            runCatching { repository.createList(normalizedName, color = color, iconKey = iconKey) }
                 .onSuccess {
                     refreshInternal(
                         forceSync = false,
