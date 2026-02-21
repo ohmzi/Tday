@@ -36,10 +36,30 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
-        refreshInternal(
-            forceSync = false,
-            showLoading = false,
-        )
+        refreshFromCache()
+    }
+
+    fun refreshFromCache() {
+        viewModelScope.launch {
+            runCatching {
+                repository.fetchDashboardSummaryCached()
+            }.onSuccess { summary ->
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        summary = if (current.summary == summary) current.summary else summary,
+                        errorMessage = null,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        errorMessage = error.message ?: "Failed to load dashboard",
+                    )
+                }
+            }
+        }
     }
 
     fun refresh() {
