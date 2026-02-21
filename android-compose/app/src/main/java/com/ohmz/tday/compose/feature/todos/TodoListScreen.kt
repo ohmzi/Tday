@@ -125,6 +125,13 @@ fun TodoListScreen(
         TodoListMode.PRIORITY -> Color(0xFFD48A8C)
         TodoListMode.LIST -> listAccentColor(selectedListColorKey)
     }
+    val titleIcon = when (uiState.mode) {
+        TodoListMode.TODAY -> Icons.Rounded.WbSunny
+        TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
+        TodoListMode.ALL -> Icons.Rounded.Inbox
+        TodoListMode.PRIORITY -> Icons.Rounded.Flag
+        TodoListMode.LIST -> listIconForKey(selectedList?.iconKey)
+    }
     val fabColor = todoFabColorForMode(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -227,6 +234,7 @@ fun TodoListScreen(
                     onBack = onBack,
                     collapseProgress = todayCollapseProgress,
                     title = uiState.title,
+                    titleIcon = titleIcon,
                     titleColor = titleColor,
                     onMore = {
                         if (uiState.mode == TodoListMode.LIST && selectedList != null) {
@@ -247,12 +255,23 @@ fun TodoListScreen(
             } else {
                 TopAppBar(
                     title = {
-                        Text(
-                            text = uiState.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = titleColor,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                imageVector = titleIcon,
+                                contentDescription = null,
+                                tint = titleColor,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Text(
+                                text = uiState.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = titleColor,
+                            )
+                        }
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
@@ -441,6 +460,7 @@ private fun TodayTopBar(
     onBack: () -> Unit,
     collapseProgress: Float,
     title: String,
+    titleIcon: ImageVector,
     titleColor: Color,
     onMore: () -> Unit,
 ) {
@@ -478,18 +498,29 @@ private fun TodayTopBar(
                 )
             }
             if (collapsedTitleAlpha > 0.001f) {
-                Text(
-                    text = title,
+                Row(
                     modifier = Modifier
                         .align(Alignment.Center)
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
                         },
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = titleColor,
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = titleIcon,
+                        contentDescription = null,
+                        tint = titleColor,
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = titleColor,
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
@@ -500,16 +531,27 @@ private fun TodayTopBar(
             contentAlignment = Alignment.BottomStart,
         ) {
             if (expandedTitleAlpha > 0.001f) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = titleColor,
+                Row(
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
                     },
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = titleIcon,
+                        contentDescription = null,
+                        tint = titleColor,
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = titleColor,
+                    )
+                }
             }
         }
     }
