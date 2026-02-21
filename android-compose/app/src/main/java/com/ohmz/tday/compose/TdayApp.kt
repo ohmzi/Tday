@@ -128,6 +128,11 @@ fun TdayApp() {
                         if (appUiState.authenticated) {
                             val homeViewModel: HomeViewModel = hiltViewModel()
                             val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                            LaunchedEffect(Unit) {
+                                // Keep Home in sync with locally cached mutations (rename/create/delete)
+                                // when returning from other screens without forcing a network refresh.
+                                homeViewModel.refreshFromCache()
+                            }
                             HomeScreen(
                                 uiState = homeUiState,
                                 onRefresh = homeViewModel::refresh,
