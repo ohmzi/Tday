@@ -287,6 +287,8 @@ class TdayRepository @Inject constructor(
             .filterNot { it.completed }
             .toList()
         val todayTodos = timelineTodos.filter(::isTodayTodo)
+        val now = Instant.now()
+        val scheduledTodos = timelineTodos.filter { isScheduledTodo(it, now) }
         val completedTodos = state.completedItems.map(::completedFromCache)
         val todoCountsByList = timelineTodos
             .groupingBy { it.listId }
@@ -299,10 +301,9 @@ class TdayRepository @Inject constructor(
             )
         }
 
-        val todayDate = LocalDate.now(zoneId)
         return DashboardSummary(
             todayCount = todayTodos.size,
-            scheduledCount = timelineTodos.count { LocalDate.ofInstant(it.due, zoneId) != todayDate },
+            scheduledCount = scheduledTodos.size,
             allCount = timelineTodos.size,
             priorityCount = timelineTodos.count { isPriorityTodo(it.priority) },
             completedCount = completedTodos.size,
@@ -336,14 +337,12 @@ class TdayRepository @Inject constructor(
             .map(::todoFromCache)
             .filterNot { it.completed }
             .toList()
+        val now = Instant.now()
 
         return when (mode) {
             TodoListMode.TODAY -> timelineTodos.filter(::isTodayTodo)
             TodoListMode.ALL -> timelineTodos
-            TodoListMode.SCHEDULED -> {
-                val todayDate = LocalDate.now(zoneId)
-                timelineTodos.filter { LocalDate.ofInstant(it.due, zoneId) != todayDate }
-            }
+            TodoListMode.SCHEDULED -> timelineTodos.filter { isScheduledTodo(it, now) }
 
             TodoListMode.PRIORITY -> timelineTodos.filter { isPriorityTodo(it.priority) }
 
@@ -1401,6 +1400,10 @@ class TdayRepository @Inject constructor(
         val start = Instant.ofEpochMilli(startOfTodayMillis())
         val end = Instant.ofEpochMilli(endOfTodayMillis())
         return todo.due >= start && todo.dtstart <= end
+    }
+
+    private fun isScheduledTodo(todo: TodoItem, now: Instant = Instant.now()): Boolean {
+        return !todo.due.isBefore(now)
     }
 
     private fun isPriorityTodo(priority: String?): Boolean {
