@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="md:col-span-2 space-y-6 text-start">
             <div>
-              <h3 className="text-2xl font-bold">Tday</h3>
+              <h3 className="text-2xl font-bold">{"T'Day"}</h3>
               <p className="text-muted-foreground max-w-md">
                 The intelligent task management platform built for the not so
                 sane.
@@ -128,7 +128,7 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground font-mono">
-          {/* <p>&copy; 2026 Tday. All rights reserved.</p> */}
+          {/* <p>&copy; 2026 T'Day. All rights reserved.</p> */}
           <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-foreground">
               {dict("footer.privacyPolicy")}
