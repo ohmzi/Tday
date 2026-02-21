@@ -92,6 +92,7 @@ fun TodoListScreen(
     onTogglePin: (todo: TodoItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val selectedListColorKey = uiState.lists.firstOrNull { it.id == uiState.listId }?.color
     val usesTodayStyle =
         uiState.mode == TodoListMode.TODAY ||
         uiState.mode == TodoListMode.SCHEDULED ||
@@ -99,12 +100,16 @@ fun TodoListScreen(
         uiState.mode == TodoListMode.PRIORITY ||
         uiState.mode == TodoListMode.LIST
     val titleColor = when (uiState.mode) {
-        TodoListMode.TODAY -> Color(0xFF3D7FEA)
+        TodoListMode.TODAY -> Color(0xFF6EA8E1)
         TodoListMode.SCHEDULED -> Color(0xFFDDB37D)
-        TodoListMode.ALL -> colorScheme.onSurface
-        TodoListMode.PRIORITY -> Color(0xFFC8798B)
-        else -> colorScheme.onSurface
+        TodoListMode.ALL -> Color(0xFF4E4E50)
+        TodoListMode.PRIORITY -> Color(0xFFD48A8C)
+        TodoListMode.LIST -> listAccentColor(selectedListColorKey)
     }
+    val fabColor = todoFabColorForMode(
+        mode = uiState.mode,
+        listColorKey = selectedListColorKey,
+    )
     val showSectionedTimeline =
         uiState.mode == TodoListMode.TODAY ||
         uiState.mode == TodoListMode.SCHEDULED ||
@@ -229,6 +234,7 @@ fun TodoListScreen(
                         scaleY = fabScale
                     },
                 interactionSource = fabInteractionSource,
+                backgroundColor = fabColor,
                 onClick = {
                     quickAddStartEpochMs = null
                     quickAddDueEpochMs = null
@@ -471,10 +477,10 @@ private fun TodayHeaderButton(
 private fun CreateTaskButton(
     modifier: Modifier,
     interactionSource: MutableInteractionSource,
+    backgroundColor: Color,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
-    val colorScheme = MaterialTheme.colorScheme
 
     Card(
         modifier = modifier,
@@ -484,8 +490,8 @@ private fun CreateTaskButton(
         },
         interactionSource = interactionSource,
         shape = CircleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
+        border = BorderStroke(1.dp, backgroundColor.copy(alpha = 0.72f)),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 0.dp,
             pressedElevation = 0.dp,
@@ -498,7 +504,7 @@ private fun CreateTaskButton(
             Icon(
                 imageVector = Icons.Rounded.Add,
                 contentDescription = "Create task",
-                tint = colorScheme.onSurface,
+                tint = Color.White,
                 modifier = Modifier.size(26.dp),
             )
         }
@@ -1009,5 +1015,39 @@ private fun priorityColor(priority: String): Color {
         "high" -> Color(0xFFE56A6A)
         "medium" -> Color(0xFFE3B368)
         else -> Color(0xFF6FBF86)
+    }
+}
+
+private fun todoFabColorForMode(
+    mode: TodoListMode,
+    listColorKey: String?,
+): Color {
+    return when (mode) {
+        TodoListMode.TODAY -> Color(0xFF6EA8E1)
+        TodoListMode.SCHEDULED -> Color(0xFFDDB37D)
+        TodoListMode.ALL -> Color(0xFF4E4E50)
+        TodoListMode.PRIORITY -> Color(0xFFD48A8C)
+        TodoListMode.LIST -> listAccentColor(listColorKey)
+    }
+}
+
+private fun listAccentColor(colorKey: String?): Color {
+    return when (colorKey) {
+        "RED" -> Color(0xFFE65E52)
+        "ORANGE" -> Color(0xFFF29F38)
+        "YELLOW" -> Color(0xFFF3D04A)
+        "LIME" -> Color(0xFF8ACF56)
+        "BLUE" -> Color(0xFF5C9FE7)
+        "PURPLE" -> Color(0xFF8D6CE2)
+        "PINK" -> Color(0xFFDF6DAA)
+        "TEAL" -> Color(0xFF4EB5B0)
+        "CORAL" -> Color(0xFFE3876D)
+        "GOLD" -> Color(0xFFCFAB57)
+        "DEEP_BLUE" -> Color(0xFF4B73D6)
+        "ROSE" -> Color(0xFFD9799A)
+        "LIGHT_RED" -> Color(0xFFE48888)
+        "BRICK" -> Color(0xFFB86A5C)
+        "SLATE" -> Color(0xFF7B8593)
+        else -> Color(0xFF5C9FE7)
     }
 }
