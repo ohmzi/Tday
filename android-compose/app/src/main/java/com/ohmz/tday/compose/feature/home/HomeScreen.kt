@@ -1,19 +1,16 @@
 package com.ohmz.tday.compose.feature.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -38,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -144,16 +142,15 @@ fun HomeScreen(
     var showCreateList by rememberSaveable { mutableStateOf(false) }
     var hasCapturedInitialListSnapshot by rememberSaveable { mutableStateOf(false) }
     var hasShownListDataOnce by rememberSaveable { mutableStateOf(false) }
-    var lastListSignature by rememberSaveable { mutableStateOf("") }
-    var visibleListCount by rememberSaveable { mutableIntStateOf(0) }
+    var lastListStructureSignature by rememberSaveable { mutableStateOf("") }
+    var visibleListStage by rememberSaveable { mutableIntStateOf(0) }
+    var animateListCascade by rememberSaveable { mutableStateOf(false) }
     val closeSearch = { searchExpanded = false }
-    val listSignature = uiState.summary.lists.joinToString(separator = "|") { list ->
+    val listStructureSignature = uiState.summary.lists.joinToString(separator = "|") { list ->
         buildString {
             append(list.id)
             append(':')
             append(list.name)
-            append(':')
-            append(list.todoCount)
             append(':')
             append(list.color.orEmpty())
             append(':')
@@ -161,38 +158,46 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(listSignature) {
+    LaunchedEffect(listStructureSignature) {
         val lists = uiState.summary.lists
+        val targetFinalStage = if (lists.isEmpty()) 0 else lists.size + 1
         if (!hasCapturedInitialListSnapshot) {
-            visibleListCount = lists.size
+            visibleListStage = targetFinalStage
+            animateListCascade = false
             hasCapturedInitialListSnapshot = true
             hasShownListDataOnce = lists.isNotEmpty()
-            lastListSignature = listSignature
+            lastListStructureSignature = listStructureSignature
             return@LaunchedEffect
         }
 
-        if (listSignature == lastListSignature) {
-            visibleListCount = lists.size
+        if (listStructureSignature == lastListStructureSignature) {
+            visibleListStage = targetFinalStage
+            animateListCascade = false
             return@LaunchedEffect
         }
 
-        lastListSignature = listSignature
+        lastListStructureSignature = listStructureSignature
         if (lists.isEmpty()) {
-            visibleListCount = 0
+            visibleListStage = 0
+            animateListCascade = false
             return@LaunchedEffect
         }
 
         if (!hasShownListDataOnce) {
-            visibleListCount = lists.size
+            visibleListStage = targetFinalStage
+            animateListCascade = false
             hasShownListDataOnce = true
             return@LaunchedEffect
         }
 
-        visibleListCount = 0
+        animateListCascade = true
+        visibleListStage = 0
         delay(70)
+        visibleListStage = 1
+        delay(75)
         lists.forEachIndexed { index, _ ->
-            visibleListCount = index + 1
-            delay(55)
+            visibleListStage = index + 2
+            delay(60)
         }
     }
 
@@ -307,33 +312,53 @@ fun HomeScreen(
 
                     if (uiState.summary.lists.isNotEmpty()) {
                         item {
-                            AnimatedVisibility(
-                                visible = visibleListCount > 0,
-                                enter = listSectionEnterTransition(),
-                            ) {
-                                Text(
-                                    text = "My Lists",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    color = colorScheme.onBackground,
-                                    fontWeight = FontWeight.Bold,
-                                )
+                            if (visibleListStage >= 1) {
+                                if (animateListCascade) {
+                                    TopDownCascadeReveal {
+                                        Text(
+                                            text = "My Lists",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            color = colorScheme.onBackground,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = "My Lists",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = colorScheme.onBackground,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
                             }
                         }
                         itemsIndexed(uiState.summary.lists, key = { _, list -> list.id }) { index, list ->
-                            AnimatedVisibility(
-                                visible = index < visibleListCount,
-                                enter = listSectionEnterTransition(),
-                            ) {
-                                ListRow(
-                                    name = list.name,
-                                    colorKey = list.color,
-                                    iconKey = list.iconKey,
-                                    count = list.todoCount,
-                                    onClick = {
-                                        closeSearch()
-                                        onOpenList(list.id, list.name)
-                                    },
-                                )
+                            if (visibleListStage >= index + 2) {
+                                if (animateListCascade) {
+                                    TopDownCascadeReveal {
+                                        ListRow(
+                                            name = list.name,
+                                            colorKey = list.color,
+                                            iconKey = list.iconKey,
+                                            count = list.todoCount,
+                                            onClick = {
+                                                closeSearch()
+                                                onOpenList(list.id, list.name)
+                                            },
+                                        )
+                                    }
+                                } else {
+                                    ListRow(
+                                        name = list.name,
+                                        colorKey = list.color,
+                                        iconKey = list.iconKey,
+                                        count = list.todoCount,
+                                        onClick = {
+                                            closeSearch()
+                                            onOpenList(list.id, list.name)
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -794,11 +819,14 @@ private fun TopSearchBar(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val collapsedWidth = 168.dp.coerceAtMost(maxWidth)
-        val expandedWidth = maxWidth
-        val animatedWidth by animateDpAsState(
-            targetValue = if (searchExpanded) expandedWidth else collapsedWidth,
-            label = "topSearchBarWidth",
+        val buttonSize = 54.dp
+        val buttonGap = 8.dp
+        val fixedActionWidth = (buttonSize * 2) + buttonGap
+        val collapsedSearchWidth = buttonSize
+        val expandedSearchWidth = (maxWidth - fixedActionWidth - buttonGap).coerceAtLeast(buttonSize)
+        val animatedSearchWidth by animateDpAsState(
+            targetValue = if (searchExpanded) expandedSearchWidth else collapsedSearchWidth,
+            label = "topSearchBarSearchWidth",
         )
 
         if (!searchExpanded) {
@@ -816,64 +844,78 @@ private fun TopSearchBar(
         Row(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .width(animatedWidth)
                 .onGloballyPositioned { coordinates ->
                     onSearchBarBoundsChanged(coordinates.boundsInRoot())
-                }
-                .clip(RoundedCornerShape(32.dp))
-                .background(colorScheme.surfaceVariant)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = if (searchExpanded) {
-                Arrangement.spacedBy(4.dp)
-            } else {
-                Arrangement.SpaceEvenly
-            },
+                },
+            horizontalArrangement = Arrangement.spacedBy(buttonGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PressableIconButton(
-                icon = Icons.Rounded.Search,
-                contentDescription = "Search",
-                tint = colorScheme.onSurface,
+            Card(
+                modifier = Modifier
+                    .width(animatedSearchWidth)
+                    .height(buttonSize),
                 onClick = {
-                    if (searchExpanded) {
-                        onSearchExpandedChange(false)
-                    } else {
+                    if (!searchExpanded) {
                         onSearchExpandedChange(true)
                     }
                 },
-            )
-
-            if (searchExpanded) {
-                BasicTextField(
+                shape = RoundedCornerShape(28.dp),
+                border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.26f)),
+                colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+            ) {
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(40.dp)
-                        .focusRequester(focusRequester),
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        color = colorScheme.onSurface,
-                    ),
-                    cursorBrush = SolidColor(colorScheme.primary),
-                    decorationBox = { innerTextField ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 2.dp),
-                            contentAlignment = Alignment.CenterStart,
-                        ) {
-                            if (searchQuery.isBlank()) {
-                                Text(
-                                    text = "Search",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = colorScheme.onSurfaceVariant,
-                                )
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    PressableIconButton(
+                        icon = Icons.Rounded.Search,
+                        contentDescription = if (searchExpanded) "Close search" else "Search",
+                        tint = colorScheme.onSurface,
+                        compact = true,
+                        onClick = {
+                            if (searchExpanded) {
+                                onSearchExpandedChange(false)
+                            } else {
+                                onSearchExpandedChange(true)
                             }
-                            innerTextField()
-                        }
-                    },
-                )
+                        },
+                    )
+
+                    if (searchExpanded) {
+                        BasicTextField(
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester),
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                color = colorScheme.onSurface,
+                                fontWeight = FontWeight.Medium,
+                            ),
+                            cursorBrush = SolidColor(colorScheme.primary),
+                            decorationBox = { innerTextField ->
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.CenterStart,
+                                ) {
+                                    if (searchQuery.isBlank()) {
+                                        Text(
+                                            text = "Search",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            },
+                        )
+                    }
+                }
             }
 
             PressableIconButton(
@@ -897,38 +939,46 @@ private fun PressableIconButton(
     icon: ImageVector,
     contentDescription: String,
     tint: Color,
+    compact: Boolean = false,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
+    val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.9f else 1f,
+        targetValue = if (pressed) 0.93f else 1f,
         label = "homeIconButtonScale",
     )
 
-    Box(
+    Card(
         modifier = Modifier
-            .size(40.dp)
+            .size(if (compact) 30.dp else 54.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-            }
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
-            ) {
-                performGentleHaptic(view)
-                onClick()
             },
-        contentAlignment = Alignment.Center,
+        onClick = {
+            performGentleHaptic(view)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = if (compact) RoundedCornerShape(999.dp) else CircleShape,
+        border = if (compact) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
+        colors = CardDefaults.cardColors(containerColor = if (compact) Color.Transparent else colorScheme.background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
-        )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(if (compact) 24.dp else 22.dp),
+            )
+        }
     }
 }
 
@@ -1009,14 +1059,36 @@ private fun calendarTileColor(colorScheme: ColorScheme): Color {
     return Color(0xFFCEC2E2)
 }
 
-private fun listSectionEnterTransition(): EnterTransition {
-    val duration = 300
-    return fadeIn(
-        animationSpec = tween(durationMillis = duration),
-    ) + slideInVertically(
-        animationSpec = tween(durationMillis = duration),
-        initialOffsetY = { fullHeight -> (fullHeight * 0.22f).toInt().coerceAtLeast(18) },
+@Composable
+private fun TopDownCascadeReveal(
+    content: @Composable () -> Unit,
+) {
+    var revealed by remember { mutableStateOf(false) }
+    val alpha by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0f,
+        animationSpec = tween(durationMillis = 320),
+        label = "listCascadeAlpha",
     )
+    val offsetY by animateDpAsState(
+        targetValue = if (revealed) 0.dp else (-14).dp,
+        animationSpec = tween(durationMillis = 320),
+        label = "listCascadeOffsetY",
+    )
+
+    LaunchedEffect(Unit) {
+        revealed = true
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                this.alpha = alpha
+                translationY = offsetY.toPx()
+            },
+    ) {
+        content()
+    }
 }
 
 @Composable
@@ -1249,6 +1321,11 @@ private fun ListRow(
         targetValue = if (isPressed) 2.dp else 10.dp,
         label = "listRowElevation",
     )
+    val animatedCount by animateIntAsState(
+        targetValue = count,
+        animationSpec = tween(durationMillis = 220),
+        label = "listRowCount",
+    )
 
     Card(
         modifier = Modifier
@@ -1302,7 +1379,7 @@ private fun ListRow(
             }
 
             Text(
-                text = count.toString(),
+                text = animatedCount.toString(),
                 color = colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
