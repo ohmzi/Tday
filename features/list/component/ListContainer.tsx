@@ -111,7 +111,7 @@ const ListContainer = ({ id }: { id: string }) => {
             useReorderTodo={useReorderListTodo}
         >
             <div className="mb-20" onMouseOver={() => (setContainerHovered(true))} onMouseOut={() => setContainerHovered(false)}>
-                {/* Sticky header with mobile menu + search — matches Tday & Completed pages */}
+                {/* Sticky header with mobile menu + search — matches T'Day & Completed pages */}
                 <MobileSearchHeader
                     searchQuery={searchQuery}
                     onSearchChange={setSearchQuery}

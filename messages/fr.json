@@ -6,7 +6,7 @@
       "login": "Se connecter"
     },
     "hero": {
-      "title": "Tday",
+      "title": "T'Day",
       "subtitle": "Un couteau suisse de la planification personnelle — avec un éditeur style Notion, des téléchargements de fichiers cryptés ultra-secrets, et une foule de petits extras géniaux !",
       "readDocs": "Lire la documentation",
       "start": "Commencer"
@@ -75,11 +75,11 @@
   "terms": {
     "title": "Conditions d'utilisation",
     "lastUpdated": "Dernière mise à jour : 19 janvier 2026",
-    "intro": "En utilisant Tday (le « Service »), vous acceptez ces Conditions d'utilisation.",
+    "intro": "En utilisant T'Day (le « Service »), vous acceptez ces Conditions d'utilisation.",
     "sections": {
       "1": {
         "title": "Utilisation du Service",
-        "content": "Tday est une application de productivité gratuite pour gérer les tâches, les notes et les fichiers. Vous acceptez d'utiliser le Service légalement et de ne pas en abuser ni de l'interrompre."
+        "content": "T'Day est une application de productivité gratuite pour gérer les tâches, les notes et les fichiers. Vous acceptez d'utiliser le Service légalement et de ne pas en abuser ni de l'interrompre."
       },
       "2": {
         "title": "Comptes",
@@ -87,7 +87,7 @@
       },
       "3": {
         "title": "Votre Contenu",
-        "content": "Vous conservez la propriété de votre contenu. En utilisant Tday, vous accordez la permission de le stocker et de le traiter uniquement pour faire fonctionner le Service."
+        "content": "Vous conservez la propriété de votre contenu. En utilisant T'Day, vous accordez la permission de le stocker et de le traiter uniquement pour faire fonctionner le Service."
       },
       "4": {
         "title": "Utilisation Acceptable",
@@ -100,15 +100,15 @@
       },
       "5": {
         "title": "Disponibilité",
-        "content": "Tday est un projet personnel fourni au mieux. Le Service peut changer, être hors ligne ou être interrompu à tout moment."
+        "content": "T'Day est un projet personnel fourni au mieux. Le Service peut changer, être hors ligne ou être interrompu à tout moment."
       },
       "6": {
         "title": "Résiliation",
-        "content": "Vous pouvez cesser d'utiliser Tday à tout moment. Nous pouvons suspendre l'accès si ces Conditions sont violées."
+        "content": "Vous pouvez cesser d'utiliser T'Day à tout moment. Nous pouvons suspendre l'accès si ces Conditions sont violées."
       },
       "7": {
         "title": "Clause de non-responsabilité",
-        "content": "Tday est fourni « tel quel ». Nous ne sommes pas responsables de la perte de données, des interruptions ou des dommages résultant de l'utilisation du Service."
+        "content": "T'Day est fourni « tel quel ». Nous ne sommes pas responsables de la perte de données, des interruptions ou des dommages résultant de l'utilisation du Service."
       },
       "8": {
         "title": "Changements",
@@ -123,7 +123,7 @@
   "privacy": {
     "title": "Politique de confidentialité",
     "lastUpdated": "Dernière mise à jour : 19 janvier 2026",
-    "intro": "Tday (« nous », « notre » ou « nos ») est une application de productivité personnelle. Cette politique de confidentialité explique quelles données nous collectons et comment nous les utilisons.",
+    "intro": "T'Day (« nous », « notre » ou « nos ») est une application de productivité personnelle. Cette politique de confidentialité explique quelles données nous collectons et comment nous les utilisons.",
     "sections": {
       "1": {
         "title": "Informations que nous collectons",
@@ -137,7 +137,7 @@
       "2": {
         "title": "Comment nous utilisons vos données",
         "content": [
-          "Fournir et exploiter Tday",
+          "Fournir et exploiter T'Day",
           "Authentifier les utilisateurs",
           "Stocker et synchroniser votre contenu",
           "Maintenir la sécurité et prévenir les abus"
@@ -145,11 +145,11 @@
       },
       "3": {
         "title": "Stockage des données et sécurité",
-        "content": "Tday utilise NextAuth pour l'authentification, NeonDB pour le stockage et Vercel pour l'hébergement. Les fichiers sont cryptés le cas échéant. Bien qu'aucun système ne soit parfaitement sécurisé, des mesures raisonnables sont prises pour protéger vos données."
+        "content": "T'Day utilise NextAuth pour l'authentification, NeonDB pour le stockage et Vercel pour l'hébergement. Les fichiers sont cryptés le cas échéant. Bien qu'aucun système ne soit parfaitement sécurisé, des mesures raisonnables sont prises pour protéger vos données."
       },
       "4": {
         "title": "Partage des données",
-        "content": "Nous ne partageons les données qu'avec les prestataires de services requis pour exploiter Tday. Nous ne vendons pas vos données personnelles."
+        "content": "Nous ne partageons les données qu'avec les prestataires de services requis pour exploiter T'Day. Nous ne vendons pas vos données personnelles."
       },
       "5": {
         "title": "Cookies",

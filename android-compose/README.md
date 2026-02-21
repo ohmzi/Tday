@@ -1,6 +1,6 @@
-# Tday Native Android (Compose)
+# T'Day Native Android (Compose)
 
-Native Kotlin + Jetpack Compose Android client for Tday.
+Native Kotlin + Jetpack Compose Android client for T'Day.
 
 ## Goals
 - Replace old web-wrapper APK approach with a real native app.
