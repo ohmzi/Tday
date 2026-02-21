@@ -22,6 +22,7 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
+import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.network.TdayApiService
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -844,8 +845,8 @@ class TdayRepository @Inject constructor(
         color: String? = null,
         iconKey: String? = null,
     ) {
-        val trimmedName = name.trim()
-        if (trimmedName.isBlank()) return
+        val normalizedName = capitalizeFirstListLetter(name).trim()
+        if (normalizedName.isBlank()) return
 
         val localListId = "$LOCAL_LIST_PREFIX${UUID.randomUUID()}"
         val timestampMs = System.currentTimeMillis()
@@ -853,7 +854,7 @@ class TdayRepository @Inject constructor(
         updateOfflineState { state ->
             val newList = CachedListRecord(
                 id = localListId,
-                name = trimmedName,
+                name = normalizedName,
                 color = color,
                 iconKey = iconKey,
                 todoCount = 0,
@@ -866,7 +867,7 @@ class TdayRepository @Inject constructor(
                     kind = MutationKind.CREATE_LIST,
                     targetId = localListId,
                     timestampEpochMs = timestampMs,
-                    name = trimmedName,
+                    name = normalizedName,
                     color = color,
                     iconKey = iconKey,
                 ),
@@ -877,7 +878,7 @@ class TdayRepository @Inject constructor(
             requireBody(
                 api.createList(
                     CreateListRequest(
-                        name = trimmedName,
+                        name = normalizedName,
                         color = color,
                         iconKey = iconKey,
                     ),
@@ -920,7 +921,7 @@ class TdayRepository @Inject constructor(
         color: String? = null,
         iconKey: String? = null,
     ) {
-        val trimmedName = name.trim()
+        val trimmedName = capitalizeFirstListLetter(name).trim()
         if (listId.isBlank()) return
         require(trimmedName.isNotBlank()) { "List name is required" }
         Log.d(
