@@ -228,7 +228,7 @@ private fun CompletedTopBar(
                         },
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF5C8E75),
+                    color = Color(0xFFB4CDBA),
                 )
             }
         }
@@ -244,7 +244,7 @@ private fun CompletedTopBar(
                     text = "Completed",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF5C8E75),
+                    color = Color(0xFFB4CDBA),
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY

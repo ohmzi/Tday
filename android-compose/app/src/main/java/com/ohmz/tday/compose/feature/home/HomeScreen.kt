@@ -795,7 +795,8 @@ private fun CreateTaskButton(
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
-    val colorScheme = MaterialTheme.colorScheme
+    val fabBlue = Color(0xFF6EA8E1)
+    val fabBlueBorder = Color(0xFF3D7FEA).copy(alpha = 0.58f)
 
     Card(
         modifier = modifier,
@@ -805,8 +806,8 @@ private fun CreateTaskButton(
         },
         interactionSource = interactionSource,
         shape = CircleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
+        border = BorderStroke(1.dp, fabBlueBorder),
+        colors = CardDefaults.cardColors(containerColor = fabBlue),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 0.dp,
             pressedElevation = 0.dp,
@@ -819,7 +820,7 @@ private fun CreateTaskButton(
             Icon(
                 imageVector = Icons.Rounded.Add,
                 contentDescription = "Create task",
-                tint = colorScheme.onSurface,
+                tint = Color.White,
                 modifier = Modifier.size(26.dp),
             )
         }
