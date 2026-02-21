@@ -97,6 +97,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
@@ -434,7 +435,7 @@ fun HomeScreen(
                         }
                     }
 
-                    item { Spacer(Modifier.height(96.dp)) }
+                    item { Spacer(Modifier.height(80.dp)) }
                     }
                 }
             }
@@ -1319,62 +1320,135 @@ private fun ListRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        label = "listRowScale",
+    )
+    val animatedOffsetY by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 0.dp,
+        label = "listRowOffsetY",
+    )
+    val animatedElevation by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 8.dp,
+        label = "listRowElevation",
+    )
     val animatedCount by animateIntAsState(
         targetValue = count,
         animationSpec = tween(durationMillis = 220),
         label = "listRowCount",
     )
+    val accent = listColorAccent(colorKey)
+    val icon = listIconForKey(iconKey)
+    val containerColor = lerp(colorScheme.surfaceVariant, colorScheme.surface, 0.32f)
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(70.dp)
+            .offset(y = animatedOffsetY)
+            .graphicsLayer {
+                scaleX = animatedScale
+                scaleY = animatedScale
+            },
         onClick = {
             performGentleHaptic(view)
             onClick()
         },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(26.dp),
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.14f)),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 4.dp,
-            pressedElevation = 6.dp,
+            defaultElevation = animatedElevation,
+            pressedElevation = animatedElevation,
         ),
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .drawWithCache {
+                    val accentGlow = Brush.radialGradient(
+                        colors = listOf(
+                            accent.copy(alpha = 0.26f),
+                            accent.copy(alpha = 0.12f),
+                            Color.Transparent,
+                        ),
+                        center = Offset(size.width * 0.2f, size.height * 0.24f),
+                        radius = size.maxDimension * 0.92f,
+                    )
+                    val pearlWash = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.20f),
+                            Color.White.copy(alpha = 0.08f),
+                            Color.Transparent,
+                        ),
+                        start = Offset(size.width * 0.06f, 0f),
+                        end = Offset(size.width * 0.94f, size.height),
+                    )
+                    onDrawWithContent {
+                        drawRect(accentGlow)
+                        drawRect(pearlWash)
+                        drawContent()
+                    }
+                },
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val accent = listColorAccent(colorKey)
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(accent.copy(alpha = 0.18f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = listIconForKey(iconKey),
-                        contentDescription = null,
-                        tint = accent,
-                        modifier = Modifier.size(14.dp),
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = lerp(accent, Color.White, 0.5f).copy(alpha = 0.20f),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(x = 14.dp, y = 8.dp)
+                    .size(82.dp),
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(accent.copy(alpha = 0.20f))
+                            .border(
+                                width = 1.dp,
+                                color = accent.copy(alpha = 0.34f),
+                                shape = CircleShape,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                    Text(
+                        modifier = Modifier.padding(start = 12.dp),
+                        text = name,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
+
                 Text(
-                    modifier = Modifier.padding(start = 12.dp),
-                    text = name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colorScheme.onSurface,
+                    text = animatedCount.toString(),
+                    color = colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                 )
             }
-
-            Text(
-                text = animatedCount.toString(),
-                color = colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
         }
     }
 }
