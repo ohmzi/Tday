@@ -189,12 +189,23 @@ private fun CalendarTopBar(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Text(
-            text = "Calendar",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFFCEC2E2),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.CalendarMonth,
+                contentDescription = null,
+                tint = Color(0xFFCEC2E2),
+                modifier = Modifier.size(28.dp),
+            )
+            Text(
+                text = "Calendar",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFCEC2E2),
+            )
+        }
         Text(
             text = monthLabel,
             style = MaterialTheme.typography.titleMedium,
