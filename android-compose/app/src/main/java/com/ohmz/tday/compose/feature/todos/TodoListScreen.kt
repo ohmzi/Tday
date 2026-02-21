@@ -73,6 +73,7 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -103,7 +104,7 @@ fun TodoListScreen(
     val isTodayScreen = uiState.mode == TodoListMode.TODAY
     val titleColor = when (uiState.mode) {
         TodoListMode.TODAY -> Color(0xFF3D7FEA)
-        TodoListMode.SCHEDULED -> Color(0xFFE25555)
+        TodoListMode.SCHEDULED -> Color(0xFFDDB37D)
         TodoListMode.ALL -> colorScheme.onSurface
         TodoListMode.PRIORITY -> Color(0xFFC8798B)
         else -> colorScheme.onSurface
@@ -112,7 +113,8 @@ fun TodoListScreen(
         uiState.mode == TodoListMode.TODAY ||
         uiState.mode == TodoListMode.SCHEDULED ||
         uiState.mode == TodoListMode.ALL ||
-        uiState.mode == TodoListMode.PRIORITY
+        uiState.mode == TodoListMode.PRIORITY ||
+        uiState.mode == TodoListMode.LIST
     val timelineSections = remember(uiState.mode, uiState.items) {
         buildTimelineSections(
             mode = uiState.mode,
@@ -351,7 +353,7 @@ fun TodoListScreen(
     if (showCreateTaskSheet) {
         CreateTaskBottomSheet(
             lists = uiState.lists,
-            defaultListId = null,
+            defaultListId = if (uiState.mode == TodoListMode.LIST) uiState.listId else null,
             initialStartEpochMs = quickAddStartEpochMs,
             initialDueEpochMs = quickAddDueEpochMs,
             onDismiss = {
@@ -666,7 +668,16 @@ private fun buildTimelineSections(
     val zoneId = ZoneId.systemDefault()
     return when (mode) {
         TodoListMode.TODAY -> buildTodaySections(items, zoneId)
-        TodoListMode.SCHEDULED, TodoListMode.ALL, TodoListMode.PRIORITY -> buildScheduledSections(items, zoneId)
+        TodoListMode.SCHEDULED -> buildScheduledSections(
+            items = items,
+            zoneId = zoneId,
+            futureOnly = true,
+        )
+        TodoListMode.ALL, TodoListMode.PRIORITY, TodoListMode.LIST -> buildScheduledSections(
+            items = items,
+            zoneId = zoneId,
+            futureOnly = false,
+        )
         else -> emptyList()
     }
 }
@@ -717,8 +728,16 @@ private fun buildTodaySections(
 private fun buildScheduledSections(
     items: List<TodoItem>,
     zoneId: ZoneId,
+    futureOnly: Boolean,
 ): List<TodoSection> {
-    val sorted = items.sortedBy { it.due }
+    val now = Instant.now()
+    val sorted = items
+        .asSequence()
+        .filter { todo ->
+            if (futureOnly) !todo.due.isBefore(now) else true
+        }
+        .sortedBy { it.due }
+        .toList()
     val groupedByDate = sorted.groupBy { todo ->
         LocalDate.ofInstant(todo.due, zoneId)
     }
@@ -735,18 +754,20 @@ private fun buildScheduledSections(
         )
     }
 
-    val earlierItems = groupedByDate
-        .asSequence()
-        .filter { (date, _) -> date < today }
-        .flatMap { (_, dayItems) -> dayItems.asSequence() }
-        .sortedBy { it.due }
-        .toList()
-    if (earlierItems.isNotEmpty()) {
-        sections += TodoSection(
-            key = "earlier",
-            title = "Earlier",
-            items = earlierItems,
-        )
+    if (!futureOnly) {
+        val earlierItems = groupedByDate
+            .asSequence()
+            .filter { (date, _) -> date < today }
+            .flatMap { (_, dayItems) -> dayItems.asSequence() }
+            .sortedBy { it.due }
+            .toList()
+        if (earlierItems.isNotEmpty()) {
+            sections += TodoSection(
+                key = "earlier",
+                title = "Earlier",
+                items = earlierItems,
+            )
+        }
     }
 
     sections += daySection(today, "Today")
