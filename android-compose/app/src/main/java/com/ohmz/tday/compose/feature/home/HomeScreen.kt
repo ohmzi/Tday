@@ -104,6 +104,7 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import kotlinx.coroutines.delay
+import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -843,6 +844,9 @@ private fun TopSearchBar(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
+    val isDaytime = rememberIsDaytime()
+    val homeTitleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val homeTitleIconTint = if (isDaytime) Color(0xFFF4C542) else Color(0xFFA8B8E8)
 
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
@@ -876,9 +880,9 @@ private fun TopSearchBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.WbSunny,
+                    imageVector = homeTitleIcon,
                     contentDescription = null,
-                    tint = colorScheme.onBackground,
+                    tint = homeTitleIconTint,
                     modifier = Modifier.size(26.dp),
                 )
                 Text(
@@ -987,6 +991,22 @@ private fun TopSearchBar(
             )
         }
     }
+}
+
+@Composable
+private fun rememberIsDaytime(): Boolean {
+    val hour = remember { mutableIntStateOf(LocalTime.now().hour) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = LocalTime.now()
+            val millisToNextMinute = ((60 - now.second) * 1000L) - (now.nano / 1_000_000L)
+            delay(millisToNextMinute.coerceAtLeast(500L))
+            hour.intValue = LocalTime.now().hour
+        }
+    }
+
+    return hour.intValue in 6 until 18
 }
 
 @Composable
