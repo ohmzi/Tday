@@ -51,9 +51,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -62,7 +60,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
@@ -190,10 +187,6 @@ fun TodoListScreen(
         targetValue = if (fabPressed) 0.93f else 1f,
         label = "todoFabScale",
     )
-    val fabElevation by animateDpAsState(
-        targetValue = if (fabPressed) 4.dp else 14.dp,
-        label = "todoFabElevation",
-    )
     val fabOffsetY by animateDpAsState(
         targetValue = if (fabPressed) 2.dp else 0.dp,
         label = "todoFabOffsetY",
@@ -236,7 +229,6 @@ fun TodoListScreen(
                         scaleY = fabScale
                     },
                 interactionSource = fabInteractionSource,
-                elevation = fabElevation,
                 onClick = {
                     quickAddStartEpochMs = null
                     quickAddDueEpochMs = null
@@ -479,7 +471,6 @@ private fun TodayHeaderButton(
 private fun CreateTaskButton(
     modifier: Modifier,
     interactionSource: MutableInteractionSource,
-    elevation: Dp,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
@@ -492,47 +483,23 @@ private fun CreateTaskButton(
             onClick()
         },
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.primary),
+        shape = CircleShape,
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = elevation,
-            pressedElevation = elevation,
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
         ),
     ) {
         Box(
-            modifier = Modifier
-                .size(62.dp)
-                .drawWithCache {
-                    val pearlWash = Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.18f),
-                            Color(0xFFE7F3FF).copy(alpha = 0.12f),
-                            Color.Transparent,
-                        ),
-                        start = Offset(size.width * 0.08f, size.height * 0.05f),
-                        end = Offset(size.width * 0.9f, size.height * 0.88f),
-                    )
-                    val depthShade = Brush.linearGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.12f),
-                        ),
-                        start = Offset(size.width * 0.4f, size.height * 0.3f),
-                        end = Offset(size.width, size.height),
-                    )
-                    onDrawWithContent {
-                        drawRect(pearlWash)
-                        drawRect(depthShade)
-                        drawContent()
-                    }
-                },
+            modifier = Modifier.size(56.dp),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Rounded.Add,
                 contentDescription = "Create task",
-                tint = Color.White,
-                modifier = Modifier.size(30.dp),
+                tint = colorScheme.onSurface,
+                modifier = Modifier.size(26.dp),
             )
         }
     }
