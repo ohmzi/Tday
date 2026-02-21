@@ -393,7 +393,7 @@ fun HomeScreen(
                                             count = list.todoCount,
                                             onClick = {
                                                 closeSearch()
-                                                onOpenList(list.id, list.name)
+                                                onOpenList(list.id, capitalizeFirstListLetter(list.name))
                                             },
                                         )
                                     }
@@ -405,7 +405,7 @@ fun HomeScreen(
                                         count = list.todoCount,
                                         onClick = {
                                             closeSearch()
-                                            onOpenList(list.id, list.name)
+                                            onOpenList(list.id, capitalizeFirstListLetter(list.name))
                                         },
                                     )
                                 }
@@ -1146,11 +1146,11 @@ private fun CategoryGrid(
 }
 
 private fun completedTileColor(colorScheme: ColorScheme): Color {
-    return Color(0xFFB4CDBA)
+    return Color(0xFFA8C8B2)
 }
 
 private fun calendarTileColor(colorScheme: ColorScheme): Color {
-    return Color(0xFFCEC2E2)
+    return Color(0xFFC3B4DF)
 }
 
 @Composable
@@ -1390,7 +1390,8 @@ private fun ListRow(
     )
     val accent = listColorAccent(colorKey)
     val icon = listIconForKey(iconKey)
-    val containerColor = lerp(colorScheme.surfaceVariant, accent, 0.30f)
+    val containerColor = lerp(colorScheme.surfaceVariant, accent, 0.38f)
+    val displayName = capitalizeFirstListLetter(name)
 
     Card(
         modifier = Modifier
@@ -1425,13 +1426,13 @@ private fun ListRow(
                         ),
                         center = Offset(
                             x = size.width * 0.22f,
-                            y = size.height * 0.22f,
+                            y = size.height * 0.2f,
                         ),
-                        radius = size.maxDimension * 0.88f,
+                        radius = size.maxDimension * 0.9f,
                     )
                     val pearlWash = Brush.linearGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.16f),
+                            Color.White.copy(alpha = 0.12f),
                             Color(0xFFE7F3FF).copy(alpha = 0.1f),
                             Color(0xFFFFF2FA).copy(alpha = 0.08f),
                             Color.Transparent,
@@ -1442,7 +1443,7 @@ private fun ListRow(
                         ),
                         end = Offset(
                             x = size.width * 0.9f,
-                            y = size.height * 0.78f,
+                            y = size.height * 0.75f,
                         ),
                     )
                     onDrawWithContent {
@@ -1455,7 +1456,7 @@ private fun ListRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = lerp(accent, Color.White, 0.32f).copy(alpha = 0.34f),
+                tint = lerp(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .offset(x = 14.dp, y = 8.dp)
@@ -1482,7 +1483,7 @@ private fun ListRow(
                         )
                     }
                     Text(
-                        text = name,
+                        text = displayName,
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
