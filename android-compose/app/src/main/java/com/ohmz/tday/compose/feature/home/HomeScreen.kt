@@ -368,20 +368,10 @@ fun HomeScreen(
                             if (visibleListStage >= 1) {
                                 if (animateListCascade) {
                                     TopDownCascadeReveal {
-                                        Text(
-                                            text = "My Lists",
-                                            style = MaterialTheme.typography.headlineMedium,
-                                            color = colorScheme.onBackground,
-                                            fontWeight = FontWeight.Bold,
-                                        )
+                                        MyListsHeader()
                                     }
                                 } else {
-                                    Text(
-                                        text = "My Lists",
-                                        style = MaterialTheme.typography.headlineMedium,
-                                        color = colorScheme.onBackground,
-                                        fontWeight = FontWeight.Bold,
-                                    )
+                                    MyListsHeader()
                                 }
                             }
                         }
@@ -878,15 +868,26 @@ private fun TopSearchBar(
         )
 
         if (!searchExpanded) {
-            Text(
+            Row(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = 2.dp),
-                text = "Tday",
-                style = MaterialTheme.typography.headlineLarge,
-                color = colorScheme.onBackground,
-                fontWeight = FontWeight.Bold,
-            )
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.WbSunny,
+                    contentDescription = null,
+                    tint = colorScheme.onBackground,
+                    modifier = Modifier.size(26.dp),
+                )
+                Text(
+                    text = "Tday",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
 
         Row(
@@ -985,6 +986,28 @@ private fun TopSearchBar(
                 onClick = onOpenSettings,
             )
         }
+    }
+}
+
+@Composable
+private fun MyListsHeader() {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.List,
+            contentDescription = null,
+            tint = colorScheme.onBackground,
+            modifier = Modifier.size(24.dp),
+        )
+        Text(
+            text = "My Lists",
+            style = MaterialTheme.typography.headlineMedium,
+            color = colorScheme.onBackground,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
