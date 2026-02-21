@@ -6,7 +6,7 @@
       "login": "Anmelden"
     },
     "hero": {
-      "title": "Tday",
+      "title": "T'Day",
       "subtitle": "Ein Schweizer Taschenmesser für die persönliche Planung – mit einem Editor im Notion-Stil, streng geheimen, verschlüsselten Dateiuploads und vielen raffinierten Extras!",
       "readDocs": "Dokumentation lesen",
       "start": "Jetzt starten"
@@ -75,11 +75,11 @@
   "terms": {
     "title": "Nutzungsbedingungen",
     "lastUpdated": "Zuletzt aktualisiert: 19. Januar 2026",
-    "intro": "Durch die Nutzung von Tday (dem „Dienst“) erklären Sie sich mit diesen Nutzungsbedingungen einverstanden.",
+    "intro": "Durch die Nutzung von T'Day (dem „Dienst“) erklären Sie sich mit diesen Nutzungsbedingungen einverstanden.",
     "sections": {
       "1": {
         "title": "Nutzung des Dienstes",
-        "content": "Tday ist eine kostenlose Produktivitäts-App zur Verwaltung von Aufgaben, Notizen und Dateien. Sie stimmen zu, den Dienst rechtmäßig zu nutzen und ihn nicht zu missbrauchen oder zu stören."
+        "content": "T'Day ist eine kostenlose Produktivitäts-App zur Verwaltung von Aufgaben, Notizen und Dateien. Sie stimmen zu, den Dienst rechtmäßig zu nutzen und ihn nicht zu missbrauchen oder zu stören."
       },
       "2": {
         "title": "Konten",
@@ -87,7 +87,7 @@
       },
       "3": {
         "title": "Ihre Inhalte",
-        "content": "Sie behalten das Eigentum an Ihren Inhalten. Durch die Nutzung von Tday gewähren Sie die Erlaubnis, diese ausschließlich für den Betrieb des Dienstes zu speichern und zu verarbeiten."
+        "content": "Sie behalten das Eigentum an Ihren Inhalten. Durch die Nutzung von T'Day gewähren Sie die Erlaubnis, diese ausschließlich für den Betrieb des Dienstes zu speichern und zu verarbeiten."
       },
       "4": {
         "title": "Zulässige Nutzung",
@@ -100,15 +100,15 @@
       },
       "5": {
         "title": "Verfügbarkeit",
-        "content": "Tday ist ein persönliches Projekt, das auf Best-Effort-Basis bereitgestellt wird. Der Dienst kann sich jederzeit ändern, offline gehen oder eingestellt werden."
+        "content": "T'Day ist ein persönliches Projekt, das auf Best-Effort-Basis bereitgestellt wird. Der Dienst kann sich jederzeit ändern, offline gehen oder eingestellt werden."
       },
       "6": {
         "title": "Beendigung",
-        "content": "Sie können die Nutzung von Tday jederzeit beenden. Wir können den Zugriff sperren, wenn diese Bedingungen verletzt werden."
+        "content": "Sie können die Nutzung von T'Day jederzeit beenden. Wir können den Zugriff sperren, wenn diese Bedingungen verletzt werden."
       },
       "7": {
         "title": "Haftungsausschluss",
-        "content": "Tday wird „wie besehen“ bereitgestellt. Wir sind nicht verantwortlich für Datenverlust, Unterbrechungen oder Schäden, die aus der Nutzung des Dienstes resultieren."
+        "content": "T'Day wird „wie besehen“ bereitgestellt. Wir sind nicht verantwortlich für Datenverlust, Unterbrechungen oder Schäden, die aus der Nutzung des Dienstes resultieren."
       },
       "8": {
         "title": "Änderungen",
@@ -123,7 +123,7 @@
   "privacy": {
     "title": "Datenschutzbestimmungen",
     "lastUpdated": "Zuletzt aktualisiert: 19. Januar 2026",
-    "intro": "Tday („wir“, „unser“ oder „uns“) ist eine persönliche Produktivitäts-App. Diese Datenschutzbestimmung erklärt, welche Daten wir sammeln und wie wir sie verwenden.",
+    "intro": "T'Day („wir“, „unser“ oder „uns“) ist eine persönliche Produktivitäts-App. Diese Datenschutzbestimmung erklärt, welche Daten wir sammeln und wie wir sie verwenden.",
     "sections": {
       "1": {
         "title": "Informationen, die wir sammeln",
@@ -137,7 +137,7 @@
       "2": {
         "title": "Wie wir Ihre Daten verwenden",
         "content": [
-          "Bereitstellung und Betrieb von Tday",
+          "Bereitstellung und Betrieb von T'Day",
           "Authentifizierung von Nutzern",
           "Speicherung und Synchronisierung Ihrer Inhalte",
           "Aufrechterhaltung der Sicherheit und Missbrauchsprävention"
@@ -145,11 +145,11 @@
       },
       "3": {
         "title": "Datenspeicherung & Sicherheit",
-        "content": "Tday nutzt NextAuth für die Authentifizierung, NeonDB für die Speicherung und Vercel für das Hosting. Dateien werden nach Möglichkeit verschlüsselt. Obwohl kein System perfekt sicher ist, werden angemessene Schritte zum Schutz Ihrer Daten unternommen."
+        "content": "T'Day nutzt NextAuth für die Authentifizierung, NeonDB für die Speicherung und Vercel für das Hosting. Dateien werden nach Möglichkeit verschlüsselt. Obwohl kein System perfekt sicher ist, werden angemessene Schritte zum Schutz Ihrer Daten unternommen."
       },
       "4": {
         "title": "Weitergabe von Daten",
-        "content": "Wir geben Daten nur an Dienstleister weiter, die für den Betrieb von Tday erforderlich sind. Wir verkaufen Ihre persönlichen Daten nicht."
+        "content": "Wir geben Daten nur an Dienstleister weiter, die für den Betrieb von T'Day erforderlich sind. Wir verkaufen Ihre persönlichen Daten nicht."
       },
       "5": {
         "title": "Cookies",

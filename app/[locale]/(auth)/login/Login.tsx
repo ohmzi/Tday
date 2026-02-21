@@ -69,12 +69,12 @@ export default function LoginPage() {
       <Card className="border-0 bg-card/80 shadow-xl backdrop-blur-sm">
         <CardHeader className="space-y-4 pb-2 text-center">
         <div className="mx-auto flex items-center justify-center">
-          <Image src="/tday-icon.svg" alt="Tday" width={64} height={64} />
+          <Image src="/tday-icon.svg" alt="T'Day" width={64} height={64} />
         </div>
         <div className="space-y-1">
           <CardTitle className="text-3xl font-serif">Welcome Back</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Sign in to continue to Tday
+            {"Sign in to continue to T'Day"}
           </CardDescription>
         </div>
       </CardHeader>
