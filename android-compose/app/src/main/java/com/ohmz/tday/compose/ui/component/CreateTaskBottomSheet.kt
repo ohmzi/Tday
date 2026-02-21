@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -55,6 +56,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -108,8 +110,11 @@ fun CreateTaskBottomSheet(
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val dateFormatter = remember {
-        DateTimeFormatter.ofPattern("EEE, MMM d • h:mm a").withZone(ZoneId.systemDefault())
+    val dateOnlyFormatter = remember {
+        DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault())
+    }
+    val timeOnlyFormatter = remember {
+        DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
     }
     val listIdsKey = remember(lists) { lists.joinToString(separator = "|") { it.id } }
 
@@ -230,26 +235,52 @@ fun CreateTaskBottomSheet(
 
                         SectionHeading("Date & Time")
                         GroupCard {
-                            SheetRow(
+                            SplitDateTimeRow(
                                 icon = Icons.Rounded.Schedule,
-                                title = "Starts",
-                                value = dateFormatter.format(Instant.ofEpochMilli(startEpochMs)),
-                                onClick = {
-                                    showDateTimePicker(context, startEpochMs) { picked ->
-                                        startEpochMs = picked
-                                        dueEpochMs = picked + DEFAULT_TASK_DURATION_MS
+                                title = "Start",
+                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
+                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
+                                onDateClick = {
+                                    showDatePicker(context, startEpochMs) { pickedDate ->
+                                        startEpochMs = mergeDateKeepingTime(
+                                            baseEpochMs = startEpochMs,
+                                            selectedDateEpochMs = pickedDate,
+                                        )
+                                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
+                                    }
+                                },
+                                onTimeClick = {
+                                    showTimePicker(context, startEpochMs) { pickedTime ->
+                                        startEpochMs = mergeTimeKeepingDate(
+                                            baseEpochMs = startEpochMs,
+                                            selectedTimeEpochMs = pickedTime,
+                                        )
+                                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
                                     }
                                 },
                             )
                             RowDivider()
-                            SheetRow(
+                            SplitDateTimeRow(
                                 icon = Icons.Rounded.CalendarMonth,
                                 title = "Due",
-                                value = dateFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onClick = {
-                                    showDateTimePicker(context, dueEpochMs) { picked ->
-                                        dueEpochMs = picked
-                                        startEpochMs = picked - DEFAULT_TASK_DURATION_MS
+                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                                onDateClick = {
+                                    showDatePicker(context, dueEpochMs) { pickedDate ->
+                                        dueEpochMs = mergeDateKeepingTime(
+                                            baseEpochMs = dueEpochMs,
+                                            selectedDateEpochMs = pickedDate,
+                                        )
+                                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
+                                    }
+                                },
+                                onTimeClick = {
+                                    showTimePicker(context, dueEpochMs) { pickedTime ->
+                                        dueEpochMs = mergeTimeKeepingDate(
+                                            baseEpochMs = dueEpochMs,
+                                            selectedTimeEpochMs = pickedTime,
+                                        )
+                                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
                                     }
                                 },
                             )
@@ -282,26 +313,52 @@ fun CreateTaskBottomSheet(
                     TaskSheetPage.DETAILS -> {
                         SectionHeading("Scheduling")
                         GroupCard {
-                            SheetRow(
+                            SplitDateTimeRow(
                                 icon = Icons.Rounded.Schedule,
-                                title = "Starts",
-                                value = dateFormatter.format(Instant.ofEpochMilli(startEpochMs)),
-                                onClick = {
-                                    showDateTimePicker(context, startEpochMs) { picked ->
-                                        startEpochMs = picked
-                                        dueEpochMs = picked + DEFAULT_TASK_DURATION_MS
+                                title = "Start",
+                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
+                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
+                                onDateClick = {
+                                    showDatePicker(context, startEpochMs) { pickedDate ->
+                                        startEpochMs = mergeDateKeepingTime(
+                                            baseEpochMs = startEpochMs,
+                                            selectedDateEpochMs = pickedDate,
+                                        )
+                                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
+                                    }
+                                },
+                                onTimeClick = {
+                                    showTimePicker(context, startEpochMs) { pickedTime ->
+                                        startEpochMs = mergeTimeKeepingDate(
+                                            baseEpochMs = startEpochMs,
+                                            selectedTimeEpochMs = pickedTime,
+                                        )
+                                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
                                     }
                                 },
                             )
                             RowDivider()
-                            SheetRow(
+                            SplitDateTimeRow(
                                 icon = Icons.Rounded.CalendarMonth,
                                 title = "Due",
-                                value = dateFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onClick = {
-                                    showDateTimePicker(context, dueEpochMs) { picked ->
-                                        dueEpochMs = picked
-                                        startEpochMs = picked - DEFAULT_TASK_DURATION_MS
+                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                                onDateClick = {
+                                    showDatePicker(context, dueEpochMs) { pickedDate ->
+                                        dueEpochMs = mergeDateKeepingTime(
+                                            baseEpochMs = dueEpochMs,
+                                            selectedDateEpochMs = pickedDate,
+                                        )
+                                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
+                                    }
+                                },
+                                onTimeClick = {
+                                    showTimePicker(context, dueEpochMs) { pickedTime ->
+                                        dueEpochMs = mergeTimeKeepingDate(
+                                            baseEpochMs = dueEpochMs,
+                                            selectedTimeEpochMs = pickedTime,
+                                        )
+                                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
                                     }
                                 },
                             )
@@ -642,6 +699,95 @@ private fun RowDivider() {
 }
 
 @Composable
+private fun SplitDateTimeRow(
+    icon: ImageVector,
+    title: String,
+    dateValue: String,
+    timeValue: String,
+    onDateClick: () -> Unit,
+    onTimeClick: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val splitShape = RoundedCornerShape(14.dp)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(modifier = Modifier.size(14.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = colorScheme.onSurface,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+
+        Row(
+            modifier = Modifier
+                .weight(1.45f)
+                .clip(splitShape)
+                .border(
+                    width = 1.dp,
+                    color = colorScheme.outlineVariant.copy(alpha = 0.55f),
+                    shape = splitShape,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onDateClick)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = dateValue,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(20.dp)
+                    .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onTimeClick)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = timeValue,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun SheetRow(
     icon: ImageVector,
     title: String,
@@ -761,7 +907,7 @@ private fun repeatSwatchColor(preset: RepeatPreset): Color {
     }
 }
 
-private fun showDateTimePicker(
+private fun showDatePicker(
     context: android.content.Context,
     initialEpochMs: Long,
     onSelected: (Long) -> Unit,
@@ -772,28 +918,68 @@ private fun showDateTimePicker(
     DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
-            TimePickerDialog(
-                context,
-                { _, hourOfDay, minute ->
-                    val selected = ZonedDateTime.of(
-                        year,
-                        month + 1,
-                        dayOfMonth,
-                        hourOfDay,
-                        minute,
-                        0,
-                        0,
-                        zoneId,
-                    )
-                    onSelected(selected.toInstant().toEpochMilli())
-                },
-                initial.hour,
-                initial.minute,
-                false,
-            ).show()
+            val selected = ZonedDateTime.of(
+                year,
+                month + 1,
+                dayOfMonth,
+                0,
+                0,
+                0,
+                0,
+                zoneId,
+            )
+            onSelected(selected.toInstant().toEpochMilli())
         },
         initial.year,
         initial.monthValue - 1,
         initial.dayOfMonth,
     ).show()
+}
+
+private fun showTimePicker(
+    context: android.content.Context,
+    initialEpochMs: Long,
+    onSelected: (Long) -> Unit,
+) {
+    val zoneId = ZoneId.systemDefault()
+    val initial = ZonedDateTime.ofInstant(Instant.ofEpochMilli(initialEpochMs), zoneId)
+
+    TimePickerDialog(
+        context,
+        { _, hourOfDay, minute ->
+            val selected = initial
+                .withHour(hourOfDay)
+                .withMinute(minute)
+                .withSecond(0)
+                .withNano(0)
+            onSelected(selected.toInstant().toEpochMilli())
+        },
+        initial.hour,
+        initial.minute,
+        false,
+    ).show()
+}
+
+private fun mergeDateKeepingTime(
+    baseEpochMs: Long,
+    selectedDateEpochMs: Long,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Long {
+    val base = ZonedDateTime.ofInstant(Instant.ofEpochMilli(baseEpochMs), zoneId)
+    val selectedDate = ZonedDateTime.ofInstant(Instant.ofEpochMilli(selectedDateEpochMs), zoneId).toLocalDate()
+    return ZonedDateTime.of(selectedDate, base.toLocalTime(), zoneId)
+        .toInstant()
+        .toEpochMilli()
+}
+
+private fun mergeTimeKeepingDate(
+    baseEpochMs: Long,
+    selectedTimeEpochMs: Long,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Long {
+    val base = ZonedDateTime.ofInstant(Instant.ofEpochMilli(baseEpochMs), zoneId)
+    val selectedTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(selectedTimeEpochMs), zoneId).toLocalTime()
+    return ZonedDateTime.of(base.toLocalDate(), selectedTime, zoneId)
+        .toInstant()
+        .toEpochMilli()
 }
