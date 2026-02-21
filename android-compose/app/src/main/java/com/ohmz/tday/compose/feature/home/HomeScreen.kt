@@ -188,6 +188,14 @@ fun HomeScreen(
         }
     }
     val listState = rememberLazyListState()
+    LaunchedEffect(listState.isScrollInProgress, searchExpanded) {
+        if (searchExpanded || listState.isScrollInProgress) return@LaunchedEffect
+        // Snap only when top header row is partially visible.
+        // If fully off-screen (index > 0), do not force any anchor behavior.
+        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset > 0) {
+            listState.animateScrollToItem(index = 0, scrollOffset = 0)
+        }
+    }
 
     LaunchedEffect(listStructureSignature) {
         val lists = uiState.summary.lists
