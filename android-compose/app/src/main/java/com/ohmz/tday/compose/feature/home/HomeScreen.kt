@@ -886,7 +886,7 @@ private fun TopSearchBar(
                     modifier = Modifier.size(26.dp),
                 )
                 Text(
-                    text = "Tday",
+                    text = "T'Day",
                     style = MaterialTheme.typography.headlineLarge,
                     color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
@@ -1016,13 +1016,7 @@ private fun MyListsHeader() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Rounded.List,
-            contentDescription = null,
-            tint = colorScheme.onBackground,
-            modifier = Modifier.size(24.dp),
-        )
-        Text(
+         Text(
             text = "My Lists",
             style = MaterialTheme.typography.headlineMedium,
             color = colorScheme.onBackground,
@@ -1427,17 +1421,17 @@ private fun ListRow(
                             accent.copy(alpha = 0.12f),
                             Color.Transparent,
                         ),
-                        center = Offset(size.width * 0.2f, size.height * 0.24f),
+                        center = Offset(size.width * 0.16f, size.height * 0.84f),
                         radius = size.maxDimension * 0.92f,
                     )
                     val pearlWash = Brush.linearGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.20f),
-                            Color.White.copy(alpha = 0.08f),
+                            Color.White.copy(alpha = 0.24f),
+                            Color.White.copy(alpha = 0.12f),
                             Color.Transparent,
                         ),
-                        start = Offset(size.width * 0.06f, 0f),
-                        end = Offset(size.width * 0.94f, size.height),
+                        start = Offset(size.width * 0.03f, size.height * 0.94f),
+                        end = Offset(size.width * 0.9f, size.height * 0.08f),
                     )
                     onDrawWithContent {
                         drawRect(accentGlow)
@@ -1451,8 +1445,8 @@ private fun ListRow(
                 contentDescription = null,
                 tint = lerp(accent, Color.White, 0.5f).copy(alpha = 0.20f),
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .offset(x = 14.dp, y = 8.dp)
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-10).dp, y = 12.dp)
                     .size(82.dp),
             )
 
@@ -1479,7 +1473,7 @@ private fun ListRow(
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = accent,
+                            tint = Color.White,
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -1487,7 +1481,7 @@ private fun ListRow(
                         modifier = Modifier.padding(start = 12.dp),
                         text = name,
                         style = MaterialTheme.typography.titleLarge,
-                        color = colorScheme.onSurface,
+                        color = Color.White,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1496,7 +1490,7 @@ private fun ListRow(
 
                 Text(
                     text = animatedCount.toString(),
-                    color = colorScheme.onSurfaceVariant,
+                    color = Color.White,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )

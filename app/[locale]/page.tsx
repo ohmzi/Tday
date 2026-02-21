@@ -26,7 +26,7 @@ const Page = async () => {
                 src="/tday-icon.svg"
                 width={48}
                 height={48}
-                alt="Tday"
+                alt="T'Day"
               />
             </Link>
 

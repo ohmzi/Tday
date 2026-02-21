@@ -1,6 +1,6 @@
 # Cloudflare Auth Hardening Checklist
 
-Use these edge rules in front of the Docker-hosted Tday backend.
+Use these edge rules in front of the Docker-hosted T'Day backend.
 
 ## Rate-limit rules
 

@@ -217,13 +217,13 @@ function ExpandedSidebarContent({
             <span className={railIconSlot}>
               <Image
                 src="/tday-icon.svg"
-                alt="Tday"
+                alt="T'Day"
                 width={36}
                 height={36}
               />
             </span>
             <span className="min-w-0 truncate text-xl font-bold text-sidebar-foreground">
-              Tday
+              {"T'Day"}
             </span>
           </button>
         ) : (
@@ -238,13 +238,13 @@ function ExpandedSidebarContent({
             <span className={railIconSlot}>
               <Image
                 src="/tday-icon.svg"
-                alt="Tday"
+                alt="T'Day"
                 width={36}
                 height={36}
               />
             </span>
             <span className="min-w-0 truncate text-xl font-bold text-sidebar-foreground">
-              Tday
+              {"T'Day"}
             </span>
           </Link>
         )}
@@ -424,7 +424,7 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               >
               <Image
                 src="/tday-icon.svg"
-                alt="Tday"
+                alt="T'Day"
                 width={36}
                 height={36}
                 className="h-9 w-9 shrink-0 rounded-md object-cover"

@@ -6,7 +6,7 @@
       "login": "Entrar"
     },
     "hero": {
-      "title": "Tday",
+      "title": "T'Day",
       "subtitle": "Um canivete suíço de planeamento pessoal — com um editor estilo Notion, carregamento de ficheiros encriptados ultra-secretos e muitos extras fantásticos!",
       "readDocs": "Ler a documentação",
       "start": "Começar"
@@ -75,11 +75,11 @@
   "terms": {
     "title": "Termos de Serviço",
     "lastUpdated": "Última atualização: 19 de janeiro de 2026",
-    "intro": "Ao utilizar o Tday (o “Serviço”), concorda com estes Termos de Serviço.",
+    "intro": "Ao utilizar o T'Day (o “Serviço”), concorda com estes Termos de Serviço.",
     "sections": {
       "1": {
         "title": "Uso do Serviço",
-        "content": "O Tday é uma aplicação de produtividade gratuita para gerir tarefas, notas e ficheiros. Concorda em utilizar o Serviço legalmente e não abusar ou interromper o mesmo."
+        "content": "O T'Day é uma aplicação de produtividade gratuita para gerir tarefas, notas e ficheiros. Concorda em utilizar o Serviço legalmente e não abusar ou interromper o mesmo."
       },
       "2": {
         "title": "Contas",
@@ -87,7 +87,7 @@
       },
       "3": {
         "title": "O Seu Conteúdo",
-        "content": "Mantém a propriedade do seu conteúdo. Ao utilizar o Tday, concede permissão para o armazenar e processar apenas para operar o Serviço."
+        "content": "Mantém a propriedade do seu conteúdo. Ao utilizar o T'Day, concede permissão para o armazenar e processar apenas para operar o Serviço."
       },
       "4": {
         "title": "Uso Aceitável",
@@ -100,15 +100,15 @@
       },
       "5": {
         "title": "Disponibilidade",
-        "content": "O Tday é um projeto pessoal fornecido numa base de melhor esforço. O Serviço pode ser alterado, ficar offline ou ser descontinuado a qualquer momento."
+        "content": "O T'Day é um projeto pessoal fornecido numa base de melhor esforço. O Serviço pode ser alterado, ficar offline ou ser descontinuado a qualquer momento."
       },
       "6": {
         "title": "Rescisão",
-        "content": "Pode parar de utilizar o Tday a qualquer momento. Podemos suspender o acesso se estes Termos forem violados."
+        "content": "Pode parar de utilizar o T'Day a qualquer momento. Podemos suspender o acesso se estes Termos forem violados."
       },
       "7": {
         "title": "Exoneração de Responsabilidade",
-        "content": "O Tday é fornecido “tal como está”. Não somos responsáveis por perda de dados, interrupções ou danos resultantes do uso do Serviço."
+        "content": "O T'Day é fornecido “tal como está”. Não somos responsáveis por perda de dados, interrupções ou danos resultantes do uso do Serviço."
       },
       "8": {
         "title": "Alterações",
@@ -123,7 +123,7 @@
   "privacy": {
     "title": "Política de Privacidade",
     "lastUpdated": "Última atualização: 19 de janeiro de 2026",
-    "intro": "O Tday (“nós”, ou “nosso”) é uma aplicação de produtividade pessoal. Esta Política de Privacidade explica quais os dados que recolhemos e como os utilizamos.",
+    "intro": "O T'Day (“nós”, ou “nosso”) é uma aplicação de produtividade pessoal. Esta Política de Privacidade explica quais os dados que recolhemos e como os utilizamos.",
     "sections": {
       "1": {
         "title": "Informação que Recolhemos",
@@ -137,7 +137,7 @@
       "2": {
         "title": "Como Utilizamos os Seus Dados",
         "content": [
-          "Fornecer e operar o Tday",
+          "Fornecer e operar o T'Day",
           "Autenticar utilizadores",
           "Armazenar e sincronizar o seu conteúdo",
           "Manter a segurança e prevenir o abuso"
@@ -145,11 +145,11 @@
       },
       "3": {
         "title": "Armazenamento de Dados e Segurança",
-        "content": "O Tday utiliza NextAuth para autenticação, NeonDB para armazenamento e Vercel para alojamento. Os ficheiros são encriptados onde aplicável. Embora nenhum sistema seja perfeitamente seguro, são tomadas medidas razoáveis para proteger os seus dados."
+        "content": "O T'Day utiliza NextAuth para autenticação, NeonDB para armazenamento e Vercel para alojamento. Os ficheiros são encriptados onde aplicável. Embora nenhum sistema seja perfeitamente seguro, são tomadas medidas razoáveis para proteger os seus dados."
       },
       "4": {
         "title": "Partilha de Dados",
-        "content": "Apenas partilhamos dados com fornecedores de serviços necessários para operar o Tday. Não vendemos os seus dados pessoais."
+        "content": "Apenas partilhamos dados com fornecedores de serviços necessários para operar o T'Day. Não vendemos os seus dados pessoais."
       },
       "5": {
         "title": "Cookies",

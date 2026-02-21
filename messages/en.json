@@ -6,7 +6,7 @@
       "login": "Log in"
     },
     "hero": {
-      "title": "Tday",
+      "title": "T'Day",
       "subtitle": "A swiss army knife of a personal planner — with a Notion-style editor, calendar view, customizable pages to organize your todos, and a bunch of nifty extras!",
       "readDocs": "Read the docs",
       "start": "Get Started"
@@ -75,11 +75,11 @@
   "terms": {
     "title": "Terms of Service",
     "lastUpdated": "Last updated: January 19, 2026",
-    "intro": "By using Tday (the “Service”), you agree to these Terms of Service.",
+    "intro": "By using T'Day (the “Service”), you agree to these Terms of Service.",
     "sections": {
       "1": {
         "title": "Use of the Service",
-        "content": "Tday is a free productivity app for managing todos, notes, and files. You agree to use the Service lawfully and not abuse or disrupt it."
+        "content": "T'Day is a free productivity app for managing todos, notes, and files. You agree to use the Service lawfully and not abuse or disrupt it."
       },
       "2": {
         "title": "Accounts",
@@ -87,7 +87,7 @@
       },
       "3": {
         "title": "Your Content",
-        "content": "You retain ownership of your content. By using Tday, you grant permission to store and process it only to operate the Service."
+        "content": "You retain ownership of your content. By using T'Day, you grant permission to store and process it only to operate the Service."
       },
       "4": {
         "title": "Acceptable Use",
@@ -100,15 +100,15 @@
       },
       "5": {
         "title": "Availability",
-        "content": "Tday is a personal service provided on a best-effort basis. The Service may change, go offline, or be discontinued at any time."
+        "content": "T'Day is a personal service provided on a best-effort basis. The Service may change, go offline, or be discontinued at any time."
       },
       "6": {
         "title": "Termination",
-        "content": "You may stop using Tday at any time. We may suspend access if these Terms are violated."
+        "content": "You may stop using T'Day at any time. We may suspend access if these Terms are violated."
       },
       "7": {
         "title": "Disclaimer",
-        "content": "Tday is provided “as is”. We are not responsible for data loss, interruptions, or damages resulting from use of the Service."
+        "content": "T'Day is provided “as is”. We are not responsible for data loss, interruptions, or damages resulting from use of the Service."
       },
       "8": {
         "title": "Changes",
@@ -123,7 +123,7 @@
   "privacy": {
     "title": "Privacy Policy",
     "lastUpdated": "Last updated: January 19, 2026",
-    "intro": "Tday (“we”, “our”, or “us”) is a personal productivity app. This Privacy Policy explains what data we collect and how we use it.",
+    "intro": "T'Day (“we”, “our”, or “us”) is a personal productivity app. This Privacy Policy explains what data we collect and how we use it.",
     "sections": {
       "1": {
         "title": "Information We Collect",
@@ -137,7 +137,7 @@
       "2": {
         "title": "How We Use Your Data",
         "content": [
-          "Provide and operate Tday",
+          "Provide and operate T'Day",
           "Authenticate users",
           "Store and sync your content",
           "Maintain security and prevent abuse"
@@ -145,11 +145,11 @@
       },
       "3": {
         "title": "Data Storage & Security",
-        "content": "Tday uses NextAuth for authentication, NeonDB for storage, and Vercel for hosting. Files are encrypted where applicable. While no system is perfectly secure, reasonable steps are taken to protect your data."
+        "content": "T'Day uses NextAuth for authentication, NeonDB for storage, and Vercel for hosting. Files are encrypted where applicable. While no system is perfectly secure, reasonable steps are taken to protect your data."
       },
       "4": {
         "title": "Sharing of Data",
-        "content": "We only share data with service providers required to operate Tday. We do not sell your personal data."
+        "content": "We only share data with service providers required to operate T'Day. We do not sell your personal data."
       },
       "5": {
         "title": "Cookies",
