@@ -20,6 +20,7 @@ import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
+import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import kotlinx.coroutines.sync.Mutex
@@ -260,6 +261,8 @@ class TdayRepository @Inject constructor(
 
     fun getSavedCredentials(): SavedCredentials? = secureConfigStore.getSavedCredentials()
 
+    fun hasPendingMutations(): Boolean = loadOfflineState().pendingMutations.isNotEmpty()
+
     suspend fun syncCachedData(
         force: Boolean = false,
         replayPendingMutations: Boolean = true,
@@ -424,7 +427,14 @@ class TdayRepository @Inject constructor(
             )
         }
 
-        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(LOCAL_LIST_PREFIX)) return
+        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(LOCAL_LIST_PREFIX)) {
+            // Defer remote create until local list gets a server id, then replay queue.
+            syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+            )
+            return
+        }
 
         runCatching {
             requireBody(
@@ -904,6 +914,98 @@ class TdayRepository @Inject constructor(
         }
     }
 
+    suspend fun updateList(
+        listId: String,
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+    ) {
+        val trimmedName = name.trim()
+        if (listId.isBlank()) return
+        require(trimmedName.isNotBlank()) { "List name is required" }
+        Log.d(
+            LOG_TAG,
+            "updateList start listId=$listId name=$trimmedName color=$color iconKey=$iconKey",
+        )
+
+        val timestampMs = System.currentTimeMillis()
+        if (listId.startsWith(LOCAL_LIST_PREFIX)) {
+            updateOfflineState { state ->
+                state.copy(
+                    lists = state.lists.map { list ->
+                        if (list.id == listId) {
+                            list.copy(
+                                name = trimmedName,
+                                color = color,
+                                iconKey = iconKey ?: list.iconKey,
+                                updatedAtEpochMs = timestampMs,
+                            )
+                        } else {
+                            list
+                        }
+                    },
+                    pendingMutations = state.pendingMutations.map { mutation ->
+                        if (mutation.kind == MutationKind.CREATE_LIST && mutation.targetId == listId) {
+                            mutation.copy(
+                                name = trimmedName,
+                                color = color,
+                                iconKey = iconKey ?: mutation.iconKey,
+                                timestampEpochMs = timestampMs,
+                            )
+                        } else {
+                            mutation
+                        }
+                    },
+                )
+            }
+            iconKey?.takeIf { it.isNotBlank() }?.let {
+                secureConfigStore.saveListIcon(listId, it)
+            }
+            // Best effort: if network is available, push pending list create/update immediately.
+            syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+            )
+            Log.d(LOG_TAG, "updateList local-list path finished listId=$listId")
+            return
+        }
+
+        Log.d(LOG_TAG, "updateList patch /api/list listId=$listId")
+        requireBody(
+            api.patchListByBody(
+                UpdateListRequest(
+                    id = listId,
+                    name = trimmedName,
+                    color = color,
+                    iconKey = iconKey,
+                ),
+            ),
+            "Could not update list",
+        )
+
+        iconKey?.takeIf { it.isNotBlank() }?.let {
+            secureConfigStore.saveListIcon(listId, it)
+        }
+
+        updateOfflineState { state ->
+            state.copy(
+                lists = state.lists.map { list ->
+                    if (list.id == listId) {
+                        list.copy(
+                            name = trimmedName,
+                            color = color ?: list.color,
+                            iconKey = iconKey ?: list.iconKey,
+                            updatedAtEpochMs = timestampMs,
+                        )
+                    } else {
+                        list
+                    }
+                },
+            )
+        }
+        Log.d(LOG_TAG, "updateList success listId=$listId")
+    }
+
     private suspend fun syncLocalCache(
         force: Boolean,
         replayPendingMutations: Boolean,
@@ -1206,12 +1308,19 @@ class TdayRepository @Inject constructor(
                 }
             }.getOrElse { error ->
                 if (isLikelyConnectivityIssue(error)) {
-                    remaining.add(mutation)
-                    remaining.addAll(pending.dropWhile { it.mutationId != mutation.mutationId }.drop(1))
+                    remaining.add(resolveLatestMutationSnapshot(state, mutation))
+                    remaining.addAll(
+                        pending
+                            .dropWhile { it.mutationId != mutation.mutationId }
+                            .drop(1)
+                            .map { queued ->
+                                resolveLatestMutationSnapshot(state, queued)
+                            },
+                    )
                     saveOfflineState(state.copy(pendingMutations = remaining))
                     return state.copy(pendingMutations = remaining)
                 }
-                if (isLikelyUnrecoverableMutationError(error)) {
+                if (isLikelyUnrecoverableMutationError(error, mutation)) {
                     Log.w(
                         LOG_TAG,
                         "Dropping unrecoverable mutation kind=${mutation.kind} target=${mutation.targetId}: ${error.message}",
@@ -1223,7 +1332,7 @@ class TdayRepository @Inject constructor(
             }
 
             if (!success) {
-                remaining.add(mutation)
+                remaining.add(resolveLatestMutationSnapshot(state, mutation))
             }
         }
 
@@ -1355,8 +1464,26 @@ class TdayRepository @Inject constructor(
             message.contains("network is unreachable")
     }
 
-    private fun isLikelyUnrecoverableMutationError(error: Throwable): Boolean {
+    private fun resolveLatestMutationSnapshot(
+        state: OfflineSyncState,
+        mutation: PendingMutationRecord,
+    ): PendingMutationRecord {
+        return state.pendingMutations.firstOrNull { it.mutationId == mutation.mutationId } ?: mutation
+    }
+
+    private fun isLikelyUnrecoverableMutationError(
+        error: Throwable,
+        mutation: PendingMutationRecord,
+    ): Boolean {
         if (error is ApiCallException) {
+            // Keep pending mutations on auth/session issues so they replay after re-auth.
+            if (error.statusCode == 401 || error.statusCode == 403) return false
+
+            // Never aggressively drop offline create flows; preserve user-created local data.
+            if (mutation.kind == MutationKind.CREATE_LIST || mutation.kind == MutationKind.CREATE_TODO) {
+                return false
+            }
+
             return error.statusCode in 400..499 &&
                 error.statusCode != 408 &&
                 error.statusCode != 429

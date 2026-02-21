@@ -4,18 +4,24 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,22 +32,34 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -54,12 +72,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
@@ -90,15 +116,13 @@ fun TodoListScreen(
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
     onTogglePin: (todo: TodoItem) -> Unit,
+    onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val selectedListColorKey = uiState.lists.firstOrNull { it.id == uiState.listId }?.color
+    val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
+    val selectedListColorKey = selectedList?.color
     val usesTodayStyle =
-        uiState.mode == TodoListMode.TODAY ||
-        uiState.mode == TodoListMode.SCHEDULED ||
-        uiState.mode == TodoListMode.ALL ||
-        uiState.mode == TodoListMode.PRIORITY ||
-        uiState.mode == TodoListMode.LIST
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
     val titleColor = when (uiState.mode) {
         TodoListMode.TODAY -> Color(0xFF6EA8E1)
         TodoListMode.SCHEDULED -> Color(0xFFDDB37D)
@@ -111,11 +135,7 @@ fun TodoListScreen(
         listColorKey = selectedListColorKey,
     )
     val showSectionedTimeline =
-        uiState.mode == TodoListMode.TODAY ||
-        uiState.mode == TodoListMode.SCHEDULED ||
-        uiState.mode == TodoListMode.ALL ||
-        uiState.mode == TodoListMode.PRIORITY ||
-        uiState.mode == TodoListMode.LIST
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
     val timelineSections = remember(uiState.mode, uiState.items) {
         buildTimelineSections(
             mode = uiState.mode,
@@ -186,6 +206,13 @@ fun TodoListScreen(
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
     var quickAddStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
+    var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var listSettingsName by rememberSaveable { mutableStateOf("") }
+    var listSettingsColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR_KEY) }
+    var listSettingsIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
+    var listSettingsColorTouched by rememberSaveable { mutableStateOf(false) }
+    var listSettingsIconTouched by rememberSaveable { mutableStateOf(false) }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
@@ -206,6 +233,21 @@ fun TodoListScreen(
                     collapseProgress = todayCollapseProgress,
                     title = uiState.title,
                     titleColor = titleColor,
+                    onMore = {
+                        if (uiState.mode == TodoListMode.LIST && selectedList != null) {
+                            listSettingsTargetId = selectedList.id
+                            listSettingsName = selectedList.name
+                            listSettingsColor = selectedList.color
+                                ?.takeIf { isSupportedListColor(it) }
+                                ?: DEFAULT_LIST_COLOR_KEY
+                            listSettingsIconKey = selectedList.iconKey
+                                ?.takeIf { isSupportedListIconKey(it) }
+                                ?: DEFAULT_LIST_ICON_KEY
+                            listSettingsColorTouched = false
+                            listSettingsIconTouched = false
+                            showListSettingsSheet = true
+                        }
+                    },
                 )
             } else {
                 TopAppBar(
@@ -361,6 +403,42 @@ fun TodoListScreen(
             },
         )
     }
+
+    val selectedListId = listSettingsTargetId ?: uiState.listId
+    if (
+        showListSettingsSheet &&
+        uiState.mode == TodoListMode.LIST &&
+        !selectedListId.isNullOrBlank()
+    ) {
+        ListSettingsBottomSheet(
+            listName = listSettingsName,
+            onListNameChange = { listSettingsName = it },
+            listColor = listSettingsColor,
+            onListColorChange = {
+                listSettingsColor = it
+                listSettingsColorTouched = true
+            },
+            listIconKey = listSettingsIconKey,
+            onListIconChange = {
+                listSettingsIconKey = it
+                listSettingsIconTouched = true
+            },
+            onDismiss = {
+                showListSettingsSheet = false
+                listSettingsTargetId = null
+            },
+            onSave = {
+                onUpdateListSettings(
+                    selectedListId,
+                    listSettingsName,
+                    if (listSettingsColorTouched) listSettingsColor else null,
+                    if (listSettingsIconTouched) listSettingsIconKey else null,
+                )
+                showListSettingsSheet = false
+                listSettingsTargetId = null
+            },
+        )
+    }
 }
 
 @Composable
@@ -369,6 +447,7 @@ private fun TodayTopBar(
     collapseProgress: Float,
     title: String,
     titleColor: Color,
+    onMore: () -> Unit,
 ) {
     val progress = collapseProgress.coerceIn(0f, 1f)
     val titleHandoffPoint = 0.9f
@@ -398,7 +477,7 @@ private fun TodayTopBar(
                     contentDescription = "Back",
                 )
                 TodayHeaderButton(
-                    onClick = { },
+                    onClick = onMore,
                     icon = Icons.Rounded.MoreHoriz,
                     contentDescription = "More options",
                 )
@@ -411,7 +490,7 @@ private fun TodayTopBar(
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
-                    },
+                        },
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = titleColor,
@@ -506,6 +585,350 @@ private fun CreateTaskButton(
                 contentDescription = "Create task",
                 tint = Color.White,
                 modifier = Modifier.size(26.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ListSettingsBottomSheet(
+    listName: String,
+    onListNameChange: (String) -> Unit,
+    listColor: String,
+    onListColorChange: (String) -> Unit,
+    listIconKey: String,
+    onListIconChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val colorScheme = MaterialTheme.colorScheme
+    val selectedAccent = listAccentColor(listColor)
+    val selectedIcon = listIconForKey(listIconKey)
+    val canSave = listName.isNotBlank()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = null,
+        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+        containerColor = colorScheme.background,
+        tonalElevation = 0.dp,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.8f),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ListSettingsActionButton(
+                        icon = Icons.Rounded.Close,
+                        contentDescription = "Close",
+                        enabled = true,
+                        accentColor = Color(0xFFE35A5A),
+                        onClick = {
+                            focusManager.clearFocus(force = true)
+                            onDismiss()
+                        },
+                    )
+
+                    Text(
+                        text = "List settings",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold,
+                    )
+
+                    ListSettingsActionButton(
+                        icon = Icons.Rounded.Check,
+                        contentDescription = "Save list settings",
+                        enabled = canSave,
+                        accentColor = Color(0xFF2FA35B),
+                        onClick = {
+                            focusManager.clearFocus(force = true)
+                            if (canSave) onSave()
+                        },
+                    )
+                }
+
+                Text(
+                    text = "List",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 18.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(86.dp)
+                                .background(selectedAccent, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = selectedIcon,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(42.dp),
+                            )
+                        }
+
+                        BasicTextField(
+                            value = listName,
+                            onValueChange = onListNameChange,
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Done,
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus(force = true)
+                                    if (canSave) onSave()
+                                },
+                            ),
+                            textStyle = MaterialTheme.typography.headlineSmall.copy(
+                                color = selectedAccent,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onPreviewKeyEvent { event ->
+                                    if (
+                                        event.type == KeyEventType.KeyUp &&
+                                        (event.key == Key.Enter || event.key == Key.NumPadEnter)
+                                    ) {
+                                        keyboardController?.hide()
+                                        focusManager.clearFocus(force = true)
+                                        if (canSave) onSave()
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                },
+                            decorationBox = { innerTextField ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            colorScheme.surfaceVariant, RoundedCornerShape(16.dp)
+                                        )
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (listName.isBlank()) {
+                                        Text(
+                                            text = "List name",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            },
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Color",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        LIST_SETTINGS_COLOR_KEYS.forEach { colorKey ->
+                            val selected = listColor == colorKey
+                            val swatchColor = listAccentColor(colorKey)
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .background(swatchColor, CircleShape)
+                                    .clickable { onListColorChange(colorKey) }
+                                    .then(
+                                        if (selected) {
+                                            Modifier.border(
+                                                width = 3.dp,
+                                                color = colorScheme.onBackground.copy(alpha = 0.32f),
+                                                shape = CircleShape,
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
+                                    ),
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = "Icon",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        LIST_SETTINGS_ICON_OPTIONS.forEach { option ->
+                            val selected = listIconKey == option.key
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .background(
+                                        color = if (selected) {
+                                            selectedAccent.copy(alpha = 0.2f)
+                                        } else {
+                                            colorScheme.surfaceVariant
+                                        },
+                                        shape = CircleShape,
+                                    )
+                                    .clickable { onListIconChange(option.key) }
+                                    .then(
+                                        if (selected) {
+                                            Modifier.border(
+                                                width = 2.dp,
+                                                color = selectedAccent.copy(alpha = 0.55f),
+                                                shape = CircleShape,
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = option.icon,
+                                    contentDescription = null,
+                                    tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListSettingsActionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    accentColor: Color,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val colorScheme = MaterialTheme.colorScheme
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed && enabled) 0.93f else 1f,
+        label = "listSettingsHeaderButtonScale",
+    )
+    val elevation by animateDpAsState(
+        targetValue = when {
+            pressed && enabled -> 2.dp
+            enabled -> 8.dp
+            else -> 5.dp
+        },
+        label = "listSettingsHeaderButtonElevation",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed && enabled) 1.dp else 0.dp,
+        label = "listSettingsHeaderButtonOffsetY",
+    )
+    val iconTint = colorScheme.onBackground.copy(alpha = if (enabled) 1f else 0.55f)
+
+    Card(
+        modifier = Modifier
+            .size(54.dp)
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .border(
+                width = 1.5.dp,
+                color = accentColor.copy(alpha = if (enabled) 0.55f else 0.3f),
+                shape = CircleShape,
+            ),
+        onClick = {
+            if (enabled) {
+                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            }
+            onClick()
+        },
+        enabled = enabled,
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = elevation,
+            pressedElevation = elevation,
+        ),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = iconTint,
+                modifier = Modifier.size(22.dp),
             )
         }
     }
@@ -623,9 +1046,7 @@ private data class TodoSection(
 )
 
 private enum class TodaySectionSlot {
-    MORNING,
-    AFTERNOON,
-    TONIGHT,
+    MORNING, AFTERNOON, TONIGHT,
 }
 
 private fun buildTimelineSections(
@@ -640,11 +1061,13 @@ private fun buildTimelineSections(
             zoneId = zoneId,
             futureOnly = true,
         )
+
         TodoListMode.ALL, TodoListMode.PRIORITY, TodoListMode.LIST -> buildScheduledSections(
             items = items,
             zoneId = zoneId,
             futureOnly = false,
         )
+
         else -> emptyList()
     }
 }
@@ -707,13 +1130,9 @@ private fun buildScheduledSections(
     futureOnly: Boolean,
 ): List<TodoSection> {
     val now = Instant.now()
-    val sorted = items
-        .asSequence()
-        .filter { todo ->
-            if (futureOnly) !todo.due.isBefore(now) else true
-        }
-        .sortedBy { it.due }
-        .toList()
+    val sorted = items.asSequence().filter { todo ->
+        if (futureOnly) !todo.due.isBefore(now) else true
+    }.sortedBy { it.due }.toList()
     val groupedByDate = sorted.groupBy { todo ->
         LocalDate.ofInstant(todo.due, zoneId)
     }
@@ -735,12 +1154,8 @@ private fun buildScheduledSections(
     }
 
     if (!futureOnly) {
-        val earlierItems = groupedByDate
-            .asSequence()
-            .filter { (date, _) -> date < today }
-            .flatMap { (_, dayItems) -> dayItems.asSequence() }
-            .sortedBy { it.due }
-            .toList()
+        val earlierItems = groupedByDate.asSequence().filter { (date, _) -> date < today }
+            .flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
         if (earlierItems.isNotEmpty()) {
             sections += TodoSection(
                 key = "earlier",
@@ -764,14 +1179,9 @@ private fun buildScheduledSections(
         )
     }
 
-    val restOfCurrentMonthItems = groupedByDate
-        .asSequence()
-        .filter { (date, _) ->
-            date >= horizonStart && YearMonth.from(date) == currentMonth
-        }
-        .flatMap { (_, dayItems) -> dayItems.asSequence() }
-        .sortedBy { it.due }
-        .toList()
+    val restOfCurrentMonthItems = groupedByDate.asSequence().filter { (date, _) ->
+        date >= horizonStart && YearMonth.from(date) == currentMonth
+    }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
     val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
     sections += TodoSection(
         key = "rest-$currentMonth",
@@ -783,11 +1193,9 @@ private fun buildScheduledSections(
         ),
     )
 
-    val futureMonthsWithData = groupedByDate.keys
-        .asSequence()
-        .filter { it >= horizonStart }
-        .map { YearMonth.from(it) }
-        .toSet()
+    val futureMonthsWithData =
+        groupedByDate.keys.asSequence().filter { it >= horizonStart }.map { YearMonth.from(it) }
+            .toSet()
     val minimumFinalMonth = YearMonth.of(currentMonth.year, 12)
     val finalMonth = maxOf(
         minimumFinalMonth,
@@ -796,14 +1204,9 @@ private fun buildScheduledSections(
 
     var targetMonth = currentMonth.plusMonths(1)
     while (targetMonth <= finalMonth) {
-        val monthItems = groupedByDate
-            .asSequence()
-            .filter { (date, _) ->
-                date >= horizonStart && YearMonth.from(date) == targetMonth
-            }
-            .flatMap { (_, dayItems) -> dayItems.asSequence() }
-            .sortedBy { it.due }
-            .toList()
+        val monthItems = groupedByDate.asSequence().filter { (date, _) ->
+            date >= horizonStart && YearMonth.from(date) == targetMonth
+        }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
         sections += TodoSection(
             key = "month-$targetMonth",
             title = monthTitle(targetMonth, currentMonth.year),
@@ -831,8 +1234,7 @@ private fun monthTitle(
     }
 }
 
-private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("EEE MMM d")
+private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE MMM d")
 
 private fun quickAddDefaultsForDate(
     date: LocalDate,
@@ -853,7 +1255,7 @@ private fun quickAddDefaultsForTodaySection(
         TodaySectionSlot.MORNING,
         TodaySectionSlot.AFTERNOON,
         TodaySectionSlot.TONIGHT,
-        -> Unit
+            -> Unit
     }
     val today = LocalDate.now(zoneId)
     return quickAddDefaultsForDate(
@@ -872,9 +1274,8 @@ private fun TodayTodoRow(
     onPin: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val dueText = DateTimeFormatter.ofPattern("h:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(todo.due)
+    val dueText =
+        DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -945,8 +1346,7 @@ private fun TodoRow(
     onPin: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = DateTimeFormatter.ofPattern("MMM d, h:mm a")
-        .withZone(ZoneId.systemDefault())
+    val due = DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault())
         .format(todo.due)
 
     Card(
@@ -1051,3 +1451,50 @@ private fun listAccentColor(colorKey: String?): Color {
         else -> Color(0xFF5C9FE7)
     }
 }
+
+private fun listIconForKey(iconKey: String?): ImageVector {
+    return LIST_SETTINGS_ICON_OPTIONS.firstOrNull { it.key == iconKey }?.icon ?: Icons.Rounded.Inbox
+}
+
+private fun isSupportedListColor(colorKey: String): Boolean {
+    return LIST_SETTINGS_COLOR_KEYS.contains(colorKey)
+}
+
+private fun isSupportedListIconKey(iconKey: String): Boolean {
+    return LIST_SETTINGS_ICON_OPTIONS.any { it.key == iconKey }
+}
+
+private data class ListSettingsIconOption(
+    val key: String,
+    val icon: ImageVector,
+)
+
+private const val DEFAULT_LIST_COLOR_KEY = "BLUE"
+private const val DEFAULT_LIST_ICON_KEY = "inbox"
+
+private val LIST_SETTINGS_COLOR_KEYS = listOf(
+    "RED",
+    "ORANGE",
+    "YELLOW",
+    "LIME",
+    "BLUE",
+    "PURPLE",
+    "PINK",
+    "TEAL",
+    "CORAL",
+    "GOLD",
+    "DEEP_BLUE",
+    "ROSE",
+    "LIGHT_RED",
+    "BRICK",
+    "SLATE",
+)
+
+private val LIST_SETTINGS_ICON_OPTIONS = listOf(
+    ListSettingsIconOption("inbox", Icons.Rounded.Inbox),
+    ListSettingsIconOption("sun", Icons.Rounded.WbSunny),
+    ListSettingsIconOption("calendar", Icons.Rounded.CalendarToday),
+    ListSettingsIconOption("schedule", Icons.Rounded.Schedule),
+    ListSettingsIconOption("flag", Icons.Rounded.Flag),
+    ListSettingsIconOption("check", Icons.Rounded.Check),
+)

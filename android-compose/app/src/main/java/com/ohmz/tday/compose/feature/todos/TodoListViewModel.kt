@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.todos
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.TdayRepository
@@ -84,7 +85,7 @@ class TodoListViewModel @Inject constructor(
                     // Pull-to-refresh should fetch latest server state first.
                     repository.syncCachedData(
                         force = true,
-                        replayPendingMutations = false,
+                        replayPendingMutations = true,
                     ).onFailure { /* fall back to local cache */ }
                 }
                 val todos = repository.fetchTodos(mode = mode, listId = listId)
@@ -124,20 +125,19 @@ class TodoListViewModel @Inject constructor(
                     val lists = repository.fetchLists()
                     todos to lists
                 }.onSuccess { (todos, lists) ->
-                        _uiState.update { current ->
-                            current.copy(
-                                lists = if (current.lists == lists) current.lists else lists,
-                                items = if (current.items == todos) current.items else todos,
-                                errorMessage = null,
-                            )
-                        }
-                    }
-                    .onFailure {
-                        refreshInternal(
-                            forceSync = false,
-                            showLoading = false,
+                    _uiState.update { current ->
+                        current.copy(
+                            lists = if (current.lists == lists) current.lists else lists,
+                            items = if (current.items == todos) current.items else todos,
+                            errorMessage = null,
                         )
                     }
+                }.onFailure {
+                    refreshInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
             }.onFailure { error ->
                 _uiState.update { it.copy(errorMessage = error.message ?: "Could not create task") }
             }
@@ -190,20 +190,19 @@ class TodoListViewModel @Inject constructor(
                     val lists = repository.fetchLists()
                     todos to lists
                 }.onSuccess { (todos, lists) ->
-                        _uiState.update { current ->
-                            current.copy(
-                                lists = if (current.lists == lists) current.lists else lists,
-                                items = if (current.items == todos) current.items else todos,
-                                errorMessage = null,
-                            )
-                        }
-                    }
-                    .onFailure {
-                        refreshInternal(
-                            forceSync = false,
-                            showLoading = false,
+                    _uiState.update { current ->
+                        current.copy(
+                            lists = if (current.lists == lists) current.lists else lists,
+                            items = if (current.items == todos) current.items else todos,
+                            errorMessage = null,
                         )
                     }
+                }.onFailure {
+                    refreshInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
@@ -241,5 +240,73 @@ class TodoListViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun updateListSettings(
+        listId: String,
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+    ) {
+        val trimmedName = name.trim()
+        if (trimmedName.isBlank()) return
+
+        val currentState = _uiState.value
+        val resolvedListId = when {
+            listId.isNotBlank() && currentState.lists.any { it.id == listId } -> listId
+            !currentState.listId.isNullOrBlank() &&
+                currentState.lists.any { it.id == currentState.listId } -> currentState.listId
+            listId.isNotBlank() -> listId
+            else -> return
+        }
+        Log.d(
+            TAG,
+            "updateListSettings requested rawId=$listId resolvedId=$resolvedListId name=$trimmedName color=$color iconKey=$iconKey",
+        )
+
+        val previousState = currentState
+        _uiState.update { current ->
+            current.copy(
+                title = if (current.mode == TodoListMode.LIST) {
+                    trimmedName
+                } else {
+                    current.title
+                },
+                lists = current.lists.map { list ->
+                    if (list.id == resolvedListId) {
+                        list.copy(
+                            name = trimmedName,
+                            color = color ?: list.color,
+                            iconKey = iconKey ?: list.iconKey,
+                        )
+                    } else {
+                        list
+                    }
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                repository.updateList(
+                    listId = resolvedListId,
+                    name = trimmedName,
+                    color = color,
+                    iconKey = iconKey,
+                )
+            }.onSuccess {
+                Log.d(TAG, "updateListSettings persisted listId=$resolvedListId")
+            }.onFailure { error ->
+                Log.e(TAG, "updateListSettings failed listId=$resolvedListId", error)
+                _uiState.value = previousState.copy(
+                    errorMessage = error.message ?: "Could not update list",
+                )
+            }
+        }
+    }
+
+    private companion object {
+        const val TAG = "TodoListViewModel"
     }
 }
