@@ -1479,7 +1479,6 @@ private fun ListRow(
                         )
                     }
                     Text(
-                        modifier = Modifier.padding(start = 5.dp),
                         text = name,
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
