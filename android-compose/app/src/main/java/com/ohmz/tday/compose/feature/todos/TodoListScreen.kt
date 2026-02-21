@@ -94,13 +94,25 @@ fun TodoListScreen(
     onTogglePin: (todo: TodoItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val usesTodayStyle =
+        uiState.mode == TodoListMode.TODAY ||
+        uiState.mode == TodoListMode.SCHEDULED ||
+        uiState.mode == TodoListMode.ALL ||
+        uiState.mode == TodoListMode.PRIORITY ||
+        uiState.mode == TodoListMode.LIST
     val isTodayScreen = uiState.mode == TodoListMode.TODAY
     val titleColor = when (uiState.mode) {
         TodoListMode.TODAY -> Color(0xFF3D7FEA)
         TodoListMode.SCHEDULED -> Color(0xFFE25555)
+        TodoListMode.ALL -> colorScheme.onSurface
+        TodoListMode.PRIORITY -> Color(0xFFC8798B)
         else -> colorScheme.onSurface
     }
-    val showSectionedTimeline = uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.SCHEDULED
+    val showSectionedTimeline =
+        uiState.mode == TodoListMode.TODAY ||
+        uiState.mode == TodoListMode.SCHEDULED ||
+        uiState.mode == TodoListMode.ALL ||
+        uiState.mode == TodoListMode.PRIORITY
     val timelineSections = remember(uiState.mode, uiState.items) {
         buildTimelineSections(
             mode = uiState.mode,
@@ -111,15 +123,15 @@ fun TodoListScreen(
     val density = LocalDensity.current
     val maxTodayCollapsePx = with(density) { TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
     var todayHeaderCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val todayCollapseProgressTarget = if (isTodayScreen && maxTodayCollapsePx > 0f) {
+    val todayCollapseProgressTarget = if (usesTodayStyle && maxTodayCollapsePx > 0f) {
         (todayHeaderCollapsePx / maxTodayCollapsePx).coerceIn(0f, 1f)
     } else {
         0f
     }
-    val todayNestedScrollConnection = remember(isTodayScreen, listState, maxTodayCollapsePx) {
+    val todayNestedScrollConnection = remember(usesTodayStyle, listState, maxTodayCollapsePx) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (!isTodayScreen) return Offset.Zero
+                if (!usesTodayStyle) return Offset.Zero
                 val deltaY = available.y
                 if (deltaY < 0f) {
                     val previous = todayHeaderCollapsePx
@@ -149,7 +161,7 @@ fun TodoListScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (!isTodayScreen) return Velocity.Zero
+                if (!usesTodayStyle) return Velocity.Zero
                 if (available.y < 0f && todayHeaderCollapsePx < maxTodayCollapsePx) {
                     todayHeaderCollapsePx = maxTodayCollapsePx
                     return available
@@ -189,10 +201,12 @@ fun TodoListScreen(
     Scaffold(
         containerColor = colorScheme.background,
         topBar = {
-            if (isTodayScreen) {
+            if (usesTodayStyle) {
                 TodayTopBar(
                     onBack = onBack,
                     collapseProgress = todayCollapseProgress,
+                    title = uiState.title,
+                    titleColor = titleColor,
                 )
             } else {
                 TopAppBar(
@@ -237,7 +251,7 @@ fun TodoListScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .then(
-                    if (isTodayScreen) {
+                    if (usesTodayStyle) {
                         Modifier.nestedScroll(todayNestedScrollConnection)
                     } else {
                         Modifier
@@ -247,12 +261,12 @@ fun TodoListScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
-                contentPadding = if (isTodayScreen) {
+                contentPadding = if (usesTodayStyle) {
                     PaddingValues(horizontal = 18.dp, vertical = 2.dp)
                 } else {
                     PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                 },
-                verticalArrangement = Arrangement.spacedBy(if (isTodayScreen) 18.dp else 8.dp),
+                verticalArrangement = Arrangement.spacedBy(if (usesTodayStyle) 18.dp else 8.dp),
             ) {
                 if (!showSectionedTimeline && uiState.items.isEmpty()) {
                     item {
@@ -273,7 +287,7 @@ fun TodoListScreen(
                     items(timelineSections, key = { it.key }) { section ->
                         TimelineSection(
                             section = section,
-                            useMinimalStyle = isTodayScreen,
+                            useMinimalStyle = usesTodayStyle,
                             onTapForQuickAdd = if (isTodayScreen) {
                                 section.quickAddSlot?.let { slot ->
                                     {
@@ -295,18 +309,27 @@ fun TodoListScreen(
                         item {
                             EmptyTimelineState(
                                 message = "No Reminders",
-                                useMinimalStyle = isTodayScreen,
+                                useMinimalStyle = usesTodayStyle,
                             )
                         }
                     }
                 } else {
                     items(uiState.items, key = { it.id }) { todo ->
-                        TodoRow(
-                            todo = todo,
-                            onComplete = { onComplete(todo) },
-                            onDelete = { onDelete(todo) },
-                            onPin = { onTogglePin(todo) },
-                        )
+                        if (usesTodayStyle) {
+                            TodayTodoRow(
+                                todo = todo,
+                                onComplete = { onComplete(todo) },
+                                onDelete = { onDelete(todo) },
+                                onPin = { onTogglePin(todo) },
+                            )
+                        } else {
+                            TodoRow(
+                                todo = todo,
+                                onComplete = { onComplete(todo) },
+                                onDelete = { onDelete(todo) },
+                                onPin = { onTogglePin(todo) },
+                            )
+                        }
                     }
                 }
 
@@ -350,6 +373,8 @@ fun TodoListScreen(
 private fun TodayTopBar(
     onBack: () -> Unit,
     collapseProgress: Float,
+    title: String,
+    titleColor: Color,
 ) {
     val progress = collapseProgress.coerceIn(0f, 1f)
     val titleHandoffPoint = 0.9f
@@ -386,16 +411,16 @@ private fun TodayTopBar(
             }
             if (collapsedTitleAlpha > 0.001f) {
                 Text(
-                    text = "Today",
+                    text = title,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
-                        },
+                    },
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF3D7FEA),
+                    color = titleColor,
                 )
             }
         }
@@ -408,10 +433,10 @@ private fun TodayTopBar(
         ) {
             if (expandedTitleAlpha > 0.001f) {
                 Text(
-                    text = "Today",
+                    text = title,
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF3D7FEA),
+                    color = titleColor,
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
@@ -641,7 +666,7 @@ private fun buildTimelineSections(
     val zoneId = ZoneId.systemDefault()
     return when (mode) {
         TodoListMode.TODAY -> buildTodaySections(items, zoneId)
-        TodoListMode.SCHEDULED -> buildScheduledSections(items, zoneId)
+        TodoListMode.SCHEDULED, TodoListMode.ALL, TodoListMode.PRIORITY -> buildScheduledSections(items, zoneId)
         else -> emptyList()
     }
 }
