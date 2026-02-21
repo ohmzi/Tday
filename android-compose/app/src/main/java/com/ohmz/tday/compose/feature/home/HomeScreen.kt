@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -21,13 +22,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -102,7 +106,7 @@ import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
@@ -134,6 +138,8 @@ fun HomeScreen(
         label = "fabOffsetY",
     )
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    val imeVisible = WindowInsets.isImeVisible
+    var searchImeWasVisible by rememberSaveable { mutableStateOf(false) }
     var searchBarBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
@@ -150,6 +156,24 @@ fun HomeScreen(
         searchExpanded = false
         searchBarBounds = null
         rootInRoot = Offset.Zero
+        searchImeWasVisible = false
+    }
+    BackHandler(enabled = searchExpanded) {
+        closeSearch()
+    }
+    LaunchedEffect(searchExpanded, imeVisible) {
+        if (!searchExpanded) {
+            searchImeWasVisible = false
+            return@LaunchedEffect
+        }
+        if (imeVisible) {
+            searchImeWasVisible = true
+            return@LaunchedEffect
+        }
+        if (searchImeWasVisible) {
+            // Back usually dismisses IME first; once IME goes away, also close search.
+            closeSearch()
+        }
     }
     val listStructureSignature = remember(uiState.summary.lists) {
         uiState.summary.lists.joinToString(separator = "|") { list ->
