@@ -307,7 +307,14 @@ class AppViewModel @Inject constructor(
 
         resyncJob = viewModelScope.launch {
             while (isActive) {
-                delay(RESYNC_INTERVAL_MS)
+                val delayMs = runCatching {
+                    if (repository.hasPendingMutations()) {
+                        PENDING_RESYNC_INTERVAL_MS
+                    } else {
+                        RESYNC_INTERVAL_MS
+                    }
+                }.getOrDefault(RESYNC_INTERVAL_MS)
+                delay(delayMs)
                 runCatching { repository.syncCachedData(force = true) }
             }
         }
@@ -336,6 +343,7 @@ class AppViewModel @Inject constructor(
     }
 
     private companion object {
+        const val PENDING_RESYNC_INTERVAL_MS = 20 * 1000L
         const val RESYNC_INTERVAL_MS = 5 * 60 * 1000L
     }
 }

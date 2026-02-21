@@ -336,6 +336,14 @@ private fun TodosRoute(
         onComplete = viewModel::toggleComplete,
         onDelete = viewModel::delete,
         onTogglePin = viewModel::togglePin,
+        onUpdateListSettings = { targetListId, name, color, iconKey ->
+            viewModel.updateListSettings(
+                listId = targetListId,
+                name = name,
+                color = color,
+                iconKey = iconKey,
+            )
+        },
     )
 }
 
