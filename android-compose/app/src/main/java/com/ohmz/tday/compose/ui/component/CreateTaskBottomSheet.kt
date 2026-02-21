@@ -38,16 +38,15 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LowPriority
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -64,8 +63,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
@@ -73,6 +76,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
@@ -287,6 +292,16 @@ fun CreateTaskBottomSheet(
                                 RowDivider()
                             }
                             SheetRow(
+                                icon = Icons.Rounded.LowPriority,
+                                title = "Priority",
+                                value = selectedPriority,
+                                onClick = {
+                                    priorityReturnPage = TaskSheetPage.MAIN.name
+                                    page = TaskSheetPage.PRIORITY
+                                },
+                            )
+                            RowDivider()
+                            SheetRow(
                                 icon = Icons.Rounded.Info,
                                 title = "Details",
                                 value = "",
@@ -371,7 +386,7 @@ fun CreateTaskBottomSheet(
                                 RowDivider()
                                 ListSelectionRow(
                                     title = list.name,
-                                    swatchColor = parseListColorOrFallback(
+                                    swatchColor = listColorSwatchForSelector(
                                         raw = list.color,
                                         fallback = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
                                     ),
@@ -890,10 +905,27 @@ private fun ListSelectionRow(
     }
 }
 
-private fun parseListColorOrFallback(raw: String?, fallback: Color): Color {
+private fun listColorSwatchForSelector(raw: String?, fallback: Color): Color {
     if (raw.isNullOrBlank()) return fallback
-    return runCatching { Color(AndroidColor.parseColor(raw)) }
-        .getOrDefault(fallback)
+    return when (raw.trim().uppercase()) {
+        "RED" -> Color(0xFFE65E52)
+        "ORANGE" -> Color(0xFFF29F38)
+        "YELLOW" -> Color(0xFFF3D04A)
+        "LIME" -> Color(0xFF8ACF56)
+        "BLUE" -> Color(0xFF5C9FE7)
+        "PURPLE" -> Color(0xFF8D6CE2)
+        "PINK" -> Color(0xFFDF6DAA)
+        "TEAL" -> Color(0xFF4EB5B0)
+        "CORAL" -> Color(0xFFE3876D)
+        "GOLD" -> Color(0xFFCFAB57)
+        "DEEP_BLUE" -> Color(0xFF4B73D6)
+        "ROSE" -> Color(0xFFD9799A)
+        "LIGHT_RED" -> Color(0xFFE48888)
+        "BRICK" -> Color(0xFFB86A5C)
+        "SLATE" -> Color(0xFF7B8593)
+        else -> runCatching { Color(AndroidColor.parseColor(raw)) }
+            .getOrDefault(fallback)
+    }
 }
 
 private fun prioritySwatchColor(priority: String): Color {
@@ -923,6 +955,7 @@ private fun ThemedDatePickerDialog(
     onConfirm: (Long) -> Unit,
 ) {
     val zoneId = remember { ZoneId.systemDefault() }
+    val now = remember(zoneId) { ZonedDateTime.now(zoneId) }
     val initialDateEpochMs = remember(initialEpochMs, zoneId) {
         ZonedDateTime
             .ofInstant(Instant.ofEpochMilli(initialEpochMs), zoneId)
@@ -931,16 +964,44 @@ private fun ThemedDatePickerDialog(
             .toInstant()
             .toEpochMilli()
     }
-    val pickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateEpochMs)
+    val currentYear = now.year
+    val minMonthStartEpochMs = remember(zoneId, now.year, now.monthValue) {
+        ZonedDateTime
+            .of(now.year, now.monthValue, 1, 0, 0, 0, 0, zoneId)
+            .toInstant()
+            .toEpochMilli()
+    }
+    val boundedInitialDateEpochMs = maxOf(initialDateEpochMs, minMonthStartEpochMs)
+    val selectableDates = remember(minMonthStartEpochMs, currentYear) {
+        object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                return utcTimeMillis >= minMonthStartEpochMs
+            }
+
+            override fun isSelectableYear(year: Int): Boolean {
+                return year >= currentYear
+            }
+        }
+    }
+    val pickerState = rememberDatePickerState(
+        initialSelectedDateMillis = boundedInitialDateEpochMs,
+        yearRange = currentYear..(currentYear + 100),
+        selectableDates = selectableDates,
+    )
     val colorScheme = MaterialTheme.colorScheme
     val isDark = colorScheme.background.luminance() < 0.5f
-    val pickerAccent = if (isDark) Color(0xFF75AEFF) else Color(0xFF2E73D6)
-    val pickerContainer = if (isDark) Color(0xFF1F2532) else Color(0xFFFFFFFF)
-    val pickerSurface = if (isDark) Color(0xFF2A3244) else Color(0xFFF3F6FC)
-    val primaryText = if (isDark) colorScheme.onSurface else Color(0xFF1D2638)
-    val mutedText = if (isDark) colorScheme.onSurfaceVariant else Color(0xFF5D6E8A)
+    val pickerAccent = lerp(
+        colorScheme.onSurfaceVariant,
+        colorScheme.onSurface,
+        if (isDark) 0.14f else 0.28f,
+    )
+    val dialogContainer = colorScheme.background
+    val calendarSurface = if (isDark) colorScheme.surface else Color.White
+    val primaryText = colorScheme.onSurface
+    val mutedText = colorScheme.onSurfaceVariant
+    val selectedContentColor = if (pickerAccent.luminance() > 0.45f) colorScheme.surface else Color.White
     val pickerColors = DatePickerDefaults.colors(
-        containerColor = pickerContainer,
+        containerColor = calendarSurface,
         titleContentColor = mutedText,
         headlineContentColor = primaryText,
         weekdayContentColor = mutedText,
@@ -948,46 +1009,37 @@ private fun ThemedDatePickerDialog(
         navigationContentColor = primaryText,
         yearContentColor = primaryText,
         currentYearContentColor = pickerAccent,
-        selectedYearContentColor = Color.White,
+        selectedYearContentColor = selectedContentColor,
         selectedYearContainerColor = pickerAccent,
         dayContentColor = primaryText,
-        selectedDayContentColor = Color.White,
+        selectedDayContentColor = selectedContentColor,
         selectedDayContainerColor = pickerAccent,
         todayContentColor = pickerAccent,
-        todayDateBorderColor = pickerAccent.copy(alpha = 0.75f),
+        todayDateBorderColor = Color.Transparent,
         dayInSelectionRangeContentColor = primaryText,
-        dayInSelectionRangeContainerColor = pickerAccent.copy(alpha = 0.16f),
-        dividerColor = mutedText.copy(alpha = 0.25f),
+        dayInSelectionRangeContainerColor = pickerAccent.copy(alpha = if (isDark) 0.24f else 0.12f),
+        dividerColor = Color.Transparent,
     )
 
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        tonalElevation = 0.dp,
-        colors = pickerColors,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm(pickerState.selectedDateMillis ?: initialDateEpochMs)
-                },
-            ) {
-                Text(text = "Done", color = pickerAccent)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = "Cancel", color = pickerAccent)
-            }
-        },
+    SpectrumPickerDialog(
+        onDismiss = onDismiss,
+        title = "Select date",
+        titleIcon = Icons.Rounded.CalendarMonth,
+        accent = pickerAccent,
+        primaryText = primaryText,
+        mutedText = mutedText,
+        containerColor = dialogContainer,
+        panelColor = calendarSurface,
+        dialogWidthFraction = 0.97f,
+        onConfirm = { onConfirm(pickerState.selectedDateMillis ?: boundedInitialDateEpochMs) },
     ) {
         DatePicker(
+            modifier = Modifier.fillMaxWidth(),
             state = pickerState,
             showModeToggle = false,
             title = null,
             headline = null,
-            colors = pickerColors.copy(
-                containerColor = pickerSurface,
-            ),
+            colors = pickerColors,
         )
     }
 }
@@ -1010,74 +1062,163 @@ private fun ThemedTimePickerDialog(
     )
     val colorScheme = MaterialTheme.colorScheme
     val isDark = colorScheme.background.luminance() < 0.5f
-    val pickerAccent = if (isDark) Color(0xFF75AEFF) else Color(0xFF2E73D6)
-    val pickerContainer = if (isDark) Color(0xFF1F2532) else Color(0xFFFFFFFF)
-    val pickerSurface = if (isDark) Color(0xFF2A3244) else Color(0xFFF3F6FC)
-    val primaryText = if (isDark) colorScheme.onSurface else Color(0xFF1D2638)
-    val mutedText = if (isDark) colorScheme.onSurfaceVariant else Color(0xFF5D6E8A)
+    val pickerAccent = lerp(
+        colorScheme.onSurfaceVariant,
+        colorScheme.onSurface,
+        if (isDark) 0.14f else 0.28f,
+    )
+    val dialogContainer = colorScheme.background
+    val pickerSurface = colorScheme.surface
+    val primaryText = colorScheme.onSurface
+    val mutedText = colorScheme.onSurfaceVariant
+    val selectedContentColor = if (pickerAccent.luminance() > 0.45f) colorScheme.surface else Color.White
+    val unselectedChipText = if (isDark) {
+        colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+    } else {
+        colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    }
+    val unselectedChipContainer = if (isDark) {
+        colorScheme.surfaceVariant.copy(alpha = 0.32f)
+    } else {
+        colorScheme.surfaceVariant.copy(alpha = 0.44f)
+    }
     val pickerColors = TimePickerDefaults.colors(
         clockDialColor = pickerSurface,
-        clockDialSelectedContentColor = Color.White,
-        clockDialUnselectedContentColor = primaryText.copy(alpha = 0.88f),
+        clockDialSelectedContentColor = selectedContentColor,
+        clockDialUnselectedContentColor = primaryText.copy(alpha = 0.9f),
         selectorColor = pickerAccent,
-        containerColor = pickerContainer,
-        periodSelectorBorderColor = mutedText.copy(alpha = 0.35f),
-        periodSelectorSelectedContainerColor = pickerAccent.copy(alpha = 0.2f),
-        periodSelectorUnselectedContainerColor = pickerSurface,
-        periodSelectorSelectedContentColor = pickerAccent,
-        periodSelectorUnselectedContentColor = primaryText.copy(alpha = 0.78f),
-        timeSelectorSelectedContainerColor = pickerAccent.copy(alpha = 0.2f),
-        timeSelectorUnselectedContainerColor = pickerSurface,
-        timeSelectorSelectedContentColor = pickerAccent,
-        timeSelectorUnselectedContentColor = primaryText,
+        containerColor = Color.Transparent,
+        periodSelectorBorderColor = Color.Transparent,
+        periodSelectorSelectedContainerColor = pickerAccent,
+        periodSelectorUnselectedContainerColor = unselectedChipContainer,
+        periodSelectorSelectedContentColor = selectedContentColor,
+        periodSelectorUnselectedContentColor = unselectedChipText,
+        timeSelectorSelectedContainerColor = pickerAccent,
+        timeSelectorUnselectedContainerColor = unselectedChipContainer,
+        timeSelectorSelectedContentColor = selectedContentColor,
+        timeSelectorUnselectedContentColor = unselectedChipText,
     )
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = pickerContainer,
-        tonalElevation = 0.dp,
-        titleContentColor = primaryText,
-        textContentColor = primaryText,
-        title = {
-            Text(
-                text = "Select time",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = primaryText,
+    SpectrumPickerDialog(
+        onDismiss = onDismiss,
+        title = "Select time",
+        titleIcon = Icons.Rounded.Schedule,
+        accent = pickerAccent,
+        primaryText = primaryText,
+        mutedText = mutedText,
+        containerColor = dialogContainer,
+        panelColor = pickerSurface,
+        onConfirm = {
+            val selected = initial
+                .withHour(pickerState.hour)
+                .withMinute(pickerState.minute)
+                .withSecond(0)
+                .withNano(0)
+            onConfirm(selected.toInstant().toEpochMilli())
+        },
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            TimePicker(
+                state = pickerState,
+                colors = pickerColors,
             )
-        },
-        text = {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center,
+        }
+    }
+}
+
+@Composable
+private fun SpectrumPickerDialog(
+    onDismiss: () -> Unit,
+    title: String,
+    titleIcon: ImageVector,
+    accent: Color,
+    primaryText: Color,
+    mutedText: Color,
+    containerColor: Color,
+    panelColor: Color,
+    dialogWidthFraction: Float = 0.92f,
+    onConfirm: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val outerShape = RoundedCornerShape(34.dp)
+    val innerShape = RoundedCornerShape(28.dp)
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(dialogWidthFraction),
+            shape = outerShape,
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                TimePicker(
-                    state = pickerState,
-                    colors = pickerColors,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = titleIcon,
+                        contentDescription = null,
+                        tint = mutedText,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = primaryText,
+                    )
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    shape = innerShape,
+                    colors = CardDefaults.cardColors(containerColor = panelColor),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    content()
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(
+                            text = "Cancel",
+                            color = mutedText,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    TextButton(onClick = onConfirm) {
+                        Text(
+                            text = "Done",
+                            color = primaryText,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val selected = initial
-                        .withHour(pickerState.hour)
-                        .withMinute(pickerState.minute)
-                        .withSecond(0)
-                        .withNano(0)
-                    onConfirm(selected.toInstant().toEpochMilli())
-                },
-            ) {
-                Text(text = "Done", color = pickerAccent)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = "Cancel", color = pickerAccent)
-            }
-        },
-    )
+        }
+    }
 }
 
 private fun mergeDateKeepingTime(
