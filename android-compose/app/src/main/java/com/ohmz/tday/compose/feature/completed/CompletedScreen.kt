@@ -218,18 +218,29 @@ private fun CompletedTopBar(
                 )
             }
             if (collapsedTitleAlpha > 0.001f) {
-                Text(
-                    text = "Completed",
+                Row(
                     modifier = Modifier
                         .align(Alignment.Center)
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
                         },
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFB4CDBA),
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFFB4CDBA),
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Text(
+                        text = "Completed",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB4CDBA),
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
@@ -240,16 +251,27 @@ private fun CompletedTopBar(
             contentAlignment = Alignment.BottomStart,
         ) {
             if (expandedTitleAlpha > 0.001f) {
-                Text(
-                    text = "Completed",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFB4CDBA),
+                Row(
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
                     },
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFFB4CDBA),
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Text(
+                        text = "Completed",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB4CDBA),
+                    )
+                }
             }
         }
     }
