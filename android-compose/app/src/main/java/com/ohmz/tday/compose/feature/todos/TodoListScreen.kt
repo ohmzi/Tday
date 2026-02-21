@@ -101,7 +101,6 @@ fun TodoListScreen(
         uiState.mode == TodoListMode.ALL ||
         uiState.mode == TodoListMode.PRIORITY ||
         uiState.mode == TodoListMode.LIST
-    val isTodayScreen = uiState.mode == TodoListMode.TODAY
     val titleColor = when (uiState.mode) {
         TodoListMode.TODAY -> Color(0xFF3D7FEA)
         TodoListMode.SCHEDULED -> Color(0xFFDDB37D)
@@ -290,17 +289,12 @@ fun TodoListScreen(
                         TimelineSection(
                             section = section,
                             useMinimalStyle = usesTodayStyle,
-                            onTapForQuickAdd = if (isTodayScreen) {
-                                section.quickAddSlot?.let { slot ->
-                                    {
-                                        val quickAdd = quickAddDefaultsForTodaySection(slot)
-                                        quickAddStartEpochMs = quickAdd.first
-                                        quickAddDueEpochMs = quickAdd.second
-                                        showCreateTaskSheet = true
-                                    }
+                            onTapForQuickAdd = section.quickAddDefaults?.let { quickAdd ->
+                                {
+                                    quickAddStartEpochMs = quickAdd.first
+                                    quickAddDueEpochMs = quickAdd.second
+                                    showCreateTaskSheet = true
                                 }
-                            } else {
-                                null
                             },
                             onComplete = onComplete,
                             onDelete = onDelete,
@@ -652,7 +646,7 @@ private data class TodoSection(
     val key: String,
     val title: String,
     val items: List<TodoItem>,
-    val quickAddSlot: TodaySectionSlot? = null,
+    val quickAddDefaults: Pair<Long, Long>? = null,
 )
 
 private enum class TodaySectionSlot {
@@ -708,19 +702,28 @@ private fun buildTodaySections(
             key = "today-morning",
             title = "Morning",
             items = sorted.filter { sectionOf(it) == TodaySectionSlot.MORNING },
-            quickAddSlot = TodaySectionSlot.MORNING,
+            quickAddDefaults = quickAddDefaultsForTodaySection(
+                slot = TodaySectionSlot.MORNING,
+                zoneId = zoneId,
+            ),
         ),
         TodoSection(
             key = "today-afternoon",
             title = "Afternoon",
             items = sorted.filter { sectionOf(it) == TodaySectionSlot.AFTERNOON },
-            quickAddSlot = TodaySectionSlot.AFTERNOON,
+            quickAddDefaults = quickAddDefaultsForTodaySection(
+                slot = TodaySectionSlot.AFTERNOON,
+                zoneId = zoneId,
+            ),
         ),
         TodoSection(
             key = "today-tonight",
             title = "Tonight",
             items = sorted.filter { sectionOf(it) == TodaySectionSlot.TONIGHT },
-            quickAddSlot = TodaySectionSlot.TONIGHT,
+            quickAddDefaults = quickAddDefaultsForTodaySection(
+                slot = TodaySectionSlot.TONIGHT,
+                zoneId = zoneId,
+            ),
         ),
     )
 }
@@ -751,6 +754,10 @@ private fun buildScheduledSections(
             key = "day-$date",
             title = title,
             items = groupedByDate[date].orEmpty(),
+            quickAddDefaults = quickAddDefaultsForDate(
+                date = date,
+                zoneId = zoneId,
+            ),
         )
     }
 
@@ -766,6 +773,10 @@ private fun buildScheduledSections(
                 key = "earlier",
                 title = "Earlier",
                 items = earlierItems,
+                quickAddDefaults = quickAddDefaultsForDate(
+                    date = today,
+                    zoneId = zoneId,
+                ),
             )
         }
     }
@@ -793,6 +804,10 @@ private fun buildScheduledSections(
         key = "rest-$currentMonth",
         title = "Rest of $monthName",
         items = restOfCurrentMonthItems,
+        quickAddDefaults = quickAddDefaultsForDate(
+            date = currentMonth.atEndOfMonth(),
+            zoneId = zoneId,
+        ),
     )
 
     val futureMonthsWithData = groupedByDate.keys
@@ -800,7 +815,7 @@ private fun buildScheduledSections(
         .filter { it >= horizonStart }
         .map { YearMonth.from(it) }
         .toSet()
-    val minimumFinalMonth = currentMonth.plusMonths(6)
+    val minimumFinalMonth = YearMonth.of(currentMonth.year, 12)
     val finalMonth = maxOf(
         minimumFinalMonth,
         futureMonthsWithData.maxOrNull() ?: minimumFinalMonth,
@@ -820,6 +835,10 @@ private fun buildScheduledSections(
             key = "month-$targetMonth",
             title = monthTitle(targetMonth, currentMonth.year),
             items = monthItems,
+            quickAddDefaults = quickAddDefaultsForDate(
+                date = targetMonth.atDay(1),
+                zoneId = zoneId,
+            ),
         )
         targetMonth = targetMonth.plusMonths(1)
     }
@@ -842,24 +861,32 @@ private fun monthTitle(
 private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE MMM d")
 
+private fun quickAddDefaultsForDate(
+    date: LocalDate,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Pair<Long, Long> {
+    val startTime = LocalTime.of(6, 0)
+    val dueTime = LocalTime.of(23, 59)
+    val due = ZonedDateTime.of(date, dueTime, zoneId)
+    val start = ZonedDateTime.of(date, startTime, zoneId)
+    return start.toInstant().toEpochMilli() to due.toInstant().toEpochMilli()
+}
+
 private fun quickAddDefaultsForTodaySection(
     slot: TodaySectionSlot,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): Pair<Long, Long> {
+    when (slot) {
+        TodaySectionSlot.MORNING,
+        TodaySectionSlot.AFTERNOON,
+        TodaySectionSlot.TONIGHT,
+        -> Unit
+    }
     val today = LocalDate.now(zoneId)
-    val dueTime = when (slot) {
-        TodaySectionSlot.MORNING -> LocalTime.NOON
-        TodaySectionSlot.AFTERNOON -> LocalTime.of(18, 0)
-        TodaySectionSlot.TONIGHT -> LocalTime.of(23, 59)
-    }
-    val startTime = when (slot) {
-        TodaySectionSlot.MORNING -> dueTime.minusHours(1)
-        TodaySectionSlot.AFTERNOON -> dueTime.minusHours(1)
-        TodaySectionSlot.TONIGHT -> LocalTime.of(23, 0)
-    }
-    val due = ZonedDateTime.of(today, dueTime, zoneId)
-    val start = ZonedDateTime.of(today, startTime, zoneId)
-    return start.toInstant().toEpochMilli() to due.toInstant().toEpochMilli()
+    return quickAddDefaultsForDate(
+        date = today,
+        zoneId = zoneId,
+    )
 }
 
 private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
