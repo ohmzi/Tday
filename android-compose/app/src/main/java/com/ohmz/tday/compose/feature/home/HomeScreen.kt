@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -134,7 +135,7 @@ fun HomeScreen(
     )
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchBarBounds by remember { mutableStateOf<Rect?>(null) }
-    var rootInRoot by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
     var listName by rememberSaveable { mutableStateOf("") }
     var listColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR) }
@@ -145,18 +146,25 @@ fun HomeScreen(
     var lastListStructureSignature by rememberSaveable { mutableStateOf("") }
     var visibleListStage by rememberSaveable { mutableIntStateOf(0) }
     var animateListCascade by rememberSaveable { mutableStateOf(false) }
-    val closeSearch = { searchExpanded = false }
-    val listStructureSignature = uiState.summary.lists.joinToString(separator = "|") { list ->
-        buildString {
-            append(list.id)
-            append(':')
-            append(list.name)
-            append(':')
-            append(list.color.orEmpty())
-            append(':')
-            append(list.iconKey.orEmpty())
+    val closeSearch = {
+        searchExpanded = false
+        searchBarBounds = null
+        rootInRoot = Offset.Zero
+    }
+    val listStructureSignature = remember(uiState.summary.lists) {
+        uiState.summary.lists.joinToString(separator = "|") { list ->
+            buildString {
+                append(list.id)
+                append(':')
+                append(list.name)
+                append(':')
+                append(list.color.orEmpty())
+                append(':')
+                append(list.iconKey.orEmpty())
+            }
         }
     }
+    val listState = rememberLazyListState()
 
     LaunchedEffect(listStructureSignature) {
         val lists = uiState.summary.lists
@@ -229,23 +237,33 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .onGloballyPositioned { coordinates ->
-                        rootInRoot = coordinates.boundsInRoot().topLeft
-                    }
-                    .pointerInput(searchExpanded, searchBarBounds, rootInRoot) {
-                        if (!searchExpanded) return@pointerInput
-                        awaitEachGesture {
-                            val down = awaitFirstDown(pass = PointerEventPass.Final)
-                            val tapInRoot = down.position + rootInRoot
-                            val tappedSearchBar = searchBarBounds?.contains(tapInRoot) == true
-                            val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
-                            if (up != null && !tappedSearchBar) {
-                                searchExpanded = false
-                            }
+                    .then(
+                        if (searchExpanded) {
+                            Modifier
+                                .onGloballyPositioned { coordinates ->
+                                    val topLeft = coordinates.boundsInRoot().topLeft
+                                    if (rootInRoot != topLeft) {
+                                        rootInRoot = topLeft
+                                    }
+                                }
+                                .pointerInput(searchBarBounds, rootInRoot) {
+                                    awaitEachGesture {
+                                        val down = awaitFirstDown(pass = PointerEventPass.Final)
+                                        val tapInRoot = down.position + rootInRoot
+                                        val tappedSearchBar = searchBarBounds?.contains(tapInRoot) == true
+                                        val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
+                                        if (up != null && !tappedSearchBar) {
+                                            closeSearch()
+                                        }
+                                    }
+                                }
+                        } else {
+                            Modifier
                         }
-                    },
+                    ),
             ) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(18.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -254,7 +272,11 @@ fun HomeScreen(
                         TopSearchBar(
                             searchExpanded = searchExpanded,
                             onSearchExpandedChange = { searchExpanded = it },
-                            onSearchBarBoundsChanged = { bounds -> searchBarBounds = bounds },
+                            onSearchBarBoundsChanged = { bounds ->
+                                if (searchExpanded && searchBarBounds != bounds) {
+                                    searchBarBounds = bounds
+                                }
+                            },
                             onCreateList = {
                                 closeSearch()
                                 showCreateList = true
@@ -332,7 +354,11 @@ fun HomeScreen(
                                 }
                             }
                         }
-                        itemsIndexed(uiState.summary.lists, key = { _, list -> list.id }) { index, list ->
+                        itemsIndexed(
+                            items = uiState.summary.lists,
+                            key = { _, list -> list.id },
+                            contentType = { _, _ -> "list_row" },
+                        ) { index, list ->
                             if (visibleListStage >= index + 2) {
                                 if (animateListCascade) {
                                     TopDownCascadeReveal {
@@ -844,9 +870,15 @@ private fun TopSearchBar(
         Row(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .onGloballyPositioned { coordinates ->
-                    onSearchBarBoundsChanged(coordinates.boundsInRoot())
-                },
+                .then(
+                    if (searchExpanded) {
+                        Modifier.onGloballyPositioned { coordinates ->
+                            onSearchBarBoundsChanged(coordinates.boundsInRoot())
+                        }
+                    } else {
+                        Modifier
+                    }
+                ),
             horizontalArrangement = Arrangement.spacedBy(buttonGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1114,7 +1146,7 @@ private fun CategoryCard(
         label = "categoryCardOffsetY",
     )
     val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 14.dp,
+        targetValue = if (isPressed) 2.dp else 9.dp,
         label = "categoryCardElevation",
     )
 
@@ -1169,41 +1201,9 @@ private fun CategoryCard(
                             y = size.height * 0.75f,
                         ),
                     )
-                    val pearlBand = Brush.linearGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.16f),
-                            Color(0xFFDDF0FF).copy(alpha = 0.1f),
-                            Color.Transparent,
-                        ),
-                        start = Offset(
-                            x = size.width * 0.08f,
-                            y = 0f,
-                        ),
-                        end = Offset(
-                            x = size.width * 0.68f,
-                            y = size.height,
-                        ),
-                    )
-                    val depthShade = Brush.linearGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.1f),
-                        ),
-                        start = Offset(
-                            x = size.width * 0.35f,
-                            y = size.height * 0.35f,
-                        ),
-                        end = Offset(
-                            x = size.width,
-                            y = size.height,
-                        ),
-                    )
                     onDrawWithContent {
                         drawRect(iconSideGlow)
                         drawRect(pearlWash)
-                        drawRect(pearlBand)
-                        drawRect(depthShade)
                         drawContent()
                     }
                 }
@@ -1257,8 +1257,8 @@ private fun CategoryCard(
                     Icon(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .offset(x = 24.dp, y = 14.dp)
-                            .size(132.dp),
+                            .offset(x = 22.dp, y = 12.dp)
+                            .size(124.dp),
                         imageVector = backgroundWatermark,
                         contentDescription = null,
                         tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
@@ -1307,20 +1307,6 @@ private fun ListRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        label = "listRowScale",
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 1.dp else 0.dp,
-        label = "listRowOffsetY",
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 10.dp,
-        label = "listRowElevation",
-    )
     val animatedCount by animateIntAsState(
         targetValue = count,
         animationSpec = tween(durationMillis = 220),
@@ -1328,23 +1314,16 @@ private fun ListRow(
     )
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .offset(y = animatedOffsetY)
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            },
+        modifier = Modifier.fillMaxWidth(),
         onClick = {
             performGentleHaptic(view)
             onClick()
         },
-        interactionSource = interactionSource,
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation,
+            defaultElevation = 4.dp,
+            pressedElevation = 6.dp,
         ),
     ) {
         Row(
