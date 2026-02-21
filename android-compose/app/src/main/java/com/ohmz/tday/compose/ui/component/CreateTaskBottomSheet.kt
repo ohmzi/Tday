@@ -1,7 +1,5 @@
 package com.ohmz.tday.compose.ui.component
 
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.graphics.Color as AndroidColor
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -40,14 +38,21 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LowPriority
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,7 +65,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -81,6 +85,16 @@ private enum class TaskSheetPage {
     LIST,
     PRIORITY,
     REPEAT,
+}
+
+private enum class DatePickerTarget {
+    START,
+    DUE,
+}
+
+private enum class TimePickerTarget {
+    START,
+    DUE,
 }
 
 private enum class RepeatPreset(
@@ -108,7 +122,6 @@ fun CreateTaskBottomSheet(
     onCreateTask: (CreateTaskPayload) -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
-    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val dateOnlyFormatter = remember {
         DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault())
@@ -144,6 +157,8 @@ fun CreateTaskBottomSheet(
     var listReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN.name) }
     var priorityReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
     var repeatReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
+    var datePickerTarget by rememberSaveable { mutableStateOf<DatePickerTarget?>(null) }
+    var timePickerTarget by rememberSaveable { mutableStateOf<TimePickerTarget?>(null) }
 
     val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
     val repeatPreset = RepeatPreset.valueOf(selectedRepeat)
@@ -240,24 +255,8 @@ fun CreateTaskBottomSheet(
                                 title = "Start",
                                 dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
                                 timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
-                                onDateClick = {
-                                    showDatePicker(context, startEpochMs) { pickedDate ->
-                                        startEpochMs = mergeDateKeepingTime(
-                                            baseEpochMs = startEpochMs,
-                                            selectedDateEpochMs = pickedDate,
-                                        )
-                                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
-                                    }
-                                },
-                                onTimeClick = {
-                                    showTimePicker(context, startEpochMs) { pickedTime ->
-                                        startEpochMs = mergeTimeKeepingDate(
-                                            baseEpochMs = startEpochMs,
-                                            selectedTimeEpochMs = pickedTime,
-                                        )
-                                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
-                                    }
-                                },
+                                onDateClick = { datePickerTarget = DatePickerTarget.START },
+                                onTimeClick = { timePickerTarget = TimePickerTarget.START },
                             )
                             RowDivider()
                             SplitDateTimeRow(
@@ -265,24 +264,8 @@ fun CreateTaskBottomSheet(
                                 title = "Due",
                                 dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
                                 timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onDateClick = {
-                                    showDatePicker(context, dueEpochMs) { pickedDate ->
-                                        dueEpochMs = mergeDateKeepingTime(
-                                            baseEpochMs = dueEpochMs,
-                                            selectedDateEpochMs = pickedDate,
-                                        )
-                                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
-                                    }
-                                },
-                                onTimeClick = {
-                                    showTimePicker(context, dueEpochMs) { pickedTime ->
-                                        dueEpochMs = mergeTimeKeepingDate(
-                                            baseEpochMs = dueEpochMs,
-                                            selectedTimeEpochMs = pickedTime,
-                                        )
-                                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
-                                    }
-                                },
+                                onDateClick = { datePickerTarget = DatePickerTarget.DUE },
+                                onTimeClick = { timePickerTarget = TimePickerTarget.DUE },
                             )
                         }
 
@@ -318,24 +301,8 @@ fun CreateTaskBottomSheet(
                                 title = "Start",
                                 dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
                                 timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
-                                onDateClick = {
-                                    showDatePicker(context, startEpochMs) { pickedDate ->
-                                        startEpochMs = mergeDateKeepingTime(
-                                            baseEpochMs = startEpochMs,
-                                            selectedDateEpochMs = pickedDate,
-                                        )
-                                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
-                                    }
-                                },
-                                onTimeClick = {
-                                    showTimePicker(context, startEpochMs) { pickedTime ->
-                                        startEpochMs = mergeTimeKeepingDate(
-                                            baseEpochMs = startEpochMs,
-                                            selectedTimeEpochMs = pickedTime,
-                                        )
-                                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
-                                    }
-                                },
+                                onDateClick = { datePickerTarget = DatePickerTarget.START },
+                                onTimeClick = { timePickerTarget = TimePickerTarget.START },
                             )
                             RowDivider()
                             SplitDateTimeRow(
@@ -343,24 +310,8 @@ fun CreateTaskBottomSheet(
                                 title = "Due",
                                 dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
                                 timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onDateClick = {
-                                    showDatePicker(context, dueEpochMs) { pickedDate ->
-                                        dueEpochMs = mergeDateKeepingTime(
-                                            baseEpochMs = dueEpochMs,
-                                            selectedDateEpochMs = pickedDate,
-                                        )
-                                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
-                                    }
-                                },
-                                onTimeClick = {
-                                    showTimePicker(context, dueEpochMs) { pickedTime ->
-                                        dueEpochMs = mergeTimeKeepingDate(
-                                            baseEpochMs = dueEpochMs,
-                                            selectedTimeEpochMs = pickedTime,
-                                        )
-                                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
-                                    }
-                                },
+                                onDateClick = { datePickerTarget = DatePickerTarget.DUE },
+                                onTimeClick = { timePickerTarget = TimePickerTarget.DUE },
                             )
                             RowDivider()
                             SheetRow(
@@ -475,6 +426,60 @@ fun CreateTaskBottomSheet(
                 Spacer(modifier = Modifier.height(6.dp))
             }
         }
+    }
+
+    datePickerTarget?.let { target ->
+        ThemedDatePickerDialog(
+            initialEpochMs = if (target == DatePickerTarget.START) startEpochMs else dueEpochMs,
+            onDismiss = { datePickerTarget = null },
+            onConfirm = { pickedDateEpochMs ->
+                when (target) {
+                    DatePickerTarget.START -> {
+                        startEpochMs = mergeDateKeepingTime(
+                            baseEpochMs = startEpochMs,
+                            selectedDateEpochMs = pickedDateEpochMs,
+                        )
+                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
+                    }
+
+                    DatePickerTarget.DUE -> {
+                        dueEpochMs = mergeDateKeepingTime(
+                            baseEpochMs = dueEpochMs,
+                            selectedDateEpochMs = pickedDateEpochMs,
+                        )
+                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
+                    }
+                }
+                datePickerTarget = null
+            },
+        )
+    }
+
+    timePickerTarget?.let { target ->
+        ThemedTimePickerDialog(
+            initialEpochMs = if (target == TimePickerTarget.START) startEpochMs else dueEpochMs,
+            onDismiss = { timePickerTarget = null },
+            onConfirm = { pickedTimeEpochMs ->
+                when (target) {
+                    TimePickerTarget.START -> {
+                        startEpochMs = mergeTimeKeepingDate(
+                            baseEpochMs = startEpochMs,
+                            selectedTimeEpochMs = pickedTimeEpochMs,
+                        )
+                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
+                    }
+
+                    TimePickerTarget.DUE -> {
+                        dueEpochMs = mergeTimeKeepingDate(
+                            baseEpochMs = dueEpochMs,
+                            selectedTimeEpochMs = pickedTimeEpochMs,
+                        )
+                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
+                    }
+                }
+                timePickerTarget = null
+            },
+        )
     }
 }
 
@@ -907,57 +912,106 @@ private fun repeatSwatchColor(preset: RepeatPreset): Color {
     }
 }
 
-private fun showDatePicker(
-    context: android.content.Context,
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemedDatePickerDialog(
     initialEpochMs: Long,
-    onSelected: (Long) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit,
 ) {
-    val zoneId = ZoneId.systemDefault()
-    val initial = ZonedDateTime.ofInstant(Instant.ofEpochMilli(initialEpochMs), zoneId)
+    val zoneId = remember { ZoneId.systemDefault() }
+    val initialDateEpochMs = remember(initialEpochMs, zoneId) {
+        ZonedDateTime
+            .ofInstant(Instant.ofEpochMilli(initialEpochMs), zoneId)
+            .toLocalDate()
+            .atStartOfDay(zoneId)
+            .toInstant()
+            .toEpochMilli()
+    }
+    val pickerState = rememberDatePickerState(initialSelectedDateMillis = initialDateEpochMs)
 
     DatePickerDialog(
-        context,
-        { _, year, month, dayOfMonth ->
-            val selected = ZonedDateTime.of(
-                year,
-                month + 1,
-                dayOfMonth,
-                0,
-                0,
-                0,
-                0,
-                zoneId,
-            )
-            onSelected(selected.toInstant().toEpochMilli())
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirm(pickerState.selectedDateMillis ?: initialDateEpochMs)
+                },
+            ) {
+                Text("Done")
+            }
         },
-        initial.year,
-        initial.monthValue - 1,
-        initial.dayOfMonth,
-    ).show()
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    ) {
+        DatePicker(
+            state = pickerState,
+            showModeToggle = false,
+            title = null,
+            headline = null,
+        )
+    }
 }
 
-private fun showTimePicker(
-    context: android.content.Context,
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemedTimePickerDialog(
     initialEpochMs: Long,
-    onSelected: (Long) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: (Long) -> Unit,
 ) {
-    val zoneId = ZoneId.systemDefault()
-    val initial = ZonedDateTime.ofInstant(Instant.ofEpochMilli(initialEpochMs), zoneId)
+    val zoneId = remember { ZoneId.systemDefault() }
+    val initial = remember(initialEpochMs, zoneId) {
+        ZonedDateTime.ofInstant(Instant.ofEpochMilli(initialEpochMs), zoneId)
+    }
+    val pickerState = rememberTimePickerState(
+        initialHour = initial.hour,
+        initialMinute = initial.minute,
+        is24Hour = false,
+    )
 
-    TimePickerDialog(
-        context,
-        { _, hourOfDay, minute ->
-            val selected = initial
-                .withHour(hourOfDay)
-                .withMinute(minute)
-                .withSecond(0)
-                .withNano(0)
-            onSelected(selected.toInstant().toEpochMilli())
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        title = {
+            Text(
+                text = "Select time",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
         },
-        initial.hour,
-        initial.minute,
-        false,
-    ).show()
+        text = {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                TimePicker(state = pickerState)
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val selected = initial
+                        .withHour(pickerState.hour)
+                        .withMinute(pickerState.minute)
+                        .withSecond(0)
+                        .withNano(0)
+                    onConfirm(selected.toInstant().toEpochMilli())
+                },
+            ) {
+                Text("Done")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 private fun mergeDateKeepingTime(
