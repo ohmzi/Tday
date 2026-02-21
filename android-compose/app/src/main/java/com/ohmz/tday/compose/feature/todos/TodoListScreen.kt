@@ -89,6 +89,7 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import java.time.Instant
@@ -426,7 +427,7 @@ fun TodoListScreen(
     ) {
         ListSettingsBottomSheet(
             listName = listSettingsName,
-            onListNameChange = { listSettingsName = it },
+            onListNameChange = { listSettingsName = capitalizeFirstListLetter(it) },
             listColor = listSettingsColor,
             onListColorChange = {
                 listSettingsColor = it
