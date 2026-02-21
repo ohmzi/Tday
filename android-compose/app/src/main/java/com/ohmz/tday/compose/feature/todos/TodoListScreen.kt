@@ -86,6 +86,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
@@ -716,6 +717,7 @@ private fun ListSettingsBottomSheet(
                             textStyle = MaterialTheme.typography.headlineSmall.copy(
                                 color = selectedAccent,
                                 fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -748,9 +750,15 @@ private fun ListSettingsBottomSheet(
                                             style = MaterialTheme.typography.headlineSmall,
                                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                                             fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center,
                                         )
                                     }
-                                    innerTextField()
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        innerTextField()
+                                    }
                                 }
                             },
                         )
