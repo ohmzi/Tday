@@ -58,6 +58,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -101,6 +102,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import kotlinx.coroutines.delay
@@ -443,15 +445,16 @@ fun HomeScreen(
     if (showCreateList) {
         CreateListBottomSheet(
             listName = listName,
-            onListNameChange = { listName = it },
+            onListNameChange = { listName = capitalizeFirstListLetter(it) },
             listColor = listColor,
             onListColorChange = { listColor = it },
             listIconKey = listIconKey,
             onListIconChange = { listIconKey = it },
             onDismiss = { showCreateList = false },
             onCreate = {
-                if (listName.isNotBlank()) {
-                    onCreateList(listName.trim(), listColor, listIconKey)
+                val normalizedName = capitalizeFirstListLetter(listName).trim()
+                if (normalizedName.isNotBlank()) {
+                    onCreateList(normalizedName, listColor, listIconKey)
                     listName = ""
                     listColor = DEFAULT_LIST_COLOR
                     listIconKey = DEFAULT_LIST_ICON_KEY

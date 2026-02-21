@@ -8,6 +8,7 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -248,7 +249,7 @@ class TodoListViewModel @Inject constructor(
         color: String? = null,
         iconKey: String? = null,
     ) {
-        val trimmedName = name.trim()
+        val trimmedName = capitalizeFirstListLetter(name).trim()
         if (trimmedName.isBlank()) return
 
         val currentState = _uiState.value
