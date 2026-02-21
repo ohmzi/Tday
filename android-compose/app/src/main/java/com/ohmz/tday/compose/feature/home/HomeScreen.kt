@@ -238,6 +238,10 @@ fun HomeScreen(
             visibleListStage = index + 2
             delay(60)
         }
+        // Stop wrapping rows with entry animation once the cascade has completed.
+        // This prevents rows from re-animating when they are recomposed during scroll.
+        visibleListStage = targetFinalStage
+        animateListCascade = false
     }
 
     Scaffold(
