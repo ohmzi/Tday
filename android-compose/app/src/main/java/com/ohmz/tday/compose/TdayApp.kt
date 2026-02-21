@@ -360,7 +360,7 @@ private fun SplashScreen() {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
-                text = "Tday",
+                text = "T'Day",
                 style = MaterialTheme.typography.headlineLarge,
             )
             Text(

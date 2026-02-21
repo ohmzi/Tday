@@ -1,4 +1,4 @@
-# Tday
+# T'Day
 
 Personal task planner.
 
