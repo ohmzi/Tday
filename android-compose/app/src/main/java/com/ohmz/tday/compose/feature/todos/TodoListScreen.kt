@@ -66,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -647,14 +648,22 @@ private fun ListSettingsBottomSheet(
     val selectedAccent = listAccentColor(listColor)
     val selectedIcon = listIconForKey(listIconKey)
     val canSave = listName.isNotBlank()
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
+    val sheetContainerColor = if (isDarkTheme) colorScheme.surface else colorScheme.background
+    val sheetScrimColor = if (isDarkTheme) {
+        Color.Black.copy(alpha = 0.68f)
+    } else {
+        Color.Black.copy(alpha = 0.40f)
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         dragHandle = null,
         shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-        containerColor = colorScheme.background,
-        tonalElevation = 0.dp,
+        containerColor = sheetContainerColor,
+        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+        scrimColor = sheetScrimColor,
     ) {
         Box(
             modifier = Modifier
