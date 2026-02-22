@@ -167,11 +167,14 @@ fun TdayApp() {
                                     onRefresh = homeViewModel::refresh,
                                     onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
                                     onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
-                                    onOpenAll = { navController.navigate(AppRoute.AllTodos.route) },
+                                    onOpenAll = { navController.navigate(AppRoute.AllTodos.create()) },
                                     onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
                                     onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
                                     onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
                                     onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
+                                    onOpenTaskFromSearch = { todoId ->
+                                        navController.navigate(AppRoute.AllTodos.create(highlightTodoId = todoId))
+                                    },
                                     onOpenList = { id, name ->
                                         navController.navigate(AppRoute.ListTodos.create(id, name))
                                     },
@@ -197,6 +200,7 @@ fun TdayApp() {
                                     onOpenCompleted = {},
                                     onOpenCalendar = {},
                                     onOpenSettings = {},
+                                    onOpenTaskFromSearch = {},
                                     onOpenList = { _, _ -> },
                                     onCreateTask = { _ -> },
                                     onCreateList = { _, _, _ -> },
@@ -270,9 +274,22 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.AllTodos.route) {
+                composable(
+                    route = AppRoute.AllTodos.route,
+                    arguments = listOf(
+                        navArgument("highlightTodoId") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                    ),
+                ) { entry ->
+                    val highlightTodoId = Uri.decode(
+                        entry.arguments?.getString("highlightTodoId").orEmpty(),
+                    ).ifBlank { null }
                     TodosRoute(
                         mode = TodoListMode.ALL,
+                        highlightTodoId = highlightTodoId,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                     )
@@ -376,6 +393,7 @@ private fun TodosRoute(
     mode: TodoListMode,
     onBack: () -> Unit,
     onTaskDeleted: () -> Unit,
+    highlightTodoId: String? = null,
     listId: String? = null,
     listName: String? = null,
 ) {
@@ -393,6 +411,7 @@ private fun TodosRoute(
         uiState = uiState,
         onBack = onBack,
         onRefresh = viewModel::refresh,
+        highlightedTodoId = highlightTodoId,
         onAddTask = viewModel::addTask,
         onUpdateTask = viewModel::updateTask,
         onComplete = viewModel::toggleComplete,
