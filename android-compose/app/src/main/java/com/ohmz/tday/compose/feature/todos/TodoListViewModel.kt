@@ -14,6 +14,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -34,8 +35,27 @@ class TodoListViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(TodoListUiState())
     val uiState: StateFlow<TodoListUiState> = _uiState.asStateFlow()
+    private var hasLoadedMode = false
+
+    init {
+        observeCacheChanges()
+    }
+
+    private fun observeCacheChanges() {
+        viewModelScope.launch {
+            repository.cacheDataVersion
+                .collect {
+                    if (!hasLoadedMode) return@collect
+                    refreshInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
+        }
+    }
 
     fun load(mode: TodoListMode, listId: String? = null, listName: String? = null) {
+        hasLoadedMode = true
         _uiState.update {
             it.copy(
                 mode = mode,

@@ -9,6 +9,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -25,8 +26,27 @@ class CompletedViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CompletedUiState())
     val uiState: StateFlow<CompletedUiState> = _uiState.asStateFlow()
+    private var hasLoadedScreen = false
+
+    init {
+        observeCacheChanges()
+    }
+
+    private fun observeCacheChanges() {
+        viewModelScope.launch {
+            repository.cacheDataVersion
+                .collect {
+                    if (!hasLoadedScreen) return@collect
+                    loadInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
+        }
+    }
 
     fun load() {
+        hasLoadedScreen = true
         loadInternal(
             forceSync = false,
             showLoading = false,
@@ -34,6 +54,7 @@ class CompletedViewModel @Inject constructor(
     }
 
     fun refresh() {
+        hasLoadedScreen = true
         loadInternal(
             forceSync = true,
             showLoading = true,
