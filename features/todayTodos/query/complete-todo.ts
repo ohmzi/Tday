@@ -38,12 +38,11 @@ export const useCompleteTodo = () => {
       );
       return { oldTodos, oldTimelineTodos };
     },
-    onError: (error, newTodo, context) => {
+    onError: (error, _newTodo, context) => {
       toast({ description: error.message, variant: "destructive" });
       queryClient.setQueryData(["todo"], context?.oldTodos);
       queryClient.setQueryData(["todoTimeline"], context?.oldTimelineTodos);
     },
-    onSuccess: () => {},
     onSettled: () => {
       //optimistically update calendar todos
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });

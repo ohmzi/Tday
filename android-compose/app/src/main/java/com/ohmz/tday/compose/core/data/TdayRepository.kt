@@ -337,40 +337,28 @@ class TdayRepository @Inject constructor(
         mode: TodoListMode,
         listId: String?,
     ): List<TodoItem> {
-        val timelineTodos = state.todos
+        val allTodos = state.todos
             .asSequence()
             .map(::todoFromCache)
-            .filterNot { it.completed }
             .toList()
+        val activeTodos = allTodos.filterNot { it.completed }
         val now = Instant.now()
 
         return when (mode) {
-            TodoListMode.TODAY -> timelineTodos.filter(::isTodayTodo)
-            TodoListMode.ALL -> timelineTodos
-            TodoListMode.SCHEDULED -> timelineTodos.filter { isScheduledTodo(it, now) }
+            TodoListMode.TODAY -> activeTodos.filter(::isTodayTodo)
+            TodoListMode.ALL -> allTodos
+            TodoListMode.SCHEDULED -> activeTodos.filter { isScheduledTodo(it, now) }
 
-            TodoListMode.PRIORITY -> timelineTodos.filter { isPriorityTodo(it.priority) }
+            TodoListMode.PRIORITY -> activeTodos.filter { isPriorityTodo(it.priority) }
 
             TodoListMode.LIST -> {
                 if (listId.isNullOrBlank()) {
                     emptyList()
                 } else {
-                    timelineTodos.filter { it.listId == listId }
+                    activeTodos.filter { it.listId == listId }
                 }
             }
         }
-    }
-
-    suspend fun fetchTodayTodos(): List<TodoItem> {
-        return fetchTodos(TodoListMode.TODAY)
-    }
-
-    suspend fun fetchTimelineTodos(): List<TodoItem> {
-        return fetchTodos(TodoListMode.ALL)
-    }
-
-    suspend fun fetchListTodos(listId: String): List<TodoItem> {
-        return fetchTodos(TodoListMode.LIST, listId = listId)
     }
 
     suspend fun createTodo(payload: CreateTaskPayload) {
@@ -476,6 +464,175 @@ class TdayRepository @Inject constructor(
         }
     }
 
+    suspend fun updateTodo(
+        todo: TodoItem,
+        payload: CreateTaskPayload,
+    ) {
+        val canonicalId = todo.canonicalId
+        if (canonicalId.isBlank()) return
+
+        val trimmedTitle = payload.title.trim()
+        if (trimmedTitle.isBlank()) return
+
+        val normalizedPriority = when (payload.priority.trim()) {
+            "Medium" -> "Medium"
+            "High" -> "High"
+            else -> "Low"
+        }
+        val normalizedStart = payload.dtstart
+        val normalizedDue = if (payload.due > normalizedStart) {
+            payload.due
+        } else {
+            normalizedStart.plusSeconds(60L * 60L)
+        }
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedRrule = payload.rrule?.takeIf { it.isNotBlank() }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+        val instanceDateEpochMs = todo.instanceDateEpochMillis
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.UPDATE_TODO,
+            targetId = canonicalId,
+            timestampEpochMs = timestampMs,
+            title = trimmedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            dtstartEpochMs = normalizedStart.toEpochMilli(),
+            dueEpochMs = normalizedDue.toEpochMilli(),
+            rrule = normalizedRrule,
+            listId = normalizedListId,
+            instanceDateEpochMs = instanceDateEpochMs,
+        )
+
+        if (canonicalId.startsWith(LOCAL_TODO_PREFIX)) {
+            updateOfflineState { state ->
+                state.copy(
+                    todos = state.todos.map { cached ->
+                        val isTarget = cached.canonicalId == canonicalId &&
+                            (instanceDateEpochMs == null || cached.instanceDateEpochMs == instanceDateEpochMs)
+                        if (isTarget) {
+                            cached.copy(
+                                title = trimmedTitle,
+                                description = normalizedDescription,
+                                priority = normalizedPriority,
+                                dtstartEpochMs = normalizedStart.toEpochMilli(),
+                                dueEpochMs = normalizedDue.toEpochMilli(),
+                                rrule = normalizedRrule,
+                                listId = normalizedListId,
+                                updatedAtEpochMs = timestampMs,
+                            )
+                        } else {
+                            cached
+                        }
+                    },
+                    pendingMutations = state.pendingMutations.map { mutation ->
+                        if (mutation.kind == MutationKind.CREATE_TODO && mutation.targetId == canonicalId) {
+                            mutation.copy(
+                                title = trimmedTitle,
+                                description = normalizedDescription,
+                                priority = normalizedPriority,
+                                dtstartEpochMs = normalizedStart.toEpochMilli(),
+                                dueEpochMs = normalizedDue.toEpochMilli(),
+                                rrule = normalizedRrule,
+                                listId = normalizedListId,
+                                timestampEpochMs = timestampMs,
+                            )
+                        } else {
+                            mutation
+                        }
+                    },
+                )
+            }
+            syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+            )
+            return
+        }
+
+        updateOfflineState { state ->
+            state.copy(
+                todos = state.todos.map { cached ->
+                    val isTarget = cached.canonicalId == canonicalId &&
+                        (instanceDateEpochMs == null || cached.instanceDateEpochMs == instanceDateEpochMs)
+                    if (isTarget) {
+                        cached.copy(
+                            title = trimmedTitle,
+                            description = normalizedDescription,
+                            priority = normalizedPriority,
+                            dtstartEpochMs = normalizedStart.toEpochMilli(),
+                            dueEpochMs = normalizedDue.toEpochMilli(),
+                            rrule = normalizedRrule,
+                            listId = normalizedListId,
+                            updatedAtEpochMs = timestampMs,
+                        )
+                    } else {
+                        cached
+                    }
+                },
+                pendingMutations = state.pendingMutations
+                    .filterNot {
+                        it.kind == MutationKind.UPDATE_TODO &&
+                            it.targetId == canonicalId &&
+                            it.instanceDateEpochMs == instanceDateEpochMs
+                    } +
+                    pendingMutation,
+            )
+        }
+
+        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(LOCAL_LIST_PREFIX)) {
+            syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+            )
+            return
+        }
+
+        val descriptionForApi = normalizedDescription ?: if (todo.description != null) "" else null
+        val rruleForApi = normalizedRrule ?: if (!todo.rrule.isNullOrBlank()) "" else null
+        val listIdForApi = normalizedListId ?: if (!todo.listId.isNullOrBlank()) "" else null
+
+        val immediateError = runCatching {
+            requireBody(
+                api.patchTodoByBody(
+                    UpdateTodoRequest(
+                        id = canonicalId,
+                        title = trimmedTitle,
+                        description = descriptionForApi,
+                        priority = normalizedPriority,
+                        dtstart = normalizedStart.toString(),
+                        due = normalizedDue.toString(),
+                        rrule = rruleForApi,
+                        listID = listIdForApi,
+                        dateChanged = true,
+                        rruleChanged = true,
+                        instanceDate = instanceDateEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+                    ),
+                ),
+                "Could not update task",
+            )
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(immediateError, pendingMutation)) {
+            throw immediateError
+        }
+
+        if (immediateError == null) {
+            updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        } else {
+            Log.w(
+                LOG_TAG,
+                "updateTodo deferred todo=$canonicalId reason=${immediateError.message}",
+            )
+        }
+    }
+
     suspend fun deleteTodo(todo: TodoItem) {
         val timestampMs = System.currentTimeMillis()
         val canonicalId = todo.canonicalId
@@ -536,121 +693,6 @@ class TdayRepository @Inject constructor(
                         DeleteTodoRequest(id = canonicalId),
                     ),
                     "Could not delete task",
-                )
-            }
-        }.onSuccess {
-            updateOfflineState { state ->
-                state.copy(
-                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
-                )
-            }
-        }
-    }
-
-    suspend fun setTodoPinned(todo: TodoItem, pinned: Boolean) {
-        val timestampMs = System.currentTimeMillis()
-        val mutationId = UUID.randomUUID().toString()
-        updateOfflineState { state ->
-            state.copy(
-                todos = state.todos.map {
-                    if (it.canonicalId == todo.canonicalId) {
-                        it.copy(
-                            pinned = pinned,
-                            updatedAtEpochMs = timestampMs,
-                        )
-                    } else {
-                        it
-                    }
-                },
-                pendingMutations = state.pendingMutations
-                    .filterNot { it.kind == MutationKind.SET_PINNED && it.targetId == todo.canonicalId } +
-                    PendingMutationRecord(
-                        mutationId = mutationId,
-                        kind = MutationKind.SET_PINNED,
-                        targetId = todo.canonicalId,
-                        timestampEpochMs = timestampMs,
-                        pinned = pinned,
-                    ),
-            )
-        }
-
-        if (todo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
-
-        runCatching {
-            requireBody(
-                api.patchTodoByBody(
-                    UpdateTodoRequest(
-                        id = todo.canonicalId,
-                        pinned = pinned,
-                    ),
-                ),
-                "Could not update pin",
-            )
-        }.onSuccess {
-            updateOfflineState { state ->
-                state.copy(
-                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
-                )
-            }
-        }
-    }
-
-    suspend fun setTodoPriority(todo: TodoItem, priority: String) {
-        val timestampMs = System.currentTimeMillis()
-        val mutationId = UUID.randomUUID().toString()
-        updateOfflineState { state ->
-            state.copy(
-                todos = state.todos.map {
-                    if (it.canonicalId == todo.canonicalId) {
-                        it.copy(
-                            priority = priority,
-                            updatedAtEpochMs = timestampMs,
-                        )
-                    } else {
-                        it
-                    }
-                },
-                pendingMutations = state.pendingMutations
-                    .filterNot {
-                        it.kind == MutationKind.SET_PRIORITY &&
-                            it.targetId == todo.canonicalId &&
-                            it.instanceDateEpochMs == todo.instanceDateEpochMillis
-                    } +
-                    PendingMutationRecord(
-                        mutationId = mutationId,
-                        kind = MutationKind.SET_PRIORITY,
-                        targetId = todo.canonicalId,
-                        timestampEpochMs = timestampMs,
-                        priority = priority,
-                        instanceDateEpochMs = todo.instanceDateEpochMillis,
-                    ),
-            )
-        }
-
-        if (todo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
-
-        runCatching {
-            val instanceDateEpochMs = todo.instanceDateEpochMillis
-            if (instanceDateEpochMs != null) {
-                requireBody(
-                    api.prioritizeTodoByBody(
-                        TodoPrioritizeRequest(
-                            id = todo.canonicalId,
-                            priority = priority,
-                            instanceDate = instanceDateEpochMs,
-                        ),
-                    ),
-                    "Could not update priority",
-                )
-            } else {
-                requireBody(
-                    api.patchTodoByBody(
-                        UpdateTodoRequest(
-                            id = todo.canonicalId,
-                            priority = priority,
-                        ),
-                    ),
-                    "Could not update priority",
                 )
             }
         }.onSuccess {
@@ -1242,6 +1284,48 @@ class TdayRepository @Inject constructor(
                         true
                     }
 
+                    MutationKind.UPDATE_TODO -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching false
+                        val remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetId] ?: 0L
+                        if (remoteUpdatedAt > mutation.timestampEpochMs) return@runCatching true
+
+                        val resolvedListId = mutation.listId?.let { resolvedListIds[it] ?: it }
+                        if (!resolvedListId.isNullOrBlank() && resolvedListId.startsWith(LOCAL_LIST_PREFIX)) {
+                            return@runCatching false
+                        }
+
+                        val remoteTodo = remoteSnapshot.todos.firstOrNull { it.canonicalId == targetId }
+                        val descriptionForApi = mutation.description
+                            ?: if (remoteTodo?.description != null) "" else null
+                        val rruleForApi = mutation.rrule
+                            ?: if (!remoteTodo?.rrule.isNullOrBlank()) "" else null
+                        val listIdForApi = resolvedListId
+                            ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null
+
+                        requireBody(
+                            api.patchTodoByBody(
+                                UpdateTodoRequest(
+                                    id = targetId,
+                                    title = mutation.title,
+                                    description = descriptionForApi,
+                                    priority = mutation.priority,
+                                    dtstart = mutation.dtstartEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+                                    due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+                                    rrule = rruleForApi,
+                                    listID = listIdForApi,
+                                    dateChanged = true,
+                                    rruleChanged = true,
+                                    instanceDate = mutation.instanceDateEpochMs?.let {
+                                        Instant.ofEpochMilli(it).toString()
+                                    },
+                                ),
+                            ),
+                            "Could not update task",
+                        )
+                        true
+                    }
+
                     MutationKind.DELETE_TODO -> {
                         val targetId = resolvedTargetId ?: return@runCatching false
                         if (targetId.startsWith(LOCAL_TODO_PREFIX)) return@runCatching true
@@ -1547,7 +1631,8 @@ class TdayRepository @Inject constructor(
             if (
                 mutation.kind == MutationKind.CREATE_LIST ||
                 mutation.kind == MutationKind.CREATE_TODO ||
-                mutation.kind == MutationKind.UPDATE_LIST
+                mutation.kind == MutationKind.UPDATE_LIST ||
+                mutation.kind == MutationKind.UPDATE_TODO
             ) {
                 return false
             }

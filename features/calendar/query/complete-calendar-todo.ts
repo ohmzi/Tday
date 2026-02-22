@@ -26,7 +26,7 @@ export const useCompleteCalendarTodo = () => {
       );
       return { oldTodos };
     },
-    onError: (error, newTodo, context) => {
+    onError: (error, _newTodo, context) => {
       toast({ description: error.message, variant: "destructive" });
       queryClient.setQueryData(["todo"], context?.oldTodos);
     },

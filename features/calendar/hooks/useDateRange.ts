@@ -28,7 +28,7 @@ export function useDateRange() {
   return [calendarRange, setCalendarRange] as const;
 }
 function calendarRangeReducer(
-  state: CalendarDateRange,
+  _state: CalendarDateRange,
   action: CalendarDateRange,
 ) {
   if (Array.isArray(action)) {
