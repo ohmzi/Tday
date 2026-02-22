@@ -182,8 +182,8 @@ const AllTasksTimelineContainer = ({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const pageHeading = scope === "priority" ? appDict("priority") : appDict("today");
   const emptyStateMessage = scope === "priority"
-    ? "No priority tasks yet."
-    : "No today tasks yet.";
+    ? "No priority tasks"
+    : "No tasks for today";
   const isMac =
     typeof window !== "undefined" &&
     navigator.userAgent.toLowerCase().includes("mac");
@@ -455,15 +455,15 @@ const AllTasksTimelineContainer = ({
               </div>
             </div>
             <h3 className="mb-2 text-2xl font-semibold text-foreground">
-              No matching tasks found
+              No matching tasks
             </h3>
             <p className="mb-6 text-sm text-muted-foreground">
-              Try adjusting your search terms or{" "}
+              Try different keywords or{" "}
               <button
                 onClick={() => setSearchQuery("")}
                 className="text-accent hover:underline"
               >
-                clear the search
+                clear your search
               </button>
             </p>
           </div>
