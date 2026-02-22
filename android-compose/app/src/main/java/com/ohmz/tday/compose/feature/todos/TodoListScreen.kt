@@ -1709,7 +1709,7 @@ private fun SwipeTaskRow(
                             .padding(horizontal = 4.dp, vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
+                        CircularCheckToggleIcon(
                             imageVector = if (!visuallyCompleted) {
                                 Icons.Rounded.RadioButtonUnchecked
                             } else {
@@ -1721,29 +1721,27 @@ private fun SwipeTaskRow(
                             } else {
                                 TASK_CHECKMARK_GREEN
                             },
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable {
-                                    if (visuallyCompleted || pendingCompletion) return@clickable
-                                    ViewCompat.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                    )
-                                    targetOffsetX = 0f
-                                    localCompleted = true
-                                    pendingCompletion = true
-                                    coroutineScope.launch {
-                                        if (useDelayedFadeCompletion) {
-                                            delay(500)
-                                            rowVisible = false
-                                            delay(220)
-                                            onComplete()
-                                        } else {
-                                            delay(if (keepCompletedInline) 120 else 180)
-                                            onComplete()
-                                        }
+                            enabled = !visuallyCompleted && !pendingCompletion,
+                            onClick = {
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                targetOffsetX = 0f
+                                localCompleted = true
+                                pendingCompletion = true
+                                coroutineScope.launch {
+                                    if (useDelayedFadeCompletion) {
+                                        delay(500)
+                                        rowVisible = false
+                                        delay(220)
+                                        onComplete()
+                                    } else {
+                                        delay(if (keepCompletedInline) 120 else 180)
+                                        onComplete()
                                     }
-                                },
+                                }
+                            },
                         )
 
                         Column(
@@ -1831,13 +1829,11 @@ private fun TodayTodoRow(
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
+            CircularCheckToggleIcon(
                 imageVector = Icons.Rounded.CheckCircle,
                 contentDescription = "Complete",
                 tint = TASK_CHECKMARK_GREEN,
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable { onComplete() },
+                onClick = onComplete,
             )
 
             Column(
@@ -1901,13 +1897,11 @@ private fun TodoRow(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
+                CircularCheckToggleIcon(
                     imageVector = Icons.Rounded.CheckCircle,
                     contentDescription = "Complete",
                     tint = TASK_CHECKMARK_GREEN,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { onComplete() },
+                    onClick = onComplete,
                 )
 
                 Column(modifier = Modifier.padding(start = 12.dp)) {
@@ -1933,6 +1927,39 @@ private fun TodoRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun CircularCheckToggleIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = ripple(
+                    bounded = true,
+                    radius = 14.dp,
+                ),
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(24.dp),
+        )
     }
 }
 
