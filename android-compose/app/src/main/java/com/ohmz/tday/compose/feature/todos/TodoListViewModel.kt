@@ -258,21 +258,9 @@ class TodoListViewModel @Inject constructor(
 
     fun toggleComplete(todo: TodoItem) {
         val previousItems = _uiState.value.items
-        val mode = _uiState.value.mode
-        val keepInAllMode = mode == TodoListMode.ALL
         _uiState.update { current ->
             current.copy(
-                items = if (keepInAllMode) {
-                    current.items.map { item ->
-                        if (item.id == todo.id) {
-                            item.copy(completed = true)
-                        } else {
-                            item
-                        }
-                    }
-                } else {
-                    current.items.filterNot { it.id == todo.id }
-                },
+                items = current.items.filterNot { it.id == todo.id },
                 errorMessage = null,
             )
         }
@@ -280,12 +268,10 @@ class TodoListViewModel @Inject constructor(
             runCatching {
                 repository.completeTodo(todo)
             }.onSuccess {
-                if (!keepInAllMode) {
-                    refreshInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
-                }
+                refreshInternal(
+                    forceSync = false,
+                    showLoading = false,
+                )
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
