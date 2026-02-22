@@ -100,6 +100,7 @@ export const useCreateTodo = () => {
             old.map((t) => (t.id === newTodo.id ? createdTodo : t)),
         );
       }
+      toast({ description: "todo created" });
     },
   });
   return { createMutateFn, createStatus };
