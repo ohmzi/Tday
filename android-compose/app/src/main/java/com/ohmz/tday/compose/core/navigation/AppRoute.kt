@@ -9,7 +9,15 @@ sealed class AppRoute(val route: String) {
     data object Home : AppRoute("home")
     data object TodayTodos : AppRoute("todos/today")
     data object ScheduledTodos : AppRoute("todos/scheduled")
-    data object AllTodos : AppRoute("todos/all")
+    data object AllTodos : AppRoute("todos/all?highlightTodoId={highlightTodoId}") {
+        fun create(highlightTodoId: String? = null): String {
+            return if (highlightTodoId.isNullOrBlank()) {
+                "todos/all"
+            } else {
+                "todos/all?highlightTodoId=${Uri.encode(highlightTodoId)}"
+            }
+        }
+    }
     data object PriorityTodos : AppRoute("todos/priority")
     data object ListTodos : AppRoute("todos/list/{listId}/{listName}") {
         fun create(listId: String, listName: String): String {
