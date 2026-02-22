@@ -1,8 +1,5 @@
 package com.ohmz.tday.compose.feature.completed
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
@@ -472,7 +469,6 @@ private fun CompletedSwipeRow(
     val maxElasticDragPx = actionRevealPx * 1.22f
     var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
     var pendingUncomplete by remember(item.id) { mutableStateOf(false) }
-    var rowVisible by remember(item.id) { mutableStateOf(true) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(),
@@ -496,14 +492,10 @@ private fun CompletedSwipeRow(
         colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
     val foregroundColor = colorScheme.background
 
-    AnimatedVisibility(
-        visible = rowVisible,
-        exit = fadeOut(animationSpec = tween(durationMillis = 220)),
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -603,8 +595,6 @@ private fun CompletedSwipeRow(
                                 pendingUncomplete = true
                                 coroutineScope.launch {
                                     delay(500)
-                                    rowVisible = false
-                                    delay(220)
                                     onUncomplete()
                                 }
                             },
@@ -681,7 +671,6 @@ private fun CompletedSwipeRow(
                     .height(1.dp)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
-        }
     }
 }
 
