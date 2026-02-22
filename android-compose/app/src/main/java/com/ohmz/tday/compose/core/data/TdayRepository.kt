@@ -292,6 +292,10 @@ class TdayRepository @Inject constructor(
         return buildDashboardSummary(loadOfflineState())
     }
 
+    fun fetchDashboardSummarySnapshot(): DashboardSummary {
+        return buildDashboardSummary(loadOfflineState())
+    }
+
     private fun buildDashboardSummary(state: OfflineSyncState): DashboardSummary {
         val timelineTodos = state.todos
             .asSequence()
@@ -339,6 +343,14 @@ class TdayRepository @Inject constructor(
         )
     }
 
+    fun fetchTodosSnapshot(mode: TodoListMode, listId: String? = null): List<TodoItem> {
+        return buildTodosForMode(
+            state = loadOfflineState(),
+            mode = mode,
+            listId = listId,
+        )
+    }
+
     private fun buildTodosForMode(
         state: OfflineSyncState,
         mode: TodoListMode,
@@ -353,7 +365,7 @@ class TdayRepository @Inject constructor(
 
         return when (mode) {
             TodoListMode.TODAY -> activeTodos.filter(::isTodayTodo)
-            TodoListMode.ALL -> allTodos
+            TodoListMode.ALL -> activeTodos
             TodoListMode.SCHEDULED -> activeTodos.filter { isScheduledTodo(it, now) }
 
             TodoListMode.PRIORITY -> activeTodos.filter { isPriorityTodo(it.priority) }
@@ -802,6 +814,10 @@ class TdayRepository @Inject constructor(
         return loadOfflineState().completedItems.map(::completedFromCache)
     }
 
+    fun fetchCompletedItemsSnapshot(): List<CompletedItem> {
+        return loadOfflineState().completedItems.map(::completedFromCache)
+    }
+
     suspend fun uncomplete(item: CompletedItem) {
         val originalTodoId = item.originalTodoId
             ?: throw IllegalStateException("Completed todo is missing original todo id")
@@ -1016,6 +1032,14 @@ class TdayRepository @Inject constructor(
     }
 
     suspend fun fetchLists(): List<ListSummary> {
+        return buildListsForState(loadOfflineState())
+    }
+
+    fun fetchListsSnapshot(): List<ListSummary> {
+        return buildListsForState(loadOfflineState())
+    }
+
+    private fun buildListsForState(state: OfflineSyncState): List<ListSummary> {
         val state = loadOfflineState()
         val todoCountsByList = state.todos
             .asSequence()

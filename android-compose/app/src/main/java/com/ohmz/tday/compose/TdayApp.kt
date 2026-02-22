@@ -19,10 +19,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +34,10 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -154,9 +159,7 @@ fun TdayApp() {
                             if (appUiState.authenticated) {
                                 val homeViewModel: HomeViewModel = hiltViewModel()
                                 val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
-                                LaunchedEffect(Unit) {
-                                    // Keep Home in sync with locally cached mutations (rename/create/delete)
-                                    // when returning from other screens without forcing a network refresh.
+                                OnRouteResume {
                                     homeViewModel.refreshFromCache()
                                 }
                                 HomeScreen(
@@ -304,7 +307,7 @@ fun TdayApp() {
                 composable(AppRoute.Completed.route) {
                     val viewModel: CompletedViewModel = hiltViewModel()
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                    LaunchedEffect(Unit) { viewModel.load() }
+                    OnRouteResume { viewModel.load() }
                     CompletedScreen(
                         uiState = uiState,
                         onBack = { navController.popBackStack() },
@@ -322,7 +325,7 @@ fun TdayApp() {
                 composable(AppRoute.Notes.route) {
                     val viewModel: NotesViewModel = hiltViewModel()
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                    LaunchedEffect(Unit) { viewModel.load() }
+                    OnRouteResume { viewModel.load() }
                     NotesScreen(
                         uiState = uiState,
                         onBack = { navController.popBackStack() },
@@ -335,7 +338,7 @@ fun TdayApp() {
                 composable(AppRoute.Calendar.route) {
                     val viewModel: CalendarViewModel = hiltViewModel()
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                    LaunchedEffect(Unit) { viewModel.load() }
+                    OnRouteResume { viewModel.load() }
                     CalendarScreen(
                         uiState = uiState,
                         onBack = { navController.popBackStack() },
@@ -382,6 +385,9 @@ private fun TodosRoute(
     LaunchedEffect(mode, listId, listName) {
         viewModel.load(mode = mode, listId = listId, listName = listName)
     }
+    OnRouteResume {
+        viewModel.load(mode = mode, listId = listId, listName = listName)
+    }
 
     TodoListScreen(
         uiState = uiState,
@@ -404,6 +410,25 @@ private fun TodosRoute(
             )
         },
     )
+}
+
+@Composable
+private fun OnRouteResume(
+    action: () -> Unit,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentAction by rememberUpdatedState(action)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                currentAction()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 }
 
 private data class AppToastMessage(
