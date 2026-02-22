@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 data class CalendarUiState(
     val isLoading: Boolean = false,
     val items: List<TodoItem> = emptyList(),
+    val lists: List<ListSummary> = emptyList(),
     val errorMessage: String? = null,
 )
 
@@ -85,12 +87,15 @@ class CalendarViewModel @Inject constructor(
                         replayPendingMutations = false,
                     ).onFailure { /* fall back to cache */ }
                 }
-                repository.fetchTodos(mode = TodoListMode.SCHEDULED)
-            }.onSuccess { todos ->
+                val todos = repository.fetchTodos(mode = TodoListMode.SCHEDULED)
+                val lists = repository.fetchLists()
+                todos to lists
+            }.onSuccess { (todos, lists) ->
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
                         items = if (current.items == todos) current.items else todos,
+                        lists = if (current.lists == lists) current.lists else lists,
                         errorMessage = null,
                     )
                 }
