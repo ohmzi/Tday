@@ -1161,22 +1161,23 @@ private fun TimelineSection(
                         onComplete = { onComplete(todo) },
                         onDelete = { onDelete(todo) },
                         onInfo = { onInfo(todo) },
+                        showDuePrefix = true,
                     )
-                } else if (mode == TodoListMode.TODAY && useMinimalStyle) {
+                } else if (
+                    useMinimalStyle &&
+                    (
+                        mode == TodoListMode.TODAY ||
+                            mode == TodoListMode.SCHEDULED ||
+                            mode == TodoListMode.PRIORITY ||
+                            mode == TodoListMode.LIST
+                    )
+                ) {
                     TodayTaskSwipeRow(
                         todo = todo,
                         onComplete = { onComplete(todo) },
                         onDelete = { onDelete(todo) },
                         onInfo = { onInfo(todo) },
                         showDuePrefix = true,
-                    )
-                } else if ((mode == TodoListMode.SCHEDULED || mode == TodoListMode.PRIORITY) && useMinimalStyle) {
-                    TodayTaskSwipeRow(
-                        todo = todo,
-                        onComplete = { onComplete(todo) },
-                        onDelete = { onDelete(todo) },
-                        onInfo = { onInfo(todo) },
-                        showDuePrefix = false,
                     )
                 } else if (useMinimalStyle) {
                     TodayTodoRow(
@@ -1470,6 +1471,7 @@ private fun AllTaskSwipeRow(
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
+    showDuePrefix: Boolean,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -1477,8 +1479,8 @@ private fun AllTaskSwipeRow(
         onDelete = onDelete,
         onInfo = onInfo,
         keepCompletedInline = true,
-        showDueText = false,
-        showDuePrefix = false,
+        showDueText = true,
+        showDuePrefix = showDuePrefix,
     )
 }
 
