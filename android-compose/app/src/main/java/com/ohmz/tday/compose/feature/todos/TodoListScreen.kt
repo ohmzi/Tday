@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.todos
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -1487,7 +1488,7 @@ private fun AllTaskSwipeRow(
         lists = lists,
         showDueText = true,
         showDuePrefix = showDuePrefix,
-        useDelayedFadeCompletion = true,
+        useDelayedFadeCompletion = false,
     )
 }
 
@@ -1568,6 +1569,7 @@ private fun SwipeTaskRow(
     showDueText: Boolean,
     showDuePrefix: Boolean,
     useDelayedFadeCompletion: Boolean = false,
+    useFadeOnCompletion: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -1578,11 +1580,17 @@ private fun SwipeTaskRow(
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var localCompleted by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
+    var completionFading by remember(todo.id) { mutableStateOf(false) }
     val visuallyCompleted = localCompleted || (keepCompletedInline && todo.completed)
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(),
         label = "swipeTaskOffset",
+    )
+    val completionAlpha by animateFloatAsState(
+        targetValue = if (completionFading) 0f else 1f,
+        animationSpec = tween(durationMillis = 220),
+        label = "swipeTaskCompletionAlpha",
     )
     val dueTimeText =
         DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
@@ -1613,7 +1621,9 @@ private fun SwipeTaskRow(
     val listIndicatorColor = listAccentColor(listMeta?.color)
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { alpha = completionAlpha },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
             Box(
@@ -1722,6 +1732,10 @@ private fun SwipeTaskRow(
                                 coroutineScope.launch {
                                     if (useDelayedFadeCompletion) {
                                         delay(500)
+                                        if (useFadeOnCompletion) {
+                                            completionFading = true
+                                            delay(220)
+                                        }
                                         onComplete()
                                     } else {
                                         delay(if (keepCompletedInline) 120 else 180)
