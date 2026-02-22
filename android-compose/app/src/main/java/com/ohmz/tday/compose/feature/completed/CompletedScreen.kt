@@ -1,11 +1,19 @@
 package com.ohmz.tday.compose.feature.completed
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,11 +27,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,28 +43,39 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CompletedItem
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -68,6 +90,8 @@ fun CompletedScreen(
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onUncomplete: (CompletedItem) -> Unit,
+    onDelete: (CompletedItem) -> Unit,
+    onUpdateTask: (CompletedItem, CreateTaskPayload) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val listState = rememberLazyListState()
@@ -131,6 +155,10 @@ fun CompletedScreen(
         targetValue = collapseProgressTarget,
         label = "completedTitleCollapseProgress",
     )
+    var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editTarget = remember(editTargetId, uiState.items) {
+        editTargetId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+    }
 
     Scaffold(
         containerColor = colorScheme.background,
@@ -170,6 +198,9 @@ fun CompletedScreen(
                 items(timelineSections, key = { it.key }) { section ->
                     CompletedTimelineSection(
                         section = section,
+                        lists = uiState.lists,
+                        onInfo = { item -> editTargetId = item.id },
+                        onDelete = onDelete,
                         onUncomplete = onUncomplete,
                     )
                 }
@@ -187,6 +218,20 @@ fun CompletedScreen(
                 item { Spacer(modifier = Modifier.height(96.dp)) }
             }
         }
+    }
+
+    editTarget?.let { completed ->
+        CreateTaskBottomSheet(
+            lists = uiState.lists,
+            editingTask = completed.toEditableTodo(uiState.lists),
+            defaultListId = completed.resolveListId(uiState.lists),
+            onDismiss = { editTargetId = null },
+            onCreateTask = { _ -> },
+            onUpdateTask = { _, payload ->
+                onUpdateTask(completed, payload)
+                editTargetId = null
+            },
+        )
     }
 }
 
@@ -324,6 +369,9 @@ private fun CompletedHeaderButton(
 @Composable
 private fun CompletedTimelineSection(
     section: CompletedSection,
+    lists: List<ListSummary>,
+    onInfo: (CompletedItem) -> Unit,
+    onDelete: (CompletedItem) -> Unit,
     onUncomplete: (CompletedItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -347,8 +395,11 @@ private fun CompletedTimelineSection(
             )
         } else {
             section.items.forEach { item ->
-                CompletedRow(
+                CompletedSwipeRow(
                     item = item,
+                    lists = lists,
+                    onInfo = { onInfo(item) },
+                    onDelete = { onDelete(item) },
                     onUncomplete = { onUncomplete(item) },
                 )
             }
@@ -357,65 +408,216 @@ private fun CompletedTimelineSection(
 }
 
 @Composable
-private fun CompletedRow(
+private fun CompletedSwipeRow(
     item: CompletedItem,
+    lists: List<ListSummary>,
+    onInfo: () -> Unit,
+    onDelete: () -> Unit,
     onUncomplete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = DateTimeFormatter.ofPattern("h:mm a")
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
+    val actionRevealPx = with(density) { 130.dp.toPx() }
+    val maxElasticDragPx = actionRevealPx * 1.22f
+    var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = targetOffsetX,
+        animationSpec = spring(),
+        label = "completedSwipeOffset",
+    )
+    val completedAtText = DateTimeFormatter.ofPattern("EEE, MMM d · h:mm a")
         .withZone(ZoneId.systemDefault())
-        .format(item.due)
+        .format(item.completedAt ?: item.due)
+    val createdAtText = DateTimeFormatter.ofPattern("EEE, MMM d · h:mm a")
+        .withZone(ZoneId.systemDefault())
+        .format(item.dtstart)
+    val listMeta = item.resolveListSummary(lists)
+    val leadingColor = listMeta?.color?.let(::listAccentColor)
+        ?: item.listColor?.let(::listAccentColor)
+        ?: priorityColor(item.priority)
+    val leadingIcon = if (!item.listName.isNullOrBlank() || listMeta != null) {
+        listIconForKey(listMeta?.iconKey)
+    } else {
+        Icons.Rounded.CheckCircle
+    }
+    val rowShape = RoundedCornerShape(16.dp)
+    val actionContainerColor =
+        colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
+    val foregroundColor = colorScheme.background
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .height(74.dp)
+                .background(actionContainerColor, rowShape),
         ) {
-            Icon(
-                imageVector = Icons.Rounded.CheckCircle,
-                contentDescription = "Completed",
-                tint = priorityColor(item.priority),
-                modifier = Modifier.size(24.dp),
-            )
-
-            Column(
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 10.dp),
+                    .align(Alignment.CenterEnd)
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = item.title,
-                    color = colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                SwipeActionCircle(
+                    icon = Icons.Rounded.Info,
+                    contentDescription = "Edit task",
+                    tint = colorScheme.onSurface,
+                    background = colorScheme.surface,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        onInfo()
+                        targetOffsetX = 0f
+                    },
                 )
-                Text(
-                    text = due,
-                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodySmall,
+                SwipeActionCircle(
+                    icon = Icons.Rounded.DeleteSweep,
+                    contentDescription = "Delete task",
+                    tint = colorScheme.error,
+                    background = colorScheme.surface,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        onDelete()
+                        targetOffsetX = 0f
+                    },
                 )
             }
 
-            IconButton(onClick = onUncomplete) {
-                Icon(
-                    imageVector = Icons.Rounded.Restore,
-                    contentDescription = "Restore",
-                    tint = colorScheme.primary,
-                )
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = animatedOffsetX }
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
+                        },
+                        onDragStopped = { velocity ->
+                            val flingOpen = velocity < -1450f
+                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
+                            targetOffsetX = if (flingOpen || dragOpen) -actionRevealPx else 0f
+                        },
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        if (targetOffsetX != 0f) targetOffsetX = 0f
+                    },
+                shape = rowShape,
+                colors = CardDefaults.cardColors(containerColor = foregroundColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = leadingIcon,
+                        contentDescription = if (leadingIcon == Icons.Rounded.CheckCircle) "Completed" else "List task",
+                        tint = leadingColor,
+                        modifier = Modifier.size(24.dp),
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 10.dp),
+                    ) {
+                        Text(
+                            text = item.title,
+                            color = colorScheme.onSurface.copy(alpha = 0.78f),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            textDecoration = TextDecoration.LineThrough,
+                        )
+                        Text(
+                            text = "Created: $createdAtText",
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                        )
+                        Text(
+                            text = "Completed: $completedAtText",
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            targetOffsetX = 0f
+                            coroutineScope.launch {
+                                delay(90)
+                                onUncomplete()
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Restore,
+                            contentDescription = "Restore",
+                            tint = colorScheme.primary,
+                        )
+                    }
+                }
             }
         }
-
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
                 .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
         )
+    }
+}
+
+@Composable
+private fun SwipeActionCircle(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    background: Color,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        label = "completedSwipeActionScale",
+    )
+    Card(
+        modifier = Modifier
+            .size(42.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        onClick = onClick,
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        colors = CardDefaults.cardColors(containerColor = background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }
 
@@ -444,6 +646,79 @@ private fun priorityColor(priority: String): Color {
         "high" -> Color(0xFFE56A6A)
         "medium" -> Color(0xFFE3B368)
         else -> Color(0xFF6FBF86)
+    }
+}
+
+private fun CompletedItem.resolveListSummary(lists: List<ListSummary>): ListSummary? {
+    val name = listName?.trim()?.lowercase(Locale.getDefault()) ?: return null
+    return lists.firstOrNull { it.name.trim().lowercase(Locale.getDefault()) == name }
+}
+
+private fun CompletedItem.resolveListId(lists: List<ListSummary>): String? {
+    return resolveListSummary(lists)?.id
+}
+
+private fun CompletedItem.toEditableTodo(lists: List<ListSummary>): TodoItem {
+    val resolvedListId = resolveListId(lists)
+    val canonical = originalTodoId ?: id
+    return TodoItem(
+        id = canonical,
+        canonicalId = canonical,
+        title = title,
+        description = description,
+        priority = priority,
+        dtstart = dtstart,
+        due = due,
+        rrule = rrule,
+        instanceDate = instanceDate,
+        pinned = false,
+        completed = true,
+        listId = resolvedListId,
+        updatedAt = completedAt,
+    )
+}
+
+private fun listAccentColor(colorKey: String?): Color {
+    return when (colorKey?.trim()?.uppercase(Locale.getDefault())) {
+        "RED" -> Color(0xFFE65E52)
+        "ORANGE" -> Color(0xFFF29F38)
+        "YELLOW" -> Color(0xFFF3D04A)
+        "LIME" -> Color(0xFF8ACF56)
+        "BLUE" -> Color(0xFF5C9FE7)
+        "PURPLE" -> Color(0xFF8D6CE2)
+        "PINK" -> Color(0xFFDF6DAA)
+        "TEAL" -> Color(0xFF4EB5B0)
+        "CORAL" -> Color(0xFFE3876D)
+        "GOLD" -> Color(0xFFCFAB57)
+        "DEEP_BLUE" -> Color(0xFF4B73D6)
+        "ROSE" -> Color(0xFFD9799A)
+        "LIGHT_RED" -> Color(0xFFE48888)
+        "BRICK" -> Color(0xFFB86A5C)
+        "SLATE" -> Color(0xFF7B8593)
+        else -> Color(0xFF6EA8E1)
+    }
+}
+
+private fun listIconForKey(iconKey: String?): ImageVector {
+    return when (iconKey?.trim()?.lowercase(Locale.getDefault())) {
+        "sun" -> Icons.Rounded.WbSunny
+        "calendar" -> Icons.Rounded.CalendarMonth
+        "schedule" -> Icons.Rounded.Schedule
+        "flag" -> Icons.Rounded.Flag
+        "check" -> Icons.Rounded.Check
+        "inbox" -> Icons.Rounded.Inbox
+        "book" -> Icons.AutoMirrored.Rounded.MenuBook
+        "briefcase" -> Icons.Rounded.Work
+        "health" -> Icons.Rounded.LocalHospital
+        "fitness" -> Icons.Rounded.FitnessCenter
+        "food" -> Icons.Rounded.Restaurant
+        "cocktail" -> Icons.Rounded.LocalBar
+        "music" -> Icons.Rounded.MusicNote
+        "travel" -> Icons.Rounded.Flight
+        "car" -> Icons.Rounded.DirectionsCar
+        "gift" -> Icons.Rounded.CardGiftcard
+        "home" -> Icons.Rounded.Home
+        else -> Icons.AutoMirrored.Rounded.List
     }
 }
 

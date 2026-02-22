@@ -279,6 +279,8 @@ fun TdayApp() {
                     onBack = { navController.popBackStack() },
                     onRefresh = viewModel::refresh,
                     onUncomplete = viewModel::uncomplete,
+                    onDelete = viewModel::delete,
+                    onUpdateTask = viewModel::update,
                 )
             }
 
