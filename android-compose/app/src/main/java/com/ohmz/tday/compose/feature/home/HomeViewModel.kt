@@ -6,6 +6,8 @@ import com.ohmz.tday.compose.core.data.TdayRepository
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -26,6 +28,7 @@ data class HomeUiState(
         completedCount = 0,
         lists = emptyList(),
     ),
+    val searchableTodos: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
 )
 
@@ -39,6 +42,7 @@ class HomeViewModel @Inject constructor(
             HomeUiState(
                 isLoading = false,
                 summary = repository.fetchDashboardSummarySnapshot(),
+                searchableTodos = repository.fetchTodosSnapshot(mode = TodoListMode.ALL),
                 errorMessage = null,
             )
         }.getOrElse { HomeUiState() },
@@ -60,12 +64,13 @@ class HomeViewModel @Inject constructor(
 
     fun refreshFromCache() {
         runCatching {
-            repository.fetchDashboardSummarySnapshot()
-        }.onSuccess { summary ->
+            repository.fetchDashboardSummarySnapshot() to repository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+        }.onSuccess { (summary, todos) ->
             _uiState.update { current ->
                 current.copy(
                     isLoading = false,
                     summary = if (current.summary == summary) current.summary else summary,
+                    searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
                     errorMessage = null,
                 )
             }
@@ -109,12 +114,13 @@ class HomeViewModel @Inject constructor(
                         replayPendingMutations = true,
                     ).onFailure { /* fall back to local cache */ }
                 }
-                repository.fetchDashboardSummary()
-            }.onSuccess { summary ->
+                repository.fetchDashboardSummary() to repository.fetchTodos(mode = TodoListMode.ALL)
+            }.onSuccess { (summary, todos) ->
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
                         summary = if (current.summary == summary) current.summary else summary,
+                        searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
                         errorMessage = null,
                     )
                 }
@@ -159,9 +165,17 @@ class HomeViewModel @Inject constructor(
                 .onSuccess {
                     runCatching { repository.fetchDashboardSummaryCached() }
                         .onSuccess { summary ->
+                            val todos = runCatching {
+                                repository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+                            }.getOrDefault(emptyList())
                             _uiState.update { current ->
                                 current.copy(
                                     summary = if (current.summary == summary) current.summary else summary,
+                                    searchableTodos = if (current.searchableTodos == todos) {
+                                        current.searchableTodos
+                                    } else {
+                                        todos
+                                    },
                                     errorMessage = null,
                                 )
                             }
