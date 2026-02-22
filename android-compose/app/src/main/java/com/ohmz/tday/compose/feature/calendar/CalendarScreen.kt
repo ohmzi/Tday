@@ -1,9 +1,14 @@
 package com.ohmz.tday.compose.feature.calendar
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +42,9 @@ import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalBar
+import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Restaurant
@@ -54,21 +61,29 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import java.time.LocalDate
 import java.time.YearMonth
@@ -76,6 +91,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +99,8 @@ fun CalendarScreen(
     uiState: CalendarUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
+    onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
+    onDelete: (TodoItem) -> Unit,
 ) {
     val zoneId = remember { ZoneId.systemDefault() }
     val today = remember { LocalDate.now(zoneId) }
@@ -101,6 +119,12 @@ fun CalendarScreen(
     val monthLabel = remember(visibleMonth) {
         visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) +
             " " + visibleMonth.year
+    }
+    var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editTarget = remember(editTargetId, uiState.items) {
+        editTargetId?.let { targetId ->
+            uiState.items.firstOrNull { it.id == targetId }
+        }
     }
 
     Scaffold(
@@ -164,6 +188,8 @@ fun CalendarScreen(
                         CalendarTodoRow(
                             todo = todo,
                             lists = uiState.lists,
+                            onInfo = { editTargetId = todo.id },
+                            onDelete = { onDelete(todo) },
                         )
                     }
                 }
@@ -181,6 +207,20 @@ fun CalendarScreen(
                 item { Spacer(modifier = Modifier.height(96.dp)) }
             }
         }
+    }
+
+    editTarget?.let { todo ->
+        CreateTaskBottomSheet(
+            lists = uiState.lists,
+            editingTask = todo,
+            defaultListId = todo.listId,
+            onDismiss = { editTargetId = null },
+            onCreateTask = { _ -> },
+            onUpdateTask = { targetTodo, payload ->
+                onUpdateTask(targetTodo, payload)
+                editTargetId = null
+            },
+        )
     }
 }
 
@@ -479,8 +519,21 @@ private fun CalendarDayCell(
 private fun CalendarTodoRow(
     todo: TodoItem,
     lists: List<ListSummary>,
+    onInfo: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
+    val actionRevealPx = with(density) { 130.dp.toPx() }
+    val maxElasticDragPx = actionRevealPx * 1.22f
+    var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = targetOffsetX,
+        animationSpec = spring(),
+        label = "calendarTaskSwipeOffset",
+    )
     val dueText = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(todo.due)
@@ -488,60 +541,136 @@ private fun CalendarTodoRow(
     val showListIndicator = listMeta != null
     val showPriorityFlag = isHighPriority(todo.priority)
     val listIndicatorColor = listAccentColor(listMeta?.color)
+    val rowShape = RoundedCornerShape(16.dp)
+    val actionContainerColor =
+        colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
+    val foregroundColor = colorScheme.background
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .height(58.dp)
+                .clip(rowShape)
+                .background(actionContainerColor),
         ) {
-            Icon(
-                imageVector = Icons.Rounded.FiberManualRecord,
-                contentDescription = null,
-                tint = priorityColor(todo.priority),
-                modifier = Modifier.size(13.dp),
-            )
-            Column(
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 10.dp),
+                    .align(Alignment.CenterEnd)
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = todo.title,
-                    color = colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                CalendarSwipeActionCircle(
+                    icon = Icons.Rounded.Info,
+                    contentDescription = "Edit task",
+                    tint = colorScheme.onSurface,
+                    background = colorScheme.surface,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        onInfo()
+                        targetOffsetX = 0f
+                    },
                 )
-                Text(
-                    text = dueText,
-                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodySmall,
+                CalendarSwipeActionCircle(
+                    icon = Icons.Rounded.DeleteSweep,
+                    contentDescription = "Delete task",
+                    tint = colorScheme.error,
+                    background = colorScheme.surface,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        targetOffsetX = 0f
+                        coroutineScope.launch {
+                            onDelete()
+                        }
+                    },
                 )
             }
-            if (showListIndicator || showPriorityFlag) {
+
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = animatedOffsetX }
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
+                        },
+                        onDragStopped = { velocity ->
+                            val flingOpen = velocity < -1450f
+                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
+                            targetOffsetX = if (flingOpen || dragOpen) {
+                                -actionRevealPx
+                            } else {
+                                0f
+                            }
+                        },
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        if (targetOffsetX != 0f) targetOffsetX = 0f
+                    },
+                shape = rowShape,
+                colors = CardDefaults.cardColors(containerColor = foregroundColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (showListIndicator) {
-                        Icon(
-                            imageVector = listIconForKey(listMeta?.iconKey),
-                            contentDescription = "Task list",
-                            tint = listIndicatorColor,
-                            modifier = Modifier.size(18.dp),
+                    Icon(
+                        imageVector = Icons.Rounded.FiberManualRecord,
+                        contentDescription = null,
+                        tint = priorityColor(todo.priority),
+                        modifier = Modifier.size(13.dp),
+                    )
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 10.dp),
+                    ) {
+                        Text(
+                            text = todo.title,
+                            color = colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                        )
+                        Text(
+                            text = dueText,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                    if (showPriorityFlag) {
-                        Icon(
-                            imageVector = Icons.Rounded.Flag,
-                            contentDescription = "High priority",
-                            tint = priorityColor("high"),
-                            modifier = Modifier.size(18.dp),
-                        )
+                    if (showListIndicator || showPriorityFlag) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (showListIndicator) {
+                                Icon(
+                                    imageVector = listIconForKey(listMeta?.iconKey),
+                                    contentDescription = "Task list",
+                                    tint = listIndicatorColor,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            if (showPriorityFlag) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Flag,
+                                    contentDescription = "High priority",
+                                    tint = priorityColor("high"),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -552,6 +681,47 @@ private fun CalendarTodoRow(
                 .height(1.dp)
                 .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
         )
+    }
+}
+
+@Composable
+private fun CalendarSwipeActionCircle(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    background: Color,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        label = "calendarSwipeActionScale",
+    )
+    Card(
+        modifier = Modifier
+            .size(42.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        onClick = onClick,
+        interactionSource = interactionSource,
+        shape = androidx.compose.foundation.shape.CircleShape,
+        colors = CardDefaults.cardColors(containerColor = background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }
 
