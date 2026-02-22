@@ -28,8 +28,8 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-background/90 group-[.toaster]:backdrop-blur-xl group-[.toaster]:text-foreground group-[.toaster]:border-border/40 group-[.toaster]:shadow-lg group-[.toaster]:rounded-xl",
-          description: "group-[.toast]:text-muted-foreground",
+            "group toast group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-lg group-[.toaster]:rounded-xl",
+          description: "group-[.toast]:text-current/90",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:
@@ -38,9 +38,18 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
       }}
       style={
         {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
+          "--normal-bg": "hsl(var(--accent))",
+          "--normal-text": "hsl(var(--accent-foreground))",
+          "--normal-border": "hsl(var(--form-button-accent))",
+          "--success-bg": "hsl(var(--accent))",
+          "--success-text": "hsl(var(--accent-foreground))",
+          "--success-border": "hsl(var(--form-button-accent))",
+          "--info-bg": "hsl(var(--accent))",
+          "--info-text": "hsl(var(--accent-foreground))",
+          "--info-border": "hsl(var(--form-button-accent))",
+          "--warning-bg": "hsl(var(--accent))",
+          "--warning-text": "hsl(var(--accent-foreground))",
+          "--warning-border": "hsl(var(--form-button-accent))",
         } as React.CSSProperties
       }
       {...props}

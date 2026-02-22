@@ -2,6 +2,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { todoSchema } from "@/schema";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 type CreateTodoInput = Pick<
   TodoItemType,
@@ -45,10 +46,17 @@ async function postTodo({ todo }: { todo: CreateTodoInput }) {
 }
 
 export const useCreateCalendarTodo = () => {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { mutate: createCalendarTodo, status: createTodoStatus } = useMutation({
     mutationFn: (todo: CreateTodoInput) => postTodo({ todo }),
+    onSuccess: () => {
+      toast({ description: "todo created" });
+    },
+    onError: (error) => {
+      toast({ description: error.message, variant: "destructive" });
+    },
     //if fetch error then revert optimistic updates including form states
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["todo"] });

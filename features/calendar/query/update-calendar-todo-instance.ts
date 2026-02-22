@@ -74,6 +74,7 @@ export const useEditCalendarTodoInstance = () => {
         queryClient.invalidateQueries({
           queryKey: ["todo"],
         });
+        toast({ description: "todo updated" });
       },
 
       onError: (error, _newTodo, context) => {
