@@ -1,5 +1,8 @@
 package com.ohmz.tday.compose.feature.completed
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
@@ -186,18 +189,6 @@ fun CompletedScreen(
                 contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                if (uiState.items.isEmpty()) {
-                    item {
-                        EmptyCompletedState(
-                            message = if (uiState.isLoading) {
-                                "Loading..."
-                            } else {
-                                "No completed tasks yet"
-                            },
-                        )
-                    }
-                }
-
                 items(timelineSections, key = { it.key }) { section ->
                     val isCollapsed = collapsedSectionKeys.contains(section.key)
                     CompletedTimelineSection(
@@ -216,6 +207,18 @@ fun CompletedScreen(
                         onDelete = onDelete,
                         onUncomplete = onUncomplete,
                     )
+                }
+
+                if (uiState.items.isEmpty()) {
+                    item {
+                        EmptyCompletedState(
+                            message = if (uiState.isLoading) {
+                                "Loading..."
+                            } else {
+                                "No completed tasks yet"
+                            },
+                        )
+                    }
                 }
 
                 uiState.errorMessage?.let { message ->
@@ -466,11 +469,14 @@ private fun CompletedSwipeRow(
     val actionRevealPx = with(density) { 130.dp.toPx() }
     val maxElasticDragPx = actionRevealPx * 1.22f
     var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
+    var pendingUncomplete by remember(item.id) { mutableStateOf(false) }
+    var rowVisible by remember(item.id) { mutableStateOf(true) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(),
         label = "completedSwipeOffset",
     )
+    val showCompletedState = !pendingUncomplete
     val completedAtText = DateTimeFormatter.ofPattern("EEE, MMM d · h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(item.completedAt ?: item.due)
@@ -478,149 +484,204 @@ private fun CompletedSwipeRow(
         .withZone(ZoneId.systemDefault())
         .format(item.dtstart)
     val listMeta = item.resolveListSummary(lists)
-    val leadingColor = listMeta?.color?.let(::listAccentColor)
+    val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
         ?: item.listColor?.let(::listAccentColor)
-        ?: priorityColor(item.priority)
-    val leadingIcon = if (!item.listName.isNullOrBlank() || listMeta != null) {
-        listIconForKey(listMeta?.iconKey)
-    } else {
-        Icons.Rounded.CheckCircle
-    }
+        ?: colorScheme.onSurfaceVariant.copy(alpha = 0.86f)
+    val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
+    val showPriorityFlag = isHighPriority(item.priority)
     val rowShape = RoundedCornerShape(16.dp)
     val actionContainerColor =
         colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
     val foregroundColor = colorScheme.background
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    AnimatedVisibility(
+        visible = rowVisible,
+        exit = fadeOut(animationSpec = tween(durationMillis = 220)),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(74.dp)
-                .background(actionContainerColor, rowShape),
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SwipeActionCircle(
-                    icon = Icons.Rounded.Info,
-                    contentDescription = "Edit task",
-                    tint = colorScheme.onSurface,
-                    background = colorScheme.surface,
-                    onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                        onInfo()
-                        targetOffsetX = 0f
-                    },
-                )
-                SwipeActionCircle(
-                    icon = Icons.Rounded.DeleteSweep,
-                    contentDescription = "Delete task",
-                    tint = colorScheme.error,
-                    background = colorScheme.surface,
-                    onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                        onDelete()
-                        targetOffsetX = 0f
-                    },
-                )
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { translationX = animatedOffsetX }
-                    .draggable(
-                        orientation = Orientation.Horizontal,
-                        state = rememberDraggableState { delta ->
-                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
-                        },
-                        onDragStopped = { velocity ->
-                            val flingOpen = velocity < -1450f
-                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
-                            targetOffsetX = if (flingOpen || dragOpen) -actionRevealPx else 0f
-                        },
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {
-                        if (targetOffsetX != 0f) targetOffsetX = 0f
-                    },
-                shape = rowShape,
-                colors = CardDefaults.cardColors(containerColor = foregroundColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    .fillMaxWidth()
+                    .height(74.dp)
+                    .background(actionContainerColor, rowShape),
             ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                        .align(Alignment.CenterEnd)
+                        .padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = leadingIcon,
-                        contentDescription = if (leadingIcon == Icons.Rounded.CheckCircle) "Completed" else "List task",
-                        tint = leadingColor,
-                        modifier = Modifier.size(24.dp),
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 10.dp),
-                    ) {
-                        Text(
-                            text = item.title,
-                            color = colorScheme.onSurface.copy(alpha = 0.78f),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            textDecoration = TextDecoration.LineThrough,
-                        )
-                        Text(
-                            text = "Created: $createdAtText",
-                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                        )
-                        Text(
-                            text = "Completed: $completedAtText",
-                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                        )
-                    }
-
-                    IconButton(
+                    SwipeActionCircle(
+                        icon = Icons.Rounded.Info,
+                        contentDescription = "Edit task",
+                        tint = colorScheme.onSurface,
+                        background = colorScheme.surface,
                         onClick = {
-                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            ViewCompat.performHapticFeedback(
+                                view,
+                                HapticFeedbackConstantsCompat.CLOCK_TICK,
+                            )
+                            onInfo()
                             targetOffsetX = 0f
-                            coroutineScope.launch {
-                                delay(90)
-                                onUncomplete()
-                            }
                         },
+                    )
+                    SwipeActionCircle(
+                        icon = Icons.Rounded.DeleteSweep,
+                        contentDescription = "Delete task",
+                        tint = colorScheme.error,
+                        background = colorScheme.surface,
+                        onClick = {
+                            ViewCompat.performHapticFeedback(
+                                view,
+                                HapticFeedbackConstantsCompat.CLOCK_TICK,
+                            )
+                            onDelete()
+                            targetOffsetX = 0f
+                        },
+                    )
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { translationX = animatedOffsetX }
+                        .draggable(
+                            orientation = Orientation.Horizontal,
+                            state = rememberDraggableState { delta ->
+                                targetOffsetX = (targetOffsetX + delta).coerceIn(
+                                    -maxElasticDragPx,
+                                    0f,
+                                )
+                            },
+                            onDragStopped = { velocity ->
+                                val flingOpen = velocity < -1450f
+                                val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
+                                targetOffsetX = if (flingOpen || dragOpen) -actionRevealPx else 0f
+                            },
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            if (targetOffsetX != 0f) targetOffsetX = 0f
+                        },
+                    shape = rowShape,
+                    colors = CardDefaults.cardColors(containerColor = foregroundColor),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Restore,
-                            contentDescription = "Restore",
-                            tint = colorScheme.primary,
+                            imageVector = if (showCompletedState) {
+                                Icons.Rounded.CheckCircle
+                            } else {
+                                Icons.Rounded.RadioButtonUnchecked
+                            },
+                            contentDescription = "Undo complete",
+                            tint = if (showCompletedState) {
+                                Color(0xFF6FBF86)
+                            } else {
+                                colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                            },
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable {
+                                    if (pendingUncomplete) return@clickable
+                                    ViewCompat.performHapticFeedback(
+                                        view,
+                                        HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                    )
+                                    targetOffsetX = 0f
+                                    pendingUncomplete = true
+                                    coroutineScope.launch {
+                                        delay(500)
+                                        rowVisible = false
+                                        delay(220)
+                                        onUncomplete()
+                                    }
+                                },
                         )
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 10.dp),
+                        ) {
+                            Text(
+                                text = item.title,
+                                color = if (showCompletedState) {
+                                    colorScheme.onSurface.copy(alpha = 0.78f)
+                                } else {
+                                    colorScheme.onSurface
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                textDecoration = if (showCompletedState) {
+                                    TextDecoration.LineThrough
+                                } else {
+                                    TextDecoration.None
+                                },
+                            )
+                            Text(
+                                text = "Created: $createdAtText",
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                            )
+                            Text(
+                                text = "Completed: $completedAtText",
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                            )
+                        }
+
+                        if (showPriorityFlag) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (showListIndicator) {
+                                    Icon(
+                                        imageVector = listIconForKey(listMeta?.iconKey),
+                                        contentDescription = "Task list",
+                                        tint = listIndicatorColor,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Rounded.Flag,
+                                    contentDescription = "High priority",
+                                    tint = priorityColor("high"),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        } else if (showListIndicator) {
+                            Icon(
+                                imageVector = listIconForKey(listMeta?.iconKey),
+                                contentDescription = "Task list",
+                                tint = listIndicatorColor,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     }
                 }
             }
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+            )
         }
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
-        )
     }
 }
 
@@ -690,6 +751,13 @@ private fun priorityColor(priority: String): Color {
         "high" -> Color(0xFFE56A6A)
         "medium" -> Color(0xFFE3B368)
         else -> Color(0xFF6FBF86)
+    }
+}
+
+private fun isHighPriority(priority: String): Boolean {
+    return when (priority.trim().lowercase()) {
+        "high", "urgent", "important" -> true
+        else -> false
     }
 }
 
