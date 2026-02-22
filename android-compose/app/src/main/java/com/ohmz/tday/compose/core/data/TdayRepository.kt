@@ -24,6 +24,9 @@ import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.network.TdayApiService
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
@@ -64,6 +67,10 @@ class TdayRepository @Inject constructor(
     private val zoneId: ZoneId
         get() = ZoneId.systemDefault()
     private val syncMutex = Mutex()
+    private val cacheDataVersionMutable = MutableStateFlow(0L)
+    val cacheDataVersion: StateFlow<Long> = cacheDataVersionMutable.asStateFlow()
+    @Volatile
+    private var lastPersistedState: OfflineSyncState? = null
 
     suspend fun restoreSession(): SessionUser? {
         val response = api.getSession()
@@ -1116,14 +1123,29 @@ class TdayRepository @Inject constructor(
         val firstRemote = fetchRemoteSnapshot()
 
         if (initialPendingCount == 0 || !shouldReplayPendingMutations) {
-            val mergedWithoutMutations = mergeRemoteWithLocal(
+            var mergedWithoutMutations = mergeRemoteWithLocal(
                 localState = state,
                 remote = firstRemote,
-            ).copy(
-                lastSyncAttemptEpochMs = now,
-                lastSuccessfulSyncEpochMs = now,
             )
-            saveOfflineState(mergedWithoutMutations)
+            if (replayPendingMutations && mergedWithoutMutations.pendingMutations.isNotEmpty()) {
+                val afterPending = applyPendingMutations(
+                    initialState = mergedWithoutMutations,
+                    remoteSnapshot = firstRemote,
+                )
+                val shouldRefetchRemote =
+                    afterPending.pendingMutations.size < mergedWithoutMutations.pendingMutations.size
+                val latestRemote = if (shouldRefetchRemote) fetchRemoteSnapshot() else firstRemote
+                mergedWithoutMutations = mergeRemoteWithLocal(
+                    localState = afterPending,
+                    remote = latestRemote,
+                )
+            }
+            saveOfflineState(
+                mergedWithoutMutations.copy(
+                    lastSyncAttemptEpochMs = now,
+                    lastSuccessfulSyncEpochMs = now,
+                ),
+            )
             return
         }
 
@@ -1309,6 +1331,7 @@ class TdayRepository @Inject constructor(
                                     id = targetId,
                                     title = mutation.title,
                                     description = descriptionForApi,
+                                    pinned = mutation.pinned,
                                     priority = mutation.priority,
                                     dtstart = mutation.dtstartEpochMs?.let { Instant.ofEpochMilli(it).toString() },
                                     due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
@@ -1488,55 +1511,351 @@ class TdayRepository @Inject constructor(
         localState: OfflineSyncState,
         remote: RemoteSnapshot,
     ): OfflineSyncState {
-        val remoteTodos = remote.todos.map(::todoToCache).toMutableList()
+        val remoteTodos = remote.todos.map(::todoToCache)
+        val remoteLists = remote.lists.map(::listToCache)
         val remoteCompleted = remote.completedItems.map(::completedToCache).toMutableList()
-        val remoteLists = remote.lists.map(::listToCache).toMutableList()
 
-        if (localState.pendingMutations.isNotEmpty()) {
-            val todoTargets = localState.pendingMutations.mapNotNull { it.targetId }.toSet()
-            val pendingListIds = localState.pendingMutations
-                .filter {
-                    it.kind == MutationKind.CREATE_LIST ||
-                        it.kind == MutationKind.UPDATE_LIST
+        val pendingTodoCanonicalIds = localState.pendingMutations
+            .filter { it.kind.affectsTodo() }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingListIds = localState.pendingMutations
+            .filter { it.kind == MutationKind.CREATE_LIST || it.kind == MutationKind.UPDATE_LIST }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingDeleteAllCanonicals = localState.pendingMutations
+            .filter { it.kind == MutationKind.DELETE_TODO && it.instanceDateEpochMs == null }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingDeleteSpecificKeys = localState.pendingMutations
+            .filter { it.kind == MutationKind.DELETE_TODO && it.instanceDateEpochMs != null }
+            .mapNotNull { mutation ->
+                mutation.targetId?.let { targetId ->
+                    todoMergeKey(targetId, mutation.instanceDateEpochMs)
                 }
-                .mapNotNull { it.targetId }
-                .toSet()
+            }
+            .toSet()
 
-            todoTargets.forEach { targetId ->
-                val localTodos = localState.todos.filter { it.canonicalId == targetId }
-                if (localTodos.isNotEmpty()) {
-                    remoteTodos.removeAll { it.canonicalId == targetId }
-                    remoteTodos.addAll(localTodos)
-                }
-                val localCompleted = localState.completedItems.filter { it.originalTodoId == targetId }
-                if (localCompleted.isNotEmpty()) {
-                    remoteCompleted.removeAll { it.originalTodoId == targetId }
-                    remoteCompleted.addAll(localCompleted)
+        val localTodoByKey = localState.todos.associateBy(::todoMergeKey)
+        val remoteTodoByKey = remoteTodos.associateBy(::todoMergeKey)
+        val mergedTodos = mutableListOf<CachedTodoRecord>()
+        val allTodoKeys = LinkedHashSet<String>().apply {
+            addAll(remoteTodoByKey.keys)
+            addAll(localTodoByKey.keys)
+        }
+
+        allTodoKeys.forEach { key ->
+            val localTodo = localTodoByKey[key]
+            val remoteTodo = remoteTodoByKey[key]
+
+            if (remoteTodo != null) {
+                val blockedByPendingDelete =
+                    pendingDeleteAllCanonicals.contains(remoteTodo.canonicalId) ||
+                        pendingDeleteSpecificKeys.contains(key)
+                if (blockedByPendingDelete) {
+                    return@forEach
                 }
             }
 
-            pendingListIds.forEach { listId ->
-                val localList = localState.lists.firstOrNull { it.id == listId } ?: return@forEach
-                remoteLists.removeAll { it.id == listId }
-                remoteLists.add(localList)
+            if (remoteTodo == null && localTodo != null) {
+                val hasPendingLocalMutation = pendingTodoCanonicalIds.contains(localTodo.canonicalId)
+                val isUnsyncedLocalTodo = localTodo.canonicalId.startsWith(LOCAL_TODO_PREFIX)
+                if (!hasPendingLocalMutation && !isUnsyncedLocalTodo) {
+                    // Server no longer has this todo (deleted/completed elsewhere), so drop stale local copy.
+                    return@forEach
+                }
+            }
+
+            val merged = when {
+                localTodo != null && remoteTodo != null -> {
+                    if (shouldPreferLocalTodo(localTodo, remoteTodo, pendingTodoCanonicalIds)) {
+                        localTodo
+                    } else {
+                        remoteTodo
+                    }
+                }
+                localTodo != null -> localTodo
+                remoteTodo != null -> remoteTodo
+                else -> null
+            }
+
+            if (merged != null) {
+                mergedTodos.add(merged)
             }
         }
 
-        val todoCountByList = remoteTodos
+        pendingTodoCanonicalIds.forEach { canonicalId ->
+            val localCompletedForTodo = localState.completedItems.filter { it.originalTodoId == canonicalId }
+            if (localCompletedForTodo.isNotEmpty()) {
+                remoteCompleted.removeAll { it.originalTodoId == canonicalId }
+                remoteCompleted.addAll(localCompletedForTodo)
+            }
+        }
+
+        val localListById = localState.lists.associateBy { it.id }
+        val remoteListById = remoteLists.associateBy { it.id }
+        val mergedLists = mutableListOf<CachedListRecord>()
+        val allListIds = LinkedHashSet<String>().apply {
+            addAll(remoteListById.keys)
+            addAll(localListById.keys)
+        }
+
+        allListIds.forEach { listId ->
+            val localList = localListById[listId]
+            val remoteList = remoteListById[listId]
+            val merged = when {
+                localList != null && remoteList != null -> {
+                    if (
+                        pendingListIds.contains(listId) ||
+                        localList.updatedAtEpochMs > remoteList.updatedAtEpochMs
+                    ) {
+                        localList
+                    } else {
+                        remoteList
+                    }
+                }
+                localList != null -> localList
+                remoteList != null -> remoteList
+                else -> null
+            }
+            if (merged != null) {
+                mergedLists.add(merged)
+            }
+        }
+
+        val todoCountByList = mergedTodos
             .asSequence()
             .filterNot { it.completed }
             .groupingBy { it.listId }
             .eachCount()
 
-        val normalizedLists = remoteLists.map {
+        val normalizedLists = mergedLists.map {
             it.copy(todoCount = todoCountByList[it.id] ?: 0)
         }
 
-        return localState.copy(
-            todos = remoteTodos,
+        val dataMergedState = localState.copy(
+            todos = mergedTodos,
             completedItems = remoteCompleted,
             lists = normalizedLists,
         )
+        val localWinsMutations = buildLocalWinsMutations(
+            mergedState = dataMergedState,
+            remote = remote,
+        )
+        if (localWinsMutations.isEmpty()) return dataMergedState
+
+        return dataMergedState.copy(
+            pendingMutations = mergePendingMutations(
+                existing = dataMergedState.pendingMutations,
+                generated = localWinsMutations,
+            ),
+        )
+    }
+
+    private fun todoMergeKey(todo: CachedTodoRecord): String {
+        return todoMergeKey(
+            canonicalId = todo.canonicalId,
+            instanceDateEpochMs = todo.instanceDateEpochMs,
+        )
+    }
+
+    private fun todoMergeKey(
+        canonicalId: String,
+        instanceDateEpochMs: Long?,
+    ): String {
+        return "$canonicalId::${instanceDateEpochMs ?: Long.MIN_VALUE}"
+    }
+
+    private fun shouldPreferLocalTodo(
+        localTodo: CachedTodoRecord,
+        remoteTodo: CachedTodoRecord,
+        pendingTodoCanonicalIds: Set<String>,
+    ): Boolean {
+        if (pendingTodoCanonicalIds.contains(localTodo.canonicalId)) return true
+        return localTodo.updatedAtEpochMs > remoteTodo.updatedAtEpochMs
+    }
+
+    private fun buildLocalWinsMutations(
+        mergedState: OfflineSyncState,
+        remote: RemoteSnapshot,
+    ): List<PendingMutationRecord> {
+        val existingPending = mergedState.pendingMutations
+        val pendingTodoCanonicalIds = existingPending
+            .filter { it.kind.affectsTodo() }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingListIds = existingPending
+            .filter { it.kind == MutationKind.CREATE_LIST || it.kind == MutationKind.UPDATE_LIST }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val pendingLocalListCreates = existingPending
+            .filter { it.kind == MutationKind.CREATE_LIST }
+            .mapNotNull { it.targetId }
+            .toSet()
+
+        val remoteTodoByKey = remote.todos
+            .map(::todoToCache)
+            .associateBy(::todoMergeKey)
+        val remoteListById = remote.lists
+            .map(::listToCache)
+            .associateBy { it.id }
+
+        val generated = mutableListOf<PendingMutationRecord>()
+
+        mergedState.todos.forEach { localTodo ->
+            if (localTodo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return@forEach
+            if (pendingTodoCanonicalIds.contains(localTodo.canonicalId)) return@forEach
+
+            val remoteTodo = remoteTodoByKey[todoMergeKey(localTodo)] ?: return@forEach
+            if (!hasTodoMeaningfulDifferences(local = localTodo, remote = remoteTodo)) {
+                return@forEach
+            }
+            val localUpdatedAt = localTodo.updatedAtEpochMs
+            val remoteUpdatedAt = remoteTodo.updatedAtEpochMs
+            if (localUpdatedAt <= 0L || localUpdatedAt <= remoteUpdatedAt) return@forEach
+
+            val mutation = if (localTodo.completed != remoteTodo.completed) {
+                if (localTodo.completed) {
+                    PendingMutationRecord(
+                        mutationId = UUID.randomUUID().toString(),
+                        kind = if (localTodo.instanceDateEpochMs != null) {
+                            MutationKind.COMPLETE_TODO_INSTANCE
+                        } else {
+                            MutationKind.COMPLETE_TODO
+                        },
+                        targetId = localTodo.canonicalId,
+                        timestampEpochMs = localUpdatedAt,
+                        instanceDateEpochMs = localTodo.instanceDateEpochMs,
+                    )
+                } else {
+                    PendingMutationRecord(
+                        mutationId = UUID.randomUUID().toString(),
+                        kind = MutationKind.UNCOMPLETE_TODO,
+                        targetId = localTodo.canonicalId,
+                        timestampEpochMs = localUpdatedAt,
+                        instanceDateEpochMs = localTodo.instanceDateEpochMs,
+                    )
+                }
+            } else {
+                val localListId = localTodo.listId
+                if (!localListId.isNullOrBlank() &&
+                    localListId.startsWith(LOCAL_LIST_PREFIX) &&
+                    !pendingLocalListCreates.contains(localListId)
+                ) {
+                    return@forEach
+                }
+                PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.UPDATE_TODO,
+                    targetId = localTodo.canonicalId,
+                    timestampEpochMs = localUpdatedAt,
+                    title = localTodo.title,
+                    description = localTodo.description,
+                    priority = localTodo.priority,
+                    pinned = localTodo.pinned,
+                    dtstartEpochMs = localTodo.dtstartEpochMs,
+                    dueEpochMs = localTodo.dueEpochMs,
+                    rrule = localTodo.rrule,
+                    listId = localTodo.listId,
+                    instanceDateEpochMs = localTodo.instanceDateEpochMs,
+                )
+            }
+            generated.add(mutation)
+        }
+
+        mergedState.lists.forEach { localList ->
+            if (localList.id.startsWith(LOCAL_LIST_PREFIX)) return@forEach
+            if (pendingListIds.contains(localList.id)) return@forEach
+
+            val remoteList = remoteListById[localList.id] ?: return@forEach
+            if (!hasListMeaningfulDifferences(local = localList, remote = remoteList)) {
+                return@forEach
+            }
+            val localUpdatedAt = localList.updatedAtEpochMs
+            val remoteUpdatedAt = remoteList.updatedAtEpochMs
+            if (localUpdatedAt <= 0L || localUpdatedAt <= remoteUpdatedAt) return@forEach
+
+            generated.add(
+                PendingMutationRecord(
+                    mutationId = UUID.randomUUID().toString(),
+                    kind = MutationKind.UPDATE_LIST,
+                    targetId = localList.id,
+                    timestampEpochMs = localUpdatedAt,
+                    name = localList.name,
+                    color = localList.color,
+                    iconKey = localList.iconKey,
+                ),
+            )
+        }
+
+        return generated
+    }
+
+    private fun hasTodoMeaningfulDifferences(
+        local: CachedTodoRecord,
+        remote: CachedTodoRecord,
+    ): Boolean {
+        return local.title != remote.title ||
+            local.description != remote.description ||
+            local.priority != remote.priority ||
+            local.dtstartEpochMs != remote.dtstartEpochMs ||
+            local.dueEpochMs != remote.dueEpochMs ||
+            local.rrule != remote.rrule ||
+            local.instanceDateEpochMs != remote.instanceDateEpochMs ||
+            local.pinned != remote.pinned ||
+            local.completed != remote.completed ||
+            local.listId != remote.listId
+    }
+
+    private fun hasListMeaningfulDifferences(
+        local: CachedListRecord,
+        remote: CachedListRecord,
+    ): Boolean {
+        return local.name != remote.name ||
+            local.color != remote.color ||
+            local.iconKey != remote.iconKey
+    }
+
+    private fun mergePendingMutations(
+        existing: List<PendingMutationRecord>,
+        generated: List<PendingMutationRecord>,
+    ): List<PendingMutationRecord> {
+        if (generated.isEmpty()) return existing
+        val merged = existing.toMutableList()
+        generated.forEach { candidate ->
+            val replaceIndex = merged.indexOfFirst { existingMutation ->
+                shouldReplacePendingMutation(
+                    existing = existingMutation,
+                    candidate = candidate,
+                )
+            }
+            if (replaceIndex >= 0) {
+                merged[replaceIndex] = candidate
+            } else {
+                merged.add(candidate)
+            }
+        }
+        return merged.sortedBy { it.timestampEpochMs }
+    }
+
+    private fun shouldReplacePendingMutation(
+        existing: PendingMutationRecord,
+        candidate: PendingMutationRecord,
+    ): Boolean {
+        if (existing.kind != candidate.kind) return false
+        if (existing.targetId != candidate.targetId) return false
+        return existing.instanceDateEpochMs == candidate.instanceDateEpochMs
+    }
+
+    private fun MutationKind.affectsTodo(): Boolean {
+        return this == MutationKind.CREATE_TODO ||
+            this == MutationKind.UPDATE_TODO ||
+            this == MutationKind.DELETE_TODO ||
+            this == MutationKind.SET_PINNED ||
+            this == MutationKind.SET_PRIORITY ||
+            this == MutationKind.COMPLETE_TODO ||
+            this == MutationKind.COMPLETE_TODO_INSTANCE ||
+            this == MutationKind.UNCOMPLETE_TODO
     }
 
     private fun replaceLocalListId(
@@ -1661,7 +1980,26 @@ class TdayRepository @Inject constructor(
     }
 
     private fun loadOfflineState(): OfflineSyncState {
-        val raw = secureConfigStore.getOfflineSyncStateRaw().orEmpty()
+        val decoded = decodeOfflineSyncState(
+            raw = secureConfigStore.getOfflineSyncStateRaw().orEmpty(),
+        )
+        lastPersistedState = decoded
+        return decoded
+    }
+
+    private fun saveOfflineState(state: OfflineSyncState) {
+        val previous = lastPersistedState ?: decodeOfflineSyncState(
+            raw = secureConfigStore.getOfflineSyncStateRaw().orEmpty(),
+        )
+        if (previous == state) return
+        secureConfigStore.saveOfflineSyncStateRaw(json.encodeToString(state))
+        lastPersistedState = state
+        if (hasUiDataChanges(previous, state)) {
+            cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+        }
+    }
+
+    private fun decodeOfflineSyncState(raw: String): OfflineSyncState {
         if (raw.isBlank()) return OfflineSyncState()
         return try {
             json.decodeFromString<OfflineSyncState>(raw)
@@ -1672,8 +2010,13 @@ class TdayRepository @Inject constructor(
         }
     }
 
-    private fun saveOfflineState(state: OfflineSyncState) {
-        secureConfigStore.saveOfflineSyncStateRaw(json.encodeToString(state))
+    private fun hasUiDataChanges(
+        previous: OfflineSyncState,
+        next: OfflineSyncState,
+    ): Boolean {
+        return previous.todos != next.todos ||
+            previous.completedItems != next.completedItems ||
+            previous.lists != next.lists
     }
 
     private fun isTodayTodo(todo: TodoItem): Boolean {
