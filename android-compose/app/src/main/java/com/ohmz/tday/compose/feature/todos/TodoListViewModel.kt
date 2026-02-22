@@ -46,9 +46,9 @@ class TodoListViewModel @Inject constructor(
             repository.cacheDataVersion
                 .collect {
                     if (!hasLoadedMode) return@collect
-                    refreshInternal(
-                        forceSync = false,
-                        showLoading = false,
+                    hydrateFromCache(
+                        mode = _uiState.value.mode,
+                        listId = _uiState.value.listId,
                     )
                 }
         }
@@ -69,9 +69,9 @@ class TodoListViewModel @Inject constructor(
                 },
             )
         }
-        refreshInternal(
-            forceSync = false,
-            showLoading = false,
+        hydrateFromCache(
+            mode = mode,
+            listId = listId,
         )
     }
 
@@ -80,6 +80,25 @@ class TodoListViewModel @Inject constructor(
             forceSync = true,
             showLoading = true,
         )
+    }
+
+    private fun hydrateFromCache(
+        mode: TodoListMode,
+        listId: String?,
+    ) {
+        runCatching {
+            val todos = repository.fetchTodosSnapshot(mode = mode, listId = listId)
+            val lists = repository.fetchListsSnapshot()
+            todos to lists
+        }.onSuccess { (todos, lists) ->
+            _uiState.update { current ->
+                current.copy(
+                    lists = if (current.lists == lists) current.lists else lists,
+                    items = if (current.items == todos) current.items else todos,
+                    errorMessage = null,
+                )
+            }
+        }
     }
 
     private fun refreshInternal(
