@@ -14,7 +14,7 @@ import TodoFormContainer from "@/components/todo/component/TodoForm/TodoFormCont
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 
 export default function AddTaskPageContainer() {
-  const [displayForm, setDisplayForm] = useState(true);
+  const [, setDisplayForm] = useState(true);
   const todayDict = useTranslations("today");
 
   return (

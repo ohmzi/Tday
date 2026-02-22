@@ -71,13 +71,13 @@ export const useCreateTodo = () => {
       return { oldTodos, oldListTodos };
     },
     //if fetch error then revert optimistic updates including form states
-    onError: (error, newTodo, context) => {
+    onError: (error, _newTodo, context) => {
       queryClient.setQueryData(["todo"], context?.oldTodos);
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
       queryClient.setQueryData(["list"], context?.oldListTodos);
       toast({ description: error.message, variant: "destructive" });
     },
-    onSettled: (_, error, newTodo) => {
+    onSettled: (_, _error, newTodo) => {
       queryClient.invalidateQueries({ queryKey: ["todo"] });
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
       queryClient.invalidateQueries({
