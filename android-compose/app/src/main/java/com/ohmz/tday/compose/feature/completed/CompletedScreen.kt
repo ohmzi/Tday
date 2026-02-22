@@ -42,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ripple
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,6 +55,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -579,7 +581,7 @@ private fun CompletedSwipeRow(
                             .padding(horizontal = 4.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
+                        CompletedCircularToggleIcon(
                             imageVector = if (showCompletedState) {
                                 Icons.Rounded.CheckCircle
                             } else {
@@ -591,23 +593,21 @@ private fun CompletedSwipeRow(
                             } else {
                                 colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                             },
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable {
-                                    if (pendingUncomplete) return@clickable
-                                    ViewCompat.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                    )
-                                    targetOffsetX = 0f
-                                    pendingUncomplete = true
-                                    coroutineScope.launch {
-                                        delay(500)
-                                        rowVisible = false
-                                        delay(220)
-                                        onUncomplete()
-                                    }
-                                },
+                            enabled = !pendingUncomplete,
+                            onClick = {
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                targetOffsetX = 0f
+                                pendingUncomplete = true
+                                coroutineScope.launch {
+                                    delay(500)
+                                    rowVisible = false
+                                    delay(220)
+                                    onUncomplete()
+                                }
+                            },
                         )
 
                         Column(
@@ -682,6 +682,39 @@ private fun CompletedSwipeRow(
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
         }
+    }
+}
+
+@Composable
+private fun CompletedCircularToggleIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = ripple(
+                    bounded = true,
+                    radius = 14.dp,
+                ),
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(24.dp),
+        )
     }
 }
 
