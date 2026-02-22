@@ -155,6 +155,9 @@ fun CompletedScreen(
         targetValue = collapseProgressTarget,
         label = "completedTitleCollapseProgress",
     )
+    var collapsedSectionKeys by rememberSaveable {
+        mutableStateOf(setOf("earlier"))
+    }
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     val editTarget = remember(editTargetId, uiState.items) {
         editTargetId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
@@ -196,8 +199,18 @@ fun CompletedScreen(
                 }
 
                 items(timelineSections, key = { it.key }) { section ->
+                    val isCollapsed = collapsedSectionKeys.contains(section.key)
                     CompletedTimelineSection(
                         section = section,
+                        isCollapsed = isCollapsed,
+                        onHeaderClick = {
+                            collapsedSectionKeys =
+                                if (isCollapsed) {
+                                    collapsedSectionKeys - section.key
+                                } else {
+                                    collapsedSectionKeys + section.key
+                                }
+                        },
                         lists = uiState.lists,
                         onInfo = { item -> editTargetId = item.id },
                         onDelete = onDelete,
@@ -369,22 +382,53 @@ private fun CompletedHeaderButton(
 @Composable
 private fun CompletedTimelineSection(
     section: CompletedSection,
+    isCollapsed: Boolean,
+    onHeaderClick: () -> Unit,
     lists: List<ListSummary>,
     onInfo: (CompletedItem) -> Unit,
     onDelete: (CompletedItem) -> Unit,
     onUncomplete: (CompletedItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val headerInteractionSource = remember { MutableInteractionSource() }
+    val collapseChevronRotation by animateFloatAsState(
+        targetValue = if (isCollapsed) 0f else 180f,
+        label = "completedSectionChevronRotation",
+    )
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = section.title,
-            color = colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = headerInteractionSource,
+                    indication = null,
+                    onClick = onHeaderClick,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = section.title,
+                color = colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Icon(
+                imageVector = Icons.Rounded.ExpandMore,
+                contentDescription = if (isCollapsed) "Expand section" else "Collapse section",
+                tint = colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                modifier = Modifier
+                    .padding(start = 6.dp)
+                    .size(18.dp)
+                    .graphicsLayer { rotationZ = collapseChevronRotation },
+            )
+        }
+
+        if (isCollapsed) {
+            return@Column
+        }
 
         if (section.items.isEmpty()) {
             Spacer(
