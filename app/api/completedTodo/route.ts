@@ -44,8 +44,55 @@ export async function GET() {
       where: { userID: user.id },
       orderBy: { dtstart: "desc" },
     });
+
+    // Backfill list metadata for older completed rows where list snapshot
+    // was not persisted at completion time.
+    const missingOriginalTodoIds = [
+      ...new Set(
+        completedTodos
+          .filter(
+            (item) =>
+              (!item.listName || !item.listColor) && !!item.originalTodoID,
+          )
+          .map((item) => item.originalTodoID),
+      ),
+    ];
+    let mergedCompletedTodos = completedTodos;
+    if (missingOriginalTodoIds.length > 0) {
+      const originalTodos = await prisma.todo.findMany({
+        where: {
+          userID: user.id,
+          id: { in: missingOriginalTodoIds },
+        },
+        select: {
+          id: true,
+          list: {
+            select: {
+              name: true,
+              color: true,
+            },
+          },
+        },
+      });
+      const originalTodoById = new Map(
+        originalTodos.map((todo) => [todo.id, todo]),
+      );
+      mergedCompletedTodos = completedTodos.map((item) => {
+        if (item.listName && item.listColor) return item;
+        const originalTodo = item.originalTodoID
+          ? originalTodoById.get(item.originalTodoID)
+          : null;
+        if (!originalTodo?.list) return item;
+        return {
+          ...item,
+          listName: item.listName ?? originalTodo.list.name,
+          listColor: item.listColor ?? originalTodo.list.color,
+        };
+      });
+    }
+
     return NextResponse.json(
-      { completedTodos },
+      { completedTodos: mergedCompletedTodos },
       {
         status: 200,
       },
