@@ -112,7 +112,7 @@ export const useEditTodo = () => {
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
     },
-    onError: (error, newTodo, context) => {
+    onError: (error, _newTodo, context) => {
       queryClient.setQueryData(["todo"], context?.oldTodos);
       queryClient.setQueryData(["todoTimeline"], context?.oldTimelineTodos);
       toast({ description: error.message, variant: "destructive" });

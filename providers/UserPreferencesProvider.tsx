@@ -78,7 +78,7 @@ function UserPreferencesProviderInner({
             }
             return { previousPreferences };
         },
-        onError: (err, newPrefs, context) => {
+        onError: (err, _newPrefs, context) => {
             // Rollback on error
             if (context?.previousPreferences) {
                 queryClient.setQueryData(['userPreferences'], context.previousPreferences);

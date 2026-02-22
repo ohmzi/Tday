@@ -1,11 +1,16 @@
 package com.ohmz.tday.compose.feature.todos
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -58,6 +63,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -82,6 +88,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
@@ -102,6 +109,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.YearMonth
 import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,9 +119,9 @@ fun TodoListScreen(
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onAddTask: (payload: CreateTaskPayload) -> Unit,
+    onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
-    onTogglePin: (todo: TodoItem) -> Unit,
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -210,6 +219,7 @@ fun TodoListScreen(
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
     var quickAddStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
+    var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
     var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var listSettingsName by rememberSaveable { mutableStateOf("") }
@@ -218,6 +228,9 @@ fun TodoListScreen(
     var listSettingsColorTouched by rememberSaveable { mutableStateOf(false) }
     var listSettingsIconTouched by rememberSaveable { mutableStateOf(false) }
     val fabInteractionSource = remember { MutableInteractionSource() }
+    val editTargetTodo = remember(editTargetTodoId, uiState.items) {
+        editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+    }
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
         targetValue = if (fabPressed) 0.93f else 1f,
@@ -344,6 +357,7 @@ fun TodoListScreen(
                     items(timelineSections, key = { it.key }) { section ->
                         TimelineSection(
                             section = section,
+                            mode = uiState.mode,
                             useMinimalStyle = usesTodayStyle,
                             onTapForQuickAdd = section.quickAddDefaults?.let { quickAdd ->
                                 {
@@ -354,7 +368,9 @@ fun TodoListScreen(
                             },
                             onComplete = onComplete,
                             onDelete = onDelete,
-                            onTogglePin = onTogglePin,
+                            onInfo = { todo ->
+                                editTargetTodoId = todo.id
+                            },
                         )
                     }
                     if (uiState.items.isEmpty()) {
@@ -372,14 +388,12 @@ fun TodoListScreen(
                                 todo = todo,
                                 onComplete = { onComplete(todo) },
                                 onDelete = { onDelete(todo) },
-                                onPin = { onTogglePin(todo) },
                             )
                         } else {
                             TodoRow(
                                 todo = todo,
                                 onComplete = { onComplete(todo) },
                                 onDelete = { onDelete(todo) },
-                                onPin = { onTogglePin(todo) },
                             )
                         }
                     }
@@ -416,6 +430,19 @@ fun TodoListScreen(
                 showCreateTaskSheet = false
                 quickAddStartEpochMs = null
                 quickAddDueEpochMs = null
+            },
+        )
+    }
+
+    editTargetTodo?.let { todo ->
+        CreateTaskBottomSheet(
+            lists = uiState.lists,
+            editingTask = todo,
+            onDismiss = { editTargetTodoId = null },
+            onCreateTask = { _ -> },
+            onUpdateTask = { target, payload ->
+                onUpdateTask(target, payload)
+                editTargetTodoId = null
             },
         )
     }
@@ -1007,11 +1034,12 @@ private fun ListSettingsActionButton(
 @Composable
 private fun TimelineSection(
     section: TodoSection,
+    mode: TodoListMode,
     useMinimalStyle: Boolean,
     onTapForQuickAdd: (() -> Unit)?,
     onComplete: (TodoItem) -> Unit,
     onDelete: (TodoItem) -> Unit,
-    onTogglePin: (TodoItem) -> Unit,
+    onInfo: (TodoItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val headerInteractionSource = remember { MutableInteractionSource() }
@@ -1060,19 +1088,24 @@ private fun TimelineSection(
             )
         } else {
             section.items.forEach { todo ->
-                if (useMinimalStyle) {
+                if (mode == TodoListMode.ALL) {
+                    AllTaskSwipeRow(
+                        todo = todo,
+                        onComplete = { onComplete(todo) },
+                        onDelete = { onDelete(todo) },
+                        onInfo = { onInfo(todo) },
+                    )
+                } else if (useMinimalStyle) {
                     TodayTodoRow(
                         todo = todo,
                         onComplete = { onComplete(todo) },
                         onDelete = { onDelete(todo) },
-                        onPin = { onTogglePin(todo) },
                     )
                 } else {
                     TodoRow(
                         todo = todo,
                         onComplete = { onComplete(todo) },
                         onDelete = { onDelete(todo) },
-                        onPin = { onTogglePin(todo) },
                     )
                 }
             }
@@ -1337,11 +1370,206 @@ private fun quickAddDefaultsForTodaySection(
 private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
 
 @Composable
+private fun AllTaskSwipeRow(
+    todo: TodoItem,
+    onComplete: () -> Unit,
+    onDelete: () -> Unit,
+    onInfo: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
+    val actionRevealPx = with(density) { 130.dp.toPx() }
+    val maxElasticDragPx = actionRevealPx * 1.22f
+    var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
+    var localCompleted by remember(todo.id) { mutableStateOf(false) }
+    val visuallyCompleted = todo.completed || localCompleted
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = targetOffsetX,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow,
+        ),
+        label = "allTaskSwipeOffset",
+    )
+    val rowShape = RoundedCornerShape(16.dp)
+    val actionContainerColor = colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
+    val foregroundColor = colorScheme.background
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(66.dp)
+                .clip(rowShape)
+                .background(actionContainerColor),
+        ) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SwipeActionCircle(
+                    icon = Icons.Rounded.Info,
+                    contentDescription = "Edit task",
+                    tint = colorScheme.onSurface,
+                    background = colorScheme.surface,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        onInfo()
+                        targetOffsetX = 0f
+                    },
+                )
+                SwipeActionCircle(
+                    icon = Icons.Rounded.DeleteSweep,
+                    contentDescription = "Delete task",
+                    tint = colorScheme.error,
+                    background = colorScheme.surface,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        onDelete()
+                        targetOffsetX = 0f
+                    },
+                )
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = animatedOffsetX }
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            // One-direction reveal: only allow swiping left to expose right-side actions.
+                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
+                        },
+                        onDragStopped = { velocity ->
+                            val flingOpen = velocity < -1450f
+                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
+                            targetOffsetX = if (flingOpen || dragOpen) {
+                                -actionRevealPx
+                            } else {
+                                0f
+                            }
+                        },
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        if (targetOffsetX != 0f) targetOffsetX = 0f
+                    },
+                shape = rowShape,
+                colors = CardDefaults.cardColors(containerColor = foregroundColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (visuallyCompleted) return@IconButton
+                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            localCompleted = true
+                            targetOffsetX = 0f
+                            coroutineScope.launch {
+                                delay(120)
+                                onComplete()
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = if (visuallyCompleted) {
+                                Icons.Rounded.CheckCircle
+                            } else {
+                                Icons.Rounded.RadioButtonUnchecked
+                            },
+                            contentDescription = if (visuallyCompleted) "Completed" else "Mark complete",
+                            tint = if (visuallyCompleted) priorityColor(todo.priority) else colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+
+                    Text(
+                        text = todo.title,
+                        color = if (visuallyCompleted) {
+                            colorScheme.onSurface.copy(alpha = 0.78f)
+                        } else {
+                            colorScheme.onSurface
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        textDecoration = if (visuallyCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                        maxLines = 2,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+        )
+    }
+}
+
+@Composable
+private fun SwipeActionCircle(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    background: Color,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        label = "swipeActionScale",
+    )
+    Card(
+        modifier = Modifier
+            .size(42.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        onClick = onClick,
+        interactionSource = interactionSource,
+        shape = CircleShape,
+        colors = CardDefaults.cardColors(containerColor = background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+@Composable
 private fun TodayTodoRow(
     todo: TodoItem,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
-    onPin: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val dueText =
@@ -1384,13 +1612,6 @@ private fun TodayTodoRow(
                 )
             }
 
-            IconButton(onClick = onPin) {
-                Icon(
-                    imageVector = Icons.Rounded.PushPin,
-                    contentDescription = "Pin",
-                    tint = if (todo.pinned) colorScheme.tertiary else colorScheme.onSurfaceVariant,
-                )
-            }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Rounded.Delete,
@@ -1413,7 +1634,6 @@ private fun TodoRow(
     todo: TodoItem,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
-    onPin: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val due = DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault())
@@ -1459,21 +1679,12 @@ private fun TodoRow(
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPin) {
-                    Icon(
-                        imageVector = Icons.Rounded.PushPin,
-                        contentDescription = "Pin",
-                        tint = if (todo.pinned) colorScheme.tertiary else colorScheme.onSurfaceVariant,
-                    )
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        imageVector = Icons.Rounded.Delete,
-                        contentDescription = "Delete",
-                        tint = colorScheme.error,
-                    )
-                }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Rounded.Delete,
+                    contentDescription = "Delete",
+                    tint = colorScheme.error,
+                )
             }
         }
     }

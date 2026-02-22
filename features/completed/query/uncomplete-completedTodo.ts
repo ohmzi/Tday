@@ -32,11 +32,10 @@ export const useUnCompleteTodo = () => {
       );
       return { oldTodos };
     },
-    onError: (error, newTodo, context) => {
+    onError: (error, _newTodo, context) => {
       toast({ description: error.message, variant: "destructive" });
       queryClient.setQueryData(["completedTodo"], context?.oldTodos);
     },
-    onSuccess: () => {},
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["list"] });
       queryClient.invalidateQueries({ queryKey: ["todo"] });
