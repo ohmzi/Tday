@@ -233,13 +233,19 @@ export async function DELETE(req: NextRequest) {
 
     const { id } = parsed.data;
 
-    await prisma.todo.delete({
+    const deleted = await prisma.todo.deleteMany({
       where: {
         id,
         userID: user.id,
       },
     });
-    return NextResponse.json({ message: "todo deleted" }, { status: 200 });
+
+    return NextResponse.json(
+      {
+        message: deleted.count > 0 ? "todo deleted" : "todo already deleted",
+      },
+      { status: 200 },
+    );
   } catch (error) {
     return errorHandler(error);
   }
