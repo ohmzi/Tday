@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -76,6 +77,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -103,7 +105,8 @@ fun CalendarScreen(
 ) {
     val zoneId = remember { ZoneId.systemDefault() }
     val today = remember { LocalDate.now(zoneId) }
-    var visibleMonthIso by rememberSaveable { mutableStateOf(YearMonth.now(zoneId).toString()) }
+    val minNavigableMonth = remember(zoneId) { YearMonth.now(zoneId) }
+    var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
 
     val visibleMonth = remember(visibleMonthIso) { YearMonth.parse(visibleMonthIso) }
@@ -132,7 +135,7 @@ fun CalendarScreen(
             CalendarTopBar(
                 onBack = onBack,
                 onJumpToday = {
-                    visibleMonthIso = YearMonth.now(zoneId).toString()
+                    visibleMonthIso = minNavigableMonth.toString()
                     selectedDateIso = LocalDate.now(zoneId).toString()
                 },
             )
@@ -146,19 +149,26 @@ fun CalendarScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
-                CalendarMonthCard(
-                    visibleMonth = visibleMonth,
-                    selectedDate = selectedDate,
-                    today = today,
-                    tasksByDate = tasksByDate,
-                    onPrevMonth = { visibleMonthIso = visibleMonth.minusMonths(1).toString() },
-                    onNextMonth = { visibleMonthIso = visibleMonth.plusMonths(1).toString() },
-                    onSelectDate = { pickedDate ->
-                        visibleMonthIso = YearMonth.from(pickedDate).toString()
-                        selectedDateIso = pickedDate.toString()
-                    },
-                )
-            }
+                    CalendarMonthCard(
+                        visibleMonth = visibleMonth,
+                        canGoPrevMonth = visibleMonth > minNavigableMonth,
+                        selectedDate = selectedDate,
+                        today = today,
+                        tasksByDate = tasksByDate,
+                        onPrevMonth = {
+                            if (visibleMonth > minNavigableMonth) {
+                                visibleMonthIso = visibleMonth.minusMonths(1).toString()
+                            }
+                        },
+                        onNextMonth = { visibleMonthIso = visibleMonth.plusMonths(1).toString() },
+                        onSelectDate = { pickedDate ->
+                            val pickedMonth = YearMonth.from(pickedDate)
+                            if (pickedMonth < minNavigableMonth) return@CalendarMonthCard
+                            visibleMonthIso = pickedMonth.toString()
+                            selectedDateIso = pickedDate.toString()
+                        },
+                    )
+                }
 
             item {
                 Text(
@@ -301,6 +311,7 @@ private fun CalendarCircleButton(
 @Composable
 private fun CalendarMonthCard(
     visibleMonth: YearMonth,
+    canGoPrevMonth: Boolean,
     selectedDate: LocalDate,
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
@@ -314,9 +325,33 @@ private fun CalendarMonthCard(
             " " + visibleMonth.year
     }
     val colorScheme = MaterialTheme.colorScheme
+    val density = LocalDensity.current
+    val swipeThresholdPx = with(density) { 42.dp.toPx() }
+    var horizontalDragAccumulated by remember(visibleMonth) { mutableFloatStateOf(0f) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(visibleMonth, canGoPrevMonth) {
+                detectHorizontalDragGestures(
+                    onDragStart = {
+                        horizontalDragAccumulated = 0f
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        horizontalDragAccumulated += dragAmount
+                    },
+                    onDragCancel = {
+                        horizontalDragAccumulated = 0f
+                    },
+                    onDragEnd = {
+                        when {
+                            horizontalDragAccumulated > swipeThresholdPx && canGoPrevMonth -> onPrevMonth()
+                            horizontalDragAccumulated < -swipeThresholdPx -> onNextMonth()
+                        }
+                        horizontalDragAccumulated = 0f
+                    },
+                )
+            },
         shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -334,6 +369,7 @@ private fun CalendarMonthCard(
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = "Previous month",
+                    enabled = canGoPrevMonth,
                     onClick = onPrevMonth,
                 )
                 Box(
@@ -392,6 +428,7 @@ private fun CalendarMonthCard(
 private fun MiniCalendarNavButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -402,13 +439,14 @@ private fun MiniCalendarNavButton(
             .size(34.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(
-                color = if (isPressed) {
+                color = if (enabled && isPressed) {
                     colorScheme.surfaceVariant.copy(alpha = 0.6f)
                 } else {
                     Color.Transparent
                 },
             )
             .clickable(
+                enabled = enabled,
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
@@ -421,7 +459,11 @@ private fun MiniCalendarNavButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = colorScheme.onSurfaceVariant,
+            tint = if (enabled) {
+                colorScheme.onSurfaceVariant
+            } else {
+                colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
+            },
             modifier = Modifier.size(20.dp),
         )
     }
