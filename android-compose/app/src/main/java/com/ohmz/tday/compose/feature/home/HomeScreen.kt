@@ -83,6 +83,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -483,14 +484,26 @@ private fun CreateListBottomSheet(
     val selectedAccent = listColorAccent(listColor)
     val canCreate = listName.isNotBlank()
     val selectedIcon = listIconForKey(listIconKey)
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
+    val sheetContainerColor = if (isDarkTheme) {
+        lerp(colorScheme.background, colorScheme.surfaceVariant, 0.34f)
+    } else {
+        colorScheme.background
+    }
+    val sheetScrimColor = if (isDarkTheme) {
+        Color.Black.copy(alpha = 0.68f)
+    } else {
+        Color.Black.copy(alpha = 0.40f)
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         dragHandle = null,
         shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-        containerColor = colorScheme.background,
-        tonalElevation = 0.dp,
+        containerColor = sheetContainerColor,
+        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+        scrimColor = sheetScrimColor,
     ) {
         Box(
             modifier = Modifier
