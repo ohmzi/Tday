@@ -1983,7 +1983,7 @@ private fun modeAccentColor(
         TodoListMode.TODAY -> Color(0xFF5C9FE7)
         TodoListMode.SCHEDULED -> Color(0xFFF29F38)
         TodoListMode.ALL -> Color(0xFF5E6878)
-        TodoListMode.PRIORITY -> Color(0xFFD9799A)
+        TodoListMode.PRIORITY -> Color(0xFFE65E52)
         TodoListMode.LIST -> listAccentColor(listColorKey)
     }
 }
