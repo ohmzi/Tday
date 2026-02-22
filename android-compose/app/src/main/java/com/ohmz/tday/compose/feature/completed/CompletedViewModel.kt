@@ -128,10 +128,14 @@ class CompletedViewModel @Inject constructor(
         }
     }
 
-    fun delete(item: CompletedItem) {
+    fun delete(
+        item: CompletedItem,
+        onDeleted: (() -> Unit)? = null,
+    ) {
         viewModelScope.launch {
             runCatching { repository.deleteCompletedTodo(item) }
                 .onSuccess {
+                    onDeleted?.invoke()
                     loadInternal(
                         forceSync = false,
                         showLoading = false,
