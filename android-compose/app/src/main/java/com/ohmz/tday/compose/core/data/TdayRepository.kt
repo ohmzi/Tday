@@ -1040,7 +1040,6 @@ class TdayRepository @Inject constructor(
     }
 
     private fun buildListsForState(state: OfflineSyncState): List<ListSummary> {
-        val state = loadOfflineState()
         val todoCountsByList = state.todos
             .asSequence()
             .filterNot { it.completed }
