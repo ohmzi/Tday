@@ -75,7 +75,6 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
-import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -174,64 +173,58 @@ fun CompletedScreen(
             )
         },
     ) { padding ->
-        TdayPullToRefreshBox(
-            isRefreshing = uiState.isLoading,
-            onRefresh = onRefresh,
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .nestedScroll(nestedScrollConnection),
+            state = listState,
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-            ) {
-                items(timelineSections, key = { it.key }) { section ->
-                    val isCollapsed = collapsedSectionKeys.contains(section.key)
-                    CompletedTimelineSection(
-                        section = section,
-                        isCollapsed = isCollapsed,
-                        onHeaderClick = {
-                            collapsedSectionKeys =
-                                if (isCollapsed) {
-                                    collapsedSectionKeys - section.key
-                                } else {
-                                    collapsedSectionKeys + section.key
-                                }
+            items(timelineSections, key = { it.key }) { section ->
+                val isCollapsed = collapsedSectionKeys.contains(section.key)
+                CompletedTimelineSection(
+                    section = section,
+                    isCollapsed = isCollapsed,
+                    onHeaderClick = {
+                        collapsedSectionKeys =
+                            if (isCollapsed) {
+                                collapsedSectionKeys - section.key
+                            } else {
+                                collapsedSectionKeys + section.key
+                            }
+                    },
+                    lists = uiState.lists,
+                    onInfo = { item -> editTargetId = item.id },
+                    onDelete = onDelete,
+                    onUncomplete = onUncomplete,
+                )
+            }
+
+            if (uiState.items.isEmpty()) {
+                item {
+                    EmptyCompletedState(
+                        message = if (uiState.isLoading) {
+                            "Loading..."
+                        } else {
+                            "No completed tasks yet"
                         },
-                        lists = uiState.lists,
-                        onInfo = { item -> editTargetId = item.id },
-                        onDelete = onDelete,
-                        onUncomplete = onUncomplete,
                     )
                 }
-
-                if (uiState.items.isEmpty()) {
-                    item {
-                        EmptyCompletedState(
-                            message = if (uiState.isLoading) {
-                                "Loading..."
-                            } else {
-                                "No completed tasks yet"
-                            },
-                        )
-                    }
-                }
-
-                uiState.errorMessage?.let { message ->
-                    item {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-
-                item { Spacer(modifier = Modifier.height(96.dp)) }
             }
+
+            uiState.errorMessage?.let { message ->
+                item {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(96.dp)) }
         }
     }
 
