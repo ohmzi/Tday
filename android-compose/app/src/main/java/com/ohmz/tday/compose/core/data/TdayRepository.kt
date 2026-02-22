@@ -864,6 +864,7 @@ class TdayRepository @Inject constructor(
         payload: CreateTaskPayload,
     ) {
         val canonicalId = item.originalTodoId ?: return
+        val instanceDateEpochMs = item.instanceDate?.toEpochMilli()
         val normalizedTitle = payload.title.trim()
         if (normalizedTitle.isBlank()) return
         val normalizedPriority = when (payload.priority.trim()) {
@@ -873,6 +874,11 @@ class TdayRepository @Inject constructor(
         }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
         val timestampMs = System.currentTimeMillis()
+        val resolvedCompletedId = resolveCompletedServerIdForMutation(
+            currentCompletedId = item.id,
+            canonicalTodoId = canonicalId,
+            instanceDateEpochMs = instanceDateEpochMs,
+        )
 
         updateOfflineState { state ->
             val listMeta = normalizedListId?.let { id -> state.lists.firstOrNull { it.id == id } }
@@ -894,8 +900,17 @@ class TdayRepository @Inject constructor(
                     }
                 },
                 completedItems = state.completedItems.map { completed ->
-                    if (completed.id == item.id) {
+                    if (
+                        matchesCompletedRecord(
+                            record = completed,
+                            itemId = item.id,
+                            resolvedItemId = resolvedCompletedId,
+                            canonicalTodoId = canonicalId,
+                            instanceDateEpochMs = instanceDateEpochMs,
+                        )
+                    ) {
                         completed.copy(
+                            id = resolvedCompletedId,
                             title = normalizedTitle,
                             description = payload.description,
                             priority = normalizedPriority,
@@ -917,7 +932,7 @@ class TdayRepository @Inject constructor(
         requireBody(
             api.patchCompletedTodoByBody(
                 com.ohmz.tday.compose.core.model.UpdateCompletedTodoRequest(
-                    id = item.id,
+                    id = resolvedCompletedId,
                     title = normalizedTitle,
                     description = payload.description,
                     priority = normalizedPriority,
@@ -933,6 +948,12 @@ class TdayRepository @Inject constructor(
 
     suspend fun deleteCompletedTodo(item: CompletedItem) {
         val canonicalId = item.originalTodoId
+        val instanceDateEpochMs = item.instanceDate?.toEpochMilli()
+        val resolvedCompletedId = resolveCompletedServerIdForMutation(
+            currentCompletedId = item.id,
+            canonicalTodoId = canonicalId,
+            instanceDateEpochMs = instanceDateEpochMs,
+        )
 
         updateOfflineState { state ->
             state.copy(
@@ -941,7 +962,15 @@ class TdayRepository @Inject constructor(
                 } else {
                     state.todos
                 },
-                completedItems = state.completedItems.filterNot { it.id == item.id },
+                completedItems = state.completedItems.filterNot { completed ->
+                    matchesCompletedRecord(
+                        record = completed,
+                        itemId = item.id,
+                        resolvedItemId = resolvedCompletedId,
+                        canonicalTodoId = canonicalId,
+                        instanceDateEpochMs = instanceDateEpochMs,
+                    )
+                },
                 pendingMutations = if (canonicalId != null) {
                     state.pendingMutations.filterNot { mutation -> mutation.targetId == canonicalId }
                 } else {
@@ -950,10 +979,14 @@ class TdayRepository @Inject constructor(
             )
         }
 
+        if (resolvedCompletedId.startsWith(LOCAL_COMPLETED_PREFIX)) {
+            return
+        }
+
         requireBody(
             api.deleteCompletedTodoByBody(
                 com.ohmz.tday.compose.core.model.DeleteCompletedTodoRequest(
-                    id = item.id,
+                    id = resolvedCompletedId,
                 ),
             ),
             "Could not delete completed task",
@@ -1776,6 +1809,43 @@ class TdayRepository @Inject constructor(
         instanceDateEpochMs: Long?,
     ): String {
         return "$canonicalId::${instanceDateEpochMs ?: Long.MIN_VALUE}"
+    }
+
+    private fun matchesCompletedRecord(
+        record: CachedCompletedRecord,
+        itemId: String,
+        resolvedItemId: String,
+        canonicalTodoId: String?,
+        instanceDateEpochMs: Long?,
+    ): Boolean {
+        if (record.id == itemId || record.id == resolvedItemId) return true
+        if (canonicalTodoId.isNullOrBlank()) return false
+        if (record.originalTodoId != canonicalTodoId) return false
+        return record.instanceDateEpochMs == instanceDateEpochMs
+    }
+
+    private suspend fun resolveCompletedServerIdForMutation(
+        currentCompletedId: String,
+        canonicalTodoId: String?,
+        instanceDateEpochMs: Long?,
+    ): String {
+        if (!currentCompletedId.startsWith(LOCAL_COMPLETED_PREFIX)) {
+            return currentCompletedId
+        }
+        if (canonicalTodoId.isNullOrBlank() || canonicalTodoId.startsWith(LOCAL_TODO_PREFIX)) {
+            return currentCompletedId
+        }
+
+        syncCachedData(
+            force = true,
+            replayPendingMutations = false,
+        ).onFailure { /* best effort */ }
+
+        val refreshedState = loadOfflineState()
+        return refreshedState.completedItems.firstOrNull { record ->
+            record.originalTodoId == canonicalTodoId &&
+                record.instanceDateEpochMs == instanceDateEpochMs
+        }?.id ?: currentCompletedId
     }
 
     private fun shouldPreferLocalTodo(
