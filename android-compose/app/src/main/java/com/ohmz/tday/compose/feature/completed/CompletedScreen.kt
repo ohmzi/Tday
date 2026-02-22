@@ -302,14 +302,14 @@ private fun CompletedTopBar(
                     Icon(
                         imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = null,
-                        tint = Color(0xFFB4CDBA),
+                        tint = Color(0xFF4E8A67),
                         modifier = Modifier.size(28.dp),
                     )
                     Text(
                         text = "Completed",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFB4CDBA),
+                        color = Color(0xFF4E8A67),
                     )
                 }
             }
@@ -333,14 +333,14 @@ private fun CompletedTopBar(
                     Icon(
                         imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = null,
-                        tint = Color(0xFFB4CDBA),
+                        tint = Color(0xFF4E8A67),
                         modifier = Modifier.size(28.dp),
                     )
                     Text(
                         text = "Completed",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFB4CDBA),
+                        color = Color(0xFF4E8A67),
                     )
                 }
             }
