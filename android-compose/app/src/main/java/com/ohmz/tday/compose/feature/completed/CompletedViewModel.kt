@@ -27,7 +27,16 @@ class CompletedViewModel @Inject constructor(
     private val repository: TdayRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CompletedUiState())
+    private val _uiState = MutableStateFlow(
+        runCatching {
+            CompletedUiState(
+                isLoading = false,
+                items = repository.fetchCompletedItemsSnapshot(),
+                lists = repository.fetchListsSnapshot(),
+                errorMessage = null,
+            )
+        }.getOrElse { CompletedUiState() },
+    )
     val uiState: StateFlow<CompletedUiState> = _uiState.asStateFlow()
     private var hasLoadedScreen = false
 
@@ -40,20 +49,14 @@ class CompletedViewModel @Inject constructor(
             repository.cacheDataVersion
                 .collect {
                     if (!hasLoadedScreen) return@collect
-                    loadInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
+                    hydrateFromCache()
                 }
         }
     }
 
     fun load() {
         hasLoadedScreen = true
-        loadInternal(
-            forceSync = false,
-            showLoading = false,
-        )
+        hydrateFromCache()
     }
 
     fun refresh() {
@@ -62,6 +65,21 @@ class CompletedViewModel @Inject constructor(
             forceSync = true,
             showLoading = true,
         )
+    }
+
+    private fun hydrateFromCache() {
+        runCatching {
+            repository.fetchCompletedItemsSnapshot() to repository.fetchListsSnapshot()
+        }.onSuccess { (items, lists) ->
+            _uiState.update { current ->
+                current.copy(
+                    isLoading = false,
+                    items = if (current.items == items) current.items else items,
+                    lists = if (current.lists == lists) current.lists else lists,
+                    errorMessage = null,
+                )
+            }
+        }
     }
 
     private fun loadInternal(

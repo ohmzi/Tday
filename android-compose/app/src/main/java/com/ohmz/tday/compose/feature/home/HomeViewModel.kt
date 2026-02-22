@@ -34,7 +34,15 @@ class HomeViewModel @Inject constructor(
     private val repository: TdayRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
+    private val _uiState = MutableStateFlow(
+        runCatching {
+            HomeUiState(
+                isLoading = false,
+                summary = repository.fetchDashboardSummarySnapshot(),
+                errorMessage = null,
+            )
+        }.getOrElse { HomeUiState() },
+    )
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
@@ -51,24 +59,22 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refreshFromCache() {
-        viewModelScope.launch {
-            runCatching {
-                repository.fetchDashboardSummaryCached()
-            }.onSuccess { summary ->
-                _uiState.update { current ->
-                    current.copy(
-                        isLoading = false,
-                        summary = if (current.summary == summary) current.summary else summary,
-                        errorMessage = null,
-                    )
-                }
-            }.onFailure { error ->
-                _uiState.update { current ->
-                    current.copy(
-                        isLoading = false,
-                        errorMessage = error.message ?: "Failed to load dashboard",
-                    )
-                }
+        runCatching {
+            repository.fetchDashboardSummarySnapshot()
+        }.onSuccess { summary ->
+            _uiState.update { current ->
+                current.copy(
+                    isLoading = false,
+                    summary = if (current.summary == summary) current.summary else summary,
+                    errorMessage = null,
+                )
+            }
+        }.onFailure { error ->
+            _uiState.update { current ->
+                current.copy(
+                    isLoading = false,
+                    errorMessage = error.message ?: "Failed to load dashboard",
+                )
             }
         }
     }

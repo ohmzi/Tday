@@ -28,7 +28,16 @@ class CalendarViewModel @Inject constructor(
     private val repository: TdayRepository,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CalendarUiState())
+    private val _uiState = MutableStateFlow(
+        runCatching {
+            CalendarUiState(
+                isLoading = false,
+                items = repository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED),
+                lists = repository.fetchListsSnapshot(),
+                errorMessage = null,
+            )
+        }.getOrElse { CalendarUiState() },
+    )
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
     private var hasLoadedScreen = false
 
@@ -41,20 +50,14 @@ class CalendarViewModel @Inject constructor(
             repository.cacheDataVersion
                 .collect {
                     if (!hasLoadedScreen) return@collect
-                    loadInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
+                    hydrateFromCache()
                 }
         }
     }
 
     fun load() {
         hasLoadedScreen = true
-        loadInternal(
-            forceSync = false,
-            showLoading = false,
-        )
+        hydrateFromCache()
     }
 
     fun refresh() {
@@ -63,6 +66,23 @@ class CalendarViewModel @Inject constructor(
             forceSync = true,
             showLoading = true,
         )
+    }
+
+    private fun hydrateFromCache() {
+        runCatching {
+            val todos = repository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED)
+            val lists = repository.fetchListsSnapshot()
+            todos to lists
+        }.onSuccess { (todos, lists) ->
+            _uiState.update { current ->
+                current.copy(
+                    isLoading = false,
+                    items = if (current.items == todos) current.items else todos,
+                    lists = if (current.lists == lists) current.lists else lists,
+                    errorMessage = null,
+                )
+            }
+        }
     }
 
     private fun loadInternal(
