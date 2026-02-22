@@ -82,6 +82,7 @@ import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TodoItem
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -123,11 +124,13 @@ private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
 @Composable
 fun CreateTaskBottomSheet(
     lists: List<ListSummary>,
+    editingTask: TodoItem? = null,
     defaultListId: String? = null,
     initialStartEpochMs: Long? = null,
     initialDueEpochMs: Long? = null,
     onDismiss: () -> Unit,
     onCreateTask: (CreateTaskPayload) -> Unit,
+    onUpdateTask: ((todo: TodoItem, payload: CreateTaskPayload) -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -140,19 +143,36 @@ fun CreateTaskBottomSheet(
     val listIdsKey = remember(lists) { lists.joinToString(separator = "|") { it.id } }
 
     var page by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN) }
-    var title by rememberSaveable { mutableStateOf("") }
-    var notes by rememberSaveable { mutableStateOf("") }
-    var selectedPriority by rememberSaveable { mutableStateOf("Low") }
-    var selectedListId by rememberSaveable(defaultListId, listIdsKey) {
-        mutableStateOf(defaultListId?.takeIf { id -> lists.any { it.id == id } })
+    val isEditMode = editingTask != null
+    var title by rememberSaveable(editingTask?.id) {
+        mutableStateOf(editingTask?.title.orEmpty())
+    }
+    var notes by rememberSaveable(editingTask?.id) {
+        mutableStateOf(editingTask?.description.orEmpty())
+    }
+    var selectedPriority by rememberSaveable(editingTask?.id) {
+        mutableStateOf(
+            when (editingTask?.priority?.trim()) {
+                "Medium" -> "Medium"
+                "High" -> "High"
+                else -> "Low"
+            },
+        )
+    }
+    var selectedListId by rememberSaveable(editingTask?.id, defaultListId, listIdsKey) {
+        mutableStateOf(
+            editingTask?.listId?.takeIf { id -> lists.any { it.id == id } }
+                ?: defaultListId?.takeIf { id -> lists.any { it.id == id } },
+        )
     }
     val nowEpochMs = remember { System.currentTimeMillis() }
-    val resolvedStartEpochMs = initialStartEpochMs ?: nowEpochMs
-    val resolvedDueEpochMs = initialDueEpochMs ?: (resolvedStartEpochMs + DEFAULT_TASK_DURATION_MS)
-    var startEpochMs by rememberSaveable(initialStartEpochMs, initialDueEpochMs) {
+    val resolvedStartEpochMs = editingTask?.dtstart?.toEpochMilli() ?: (initialStartEpochMs ?: nowEpochMs)
+    val resolvedDueEpochMs = editingTask?.due?.toEpochMilli() ?: (initialDueEpochMs
+        ?: (resolvedStartEpochMs + DEFAULT_TASK_DURATION_MS))
+    var startEpochMs by rememberSaveable(editingTask?.id, initialStartEpochMs, initialDueEpochMs) {
         mutableStateOf(resolvedStartEpochMs)
     }
-    var dueEpochMs by rememberSaveable(initialStartEpochMs, initialDueEpochMs) {
+    var dueEpochMs by rememberSaveable(editingTask?.id, initialStartEpochMs, initialDueEpochMs) {
         mutableStateOf(
             if (resolvedDueEpochMs > resolvedStartEpochMs) {
                 resolvedDueEpochMs
@@ -161,7 +181,9 @@ fun CreateTaskBottomSheet(
             },
         )
     }
-    var selectedRepeat by rememberSaveable { mutableStateOf(RepeatPreset.NONE.name) }
+    var selectedRepeat by rememberSaveable(editingTask?.id) {
+        mutableStateOf(repeatPresetFromRrule(editingTask?.rrule).name)
+    }
     var listReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN.name) }
     var priorityReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
     var repeatReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
@@ -170,7 +192,7 @@ fun CreateTaskBottomSheet(
 
     val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
     val repeatPreset = RepeatPreset.valueOf(selectedRepeat)
-    val canCreate = title.isNotBlank()
+    val canSubmit = title.isNotBlank()
     val colorScheme = MaterialTheme.colorScheme
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
     val sheetContainerColor = if (isDarkTheme) {
@@ -192,17 +214,21 @@ fun CreateTaskBottomSheet(
             start.plusSeconds(DEFAULT_TASK_DURATION_MS / 1000L)
         }
 
-        onCreateTask(
-            CreateTaskPayload(
-                title = title.trim(),
-                description = notes.trim().ifBlank { null },
-                priority = selectedPriority,
-                dtstart = start,
-                due = due,
-                rrule = repeatPreset.rrule,
-                listId = selectedListId,
-            ),
+        val payload = CreateTaskPayload(
+            title = title.trim(),
+            description = notes.trim().ifBlank { null },
+            priority = selectedPriority,
+            dtstart = start,
+            due = due,
+            rrule = repeatPreset.rrule,
+            listId = selectedListId,
         )
+        val editing = editingTask
+        if (editing != null && onUpdateTask != null) {
+            onUpdateTask(editing, payload)
+        } else {
+            onCreateTask(payload)
+        }
     }
 
     ModalBottomSheet(
@@ -229,7 +255,7 @@ fun CreateTaskBottomSheet(
             ) {
                 SheetHeader(
                     title = when (page) {
-                        TaskSheetPage.MAIN -> "New task"
+                        TaskSheetPage.MAIN -> if (isEditMode) "Edit task" else "New task"
                         TaskSheetPage.DETAILS -> "Details"
                         TaskSheetPage.LIST -> "List"
                         TaskSheetPage.PRIORITY -> "Priority"
@@ -253,11 +279,11 @@ fun CreateTaskBottomSheet(
                     },
                     onConfirm = {
                         focusManager.clearFocus(force = true)
-                        if (canCreate) {
+                        if (canSubmit) {
                             submitTask()
                         }
                     },
-                    confirmEnabled = canCreate,
+                    confirmEnabled = canSubmit,
                 )
 
                 when (page) {
@@ -958,6 +984,11 @@ private fun repeatSwatchColor(preset: RepeatPreset): Color {
         RepeatPreset.MONTHLY -> Color(0xFFE3B368)
         RepeatPreset.YEARLY -> Color(0xFFE56A6A)
     }
+}
+
+private fun repeatPresetFromRrule(rrule: String?): RepeatPreset {
+    if (rrule.isNullOrBlank()) return RepeatPreset.NONE
+    return RepeatPreset.entries.firstOrNull { it.rrule == rrule } ?: RepeatPreset.NONE
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

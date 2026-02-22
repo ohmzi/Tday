@@ -76,6 +76,7 @@ internal enum class MutationKind {
     CREATE_LIST,
     UPDATE_LIST,
     CREATE_TODO,
+    UPDATE_TODO,
     DELETE_TODO,
     SET_PINNED,
     SET_PRIORITY,

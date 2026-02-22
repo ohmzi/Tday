@@ -76,7 +76,7 @@ export const useEditCalendarTodoInstance = () => {
         });
       },
 
-      onError: (error, newTodo, context) => {
+      onError: (error, _newTodo, context) => {
         queryClient.setQueryData(["calendarTodo"], context?.oldTodosBackup);
         toast({
           description: error.message,
