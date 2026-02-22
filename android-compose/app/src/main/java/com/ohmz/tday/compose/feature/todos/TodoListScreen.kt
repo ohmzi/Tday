@@ -1,6 +1,5 @@
 package com.ohmz.tday.compose.feature.todos
 
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -367,6 +366,7 @@ fun TodoListScreen(
                         TimelineSection(
                             section = section,
                             mode = uiState.mode,
+                            lists = uiState.lists,
                             useMinimalStyle = usesTodayStyle,
                             isCollapsed = isCollapsed,
                             showTopDivider = isAllMode && section.title == "Today",
@@ -1063,6 +1063,7 @@ private fun ListSettingsActionButton(
 private fun TimelineSection(
     section: TodoSection,
     mode: TodoListMode,
+    lists: List<ListSummary>,
     useMinimalStyle: Boolean,
     isCollapsed: Boolean = false,
     showTopDivider: Boolean = false,
@@ -1174,6 +1175,8 @@ private fun TimelineSection(
                 ) {
                     TodayTaskSwipeRow(
                         todo = todo,
+                        mode = mode,
+                        lists = lists,
                         onComplete = { onComplete(todo) },
                         onDelete = { onDelete(todo) },
                         onInfo = { onInfo(todo) },
@@ -1528,6 +1531,8 @@ private fun SwipeActionCircle(
 @Composable
 private fun TodayTaskSwipeRow(
     todo: TodoItem,
+    mode: TodoListMode,
+    lists: List<ListSummary>,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -1539,6 +1544,8 @@ private fun TodayTaskSwipeRow(
         onDelete = onDelete,
         onInfo = onInfo,
         keepCompletedInline = false,
+        mode = mode,
+        lists = lists,
         showDueText = true,
         showDuePrefix = showDuePrefix,
     )
@@ -1551,6 +1558,8 @@ private fun SwipeTaskRow(
     onDelete: () -> Unit,
     onInfo: () -> Unit,
     keepCompletedInline: Boolean,
+    mode: TodoListMode = TodoListMode.ALL,
+    lists: List<ListSummary> = emptyList(),
     showDueText: Boolean,
     showDuePrefix: Boolean,
 ) {
@@ -1562,17 +1571,10 @@ private fun SwipeTaskRow(
     val maxElasticDragPx = actionRevealPx * 1.22f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var localCompleted by remember(todo.id) { mutableStateOf(false) }
-    val visuallyCompleted = if (keepCompletedInline) {
-        todo.completed || localCompleted
-    } else {
-        todo.completed
-    }
+    val visuallyCompleted = localCompleted || (keepCompletedInline && todo.completed)
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow,
-        ),
+        animationSpec = spring(),
         label = "swipeTaskOffset",
     )
     val dueTimeText =
@@ -1582,6 +1584,28 @@ private fun SwipeTaskRow(
     val actionContainerColor =
         colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
     val foregroundColor = colorScheme.background
+    val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
+    val showListIndicator = when (mode) {
+        TodoListMode.TODAY,
+        TodoListMode.SCHEDULED,
+        TodoListMode.PRIORITY,
+            -> listMeta != null
+
+        TodoListMode.LIST,
+        TodoListMode.ALL,
+            -> false
+    }
+    val showPriorityFlag = when (mode) {
+        TodoListMode.TODAY,
+        TodoListMode.SCHEDULED,
+        TodoListMode.PRIORITY,
+        TodoListMode.LIST,
+            -> isHighPriority(todo.priority)
+
+        TodoListMode.ALL,
+            -> false
+    }
+    val listIndicatorColor = listAccentColor(listMeta?.color)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -1661,13 +1685,13 @@ private fun SwipeTaskRow(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        imageVector = if (keepCompletedInline && !visuallyCompleted) {
+                        imageVector = if (!visuallyCompleted) {
                             Icons.Rounded.RadioButtonUnchecked
                         } else {
                             Icons.Rounded.CheckCircle
                         },
                         contentDescription = if (visuallyCompleted) "Completed" else "Mark complete",
-                        tint = if (keepCompletedInline && !visuallyCompleted) {
+                        tint = if (!visuallyCompleted) {
                             colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                         } else {
                             priorityColor(todo.priority)
@@ -1675,19 +1699,15 @@ private fun SwipeTaskRow(
                         modifier = Modifier
                             .size(24.dp)
                             .clickable {
-                                if (keepCompletedInline && visuallyCompleted) return@clickable
+                                if (visuallyCompleted) return@clickable
                                 ViewCompat.performHapticFeedback(
                                     view,
                                     HapticFeedbackConstantsCompat.CLOCK_TICK,
                                 )
                                 targetOffsetX = 0f
-                                if (keepCompletedInline) {
-                                    localCompleted = true
-                                    coroutineScope.launch {
-                                        delay(120)
-                                        onComplete()
-                                    }
-                                } else {
+                                localCompleted = true
+                                coroutineScope.launch {
+                                    delay(if (keepCompletedInline) 120 else 180)
                                     onComplete()
                                 }
                             },
@@ -1720,6 +1740,29 @@ private fun SwipeTaskRow(
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                 style = MaterialTheme.typography.bodySmall,
                             )
+                        }
+                    }
+                    if (showListIndicator || showPriorityFlag) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (showListIndicator) {
+                                Icon(
+                                    imageVector = listIconForKey(listMeta?.iconKey),
+                                    contentDescription = "Task list",
+                                    tint = listIndicatorColor,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            if (showPriorityFlag) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Flag,
+                                    contentDescription = "High priority",
+                                    tint = priorityColor("high"),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
                         }
                     }
                 }
