@@ -54,8 +54,12 @@ import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.time.YearMonth
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +71,9 @@ fun CompletedScreen(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val listState = rememberLazyListState()
+    val timelineSections = remember(uiState.items) {
+        buildCompletedTimelineSections(uiState.items)
+    }
     val density = LocalDensity.current
     val maxCollapsePx = with(density) { COMPLETED_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
     var headerCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
@@ -156,10 +163,10 @@ fun CompletedScreen(
                     }
                 }
 
-                items(uiState.items, key = { it.id }) { item ->
-                    CompletedRow(
-                        item = item,
-                        onUncomplete = { onUncomplete(item) },
+                items(timelineSections, key = { it.key }) { section ->
+                    CompletedTimelineSection(
+                        section = section,
+                        onUncomplete = onUncomplete,
                     )
                 }
 
@@ -311,6 +318,41 @@ private fun CompletedHeaderButton(
 }
 
 @Composable
+private fun CompletedTimelineSection(
+    section: CompletedSection,
+    onUncomplete: (CompletedItem) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = section.title,
+            color = colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        if (section.items.isEmpty()) {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+            )
+        } else {
+            section.items.forEach { item ->
+                CompletedRow(
+                    item = item,
+                    onUncomplete = { onUncomplete(item) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun CompletedRow(
     item: CompletedItem,
     onUncomplete: () -> Unit,
@@ -401,4 +443,101 @@ private fun priorityColor(priority: String): Color {
     }
 }
 
+private data class CompletedSection(
+    val key: String,
+    val title: String,
+    val items: List<CompletedItem>,
+)
+
+private fun buildCompletedTimelineSections(
+    items: List<CompletedItem>,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): List<CompletedSection> {
+    val sorted = items.sortedBy { it.due }
+    val groupedByDate = sorted.groupBy { item ->
+        LocalDate.ofInstant(item.due, zoneId)
+    }
+    val today = LocalDate.now(zoneId)
+    val horizonStart = today.plusDays(7)
+    val currentMonth = YearMonth.from(today)
+
+    val sections = mutableListOf<CompletedSection>()
+    fun daySection(date: LocalDate, title: String): CompletedSection {
+        return CompletedSection(
+            key = "day-$date",
+            title = title,
+            items = groupedByDate[date].orEmpty(),
+        )
+    }
+
+    val earlierItems = groupedByDate.asSequence().filter { (date, _) -> date < today }
+        .flatMap { (_, dayItems) -> dayItems.asSequence() }
+        .sortedBy { it.due }
+        .toList()
+    if (earlierItems.isNotEmpty()) {
+        sections += CompletedSection(
+            key = "earlier",
+            title = "Earlier",
+            items = earlierItems,
+        )
+    }
+
+    sections += daySection(today, "Today")
+    sections += daySection(today.plusDays(1), "Tomorrow")
+    for (offset in 2..6) {
+        val date = today.plusDays(offset.toLong())
+        sections += daySection(
+            date = date,
+            title = date.format(COMPLETED_DAY_FORMATTER),
+        )
+    }
+
+    val restOfCurrentMonthItems = groupedByDate.asSequence().filter { (date, _) ->
+        date >= horizonStart && YearMonth.from(date) == currentMonth
+    }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
+    val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+    sections += CompletedSection(
+        key = "rest-$currentMonth",
+        title = "Rest of $monthName",
+        items = restOfCurrentMonthItems,
+    )
+
+    val futureMonthsWithData =
+        groupedByDate.keys.asSequence().filter { it >= horizonStart }.map { YearMonth.from(it) }
+            .toSet()
+    val minimumFinalMonth = YearMonth.of(currentMonth.year, 12)
+    val finalMonth = maxOf(
+        minimumFinalMonth,
+        futureMonthsWithData.maxOrNull() ?: minimumFinalMonth,
+    )
+
+    var targetMonth = currentMonth.plusMonths(1)
+    while (targetMonth <= finalMonth) {
+        val monthItems = groupedByDate.asSequence().filter { (date, _) ->
+            date >= horizonStart && YearMonth.from(date) == targetMonth
+        }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
+        sections += CompletedSection(
+            key = "month-$targetMonth",
+            title = completedMonthTitle(targetMonth, currentMonth.year),
+            items = monthItems,
+        )
+        targetMonth = targetMonth.plusMonths(1)
+    }
+
+    return sections
+}
+
+private fun completedMonthTitle(
+    month: YearMonth,
+    currentYear: Int,
+): String {
+    val monthName = month.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+    return if (month.year == currentYear) {
+        monthName
+    } else {
+        "$monthName ${month.year}"
+    }
+}
+
+private val COMPLETED_DAY_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE MMM d")
 private const val COMPLETED_TITLE_COLLAPSE_DISTANCE_DP = 180f
