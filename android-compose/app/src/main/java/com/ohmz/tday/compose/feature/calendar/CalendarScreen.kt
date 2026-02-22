@@ -133,7 +133,7 @@ fun CalendarScreen(
                 if (selectedDateTasks.isEmpty()) {
                     item {
                         EmptyCalendarState(
-                            message = "No reminders",
+                            message = "No tasks yet.",
                         )
                     }
                 } else {

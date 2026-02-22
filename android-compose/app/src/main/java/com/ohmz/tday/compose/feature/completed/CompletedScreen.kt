@@ -158,7 +158,11 @@ fun CompletedScreen(
                 if (uiState.items.isEmpty()) {
                     item {
                         EmptyCompletedState(
-                            message = if (uiState.isLoading) "Loading..." else "No completed tasks",
+                            message = if (uiState.isLoading) {
+                                "Loading..."
+                            } else {
+                                "No completed tasks yet."
+                            },
                         )
                     }
                 }
