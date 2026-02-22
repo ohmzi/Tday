@@ -347,7 +347,11 @@ fun TodoListScreen(
                         ) {
                             Text(
                                 modifier = Modifier.padding(18.dp),
-                                text = if (uiState.isLoading) "Loading..." else "No tasks yet.",
+                                text = if (uiState.isLoading) {
+                                    "Loading..."
+                                } else {
+                                    emptyStateMessageForMode(uiState.mode)
+                                },
                                 color = colorScheme.onSurfaceVariant,
                             )
                         }
@@ -389,7 +393,7 @@ fun TodoListScreen(
                     if (uiState.items.isEmpty()) {
                         item {
                             EmptyTimelineState(
-                                message = "No Reminders",
+                                message = emptyStateMessageForMode(uiState.mode),
                                 useMinimalStyle = usesTodayStyle,
                             )
                         }
@@ -1375,6 +1379,16 @@ private fun monthTitle(
         monthName
     } else {
         "$monthName ${month.year}"
+    }
+}
+
+private fun emptyStateMessageForMode(mode: TodoListMode): String {
+    return when (mode) {
+        TodoListMode.TODAY -> "No today tasks yet."
+        TodoListMode.PRIORITY -> "No priority tasks yet."
+        TodoListMode.SCHEDULED -> "No tasks yet."
+        TodoListMode.ALL -> "No tasks yet."
+        TodoListMode.LIST -> "No tasks yet."
     }
 }
 
