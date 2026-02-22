@@ -105,6 +105,9 @@ export const useEditCalendarTodo = () => {
       queryClient.setQueryData(["calendarTodo"], context?.oldTodos);
       toast({ description: error.message, variant: "destructive" });
     },
+    onSuccess: () => {
+      toast({ description: "todo updated" });
+    },
   });
 
   return { editCalendarTodo, editTodoStatus };

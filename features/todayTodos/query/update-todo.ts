@@ -117,6 +117,9 @@ export const useEditTodo = () => {
       queryClient.setQueryData(["todoTimeline"], context?.oldTimelineTodos);
       toast({ description: error.message, variant: "destructive" });
     },
+    onSuccess: () => {
+      toast({ description: "todo updated" });
+    },
   });
 
   return { editTodoMutateFn, editTodoStatus };
