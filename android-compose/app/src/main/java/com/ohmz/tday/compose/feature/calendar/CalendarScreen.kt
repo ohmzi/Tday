@@ -84,7 +84,6 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
-import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -131,7 +130,6 @@ fun CalendarScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CalendarTopBar(
-                monthLabel = monthLabel,
                 onBack = onBack,
                 onJumpToday = {
                     visibleMonthIso = YearMonth.now(zoneId).toString()
@@ -140,72 +138,66 @@ fun CalendarScreen(
             )
         },
     ) { padding ->
-        TdayPullToRefreshBox(
-            isRefreshing = uiState.isLoading,
-            onRefresh = onRefresh,
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
+            item {
+                CalendarMonthCard(
+                    visibleMonth = visibleMonth,
+                    selectedDate = selectedDate,
+                    today = today,
+                    tasksByDate = tasksByDate,
+                    onPrevMonth = { visibleMonthIso = visibleMonth.minusMonths(1).toString() },
+                    onNextMonth = { visibleMonthIso = visibleMonth.plusMonths(1).toString() },
+                    onSelectDate = { pickedDate ->
+                        visibleMonthIso = YearMonth.from(pickedDate).toString()
+                        selectedDateIso = pickedDate.toString()
+                    },
+                )
+            }
+
+            item {
+                Text(
+                    text = selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d")),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+            }
+
+            if (selectedDateTasks.isEmpty()) {
                 item {
-                    CalendarMonthCard(
-                        visibleMonth = visibleMonth,
-                        selectedDate = selectedDate,
-                        today = today,
-                        tasksByDate = tasksByDate,
-                        onPrevMonth = { visibleMonthIso = visibleMonth.minusMonths(1).toString() },
-                        onNextMonth = { visibleMonthIso = visibleMonth.plusMonths(1).toString() },
-                        onSelectDate = { pickedDate ->
-                            visibleMonthIso = YearMonth.from(pickedDate).toString()
-                            selectedDateIso = pickedDate.toString()
-                        },
+                    EmptyCalendarState(
+                        message = "No tasks on this date",
                     )
                 }
+            } else {
+                items(selectedDateTasks, key = { it.id }) { todo ->
+                    CalendarTodoRow(
+                        todo = todo,
+                        lists = uiState.lists,
+                        onInfo = { editTargetId = todo.id },
+                        onDelete = { onDelete(todo) },
+                    )
+                }
+            }
 
+            uiState.errorMessage?.let { message ->
                 item {
                     Text(
-                        text = selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d")),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 4.dp),
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
-
-                if (selectedDateTasks.isEmpty()) {
-                    item {
-                        EmptyCalendarState(
-                            message = "No tasks on this date",
-                        )
-                    }
-                } else {
-                    items(selectedDateTasks, key = { it.id }) { todo ->
-                        CalendarTodoRow(
-                            todo = todo,
-                            lists = uiState.lists,
-                            onInfo = { editTargetId = todo.id },
-                            onDelete = { onDelete(todo) },
-                        )
-                    }
-                }
-
-                uiState.errorMessage?.let { message ->
-                    item {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-
-                item { Spacer(modifier = Modifier.height(96.dp)) }
             }
+
+            item { Spacer(modifier = Modifier.height(96.dp)) }
         }
     }
 
@@ -226,7 +218,6 @@ fun CalendarScreen(
 
 @Composable
 private fun CalendarTopBar(
-    monthLabel: String,
     onBack: () -> Unit,
     onJumpToday: () -> Unit,
 ) {
@@ -272,13 +263,6 @@ private fun CalendarTopBar(
                 color = Color(0xFF7D67B6),
             )
         }
-        Text(
-            text = monthLabel,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp),
-        )
     }
 }
 
@@ -352,13 +336,17 @@ private fun CalendarMonthCard(
                     contentDescription = "Previous month",
                     onClick = onPrevMonth,
                 )
-                Text(
-                    text = monthLabel,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onSurface,
+                Box(
                     modifier = Modifier.weight(1f),
-                )
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = monthLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurface,
+                    )
+                }
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronRight,
                     contentDescription = "Next month",
