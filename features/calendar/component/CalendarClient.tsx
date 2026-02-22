@@ -291,7 +291,7 @@ export default function CalendarClient() {
             updateRangeForDate(newDate, view);
           }}
           drilldownView="day"
-          getDrilldownView={(targetDate, currentViewName) => {
+          getDrilldownView={(_targetDate, currentViewName) => {
             // Only drill down from month → day or week → day
             if (currentViewName === "month" || currentViewName === "week") return "day";
             return null; // no drill from day view

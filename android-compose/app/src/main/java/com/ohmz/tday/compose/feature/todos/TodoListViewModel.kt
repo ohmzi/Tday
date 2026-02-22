@@ -145,11 +145,114 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
+    fun updateTask(
+        todo: TodoItem,
+        payload: CreateTaskPayload,
+    ) {
+        val normalizedTitle = payload.title.trim()
+        if (normalizedTitle.isBlank()) return
+
+        val normalizedPriority = when (payload.priority.trim()) {
+            "Medium" -> "Medium"
+            "High" -> "High"
+            else -> "Low"
+        }
+        val normalizedStart = payload.dtstart
+        val normalizedDue = if (payload.due > normalizedStart) {
+            payload.due
+        } else {
+            normalizedStart.plusSeconds(60L * 60L)
+        }
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+
+        val previousState = _uiState.value
+        val mode = previousState.mode
+        val currentListId = previousState.listId
+        val updatedTodo = todo.copy(
+            title = normalizedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            dtstart = normalizedStart,
+            due = normalizedDue,
+            rrule = payload.rrule,
+            listId = normalizedListId,
+        )
+
+        _uiState.update { current ->
+            val optimisticItems = current.items
+                .map { item -> if (item.id == todo.id) updatedTodo else item }
+                .filterNot { item ->
+                    current.mode == TodoListMode.LIST &&
+                        !current.listId.isNullOrBlank() &&
+                        item.id == todo.id &&
+                        item.listId != current.listId
+                }
+            current.copy(
+                items = optimisticItems,
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+
+            runCatching {
+                repository.updateTodo(
+                    todo = todo,
+                    payload = CreateTaskPayload(
+                        title = normalizedTitle,
+                        description = normalizedDescription,
+                        priority = normalizedPriority,
+                        dtstart = normalizedStart,
+                        due = normalizedDue,
+                        rrule = payload.rrule,
+                        listId = normalizedListId,
+                    ),
+                )
+            }.onSuccess {
+                runCatching {
+                    val todos = repository.fetchTodosCached(mode = mode, listId = currentListId)
+                    val lists = repository.fetchLists()
+                    todos to lists
+                }.onSuccess { (todos, lists) ->
+                    _uiState.update { current ->
+                        current.copy(
+                            lists = if (current.lists == lists) current.lists else lists,
+                            items = if (current.items == todos) current.items else todos,
+                            errorMessage = null,
+                        )
+                    }
+                }.onFailure {
+                    refreshInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = error.message ?: "Could not update task",
+                )
+            }
+        }
+    }
+
     fun toggleComplete(todo: TodoItem) {
         val previousItems = _uiState.value.items
+        val mode = _uiState.value.mode
+        val keepInAllMode = mode == TodoListMode.ALL
         _uiState.update { current ->
             current.copy(
-                items = current.items.filterNot { it.id == todo.id },
+                items = if (keepInAllMode) {
+                    current.items.map { item ->
+                        if (item.id == todo.id) {
+                            item.copy(completed = true)
+                        } else {
+                            item
+                        }
+                    }
+                } else {
+                    current.items.filterNot { it.id == todo.id }
+                },
                 errorMessage = null,
             )
         }
@@ -157,10 +260,12 @@ class TodoListViewModel @Inject constructor(
             runCatching {
                 repository.completeTodo(todo)
             }.onSuccess {
-                refreshInternal(
-                    forceSync = false,
-                    showLoading = false,
-                )
+                if (!keepInAllMode) {
+                    refreshInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
@@ -209,34 +314,6 @@ class TodoListViewModel @Inject constructor(
                     it.copy(
                         items = previousItems,
                         errorMessage = error.message ?: "Could not delete task",
-                    )
-                }
-            }
-        }
-    }
-
-    fun togglePin(todo: TodoItem) {
-        val targetPinned = !todo.pinned
-        _uiState.update { current ->
-            current.copy(
-                items = current.items.map { item ->
-                    if (item.id == todo.id) item.copy(pinned = targetPinned) else item
-                },
-                errorMessage = null,
-            )
-        }
-        viewModelScope.launch {
-            runCatching {
-                repository.setTodoPinned(todo, targetPinned)
-            }.onSuccess {
-                // Keep the local optimistic state; background sync reconciles if needed.
-            }.onFailure { error ->
-                _uiState.update { current ->
-                    current.copy(
-                        items = current.items.map { item ->
-                            if (item.id == todo.id) item.copy(pinned = todo.pinned) else item
-                        },
-                        errorMessage = error.message ?: "Could not update pin",
                     )
                 }
             }

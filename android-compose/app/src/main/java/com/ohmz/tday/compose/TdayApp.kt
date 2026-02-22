@@ -338,9 +338,9 @@ private fun TodosRoute(
         onBack = onBack,
         onRefresh = viewModel::refresh,
         onAddTask = viewModel::addTask,
+        onUpdateTask = viewModel::updateTask,
         onComplete = viewModel::toggleComplete,
         onDelete = viewModel::delete,
-        onTogglePin = viewModel::togglePin,
         onUpdateListSettings = { targetListId, name, color, iconKey ->
             viewModel.updateListSettings(
                 listId = targetListId,

@@ -1,24 +1,4 @@
 import { z } from "zod";
-const todoItemSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string().nullable(),
-  pinned: z.boolean(),
-  createdAt: z.date(),
-  updatedAt: z.date().optional(),
-  order: z.number(),
-  priority: z.enum(["Low", "Medium", "High"]),
-  dtstart: z.date(),
-  durationMinutes: z.number(),
-  due: z.date(),
-  rrule: z.string().nullable(),
-  timeZone: z.string(),
-  userID: z.string(),
-  completed: z.boolean(),
-  exdates: z.array(z.date()),
-  instances: z.array(z.any()).nullable(),
-  instanceDate: z.date().nullable(),
-});
 export const registrationSchema = z.object({
   fname: z
     .string({ message: "name cannot be left empty" })
@@ -38,14 +18,6 @@ export const registrationSchema = z.object({
     .regex(/[\W_]/, {
       message: "password must have at least one special character",
     }),
-});
-
-const loginSchema = z.object({
-  email: z
-    .string({ message: "email cannot be left empty" })
-    .trim()
-    .email({ message: "email is incorrect" }),
-  password: z.string(),
 });
 
 export const todoSchema = z.object({

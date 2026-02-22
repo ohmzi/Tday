@@ -21,7 +21,6 @@ export const useCompleteListTodo = () => {
             await queryClient.cancelQueries({ queryKey: ["list"] });
             const oldTodos = queryClient.getQueryData(["list"]) as TodoItemType[];
             queryClient.setQueryData(["list", todoItem.listID], (oldTodos: TodoItemType[]) => {
-                console.log(oldTodos)
                 return oldTodos.flatMap((oldTodo) => {
 
                     if (oldTodo.id === todoItem.id) return [];
@@ -31,11 +30,10 @@ export const useCompleteListTodo = () => {
             );
             return { oldTodos };
         },
-        onError: (error, newTodo, context) => {
+        onError: (error, _newTodo, context) => {
             toast({ description: error.message, variant: "destructive" });
             queryClient.setQueryData(["list"], context?.oldTodos);
         },
-        onSuccess: () => { },
         onSettled: () => {
             //optimistically update calendar todos
             queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
