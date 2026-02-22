@@ -133,7 +133,7 @@ fun CalendarScreen(
                 if (selectedDateTasks.isEmpty()) {
                     item {
                         EmptyCalendarState(
-                            message = "No tasks yet.",
+                            message = "No tasks on this date",
                         )
                     }
                 } else {
