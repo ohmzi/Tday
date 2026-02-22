@@ -238,10 +238,28 @@ data class CompletedTodoDto(
     val priority: String = "Low",
     val dtstart: String,
     val due: String,
+    val completedAt: String? = null,
     val rrule: String? = null,
     val instanceDate: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
+)
+
+@Serializable
+data class UpdateCompletedTodoRequest(
+    val id: String,
+    val title: String? = null,
+    val description: String? = null,
+    val priority: String? = null,
+    val dtstart: String? = null,
+    val due: String? = null,
+    val rrule: String? = null,
+    val listID: String? = null,
+)
+
+@Serializable
+data class DeleteCompletedTodoRequest(
+    val id: String,
 )
 
 @Serializable
