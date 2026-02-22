@@ -44,10 +44,15 @@ internal data class CachedCompletedRecord(
     val id: String,
     val originalTodoId: String? = null,
     val title: String,
+    val description: String? = null,
     val priority: String,
+    val dtstartEpochMs: Long = 0L,
     val dueEpochMs: Long,
+    val completedAtEpochMs: Long = 0L,
     val rrule: String? = null,
     val instanceDateEpochMs: Long? = null,
+    val listName: String? = null,
+    val listColor: String? = null,
 )
 
 @Serializable

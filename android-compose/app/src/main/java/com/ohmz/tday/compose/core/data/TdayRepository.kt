@@ -731,14 +731,20 @@ class TdayRepository @Inject constructor(
                 }
             }
             val completedId = "$LOCAL_COMPLETED_PREFIX${UUID.randomUUID()}"
+            val listMeta = todo.listId?.let { listId -> state.lists.firstOrNull { it.id == listId } }
             val completedItem = CachedCompletedRecord(
                 id = completedId,
                 originalTodoId = todo.canonicalId,
                 title = todo.title,
+                description = todo.description,
                 priority = todo.priority,
+                dtstartEpochMs = todo.dtstart.toEpochMilli(),
                 dueEpochMs = todo.due.toEpochMilli(),
+                completedAtEpochMs = timestampMs,
                 rrule = todo.rrule,
                 instanceDateEpochMs = todo.instanceDateEpochMillis,
+                listName = listMeta?.name,
+                listColor = listMeta?.color,
             )
 
             val mutationKind = if (todo.isRecurring && todo.instanceDate != null) {
@@ -851,6 +857,107 @@ class TdayRepository @Inject constructor(
                 )
             }
         }
+    }
+
+    suspend fun updateCompletedTodo(
+        item: CompletedItem,
+        payload: CreateTaskPayload,
+    ) {
+        val canonicalId = item.originalTodoId ?: return
+        val normalizedTitle = payload.title.trim()
+        if (normalizedTitle.isBlank()) return
+        val normalizedPriority = when (payload.priority.trim()) {
+            "Medium" -> "Medium"
+            "High" -> "High"
+            else -> "Low"
+        }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+        val timestampMs = System.currentTimeMillis()
+
+        updateOfflineState { state ->
+            val listMeta = normalizedListId?.let { id -> state.lists.firstOrNull { it.id == id } }
+            state.copy(
+                todos = state.todos.map { todo ->
+                    if (todo.canonicalId == canonicalId) {
+                        todo.copy(
+                            title = normalizedTitle,
+                            description = payload.description,
+                            priority = normalizedPriority,
+                            dtstartEpochMs = payload.dtstart.toEpochMilli(),
+                            dueEpochMs = payload.due.toEpochMilli(),
+                            rrule = payload.rrule,
+                            listId = normalizedListId,
+                            updatedAtEpochMs = timestampMs,
+                        )
+                    } else {
+                        todo
+                    }
+                },
+                completedItems = state.completedItems.map { completed ->
+                    if (completed.id == item.id) {
+                        completed.copy(
+                            title = normalizedTitle,
+                            description = payload.description,
+                            priority = normalizedPriority,
+                            dtstartEpochMs = payload.dtstart.toEpochMilli(),
+                            dueEpochMs = payload.due.toEpochMilli(),
+                            completedAtEpochMs = completed.completedAtEpochMs.takeIf { it > 0L }
+                                ?: timestampMs,
+                            rrule = payload.rrule,
+                            listName = listMeta?.name,
+                            listColor = listMeta?.color,
+                        )
+                    } else {
+                        completed
+                    }
+                },
+            )
+        }
+
+        requireBody(
+            api.patchCompletedTodoByBody(
+                com.ohmz.tday.compose.core.model.UpdateCompletedTodoRequest(
+                    id = item.id,
+                    title = normalizedTitle,
+                    description = payload.description,
+                    priority = normalizedPriority,
+                    dtstart = payload.dtstart.toString(),
+                    due = payload.due.toString(),
+                    rrule = payload.rrule,
+                    listID = normalizedListId,
+                ),
+            ),
+            "Could not update completed task",
+        )
+    }
+
+    suspend fun deleteCompletedTodo(item: CompletedItem) {
+        val canonicalId = item.originalTodoId
+
+        updateOfflineState { state ->
+            state.copy(
+                todos = if (canonicalId != null) {
+                    state.todos.filterNot { todo -> todo.canonicalId == canonicalId }
+                } else {
+                    state.todos
+                },
+                completedItems = state.completedItems.filterNot { it.id == item.id },
+                pendingMutations = if (canonicalId != null) {
+                    state.pendingMutations.filterNot { mutation -> mutation.targetId == canonicalId }
+                } else {
+                    state.pendingMutations
+                },
+            )
+        }
+
+        requireBody(
+            api.deleteCompletedTodoByBody(
+                com.ohmz.tday.compose.core.model.DeleteCompletedTodoRequest(
+                    id = item.id,
+                ),
+            ),
+            "Could not delete completed task",
+        )
     }
 
     suspend fun fetchNotes(): List<NoteItem> {
@@ -1182,10 +1289,15 @@ class TdayRepository @Inject constructor(
                 id = dto.id,
                 originalTodoId = dto.originalTodoID,
                 title = dto.title,
+                description = dto.description,
                 priority = dto.priority,
+                dtstart = parseInstant(dto.dtstart),
                 due = parseInstant(dto.due),
+                completedAt = parseOptionalInstant(dto.completedAt),
                 rrule = dto.rrule,
                 instanceDate = parseOptionalInstant(dto.instanceDate),
+                listName = dto.listName,
+                listColor = dto.listColor,
             )
         }
 
@@ -2111,10 +2223,15 @@ class TdayRepository @Inject constructor(
             id = item.id,
             originalTodoId = item.originalTodoId,
             title = item.title,
+            description = item.description,
             priority = item.priority,
+            dtstartEpochMs = item.dtstart.toEpochMilli(),
             dueEpochMs = item.due.toEpochMilli(),
+            completedAtEpochMs = item.completedAt?.toEpochMilli() ?: 0L,
             rrule = item.rrule,
             instanceDateEpochMs = item.instanceDate?.toEpochMilli(),
+            listName = item.listName,
+            listColor = item.listColor,
         )
     }
 
@@ -2123,10 +2240,23 @@ class TdayRepository @Inject constructor(
             id = cache.id,
             originalTodoId = cache.originalTodoId,
             title = cache.title,
+            description = cache.description,
             priority = cache.priority,
+            dtstart = if (cache.dtstartEpochMs > 0L) {
+                Instant.ofEpochMilli(cache.dtstartEpochMs)
+            } else {
+                Instant.ofEpochMilli(cache.dueEpochMs)
+            },
             due = Instant.ofEpochMilli(cache.dueEpochMs),
+            completedAt = if (cache.completedAtEpochMs > 0L) {
+                Instant.ofEpochMilli(cache.completedAtEpochMs)
+            } else {
+                null
+            },
             rrule = cache.rrule,
             instanceDate = cache.instanceDateEpochMs?.let(Instant::ofEpochMilli),
+            listName = cache.listName,
+            listColor = cache.listColor,
         )
     }
 

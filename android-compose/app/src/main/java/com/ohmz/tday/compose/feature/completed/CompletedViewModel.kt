@@ -3,7 +3,9 @@ package com.ohmz.tday.compose.feature.completed
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.CompletedItem
+import com.ohmz.tday.compose.core.model.ListSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +18,7 @@ import kotlinx.coroutines.launch
 data class CompletedUiState(
     val isLoading: Boolean = false,
     val items: List<CompletedItem> = emptyList(),
+    val lists: List<ListSummary> = emptyList(),
     val errorMessage: String? = null,
 )
 
@@ -84,12 +87,16 @@ class CompletedViewModel @Inject constructor(
                         replayPendingMutations = false,
                     ).onFailure { /* fall back to local cache */ }
                 }
-                repository.fetchCompletedItems()
-            }.onSuccess { items ->
+                Pair(
+                    repository.fetchCompletedItems(),
+                    repository.fetchLists(),
+                )
+            }.onSuccess { (items, lists) ->
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
                         items = if (current.items == items) current.items else items,
+                        lists = if (current.lists == lists) current.lists else lists,
                         errorMessage = null,
                     )
                 }
@@ -116,6 +123,40 @@ class CompletedViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(errorMessage = error.message ?: "Could not restore task")
+                    }
+                }
+        }
+    }
+
+    fun delete(item: CompletedItem) {
+        viewModelScope.launch {
+            runCatching { repository.deleteCompletedTodo(item) }
+                .onSuccess {
+                    loadInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(errorMessage = error.message ?: "Could not delete task")
+                    }
+                }
+        }
+    }
+
+    fun update(item: CompletedItem, payload: CreateTaskPayload) {
+        viewModelScope.launch {
+            runCatching { repository.updateCompletedTodo(item, payload) }
+                .onSuccess {
+                    loadInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(errorMessage = error.message ?: "Could not update task")
                     }
                 }
         }
