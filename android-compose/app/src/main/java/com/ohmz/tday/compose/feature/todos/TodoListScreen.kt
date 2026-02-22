@@ -217,6 +217,7 @@ fun TodoListScreen(
         label = "todayTitleCollapseProgress",
     )
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
+    var allEarlierExpanded by rememberSaveable(uiState.mode) { mutableStateOf(false) }
     var quickAddStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -355,15 +356,27 @@ fun TodoListScreen(
 
                 if (showSectionedTimeline) {
                     items(timelineSections, key = { it.key }) { section ->
+                        val isAllEarlierSection =
+                            uiState.mode == TodoListMode.ALL && section.key == "earlier"
                         TimelineSection(
                             section = section,
                             mode = uiState.mode,
                             useMinimalStyle = usesTodayStyle,
-                            onTapForQuickAdd = section.quickAddDefaults?.let { quickAdd ->
+                            isCollapsed = isAllEarlierSection && !allEarlierExpanded,
+                            onHeaderClick = if (isAllEarlierSection) {
+                                { allEarlierExpanded = !allEarlierExpanded }
+                            } else {
+                                null
+                            },
+                            onTapForQuickAdd = if (isAllEarlierSection) {
+                                null
+                            } else {
+                                section.quickAddDefaults?.let { quickAdd ->
                                 {
                                     quickAddStartEpochMs = quickAdd.first
                                     quickAddDueEpochMs = quickAdd.second
                                     showCreateTaskSheet = true
+                                }
                                 }
                             },
                             onComplete = onComplete,
@@ -1036,6 +1049,8 @@ private fun TimelineSection(
     section: TodoSection,
     mode: TodoListMode,
     useMinimalStyle: Boolean,
+    isCollapsed: Boolean = false,
+    onHeaderClick: (() -> Unit)? = null,
     onTapForQuickAdd: (() -> Unit)?,
     onComplete: (TodoItem) -> Unit,
     onDelete: (TodoItem) -> Unit,
@@ -1051,7 +1066,13 @@ private fun TimelineSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .then(
-                    if (onTapForQuickAdd != null) {
+                    if (onHeaderClick != null) {
+                        Modifier.clickable(
+                            interactionSource = headerInteractionSource,
+                            indication = null,
+                            onClick = onHeaderClick,
+                        )
+                    } else if (onTapForQuickAdd != null) {
                         Modifier.clickable(
                             interactionSource = headerInteractionSource,
                             indication = null,
@@ -1077,6 +1098,19 @@ private fun TimelineSection(
                 },
                 fontWeight = FontWeight.SemiBold,
             )
+            if (onHeaderClick != null) {
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    imageVector = if (isCollapsed) Icons.Rounded.ExpandMore else Icons.Rounded.ExpandLess,
+                    contentDescription = if (isCollapsed) "Expand section" else "Collapse section",
+                    tint = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.72f else 1f),
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        }
+
+        if (isCollapsed) {
+            return@Column
         }
 
         if (section.items.isEmpty()) {
