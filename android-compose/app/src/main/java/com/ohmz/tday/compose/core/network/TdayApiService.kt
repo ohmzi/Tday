@@ -8,6 +8,7 @@ import com.ohmz.tday.compose.core.model.CreateListResponse
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.CreateTodoResponse
 import com.ohmz.tday.compose.core.model.CsrfResponse
+import com.ohmz.tday.compose.core.model.DeleteCompletedTodoRequest
 import com.ohmz.tday.compose.core.model.DeleteListRequest
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.MessageResponse
@@ -24,6 +25,7 @@ import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.TodosResponse
+import com.ohmz.tday.compose.core.model.UpdateCompletedTodoRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.model.UpdateProfileRequest
@@ -137,6 +139,16 @@ interface TdayApiService {
 
     @GET("/api/completedTodo")
     suspend fun getCompletedTodos(): Response<CompletedTodosResponse>
+
+    @PATCH("/api/completedTodo")
+    suspend fun patchCompletedTodoByBody(
+        @Body payload: UpdateCompletedTodoRequest,
+    ): Response<MessageResponse>
+
+    @HTTP(method = "DELETE", path = "/api/completedTodo", hasBody = true)
+    suspend fun deleteCompletedTodoByBody(
+        @Body payload: DeleteCompletedTodoRequest,
+    ): Response<MessageResponse>
 
     @GET("/api/note")
     suspend fun getNotes(): Response<NotesResponse>
