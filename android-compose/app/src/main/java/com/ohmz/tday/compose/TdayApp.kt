@@ -1,18 +1,35 @@
 package com.ohmz.tday.compose
 
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +67,14 @@ fun TdayApp() {
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    var activeToast by remember { mutableStateOf<AppToastMessage?>(null) }
+
+    fun showTaskDeletedToast() {
+        activeToast = AppToastMessage(
+            id = System.currentTimeMillis(),
+            message = "Task deleted",
+        )
+    }
 
     LaunchedEffect(
         appUiState.loading,
@@ -92,231 +117,247 @@ fun TdayApp() {
     }
 
     TdayTheme(themeMode = appUiState.themeMode) {
-        NavHost(
-            navController = navController,
-            startDestination = AppRoute.Splash.route,
-        ) {
-            composable(AppRoute.Splash.route) {
-                SplashScreen()
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = AppRoute.Splash.route,
+            ) {
+                composable(AppRoute.Splash.route) {
+                    SplashScreen()
+                }
 
-            composable(AppRoute.ServerSetup.route) {
-                SplashScreen()
-            }
+                composable(AppRoute.ServerSetup.route) {
+                    SplashScreen()
+                }
 
-            composable(AppRoute.Login.route) {
-                SplashScreen()
-            }
+                composable(AppRoute.Login.route) {
+                    SplashScreen()
+                }
 
-            composable(AppRoute.Home.route) {
-                val authViewModel: AuthViewModel = hiltViewModel()
-                val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-                val showOnboardingWizard = !appUiState.authenticated
+                composable(AppRoute.Home.route) {
+                    val authViewModel: AuthViewModel = hiltViewModel()
+                    val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+                    val showOnboardingWizard = !appUiState.authenticated
 
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .then(
-                                if (showOnboardingWizard) {
-                                    Modifier.blur(14.dp)
-                                } else {
-                                    Modifier
-                                },
-                            ),
-                    ) {
-                        if (appUiState.authenticated) {
-                            val homeViewModel: HomeViewModel = hiltViewModel()
-                            val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
-                            LaunchedEffect(Unit) {
-                                // Keep Home in sync with locally cached mutations (rename/create/delete)
-                                // when returning from other screens without forcing a network refresh.
-                                homeViewModel.refreshFromCache()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (showOnboardingWizard) {
+                                        Modifier.blur(14.dp)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                        ) {
+                            if (appUiState.authenticated) {
+                                val homeViewModel: HomeViewModel = hiltViewModel()
+                                val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                                LaunchedEffect(Unit) {
+                                    // Keep Home in sync with locally cached mutations (rename/create/delete)
+                                    // when returning from other screens without forcing a network refresh.
+                                    homeViewModel.refreshFromCache()
+                                }
+                                HomeScreen(
+                                    uiState = homeUiState,
+                                    onRefresh = homeViewModel::refresh,
+                                    onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
+                                    onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
+                                    onOpenAll = { navController.navigate(AppRoute.AllTodos.route) },
+                                    onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
+                                    onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
+                                    onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
+                                    onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
+                                    onOpenList = { id, name ->
+                                        navController.navigate(AppRoute.ListTodos.create(id, name))
+                                    },
+                                    onCreateTask = { payload ->
+                                        homeViewModel.createTask(payload)
+                                    },
+                                    onCreateList = { name, color, iconKey ->
+                                        homeViewModel.createList(
+                                            name = name,
+                                            color = color,
+                                            iconKey = iconKey,
+                                        )
+                                    },
+                                )
+                            } else {
+                                HomeScreen(
+                                    uiState = UnauthenticatedHomeUiState,
+                                    onRefresh = {},
+                                    onOpenToday = {},
+                                    onOpenScheduled = {},
+                                    onOpenAll = {},
+                                    onOpenPriority = {},
+                                    onOpenCompleted = {},
+                                    onOpenCalendar = {},
+                                    onOpenSettings = {},
+                                    onOpenList = { _, _ -> },
+                                    onCreateTask = { _ -> },
+                                    onCreateList = { _, _, _ -> },
+                                )
                             }
-                            HomeScreen(
-                                uiState = homeUiState,
-                                onRefresh = homeViewModel::refresh,
-                                onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
-                                onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
-                                onOpenAll = { navController.navigate(AppRoute.AllTodos.route) },
-                                onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
-                                onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
-                                onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
-                                onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
-                                onOpenList = { id, name ->
-                                    navController.navigate(AppRoute.ListTodos.create(id, name))
-                                },
-                                onCreateTask = { payload ->
-                                    homeViewModel.createTask(payload)
-                                },
-                                onCreateList = { name, color, iconKey ->
-                                    homeViewModel.createList(
-                                        name = name,
-                                        color = color,
-                                        iconKey = iconKey,
+                        }
+
+                        if (showOnboardingWizard) {
+                            OnboardingWizardOverlay(
+                                initialServerUrl = appUiState.serverUrl,
+                                serverErrorMessage = appUiState.error,
+                                serverCanResetTrust = appUiState.canResetServerTrust,
+                                pendingApprovalMessage = appUiState.pendingApprovalMessage,
+                                authUiState = authUiState,
+                                onConnectServer = { rawUrl, onResult ->
+                                    appViewModel.saveServerUrl(
+                                        rawUrl = rawUrl,
+                                        onSuccess = { onResult(Result.success(Unit)) },
+                                        onFailure = { message ->
+                                            onResult(Result.failure(IllegalStateException(message)))
+                                        },
                                     )
                                 },
-                            )
-                        } else {
-                            HomeScreen(
-                                uiState = UnauthenticatedHomeUiState,
-                                onRefresh = {},
-                                onOpenToday = {},
-                                onOpenScheduled = {},
-                                onOpenAll = {},
-                                onOpenPriority = {},
-                                onOpenCompleted = {},
-                                onOpenCalendar = {},
-                                onOpenSettings = {},
-                                onOpenList = { _, _ -> },
-                                onCreateTask = { _ -> },
-                                onCreateList = { _, _, _ -> },
+                                onResetServerTrust = { rawUrl, onResult ->
+                                    appViewModel.resetTrustedServer(
+                                        rawUrl = rawUrl,
+                                        onSuccess = { onResult(Result.success(Unit)) },
+                                        onFailure = { message ->
+                                            onResult(Result.failure(IllegalStateException(message)))
+                                        },
+                                    )
+                                },
+                                onLogin = { email, password ->
+                                    authViewModel.login(email, password) {
+                                        appViewModel.refreshSession()
+                                    }
+                                },
+                                onRegister = { firstName, email, password, onSuccess ->
+                                    authViewModel.register(
+                                        firstName = firstName,
+                                        lastName = "",
+                                        email = email,
+                                        password = password,
+                                    ) {
+                                        onSuccess()
+                                        appViewModel.refreshSession()
+                                    }
+                                },
+                                onClearAuthStatus = {
+                                    authViewModel.clearStatus()
+                                    appViewModel.clearPendingApprovalNotice()
+                                },
                             )
                         }
                     }
+                }
 
-                    if (showOnboardingWizard) {
-                        OnboardingWizardOverlay(
-                            initialServerUrl = appUiState.serverUrl,
-                            serverErrorMessage = appUiState.error,
-                            serverCanResetTrust = appUiState.canResetServerTrust,
-                            pendingApprovalMessage = appUiState.pendingApprovalMessage,
-                            authUiState = authUiState,
-                            onConnectServer = { rawUrl, onResult ->
-                                appViewModel.saveServerUrl(
-                                    rawUrl = rawUrl,
-                                    onSuccess = { onResult(Result.success(Unit)) },
-                                    onFailure = { message ->
-                                        onResult(Result.failure(IllegalStateException(message)))
-                                    },
-                                )
-                            },
-                            onResetServerTrust = { rawUrl, onResult ->
-                                appViewModel.resetTrustedServer(
-                                    rawUrl = rawUrl,
-                                    onSuccess = { onResult(Result.success(Unit)) },
-                                    onFailure = { message ->
-                                        onResult(Result.failure(IllegalStateException(message)))
-                                    },
-                                )
-                            },
-                            onLogin = { email, password ->
-                                authViewModel.login(email, password) {
-                                    appViewModel.refreshSession()
-                                }
-                            },
-                            onRegister = { firstName, email, password, onSuccess ->
-                                authViewModel.register(
-                                    firstName = firstName,
-                                    lastName = "",
-                                    email = email,
-                                    password = password,
-                                ) {
-                                    onSuccess()
-                                    appViewModel.refreshSession()
-                                }
-                            },
-                            onClearAuthStatus = {
-                                authViewModel.clearStatus()
-                                appViewModel.clearPendingApprovalNotice()
-                            },
-                        )
-                    }
+                composable(AppRoute.TodayTodos.route) {
+                    TodosRoute(
+                        mode = TodoListMode.TODAY,
+                        onBack = { navController.popBackStack() },
+                        onTaskDeleted = ::showTaskDeletedToast,
+                    )
+                }
+
+                composable(AppRoute.ScheduledTodos.route) {
+                    TodosRoute(
+                        mode = TodoListMode.SCHEDULED,
+                        onBack = { navController.popBackStack() },
+                        onTaskDeleted = ::showTaskDeletedToast,
+                    )
+                }
+
+                composable(AppRoute.AllTodos.route) {
+                    TodosRoute(
+                        mode = TodoListMode.ALL,
+                        onBack = { navController.popBackStack() },
+                        onTaskDeleted = ::showTaskDeletedToast,
+                    )
+                }
+
+                composable(AppRoute.PriorityTodos.route) {
+                    TodosRoute(
+                        mode = TodoListMode.PRIORITY,
+                        onBack = { navController.popBackStack() },
+                        onTaskDeleted = ::showTaskDeletedToast,
+                    )
+                }
+
+                composable(
+                    route = AppRoute.ListTodos.route,
+                    arguments = listOf(
+                        navArgument("listId") { type = NavType.StringType },
+                        navArgument("listName") { type = NavType.StringType },
+                    ),
+                ) { entry ->
+                    val listId = entry.arguments?.getString("listId").orEmpty()
+                    val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
+                    TodosRoute(
+                        mode = TodoListMode.LIST,
+                        listId = listId,
+                        listName = listName,
+                        onBack = { navController.popBackStack() },
+                        onTaskDeleted = ::showTaskDeletedToast,
+                    )
+                }
+
+                composable(AppRoute.Completed.route) {
+                    val viewModel: CompletedViewModel = hiltViewModel()
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                    LaunchedEffect(Unit) { viewModel.load() }
+                    CompletedScreen(
+                        uiState = uiState,
+                        onBack = { navController.popBackStack() },
+                        onRefresh = viewModel::refresh,
+                        onUncomplete = viewModel::uncomplete,
+                        onDelete = { item ->
+                            viewModel.delete(item) {
+                                showTaskDeletedToast()
+                            }
+                        },
+                        onUpdateTask = viewModel::update,
+                    )
+                }
+
+                composable(AppRoute.Notes.route) {
+                    val viewModel: NotesViewModel = hiltViewModel()
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                    LaunchedEffect(Unit) { viewModel.load() }
+                    NotesScreen(
+                        uiState = uiState,
+                        onBack = { navController.popBackStack() },
+                        onRefresh = viewModel::refresh,
+                        onCreate = viewModel::create,
+                        onDelete = viewModel::delete,
+                    )
+                }
+
+                composable(AppRoute.Calendar.route) {
+                    val viewModel: CalendarViewModel = hiltViewModel()
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                    LaunchedEffect(Unit) { viewModel.load() }
+                    CalendarScreen(
+                        uiState = uiState,
+                        onBack = { navController.popBackStack() },
+                        onRefresh = viewModel::refresh,
+                    )
+                }
+
+                composable(AppRoute.Settings.route) {
+                    SettingsScreen(
+                        user = appUiState.user,
+                        selectedThemeMode = appUiState.themeMode,
+                        onThemeModeSelected = appViewModel::setThemeMode,
+                        onBack = { navController.popBackStack() },
+                        onLogout = { appViewModel.logout() },
+                    )
                 }
             }
 
-            composable(AppRoute.TodayTodos.route) {
-                TodosRoute(
-                    mode = TodoListMode.TODAY,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-
-            composable(AppRoute.ScheduledTodos.route) {
-                TodosRoute(
-                    mode = TodoListMode.SCHEDULED,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-
-            composable(AppRoute.AllTodos.route) {
-                TodosRoute(
-                    mode = TodoListMode.ALL,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-
-            composable(AppRoute.PriorityTodos.route) {
-                TodosRoute(
-                    mode = TodoListMode.PRIORITY,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-
-            composable(
-                route = AppRoute.ListTodos.route,
-                arguments = listOf(
-                    navArgument("listId") { type = NavType.StringType },
-                    navArgument("listName") { type = NavType.StringType },
-                ),
-            ) { entry ->
-                val listId = entry.arguments?.getString("listId").orEmpty()
-                val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
-                TodosRoute(
-                    mode = TodoListMode.LIST,
-                    listId = listId,
-                    listName = listName,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-
-            composable(AppRoute.Completed.route) {
-                val viewModel: CompletedViewModel = hiltViewModel()
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                LaunchedEffect(Unit) { viewModel.load() }
-                CompletedScreen(
-                    uiState = uiState,
-                    onBack = { navController.popBackStack() },
-                    onRefresh = viewModel::refresh,
-                    onUncomplete = viewModel::uncomplete,
-                    onDelete = viewModel::delete,
-                    onUpdateTask = viewModel::update,
-                )
-            }
-
-            composable(AppRoute.Notes.route) {
-                val viewModel: NotesViewModel = hiltViewModel()
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                LaunchedEffect(Unit) { viewModel.load() }
-                NotesScreen(
-                    uiState = uiState,
-                    onBack = { navController.popBackStack() },
-                    onRefresh = viewModel::refresh,
-                    onCreate = viewModel::create,
-                    onDelete = viewModel::delete,
-                )
-            }
-
-            composable(AppRoute.Calendar.route) {
-                val viewModel: CalendarViewModel = hiltViewModel()
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                LaunchedEffect(Unit) { viewModel.load() }
-                CalendarScreen(
-                    uiState = uiState,
-                    onBack = { navController.popBackStack() },
-                    onRefresh = viewModel::refresh,
-                )
-            }
-
-            composable(AppRoute.Settings.route) {
-                SettingsScreen(
-                    user = appUiState.user,
-                    selectedThemeMode = appUiState.themeMode,
-                    onThemeModeSelected = appViewModel::setThemeMode,
-                    onBack = { navController.popBackStack() },
-                    onLogout = { appViewModel.logout() },
-                )
-            }
+            TdayBottomToastHost(
+                toast = activeToast,
+                onDismiss = { activeToast = null },
+            )
         }
     }
 }
@@ -325,6 +366,7 @@ fun TdayApp() {
 private fun TodosRoute(
     mode: TodoListMode,
     onBack: () -> Unit,
+    onTaskDeleted: () -> Unit,
     listId: String? = null,
     listName: String? = null,
 ) {
@@ -342,7 +384,11 @@ private fun TodosRoute(
         onAddTask = viewModel::addTask,
         onUpdateTask = viewModel::updateTask,
         onComplete = viewModel::toggleComplete,
-        onDelete = viewModel::delete,
+        onDelete = { todo ->
+            viewModel.delete(todo) {
+                onTaskDeleted()
+            }
+        },
         onUpdateListSettings = { targetListId, name, color, iconKey ->
             viewModel.updateListSettings(
                 listId = targetListId,
@@ -352,6 +398,74 @@ private fun TodosRoute(
             )
         },
     )
+}
+
+private data class AppToastMessage(
+    val id: Long,
+    val message: String,
+)
+
+@Composable
+private fun TdayBottomToastHost(
+    toast: AppToastMessage?,
+    onDismiss: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = colorScheme.background.luminance() < 0.5f
+    val accent = Color(0xFFDDB37D)
+    val toastColor = if (isDark) {
+        lerp(colorScheme.surfaceVariant, accent, 0.22f)
+    } else {
+        lerp(colorScheme.surfaceVariant, accent, 0.30f)
+    }
+
+    LaunchedEffect(toast?.id) {
+        if (toast == null) return@LaunchedEffect
+        kotlinx.coroutines.delay(2200)
+        onDismiss()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+            .padding(bottom = 20.dp),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        AnimatedVisibility(
+            visible = toast != null,
+            enter = fadeIn(animationSpec = tween(durationMillis = 180)) +
+                slideInVertically(
+                    animationSpec = tween(durationMillis = 220),
+                    initialOffsetY = { it / 2 },
+                ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 160)) +
+                slideOutVertically(
+                    animationSpec = tween(durationMillis = 200),
+                    targetOffsetY = { it / 2 },
+                ),
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = toastColor),
+                border = androidx.compose.foundation.BorderStroke(
+                    width = 1.dp,
+                    color = accent.copy(alpha = if (isDark) 0.36f else 0.42f),
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 8.dp else 5.dp),
+            ) {
+                Text(
+                    text = toast?.message.orEmpty(),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    color = colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+        }
+    }
 }
 
 @Composable

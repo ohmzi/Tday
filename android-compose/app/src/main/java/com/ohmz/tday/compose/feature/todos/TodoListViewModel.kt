@@ -297,7 +297,10 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
-    fun delete(todo: TodoItem) {
+    fun delete(
+        todo: TodoItem,
+        onDeleted: (() -> Unit)? = null,
+    ) {
         val previousItems = _uiState.value.items
         val mode = _uiState.value.mode
         val listId = _uiState.value.listId
@@ -311,6 +314,7 @@ class TodoListViewModel @Inject constructor(
             runCatching {
                 repository.deleteTodo(todo)
             }.onSuccess {
+                onDeleted?.invoke()
                 runCatching {
                     val todos = repository.fetchTodosCached(mode = mode, listId = listId)
                     val lists = repository.fetchLists()
