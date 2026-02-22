@@ -64,10 +64,15 @@ data class CompletedItem(
     val id: String,
     val originalTodoId: String?,
     val title: String,
+    val description: String? = null,
     val priority: String,
+    val dtstart: Instant,
     val due: Instant,
+    val completedAt: Instant? = null,
     val rrule: String?,
     val instanceDate: Instant?,
+    val listName: String? = null,
+    val listColor: String? = null,
 )
 
 data class NoteItem(
