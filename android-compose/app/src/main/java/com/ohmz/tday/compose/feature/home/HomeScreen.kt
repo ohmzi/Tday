@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -93,6 +94,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -102,14 +104,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import kotlinx.coroutines.delay
 import java.time.LocalTime
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -123,6 +129,7 @@ fun HomeScreen(
     onOpenCompleted: () -> Unit,
     onOpenCalendar: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenTaskFromSearch: (todoId: String) -> Unit,
     onOpenList: (listId: String, listName: String) -> Unit,
     onCreateTask: (payload: CreateTaskPayload) -> Unit,
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
@@ -139,9 +146,11 @@ fun HomeScreen(
         label = "fabOffsetY",
     )
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     val imeVisible = WindowInsets.isImeVisible
     var searchImeWasVisible by rememberSaveable { mutableStateOf(false) }
     var searchBarBounds by remember { mutableStateOf<Rect?>(null) }
+    var searchResultsBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
     var listName by rememberSaveable { mutableStateOf("") }
@@ -155,7 +164,9 @@ fun HomeScreen(
     var animateListCascade by rememberSaveable { mutableStateOf(false) }
     val closeSearch = {
         searchExpanded = false
+        searchQuery = ""
         searchBarBounds = null
+        searchResultsBounds = null
         rootInRoot = Offset.Zero
         searchImeWasVisible = false
     }
@@ -189,6 +200,31 @@ fun HomeScreen(
             }
         }
     }
+    val listById = remember(uiState.summary.lists) { uiState.summary.lists.associateBy { it.id } }
+    val normalizedSearchQuery = remember(searchQuery) { searchQuery.trim().lowercase(Locale.getDefault()) }
+    val dueFormatter = remember {
+        java.time.format.DateTimeFormatter.ofPattern("EEE h:mm a")
+            .withZone(java.time.ZoneId.systemDefault())
+    }
+    val searchResults = remember(normalizedSearchQuery, uiState.searchableTodos, listById) {
+        if (normalizedSearchQuery.isBlank()) {
+            emptyList()
+        } else {
+            uiState.searchableTodos
+                .asSequence()
+                .filter { todo ->
+                    todo.title.lowercase(Locale.getDefault()).contains(normalizedSearchQuery) ||
+                        (todo.description?.lowercase(Locale.getDefault())?.contains(normalizedSearchQuery) == true) ||
+                        (todo.listId?.let { listById[it]?.name }?.lowercase(Locale.getDefault())
+                            ?.contains(normalizedSearchQuery) == true)
+                }
+                .sortedBy { it.due }
+                .take(20)
+                .toList()
+        }
+    }
+    val showSearchResultsOverlay = searchExpanded && searchQuery.isNotBlank()
+    val density = LocalDensity.current
     val listState = rememberLazyListState()
     LaunchedEffect(listState.isScrollInProgress, searchExpanded) {
         if (searchExpanded || listState.isScrollInProgress) return@LaunchedEffect
@@ -251,6 +287,11 @@ fun HomeScreen(
         visibleListStage = targetFinalStage
         animateListCascade = false
     }
+    LaunchedEffect(showSearchResultsOverlay) {
+        if (!showSearchResultsOverlay) {
+            searchResultsBounds = null
+        }
+    }
 
     Scaffold(
         containerColor = colorScheme.background,
@@ -289,13 +330,14 @@ fun HomeScreen(
                                             rootInRoot = topLeft
                                         }
                                     }
-                                    .pointerInput(searchBarBounds, rootInRoot) {
+                                    .pointerInput(searchBarBounds, searchResultsBounds, rootInRoot) {
                                         awaitEachGesture {
                                             val down = awaitFirstDown(pass = PointerEventPass.Final)
                                             val tapInRoot = down.position + rootInRoot
                                             val tappedSearchBar = searchBarBounds?.contains(tapInRoot) == true
+                                            val tappedSearchResults = searchResultsBounds?.contains(tapInRoot) == true
                                             val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
-                                            if (up != null && !tappedSearchBar) {
+                                            if (up != null && !tappedSearchBar && !tappedSearchResults) {
                                                 closeSearch()
                                             }
                                         }
@@ -314,7 +356,10 @@ fun HomeScreen(
                     item {
                         TopSearchBar(
                             searchExpanded = searchExpanded,
+                            searchQuery = searchQuery,
+                            onSearchQueryChange = { searchQuery = it },
                             onSearchExpandedChange = { searchExpanded = it },
+                            onSearchClose = closeSearch,
                             onSearchBarBoundsChanged = { bounds ->
                                 if (searchExpanded && searchBarBounds != bounds) {
                                     searchBarBounds = bounds
@@ -433,6 +478,94 @@ fun HomeScreen(
                     }
 
                     item { Spacer(Modifier.height(80.dp)) }
+                    }
+
+                    if (showSearchResultsOverlay && searchBarBounds != null) {
+                        val searchBarRect = searchBarBounds!!
+                        val overlayLeft = with(density) { (searchBarRect.left - rootInRoot.x).toDp() }
+                        val overlayTop = with(density) { (searchBarRect.bottom - rootInRoot.y).toDp() } + 8.dp
+                        val overlayWidth = with(density) { searchBarRect.width.toDp() }
+                        Card(
+                            modifier = Modifier
+                                .offset(x = overlayLeft, y = overlayTop)
+                                .width(overlayWidth)
+                                .zIndex(6f)
+                                .onGloballyPositioned { coordinates ->
+                                    searchResultsBounds = coordinates.boundsInRoot()
+                                },
+                            shape = RoundedCornerShape(22.dp),
+                            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.2f)),
+                            colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                        ) {
+                            if (searchResults.isEmpty()) {
+                                Text(
+                                    text = "No matching tasks",
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colorScheme.onSurfaceVariant,
+                                )
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 320.dp),
+                                    contentPadding = PaddingValues(vertical = 4.dp),
+                                ) {
+                                    itemsIndexed(
+                                        items = searchResults,
+                                        key = { _, todo -> todo.id },
+                                    ) { index, todo ->
+                                        val listMeta = todo.listId?.let { listById[it] }
+                                        val listTint = listColorAccent(listMeta?.color)
+                                        val listIcon = listIconForKey(listMeta?.iconKey)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    closeSearch()
+                                                    onOpenTaskFromSearch(todo.id)
+                                                }
+                                                .padding(horizontal = 12.dp, vertical = 9.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Icon(
+                                                imageVector = listIcon,
+                                                contentDescription = null,
+                                                tint = listTint.copy(alpha = 0.92f),
+                                                modifier = Modifier.size(17.dp),
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = todo.title,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    color = colorScheme.onSurface,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                )
+                                                Text(
+                                                    text = dueFormatter.format(todo.due),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = colorScheme.onSurfaceVariant,
+                                                    maxLines = 1,
+                                                )
+                                            }
+                                        }
+                                        if (index < searchResults.lastIndex) {
+                                            Spacer(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(1.dp)
+                                                    .padding(horizontal = 12.dp)
+                                                    .background(colorScheme.outlineVariant.copy(alpha = 0.45f)),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -859,7 +992,10 @@ private fun CreateTaskButton(
 @Composable
 private fun TopSearchBar(
     searchExpanded: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     onSearchExpandedChange: (Boolean) -> Unit,
+    onSearchClose: () -> Unit,
     onSearchBarBoundsChanged: (Rect) -> Unit,
     onCreateList: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -871,8 +1007,6 @@ private fun TopSearchBar(
     val isDaytime = rememberIsDaytime()
     val homeTitleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
     val homeTitleIconTint = if (isDaytime) Color(0xFFF4C542) else Color(0xFFA8B8E8)
-
-    var searchQuery by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
@@ -918,7 +1052,7 @@ private fun TopSearchBar(
             }
         }
 
-        Row(
+        Column(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .then(
@@ -930,89 +1064,93 @@ private fun TopSearchBar(
                         Modifier
                     }
                 ),
-            horizontalArrangement = Arrangement.spacedBy(buttonGap),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Card(
-                modifier = Modifier
-                    .width(animatedSearchWidth)
-                    .height(buttonSize),
-                onClick = {
-                    if (!searchExpanded) {
-                        onSearchExpandedChange(true)
-                    }
-                },
-                shape = RoundedCornerShape(28.dp),
-                border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.26f)),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(buttonGap),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
+                Card(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        .width(animatedSearchWidth)
+                        .height(buttonSize),
+                    onClick = {
+                        if (!searchExpanded) {
+                            onSearchExpandedChange(true)
+                        }
+                    },
+                    shape = RoundedCornerShape(28.dp),
+                    border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.26f)),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                 ) {
-                    PressableIconButton(
-                        icon = Icons.Rounded.Search,
-                        contentDescription = if (searchExpanded) "Close search" else "Search",
-                        tint = colorScheme.onSurface,
-                        compact = true,
-                        onClick = {
-                            if (searchExpanded) {
-                                onSearchExpandedChange(false)
-                            } else {
-                                onSearchExpandedChange(true)
-                            }
-                        },
-                    )
-
-                    if (searchExpanded) {
-                        BasicTextField(
-                            modifier = Modifier
-                                .weight(1f)
-                                .focusRequester(focusRequester),
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = colorScheme.onSurface,
-                                fontWeight = FontWeight.Medium,
-                            ),
-                            cursorBrush = SolidColor(colorScheme.primary),
-                            decorationBox = { innerTextField ->
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.CenterStart,
-                                ) {
-                                    if (searchQuery.isBlank()) {
-                                        Text(
-                                            text = "Search",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    innerTextField()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        PressableIconButton(
+                            icon = Icons.Rounded.Search,
+                            contentDescription = if (searchExpanded) "Close search" else "Search",
+                            tint = colorScheme.onSurface,
+                            compact = true,
+                            onClick = {
+                                if (searchExpanded) {
+                                    onSearchClose()
+                                } else {
+                                    onSearchExpandedChange(true)
                                 }
                             },
                         )
+
+                        if (searchExpanded) {
+                            BasicTextField(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester),
+                                value = searchQuery,
+                                onValueChange = onSearchQueryChange,
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                    color = colorScheme.onSurface,
+                                    fontWeight = FontWeight.Medium,
+                                ),
+                                cursorBrush = SolidColor(colorScheme.primary),
+                                decorationBox = { innerTextField ->
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.CenterStart,
+                                    ) {
+                                        if (searchQuery.isBlank()) {
+                                            Text(
+                                                text = "Search",
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
-            }
 
-            PressableIconButton(
-                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                contentDescription = "Create list",
-                tint = colorScheme.onSurface,
-                onClick = onCreateList,
-            )
-            PressableIconButton(
-                icon = Icons.Rounded.MoreHoriz,
-                contentDescription = "More",
-                tint = colorScheme.onSurface,
-                onClick = onOpenSettings,
-            )
+                PressableIconButton(
+                    icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                    contentDescription = "Create list",
+                    tint = colorScheme.onSurface,
+                    onClick = onCreateList,
+                )
+                PressableIconButton(
+                    icon = Icons.Rounded.MoreHoriz,
+                    contentDescription = "More",
+                    tint = colorScheme.onSurface,
+                    onClick = onOpenSettings,
+                )
+            }
         }
     }
 }

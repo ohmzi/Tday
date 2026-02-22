@@ -1,5 +1,7 @@
 package com.ohmz.tday.compose.feature.todos
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -60,6 +62,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +73,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -118,6 +122,7 @@ fun TodoListScreen(
     uiState: TodoListUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
+    highlightedTodoId: String? = null,
     onAddTask: (payload: CreateTaskPayload) -> Unit,
     onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
@@ -217,6 +222,7 @@ fun TodoListScreen(
     var allCollapsedSectionKeys by rememberSaveable(uiState.mode) {
         mutableStateOf(setOf("earlier"))
     }
+    var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -240,6 +246,25 @@ fun TodoListScreen(
         targetValue = if (fabPressed) 2.dp else 0.dp,
         label = "todoFabOffsetY",
     )
+    LaunchedEffect(highlightedTodoId, uiState.mode, timelineSections) {
+        if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
+        if (allCollapsedSectionKeys.isNotEmpty()) {
+            allCollapsedSectionKeys = emptySet()
+        }
+        val targetSectionIndex = timelineSections.indexOfFirst { section ->
+            section.items.any { item ->
+                item.id == highlightedTodoId || item.canonicalId == highlightedTodoId
+            }
+        }
+        if (targetSectionIndex >= 0) {
+            listState.animateScrollToItem(targetSectionIndex)
+            flashTodoId = highlightedTodoId
+            delay(2300)
+            if (flashTodoId == highlightedTodoId) {
+                flashTodoId = null
+            }
+        }
+    }
 
     Scaffold(
         containerColor = colorScheme.background,
@@ -361,6 +386,7 @@ fun TodoListScreen(
                         mode = uiState.mode,
                         lists = uiState.lists,
                         useMinimalStyle = usesTodayStyle,
+                        highlightTodoId = flashTodoId,
                         isCollapsed = isCollapsed,
                         showTopDivider = isAllMode && section.title == "Today",
                         onHeaderClick = if (isAllMode) {
@@ -1057,6 +1083,7 @@ private fun TimelineSection(
     mode: TodoListMode,
     lists: List<ListSummary>,
     useMinimalStyle: Boolean,
+    highlightTodoId: String? = null,
     isCollapsed: Boolean = false,
     showTopDivider: Boolean = false,
     onHeaderClick: (() -> Unit)? = null,
@@ -1152,6 +1179,7 @@ private fun TimelineSection(
                     AllTaskSwipeRow(
                         todo = todo,
                         lists = lists,
+                        flashHighlight = highlightTodoId == todo.id || highlightTodoId == todo.canonicalId,
                         onComplete = { onComplete(todo) },
                         onDelete = { onDelete(todo) },
                         onInfo = { onInfo(todo) },
@@ -1170,6 +1198,7 @@ private fun TimelineSection(
                         todo = todo,
                         mode = mode,
                         lists = lists,
+                        flashHighlight = highlightTodoId == todo.id || highlightTodoId == todo.canonicalId,
                         onComplete = { onComplete(todo) },
                         onDelete = { onDelete(todo) },
                         onInfo = { onInfo(todo) },
@@ -1466,6 +1495,7 @@ private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
 private fun AllTaskSwipeRow(
     todo: TodoItem,
     lists: List<ListSummary>,
+    flashHighlight: Boolean,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -1479,6 +1509,7 @@ private fun AllTaskSwipeRow(
         keepCompletedInline = false,
         mode = TodoListMode.ALL,
         lists = lists,
+        flashHighlight = flashHighlight,
         showDueText = true,
         showDuePrefix = showDuePrefix,
         useDelayedFadeCompletion = false,
@@ -1531,6 +1562,7 @@ private fun TodayTaskSwipeRow(
     todo: TodoItem,
     mode: TodoListMode,
     lists: List<ListSummary>,
+    flashHighlight: Boolean = false,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -1544,6 +1576,7 @@ private fun TodayTaskSwipeRow(
         keepCompletedInline = false,
         mode = mode,
         lists = lists,
+        flashHighlight = flashHighlight,
         showDueText = true,
         showDuePrefix = showDuePrefix,
         useDelayedFadeCompletion = mode != TodoListMode.TODAY,
@@ -1559,6 +1592,7 @@ private fun SwipeTaskRow(
     keepCompletedInline: Boolean,
     mode: TodoListMode = TodoListMode.ALL,
     lists: List<ListSummary> = emptyList(),
+    flashHighlight: Boolean = false,
     showDueText: Boolean,
     showDuePrefix: Boolean,
     useDelayedFadeCompletion: Boolean = false,
@@ -1574,6 +1608,7 @@ private fun SwipeTaskRow(
     var localCompleted by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
+    val highlightAnim = remember(todo.id) { Animatable(0f) }
     val visuallyCompleted = localCompleted || (keepCompletedInline && todo.completed)
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
@@ -1592,6 +1627,26 @@ private fun SwipeTaskRow(
     val actionContainerColor =
         colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
     val foregroundColor = colorScheme.background
+    val highlightStrength = highlightAnim.value.coerceIn(0f, 1f)
+    val contentGlowBrush = Brush.horizontalGradient(
+        colors = listOf(
+            colorScheme.primary.copy(
+                alpha = if (colorScheme.background.luminance() < 0.5f) {
+                    0.50f * highlightStrength
+                } else {
+                    0.40f * highlightStrength
+                },
+            ),
+            colorScheme.primary.copy(
+                alpha = if (colorScheme.background.luminance() < 0.5f) {
+                    0.30f * highlightStrength
+                } else {
+                    0.20f * highlightStrength
+                },
+            ),
+            Color.Transparent,
+        ),
+    )
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = when (mode) {
         TodoListMode.TODAY,
@@ -1612,6 +1667,25 @@ private fun SwipeTaskRow(
             -> isHighPriority(todo.priority)
     }
     val listIndicatorColor = listAccentColor(listMeta?.color)
+    LaunchedEffect(flashHighlight) {
+        if (!flashHighlight) return@LaunchedEffect
+        targetOffsetX = 0f
+        highlightAnim.stop()
+        highlightAnim.snapTo(0f)
+        repeat(2) { pulseIndex ->
+            highlightAnim.animateTo(
+                targetValue = 0.46f,
+                animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+            )
+            highlightAnim.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 620, easing = FastOutSlowInEasing),
+            )
+            if (pulseIndex < 1) {
+                delay(150)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -1688,9 +1762,9 @@ private fun SwipeTaskRow(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                        ) {
-                            if (targetOffsetX != 0f) targetOffsetX = 0f
-                        },
+                    ) {
+                        if (targetOffsetX != 0f) targetOffsetX = 0f
+                    },
                     shape = rowShape,
                     colors = CardDefaults.cardColors(containerColor = foregroundColor),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -1701,74 +1775,86 @@ private fun SwipeTaskRow(
                             .padding(horizontal = 4.dp, vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CircularCheckToggleIcon(
-                            imageVector = if (!visuallyCompleted) {
-                                Icons.Rounded.RadioButtonUnchecked
-                            } else {
-                                Icons.Rounded.CheckCircle
-                            },
-                            contentDescription = if (visuallyCompleted) "Completed" else "Mark complete",
-                            tint = if (!visuallyCompleted) {
-                                colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                            } else {
-                                TASK_CHECKMARK_GREEN
-                            },
-                            enabled = !visuallyCompleted && !pendingCompletion,
-                            onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
-                                targetOffsetX = 0f
-                                localCompleted = true
-                                pendingCompletion = true
-                                coroutineScope.launch {
-                                    if (useDelayedFadeCompletion) {
-                                        delay(500)
-                                        if (useFadeOnCompletion) {
-                                            completionFading = true
-                                            delay(220)
-                                        }
-                                        onComplete()
-                                    } else {
-                                        delay(if (keepCompletedInline) 120 else 180)
-                                        onComplete()
-                                    }
-                                }
-                            },
-                        )
-
-                        Column(
+                        Row(
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(start = 10.dp),
+                                .fillMaxHeight()
+                                .padding(vertical = 2.dp)
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(foregroundColor, RoundedCornerShape(18.dp))
+                                .background(contentGlowBrush, RoundedCornerShape(18.dp)),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text = todo.title,
-                                color = if (visuallyCompleted) {
-                                    colorScheme.onSurface.copy(alpha = 0.78f)
+                            CircularCheckToggleIcon(
+                                imageVector = if (!visuallyCompleted) {
+                                    Icons.Rounded.RadioButtonUnchecked
                                 } else {
-                                    colorScheme.onSurface
+                                    Icons.Rounded.CheckCircle
                                 },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                textDecoration = if (visuallyCompleted) {
-                                    TextDecoration.LineThrough
+                                contentDescription = if (visuallyCompleted) "Completed" else "Mark complete",
+                                tint = if (!visuallyCompleted) {
+                                    colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                                 } else {
-                                    TextDecoration.None
+                                    TASK_CHECKMARK_GREEN
                                 },
-                                maxLines = 2,
+                                enabled = !visuallyCompleted && !pendingCompletion,
+                                onClick = {
+                                    ViewCompat.performHapticFeedback(
+                                        view,
+                                        HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                    )
+                                    targetOffsetX = 0f
+                                    localCompleted = true
+                                    pendingCompletion = true
+                                    coroutineScope.launch {
+                                        if (useDelayedFadeCompletion) {
+                                            delay(500)
+                                            if (useFadeOnCompletion) {
+                                                completionFading = true
+                                                delay(220)
+                                            }
+                                            onComplete()
+                                        } else {
+                                            delay(if (keepCompletedInline) 120 else 180)
+                                            onComplete()
+                                        }
+                                    }
+                                },
                             )
-                            if (showDueText) {
+
+                            Column(
+                                modifier = Modifier
+                                    .padding(start = 10.dp, end = 8.dp)
+                                    .weight(1f),
+                            ) {
                                 Text(
-                                    text = dueSubtitleText,
-                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    text = todo.title,
+                                    color = if (visuallyCompleted) {
+                                        colorScheme.onSurface.copy(alpha = 0.78f)
+                                    } else {
+                                        colorScheme.onSurface
+                                    },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    textDecoration = if (visuallyCompleted) {
+                                        TextDecoration.LineThrough
+                                    } else {
+                                        TextDecoration.None
+                                    },
+                                    maxLines = 2,
                                 )
+                                if (showDueText) {
+                                    Text(
+                                        text = dueSubtitleText,
+                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
                             }
                         }
                         if (showListIndicator || showPriorityFlag) {
                             Row(
+                                modifier = Modifier.padding(start = 8.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {

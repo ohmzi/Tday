@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -19,6 +20,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +38,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
@@ -71,6 +74,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -116,6 +120,9 @@ fun CalendarScreen(
     val zoneId = remember { ZoneId.systemDefault() }
     val today = remember { LocalDate.now(zoneId) }
     val minNavigableMonth = remember(zoneId) { YearMonth.now(zoneId) }
+    val listState = rememberLazyListState()
+    val density = LocalDensity.current
+    val monthTitleSnapThresholdPx = remember(density) { with(density) { 58.dp.roundToPx() } }
     var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
 
@@ -128,14 +135,24 @@ fun CalendarScreen(
     }
     val selectedDateTasks = tasksByDate[selectedDate].orEmpty()
 
-    val monthLabel = remember(visibleMonth) {
-        visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) +
-            " " + visibleMonth.year
-    }
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     val editTarget = remember(editTargetId, uiState.items) {
         editTargetId?.let { targetId ->
             uiState.items.firstOrNull { it.id == targetId }
+        }
+    }
+    LaunchedEffect(listState.isScrollInProgress, monthTitleSnapThresholdPx) {
+        if (listState.isScrollInProgress) return@LaunchedEffect
+        if (listState.firstVisibleItemIndex != 0) return@LaunchedEffect
+        val offset = listState.firstVisibleItemScrollOffset
+        if (offset in 1 until monthTitleSnapThresholdPx) {
+            listState.animateScrollBy(
+                value = -offset.toFloat(),
+                animationSpec = tween(
+                    durationMillis = 240,
+                    easing = FastOutSlowInEasing,
+                ),
+            )
         }
     }
 
@@ -156,6 +173,7 @@ fun CalendarScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                state = listState,
                 contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
