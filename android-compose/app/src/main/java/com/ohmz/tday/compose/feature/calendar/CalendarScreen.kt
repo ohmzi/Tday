@@ -1,8 +1,17 @@
 package com.ohmz.tday.compose.feature.calendar
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,6 +70,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -94,7 +104,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CalendarScreen(
     uiState: CalendarUiState,
@@ -141,14 +151,15 @@ fun CalendarScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            item {
+        CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                item {
                     CalendarMonthCard(
                         visibleMonth = visibleMonth,
                         canGoPrevMonth = visibleMonth > minNavigableMonth,
@@ -170,44 +181,45 @@ fun CalendarScreen(
                     )
                 }
 
-            item {
-                Text(
-                    text = selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d")),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                )
-            }
-
-            if (selectedDateTasks.isEmpty()) {
-                item {
-                    EmptyCalendarState(
-                        message = "No tasks on this date",
-                    )
-                }
-            } else {
-                items(selectedDateTasks, key = { it.id }) { todo ->
-                    CalendarTodoRow(
-                        todo = todo,
-                        lists = uiState.lists,
-                        onInfo = { editTargetId = todo.id },
-                        onDelete = { onDelete(todo) },
-                    )
-                }
-            }
-
-            uiState.errorMessage?.let { message ->
                 item {
                     Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d")),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 4.dp),
                     )
                 }
-            }
 
-            item { Spacer(modifier = Modifier.height(96.dp)) }
+                if (selectedDateTasks.isEmpty()) {
+                    item {
+                        EmptyCalendarState(
+                            message = "No tasks on this date",
+                        )
+                    }
+                } else {
+                    items(selectedDateTasks, key = { it.id }) { todo ->
+                        CalendarTodoRow(
+                            todo = todo,
+                            lists = uiState.lists,
+                            onInfo = { editTargetId = todo.id },
+                            onDelete = { onDelete(todo) },
+                        )
+                    }
+                }
+
+                uiState.errorMessage?.let { message ->
+                    item {
+                        Text(
+                            text = message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(96.dp)) }
+            }
         }
     }
 
@@ -319,15 +331,17 @@ private fun CalendarMonthCard(
     onNextMonth: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
 ) {
-    val monthDays = remember(visibleMonth) { buildMonthCells(visibleMonth) }
-    val monthLabel = remember(visibleMonth) {
-        visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) +
-            " " + visibleMonth.year
-    }
     val colorScheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
     val swipeThresholdPx = with(density) { 42.dp.toPx() }
+    val maxPreviewDragPx = with(density) { 64.dp.toPx() }
     var horizontalDragAccumulated by remember(visibleMonth) { mutableFloatStateOf(0f) }
+    var dragOffsetPx by remember(visibleMonth) { mutableFloatStateOf(0f) }
+    val dragTranslationX by animateFloatAsState(
+        targetValue = dragOffsetPx,
+        animationSpec = tween(durationMillis = 120),
+        label = "calendarMonthDragTranslationX",
+    )
 
     Card(
         modifier = Modifier
@@ -336,12 +350,19 @@ private fun CalendarMonthCard(
                 detectHorizontalDragGestures(
                     onDragStart = {
                         horizontalDragAccumulated = 0f
+                        dragOffsetPx = 0f
                     },
                     onHorizontalDrag = { _, dragAmount ->
                         horizontalDragAccumulated += dragAmount
+                        val maxRight = if (canGoPrevMonth) maxPreviewDragPx else 0f
+                        dragOffsetPx = (dragOffsetPx + dragAmount).coerceIn(
+                            minimumValue = -maxPreviewDragPx,
+                            maximumValue = maxRight,
+                        )
                     },
                     onDragCancel = {
                         horizontalDragAccumulated = 0f
+                        dragOffsetPx = 0f
                     },
                     onDragEnd = {
                         when {
@@ -349,6 +370,7 @@ private fun CalendarMonthCard(
                             horizontalDragAccumulated < -swipeThresholdPx -> onNextMonth()
                         }
                         horizontalDragAccumulated = 0f
+                        dragOffsetPx = 0f
                     },
                 )
             },
@@ -356,67 +378,96 @@ private fun CalendarMonthCard(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Column(
+        AnimatedContent(
+            targetState = visibleMonth,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                .graphicsLayer { translationX = dragTranslationX },
+            transitionSpec = {
+                val movingToFuture = targetState > initialState
+                val enter = slideInHorizontally(
+                    animationSpec = tween(durationMillis = 220),
+                    initialOffsetX = { fullWidth ->
+                        if (movingToFuture) fullWidth else -fullWidth
+                    },
+                ) + fadeIn(animationSpec = tween(durationMillis = 220))
+                val exit = slideOutHorizontally(
+                    animationSpec = tween(durationMillis = 220),
+                    targetOffsetX = { fullWidth ->
+                        if (movingToFuture) -fullWidth else fullWidth
+                    },
+                ) + fadeOut(animationSpec = tween(durationMillis = 180))
+                (enter togetherWith exit).using(SizeTransform(clip = true))
+            },
+            label = "calendarMonthSwipeAnimatedContent",
+        ) { displayMonth ->
+            val monthLabel = remember(displayMonth) {
+                displayMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) +
+                    " " + displayMonth.year
+            }
+            val monthDays = remember(displayMonth) { buildMonthCells(displayMonth) }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                MiniCalendarNavButton(
-                    icon = Icons.Rounded.ChevronLeft,
-                    contentDescription = "Previous month",
-                    enabled = canGoPrevMonth,
-                    onClick = onPrevMonth,
-                )
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = monthLabel,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colorScheme.onSurface,
-                    )
-                }
-                MiniCalendarNavButton(
-                    icon = Icons.Rounded.ChevronRight,
-                    contentDescription = "Next month",
-                    onClick = onNextMonth,
-                )
-            }
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                WEEKDAY_HEADERS.forEach { dayLabel ->
-                    Text(
-                        text = dayLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
-
-            monthDays.chunked(7).forEach { week ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    week.forEach { cell ->
-                        val taskCount = tasksByDate[cell.date]?.size ?: 0
-                        CalendarDayCell(
-                            cell = cell,
-                            taskCount = taskCount,
-                            isSelected = cell.date == selectedDate,
-                            isToday = cell.date == today,
-                            onClick = { onSelectDate(cell.date) },
+                    MiniCalendarNavButton(
+                        icon = Icons.Rounded.ChevronLeft,
+                        contentDescription = "Previous month",
+                        enabled = canGoPrevMonth,
+                        onClick = onPrevMonth,
+                    )
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = monthLabel,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colorScheme.onSurface,
+                        )
+                    }
+                    MiniCalendarNavButton(
+                        icon = Icons.Rounded.ChevronRight,
+                        contentDescription = "Next month",
+                        onClick = onNextMonth,
+                    )
+                }
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    WEEKDAY_HEADERS.forEach { dayLabel ->
+                        Text(
+                            text = dayLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                            fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f),
                         )
+                    }
+                }
+
+                monthDays.chunked(7).forEach { week ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        week.forEach { cell ->
+                            val taskCount = tasksByDate[cell.date]?.size ?: 0
+                            CalendarDayCell(
+                                cell = cell,
+                                taskCount = taskCount,
+                                isSelected = cell.date == selectedDate,
+                                isToday = cell.date == today,
+                                onClick = { onSelectDate(cell.date) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }
@@ -557,11 +608,10 @@ private fun CalendarTodoRow(
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val actionRevealPx = with(density) { 130.dp.toPx() }
-    val maxElasticDragPx = actionRevealPx * 1.22f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
-        animationSpec = spring(),
+        animationSpec = tween(durationMillis = 150),
         label = "calendarTaskSwipeOffset",
     )
     val dueText = DateTimeFormatter.ofPattern("h:mm a")
@@ -627,7 +677,7 @@ private fun CalendarTodoRow(
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
-                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
+                            targetOffsetX = (targetOffsetX + delta).coerceIn(-actionRevealPx, 0f)
                         },
                         onDragStopped = { velocity ->
                             val flingOpen = velocity < -1450f
