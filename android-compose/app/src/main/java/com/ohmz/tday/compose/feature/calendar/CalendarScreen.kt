@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,12 +21,29 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.FiberManualRecord
+import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.Flight
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Inbox
+import androidx.compose.material.icons.rounded.LocalBar
+import androidx.compose.material.icons.rounded.LocalHospital
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,11 +60,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import java.time.LocalDate
@@ -138,7 +161,10 @@ fun CalendarScreen(
                     }
                 } else {
                     items(selectedDateTasks, key = { it.id }) { todo ->
-                        CalendarTodoRow(todo = todo)
+                        CalendarTodoRow(
+                            todo = todo,
+                            lists = uiState.lists,
+                        )
                     }
                 }
 
@@ -341,14 +367,27 @@ private fun MiniCalendarNavButton(
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     Box(
         modifier = Modifier
             .size(34.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(
-                color = colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                color = if (isPressed) {
+                    colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                } else {
+                    Color.Transparent
+                },
             )
-            .clickable(onClick = onClick),
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(
+                    bounded = true,
+                    radius = 17.dp,
+                ),
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -437,11 +476,18 @@ private fun CalendarDayCell(
 }
 
 @Composable
-private fun CalendarTodoRow(todo: TodoItem) {
+private fun CalendarTodoRow(
+    todo: TodoItem,
+    lists: List<ListSummary>,
+) {
     val colorScheme = MaterialTheme.colorScheme
     val dueText = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(todo.due)
+    val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
+    val showListIndicator = listMeta != null
+    val showPriorityFlag = isHighPriority(todo.priority)
+    val listIndicatorColor = listAccentColor(listMeta?.color)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -475,6 +521,29 @@ private fun CalendarTodoRow(todo: TodoItem) {
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.bodySmall,
                 )
+            }
+            if (showListIndicator || showPriorityFlag) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (showListIndicator) {
+                        Icon(
+                            imageVector = listIconForKey(listMeta?.iconKey),
+                            contentDescription = "Task list",
+                            tint = listIndicatorColor,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    if (showPriorityFlag) {
+                        Icon(
+                            imageVector = Icons.Rounded.Flag,
+                            contentDescription = "High priority",
+                            tint = priorityColor("high"),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
             }
         }
         Spacer(
@@ -548,6 +617,56 @@ private fun priorityColor(priority: String): Color {
         "high" -> Color(0xFFE56A6A)
         "medium" -> Color(0xFFE3B368)
         else -> Color(0xFF6FBF86)
+    }
+}
+
+private fun isHighPriority(priority: String): Boolean {
+    return when (priority.trim().lowercase(Locale.getDefault())) {
+        "high", "urgent", "important" -> true
+        else -> false
+    }
+}
+
+private fun listAccentColor(colorKey: String?): Color {
+    return when (colorKey) {
+        "RED" -> Color(0xFFE65E52)
+        "ORANGE" -> Color(0xFFF29F38)
+        "YELLOW" -> Color(0xFFF3D04A)
+        "LIME" -> Color(0xFF8ACF56)
+        "BLUE" -> Color(0xFF5C9FE7)
+        "PURPLE" -> Color(0xFF8D6CE2)
+        "PINK" -> Color(0xFFDF6DAA)
+        "TEAL" -> Color(0xFF4EB5B0)
+        "CORAL" -> Color(0xFFE3876D)
+        "GOLD" -> Color(0xFFCFAB57)
+        "DEEP_BLUE" -> Color(0xFF4B73D6)
+        "ROSE" -> Color(0xFFD9799A)
+        "LIGHT_RED" -> Color(0xFFE48888)
+        "BRICK" -> Color(0xFFB86A5C)
+        "SLATE" -> Color(0xFF7B8593)
+        else -> Color(0xFF5C9FE7)
+    }
+}
+
+private fun listIconForKey(iconKey: String?): ImageVector {
+    return when (iconKey?.trim()?.lowercase(Locale.getDefault())) {
+        "sun" -> Icons.Rounded.WbSunny
+        "calendar" -> Icons.Rounded.CalendarMonth
+        "schedule" -> Icons.Rounded.Schedule
+        "flag" -> Icons.Rounded.Flag
+        "check" -> Icons.Rounded.Check
+        "inbox" -> Icons.Rounded.Inbox
+        "book" -> Icons.AutoMirrored.Rounded.MenuBook
+        "briefcase" -> Icons.Rounded.Work
+        "health" -> Icons.Rounded.LocalHospital
+        "fitness" -> Icons.Rounded.FitnessCenter
+        "food" -> Icons.Rounded.Restaurant
+        "cocktail" -> Icons.Rounded.LocalBar
+        "music" -> Icons.Rounded.MusicNote
+        "travel" -> Icons.Rounded.Flight
+        "car" -> Icons.Rounded.DirectionsCar
+        "home" -> Icons.Rounded.Home
+        else -> Icons.AutoMirrored.Rounded.List
     }
 }
 
