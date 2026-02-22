@@ -53,6 +53,12 @@ export async function PATCH(req: NextRequest) {
         dtstart: true,
         due: true,
         rrule: true,
+        list: {
+          select: {
+            name: true,
+            color: true,
+          },
+        },
       },
     });
     if (!todo) {
@@ -118,6 +124,8 @@ export async function PATCH(req: NextRequest) {
         rrule: todo.rrule,
         userID: user.id,
         instanceDate: instanceDate ?? null,
+        listName: todo.list?.name ?? null,
+        listColor: todo.list?.color ?? null,
       },
     });
 
