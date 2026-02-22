@@ -129,13 +129,10 @@ fun TodoListScreen(
     val selectedListColorKey = selectedList?.color
     val usesTodayStyle =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
-    val titleColor = when (uiState.mode) {
-        TodoListMode.TODAY -> Color(0xFF6EA8E1)
-        TodoListMode.SCHEDULED -> Color(0xFFDDB37D)
-        TodoListMode.ALL -> Color(0xFF4E4E50)
-        TodoListMode.PRIORITY -> Color(0xFFD48A8C)
-        TodoListMode.LIST -> listAccentColor(selectedListColorKey)
-    }
+    val titleColor = modeAccentColor(
+        mode = uiState.mode,
+        listColorKey = selectedListColorKey,
+    )
     val titleIcon = when (uiState.mode) {
         TodoListMode.TODAY -> Icons.Rounded.WbSunny
         TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
@@ -1972,11 +1969,21 @@ private fun todoFabColorForMode(
     mode: TodoListMode,
     listColorKey: String?,
 ): Color {
+    return modeAccentColor(
+        mode = mode,
+        listColorKey = listColorKey,
+    )
+}
+
+private fun modeAccentColor(
+    mode: TodoListMode,
+    listColorKey: String?,
+): Color {
     return when (mode) {
-        TodoListMode.TODAY -> Color(0xFF6EA8E1)
-        TodoListMode.SCHEDULED -> Color(0xFFDDB37D)
-        TodoListMode.ALL -> Color(0xFF4E4E50)
-        TodoListMode.PRIORITY -> Color(0xFFD48A8C)
+        TodoListMode.TODAY -> Color(0xFF5C9FE7)
+        TodoListMode.SCHEDULED -> Color(0xFFF29F38)
+        TodoListMode.ALL -> Color(0xFF5E6878)
+        TodoListMode.PRIORITY -> Color(0xFFD9799A)
         TodoListMode.LIST -> listAccentColor(listColorKey)
     }
 }
