@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -17,6 +18,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -193,7 +195,13 @@ fun HomeScreen(
         // Snap only when top header row is partially visible.
         // If fully off-screen (index > 0), do not force any anchor behavior.
         if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset > 0) {
-            listState.animateScrollToItem(index = 0, scrollOffset = 0)
+            listState.animateScrollBy(
+                value = -listState.firstVisibleItemScrollOffset.toFloat(),
+                animationSpec = tween(
+                    durationMillis = 260,
+                    easing = FastOutSlowInEasing,
+                ),
+            )
         }
     }
 
