@@ -10,6 +10,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -26,8 +27,27 @@ class CalendarViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
+    private var hasLoadedScreen = false
+
+    init {
+        observeCacheChanges()
+    }
+
+    private fun observeCacheChanges() {
+        viewModelScope.launch {
+            repository.cacheDataVersion
+                .collect {
+                    if (!hasLoadedScreen) return@collect
+                    loadInternal(
+                        forceSync = false,
+                        showLoading = false,
+                    )
+                }
+        }
+    }
 
     fun load() {
+        hasLoadedScreen = true
         loadInternal(
             forceSync = false,
             showLoading = false,
@@ -35,6 +55,7 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun refresh() {
+        hasLoadedScreen = true
         loadInternal(
             forceSync = true,
             showLoading = true,
