@@ -1,11 +1,8 @@
 package com.ohmz.tday.compose.feature.todos
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -1584,7 +1581,6 @@ private fun SwipeTaskRow(
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var localCompleted by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
-    var rowVisible by remember(todo.id) { mutableStateOf(true) }
     val visuallyCompleted = localCompleted || (keepCompletedInline && todo.completed)
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
@@ -1619,14 +1615,10 @@ private fun SwipeTaskRow(
     }
     val listIndicatorColor = listAccentColor(listMeta?.color)
 
-    AnimatedVisibility(
-        visible = rowVisible,
-        exit = fadeOut(animationSpec = tween(durationMillis = 220)),
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1733,8 +1725,6 @@ private fun SwipeTaskRow(
                                 coroutineScope.launch {
                                     if (useDelayedFadeCompletion) {
                                         delay(500)
-                                        rowVisible = false
-                                        delay(220)
                                         onComplete()
                                     } else {
                                         delay(if (keepCompletedInline) 120 else 180)
@@ -1805,7 +1795,6 @@ private fun SwipeTaskRow(
                     .height(1.dp)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
-        }
     }
 }
 
