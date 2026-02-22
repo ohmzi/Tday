@@ -118,6 +118,14 @@ private enum class RepeatPreset(
     YEARLY("Yearly", "RRULE:FREQ=YEARLY;INTERVAL=1"),
 }
 
+private fun normalizePriorityValue(value: String?): String {
+    return when (value?.trim()?.lowercase()) {
+        "medium" -> "Medium"
+        "high" -> "High"
+        else -> "Low"
+    }
+}
+
 private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,6 +134,7 @@ fun CreateTaskBottomSheet(
     lists: List<ListSummary>,
     editingTask: TodoItem? = null,
     defaultListId: String? = null,
+    defaultPriority: String? = null,
     initialStartEpochMs: Long? = null,
     initialDueEpochMs: Long? = null,
     onDismiss: () -> Unit,
@@ -150,13 +159,9 @@ fun CreateTaskBottomSheet(
     var notes by rememberSaveable(editingTask?.id) {
         mutableStateOf(editingTask?.description.orEmpty())
     }
-    var selectedPriority by rememberSaveable(editingTask?.id) {
+    var selectedPriority by rememberSaveable(editingTask?.id, defaultPriority) {
         mutableStateOf(
-            when (editingTask?.priority?.trim()) {
-                "Medium" -> "Medium"
-                "High" -> "High"
-                else -> "Low"
-            },
+            normalizePriorityValue(editingTask?.priority ?: defaultPriority),
         )
     }
     var selectedListId by rememberSaveable(editingTask?.id, defaultListId, listIdsKey) {
