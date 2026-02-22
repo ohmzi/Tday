@@ -217,7 +217,9 @@ fun TodoListScreen(
         label = "todayTitleCollapseProgress",
     )
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
-    var allEarlierExpanded by rememberSaveable(uiState.mode) { mutableStateOf(false) }
+    var allCollapsedSectionKeys by rememberSaveable(uiState.mode) {
+        mutableStateOf(setOf("earlier"))
+    }
     var quickAddStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -360,27 +362,35 @@ fun TodoListScreen(
 
                 if (showSectionedTimeline) {
                     items(timelineSections, key = { it.key }) { section ->
-                        val isAllEarlierSection =
-                            uiState.mode == TodoListMode.ALL && section.key == "earlier"
+                        val isAllMode = uiState.mode == TodoListMode.ALL
+                        val isCollapsed = isAllMode && allCollapsedSectionKeys.contains(section.key)
                         TimelineSection(
                             section = section,
                             mode = uiState.mode,
                             useMinimalStyle = usesTodayStyle,
-                            isCollapsed = isAllEarlierSection && !allEarlierExpanded,
-                            onHeaderClick = if (isAllEarlierSection) {
-                                { allEarlierExpanded = !allEarlierExpanded }
+                            isCollapsed = isCollapsed,
+                            showTopDivider = isAllMode && section.title == "Today",
+                            onHeaderClick = if (isAllMode) {
+                                {
+                                    allCollapsedSectionKeys =
+                                        if (isCollapsed) {
+                                            allCollapsedSectionKeys - section.key
+                                        } else {
+                                            allCollapsedSectionKeys + section.key
+                                        }
+                                }
                             } else {
                                 null
                             },
-                            onTapForQuickAdd = if (isAllEarlierSection) {
+                            onTapForQuickAdd = if (isAllMode) {
                                 null
                             } else {
                                 section.quickAddDefaults?.let { quickAdd ->
-                                {
-                                    quickAddStartEpochMs = quickAdd.first
-                                    quickAddDueEpochMs = quickAdd.second
-                                    showCreateTaskSheet = true
-                                }
+                                    {
+                                        quickAddStartEpochMs = quickAdd.first
+                                        quickAddDueEpochMs = quickAdd.second
+                                        showCreateTaskSheet = true
+                                    }
                                 }
                             },
                             onComplete = onComplete,
@@ -1054,6 +1064,7 @@ private fun TimelineSection(
     mode: TodoListMode,
     useMinimalStyle: Boolean,
     isCollapsed: Boolean = false,
+    showTopDivider: Boolean = false,
     onHeaderClick: (() -> Unit)? = null,
     onTapForQuickAdd: (() -> Unit)?,
     onComplete: (TodoItem) -> Unit,
@@ -1062,10 +1073,23 @@ private fun TimelineSection(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val headerInteractionSource = remember { MutableInteractionSource() }
+    val collapseChevronRotation by animateFloatAsState(
+        targetValue = if (isCollapsed) 0f else 180f,
+        label = "sectionChevronRotation",
+    )
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        if (showTopDivider) {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+            )
+        }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1103,12 +1127,16 @@ private fun TimelineSection(
                 fontWeight = FontWeight.SemiBold,
             )
             if (onHeaderClick != null) {
-                Spacer(modifier = Modifier.weight(1f))
                 Icon(
-                    imageVector = if (isCollapsed) Icons.Rounded.ExpandMore else Icons.Rounded.ExpandLess,
+                    imageVector = Icons.Rounded.ExpandMore,
                     contentDescription = if (isCollapsed) "Expand section" else "Collapse section",
                     tint = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.72f else 1f),
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier
+                        .padding(start = 6.dp)
+                        .size(18.dp)
+                        .graphicsLayer {
+                            rotationZ = collapseChevronRotation
+                        },
                 )
             }
         }
@@ -1384,11 +1412,11 @@ private fun monthTitle(
 
 private fun emptyStateMessageForMode(mode: TodoListMode): String {
     return when (mode) {
-        TodoListMode.TODAY -> "No today tasks yet."
-        TodoListMode.PRIORITY -> "No priority tasks yet."
-        TodoListMode.SCHEDULED -> "No tasks yet."
-        TodoListMode.ALL -> "No tasks yet."
-        TodoListMode.LIST -> "No tasks yet."
+        TodoListMode.TODAY -> "No tasks for today"
+        TodoListMode.PRIORITY -> "No priority tasks"
+        TodoListMode.SCHEDULED -> "No scheduled tasks"
+        TodoListMode.ALL -> "No tasks yet"
+        TodoListMode.LIST -> "No tasks in this list"
     }
 }
 

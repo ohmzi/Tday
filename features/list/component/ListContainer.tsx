@@ -138,7 +138,7 @@ const ListContainer = ({ id }: { id: string }) => {
                 {/* Empty state — no tasks yet */}
                 {!listTodosLoading && !searchQuery.trim() && listTodos.length === 0 && (
                     <div className="mt-4 rounded-2xl border border-border/65 bg-card/95 px-4 py-6 text-sm text-muted-foreground">
-                        No tasks yet.
+                        No tasks in this list
                     </div>
                 )}
 
@@ -154,15 +154,15 @@ const ListContainer = ({ id }: { id: string }) => {
                             </div>
                         </div>
                         <h3 className="mb-2 text-2xl font-semibold text-foreground">
-                            No matching tasks found
+                            No matching tasks
                         </h3>
                         <p className="mb-6 text-sm text-muted-foreground">
-                            Try adjusting your search terms or{" "}
+                            Try different keywords or{" "}
                             <button
                                 onClick={() => setSearchQuery("")}
                                 className="text-accent hover:underline"
                             >
-                                clear the search
+                                clear your search
                             </button>
                         </p>
                     </div>
