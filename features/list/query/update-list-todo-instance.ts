@@ -107,6 +107,9 @@ export const useEditListTodoInstance = (
           variant: "destructive",
         });
       },
+      onSuccess: () => {
+        toast({ description: "todo updated" });
+      },
     });
 
   return { editTodoInstanceMutateFn, editTodoInstanceStatus };
