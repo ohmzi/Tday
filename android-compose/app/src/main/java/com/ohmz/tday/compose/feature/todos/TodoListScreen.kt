@@ -1,8 +1,11 @@
 package com.ohmz.tday.compose.feature.todos
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
@@ -94,6 +97,7 @@ import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
@@ -1159,6 +1163,7 @@ private fun TimelineSection(
                 if (mode == TodoListMode.ALL) {
                     AllTaskSwipeRow(
                         todo = todo,
+                        lists = lists,
                         onComplete = { onComplete(todo) },
                         onDelete = { onDelete(todo) },
                         onInfo = { onInfo(todo) },
@@ -1467,10 +1472,12 @@ private fun quickAddDefaultsForTodaySection(
 private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 58.dp
+private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
 
 @Composable
 private fun AllTaskSwipeRow(
     todo: TodoItem,
+    lists: List<ListSummary>,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -1481,9 +1488,12 @@ private fun AllTaskSwipeRow(
         onComplete = onComplete,
         onDelete = onDelete,
         onInfo = onInfo,
-        keepCompletedInline = true,
+        keepCompletedInline = false,
+        mode = TodoListMode.ALL,
+        lists = lists,
         showDueText = true,
         showDuePrefix = showDuePrefix,
+        useDelayedFadeCompletion = true,
     )
 }
 
@@ -1548,6 +1558,7 @@ private fun TodayTaskSwipeRow(
         lists = lists,
         showDueText = true,
         showDuePrefix = showDuePrefix,
+        useDelayedFadeCompletion = mode != TodoListMode.TODAY,
     )
 }
 
@@ -1562,6 +1573,7 @@ private fun SwipeTaskRow(
     lists: List<ListSummary> = emptyList(),
     showDueText: Boolean,
     showDuePrefix: Boolean,
+    useDelayedFadeCompletion: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -1571,6 +1583,8 @@ private fun SwipeTaskRow(
     val maxElasticDragPx = actionRevealPx * 1.22f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var localCompleted by remember(todo.id) { mutableStateOf(false) }
+    var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
+    var rowVisible by remember(todo.id) { mutableStateOf(true) }
     val visuallyCompleted = localCompleted || (keepCompletedInline && todo.completed)
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
@@ -1589,10 +1603,10 @@ private fun SwipeTaskRow(
         TodoListMode.TODAY,
         TodoListMode.SCHEDULED,
         TodoListMode.PRIORITY,
+        TodoListMode.ALL,
             -> listMeta != null
 
         TodoListMode.LIST,
-        TodoListMode.ALL,
             -> false
     }
     val showPriorityFlag = when (mode) {
@@ -1600,180 +1614,200 @@ private fun SwipeTaskRow(
         TodoListMode.SCHEDULED,
         TodoListMode.PRIORITY,
         TodoListMode.LIST,
-            -> isHighPriority(todo.priority)
-
         TodoListMode.ALL,
-            -> false
+            -> isHighPriority(todo.priority)
     }
     val listIndicatorColor = listAccentColor(listMeta?.color)
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    AnimatedVisibility(
+        visible = rowVisible,
+        exit = fadeOut(animationSpec = tween(durationMillis = 220)),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(SWIPE_ROW_HEIGHT)
-                .clip(rowShape)
-                .background(actionContainerColor),
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SwipeActionCircle(
-                    icon = Icons.Rounded.Info,
-                    contentDescription = "Edit task",
-                    tint = colorScheme.onSurface,
-                    background = colorScheme.surface,
-                    onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                        onInfo()
-                        targetOffsetX = 0f
-                    },
-                )
-                SwipeActionCircle(
-                    icon = Icons.Rounded.DeleteSweep,
-                    contentDescription = "Delete task",
-                    tint = colorScheme.error,
-                    background = colorScheme.surface,
-                    onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                        onDelete()
-                        targetOffsetX = 0f
-                    },
-                )
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { translationX = animatedOffsetX }
-                    .draggable(
-                        orientation = Orientation.Horizontal,
-                        state = rememberDraggableState { delta ->
-                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
-                        },
-                        onDragStopped = { velocity ->
-                            val flingOpen = velocity < -1450f
-                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
-                            targetOffsetX = if (flingOpen || dragOpen) {
-                                -actionRevealPx
-                            } else {
-                                0f
-                            }
-                        },
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {
-                        if (targetOffsetX != 0f) targetOffsetX = 0f
-                    },
-                shape = rowShape,
-                colors = CardDefaults.cardColors(containerColor = foregroundColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    .fillMaxWidth()
+                    .height(SWIPE_ROW_HEIGHT)
+                    .clip(rowShape)
+                    .background(actionContainerColor),
             ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 4.dp, vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING),
+                        .align(Alignment.CenterEnd)
+                        .padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = if (!visuallyCompleted) {
-                            Icons.Rounded.RadioButtonUnchecked
-                        } else {
-                            Icons.Rounded.CheckCircle
+                    SwipeActionCircle(
+                        icon = Icons.Rounded.Info,
+                        contentDescription = "Edit task",
+                        tint = colorScheme.onSurface,
+                        background = colorScheme.surface,
+                        onClick = {
+                            ViewCompat.performHapticFeedback(
+                                view,
+                                HapticFeedbackConstantsCompat.CLOCK_TICK,
+                            )
+                            onInfo()
+                            targetOffsetX = 0f
                         },
-                        contentDescription = if (visuallyCompleted) "Completed" else "Mark complete",
-                        tint = if (!visuallyCompleted) {
-                            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                        } else {
-                            priorityColor(todo.priority)
+                    )
+                    SwipeActionCircle(
+                        icon = Icons.Rounded.DeleteSweep,
+                        contentDescription = "Delete task",
+                        tint = colorScheme.error,
+                        background = colorScheme.surface,
+                        onClick = {
+                            ViewCompat.performHapticFeedback(
+                                view,
+                                HapticFeedbackConstantsCompat.CLOCK_TICK,
+                            )
+                            onDelete()
+                            targetOffsetX = 0f
                         },
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clickable {
-                                if (visuallyCompleted) return@clickable
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                    )
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { translationX = animatedOffsetX }
+                        .draggable(
+                            orientation = Orientation.Horizontal,
+                            state = rememberDraggableState { delta ->
+                                targetOffsetX = (targetOffsetX + delta).coerceIn(
+                                    -maxElasticDragPx,
+                                    0f,
                                 )
-                                targetOffsetX = 0f
-                                localCompleted = true
-                                coroutineScope.launch {
-                                    delay(if (keepCompletedInline) 120 else 180)
-                                    onComplete()
+                            },
+                            onDragStopped = { velocity ->
+                                val flingOpen = velocity < -1450f
+                                val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
+                                targetOffsetX = if (flingOpen || dragOpen) {
+                                    -actionRevealPx
+                                } else {
+                                    0f
                                 }
                             },
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 10.dp),
-                    ) {
-                        Text(
-                            text = todo.title,
-                            color = if (visuallyCompleted) {
-                                colorScheme.onSurface.copy(alpha = 0.78f)
-                            } else {
-                                colorScheme.onSurface
-                            },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            textDecoration = if (visuallyCompleted) {
-                                TextDecoration.LineThrough
-                            } else {
-                                TextDecoration.None
-                            },
-                            maxLines = 2,
                         )
-                        if (showDueText) {
-                            Text(
-                                text = dueSubtitleText,
-                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
-                    if (showListIndicator || showPriorityFlag) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
                         ) {
-                            if (showListIndicator) {
-                                Icon(
-                                    imageVector = listIconForKey(listMeta?.iconKey),
-                                    contentDescription = "Task list",
-                                    tint = listIndicatorColor,
-                                    modifier = Modifier.size(18.dp),
+                            if (targetOffsetX != 0f) targetOffsetX = 0f
+                        },
+                    shape = rowShape,
+                    colors = CardDefaults.cardColors(containerColor = foregroundColor),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 4.dp, vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = if (!visuallyCompleted) {
+                                Icons.Rounded.RadioButtonUnchecked
+                            } else {
+                                Icons.Rounded.CheckCircle
+                            },
+                            contentDescription = if (visuallyCompleted) "Completed" else "Mark complete",
+                            tint = if (!visuallyCompleted) {
+                                colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                            } else {
+                                TASK_CHECKMARK_GREEN
+                            },
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clickable {
+                                    if (visuallyCompleted || pendingCompletion) return@clickable
+                                    ViewCompat.performHapticFeedback(
+                                        view,
+                                        HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                    )
+                                    targetOffsetX = 0f
+                                    localCompleted = true
+                                    pendingCompletion = true
+                                    coroutineScope.launch {
+                                        if (useDelayedFadeCompletion) {
+                                            delay(500)
+                                            rowVisible = false
+                                            delay(220)
+                                            onComplete()
+                                        } else {
+                                            delay(if (keepCompletedInline) 120 else 180)
+                                            onComplete()
+                                        }
+                                    }
+                                },
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 10.dp),
+                        ) {
+                            Text(
+                                text = todo.title,
+                                color = if (visuallyCompleted) {
+                                    colorScheme.onSurface.copy(alpha = 0.78f)
+                                } else {
+                                    colorScheme.onSurface
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                textDecoration = if (visuallyCompleted) {
+                                    TextDecoration.LineThrough
+                                } else {
+                                    TextDecoration.None
+                                },
+                                maxLines = 2,
+                            )
+                            if (showDueText) {
+                                Text(
+                                    text = dueSubtitleText,
+                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    style = MaterialTheme.typography.bodySmall,
                                 )
                             }
-                            if (showPriorityFlag) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Flag,
-                                    contentDescription = "High priority",
-                                    tint = priorityColor("high"),
-                                    modifier = Modifier.size(18.dp),
-                                )
+                        }
+                        if (showListIndicator || showPriorityFlag) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (showListIndicator) {
+                                    Icon(
+                                        imageVector = listIconForKey(listMeta?.iconKey),
+                                        contentDescription = "Task list",
+                                        tint = listIndicatorColor,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                if (showPriorityFlag) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Flag,
+                                        contentDescription = "High priority",
+                                        tint = priorityColor("high"),
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+            )
         }
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
-        )
     }
 }
 
@@ -1800,7 +1834,7 @@ private fun TodayTodoRow(
             Icon(
                 imageVector = Icons.Rounded.CheckCircle,
                 contentDescription = "Complete",
-                tint = priorityColor(todo.priority),
+                tint = TASK_CHECKMARK_GREEN,
                 modifier = Modifier
                     .size(24.dp)
                     .clickable { onComplete() },
@@ -1870,7 +1904,7 @@ private fun TodoRow(
                 Icon(
                     imageVector = Icons.Rounded.CheckCircle,
                     contentDescription = "Complete",
-                    tint = priorityColor(todo.priority),
+                    tint = TASK_CHECKMARK_GREEN,
                     modifier = Modifier
                         .size(24.dp)
                         .clickable { onComplete() },
@@ -1908,6 +1942,13 @@ private fun priorityColor(priority: String): Color {
         "high" -> Color(0xFFE56A6A)
         "medium" -> Color(0xFFE3B368)
         else -> Color(0xFF6FBF86)
+    }
+}
+
+private fun isHighPriority(priority: String): Boolean {
+    return when (priority.trim().lowercase()) {
+        "high", "urgent", "important" -> true
+        else -> false
     }
 }
 
