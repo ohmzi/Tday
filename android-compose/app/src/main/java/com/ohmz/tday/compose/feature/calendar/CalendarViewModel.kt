@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
@@ -104,6 +105,105 @@ class CalendarViewModel @Inject constructor(
                     current.copy(
                         isLoading = false,
                         errorMessage = error.message ?: "Failed to load calendar",
+                    )
+                }
+            }
+        }
+    }
+
+    fun updateTask(
+        todo: TodoItem,
+        payload: CreateTaskPayload,
+    ) {
+        val normalizedTitle = payload.title.trim()
+        if (normalizedTitle.isBlank()) return
+
+        val normalizedPriority = when (payload.priority.trim()) {
+            "Medium" -> "Medium"
+            "High" -> "High"
+            else -> "Low"
+        }
+        val normalizedStart = payload.dtstart
+        val normalizedDue = if (payload.due > normalizedStart) {
+            payload.due
+        } else {
+            normalizedStart.plusSeconds(60L * 60L)
+        }
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+
+        val previousState = _uiState.value
+        val optimisticTodo = todo.copy(
+            title = normalizedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            dtstart = normalizedStart,
+            due = normalizedDue,
+            rrule = payload.rrule,
+            listId = normalizedListId,
+        )
+
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.map { item ->
+                    if (item.id == todo.id) optimisticTodo else item
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                repository.updateTodo(
+                    todo = todo,
+                    payload = CreateTaskPayload(
+                        title = normalizedTitle,
+                        description = normalizedDescription,
+                        priority = normalizedPriority,
+                        dtstart = normalizedStart,
+                        due = normalizedDue,
+                        rrule = payload.rrule,
+                        listId = normalizedListId,
+                    ),
+                )
+            }.onSuccess {
+                loadInternal(
+                    forceSync = false,
+                    showLoading = false,
+                )
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = error.message ?: "Could not update task",
+                )
+            }
+        }
+    }
+
+    fun delete(
+        todo: TodoItem,
+        onDeleted: (() -> Unit)? = null,
+    ) {
+        val previousItems = _uiState.value.items
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id == todo.id },
+                errorMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                repository.deleteTodo(todo)
+            }.onSuccess {
+                onDeleted?.invoke()
+                loadInternal(
+                    forceSync = false,
+                    showLoading = false,
+                )
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    current.copy(
+                        items = previousItems,
+                        errorMessage = error.message ?: "Could not delete task",
                     )
                 }
             }
