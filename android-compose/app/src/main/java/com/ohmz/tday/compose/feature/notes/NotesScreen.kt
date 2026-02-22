@@ -38,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.core.model.NoteItem
-import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,42 +85,36 @@ fun NotesScreen(
             }
         },
     ) { padding ->
-        TdayPullToRefreshBox(
-            isRefreshing = uiState.isLoading,
-            onRefresh = onRefresh,
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (uiState.notes.isEmpty()) {
-                    item {
-                        Text(
-                            text = if (uiState.isLoading) "Loading..." else "No notes yet",
-                            color = colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                items(uiState.notes, key = { it.id }) { note ->
-                    NoteRow(
-                        note = note,
-                        onDelete = { onDelete(note.id) },
+            if (uiState.notes.isEmpty()) {
+                item {
+                    Text(
+                        text = if (uiState.isLoading) "Loading..." else "No notes yet",
+                        color = colorScheme.onSurfaceVariant,
                     )
                 }
+            }
 
-                uiState.errorMessage?.let { message ->
-                    item {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
+            items(uiState.notes, key = { it.id }) { note ->
+                NoteRow(
+                    note = note,
+                    onDelete = { onDelete(note.id) },
+                )
+            }
+
+            uiState.errorMessage?.let { message ->
+                item {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
         }

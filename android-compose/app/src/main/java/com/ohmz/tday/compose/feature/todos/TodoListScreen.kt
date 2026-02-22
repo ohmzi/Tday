@@ -100,7 +100,6 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
-import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -315,9 +314,7 @@ fun TodoListScreen(
             )
         },
     ) { padding ->
-        TdayPullToRefreshBox(
-            isRefreshing = uiState.isLoading,
-            onRefresh = onRefresh,
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
@@ -328,115 +325,111 @@ fun TodoListScreen(
                         Modifier
                     },
                 ),
+            state = listState,
+            contentPadding = if (usesTodayStyle) {
+                PaddingValues(horizontal = 18.dp, vertical = 2.dp)
+            } else {
+                PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+            },
+            verticalArrangement = Arrangement.spacedBy(if (usesTodayStyle) 18.dp else 8.dp),
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = if (usesTodayStyle) {
-                    PaddingValues(horizontal = 18.dp, vertical = 2.dp)
-                } else {
-                    PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                },
-                verticalArrangement = Arrangement.spacedBy(if (usesTodayStyle) 18.dp else 8.dp),
-            ) {
-                if (!showSectionedTimeline && uiState.items.isEmpty()) {
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                            shape = RoundedCornerShape(18.dp),
-                        ) {
-                            Text(
-                                modifier = Modifier.padding(18.dp),
-                                text = if (uiState.isLoading) {
-                                    "Loading..."
-                                } else {
-                                    emptyStateMessageForMode(uiState.mode)
-                                },
-                                color = colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-
-                if (showSectionedTimeline) {
-                    items(timelineSections, key = { it.key }) { section ->
-                        val isAllMode = uiState.mode == TodoListMode.ALL
-                        val isCollapsed = isAllMode && allCollapsedSectionKeys.contains(section.key)
-                        TimelineSection(
-                            section = section,
-                            mode = uiState.mode,
-                            lists = uiState.lists,
-                            useMinimalStyle = usesTodayStyle,
-                            isCollapsed = isCollapsed,
-                            showTopDivider = isAllMode && section.title == "Today",
-                            onHeaderClick = if (isAllMode) {
-                                {
-                                    allCollapsedSectionKeys =
-                                        if (isCollapsed) {
-                                            allCollapsedSectionKeys - section.key
-                                        } else {
-                                            allCollapsedSectionKeys + section.key
-                                        }
-                                }
-                            } else {
-                                null
-                            },
-                            onTapForQuickAdd = if (isAllMode) {
-                                null
-                            } else {
-                                section.quickAddDefaults?.let { quickAdd ->
-                                    {
-                                        quickAddStartEpochMs = quickAdd.first
-                                        quickAddDueEpochMs = quickAdd.second
-                                        showCreateTaskSheet = true
-                                    }
-                                }
-                            },
-                            onComplete = onComplete,
-                            onDelete = onDelete,
-                            onInfo = { todo ->
-                                editTargetTodoId = todo.id
-                            },
-                        )
-                    }
-                    if (uiState.items.isEmpty()) {
-                        item {
-                            EmptyTimelineState(
-                                message = emptyStateMessageForMode(uiState.mode),
-                                useMinimalStyle = usesTodayStyle,
-                            )
-                        }
-                    }
-                } else {
-                    items(uiState.items, key = { it.id }) { todo ->
-                        if (usesTodayStyle) {
-                            TodayTodoRow(
-                                todo = todo,
-                                onComplete = { onComplete(todo) },
-                                onDelete = { onDelete(todo) },
-                            )
-                        } else {
-                            TodoRow(
-                                todo = todo,
-                                onComplete = { onComplete(todo) },
-                                onDelete = { onDelete(todo) },
-                            )
-                        }
-                    }
-                }
-
-                uiState.errorMessage?.let { message ->
-                    item {
+            if (!showSectionedTimeline && uiState.items.isEmpty()) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+                        shape = RoundedCornerShape(18.dp),
+                    ) {
                         Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(18.dp),
+                            text = if (uiState.isLoading) {
+                                "Loading..."
+                            } else {
+                                emptyStateMessageForMode(uiState.mode)
+                            },
+                            color = colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-
-                item { Spacer(Modifier.height(96.dp)) }
             }
+
+            if (showSectionedTimeline) {
+                items(timelineSections, key = { it.key }) { section ->
+                    val isAllMode = uiState.mode == TodoListMode.ALL
+                    val isCollapsed = isAllMode && allCollapsedSectionKeys.contains(section.key)
+                    TimelineSection(
+                        section = section,
+                        mode = uiState.mode,
+                        lists = uiState.lists,
+                        useMinimalStyle = usesTodayStyle,
+                        isCollapsed = isCollapsed,
+                        showTopDivider = isAllMode && section.title == "Today",
+                        onHeaderClick = if (isAllMode) {
+                            {
+                                allCollapsedSectionKeys =
+                                    if (isCollapsed) {
+                                        allCollapsedSectionKeys - section.key
+                                    } else {
+                                        allCollapsedSectionKeys + section.key
+                                    }
+                            }
+                        } else {
+                            null
+                        },
+                        onTapForQuickAdd = if (isAllMode) {
+                            null
+                        } else {
+                            section.quickAddDefaults?.let { quickAdd ->
+                                {
+                                    quickAddStartEpochMs = quickAdd.first
+                                    quickAddDueEpochMs = quickAdd.second
+                                    showCreateTaskSheet = true
+                                }
+                            }
+                        },
+                        onComplete = onComplete,
+                        onDelete = onDelete,
+                        onInfo = { todo ->
+                            editTargetTodoId = todo.id
+                        },
+                    )
+                }
+                if (uiState.items.isEmpty()) {
+                    item {
+                        EmptyTimelineState(
+                            message = emptyStateMessageForMode(uiState.mode),
+                            useMinimalStyle = usesTodayStyle,
+                        )
+                    }
+                }
+            } else {
+                items(uiState.items, key = { it.id }) { todo ->
+                    if (usesTodayStyle) {
+                        TodayTodoRow(
+                            todo = todo,
+                            onComplete = { onComplete(todo) },
+                            onDelete = { onDelete(todo) },
+                        )
+                    } else {
+                        TodoRow(
+                            todo = todo,
+                            onComplete = { onComplete(todo) },
+                            onDelete = { onDelete(todo) },
+                        )
+                    }
+                }
+            }
+
+            uiState.errorMessage?.let { message ->
+                item {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+
+            item { Spacer(Modifier.height(96.dp)) }
         }
     }
 
