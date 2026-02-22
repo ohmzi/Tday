@@ -1095,6 +1095,13 @@ private fun TimelineSection(
                         onDelete = { onDelete(todo) },
                         onInfo = { onInfo(todo) },
                     )
+                } else if (mode == TodoListMode.TODAY && useMinimalStyle) {
+                    TodayTaskSwipeRow(
+                        todo = todo,
+                        onComplete = { onComplete(todo) },
+                        onDelete = { onDelete(todo) },
+                        onInfo = { onInfo(todo) },
+                    )
                 } else if (useMinimalStyle) {
                     TodayTodoRow(
                         todo = todo,
@@ -1562,6 +1569,154 @@ private fun SwipeActionCircle(
                 modifier = Modifier.size(22.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun TodayTaskSwipeRow(
+    todo: TodoItem,
+    onComplete: () -> Unit,
+    onDelete: () -> Unit,
+    onInfo: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val actionRevealPx = with(density) { 130.dp.toPx() }
+    val maxElasticDragPx = actionRevealPx * 1.22f
+    var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = targetOffsetX,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow,
+        ),
+        label = "todayTaskSwipeOffset",
+    )
+    val dueText = DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
+    val rowShape = RoundedCornerShape(16.dp)
+    val actionContainerColor = colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
+    val foregroundColor = colorScheme.background
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp)
+                .clip(rowShape)
+                .background(actionContainerColor),
+        ) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SwipeActionCircle(
+                    icon = Icons.Rounded.Info,
+                    contentDescription = "Edit task",
+                    tint = colorScheme.onSurface,
+                    background = colorScheme.surface,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        onInfo()
+                        targetOffsetX = 0f
+                    },
+                )
+                SwipeActionCircle(
+                    icon = Icons.Rounded.DeleteSweep,
+                    contentDescription = "Delete task",
+                    tint = colorScheme.error,
+                    background = colorScheme.surface,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        onDelete()
+                        targetOffsetX = 0f
+                    },
+                )
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = animatedOffsetX }
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
+                        },
+                        onDragStopped = { velocity ->
+                            val flingOpen = velocity < -1450f
+                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
+                            targetOffsetX = if (flingOpen || dragOpen) {
+                                -actionRevealPx
+                            } else {
+                                0f
+                            }
+                        },
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        if (targetOffsetX != 0f) targetOffsetX = 0f
+                    },
+                shape = rowShape,
+                colors = CardDefaults.cardColors(containerColor = foregroundColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(
+                        onClick = {
+                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            targetOffsetX = 0f
+                            onComplete()
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = "Complete",
+                            tint = priorityColor(todo.priority),
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 10.dp),
+                    ) {
+                        Text(
+                            text = todo.title,
+                            color = colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                        )
+                        Text(
+                            text = dueText,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+        )
     }
 }
 
