@@ -129,6 +129,9 @@ export const useEditListTodo = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
     },
+    onSuccess: () => {
+      toast({ description: "todo updated" });
+    },
   });
 
   return { editTodoMutateFn, editTodoStatus };
