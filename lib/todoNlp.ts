@@ -29,7 +29,7 @@ type ChronoParser = {
   ) => chrono.ParsedResult[];
 };
 
-function resolveChronoParser(rawLocale?: string | null): ChronoParser {
+function resolveChronoParser(rawLocale?: string | null): unknown {
   const normalized = normalizeLocale(rawLocale);
   switch (normalized) {
     case "ja":
@@ -98,6 +98,7 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
   }
 
   const parser = resolveChronoParser(input.locale);
+  const parse = (parser as ChronoParser).parse.bind(parser);
   const referenceInstant =
     typeof input.referenceEpochMs === "number" && Number.isFinite(input.referenceEpochMs)
       ? new Date(input.referenceEpochMs)
@@ -108,7 +109,7 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
     timezone: timezoneOffset,
   };
 
-  const parsedResults = parser.parse(rawText, reference);
+  const parsedResults = parse(rawText, reference);
   if (!parsedResults.length) {
     return {
       cleanTitle: trimmedText,
