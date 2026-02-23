@@ -44,6 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -67,6 +68,7 @@ import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -114,6 +116,7 @@ fun CalendarScreen(
     uiState: CalendarUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
+    onCreateTask: (CreateTaskPayload) -> Unit,
     onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
     onDelete: (TodoItem) -> Unit,
 ) {
@@ -146,10 +149,28 @@ fun CalendarScreen(
     }
 
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
+    var createStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
+    var createDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     val editTarget = remember(editTargetId, uiState.items) {
         editTargetId?.let { targetId ->
             uiState.items.firstOrNull { it.id == targetId }
         }
+    }
+    fun openCreateTaskSheetForSelectedDate() {
+        val currentDate = LocalDate.now(zoneId)
+        val (prefillStart, prefillDue) = if (selectedDate == currentDate) {
+            val nowTime = java.time.LocalTime.now(zoneId)
+            val start = selectedDate.atTime(nowTime).atZone(zoneId)
+            start to start.plusHours(1)
+        } else {
+            val start = selectedDate.atTime(6, 0).atZone(zoneId)
+            val due = selectedDate.atTime(21, 0).atZone(zoneId)
+            start to due
+        }
+        createStartEpochMs = prefillStart.toInstant().toEpochMilli()
+        createDueEpochMs = prefillDue.toInstant().toEpochMilli()
+        showCreateTaskSheet = true
     }
     LaunchedEffect(listState.isScrollInProgress, monthTitleSnapThresholdPx) {
         if (listState.isScrollInProgress) return@LaunchedEffect
@@ -174,6 +195,11 @@ fun CalendarScreen(
                 onJumpToday = {
                     selectDate(LocalDate.now(zoneId))
                 },
+            )
+        },
+        floatingActionButton = {
+            CalendarCreateTaskFab(
+                onClick = { openCreateTaskSheetForSelectedDate() },
             )
         },
     ) { padding ->
@@ -299,6 +325,25 @@ fun CalendarScreen(
         }
     }
 
+    if (showCreateTaskSheet) {
+        CreateTaskBottomSheet(
+            lists = uiState.lists,
+            initialStartEpochMs = createStartEpochMs,
+            initialDueEpochMs = createDueEpochMs,
+            onDismiss = {
+                showCreateTaskSheet = false
+                createStartEpochMs = null
+                createDueEpochMs = null
+            },
+            onCreateTask = { payload ->
+                onCreateTask(payload)
+                showCreateTaskSheet = false
+                createStartEpochMs = null
+                createDueEpochMs = null
+            },
+        )
+    }
+
     editTarget?.let { todo ->
         CreateTaskBottomSheet(
             lists = uiState.lists,
@@ -310,6 +355,27 @@ fun CalendarScreen(
                 onUpdateTask(targetTodo, payload)
                 editTargetId = null
             },
+        )
+    }
+}
+
+@Composable
+private fun CalendarCreateTaskFab(
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    FloatingActionButton(
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Add,
+            contentDescription = "Create task",
+            modifier = Modifier.size(26.dp),
         )
     }
 }
