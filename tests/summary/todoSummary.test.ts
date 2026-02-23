@@ -286,4 +286,32 @@ describe("todoSummary mode filtering", () => {
     expect(candidates.find((candidate) => candidate.title === "Task night")?.dueLabel)
       .toMatch(/tonight|night/);
   });
+
+  test("due labels omit time-of-day for tasks outside the 3-day window", () => {
+    const candidates = buildSummaryTaskCandidates(
+      [
+        makeTodo("within-3-days", {
+          due: new Date("2026-02-25T08:00:00.000Z"),
+          dtstart: new Date("2026-02-25T07:00:00.000Z"),
+        }),
+        makeTodo("outside-3-days", {
+          due: new Date("2026-02-26T08:00:00.000Z"),
+          dtstart: new Date("2026-02-26T07:00:00.000Z"),
+        }),
+      ],
+      {
+        mode: "all",
+        timeZone: "UTC",
+        now,
+      },
+    );
+
+    const withinWindow = candidates.find((candidate) => candidate.title === "Task within-3-days");
+    const outsideWindow = candidates.find((candidate) => candidate.title === "Task outside-3-days");
+
+    expect(withinWindow?.dueLabel).toContain("morning");
+    expect(outsideWindow?.dueLabel).toContain("due on 26th Feb");
+    expect(outsideWindow?.dueLabel).not.toMatch(/\b(morning|afternoon|night|tonight)\b/i);
+    expect(outsideWindow?.dueWindowPhrase).toBe("");
+  });
 });
