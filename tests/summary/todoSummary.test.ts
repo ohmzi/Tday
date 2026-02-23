@@ -34,6 +34,11 @@ function makeTodo(
 describe("todoSummary mode filtering", () => {
   const now = new Date("2026-02-22T10:00:00.000Z");
   const todos = [
+    makeTodo("today-overdue", {
+      due: new Date("2026-02-22T06:00:00.000Z"),
+      dtstart: new Date("2026-02-22T05:00:00.000Z"),
+      priority: "Low",
+    }),
     makeTodo("today", {
       due: new Date("2026-02-22T11:00:00.000Z"),
       dtstart: new Date("2026-02-22T08:00:00.000Z"),
@@ -72,7 +77,7 @@ describe("todoSummary mode filtering", () => {
       timeZone: "UTC",
       now,
     });
-    expect(filtered.map((todo) => todo.id)).toEqual(["today"]);
+    expect(filtered.map((todo) => todo.id)).toEqual(["today-overdue", "today"]);
   });
 
   test("scheduled mode excludes overdue items", () => {
@@ -83,6 +88,22 @@ describe("todoSummary mode filtering", () => {
       now,
     });
     expect(filtered.map((todo) => todo.id)).toEqual([
+      "today",
+      "priority-medium",
+      "priority-high",
+      "scheduled",
+    ]);
+  });
+
+  test("all mode includes tasks due from today's start onward", () => {
+    const filtered = filterTodosForSummaryMode({
+      mode: "all",
+      todos,
+      timeZone: "UTC",
+      now,
+    });
+    expect(filtered.map((todo) => todo.id)).toEqual([
+      "today-overdue",
       "today",
       "priority-medium",
       "priority-high",
@@ -117,5 +138,6 @@ describe("todoSummary mode filtering", () => {
       now,
     });
     expect(summary).toContain("- Start with");
+    expect(summary).toContain("(due today)");
   });
 });
