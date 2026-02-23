@@ -1,6 +1,8 @@
 package com.ohmz.tday.compose.core.network
 
 import com.ohmz.tday.compose.core.model.ChangePasswordRequest
+import com.ohmz.tday.compose.core.model.AppSettingsResponse
+import com.ohmz.tday.compose.core.model.AdminSettingsResponse
 import com.ohmz.tday.compose.core.model.CompletedTodosResponse
 import com.ohmz.tday.compose.core.model.CreateNoteRequest
 import com.ohmz.tday.compose.core.model.CreateListRequest
@@ -23,8 +25,11 @@ import com.ohmz.tday.compose.core.model.ReorderItemRequest
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
+import com.ohmz.tday.compose.core.model.TodoSummaryRequest
+import com.ohmz.tday.compose.core.model.TodoSummaryResponse
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.TodosResponse
+import com.ohmz.tday.compose.core.model.UpdateAdminSettingsRequest
 import com.ohmz.tday.compose.core.model.UpdateCompletedTodoRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
@@ -85,6 +90,22 @@ interface TdayApiService {
         @Query("timeline") timeline: Boolean? = null,
         @Query("recurringFutureDays") recurringFutureDays: Int? = null,
     ): Response<TodosResponse>
+
+    @GET("/api/app-settings")
+    suspend fun getAppSettings(): Response<AppSettingsResponse>
+
+    @GET("/api/admin/settings")
+    suspend fun getAdminSettings(): Response<AdminSettingsResponse>
+
+    @PATCH("/api/admin/settings")
+    suspend fun patchAdminSettings(
+        @Body payload: UpdateAdminSettingsRequest,
+    ): Response<AdminSettingsResponse>
+
+    @POST("/api/todo/summary")
+    suspend fun summarizeTodos(
+        @Body payload: TodoSummaryRequest,
+    ): Response<TodoSummaryResponse>
 
     @POST("/api/todo")
     suspend fun createTodo(

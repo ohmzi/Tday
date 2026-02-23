@@ -30,6 +30,10 @@ data class AppUiState(
     val canResetServerTrust: Boolean = false,
     val pendingApprovalMessage: String? = null,
     val isManualSyncing: Boolean = false,
+    val adminAiSummaryEnabled: Boolean? = null,
+    val isAdminAiSummaryLoading: Boolean = false,
+    val isAdminAiSummarySaving: Boolean = false,
+    val adminAiSummaryError: String? = null,
 )
 
 @HiltViewModel
@@ -64,6 +68,10 @@ class AppViewModel @Inject constructor(
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
                         isManualSyncing = false,
+                        adminAiSummaryEnabled = null,
+                        isAdminAiSummaryLoading = false,
+                        isAdminAiSummarySaving = false,
+                        adminAiSummaryError = null,
                     )
                 }
                 ensureResyncLoop(authenticated = false)
@@ -72,6 +80,7 @@ class AppViewModel @Inject constructor(
 
             val sessionUser = runCatching { repository.restoreSession() }.getOrNull()
             if (sessionUser?.id != null) {
+                val adminUser = isAdmin(sessionUser)
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -83,10 +92,21 @@ class AppViewModel @Inject constructor(
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
                         isManualSyncing = false,
+                        adminAiSummaryEnabled = if (adminUser) {
+                            repository.isAiSummaryEnabledSnapshot()
+                        } else {
+                            null
+                        },
+                        isAdminAiSummaryLoading = adminUser,
+                        isAdminAiSummarySaving = false,
+                        adminAiSummaryError = null,
                     )
                 }
                 ensureResyncLoop(authenticated = true)
                 launchStartupSync()
+                if (adminUser) {
+                    refreshAdminAiSummarySetting()
+                }
                 return@launch
             }
 
@@ -100,6 +120,7 @@ class AppViewModel @Inject constructor(
                 ) {
                     com.ohmz.tday.compose.core.model.AuthResult.Success -> {
                         val authed = repository.restoreSession()
+                        val adminUser = isAdmin(authed)
                         _uiState.update {
                             it.copy(
                                 loading = false,
@@ -111,11 +132,22 @@ class AppViewModel @Inject constructor(
                                 canResetServerTrust = false,
                                 pendingApprovalMessage = null,
                                 isManualSyncing = false,
+                                adminAiSummaryEnabled = if (adminUser) {
+                                    repository.isAiSummaryEnabledSnapshot()
+                                } else {
+                                    null
+                                },
+                                isAdminAiSummaryLoading = adminUser,
+                                isAdminAiSummarySaving = false,
+                                adminAiSummaryError = null,
                             )
                         }
                         ensureResyncLoop(authenticated = authed?.id != null)
                         if (authed?.id != null) {
                             launchStartupSync()
+                            if (adminUser) {
+                                refreshAdminAiSummarySetting()
+                            }
                         }
                         return@launch
                     }
@@ -132,6 +164,10 @@ class AppViewModel @Inject constructor(
                                 canResetServerTrust = false,
                                 pendingApprovalMessage = "Account pending admin approval.",
                                 isManualSyncing = false,
+                                adminAiSummaryEnabled = null,
+                                isAdminAiSummaryLoading = false,
+                                isAdminAiSummarySaving = false,
+                                adminAiSummaryError = null,
                             )
                         }
                         ensureResyncLoop(authenticated = false)
@@ -164,6 +200,10 @@ class AppViewModel @Inject constructor(
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
                         isManualSyncing = false,
+                        adminAiSummaryEnabled = null,
+                        isAdminAiSummaryLoading = false,
+                        isAdminAiSummarySaving = false,
+                        adminAiSummaryError = null,
                     )
                 }
                 ensureResyncLoop(authenticated = true)
@@ -182,6 +222,10 @@ class AppViewModel @Inject constructor(
                     canResetServerTrust = false,
                     pendingApprovalMessage = null,
                     isManualSyncing = false,
+                    adminAiSummaryEnabled = null,
+                    isAdminAiSummaryLoading = false,
+                    isAdminAiSummarySaving = false,
+                    adminAiSummaryError = null,
                 )
             }
             ensureResyncLoop(authenticated = false)
@@ -189,6 +233,84 @@ class AppViewModel @Inject constructor(
     }
 
     fun refreshSession() = bootstrap()
+
+    fun refreshAdminAiSummarySetting() {
+        val current = _uiState.value
+        if (!isAdmin(current.user)) {
+            _uiState.update {
+                it.copy(
+                    adminAiSummaryEnabled = null,
+                    isAdminAiSummaryLoading = false,
+                    isAdminAiSummarySaving = false,
+                    adminAiSummaryError = null,
+                )
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isAdminAiSummaryLoading = true,
+                    adminAiSummaryError = null,
+                    adminAiSummaryEnabled = it.adminAiSummaryEnabled
+                        ?: repository.isAiSummaryEnabledSnapshot(),
+                )
+            }
+            runCatching { repository.fetchAdminAiSummaryEnabled() }
+                .onSuccess { enabled ->
+                    _uiState.update {
+                        it.copy(
+                            adminAiSummaryEnabled = enabled,
+                            isAdminAiSummaryLoading = false,
+                            adminAiSummaryError = null,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isAdminAiSummaryLoading = false,
+                            adminAiSummaryError = error.message ?: "Could not load admin settings",
+                        )
+                    }
+                }
+        }
+    }
+
+    fun setAdminAiSummaryEnabled(enabled: Boolean) {
+        val current = _uiState.value
+        if (!isAdmin(current.user) || current.isAdminAiSummarySaving) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isAdminAiSummarySaving = true,
+                    adminAiSummaryError = null,
+                )
+            }
+            runCatching { repository.updateAdminAiSummaryEnabled(enabled) }
+                .onSuccess { updated ->
+                    _uiState.update {
+                        it.copy(
+                            adminAiSummaryEnabled = updated,
+                            isAdminAiSummaryLoading = false,
+                            isAdminAiSummarySaving = false,
+                            adminAiSummaryError = null,
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isAdminAiSummarySaving = false,
+                            adminAiSummaryError = error.message ?: "Could not update admin settings",
+                        )
+                    }
+                    refreshAdminAiSummarySetting()
+                }
+        }
+    }
 
     fun saveServerUrl(
         rawUrl: String,
@@ -266,6 +388,10 @@ class AppViewModel @Inject constructor(
                     canResetServerTrust = false,
                     pendingApprovalMessage = null,
                     isManualSyncing = false,
+                    adminAiSummaryEnabled = null,
+                    isAdminAiSummaryLoading = false,
+                    isAdminAiSummarySaving = false,
+                    adminAiSummaryError = null,
                 )
             }
         }
@@ -325,6 +451,10 @@ class AppViewModel @Inject constructor(
             runCatching { repository.syncCachedData(force = true) }
             runCatching { repository.syncTimezone() }
         }
+    }
+
+    private fun isAdmin(user: SessionUser?): Boolean {
+        return user?.role?.equals("ADMIN", ignoreCase = true) == true
     }
 
     private fun toServerSetupMessage(error: Throwable): String {
