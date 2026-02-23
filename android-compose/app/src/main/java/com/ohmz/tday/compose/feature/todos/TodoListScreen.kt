@@ -50,6 +50,7 @@ import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -123,6 +124,7 @@ fun TodoListScreen(
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     highlightedTodoId: String? = null,
+    onSummarize: () -> Unit,
     onAddTask: (payload: CreateTaskPayload) -> Unit,
     onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
@@ -227,6 +229,7 @@ fun TodoListScreen(
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
+    var showSummarySheet by rememberSaveable(uiState.mode) { mutableStateOf(false) }
     var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var listSettingsName by rememberSaveable { mutableStateOf("") }
     var listSettingsColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR_KEY) }
@@ -237,6 +240,8 @@ fun TodoListScreen(
     val editTargetTodo = remember(editTargetTodoId, uiState.items) {
         editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
     }
+    val canSummarizeCurrentMode = uiState.mode != TodoListMode.LIST && uiState.aiSummaryEnabled
+    val showTopBarActionButton = canSummarizeCurrentMode || uiState.mode == TodoListMode.LIST
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
         targetValue = if (fabPressed) 0.93f else 1f,
@@ -246,6 +251,11 @@ fun TodoListScreen(
         targetValue = if (fabPressed) 2.dp else 0.dp,
         label = "todoFabOffsetY",
     )
+    LaunchedEffect(showSummarySheet, canSummarizeCurrentMode) {
+        if (showSummarySheet && canSummarizeCurrentMode) {
+            onSummarize()
+        }
+    }
     LaunchedEffect(highlightedTodoId, uiState.mode, timelineSections) {
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         if (allCollapsedSectionKeys.isNotEmpty()) {
@@ -276,8 +286,21 @@ fun TodoListScreen(
                     title = uiState.title,
                     titleIcon = titleIcon,
                     titleColor = titleColor,
-                    onMore = {
-                        if (uiState.mode == TodoListMode.LIST && selectedList != null) {
+                    showActionButton = showTopBarActionButton,
+                    actionIcon = if (canSummarizeCurrentMode) {
+                        Icons.Rounded.AutoAwesome
+                    } else {
+                        Icons.Rounded.MoreHoriz
+                    },
+                    actionContentDescription = if (canSummarizeCurrentMode) {
+                        "Summarize tasks"
+                    } else {
+                        "More options"
+                    },
+                    onAction = {
+                        if (canSummarizeCurrentMode) {
+                            showSummarySheet = true
+                        } else if (selectedList != null) {
                             listSettingsTargetId = selectedList.id
                             listSettingsName = selectedList.name
                             listSettingsColor = selectedList.color
@@ -480,6 +503,18 @@ fun TodoListScreen(
         )
     }
 
+    if (showSummarySheet) {
+        SummaryBottomSheet(
+            isLoading = uiState.isSummarizing,
+            summaryText = uiState.summaryText,
+            summarySource = uiState.summarySource,
+            summaryGeneratedAt = uiState.summaryGeneratedAt,
+            errorMessage = uiState.summaryError,
+            onDismiss = { showSummarySheet = false },
+            onRetry = onSummarize,
+        )
+    }
+
     editTargetTodo?.let { todo ->
         CreateTaskBottomSheet(
             lists = uiState.lists,
@@ -537,7 +572,10 @@ private fun TodayTopBar(
     title: String,
     titleIcon: ImageVector,
     titleColor: Color,
-    onMore: () -> Unit,
+    showActionButton: Boolean,
+    actionIcon: ImageVector,
+    actionContentDescription: String,
+    onAction: () -> Unit,
 ) {
     val progress = collapseProgress.coerceIn(0f, 1f)
     val titleHandoffPoint = 0.9f
@@ -566,11 +604,13 @@ private fun TodayTopBar(
                     icon = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = "Back",
                 )
-                TodayHeaderButton(
-                    onClick = onMore,
-                    icon = Icons.Rounded.MoreHoriz,
-                    contentDescription = "More options",
-                )
+                if (showActionButton) {
+                    TodayHeaderButton(
+                        onClick = onAction,
+                        icon = actionIcon,
+                        contentDescription = actionContentDescription,
+                    )
+                }
             }
             if (collapsedTitleAlpha > 0.001f) {
                 Row(
@@ -660,6 +700,146 @@ private fun TodayHeaderButton(
                 tint = colorScheme.onSurface,
                 modifier = Modifier.size(30.dp),
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SummaryBottomSheet(
+    isLoading: Boolean,
+    summaryText: String?,
+    summarySource: String?,
+    summaryGeneratedAt: String?,
+    errorMessage: String?,
+    onDismiss: () -> Unit,
+    onRetry: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val colorScheme = MaterialTheme.colorScheme
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
+    val sheetContainerColor = if (isDarkTheme) colorScheme.surface else colorScheme.background
+    val sheetScrimColor = if (isDarkTheme) {
+        Color.Black.copy(alpha = 0.68f)
+    } else {
+        Color.Black.copy(alpha = 0.40f)
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = null,
+        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+        containerColor = sheetContainerColor,
+        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+        scrimColor = sheetScrimColor,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Summary",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = colorScheme.onBackground,
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "Close summary",
+                        tint = colorScheme.onBackground,
+                    )
+                }
+            }
+
+            if (isLoading) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Text(
+                        text = "Creating your task summary...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (!summaryText.isNullOrBlank()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                ) {
+                    Text(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+                        text = summaryText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = colorScheme.onSurface,
+                    )
+                }
+            }
+
+            if (!errorMessage.isNullOrBlank()) {
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.error,
+                )
+            }
+
+            if (!summaryGeneratedAt.isNullOrBlank() || !summarySource.isNullOrBlank()) {
+                val sourceLabel = summarySource?.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                }.orEmpty()
+                val generatedLabel = summaryGeneratedAt.orEmpty()
+                Text(
+                    text = buildString {
+                        if (sourceLabel.isNotBlank()) {
+                            append("Source: ")
+                            append(sourceLabel)
+                        }
+                        if (generatedLabel.isNotBlank()) {
+                            if (isNotEmpty()) append(" • ")
+                            append("Generated at ")
+                            append(generatedLabel)
+                        }
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
+                )
+            }
+
+            Card(
+                onClick = onRetry,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Text(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    text = if (isLoading) "Summarizing..." else "Refresh summary",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
     }
 }

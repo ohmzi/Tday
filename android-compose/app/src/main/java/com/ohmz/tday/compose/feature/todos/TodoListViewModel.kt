@@ -26,6 +26,12 @@ data class TodoListUiState(
     val lists: List<ListSummary> = emptyList(),
     val items: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
+    val aiSummaryEnabled: Boolean = true,
+    val summaryText: String? = null,
+    val summarySource: String? = null,
+    val summaryGeneratedAt: String? = null,
+    val summaryError: String? = null,
+    val isSummarizing: Boolean = false,
 )
 
 @HiltViewModel
@@ -67,12 +73,76 @@ class TodoListViewModel @Inject constructor(
                     TodoListMode.PRIORITY -> "Priority"
                     TodoListMode.LIST -> listName ?: "List"
                 },
+                aiSummaryEnabled = repository.isAiSummaryEnabledSnapshot(),
+                summaryText = null,
+                summarySource = null,
+                summaryGeneratedAt = null,
+                summaryError = null,
+                isSummarizing = false,
             )
         }
         hydrateFromCache(
             mode = mode,
             listId = listId,
         )
+        refreshAiSummaryAvailability()
+    }
+
+    fun summarizeCurrentMode() {
+        val current = _uiState.value
+        if (current.isSummarizing) return
+        if (!current.aiSummaryEnabled) {
+            _uiState.update {
+                it.copy(
+                    summaryError = "AI summary is disabled by admin",
+                )
+            }
+            return
+        }
+        if (current.mode == TodoListMode.LIST) {
+            _uiState.update {
+                it.copy(
+                    summaryError = "Summary is available only for Today, Scheduled, All, and Priority",
+                )
+            }
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                isSummarizing = true,
+                summaryText = null,
+                summarySource = null,
+                summaryGeneratedAt = null,
+                summaryError = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                repository.summarizeTodos(
+                    mode = current.mode,
+                    listId = current.listId,
+                )
+            }.onSuccess { response ->
+                _uiState.update {
+                    it.copy(
+                        isSummarizing = false,
+                        summaryText = response.summary,
+                        summarySource = response.source,
+                        summaryGeneratedAt = response.generatedAt,
+                        summaryError = null,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isSummarizing = false,
+                        summaryError = error.message ?: "Could not summarize tasks",
+                    )
+                }
+            }
+        }
     }
 
     fun refresh() {
@@ -89,12 +159,14 @@ class TodoListViewModel @Inject constructor(
         runCatching {
             val todos = repository.fetchTodosSnapshot(mode = mode, listId = listId)
             val lists = repository.fetchListsSnapshot()
-            todos to lists
-        }.onSuccess { (todos, lists) ->
+            val aiSummaryEnabled = repository.isAiSummaryEnabledSnapshot()
+            Triple(todos, lists, aiSummaryEnabled)
+        }.onSuccess { (todos, lists, aiSummaryEnabled) ->
             _uiState.update { current ->
                 current.copy(
                     lists = if (current.lists == lists) current.lists else lists,
                     items = if (current.items == todos) current.items else todos,
+                    aiSummaryEnabled = aiSummaryEnabled,
                     errorMessage = null,
                 )
             }
@@ -146,6 +218,20 @@ class TodoListViewModel @Inject constructor(
                         isLoading = false,
                         errorMessage = error.message ?: "Failed to load tasks",
                     )
+                }
+            }
+            refreshAiSummaryAvailability()
+        }
+    }
+
+    private fun refreshAiSummaryAvailability() {
+        viewModelScope.launch {
+            val enabled = repository.refreshAiSummaryEnabled()
+            _uiState.update { current ->
+                if (current.aiSummaryEnabled == enabled) {
+                    current
+                } else {
+                    current.copy(aiSummaryEnabled = enabled)
                 }
             }
         }

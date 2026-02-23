@@ -19,7 +19,10 @@ import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.model.TodoSummaryRequest
+import com.ohmz.tday.compose.core.model.TodoSummaryResponse
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
+import com.ohmz.tday.compose.core.model.UpdateAdminSettingsRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
@@ -348,6 +351,75 @@ class TdayRepository @Inject constructor(
             state = loadOfflineState(),
             mode = mode,
             listId = listId,
+        )
+    }
+
+    fun isAiSummaryEnabledSnapshot(): Boolean {
+        return loadOfflineState().aiSummaryEnabled
+    }
+
+    suspend fun refreshAiSummaryEnabled(): Boolean {
+        return runCatching {
+            val enabled = requireBody(
+                api.getAppSettings(),
+                "Could not load app settings",
+            ).aiSummaryEnabled
+            updateOfflineState { state ->
+                if (state.aiSummaryEnabled == enabled) state else state.copy(aiSummaryEnabled = enabled)
+            }
+            enabled
+        }.getOrElse {
+            loadOfflineState().aiSummaryEnabled
+        }
+    }
+
+    suspend fun fetchAdminAiSummaryEnabled(): Boolean {
+        val enabled = requireBody(
+            api.getAdminSettings(),
+            "Could not load admin settings",
+        ).aiSummaryEnabled
+        updateOfflineState { state ->
+            if (state.aiSummaryEnabled == enabled) state else state.copy(aiSummaryEnabled = enabled)
+        }
+        return enabled
+    }
+
+    suspend fun updateAdminAiSummaryEnabled(enabled: Boolean): Boolean {
+        val updated = requireBody(
+            api.patchAdminSettings(
+                UpdateAdminSettingsRequest(
+                    aiSummaryEnabled = enabled,
+                ),
+            ),
+            "Could not update admin settings",
+        ).aiSummaryEnabled
+        updateOfflineState { state ->
+            if (state.aiSummaryEnabled == updated) state else state.copy(aiSummaryEnabled = updated)
+        }
+        return updated
+    }
+
+    suspend fun summarizeTodos(
+        mode: TodoListMode,
+        listId: String? = null,
+    ): TodoSummaryResponse {
+        val modeValue = when (mode) {
+            TodoListMode.TODAY -> "today"
+            TodoListMode.SCHEDULED -> "scheduled"
+            TodoListMode.ALL -> "all"
+            TodoListMode.PRIORITY -> "priority"
+            TodoListMode.LIST -> throw IllegalStateException(
+                "Summary is available only for Today, Scheduled, All, and Priority screens",
+            )
+        }
+        return requireBody(
+            api.summarizeTodos(
+                TodoSummaryRequest(
+                    mode = modeValue,
+                    listId = listId,
+                ),
+            ),
+            "Could not summarize tasks",
         )
     }
 
@@ -1370,11 +1442,20 @@ class TdayRepository @Inject constructor(
                 updatedAt = parseOptionalInstant(it.updatedAt),
             )
         }
+        val aiSummaryEnabled = runCatching {
+            requireBody(
+                api.getAppSettings(),
+                "Could not load app settings",
+            ).aiSummaryEnabled
+        }.getOrElse {
+            loadOfflineState().aiSummaryEnabled
+        }
 
         return RemoteSnapshot(
             todos = todos,
             completedItems = completed,
             lists = lists,
+            aiSummaryEnabled = aiSummaryEnabled,
         )
     }
 
@@ -1805,6 +1886,7 @@ class TdayRepository @Inject constructor(
             todos = mergedTodos,
             completedItems = remoteCompleted,
             lists = normalizedLists,
+            aiSummaryEnabled = remote.aiSummaryEnabled,
         )
         val localWinsMutations = buildLocalWinsMutations(
             mergedState = dataMergedState,
@@ -2221,7 +2303,8 @@ class TdayRepository @Inject constructor(
     ): Boolean {
         return previous.todos != next.todos ||
             previous.completedItems != next.completedItems ||
-            previous.lists != next.lists
+            previous.lists != next.lists ||
+            previous.aiSummaryEnabled != next.aiSummaryEnabled
     }
 
     private fun isTodayTodo(todo: TodoItem): Boolean {
@@ -2357,6 +2440,7 @@ class TdayRepository @Inject constructor(
         val todos: List<TodoItem>,
         val completedItems: List<CompletedItem>,
         val lists: List<ListSummary>,
+        val aiSummaryEnabled: Boolean,
     ) {
         val todoUpdatedAtByCanonical: Map<String, Long> = todos
             .groupBy { it.canonicalId }
