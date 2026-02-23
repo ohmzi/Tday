@@ -27,7 +27,55 @@ type OllamaGenerateResponse = {
 type AiStructuredSummary = {
   startId?: unknown;
   thenIds?: unknown;
+  summary?: unknown;
 };
+
+function normalizeProseSummary(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const collapsed = value
+    .replace(/\r/g, " ")
+    .replace(/\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^[-*•]\s*/, "")
+    .trim();
+  if (!collapsed) return null;
+  if (collapsed.length < 20) return null;
+  return collapsed;
+}
+
+function includesDayContext(summaryText: string, task: SummaryTaskCandidate): boolean {
+  const normalizedSummary = summaryText.toLowerCase();
+  const dayTarget = (task.dueDayTarget ?? "").toLowerCase().trim();
+
+  if (dayTarget === "today") {
+    return normalizedSummary.includes("today") || normalizedSummary.includes("tonight");
+  }
+  if (dayTarget === "tomorrow") {
+    return normalizedSummary.includes("tomorrow");
+  }
+  if (dayTarget === "yesterday") {
+    return normalizedSummary.includes("yesterday");
+  }
+  if (dayTarget.startsWith("on ")) {
+    const noOrdinal = dayTarget.replace(/(\d+)(st|nd|rd|th)/g, "$1");
+    if (normalizedSummary.includes(dayTarget) || normalizedSummary.includes(noOrdinal)) {
+      return true;
+    }
+    const dateMatch = noOrdinal.match(/on\s+(\d+)\s+([a-z]+)/);
+    if (dateMatch) {
+      const [, dayNumber, monthToken] = dateMatch;
+      if (
+        normalizedSummary.includes(`${dayNumber} ${monthToken}`) ||
+        normalizedSummary.includes(`${monthToken} ${dayNumber}`)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 function extractJsonObject(raw: string): string | null {
   const trimmed = raw.trim();
@@ -77,7 +125,6 @@ function normalizeAiSummary(
   const candidateById = new Map(
     candidates.map((candidate) => [candidate.id.toUpperCase(), candidate]),
   );
-  const candidateOrder = new Map(candidates.map((candidate, index) => [candidate.id, index]));
   const startId = normalizeTaskId(parsed.startId);
   const defaultStartTask = candidates[0];
   if (!defaultStartTask) return null;
@@ -90,34 +137,49 @@ function normalizeAiSummary(
     startTask = defaultStartTask;
   }
 
-  const thenIds = Array.isArray(parsed.thenIds) ? parsed.thenIds : [];
-  const selectedThenIds = thenIds
-    .map((item) => normalizeTaskId(item))
-    .filter((id): id is string => id != null && candidateById.has(id) && id !== startTask.id);
-
   const fallbackThenIds = candidates
     .filter((candidate) => candidate.id !== startTask.id)
     .map((candidate) => candidate.id)
-    .slice(0, 3);
 
-  const normalizedThenIds = Array.from(
-    new Set(selectedThenIds.length > 0 ? selectedThenIds : fallbackThenIds),
-  )
-    .sort((a, b) => (candidateOrder.get(a) ?? 999) - (candidateOrder.get(b) ?? 999))
-    .slice(0, 3);
-
-  const thenTasks = normalizedThenIds
+  const fallbackThenTasks = fallbackThenIds
     .map((id) => candidateById.get(id))
     .filter((candidate): candidate is SummaryTaskCandidate => Boolean(candidate));
-  const summary = buildReadableTaskSummary({
+  const coverageTasks = [startTask, ...fallbackThenTasks];
+  const fallbackSummary = buildReadableTaskSummary({
     startTask,
-    thenTasks,
+    thenTasks: fallbackThenTasks,
   });
-
-  if (summary.length > 460) {
-    return null;
-  }
-
+  const aiSummary = normalizeProseSummary(parsed.summary);
+  const coverageTitlesMentioned = (() => {
+    if (!aiSummary) return 0;
+    const normalizedSummary = aiSummary.toLowerCase();
+    return coverageTasks.filter((task) => normalizedSummary.includes(task.title.toLowerCase())).length;
+  })();
+  const uniqueDayTargets = Array.from(
+    new Set(coverageTasks.map((task) => task.dueDayTarget).filter((target): target is string => Boolean(target))),
+  );
+  const hasRequiredDayContext = (() => {
+    if (!aiSummary) return false;
+    return uniqueDayTargets.every((target) =>
+      coverageTasks.some((task) =>
+        task.dueDayTarget === target && includesDayContext(aiSummary, task),
+      ),
+    );
+  })();
+  const hasElevatedUrgencyTasks = coverageTasks.some((task) => task.priorityLabel !== "low");
+  const hasUrgencyContext = (() => {
+    if (!hasElevatedUrgencyTasks) return true;
+    if (!aiSummary) return false;
+    return /\b(urgent|important|soon|first|start|next|later|after)\b/i.test(aiSummary);
+  })();
+  const avoidsPriorityLabels = (() => {
+    if (!aiSummary) return false;
+    return !/\bpriority\b/i.test(aiSummary);
+  })();
+  const summary =
+    coverageTitlesMentioned > 0 && hasRequiredDayContext && hasUrgencyContext && avoidsPriorityLabels
+      ? aiSummary ?? fallbackSummary
+      : fallbackSummary;
   return summary;
 }
 
@@ -156,7 +218,7 @@ async function requestSummaryFromOllama({
         prompt,
         options: {
           temperature: 0.2,
-          num_predict: 220,
+          num_predict: 1024,
         },
       }),
       signal: controller.signal,

@@ -1,5 +1,6 @@
 import {
   buildFallbackSummary,
+  buildReadableTaskSummary,
   buildSummaryTaskCandidates,
   filterTodosForSummaryMode,
 } from "@/lib/todoSummary";
@@ -81,7 +82,7 @@ describe("todoSummary mode filtering", () => {
     expect(filtered.map((todo) => todo.id)).toEqual(["today-overdue", "today"]);
   });
 
-  test("scheduled mode excludes overdue items", () => {
+  test("scheduled mode includes all of today and future tasks", () => {
     const filtered = filterTodosForSummaryMode({
       mode: "scheduled",
       todos,
@@ -89,6 +90,7 @@ describe("todoSummary mode filtering", () => {
       now,
     });
     expect(filtered.map((todo) => todo.id)).toEqual([
+      "today-overdue",
       "today",
       "priority-medium",
       "priority-high",
@@ -96,7 +98,7 @@ describe("todoSummary mode filtering", () => {
     ]);
   });
 
-  test("all mode includes tasks due from today's start onward", () => {
+  test("all mode includes past, present, and future tasks", () => {
     const filtered = filterTodosForSummaryMode({
       mode: "all",
       todos,
@@ -104,6 +106,7 @@ describe("todoSummary mode filtering", () => {
       now,
     });
     expect(filtered.map((todo) => todo.id)).toEqual([
+      "past",
       "today-overdue",
       "today",
       "priority-medium",
@@ -139,7 +142,7 @@ describe("todoSummary mode filtering", () => {
       now,
     });
     expect(summary).toContain("Start with");
-    expect(summary).toContain("(due today)");
+    expect(summary).toContain("due today");
   });
 
   test("all mode prioritizes near-term due tasks over far future high priority", () => {
@@ -165,5 +168,122 @@ describe("todoSummary mode filtering", () => {
 
     expect(candidates[0]?.title).toBe("Task today-low");
     expect(candidates[1]?.title).toBe("Task far-high");
+  });
+
+  test("priority mode keeps all qualifying tasks for summary coverage", () => {
+    const candidates = buildSummaryTaskCandidates(
+      [
+        makeTodo("overdue-1", {
+          due: new Date("2026-02-20T09:00:00.000Z"),
+          dtstart: new Date("2026-02-20T08:00:00.000Z"),
+          priority: "High",
+        }),
+        makeTodo("overdue-2", {
+          due: new Date("2026-02-21T09:00:00.000Z"),
+          dtstart: new Date("2026-02-21T08:00:00.000Z"),
+          priority: "Medium",
+        }),
+        makeTodo("overdue-3", {
+          due: new Date("2026-02-21T23:00:00.000Z"),
+          dtstart: new Date("2026-02-21T22:00:00.000Z"),
+          priority: "High",
+        }),
+        makeTodo("future-1", {
+          due: new Date("2026-02-27T08:00:00.000Z"),
+          dtstart: new Date("2026-02-27T07:00:00.000Z"),
+          priority: "Medium",
+        }),
+        makeTodo("future-2", {
+          due: new Date("2026-02-27T20:00:00.000Z"),
+          dtstart: new Date("2026-02-27T19:00:00.000Z"),
+          priority: "High",
+        }),
+        makeTodo("future-3", {
+          due: new Date("2026-03-01T09:00:00.000Z"),
+          dtstart: new Date("2026-03-01T08:00:00.000Z"),
+          priority: "High",
+        }),
+      ],
+      {
+        mode: "priority",
+        timeZone: "UTC",
+        now,
+      },
+    );
+
+    expect(candidates.length).toBe(6);
+    expect(candidates.some((candidate) => (candidate.dueDayDelta ?? -1) < 0)).toBe(true);
+    expect(candidates.some((candidate) => (candidate.dueDayDelta ?? -1) >= 0)).toBe(true);
+  });
+
+  test("readable summary groups repeated due dates for next tasks", () => {
+    const summary = buildReadableTaskSummary({
+      startTask: {
+        id: "T1",
+        title: "clean the car",
+        priorityLabel: "high",
+        dueLabel: "due tonight",
+        dueEpochMs: 1,
+        dueDayKey: "2026-02-22",
+        dueDayTarget: "today",
+        dueWindowPhrase: "at night",
+      },
+      thenTasks: [
+        {
+          id: "T2",
+          title: "go fishing",
+          priorityLabel: "medium",
+          dueLabel: "due on 27th Feb in the morning",
+          dueEpochMs: 2,
+          dueDayKey: "2026-02-27",
+          dueDayTarget: "on 27th Feb",
+          dueWindowPhrase: "in the morning",
+        },
+        {
+          id: "T3",
+          title: "return book",
+          priorityLabel: "high",
+          dueLabel: "due on 27th Feb at night",
+          dueEpochMs: 3,
+          dueDayKey: "2026-02-27",
+          dueDayTarget: "on 27th Feb",
+          dueWindowPhrase: "at night",
+        },
+      ],
+    });
+
+    expect(summary).toContain("go fishing in the morning and return book at night (both due on 27th Feb)");
+    expect(summary.match(/due on 27th Feb/g)?.length).toBe(1);
+  });
+
+  test("due labels include time-of-day windows for planning", () => {
+    const candidates = buildSummaryTaskCandidates(
+      [
+        makeTodo("morning", {
+          due: new Date("2026-02-22T08:00:00.000Z"),
+          dtstart: new Date("2026-02-22T07:00:00.000Z"),
+        }),
+        makeTodo("afternoon", {
+          due: new Date("2026-02-22T15:00:00.000Z"),
+          dtstart: new Date("2026-02-22T14:00:00.000Z"),
+        }),
+        makeTodo("night", {
+          due: new Date("2026-02-22T21:00:00.000Z"),
+          dtstart: new Date("2026-02-22T20:00:00.000Z"),
+        }),
+      ],
+      {
+        mode: "all",
+        timeZone: "UTC",
+        now,
+      },
+    );
+
+    expect(candidates.find((candidate) => candidate.title === "Task morning")?.dueLabel)
+      .toContain("morning");
+    expect(candidates.find((candidate) => candidate.title === "Task afternoon")?.dueLabel)
+      .toContain("afternoon");
+    expect(candidates.find((candidate) => candidate.title === "Task night")?.dueLabel)
+      .toMatch(/tonight|night/);
   });
 });
