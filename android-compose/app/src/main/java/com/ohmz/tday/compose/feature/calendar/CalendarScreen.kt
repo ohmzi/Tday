@@ -106,6 +106,7 @@ import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import java.time.LocalDate
 import java.time.YearMonth
@@ -123,6 +124,7 @@ fun CalendarScreen(
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onCreateTask: (CreateTaskPayload) -> Unit,
+    onParseTaskTitleNlp: suspend (title: String, referenceStartEpochMs: Long, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCompleteTask: (TodoItem) -> Unit,
     onUncompleteTask: (CompletedItem) -> Unit,
     onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
@@ -368,6 +370,7 @@ fun CalendarScreen(
             lists = uiState.lists,
             initialStartEpochMs = createStartEpochMs,
             initialDueEpochMs = createDueEpochMs,
+            onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = {
                 showCreateTaskSheet = false
                 createStartEpochMs = null
@@ -387,6 +390,7 @@ fun CalendarScreen(
             lists = uiState.lists,
             editingTask = todo,
             defaultListId = todo.listId,
+            onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = { editTargetId = null },
             onCreateTask = { _ -> },
             onUpdateTask = { targetTodo, payload ->

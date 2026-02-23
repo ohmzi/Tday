@@ -97,6 +97,24 @@ data class TodoSummaryResponse(
 )
 
 @Serializable
+data class TodoTitleNlpRequest(
+    val text: String,
+    val locale: String? = null,
+    val referenceEpochMs: Long? = null,
+    val timezoneOffsetMinutes: Int? = null,
+    val defaultDurationMinutes: Int? = null,
+)
+
+@Serializable
+data class TodoTitleNlpResponse(
+    val cleanTitle: String,
+    val matchedText: String? = null,
+    val matchStart: Int? = null,
+    val startEpochMs: Long? = null,
+    val dueEpochMs: Long? = null,
+)
+
+@Serializable
 data class CreateTodoRequest(
     val title: String,
     val description: String? = null,

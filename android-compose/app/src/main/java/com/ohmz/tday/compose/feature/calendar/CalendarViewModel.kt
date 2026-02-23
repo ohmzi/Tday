@@ -8,6 +8,7 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,6 +69,18 @@ class CalendarViewModel @Inject constructor(
         loadInternal(
             forceSync = true,
             showLoading = true,
+        )
+    }
+
+    suspend fun parseTaskTitleNlp(
+        text: String,
+        referenceStartEpochMs: Long,
+        referenceDueEpochMs: Long,
+    ): TodoTitleNlpResponse? {
+        return repository.parseTodoTitleNlp(
+            text = text,
+            referenceStartEpochMs = referenceStartEpochMs,
+            referenceDueEpochMs = referenceDueEpochMs,
         )
     }
 
