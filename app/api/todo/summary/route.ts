@@ -40,8 +40,23 @@ function normalizeProseSummary(value: unknown): string | null {
     .replace(/^[-*•]\s*/, "")
     .trim();
   if (!collapsed) return null;
-  if (collapsed.length < 20) return null;
-  return collapsed;
+  const cleaned = collapsed
+    .replace(
+      /^handle the most urgent work first(?:,\s*then move to the important items)?\.?\s*/i,
+      "",
+    )
+    .replace(/^start with the most important work first\.?\s*/i, "")
+    .replace(/\(\s*due\s+([^)]+)\)/gi, (_match, rawDue: string) => {
+      const dueText = String(rawDue).trim();
+      const past = /^yesterday\b/i.test(dueText);
+      return `, which ${past ? "was" : "is"} due ${dueText}`;
+    })
+    .replace(/\s+,/g, ",")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (!cleaned) return null;
+  if (cleaned.length < 20) return null;
+  return cleaned;
 }
 
 function includesDayContext(summaryText: string, task: SummaryTaskCandidate): boolean {
@@ -275,7 +290,6 @@ export async function POST(req: NextRequest) {
       now,
     });
     const summaryCandidates = buildSummaryTaskCandidates(filteredTodos, {
-      mode,
       now,
       timeZone,
     });
