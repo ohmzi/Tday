@@ -103,6 +103,7 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import java.time.Instant
@@ -126,6 +127,7 @@ fun TodoListScreen(
     highlightedTodoId: String? = null,
     onSummarize: () -> Unit,
     onAddTask: (payload: CreateTaskPayload) -> Unit,
+    onParseTaskTitleNlp: suspend (title: String, referenceStartEpochMs: Long, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
@@ -506,6 +508,7 @@ fun TodoListScreen(
             defaultPriority = if (uiState.mode == TodoListMode.PRIORITY) "Medium" else null,
             initialStartEpochMs = quickAddStartEpochMs,
             initialDueEpochMs = quickAddDueEpochMs,
+            onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = {
                 showCreateTaskSheet = false
                 quickAddStartEpochMs = null
@@ -536,6 +539,7 @@ fun TodoListScreen(
         CreateTaskBottomSheet(
             lists = uiState.lists,
             editingTask = todo,
+            onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = { editTargetTodoId = null },
             onCreateTask = { _ -> },
             onUpdateTask = { target, payload ->

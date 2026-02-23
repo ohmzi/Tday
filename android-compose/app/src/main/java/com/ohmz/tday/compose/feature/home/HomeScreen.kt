@@ -110,6 +110,7 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
@@ -132,6 +133,7 @@ fun HomeScreen(
     onOpenTaskFromSearch: (todoId: String) -> Unit,
     onOpenList: (listId: String, listName: String) -> Unit,
     onCreateTask: (payload: CreateTaskPayload) -> Unit,
+    onParseTaskTitleNlp: suspend (title: String, referenceStartEpochMs: Long, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -576,6 +578,7 @@ fun HomeScreen(
         CreateTaskBottomSheet(
             lists = uiState.summary.lists,
             defaultListId = null,
+            onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = { showCreateTask = false },
             onCreateTask = { payload ->
                 onCreateTask(payload)
