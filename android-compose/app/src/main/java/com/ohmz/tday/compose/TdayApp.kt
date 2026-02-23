@@ -360,6 +360,7 @@ fun TdayApp() {
                         uiState = uiState,
                         onBack = { navController.popBackStack() },
                         onRefresh = viewModel::refresh,
+                        onCreateTask = viewModel::createTask,
                         onUpdateTask = viewModel::updateTask,
                         onDelete = { todo ->
                             viewModel.delete(todo) {
