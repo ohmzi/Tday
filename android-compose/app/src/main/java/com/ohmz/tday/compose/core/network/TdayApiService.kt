@@ -25,6 +25,8 @@ import com.ohmz.tday.compose.core.model.ReorderItemRequest
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
+import com.ohmz.tday.compose.core.model.TodoTitleNlpRequest
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.TodoSummaryRequest
 import com.ohmz.tday.compose.core.model.TodoSummaryResponse
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
@@ -106,6 +108,11 @@ interface TdayApiService {
     suspend fun summarizeTodos(
         @Body payload: TodoSummaryRequest,
     ): Response<TodoSummaryResponse>
+
+    @POST("/api/todo/nlp")
+    suspend fun parseTodoTitleNlp(
+        @Body payload: TodoTitleNlpRequest,
+    ): Response<TodoTitleNlpResponse>
 
     @POST("/api/todo")
     suspend fun createTodo(

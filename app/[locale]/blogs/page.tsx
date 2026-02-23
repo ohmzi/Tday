@@ -125,7 +125,7 @@ const BlogMainPage = () => {
         {/* Footer */}
         <footer className="mt-24 pt-12  border-opacity-20 text-center">
           <p className="text-sm font-light opacity-60">
-            © 2024 Zheng Jiawen. Built with Next.js and Tailwind CSS.
+            © 2026 Tday. Built with Next.js and Tailwind CSS.
           </p>
           <div className="flex justify-center gap-6 mt-6">
             <a
