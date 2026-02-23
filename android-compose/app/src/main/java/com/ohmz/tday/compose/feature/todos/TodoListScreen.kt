@@ -220,9 +220,17 @@ fun TodoListScreen(
         targetValue = todayCollapseProgressTarget,
         label = "todayTitleCollapseProgress",
     )
+    val isCollapsibleTimelineMode =
+        uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
-    var allCollapsedSectionKeys by rememberSaveable(uiState.mode) {
-        mutableStateOf(setOf("earlier"))
+    var collapsedSectionKeys by rememberSaveable(uiState.mode) {
+        mutableStateOf(
+            if (isCollapsibleTimelineMode) {
+                setOf("earlier")
+            } else {
+                emptySet()
+            },
+        )
     }
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -258,8 +266,8 @@ fun TodoListScreen(
     }
     LaunchedEffect(highlightedTodoId, uiState.mode, timelineSections) {
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
-        if (allCollapsedSectionKeys.isNotEmpty()) {
-            allCollapsedSectionKeys = emptySet()
+        if (collapsedSectionKeys.isNotEmpty()) {
+            collapsedSectionKeys = emptySet()
         }
         val targetSectionIndex = timelineSections.indexOfFirst { section ->
             section.items.any { item ->
@@ -273,6 +281,11 @@ fun TodoListScreen(
             if (flashTodoId == highlightedTodoId) {
                 flashTodoId = null
             }
+        }
+    }
+    LaunchedEffect(uiState.mode) {
+        if (uiState.mode == TodoListMode.PRIORITY) {
+            collapsedSectionKeys = collapsedSectionKeys + "earlier"
         }
     }
 
@@ -402,8 +415,12 @@ fun TodoListScreen(
 
             if (showSectionedTimeline) {
                 items(timelineSections, key = { it.key }) { section ->
-                    val isAllMode = uiState.mode == TodoListMode.ALL
-                    val isCollapsed = isAllMode && allCollapsedSectionKeys.contains(section.key)
+                    val sectionCanCollapse = when (uiState.mode) {
+                        TodoListMode.ALL -> true
+                        TodoListMode.PRIORITY -> section.key == "earlier"
+                        else -> false
+                    }
+                    val isCollapsed = sectionCanCollapse && collapsedSectionKeys.contains(section.key)
                     TimelineSection(
                         section = section,
                         mode = uiState.mode,
@@ -411,20 +428,20 @@ fun TodoListScreen(
                         useMinimalStyle = usesTodayStyle,
                         highlightTodoId = flashTodoId,
                         isCollapsed = isCollapsed,
-                        showTopDivider = isAllMode && section.title == "Today",
-                        onHeaderClick = if (isAllMode) {
+                        showTopDivider = uiState.mode == TodoListMode.ALL && section.title == "Today",
+                        onHeaderClick = if (sectionCanCollapse) {
                             {
-                                allCollapsedSectionKeys =
+                                collapsedSectionKeys =
                                     if (isCollapsed) {
-                                        allCollapsedSectionKeys - section.key
+                                        collapsedSectionKeys - section.key
                                     } else {
-                                        allCollapsedSectionKeys + section.key
+                                        collapsedSectionKeys + section.key
                                     }
                             }
                         } else {
                             null
                         },
-                        onTapForQuickAdd = if (isAllMode) {
+                        onTapForQuickAdd = if (sectionCanCollapse) {
                             null
                         } else {
                             section.quickAddDefaults?.let { quickAdd ->
