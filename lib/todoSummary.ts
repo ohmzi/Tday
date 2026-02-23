@@ -40,11 +40,11 @@ export function filterTodosForSummaryMode({
 
   const filtered = (() => {
     if (mode === "all") {
-      return activeTodos.filter((todo) => todo.due >= start);
+      return activeTodos;
     }
 
     if (mode === "scheduled") {
-      return activeTodos.filter((todo) => !todo.due || todo.due >= now);
+      return activeTodos.filter((todo) => todo.due >= start);
     }
 
     if (mode === "priority") {
@@ -81,6 +81,23 @@ function priorityRank(priority: string | null | undefined): number {
   return 1;
 }
 
+function summaryPriorityLabel(priority: string | null | undefined): "high" | "medium" | "low" {
+  const normalized = normalizePriority(priority).toLowerCase();
+  if (normalized === "high" || normalized === "urgent" || normalized === "important") {
+    return "high";
+  }
+  if (normalized === "medium") {
+    return "medium";
+  }
+  return "low";
+}
+
+function urgencyStyle(priorityLabel: SummaryTaskCandidate["priorityLabel"]): string {
+  if (priorityLabel === "high") return "urgent";
+  if (priorityLabel === "medium") return "important";
+  return "routine";
+}
+
 function dueDayDelta(due: Date, now: Date, timeZone: string): number {
   const zonedNow = toZonedTime(now, timeZone);
   const zonedDue = toZonedTime(due, timeZone);
@@ -107,37 +124,154 @@ function joinTaskTitles(titles: string[]): string {
   if (titles.length === 0) return "";
   if (titles.length === 1) return titles[0];
   if (titles.length === 2) return `${titles[0]} and ${titles[1]}`;
-  return `${titles[0]}, ${titles[1]}, and ${titles[2]}`;
+  return `${titles.slice(0, -1).join(", ")}, and ${titles[titles.length - 1]}`;
 }
 
 function taskPhrase(task: Pick<SummaryTaskCandidate, "title" | "dueLabel">): string {
   return `${task.title} (${task.dueLabel})`;
 }
 
-function formatDueLabel(due: Date, now: Date, timeZone: string): string {
+function buildUrgencyLead(tasks: SummaryTaskCandidate[]): string | null {
+  const urgentCount = tasks.filter((task) => task.priorityLabel === "high").length;
+  const importantCount = tasks.filter((task) => task.priorityLabel === "medium").length;
+
+  if (urgentCount > 0 && importantCount > 0) {
+    return "Handle the most urgent work first, then move to the important items.";
+  }
+  if (urgentCount > 0) {
+    return "Handle the most urgent work first.";
+  }
+  if (importantCount > 0) {
+    return "Start with the most important work first.";
+  }
+  return null;
+}
+
+function buildGroupedThenPhrase(thenTasks: SummaryTaskCandidate[]): string {
+  if (thenTasks.length === 0) return "";
+  if (thenTasks.length === 1) return taskPhrase(thenTasks[0]);
+
+  const dayGroups = thenTasks.reduce<Array<{ dayKey: string; tasks: SummaryTaskCandidate[] }>>((acc, task) => {
+    const last = acc[acc.length - 1];
+    const dayKey = task.dueDayKey ?? task.dueLabel;
+    if (last && last.dayKey === dayKey) {
+      last.tasks.push(task);
+      return acc;
+    }
+    acc.push({ dayKey, tasks: [task] });
+    return acc;
+  }, []);
+
+  const groupPhrases = dayGroups.map((group) => buildDayGroupedPhrase(group.tasks));
+
+  if (groupPhrases.length === 1) {
+    return groupPhrases[0];
+  }
+
+  return `${groupPhrases.slice(0, -1).join(", then ")}, then ${groupPhrases[groupPhrases.length - 1]}`;
+}
+
+function dueWindow(hour: number): "morning" | "afternoon" | "night" {
+  if (hour < 12) return "morning";
+  if (hour < 18) return "afternoon";
+  return "night";
+}
+
+function dueWindowPhrase(window: "morning" | "afternoon" | "night"): string {
+  switch (window) {
+    case "morning":
+      return "in the morning";
+    case "afternoon":
+      return "in the afternoon";
+    case "night":
+      return "at night";
+  }
+}
+
+function buildDueDescriptor(due: Date, now: Date, timeZone: string): {
+  dueLabel: string;
+  dueDayKey: string;
+  dueDayTarget: string;
+  dueWindowPhrase: string;
+} {
   const zonedNow = toZonedTime(now, timeZone);
   const zonedDue = toZonedTime(due, timeZone);
   const dayDelta = differenceInCalendarDays(startOfDay(zonedDue), startOfDay(zonedNow));
+  const window = dueWindow(zonedDue.getHours());
+  const neutralWindowPhrase = dueWindowPhrase(window);
+  const dueDayKey = format(zonedDue, "yyyy-MM-dd");
 
   if (dayDelta === 0) {
-    return "due today";
+    return {
+      dueLabel: window === "night" ? "due tonight" : `due today ${neutralWindowPhrase}`,
+      dueDayKey,
+      dueDayTarget: "today",
+      dueWindowPhrase: neutralWindowPhrase,
+    };
   }
   if (dayDelta === 1) {
-    return "due tomorrow";
+    return {
+      dueLabel: `due tomorrow ${window === "night" ? "night" : window}`,
+      dueDayKey,
+      dueDayTarget: "tomorrow",
+      dueWindowPhrase: neutralWindowPhrase,
+    };
   }
   if (dayDelta === -1) {
-    return "due yesterday";
+    return {
+      dueLabel: `due yesterday ${window === "night" ? "night" : window}`,
+      dueDayKey,
+      dueDayTarget: "yesterday",
+      dueWindowPhrase: neutralWindowPhrase,
+    };
   }
 
   const sameYear = zonedDue.getFullYear() === zonedNow.getFullYear();
-  return `due on ${format(zonedDue, sameYear ? "do MMM" : "do MMM yyyy")}`;
+  const dayLabel = format(zonedDue, sameYear ? "do MMM" : "do MMM yyyy");
+  const dueDayTarget = `on ${dayLabel}`;
+  return {
+    dueLabel: `due ${dueDayTarget} ${neutralWindowPhrase}`,
+    dueDayKey,
+    dueDayTarget,
+    dueWindowPhrase: neutralWindowPhrase,
+  };
+}
+
+function buildDayGroupedPhrase(tasks: SummaryTaskCandidate[]): string {
+  if (tasks.length === 0) return "";
+  if (tasks.length === 1) return taskPhrase(tasks[0]);
+
+  const windowGroups = tasks.reduce<Array<{ windowPhrase: string; titles: string[] }>>((acc, task) => {
+    const last = acc[acc.length - 1];
+    const phrase = task.dueWindowPhrase ?? "";
+    if (last && last.windowPhrase === phrase) {
+      last.titles.push(task.title);
+      return acc;
+    }
+    acc.push({ windowPhrase: phrase, titles: [task.title] });
+    return acc;
+  }, []);
+
+  const windowPhrases = windowGroups.map((group) => {
+    const titles = joinTaskTitles(group.titles);
+    return group.windowPhrase ? `${titles} ${group.windowPhrase}` : titles;
+  });
+  const joinedTaskPhrases = joinTaskTitles(windowPhrases);
+  const dueTarget = tasks[0].dueDayTarget ?? tasks[0].dueLabel.replace(/^due\s+/, "");
+  const qualifier = tasks.length === 2 ? "both" : "all";
+  return `${joinedTaskPhrases} (${qualifier} due ${dueTarget})`;
 }
 
 export type SummaryTaskCandidate = {
   id: string;
   title: string;
+  priorityLabel: "high" | "medium" | "low";
   dueLabel: string;
   dueEpochMs: number;
+  dueDayDelta?: number;
+  dueDayKey?: string;
+  dueDayTarget?: string;
+  dueWindowPhrase?: string;
 };
 
 export function buildReadableTaskSummary({
@@ -149,11 +283,16 @@ export function buildReadableTaskSummary({
   thenTasks: SummaryTaskCandidate[];
   overdueCount?: number;
 }): string {
-  const sentences = [`Start with ${taskPhrase(startTask)}.`];
+  const sentences: string[] = [];
+  const urgencyLead = buildUrgencyLead([startTask, ...thenTasks]);
+  if (urgencyLead) {
+    sentences.push(urgencyLead);
+  }
+  sentences.push(`Start with ${taskPhrase(startTask)}.`);
   if (thenTasks.length === 1) {
-    sentences.push(`Next up is ${taskPhrase(thenTasks[0])}.`);
+    sentences.push(`Next up is ${buildGroupedThenPhrase(thenTasks)}.`);
   } else if (thenTasks.length > 1) {
-    sentences.push(`Next up are ${joinTaskTitles(thenTasks.map(taskPhrase))}.`);
+    sentences.push(`Next up are ${buildGroupedThenPhrase(thenTasks)}.`);
   }
   if (overdueCount > 0) {
     sentences.push(
@@ -197,14 +336,15 @@ export function buildSummaryTaskCandidates(
 
       if (a.dueEpochMs !== b.dueEpochMs) return a.dueEpochMs - b.dueEpochMs;
       return b.priority - a.priority;
-    })
-    .slice(0, 5);
+    });
 
-  return ranked.map(({ todo, dueEpochMs }, index) => ({
+  return ranked.map(({ todo, dueEpochMs, dayDelta }, index) => ({
+    ...buildDueDescriptor(todo.due, now, timeZone),
     id: `T${index + 1}`,
     title: compactTitle(todo.title),
-    dueLabel: formatDueLabel(todo.due, now, timeZone),
+    priorityLabel: summaryPriorityLabel(todo.priority),
     dueEpochMs,
+    dueDayDelta: dayDelta,
   }));
 }
 
@@ -235,17 +375,23 @@ export function buildSummaryPrompt({
     "",
     "Return ONLY valid JSON.",
     "Schema:",
-    '{"startId":"T1","thenIds":["T2","T3"]}',
+    '{"startId":"T1","thenIds":["T2","T3"],"summary":"Start with ..."}',
     "Rules:",
     "- Start with the earliest-due task.",
     "- Keep thenIds ordered from sooner due to later due.",
     "- Use only IDs from the task list.",
-    "- thenIds must contain 1 to 3 IDs.",
-    "- Do not include times, dates, priorities, labels, or any extra keys.",
+    "- thenIds may include any number of IDs.",
+    "- summary should be natural-sounding English, easy to read aloud.",
+    "- summary must consider all tasks shown in this view, not just the first few.",
+    "- summary should mention due timing in plain language (today/tomorrow/date and morning/afternoon/night).",
+    "- Convey urgency naturally in plain English (for example: urgent first, then important, then later tasks).",
+    "- Avoid explicit labels like 'high priority' or 'medium priority'.",
+    "- If multiple tasks share the same day, avoid repeating that date phrase for each task.",
+    "- Do not include markdown or extra keys.",
     "- No prose, no markdown, no code fences.",
     "",
     "Tasks:",
-    ...candidates.map((task) => `- ${task.id}: ${task.title} (${task.dueLabel})`),
+    ...candidates.map((task) => `- ${task.id}: ${task.title} (${urgencyStyle(task.priorityLabel)}, ${task.dueLabel})`),
   ].join("\n");
 }
 
@@ -264,7 +410,7 @@ export function buildFallbackSummary({
   if (!focusCandidate) {
     return "You're clear for now. No tasks need attention in this view.";
   }
-  const nextTasks = candidates.slice(1, 4);
+  const nextTasks = candidates.slice(1);
   const overdueCount = todos.filter((todo) => todo.due < now).length;
   return buildReadableTaskSummary({
     startTask: focusCandidate,
