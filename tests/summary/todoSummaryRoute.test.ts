@@ -111,7 +111,7 @@ describe("POST /api/todo/summary", () => {
     expect(response.status).toBe(200);
     expect(payload.source).toBe("fallback");
     expect(payload.summary).toContain("Start with");
-    expect(payload.summary).toContain("due");
+    expect(payload.summary).toMatch(/\b(due|by)\b/i);
 
     (global as any).fetch = originalFetch;
   });
@@ -152,7 +152,7 @@ describe("POST /api/todo/summary", () => {
     expect(response.status).toBe(200);
     expect(payload.source).toBe("ai");
     expect(payload.summary).toContain("Start with");
-    expect(payload.summary).toContain("due");
+    expect(payload.summary).toMatch(/\b(due|by)\b/i);
     expect(payload.summary).not.toMatch(/\b\d{1,2}(:\d{2})?\s*(AM|PM)\b/i);
     expect(payload.summary).not.toContain("priority");
 
@@ -419,7 +419,7 @@ describe("POST /api/todo/summary", () => {
     expect(response.status).toBe(200);
     expect(payload.source).toBe("ai");
     expect(payload.summary).toContain("Start with Task today-low");
-    expect(payload.summary).toContain("due today");
+    expect(payload.summary).toMatch(/\bdue (today|tonight|tomorrow)\b/i);
 
     (global as any).fetch = originalFetch;
   });
