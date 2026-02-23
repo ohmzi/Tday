@@ -128,24 +128,13 @@ function joinTaskTitles(titles: string[]): string {
   return `${titles.slice(0, -1).join(", ")}, and ${titles[titles.length - 1]}`;
 }
 
-function taskPhrase(task: Pick<SummaryTaskCandidate, "title" | "dueLabel">): string {
-  return `${task.title} (${task.dueLabel})`;
-}
-
-function buildUrgencyLead(tasks: SummaryTaskCandidate[]): string | null {
-  const urgentCount = tasks.filter((task) => task.priorityLabel === "high").length;
-  const importantCount = tasks.filter((task) => task.priorityLabel === "medium").length;
-
-  if (urgentCount > 0 && importantCount > 0) {
-    return "Handle the most urgent work first, then move to the important items.";
+function taskPhrase(task: Pick<SummaryTaskCandidate, "title" | "dueLabel" | "dueDayDelta">): string {
+  const duePhrase = task.dueLabel.replace(/^due\s+/i, "").trim();
+  if (duePhrase.toLowerCase() === "tonight") {
+    return `${task.title} by tonight`;
   }
-  if (urgentCount > 0) {
-    return "Handle the most urgent work first.";
-  }
-  if (importantCount > 0) {
-    return "Start with the most important work first.";
-  }
-  return null;
+  const isPast = (task.dueDayDelta ?? 0) < 0;
+  return `${task.title}, which ${isPast ? "was" : "is"} due ${duePhrase}`;
 }
 
 function buildGroupedThenPhrase(thenTasks: SummaryTaskCandidate[]): string {
@@ -263,7 +252,8 @@ function buildDayGroupedPhrase(tasks: SummaryTaskCandidate[]): string {
   const joinedTaskPhrases = joinTaskTitles(windowPhrases);
   const dueTarget = tasks[0].dueDayTarget ?? tasks[0].dueLabel.replace(/^due\s+/, "");
   const qualifier = tasks.length === 2 ? "both" : "all";
-  return `${joinedTaskPhrases} (${qualifier} due ${dueTarget})`;
+  const isPast = (tasks[0].dueDayDelta ?? 0) < 0;
+  return `${joinedTaskPhrases}, ${qualifier} ${isPast ? "were" : "are"} due ${dueTarget}`;
 }
 
 export type SummaryTaskCandidate = {
@@ -288,15 +278,11 @@ export function buildReadableTaskSummary({
   overdueCount?: number;
 }): string {
   const sentences: string[] = [];
-  const urgencyLead = buildUrgencyLead([startTask, ...thenTasks]);
-  if (urgencyLead) {
-    sentences.push(urgencyLead);
-  }
   sentences.push(`Start with ${taskPhrase(startTask)}.`);
   if (thenTasks.length === 1) {
-    sentences.push(`Next up is ${buildGroupedThenPhrase(thenTasks)}.`);
+    sentences.push(`Next up, ${buildGroupedThenPhrase(thenTasks)}.`);
   } else if (thenTasks.length > 1) {
-    sentences.push(`Next up are ${buildGroupedThenPhrase(thenTasks)}.`);
+    sentences.push(`Next up, ${buildGroupedThenPhrase(thenTasks)}.`);
   }
   if (overdueCount > 0) {
     sentences.push(
@@ -309,11 +295,9 @@ export function buildReadableTaskSummary({
 export function buildSummaryTaskCandidates(
   todos: TodoItemType[],
   {
-    mode = "all",
     now = new Date(),
     timeZone = "UTC",
   }: {
-    mode?: TodoSummaryMode;
     now?: Date;
     timeZone?: string;
   } = {},
@@ -332,14 +316,13 @@ export function buildSummaryTaskCandidates(
     })
     .sort((a, b) => {
       if (a.band !== b.band) return a.band - b.band;
+      if (a.dayDelta !== b.dayDelta) return a.dayDelta - b.dayDelta;
 
-      if (mode === "priority") {
-        const priorityDelta = b.priority - a.priority;
-        if (priorityDelta !== 0) return priorityDelta;
-      }
+      const priorityDelta = b.priority - a.priority;
+      if (priorityDelta !== 0) return priorityDelta;
 
       if (a.dueEpochMs !== b.dueEpochMs) return a.dueEpochMs - b.dueEpochMs;
-      return b.priority - a.priority;
+      return 0;
     });
 
   return ranked.map(({ todo, dueEpochMs, dayDelta }, index) => ({
@@ -358,7 +341,7 @@ export function buildSummaryPrompt({
   timeZone,
   now = new Date(),
 }: SummaryContext): string {
-  const candidates = buildSummaryTaskCandidates(todos, { mode, now, timeZone });
+  const candidates = buildSummaryTaskCandidates(todos, { now, timeZone });
   if (candidates.length === 0) {
     return [
       "You are writing a short planning note for a todo app.",
@@ -381,15 +364,19 @@ export function buildSummaryPrompt({
     "Schema:",
     '{"startId":"T1","thenIds":["T2","T3"],"summary":"Start with ..."}',
     "Rules:",
-    "- Start with the earliest-due task.",
-    "- Keep thenIds ordered from sooner due to later due.",
+    "- Plan by day order: overdue first, then today, then future dates.",
+    "- If multiple tasks share the same day, list higher-urgency tasks first even if their due time is later.",
+    "- Keep thenIds aligned with that ordering.",
     "- Use only IDs from the task list.",
     "- thenIds may include any number of IDs.",
     "- summary should be natural-sounding English, easy to read aloud.",
     "- summary must consider all tasks shown in this view, not just the first few.",
+    "- Write as a chronological plan, for example: Start with ..., Next up ..., Then ..., Later on [date] ....",
+    "- Do not start with generic strategy lines like 'Handle the most urgent work first'.",
     "- summary should mention due timing in plain language (today/tomorrow/date).",
     "- Use morning/afternoon/night only for tasks due within 3 days of now; for tasks farther away, treat them as all-day.",
-    "- Convey urgency naturally in plain English (for example: urgent first, then important, then later tasks).",
+    "- Convey urgency through ordering and due timing, not labels.",
+    "- Keep phrasing conversational and avoid parenthetical '(...due ...)' technical pointers.",
     "- Avoid explicit labels like 'high priority' or 'medium priority'.",
     "- If multiple tasks share the same day, avoid repeating that date phrase for each task.",
     "- Do not include markdown or extra keys.",
@@ -401,7 +388,6 @@ export function buildSummaryPrompt({
 }
 
 export function buildFallbackSummary({
-  mode,
   todos,
   timeZone,
   now = new Date(),
@@ -410,7 +396,7 @@ export function buildFallbackSummary({
     return "You're clear for now. No tasks need attention in this view.";
   }
 
-  const candidates = buildSummaryTaskCandidates(todos, { mode, now, timeZone });
+  const candidates = buildSummaryTaskCandidates(todos, { now, timeZone });
   const focusCandidate = candidates[0];
   if (!focusCandidate) {
     return "You're clear for now. No tasks need attention in this view.";
