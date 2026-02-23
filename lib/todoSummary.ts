@@ -70,15 +70,63 @@ function modeLabel(mode: TodoSummaryMode): string {
   }
 }
 
-function dueFormatter(timeZone: string): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+function priorityRank(priority: string | null | undefined): number {
+  const normalized = normalizePriority(priority).toLowerCase();
+  if (normalized === "high" || normalized === "urgent" || normalized === "important") {
+    return 3;
+  }
+  if (normalized === "medium") {
+    return 2;
+  }
+  return 1;
+}
+
+function compactTitle(title: string | null | undefined): string {
+  const normalized = (title ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "Untitled task";
+  if (normalized.length <= 46) return normalized;
+  return `${normalized.slice(0, 43).trimEnd()}...`;
+}
+
+function pickFocusTodo(todos: TodoItemType[]): TodoItemType {
+  return [...todos].sort((a, b) => {
+    const rankDelta = priorityRank(b.priority) - priorityRank(a.priority);
+    if (rankDelta !== 0) return rankDelta;
+    return a.due.getTime() - b.due.getTime();
+  })[0];
+}
+
+function sortedRemainingTodos(
+  todos: TodoItemType[],
+  focusTodo: TodoItemType,
+): TodoItemType[] {
+  return todos
+    .filter((todo) => todo !== focusTodo)
+    .sort((a, b) => a.due.getTime() - b.due.getTime());
+}
+
+function joinTaskTitles(titles: string[]): string {
+  if (titles.length === 0) return "";
+  if (titles.length === 1) return titles[0];
+  if (titles.length === 2) return `${titles[0]} and ${titles[1]}`;
+  return `${titles[0]}, ${titles[1]}, and ${titles[2]}`;
+}
+
+export type SummaryTaskCandidate = {
+  id: string;
+  title: string;
+};
+
+export function buildSummaryTaskCandidates(
+  todos: TodoItemType[],
+): SummaryTaskCandidate[] {
+  if (todos.length === 0) return [];
+  const focusTodo = pickFocusTodo(todos);
+  const ordered = [focusTodo, ...sortedRemainingTodos(todos, focusTodo)].slice(0, 5);
+  return ordered.map((todo, index) => ({
+    id: `T${index + 1}`,
+    title: compactTitle(todo.title),
+  }));
 }
 
 export function buildSummaryPrompt({
@@ -87,70 +135,60 @@ export function buildSummaryPrompt({
   timeZone,
   now = new Date(),
 }: SummaryContext): string {
-  const formatter = dueFormatter(timeZone);
-  const tasks = todos.slice(0, 120).map((todo, index) => {
-    const lineIndex = index + 1;
-    const dueText = formatter.format(todo.due);
-    const priority = normalizePriority(todo.priority);
-    const title = todo.title.trim() || "(Untitled task)";
-    return `${lineIndex}. [${priority}] ${title} | due ${dueText}`;
-  });
+  const candidates = buildSummaryTaskCandidates(todos);
+  if (candidates.length === 0) {
+    return [
+      "You are writing a short planning note for a todo app.",
+      `Screen: ${modeLabel(mode)}`,
+      `Timezone: ${timeZone}`,
+      `Current time: ${now.toISOString()}`,
+      "",
+      "Return ONLY valid JSON with no extra text:",
+      '{"startId":null,"thenIds":[]}',
+    ].join("\n");
+  }
 
   return [
-    "You are an assistant summarizing a task list for a todo app.",
+    "You are writing a short planning note for a todo app.",
     `Screen: ${modeLabel(mode)}`,
-    `User timezone: ${timeZone}`,
+    `Timezone: ${timeZone}`,
     `Current time: ${now.toISOString()}`,
     "",
-    "Write a concise and practical summary in plain English:",
-    "- 1 short overview sentence",
-    "- 2 to 4 bullet points with what needs attention soon",
-    "- mention urgent or high-priority risk first",
-    "- keep under 120 words",
+    "Return ONLY valid JSON.",
+    "Schema:",
+    '{"startId":"T1","thenIds":["T2","T3"]}',
+    "Rules:",
+    "- Use only IDs from the task list.",
+    "- thenIds must contain 1 to 3 IDs.",
+    "- Do not include times, dates, priorities, labels, or any extra keys.",
+    "- No prose, no markdown, no code fences.",
     "",
-    `Tasks (${todos.length} total for this screen):`,
-    ...tasks,
+    "Tasks:",
+    ...candidates.map((task) => `- ${task.id}: ${task.title}`),
   ].join("\n");
 }
 
 export function buildFallbackSummary({
-  mode,
   todos,
-  timeZone,
   now = new Date(),
 }: SummaryContext): string {
   if (todos.length === 0) {
-    return `${modeLabel(mode)} is clear right now. No tasks match this view.`;
+    return "- You're clear for now. No tasks need attention in this view.";
   }
 
-  const formatter = dueFormatter(timeZone);
-  const { start, end } = getTodayBounds(now, timeZone);
-  const highCount = todos.filter((todo) => {
-    const normalized = normalizePriority(todo.priority).toLowerCase();
-    return normalized === "high" || normalized === "urgent" || normalized === "important";
-  }).length;
-  const mediumCount = todos.filter((todo) => normalizePriority(todo.priority).toLowerCase() === "medium").length;
+  const candidates = buildSummaryTaskCandidates(todos);
+  const focusTitle = candidates[0]?.title ?? "your next task";
+  const nextTitles = candidates.slice(1, 4).map((candidate) => candidate.title);
   const overdueCount = todos.filter((todo) => todo.due < now).length;
-  const dueTodayCount = todos.filter((todo) => todo.due >= start && todo.due <= end).length;
-  const nextTasks = todos
-    .filter((todo) => todo.due >= now)
-    .slice(0, 3)
-    .map((todo) => `- ${todo.title} (${formatter.format(todo.due)})`);
 
-  const lines = [
-    `${modeLabel(mode)} has ${todos.length} active task${todos.length == 1 ? "" : "s"}.`,
-    `Priority mix: ${highCount} high/urgent, ${mediumCount} medium, ${Math.max(todos.length - highCount - mediumCount, 0)} low.`,
-  ];
-
+  const lines = [`- Start with ${focusTitle}.`];
+  if (nextTitles.length > 0) {
+    lines.push(`- Then move through ${joinTaskTitles(nextTitles)}.`);
+  }
   if (overdueCount > 0) {
-    lines.push(`There are ${overdueCount} overdue task${overdueCount === 1 ? "" : "s"} needing attention.`);
-  }
-  if (dueTodayCount > 0) {
-    lines.push(`${dueTodayCount} task${dueTodayCount === 1 ? "" : "s"} are due today.`);
-  }
-  if (nextTasks.length > 0) {
-    lines.push("Next up:");
-    lines.push(...nextTasks);
+    lines.push(
+      `- You also have ${overdueCount} overdue task${overdueCount === 1 ? "" : "s"} to catch up on.`,
+    );
   }
 
   return lines.join("\n");
