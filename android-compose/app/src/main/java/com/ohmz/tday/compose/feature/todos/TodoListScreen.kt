@@ -1354,6 +1354,9 @@ private fun TimelineSection(
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
         } else {
+            val showEarlierDateTimeSubtitle =
+                section.key == "earlier" &&
+                    (mode == TodoListMode.ALL || mode == TodoListMode.PRIORITY)
             section.items.forEach { todo ->
                 if (mode == TodoListMode.ALL) {
                     AllTaskSwipeRow(
@@ -1364,6 +1367,7 @@ private fun TimelineSection(
                         onDelete = { onDelete(todo) },
                         onInfo = { onInfo(todo) },
                         showDuePrefix = true,
+                        showDueDateInSubtitle = showEarlierDateTimeSubtitle,
                     )
                 } else if (
                     useMinimalStyle &&
@@ -1383,6 +1387,7 @@ private fun TimelineSection(
                         onDelete = { onDelete(todo) },
                         onInfo = { onInfo(todo) },
                         showDuePrefix = true,
+                        showDueDateInSubtitle = showEarlierDateTimeSubtitle,
                     )
                 } else if (useMinimalStyle) {
                     TodayTodoRow(
@@ -1680,6 +1685,7 @@ private fun AllTaskSwipeRow(
     onDelete: () -> Unit,
     onInfo: () -> Unit,
     showDuePrefix: Boolean,
+    showDueDateInSubtitle: Boolean = false,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -1692,6 +1698,7 @@ private fun AllTaskSwipeRow(
         flashHighlight = flashHighlight,
         showDueText = true,
         showDuePrefix = showDuePrefix,
+        showDueDateInSubtitle = showDueDateInSubtitle,
         useDelayedFadeCompletion = false,
     )
 }
@@ -1747,6 +1754,7 @@ private fun TodayTaskSwipeRow(
     onDelete: () -> Unit,
     onInfo: () -> Unit,
     showDuePrefix: Boolean,
+    showDueDateInSubtitle: Boolean = false,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -1759,6 +1767,7 @@ private fun TodayTaskSwipeRow(
         flashHighlight = flashHighlight,
         showDueText = true,
         showDuePrefix = showDuePrefix,
+        showDueDateInSubtitle = showDueDateInSubtitle,
         useDelayedFadeCompletion = mode != TodoListMode.TODAY,
     )
 }
@@ -1775,6 +1784,7 @@ private fun SwipeTaskRow(
     flashHighlight: Boolean = false,
     showDueText: Boolean,
     showDuePrefix: Boolean,
+    showDueDateInSubtitle: Boolean = false,
     useDelayedFadeCompletion: Boolean = false,
     useFadeOnCompletion: Boolean = false,
 ) {
@@ -1802,7 +1812,10 @@ private fun SwipeTaskRow(
     )
     val dueTimeText =
         DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
-    val dueSubtitleText = if (showDuePrefix) "Due $dueTimeText" else dueTimeText
+    val dueDateTimeText =
+        DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
+    val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
+    val dueSubtitleText = if (showDuePrefix) "Due $dueBodyText" else dueBodyText
     val rowShape = RoundedCornerShape(16.dp)
     val actionContainerColor =
         colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
