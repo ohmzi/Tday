@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
@@ -289,17 +290,18 @@ private fun ThemeModeSelector(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.26f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(54.dp)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                .height(52.dp)
+                .padding(horizontal = 5.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AppThemeMode.entries.forEach { mode ->
@@ -309,24 +311,22 @@ private fun ThemeModeSelector(
                     AppThemeMode.LIGHT -> Icons.Rounded.WbSunny
                     AppThemeMode.DARK -> Icons.Rounded.DarkMode
                 }
-                Card(
+                Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxSize(),
-                    onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                        onThemeModeSelected(mode)
-                    },
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        if (selected) colorScheme.onSurface.copy(alpha = 0.34f)
-                        else Color.Transparent,
-                    ),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (selected) colorScheme.background else Color.Transparent,
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            color = if (selected) {
+                                colorScheme.background
+                            } else {
+                                Color.Transparent
+                            },
+                        )
+                        .clickable {
+                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            onThemeModeSelected(mode)
+                        },
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize(),
