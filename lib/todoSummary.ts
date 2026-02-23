@@ -12,6 +12,7 @@ type SummaryContext = {
 };
 
 const PRIORITY_ALIASES = new Set(["medium", "high", "important", "urgent"]);
+const DUE_WINDOW_DAY_RANGE = 3;
 
 function normalizePriority(priority: string | null | undefined): string {
   return (priority ?? "Low").trim();
@@ -197,8 +198,9 @@ function buildDueDescriptor(due: Date, now: Date, timeZone: string): {
   const zonedNow = toZonedTime(now, timeZone);
   const zonedDue = toZonedTime(due, timeZone);
   const dayDelta = differenceInCalendarDays(startOfDay(zonedDue), startOfDay(zonedNow));
+  const includeWindowPhrase = Math.abs(dayDelta) <= DUE_WINDOW_DAY_RANGE;
   const window = dueWindow(zonedDue.getHours());
-  const neutralWindowPhrase = dueWindowPhrase(window);
+  const neutralWindowPhrase = includeWindowPhrase ? dueWindowPhrase(window) : "";
   const dueDayKey = format(zonedDue, "yyyy-MM-dd");
 
   if (dayDelta === 0) {
@@ -230,7 +232,9 @@ function buildDueDescriptor(due: Date, now: Date, timeZone: string): {
   const dayLabel = format(zonedDue, sameYear ? "do MMM" : "do MMM yyyy");
   const dueDayTarget = `on ${dayLabel}`;
   return {
-    dueLabel: `due ${dueDayTarget} ${neutralWindowPhrase}`,
+    dueLabel: neutralWindowPhrase
+      ? `due ${dueDayTarget} ${neutralWindowPhrase}`
+      : `due ${dueDayTarget}`,
     dueDayKey,
     dueDayTarget,
     dueWindowPhrase: neutralWindowPhrase,
@@ -383,7 +387,8 @@ export function buildSummaryPrompt({
     "- thenIds may include any number of IDs.",
     "- summary should be natural-sounding English, easy to read aloud.",
     "- summary must consider all tasks shown in this view, not just the first few.",
-    "- summary should mention due timing in plain language (today/tomorrow/date and morning/afternoon/night).",
+    "- summary should mention due timing in plain language (today/tomorrow/date).",
+    "- Use morning/afternoon/night only for tasks due within 3 days of now; for tasks farther away, treat them as all-day.",
     "- Convey urgency naturally in plain English (for example: urgent first, then important, then later tasks).",
     "- Avoid explicit labels like 'high priority' or 'medium priority'.",
     "- If multiple tasks share the same day, avoid repeating that date phrase for each task.",
