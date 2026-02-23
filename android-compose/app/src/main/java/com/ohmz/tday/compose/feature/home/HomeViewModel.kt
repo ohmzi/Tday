@@ -8,6 +8,7 @@ import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -193,6 +194,18 @@ class HomeViewModel @Inject constructor(
                     }
                 }
         }
+    }
+
+    suspend fun parseTaskTitleNlp(
+        text: String,
+        referenceStartEpochMs: Long,
+        referenceDueEpochMs: Long,
+    ): TodoTitleNlpResponse? {
+        return repository.parseTodoTitleNlp(
+            text = text,
+            referenceStartEpochMs = referenceStartEpochMs,
+            referenceDueEpochMs = referenceDueEpochMs,
+        )
     }
 
     val lists: List<ListSummary>
