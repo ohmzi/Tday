@@ -27,8 +27,10 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -47,11 +49,17 @@ import com.ohmz.tday.compose.ui.theme.AppThemeMode
 fun SettingsScreen(
     user: SessionUser?,
     selectedThemeMode: AppThemeMode,
+    adminAiSummaryEnabled: Boolean?,
+    isAdminAiSummaryLoading: Boolean,
+    isAdminAiSummarySaving: Boolean,
+    adminAiSummaryError: String?,
     onThemeModeSelected: (AppThemeMode) -> Unit,
+    onToggleAdminAiSummary: (Boolean) -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val isAdminUser = user?.role?.equals("ADMIN", ignoreCase = true) == true
 
     Column(
         modifier = Modifier
@@ -140,6 +148,75 @@ fun SettingsScreen(
                     selectedThemeMode = selectedThemeMode,
                     onThemeModeSelected = onThemeModeSelected,
                 )
+            }
+        }
+
+        if (isAdminUser) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        text = "Admin controls",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurface,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = "AI task summaries",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = colorScheme.onSurface,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = "Enable or disable summarize buttons globally for all users.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (isAdminAiSummaryLoading || adminAiSummaryEnabled == null) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Switch(
+                                checked = adminAiSummaryEnabled,
+                                onCheckedChange = onToggleAdminAiSummary,
+                                enabled = !isAdminAiSummarySaving,
+                            )
+                        }
+                    }
+                    if (isAdminAiSummarySaving) {
+                        Text(
+                            text = "Saving admin setting...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (!adminAiSummaryError.isNullOrBlank()) {
+                        Text(
+                            text = adminAiSummaryError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colorScheme.error,
+                        )
+                    }
+                }
             }
         }
 
