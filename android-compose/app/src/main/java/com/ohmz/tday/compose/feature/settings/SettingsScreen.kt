@@ -163,7 +163,7 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(
-                        text = "Admin controls",
+                        text = "Feature toggle",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = colorScheme.onSurface,
@@ -178,15 +178,10 @@ fun SettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
                             Text(
-                                text = "AI task summaries",
+                                text = "AI task summary",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = colorScheme.onSurface,
                                 fontWeight = FontWeight.SemiBold,
-                            )
-                            Text(
-                                text = "Enable or disable summarize buttons globally for all users.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colorScheme.onSurfaceVariant,
                             )
                         }
                         if (isAdminAiSummaryLoading || adminAiSummaryEnabled == null) {

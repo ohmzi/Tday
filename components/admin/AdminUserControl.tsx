@@ -195,7 +195,7 @@ export default function AdminUserControl() {
 
       <Card className="rounded-2xl border-border/70 bg-card/95">
         <CardHeader>
-          <CardTitle>Feature flags</CardTitle>
+          <CardTitle>Feature toggle</CardTitle>
           <CardDescription>
             Global controls applied to every user account.
           </CardDescription>
@@ -204,9 +204,6 @@ export default function AdminUserControl() {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-3">
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground">AI task summary</p>
-              <p className="text-xs text-muted-foreground">
-                Controls whether summarize buttons appear in mobile todo screens.
-              </p>
             </div>
             <Button
               size="sm"
