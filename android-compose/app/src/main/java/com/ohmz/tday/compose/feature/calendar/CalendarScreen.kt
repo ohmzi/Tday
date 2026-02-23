@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Check
@@ -61,6 +63,7 @@ import androidx.compose.material.icons.rounded.LocalBar
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.WbSunny
@@ -95,9 +98,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
@@ -108,6 +113,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -117,6 +123,8 @@ fun CalendarScreen(
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onCreateTask: (CreateTaskPayload) -> Unit,
+    onCompleteTask: (TodoItem) -> Unit,
+    onUncompleteTask: (CompletedItem) -> Unit,
     onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
     onDelete: (TodoItem) -> Unit,
 ) {
@@ -140,7 +148,13 @@ fun CalendarScreen(
             .groupBy { LocalDate.ofInstant(it.due, zoneId) }
             .mapValues { (_, tasks) -> tasks.sortedBy { it.due } }
     }
-    val selectedDateTasks = tasksByDate[selectedDate].orEmpty()
+    val completedTasksByDate = remember(uiState.completedItems, zoneId) {
+        uiState.completedItems
+            .groupBy { LocalDate.ofInstant(it.due, zoneId) }
+            .mapValues { (_, tasks) -> tasks.sortedBy { it.due } }
+    }
+    val selectedDatePendingTasks = tasksByDate[selectedDate].orEmpty()
+    val selectedDateCompletedTasks = completedTasksByDate[selectedDate].orEmpty()
     fun canNavigateTo(date: LocalDate): Boolean = YearMonth.from(date) >= minNavigableMonth
     fun selectDate(date: LocalDate) {
         if (!canNavigateTo(date)) return
@@ -293,19 +307,42 @@ fun CalendarScreen(
                     )
                 }
 
-                if (selectedDateTasks.isEmpty()) {
+                if (selectedDatePendingTasks.isEmpty()) {
                     item {
-                        EmptyCalendarState(
-                            message = "No tasks due on this day",
+                        Text(
+                            text = "No pending task due for this day",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
+                            modifier = Modifier.padding(horizontal = 4.dp),
                         )
                     }
                 } else {
-                    items(selectedDateTasks, key = { it.id }) { todo ->
+                    items(selectedDatePendingTasks, key = { it.id }) { todo ->
                         CalendarTodoRow(
                             todo = todo,
                             lists = uiState.lists,
+                            onComplete = { onCompleteTask(todo) },
                             onInfo = { editTargetId = todo.id },
                             onDelete = { onDelete(todo) },
+                        )
+                    }
+                }
+
+                if (selectedDateCompletedTasks.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Completed:",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                        )
+                    }
+
+                    items(selectedDateCompletedTasks, key = { it.id }) { completed ->
+                        CalendarCompletedTodoRow(
+                            item = completed,
+                            onUndoComplete = { onUncompleteTask(completed) },
                         )
                     }
                 }
@@ -1149,6 +1186,7 @@ private fun CalendarDayCell(
 private fun CalendarTodoRow(
     todo: TodoItem,
     lists: List<ListSummary>,
+    onComplete: () -> Unit,
     onInfo: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -1158,11 +1196,13 @@ private fun CalendarTodoRow(
     val coroutineScope = rememberCoroutineScope()
     val actionRevealPx = with(density) { 130.dp.toPx() }
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
+    var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = tween(durationMillis = 150),
         label = "calendarTaskSwipeOffset",
     )
+    val showCompletedState = pendingCompletion
     val dueText = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(todo.due)
@@ -1254,11 +1294,32 @@ private fun CalendarTodoRow(
                         .padding(horizontal = 4.dp, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.FiberManualRecord,
-                        contentDescription = null,
-                        tint = priorityColor(todo.priority),
-                        modifier = Modifier.size(13.dp),
+                    CalendarCompletionToggleIcon(
+                        imageVector = if (showCompletedState) {
+                            Icons.Rounded.CheckCircle
+                        } else {
+                            Icons.Rounded.RadioButtonUnchecked
+                        },
+                        contentDescription = if (showCompletedState) {
+                            "Completed"
+                        } else {
+                            "Mark complete"
+                        },
+                        tint = if (showCompletedState) {
+                            Color(0xFF6FBF86)
+                        } else {
+                            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                        },
+                        enabled = !pendingCompletion,
+                        onClick = {
+                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            targetOffsetX = 0f
+                            pendingCompletion = true
+                            coroutineScope.launch {
+                                delay(500)
+                                onComplete()
+                            }
+                        },
                     )
                     Column(
                         modifier = Modifier
@@ -1267,9 +1328,18 @@ private fun CalendarTodoRow(
                     ) {
                         Text(
                             text = todo.title,
-                            color = colorScheme.onSurface,
+                            color = if (showCompletedState) {
+                                colorScheme.onSurface.copy(alpha = 0.78f)
+                            } else {
+                                colorScheme.onSurface
+                            },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
+                            textDecoration = if (showCompletedState) {
+                                TextDecoration.LineThrough
+                            } else {
+                                TextDecoration.None
+                            },
                             maxLines = 2,
                         )
                         Text(
@@ -1304,6 +1374,101 @@ private fun CalendarTodoRow(
                 }
             }
         }
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        )
+    }
+}
+
+@Composable
+private fun CalendarCompletedTodoRow(
+    item: CompletedItem,
+    onUndoComplete: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val coroutineScope = rememberCoroutineScope()
+    var pendingUncomplete by remember(item.id) { mutableStateOf(false) }
+    val showCompletedState = !pendingUncomplete
+    val dueText = DateTimeFormatter.ofPattern("h:mm a")
+        .withZone(ZoneId.systemDefault())
+        .format(item.due)
+    val rowShape = RoundedCornerShape(16.dp)
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(58.dp),
+            shape = rowShape,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CalendarCompletionToggleIcon(
+                    imageVector = if (showCompletedState) {
+                        Icons.Rounded.CheckCircle
+                    } else {
+                        Icons.Rounded.RadioButtonUnchecked
+                    },
+                    contentDescription = "Undo complete",
+                    tint = if (showCompletedState) {
+                        Color(0xFF6FBF86)
+                    } else {
+                        colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                    },
+                    enabled = !pendingUncomplete,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        pendingUncomplete = true
+                        coroutineScope.launch {
+                            delay(500)
+                            onUndoComplete()
+                        }
+                    },
+                )
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 10.dp),
+                ) {
+                    Text(
+                        text = item.title,
+                        color = if (showCompletedState) {
+                            colorScheme.onSurface.copy(alpha = 0.78f)
+                        } else {
+                            colorScheme.onSurface
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        textDecoration = if (showCompletedState) {
+                            TextDecoration.LineThrough
+                        } else {
+                            TextDecoration.None
+                        },
+                        maxLines = 2,
+                    )
+                    Text(
+                        text = dueText,
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1351,6 +1516,39 @@ private fun CalendarSwipeActionCircle(
                 modifier = Modifier.size(22.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun CalendarCompletionToggleIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = ripple(
+                    bounded = true,
+                    radius = 14.dp,
+                ),
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(24.dp),
+        )
     }
 }
 
