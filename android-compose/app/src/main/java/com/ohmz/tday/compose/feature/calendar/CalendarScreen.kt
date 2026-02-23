@@ -342,6 +342,7 @@ fun CalendarScreen(
                     items(selectedDateCompletedTasks, key = { it.id }) { completed ->
                         CalendarCompletedTodoRow(
                             item = completed,
+                            lists = uiState.lists,
                             onUndoComplete = { onUncompleteTask(completed) },
                         )
                     }
@@ -1386,6 +1387,7 @@ private fun CalendarTodoRow(
 @Composable
 private fun CalendarCompletedTodoRow(
     item: CompletedItem,
+    lists: List<ListSummary>,
     onUndoComplete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -1396,6 +1398,12 @@ private fun CalendarCompletedTodoRow(
     val dueText = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(item.due)
+    val listMeta = item.resolveListSummary(lists)
+    val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
+        ?: item.listColor?.let(::listAccentColor)
+        ?: colorScheme.onSurfaceVariant.copy(alpha = 0.86f)
+    val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
+    val showPriorityFlag = isHighPriority(item.priority)
     val rowShape = RoundedCornerShape(16.dp)
 
     Column(
@@ -1464,6 +1472,34 @@ private fun CalendarCompletedTodoRow(
                         text = dueText,
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (showPriorityFlag) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (showListIndicator) {
+                            Icon(
+                                imageVector = listIconForKey(listMeta?.iconKey),
+                                contentDescription = "Task list",
+                                tint = listIndicatorColor,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Rounded.Flag,
+                            contentDescription = "Priority task",
+                            tint = priorityColor(item.priority),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                } else if (showListIndicator) {
+                    Icon(
+                        imageVector = listIconForKey(listMeta?.iconKey),
+                        contentDescription = "Task list",
+                        tint = listIndicatorColor,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
@@ -1622,6 +1658,11 @@ private fun isHighPriority(priority: String): Boolean {
         "medium", "high", "urgent", "important" -> true
         else -> false
     }
+}
+
+private fun CompletedItem.resolveListSummary(lists: List<ListSummary>): ListSummary? {
+    val name = listName?.trim()?.lowercase(Locale.getDefault()) ?: return null
+    return lists.firstOrNull { it.name.trim().lowercase(Locale.getDefault()) == name }
 }
 
 private fun listAccentColor(colorKey: String?): Color {
