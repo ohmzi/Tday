@@ -131,6 +131,26 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
+    fun createTask(payload: CreateTaskPayload) {
+        if (payload.title.isBlank()) return
+        viewModelScope.launch {
+            runCatching {
+                repository.createTodo(payload)
+            }.onSuccess {
+                loadInternal(
+                    forceSync = false,
+                    showLoading = false,
+                )
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    current.copy(
+                        errorMessage = error.message ?: "Could not create task",
+                    )
+                }
+            }
+        }
+    }
+
     fun updateTask(
         todo: TodoItem,
         payload: CreateTaskPayload,
