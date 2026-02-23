@@ -642,8 +642,8 @@ private fun CompletedSwipeRow(
                                 }
                                 Icon(
                                     imageVector = Icons.Rounded.Flag,
-                                    contentDescription = "High priority",
-                                    tint = priorityColor("high"),
+                                    contentDescription = "Priority task",
+                                    tint = priorityColor(item.priority),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
@@ -763,7 +763,7 @@ private fun EmptyCompletedState(
 @Composable
 private fun priorityColor(priority: String): Color {
     return when (priority.lowercase()) {
-        "high" -> Color(0xFFE56A6A)
+        "high", "urgent", "important" -> Color(0xFFE56A6A)
         "medium" -> Color(0xFFE3B368)
         else -> Color(0xFF6FBF86)
     }
@@ -771,7 +771,7 @@ private fun priorityColor(priority: String): Color {
 
 private fun isHighPriority(priority: String): Boolean {
     return when (priority.trim().lowercase()) {
-        "high", "urgent", "important" -> true
+        "medium", "high", "urgent", "important" -> true
         else -> false
     }
 }
