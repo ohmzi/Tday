@@ -60,8 +60,40 @@ data class MobileProbeAuthContract(
 )
 
 @Serializable
+data class AppSettingsResponse(
+    val aiSummaryEnabled: Boolean = true,
+)
+
+@Serializable
+data class AdminSettingsResponse(
+    val aiSummaryEnabled: Boolean = true,
+    val updatedAt: String? = null,
+)
+
+@Serializable
+data class UpdateAdminSettingsRequest(
+    val aiSummaryEnabled: Boolean,
+)
+
+@Serializable
 data class TodosResponse(
     val todos: List<TodoDto> = emptyList(),
+)
+
+@Serializable
+data class TodoSummaryRequest(
+    val mode: String,
+    val listId: String? = null,
+)
+
+@Serializable
+data class TodoSummaryResponse(
+    val summary: String,
+    val source: String? = null,
+    val mode: String? = null,
+    val taskCount: Int? = null,
+    val generatedAt: String? = null,
+    val fallbackReason: String? = null,
 )
 
 @Serializable
