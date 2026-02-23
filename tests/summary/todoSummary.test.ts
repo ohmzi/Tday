@@ -1,6 +1,7 @@
 import {
   buildFallbackSummary,
   buildReadableTaskSummary,
+  buildSummaryPrompt,
   buildSummaryTaskCandidates,
   filterTodosForSummaryMode,
 } from "@/lib/todoSummary";
@@ -170,6 +171,31 @@ describe("todoSummary mode filtering", () => {
     expect(candidates[1]?.title).toBe("Task far-high");
   });
 
+  test("same-day tasks are ordered by priority before due time", () => {
+    const candidates = buildSummaryTaskCandidates(
+      [
+        makeTodo("same-day-low-early", {
+          due: new Date("2026-02-22T08:00:00.000Z"),
+          dtstart: new Date("2026-02-22T07:00:00.000Z"),
+          priority: "Low",
+        }),
+        makeTodo("same-day-high-late", {
+          due: new Date("2026-02-22T20:00:00.000Z"),
+          dtstart: new Date("2026-02-22T19:00:00.000Z"),
+          priority: "High",
+        }),
+      ],
+      {
+        mode: "all",
+        timeZone: "UTC",
+        now,
+      },
+    );
+
+    expect(candidates[0]?.title).toBe("Task same-day-high-late");
+    expect(candidates[1]?.title).toBe("Task same-day-low-early");
+  });
+
   test("priority mode keeps all qualifying tasks for summary coverage", () => {
     const candidates = buildSummaryTaskCandidates(
       [
@@ -252,7 +278,7 @@ describe("todoSummary mode filtering", () => {
       ],
     });
 
-    expect(summary).toContain("go fishing in the morning and return book at night (both due on 27th Feb)");
+    expect(summary).toContain("go fishing in the morning and return book at night, both are due on 27th Feb");
     expect(summary.match(/due on 27th Feb/g)?.length).toBe(1);
   });
 
@@ -313,5 +339,62 @@ describe("todoSummary mode filtering", () => {
     expect(outsideWindow?.dueLabel).toContain("due on 26th Feb");
     expect(outsideWindow?.dueLabel).not.toMatch(/\b(morning|afternoon|night|tonight)\b/i);
     expect(outsideWindow?.dueWindowPhrase).toBe("");
+  });
+
+  test("readable summary avoids generic urgency lead-in wording", () => {
+    const summary = buildReadableTaskSummary({
+      startTask: {
+        id: "T1",
+        title: "bugging",
+        priorityLabel: "high",
+        dueLabel: "due yesterday afternoon",
+        dueEpochMs: 1,
+        dueDayKey: "2026-02-21",
+        dueDayTarget: "yesterday",
+        dueWindowPhrase: "in the afternoon",
+      },
+      thenTasks: [
+        {
+          id: "T2",
+          title: "go for taraweeh",
+          priorityLabel: "medium",
+          dueLabel: "due yesterday night",
+          dueEpochMs: 2,
+          dueDayKey: "2026-02-21",
+          dueDayTarget: "yesterday",
+          dueWindowPhrase: "at night",
+        },
+      ],
+    });
+
+    expect(summary).toMatch(/^Start with /);
+    expect(summary).toContain("Next up");
+    expect(summary).not.toMatch(/handle the most urgent|most important work first/i);
+  });
+
+  test("prompt asks for chronological writing without generic urgency preface", () => {
+    const prompt = buildSummaryPrompt({
+      mode: "all",
+      todos: [
+        makeTodo("past-medium", {
+          due: new Date("2026-02-21T15:00:00.000Z"),
+          dtstart: new Date("2026-02-21T14:00:00.000Z"),
+          priority: "Medium",
+        }),
+        makeTodo("today-low", {
+          due: new Date("2026-02-22T21:00:00.000Z"),
+          dtstart: new Date("2026-02-22T20:00:00.000Z"),
+          priority: "Low",
+        }),
+      ],
+      timeZone: "UTC",
+      now,
+    });
+
+    expect(prompt).toContain("Write as a chronological plan");
+    expect(prompt).toContain("Do not start with generic strategy lines");
+    expect(prompt).toContain("list higher-urgency tasks first even if their due time is later");
+    expect(prompt).toContain("Use morning/afternoon/night only for tasks due within 3 days");
+    expect(prompt).toContain("(important, due yesterday afternoon)");
   });
 });
