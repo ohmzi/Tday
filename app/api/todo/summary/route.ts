@@ -79,37 +79,39 @@ function normalizeAiSummary(
     return null;
   }
 
-  const titleById = new Map(
-    candidates.map((candidate) => [candidate.id.toUpperCase(), candidate.title]),
+  const candidateById = new Map(
+    candidates.map((candidate) => [candidate.id.toUpperCase(), candidate]),
   );
   const startId = normalizeTaskId(parsed.startId);
-  const startTitle = startId ? titleById.get(startId) : null;
-  if (!startTitle) return null;
+  const startTask = startId ? candidateById.get(startId) : null;
+  if (!startTask) return null;
 
   const thenIds = Array.isArray(parsed.thenIds) ? parsed.thenIds : [];
   const selectedThenTitles = thenIds
     .map((item) => normalizeTaskId(item))
     .filter((id): id is string => id != null)
-    .map((id) => titleById.get(id))
-    .filter((title): title is string => Boolean(title))
-    .filter((title) => title !== startTitle);
+    .map((id) => candidateById.get(id))
+    .filter((candidate): candidate is SummaryTaskCandidate => Boolean(candidate))
+    .filter((candidate) => candidate.id !== startTask.id)
+    .map((candidate) => `${candidate.title} (${candidate.dueLabel})`);
 
   const fallbackThenTitles = candidates
-    .map((candidate) => candidate.title)
-    .filter((title) => title !== startTitle)
+    .filter((candidate) => candidate.id !== startTask.id)
+    .map((candidate) => `${candidate.title} (${candidate.dueLabel})`)
     .slice(0, 3);
 
   const thenTitles = Array.from(
     new Set(selectedThenTitles.length > 0 ? selectedThenTitles : fallbackThenTitles),
   ).slice(0, 3);
 
+  const startTitle = `${startTask.title} (${startTask.dueLabel})`;
   const lines = [`- Start with ${startTitle}.`];
   if (thenTitles.length > 0) {
     lines.push(`- Then move through ${joinTaskTitles(thenTitles)}.`);
   }
   const summary = lines.join("\n");
 
-  if (summary.length > 320) {
+  if (summary.length > 420) {
     return null;
   }
 
@@ -205,7 +207,10 @@ export async function POST(req: NextRequest) {
       timeZone,
       now,
     });
-    const summaryCandidates = buildSummaryTaskCandidates(filteredTodos);
+    const summaryCandidates = buildSummaryTaskCandidates(filteredTodos, {
+      now,
+      timeZone,
+    });
 
     const prompt = buildSummaryPrompt({
       mode,
