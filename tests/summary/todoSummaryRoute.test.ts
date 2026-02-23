@@ -22,7 +22,9 @@ jest.mock("@/lib/resolveTimeZone", () => ({
 }));
 
 function makeTodo(id: string): TodoItemType {
-  const now = new Date("2026-02-22T10:00:00.000Z");
+  const now = new Date();
+  const start = new Date(now.getTime() - 60 * 60 * 1000);
+  const due = new Date(now.getTime() + 60 * 60 * 1000);
   return {
     id,
     title: "Mock Task",
@@ -31,9 +33,9 @@ function makeTodo(id: string): TodoItemType {
     createdAt: now,
     order: 0,
     priority: "High",
-    dtstart: new Date("2026-02-22T09:00:00.000Z"),
+    dtstart: start,
     durationMinutes: 60,
-    due: new Date("2026-02-22T11:00:00.000Z"),
+    due,
     rrule: null,
     timeZone: "UTC",
     userID: "user-1",
@@ -102,6 +104,7 @@ describe("POST /api/todo/summary", () => {
     expect(response.status).toBe(200);
     expect(payload.source).toBe("fallback");
     expect(payload.summary).toContain("Start with");
+    expect(payload.summary).toContain("(due");
 
     (global as any).fetch = originalFetch;
   });
@@ -142,6 +145,7 @@ describe("POST /api/todo/summary", () => {
     expect(response.status).toBe(200);
     expect(payload.source).toBe("ai");
     expect(payload.summary).toContain("Start with");
+    expect(payload.summary).toContain("(due");
     expect(payload.summary).not.toMatch(/\b\d{1,2}(:\d{2})?\s*(AM|PM)\b/i);
     expect(payload.summary).not.toContain("priority");
 
