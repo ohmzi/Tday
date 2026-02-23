@@ -1,5 +1,5 @@
 import { TodoItemType } from "@/types";
-import { endOfDay, startOfDay } from "date-fns";
+import { differenceInCalendarDays, endOfDay, format, startOfDay } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
 export type TodoSummaryMode = "today" | "scheduled" | "all" | "priority";
@@ -36,10 +36,11 @@ export function filterTodosForSummaryMode({
   now = new Date(),
 }: SummaryContext): TodoItemType[] {
   const activeTodos = todos.filter((todo) => !todo.completed);
+  const { start, end } = getTodayBounds(now, timeZone);
 
   const filtered = (() => {
     if (mode === "all") {
-      return activeTodos;
+      return activeTodos.filter((todo) => todo.due >= start);
     }
 
     if (mode === "scheduled") {
@@ -50,7 +51,6 @@ export function filterTodosForSummaryMode({
       return activeTodos.filter((todo) => isPriorityTodo(todo.priority));
     }
 
-    const { start, end } = getTodayBounds(now, timeZone);
     return activeTodos.filter((todo) => todo.due >= start && todo.dtstart <= end);
   })();
 
@@ -112,13 +112,40 @@ function joinTaskTitles(titles: string[]): string {
   return `${titles[0]}, ${titles[1]}, and ${titles[2]}`;
 }
 
+function formatDueLabel(due: Date, now: Date, timeZone: string): string {
+  const zonedNow = toZonedTime(now, timeZone);
+  const zonedDue = toZonedTime(due, timeZone);
+  const dayDelta = differenceInCalendarDays(startOfDay(zonedDue), startOfDay(zonedNow));
+
+  if (dayDelta === 0) {
+    return "due today";
+  }
+  if (dayDelta === 1) {
+    return "due tomorrow";
+  }
+  if (dayDelta === -1) {
+    return "due yesterday";
+  }
+
+  const sameYear = zonedDue.getFullYear() === zonedNow.getFullYear();
+  return `due ${format(zonedDue, sameYear ? "do MMM" : "do MMM yyyy")}`;
+}
+
 export type SummaryTaskCandidate = {
   id: string;
   title: string;
+  dueLabel: string;
 };
 
 export function buildSummaryTaskCandidates(
   todos: TodoItemType[],
+  {
+    now = new Date(),
+    timeZone = "UTC",
+  }: {
+    now?: Date;
+    timeZone?: string;
+  } = {},
 ): SummaryTaskCandidate[] {
   if (todos.length === 0) return [];
   const focusTodo = pickFocusTodo(todos);
@@ -126,6 +153,7 @@ export function buildSummaryTaskCandidates(
   return ordered.map((todo, index) => ({
     id: `T${index + 1}`,
     title: compactTitle(todo.title),
+    dueLabel: formatDueLabel(todo.due, now, timeZone),
   }));
 }
 
@@ -135,7 +163,7 @@ export function buildSummaryPrompt({
   timeZone,
   now = new Date(),
 }: SummaryContext): string {
-  const candidates = buildSummaryTaskCandidates(todos);
+  const candidates = buildSummaryTaskCandidates(todos, { now, timeZone });
   if (candidates.length === 0) {
     return [
       "You are writing a short planning note for a todo app.",
@@ -170,15 +198,21 @@ export function buildSummaryPrompt({
 
 export function buildFallbackSummary({
   todos,
+  timeZone,
   now = new Date(),
 }: SummaryContext): string {
   if (todos.length === 0) {
     return "- You're clear for now. No tasks need attention in this view.";
   }
 
-  const candidates = buildSummaryTaskCandidates(todos);
-  const focusTitle = candidates[0]?.title ?? "your next task";
-  const nextTitles = candidates.slice(1, 4).map((candidate) => candidate.title);
+  const candidates = buildSummaryTaskCandidates(todos, { now, timeZone });
+  const focusCandidate = candidates[0];
+  const focusTitle = focusCandidate
+    ? `${focusCandidate.title} (${focusCandidate.dueLabel})`
+    : "your next task";
+  const nextTitles = candidates
+    .slice(1, 4)
+    .map((candidate) => `${candidate.title} (${candidate.dueLabel})`);
   const overdueCount = todos.filter((todo) => todo.due < now).length;
 
   const lines = [`- Start with ${focusTitle}.`];
