@@ -9,11 +9,21 @@ Personal task planner.
 - Completion history
 - 11 languages
 
-Built with Next.js, Postgres, and Prisma. Runs in Docker.
+Built with Next.js, Postgres, Prisma, and Ollama. Runs in Docker.
 
 ```bash
-docker compose up --build
+docker compose up -d --build
+docker exec -it tday_ollama ollama pull qwen2.5:0.5b
 ```
+
+Docker services started by compose:
+- `tday` (Next.js app)
+- `tday_db` (Postgres)
+- `tday_ollama` (local AI runtime for summaries)
+
+GPU acceleration:
+- `tday_ollama` is configured with `gpus: all` by default.
+- Ensure NVIDIA Container Toolkit is installed on the Docker host.
 
 ## Auth Hardening
 
