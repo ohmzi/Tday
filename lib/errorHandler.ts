@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { BaseServerError } from "./customError";
 export function errorHandler(error: unknown) {
-  console.error("GET Todos Error:", error);
+  console.error("api_error", error);
   if (error instanceof BaseServerError) {
     return NextResponse.json(
       { message: error.message },
@@ -11,8 +11,7 @@ export function errorHandler(error: unknown) {
 
   return NextResponse.json(
     {
-      message:
-        error instanceof Error ? error.message : "An unexpected error occurred",
+      message: "An unexpected error occurred",
     },
     { status: 500 },
   );

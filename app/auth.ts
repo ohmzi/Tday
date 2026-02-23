@@ -2,11 +2,9 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma/client";
-import { sha256 } from "@noble/hashes/sha256";
-import { pbkdf2 } from "@noble/hashes/pbkdf2";
-import { hexToBytes, bytesToHex } from "@noble/hashes/utils";
 import type { Adapter } from "next-auth/adapters";
 import { CredentialsSignin } from "@auth/core/errors";
+import { hashPassword, verifyPassword } from "@/lib/security/password";
 
 class PendingApprovalError extends CredentialsSignin {
   code = "pending_approval";
@@ -14,7 +12,11 @@ class PendingApprovalError extends CredentialsSignin {
 
 export const { handlers, auth } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
-  session: { strategy: "jwt" },
+  secret: process.env.AUTH_SECRET,
+  trustHost: process.env.AUTH_TRUST_HOST === "true",
+  useSecureCookies: process.env.NODE_ENV === "production",
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },
+  jwt: { maxAge: 60 * 60 * 24 * 7 },
   providers: [
     Credentials({
       credentials: {
@@ -27,10 +29,7 @@ export const { handlers, auth } = NextAuth({
           password: string;
         };
 
-        let user = null;
-
-        // Find the user
-        user = await prisma.user.findUnique({
+        const user = await prisma.user.findUnique({
           where: { email: email },
         });
 
@@ -39,26 +38,17 @@ export const { handlers, auth } = NextAuth({
         }
 
         try {
-          // Check if this is a new format password (has a colon separator)
-          if (user.password.includes(":")) {
-            // Split the stored password to get the salt and hash
-            const [saltHex, storedHashHex] = user.password.split(":");
-            const salt = hexToBytes(saltHex);
+          const verification = verifyPassword(password, user.password);
+          if (!verification.valid) {
+            // Keep login errors generic to avoid account enumeration.
+            throw new Error("Invalid credentials.");
+          }
 
-            // Recreate the hash with the provided password and stored salt
-            const calculatedHash = pbkdf2(sha256, password, salt, {
-              c: 10000,
-              dkLen: 32,
+          if (verification.needsRehash) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { password: hashPassword(password) },
             });
-            const calculatedHex = bytesToHex(calculatedHash);
-
-            // Compare calculated hash with stored hash
-            if (calculatedHex !== storedHashHex) {
-              throw new Error("Invalid credentials.");
-            }
-          } else {
-            // This is an old bcrypt hash - we can't verify it in Edge
-            throw new Error("Please reset your password to continue.");
           }
 
           if (user.approvalStatus !== "APPROVED") {
@@ -67,7 +57,6 @@ export const { handlers, auth } = NextAuth({
 
           return user;
         } catch (error) {
-          console.log(error);
           if (error instanceof PendingApprovalError) {
             throw error;
           }

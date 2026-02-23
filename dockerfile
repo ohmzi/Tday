@@ -1,10 +1,12 @@
 FROM node:20-alpine
 
 WORKDIR /tday
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm install
+RUN npm install --include=dev --no-audit --fund=false
 
 COPY . .
 
@@ -12,7 +14,11 @@ COPY . .
 ARG DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
 
 # Build assets without running DB migrations during image build.
-RUN npx prisma generate && npx next build
+RUN npx prisma generate && npx next build \
+    && npm prune --omit=dev \
+    && npm cache clean --force
+
+USER node
 
 EXPOSE 3000
 

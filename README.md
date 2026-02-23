@@ -29,6 +29,9 @@ GPU acceleration:
 
 - Mobile/server probe endpoint: `GET /api/mobile/probe`
 - Backend auth throttling + lockout is configurable via `.env.docker` auth limit variables
+- Password hashing uses PBKDF2 with configurable iterations (`AUTH_PBKDF2_ITERATIONS`)
+- API responses are served with `Cache-Control: no-store` and hardened security headers
+- Production middleware enforces HTTPS (except local development hosts)
 - Cloudflare edge rule recommendations are documented in:
   `/home/ohmz/StudioProjects/Tday/docs/security/cloudflare-auth-hardening.md`
 
