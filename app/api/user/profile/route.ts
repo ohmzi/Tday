@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ message: error.message }, { status: error.status });
     }
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : "An unexpected error occurred" },
+      { message: "An unexpected error occurred" },
       { status: 500 },
     );
   }

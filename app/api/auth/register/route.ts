@@ -10,11 +10,8 @@ import {
   buildAuthThrottleResponse,
   enforceAuthRateLimit,
 } from "@/lib/security/authThrottle";
-import { sha256 } from "@noble/hashes/sha256";
-import { pbkdf2 } from "@noble/hashes/pbkdf2";
-import { randomBytes } from "@noble/hashes/utils";
-import { bytesToHex } from "@noble/hashes/utils";
 import { Prisma } from "@prisma/client";
+import { hashPassword } from "@/lib/security/password";
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,19 +49,7 @@ export async function POST(req: NextRequest) {
       throw new BadRequestError("this email is taken");
     }
 
-    // Generate salt and hash password
-    const salt = randomBytes(16);
-    const saltHex = bytesToHex(salt);
-
-    // Use PBKDF2 for password hashing (more secure than single-pass SHA-256)
-    const passwordHash = pbkdf2(sha256, password, salt, {
-      c: 10000,
-      dkLen: 32,
-    });
-    const passwordHex = bytesToHex(passwordHash);
-
-    // Store salt:hash
-    const hashedPassword = `${saltHex}:${passwordHex}`;
+    const hashedPassword = hashPassword(password);
 
     const fullName = [fname.trim(), lname?.trim() || ""].filter(Boolean).join(" ");
 
@@ -140,7 +125,7 @@ export async function POST(req: NextRequest) {
       { status: 200 },
     );
   } catch (error) {
-    console.log(error);
+    console.error("register_error", error);
 
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -163,10 +148,7 @@ export async function POST(req: NextRequest) {
     // handle generic error
     return NextResponse.json(
       {
-        message:
-          error instanceof Error
-            ? error.message.slice(0, 50)
-            : "an unexpected error occured",
+        message: "an unexpected error occured",
       },
       { status: 500 }
     );
