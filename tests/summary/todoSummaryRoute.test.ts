@@ -69,7 +69,7 @@ describe("POST /api/todo/summary", () => {
     const request = new Request("http://localhost/api/todo/summary", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "today" }),
+      body: JSON.stringify({ mode: "all" }),
     });
 
     const response = await POST(request as any);
@@ -93,7 +93,7 @@ describe("POST /api/todo/summary", () => {
     const request = new Request("http://localhost/api/todo/summary", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "today" }),
+      body: JSON.stringify({ mode: "all" }),
     });
 
     const response = await POST(request as any);
@@ -101,7 +101,7 @@ describe("POST /api/todo/summary", () => {
 
     expect(response.status).toBe(200);
     expect(payload.source).toBe("fallback");
-    expect(payload.summary).toContain("Today has");
+    expect(payload.summary).toContain("Start with");
 
     (global as any).fetch = originalFetch;
   });
@@ -118,7 +118,10 @@ describe("POST /api/todo/summary", () => {
     (global as any).fetch = jest.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          response: "You have one high-priority task due soon.",
+          response: JSON.stringify({
+            startId: "T1",
+            thenIds: [],
+          }),
         }),
         {
           status: 200,
@@ -130,7 +133,7 @@ describe("POST /api/todo/summary", () => {
     const request = new Request("http://localhost/api/todo/summary", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "today" }),
+      body: JSON.stringify({ mode: "all" }),
     });
 
     const response = await POST(request as any);
@@ -138,7 +141,9 @@ describe("POST /api/todo/summary", () => {
 
     expect(response.status).toBe(200);
     expect(payload.source).toBe("ai");
-    expect(payload.summary).toContain("high-priority");
+    expect(payload.summary).toContain("Start with");
+    expect(payload.summary).not.toMatch(/\b\d{1,2}(:\d{2})?\s*(AM|PM)\b/i);
+    expect(payload.summary).not.toContain("priority");
 
     (global as any).fetch = originalFetch;
   });
