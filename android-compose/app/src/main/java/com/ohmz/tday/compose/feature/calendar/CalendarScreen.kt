@@ -1364,8 +1364,8 @@ private fun CalendarTodoRow(
                             if (showPriorityFlag) {
                                 Icon(
                                     imageVector = Icons.Rounded.Flag,
-                                    contentDescription = "High priority",
-                                    tint = priorityColor("high"),
+                                    contentDescription = "Priority task",
+                                    tint = priorityColor(todo.priority),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
@@ -1611,7 +1611,7 @@ private fun buildMonthCells(month: YearMonth): List<CalendarDayCellModel> {
 
 private fun priorityColor(priority: String): Color {
     return when (priority.lowercase(Locale.getDefault())) {
-        "high" -> Color(0xFFE56A6A)
+        "high", "urgent", "important" -> Color(0xFFE56A6A)
         "medium" -> Color(0xFFE3B368)
         else -> Color(0xFF6FBF86)
     }
@@ -1619,7 +1619,7 @@ private fun priorityColor(priority: String): Color {
 
 private fun isHighPriority(priority: String): Boolean {
     return when (priority.trim().lowercase(Locale.getDefault())) {
-        "high", "urgent", "important" -> true
+        "medium", "high", "urgent", "important" -> true
         else -> false
     }
 }
