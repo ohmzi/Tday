@@ -9,13 +9,24 @@ const fetchApi = async (url: string, options: fetchOptions) => {
     method: options.method,
     headers: options.headers as HeadersInit | undefined,
     body: options.body,
+    cache: "no-store",
+    credentials: "same-origin",
   });
 
+  const isJson = (res.headers.get("content-type") ?? "").includes(
+    "application/json",
+  );
+
   if (!res.ok) {
-    const message =
-      (await res.json()).message || `a ${res.statusText} error ocurred`;
+    const payload = isJson ? ((await res.json()) as { message?: string }) : null;
+    const message = payload?.message || `a ${res.statusText} error ocurred`;
     throw new Error(message);
   }
+
+  if (!isJson || res.status === 204) {
+    return null;
+  }
+
   return await res.json();
 };
 

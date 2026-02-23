@@ -12,8 +12,6 @@ services:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: mypass
       POSTGRES_DB: mydb
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -33,7 +31,9 @@ services:
       - ollama_data:/root/.ollama
 
   tday:
-    build: .
+    build:
+      context: .
+      dockerfile: dockerfile
     image: tday:latest
     container_name: tday
     restart: always
@@ -42,6 +42,10 @@ services:
     env_file:
       - .env.docker
     command: sh -c "npx prisma migrate deploy && npm run start"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     depends_on:
       database:
         condition: service_healthy
