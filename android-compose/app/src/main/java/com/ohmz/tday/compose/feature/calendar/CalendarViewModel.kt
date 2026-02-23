@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
 data class CalendarUiState(
     val isLoading: Boolean = false,
     val items: List<TodoItem> = emptyList(),
+    val completedItems: List<CompletedItem> = emptyList(),
     val lists: List<ListSummary> = emptyList(),
     val errorMessage: String? = null,
 )
@@ -33,6 +35,7 @@ class CalendarViewModel @Inject constructor(
             CalendarUiState(
                 isLoading = false,
                 items = repository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED),
+                completedItems = repository.fetchCompletedItemsSnapshot(),
                 lists = repository.fetchListsSnapshot(),
                 errorMessage = null,
             )
@@ -71,13 +74,19 @@ class CalendarViewModel @Inject constructor(
     private fun hydrateFromCache() {
         runCatching {
             val todos = repository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED)
+            val completedItems = repository.fetchCompletedItemsSnapshot()
             val lists = repository.fetchListsSnapshot()
-            todos to lists
-        }.onSuccess { (todos, lists) ->
+            Triple(todos, completedItems, lists)
+        }.onSuccess { (todos, completedItems, lists) ->
             _uiState.update { current ->
                 current.copy(
                     isLoading = false,
                     items = if (current.items == todos) current.items else todos,
+                    completedItems = if (current.completedItems == completedItems) {
+                        current.completedItems
+                    } else {
+                        completedItems
+                    },
                     lists = if (current.lists == lists) current.lists else lists,
                     errorMessage = null,
                 )
@@ -109,13 +118,19 @@ class CalendarViewModel @Inject constructor(
                     ).onFailure { /* fall back to cache */ }
                 }
                 val todos = repository.fetchTodos(mode = TodoListMode.SCHEDULED)
+                val completedItems = repository.fetchCompletedItems()
                 val lists = repository.fetchLists()
-                todos to lists
-            }.onSuccess { (todos, lists) ->
+                Triple(todos, completedItems, lists)
+            }.onSuccess { (todos, completedItems, lists) ->
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
                         items = if (current.items == todos) current.items else todos,
+                        completedItems = if (current.completedItems == completedItems) {
+                            current.completedItems
+                        } else {
+                            completedItems
+                        },
                         lists = if (current.lists == lists) current.lists else lists,
                         errorMessage = null,
                     )
@@ -145,6 +160,60 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         errorMessage = error.message ?: "Could not create task",
+                    )
+                }
+            }
+        }
+    }
+
+    fun complete(todo: TodoItem) {
+        val previousItems = _uiState.value.items
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.filterNot { it.id == todo.id },
+                errorMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                repository.completeTodo(todo)
+            }.onSuccess {
+                loadInternal(
+                    forceSync = false,
+                    showLoading = false,
+                )
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    current.copy(
+                        items = previousItems,
+                        errorMessage = error.message ?: "Could not complete task",
+                    )
+                }
+            }
+        }
+    }
+
+    fun uncomplete(item: CompletedItem) {
+        val previousCompletedItems = _uiState.value.completedItems
+        _uiState.update { current ->
+            current.copy(
+                completedItems = current.completedItems.filterNot { it.id == item.id },
+                errorMessage = null,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                repository.uncomplete(item)
+            }.onSuccess {
+                loadInternal(
+                    forceSync = false,
+                    showLoading = false,
+                )
+            }.onFailure { error ->
+                _uiState.update { current ->
+                    current.copy(
+                        completedItems = previousCompletedItems,
+                        errorMessage = error.message ?: "Could not restore task",
                     )
                 }
             }
