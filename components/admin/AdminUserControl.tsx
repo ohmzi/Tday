@@ -24,12 +24,20 @@ type AdminUser = {
   approvedAt: string | null;
 };
 
+type AdminSettingsResponse = {
+  aiSummaryEnabled: boolean;
+  updatedAt?: string;
+};
+
 export default function AdminUserControl() {
   const { data: session } = useSession();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionUserId, setActionUserId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<"approve" | "delete" | null>(null);
+  const [aiSummaryEnabled, setAiSummaryEnabled] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -47,9 +55,30 @@ export default function AdminUserControl() {
     }
   }, []);
 
+  const fetchAdminSettings = useCallback(async () => {
+    setSettingsLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings", { cache: "no-store" });
+      const body = (await res.json()) as AdminSettingsResponse & {
+        message?: string;
+      };
+      if (!res.ok) {
+        throw new Error(body?.message || "Failed to load admin settings");
+      }
+      setAiSummaryEnabled(Boolean(body.aiSummaryEnabled));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load admin settings",
+      );
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void fetchUsers();
-  }, [fetchUsers]);
+    void fetchAdminSettings();
+  }, [fetchUsers, fetchAdminSettings]);
 
   const pendingUsers = useMemo(
     () => users.filter((user) => user.approvalStatus === "PENDING"),
@@ -103,6 +132,36 @@ export default function AdminUserControl() {
     }
   };
 
+  const toggleAiSummary = async () => {
+    const nextValue = !aiSummaryEnabled;
+    setSettingsSaving(true);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aiSummaryEnabled: nextValue }),
+      });
+      const body = (await res.json()) as AdminSettingsResponse & {
+        message?: string;
+      };
+      if (!res.ok) {
+        throw new Error(body?.message || "Failed to update admin settings");
+      }
+      setAiSummaryEnabled(Boolean(body.aiSummaryEnabled));
+      toast.success(
+        body.aiSummaryEnabled
+          ? "AI summaries enabled for all users"
+          : "AI summaries disabled for all users",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update admin settings",
+      );
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
   return (
     <div className="w-full space-y-5 pb-10">
       <div className="lg:hidden">
@@ -133,6 +192,36 @@ export default function AdminUserControl() {
           Refresh
         </Button>
       </header>
+
+      <Card className="rounded-2xl border-border/70 bg-card/95">
+        <CardHeader>
+          <CardTitle>Feature flags</CardTitle>
+          <CardDescription>
+            Global controls applied to every user account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">AI task summary</p>
+              <p className="text-xs text-muted-foreground">
+                Controls whether summarize buttons appear in mobile todo screens.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant={aiSummaryEnabled ? "default" : "outline"}
+              onClick={() => void toggleAiSummary()}
+              disabled={settingsLoading || settingsSaving}
+            >
+              {settingsSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {aiSummaryEnabled ? "Enabled" : "Disabled"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="rounded-2xl border-border/70 bg-card/95">
         <CardHeader>
