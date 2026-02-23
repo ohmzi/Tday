@@ -111,7 +111,7 @@ describe("POST /api/todo/summary", () => {
     expect(response.status).toBe(200);
     expect(payload.source).toBe("fallback");
     expect(payload.summary).toContain("Start with");
-    expect(payload.summary).toContain("(due");
+    expect(payload.summary).toContain("due");
 
     (global as any).fetch = originalFetch;
   });
@@ -152,9 +152,220 @@ describe("POST /api/todo/summary", () => {
     expect(response.status).toBe(200);
     expect(payload.source).toBe("ai");
     expect(payload.summary).toContain("Start with");
-    expect(payload.summary).toContain("(due");
+    expect(payload.summary).toContain("due");
     expect(payload.summary).not.toMatch(/\b\d{1,2}(:\d{2})?\s*(AM|PM)\b/i);
     expect(payload.summary).not.toContain("priority");
+
+    (global as any).fetch = originalFetch;
+  });
+
+  test("uses model-written summary prose when provided", async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: "user-1",
+        timeZone: "UTC",
+      },
+    } as any);
+
+    const originalFetch = global.fetch;
+    (global as any).fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          response: JSON.stringify({
+            startId: "T1",
+            thenIds: [],
+            summary: "Task todo-1 is urgent and due today, so handle it first.",
+          }),
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const request = new Request("http://localhost/api/todo/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "all" }),
+    });
+
+    const response = await POST(request as any);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.source).toBe("ai");
+    expect(payload.summary).toBe("Task todo-1 is urgent and due today, so handle it first.");
+
+    (global as any).fetch = originalFetch;
+  });
+
+  test("accepts long model-written summary prose", async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: "user-1",
+        timeZone: "UTC",
+      },
+    } as any);
+    const longSummary = [
+      "Task todo-1 is urgent and due today, so begin there and keep momentum with clear checkpoints.",
+      "Break the work into small steps, confirm each step before moving on, and keep interruptions low.",
+      "If you get blocked, switch to a quick supporting action, then return and finish the core task with focus.",
+      "Close by reviewing what was done, noting any follow-up items, and setting up the next action while context is fresh.",
+      "This plan favors steady execution and reduces context switching so the task actually gets completed.",
+      "Keep the cadence simple, deliberate, and realistic for the time you have today.",
+    ].join(" ");
+
+    const originalFetch = global.fetch;
+    (global as any).fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          response: JSON.stringify({
+            startId: "T1",
+            thenIds: [],
+            summary: longSummary,
+          }),
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const request = new Request("http://localhost/api/todo/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "all" }),
+    });
+
+    const response = await POST(request as any);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.source).toBe("ai");
+    expect(payload.summary).toBe(longSummary);
+    expect(longSummary.length).toBeGreaterThan(520);
+
+    (global as any).fetch = originalFetch;
+  });
+
+  test("falls back when model prose omits required day/date context", async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: "user-1",
+        timeZone: "UTC",
+      },
+    } as any);
+    const base = Date.now();
+    fetchTimelineMock.mockResolvedValue([
+      makeTodo("today-low", {
+        priority: "Low",
+        due: new Date(base + 2 * 60 * 60 * 1000),
+        dtstart: new Date(base + 60 * 60 * 1000),
+      }),
+      makeTodo("far-high", {
+        priority: "High",
+        due: new Date(base + 30 * 24 * 60 * 60 * 1000),
+        dtstart: new Date(base + 30 * 24 * 60 * 60 * 1000 - 60 * 60 * 1000),
+      }),
+    ]);
+
+    const originalFetch = global.fetch;
+    (global as any).fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          response: JSON.stringify({
+            startId: "T1",
+            thenIds: ["T2"],
+            summary: "Start with Task today-low, then do Task far-high.",
+          }),
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const request = new Request("http://localhost/api/todo/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "all" }),
+    });
+
+    const response = await POST(request as any);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.source).toBe("ai");
+    expect(payload.summary).not.toBe("Start with Task today-low, then do Task far-high.");
+    expect(payload.summary.toLowerCase()).toMatch(/today|tomorrow|on \d/);
+
+    (global as any).fetch = originalFetch;
+  });
+
+  test("priority mode fallback keeps upcoming tasks when AI focuses only on overdue items", async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: "user-1",
+        timeZone: "UTC",
+      },
+    } as any);
+    const base = Date.now();
+    fetchTimelineMock.mockResolvedValue([
+      makeTodo("past-a", {
+        priority: "High",
+        due: new Date(base - 30 * 60 * 60 * 1000),
+        dtstart: new Date(base - 31 * 60 * 60 * 1000),
+      }),
+      makeTodo("past-b", {
+        priority: "Medium",
+        due: new Date(base - 28 * 60 * 60 * 1000),
+        dtstart: new Date(base - 29 * 60 * 60 * 1000),
+      }),
+      makeTodo("future-a", {
+        priority: "High",
+        due: new Date(base + 4 * 24 * 60 * 60 * 1000 + 8 * 60 * 60 * 1000),
+        dtstart: new Date(base + 4 * 24 * 60 * 60 * 1000 + 7 * 60 * 60 * 1000),
+      }),
+      makeTodo("future-b", {
+        priority: "Medium",
+        due: new Date(base + 4 * 24 * 60 * 60 * 1000 + 20 * 60 * 60 * 1000),
+        dtstart: new Date(base + 4 * 24 * 60 * 60 * 1000 + 19 * 60 * 60 * 1000),
+      }),
+    ]);
+
+    const originalFetch = global.fetch;
+    (global as any).fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          response: JSON.stringify({
+            startId: "T1",
+            thenIds: ["T2"],
+            summary: "Start with Task past-a due yesterday, then Task past-b due yesterday.",
+          }),
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const request = new Request("http://localhost/api/todo/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "priority" }),
+    });
+
+    const response = await POST(request as any);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.source).toBe("ai");
+    expect(payload.summary).toContain("Task future-a");
+    expect(payload.summary).toContain("Task future-b");
 
     (global as any).fetch = originalFetch;
   });
@@ -208,7 +419,7 @@ describe("POST /api/todo/summary", () => {
     expect(response.status).toBe(200);
     expect(payload.source).toBe("ai");
     expect(payload.summary).toContain("Start with Task today-low");
-    expect(payload.summary).toContain("(due today)");
+    expect(payload.summary).toContain("due today");
 
     (global as any).fetch = originalFetch;
   });
