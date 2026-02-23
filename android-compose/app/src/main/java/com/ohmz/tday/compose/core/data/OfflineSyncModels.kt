@@ -10,6 +10,7 @@ internal data class OfflineSyncState(
     val completedItems: List<CachedCompletedRecord> = emptyList(),
     val lists: List<CachedListRecord> = emptyList(),
     val pendingMutations: List<PendingMutationRecord> = emptyList(),
+    val aiSummaryEnabled: Boolean = true,
 )
 
 @Serializable
