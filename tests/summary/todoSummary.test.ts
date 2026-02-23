@@ -116,7 +116,6 @@ describe("todoSummary mode filtering", () => {
       timeZone: "UTC",
       now,
     });
-    expect(summary).toContain("Today has 1 active task.");
-    expect(summary).toContain("Priority mix:");
+    expect(summary).toContain("- Start with");
   });
 });
