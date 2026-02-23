@@ -35,6 +35,7 @@ model User {
   approvedById String?
   approvedBy User? @relation("UserApprovalAdmin", fields: [approvedById], references: [id], onDelete: SetNull)
   approvedUsers User[] @relation("UserApprovalAdmin")
+  appConfigsUpdated AppConfig[] @relation("AppConfigUpdatedBy")
 }
 
 enum UserRole {
@@ -274,3 +275,14 @@ model eventLog{
     eventName   String
     log         String
   }
+
+model AppConfig {
+  id               Int       @id @default(1)
+  aiSummaryEnabled Boolean   @default(true)
+  updatedById      String?
+  updatedBy        User?     @relation("AppConfigUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([updatedById])
+}

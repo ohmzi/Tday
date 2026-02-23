@@ -10,13 +10,12 @@ import { prisma } from "@/lib/prisma/client";
 import { todoSchema } from "@/schema";
 import { auth } from "@/app/auth";
 import generateTodosFromRRule from "@/lib/generateTodosFromRRule";
+import { fetchTimelineTodosForUser } from "@/lib/fetchTimelineTodos";
 import { resolveTimezone } from "@/lib/resolveTimeZone";
 import { errorHandler } from "@/lib/errorHandler";
 import { overrideBy } from "@/lib/overrideBy";
 import { recurringTodoItemType } from "@/types";
 import { getMovedInstances } from "@/lib/getMovedInstances";
-import { add, endOfDay, startOfDay } from "date-fns";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { z } from "zod";
 
 const todoPatchByIdSchema = todoSchema
@@ -271,74 +270,10 @@ export async function GET(req: NextRequest) {
         ? Math.min(Math.max(Math.floor(recurringFutureDaysRaw), 1), 3650)
         : 365;
 
-      const userNow = toZonedTime(new Date(), timeZone);
-      const earliestRecurringParent = await prisma.todo.findFirst({
-        where: {
-          userID: user.id,
-          rrule: { not: null },
-          completed: false,
-        },
-        orderBy: { dtstart: "asc" },
-        select: { dtstart: true },
-      });
-      const recurringRangeStart = fromZonedTime(
-        earliestRecurringParent
-          ? toZonedTime(earliestRecurringParent.dtstart, timeZone)
-          : startOfDay(userNow),
+      const allTodos = await fetchTimelineTodosForUser({
+        userId: user.id,
         timeZone,
-      );
-      const recurringRangeEnd = fromZonedTime(
-        add(endOfDay(userNow), { days: recurringFutureDays }),
-        timeZone,
-      );
-
-      const oneOffTodos = await prisma.todo.findMany({
-        where: {
-          userID: user.id,
-          rrule: null,
-          completed: false,
-        },
-        orderBy: [{ due: "asc" }, { order: "asc" }, { createdAt: "asc" }],
-      });
-
-      const recurringParents = (await prisma.todo.findMany({
-        where: {
-          userID: user.id,
-          rrule: { not: null },
-          dtstart: { lte: recurringRangeEnd },
-          completed: false,
-        },
-        include: { instances: true },
-      })) as recurringTodoItemType[];
-
-      const ghostTodos = generateTodosFromRRule(recurringParents, timeZone, {
-        dateRangeStart: recurringRangeStart,
-        dateRangeEnd: recurringRangeEnd,
-      });
-
-      const mergedUsingRecurrId = overrideBy(ghostTodos, (inst) => inst.recurId);
-      const movedTodos = getMovedInstances(mergedUsingRecurrId, recurringParents, {
-        dateRangeStart: recurringRangeStart,
-        dateRangeEnd: recurringRangeEnd,
-      });
-
-      const allGhosts = [...mergedUsingRecurrId, ...movedTodos].filter((todo) => {
-        return todo.due >= recurringRangeStart && todo.completed === false;
-      });
-
-      const allTodos = [...oneOffTodos, ...allGhosts].sort((a, b) => {
-        const dueDelta = a.due.getTime() - b.due.getTime();
-        if (dueDelta !== 0) {
-          return dueDelta;
-        }
-        if (a.pinned !== b.pinned) {
-          return a.pinned ? -1 : 1;
-        }
-        const orderDelta = a.order - b.order;
-        if (orderDelta !== 0) {
-          return orderDelta;
-        }
-        return a.createdAt.getTime() - b.createdAt.getTime();
+        recurringFutureDays,
       });
 
       return NextResponse.json(
