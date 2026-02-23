@@ -16,6 +16,8 @@ import { useTheme } from "next-themes";
 import { LogOut, Moon, Sun, Monitor, Settings, Shield } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQueryClient } from "@tanstack/react-query";
+import { clearClientUserData } from "@/lib/security/clearClientUserData";
 
 const railButtonClass =
   "group flex h-10 min-h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors duration-200 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground";
@@ -40,6 +42,7 @@ const UserCard = ({
   const sidebarDict = useTranslations("sidebar");
   const { setTheme, theme } = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const themeLabel = theme === "dark" ? "Dark" : theme === "light" ? "Light" : "System";
 
@@ -56,7 +59,12 @@ const UserCard = ({
       .slice(0, 2) || "U";
 
   const handleLogout = async () => {
-    await signOut({ redirectTo: "/login" });
+    queryClient.clear();
+    await clearClientUserData();
+
+    await signOut({ redirectTo: "/login" }).catch(() => {
+      router.replace("/login");
+    });
   };
 
   return (

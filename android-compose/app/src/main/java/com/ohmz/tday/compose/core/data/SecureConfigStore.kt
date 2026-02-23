@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.core.data
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.ohmz.tday.compose.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,12 +53,16 @@ class SecureConfigStore @Inject constructor(
                 trimmed.toHttpUrlOrNull() ?: return null
             }
             trimmed.startsWith("http://", ignoreCase = true) -> {
-                trimmed.toHttpUrlOrNull() ?: return null
+                val httpCandidate = trimmed.toHttpUrlOrNull() ?: return null
+                if (canUseLocalHttp(httpCandidate.host)) {
+                    httpCandidate
+                } else {
+                    return null
+                }
             }
             else -> {
-                // Local/private hosts should default to HTTP for LAN-only deployments.
                 val httpsCandidate = "https://$trimmed".toHttpUrlOrNull() ?: return null
-                if (isLocalDevelopmentHost(httpsCandidate.host)) {
+                if (canUseLocalHttp(httpsCandidate.host)) {
                     "http://$trimmed".toHttpUrlOrNull() ?: return null
                 } else {
                     httpsCandidate
@@ -137,6 +142,10 @@ class SecureConfigStore @Inject constructor(
             .apply()
     }
 
+    fun clearListIconCache() {
+        prefs.edit().remove(KEY_LIST_ICON_MAP).apply()
+    }
+
     fun getListIcon(listId: String): String? {
         if (listId.isBlank()) return null
         val raw = prefs.getString(KEY_LIST_ICON_MAP, null).orEmpty()
@@ -188,6 +197,10 @@ class SecureConfigStore @Inject constructor(
         if (normalizedHost.matches(Regex("^10\\.\\d+\\.\\d+\\.\\d+$"))) return true
         if (normalizedHost.matches(Regex("^192\\.168\\.\\d+\\.\\d+$"))) return true
         return normalizedHost.matches(Regex("^172\\.(1[6-9]|2\\d|3[0-1])\\.\\d+\\.\\d+$"))
+    }
+
+    private fun canUseLocalHttp(host: String): Boolean {
+        return BuildConfig.DEBUG && isLocalDevelopmentHost(host)
     }
 
     private companion object {

@@ -8,6 +8,8 @@ import {
 import { prisma } from "@/lib/prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
+const BASE64_REGEX = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
 export async function GET() {
   try {
     const session = await auth();
@@ -34,7 +36,7 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
-    console.log(error);
+    console.error("user_get_error", error);
 
     if (error instanceof BaseServerError) {
       return NextResponse.json(
@@ -45,10 +47,7 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        message:
-          error instanceof Error
-            ? error.message.slice(0, 50)
-            : "An unexpected error occurred",
+        message: "An unexpected error occurred",
       },
       { status: 500 }
     );
@@ -95,11 +94,20 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    const trimmedProtectedKey = protectedSymmetricKey.trim();
+    if (
+      trimmedProtectedKey.length === 0 ||
+      trimmedProtectedKey.length > 4096 ||
+      !BASE64_REGEX.test(trimmedProtectedKey)
+    ) {
+      throw new BadRequestError("protectedSymmetricKey is malformed");
+    }
+
     // Store encrypted key in the database
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
-        protectedSymmetricKey,
+        protectedSymmetricKey: trimmedProtectedKey,
       },
     });
 
@@ -108,11 +116,11 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: "your files are now End to End encrypted!" },
+      { message: "protected symmetric key updated" },
       { status: 200 }
     );
   } catch (error) {
-    console.log(error);
+    console.error("user_patch_error", error);
 
     if (error instanceof BaseServerError) {
       return NextResponse.json(
@@ -123,10 +131,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json(
       {
-        message:
-          error instanceof Error
-            ? error.message.slice(0, 50)
-            : "An unexpected error occurred",
+        message: "An unexpected error occurred",
       },
       { status: 500 }
     );
