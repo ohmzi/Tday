@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.core.data
 
 import android.util.Log
+import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.AuthSession
 import com.ohmz.tday.compose.core.model.CompletedItem
@@ -50,6 +51,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import retrofit2.Response
+import java.net.CookieManager
 import java.net.URI
 import java.net.URLDecoder
 import java.security.MessageDigest
@@ -69,6 +71,8 @@ class TdayRepository @Inject constructor(
     private val api: TdayApiService,
     private val json: Json,
     private val secureConfigStore: SecureConfigStore,
+    private val cookieManager: CookieManager,
+    private val themePreferenceStore: ThemePreferenceStore,
 ) {
     private val zoneId: ZoneId
         get() = ZoneId.systemDefault()
@@ -198,19 +202,25 @@ class TdayRepository @Inject constructor(
     }
 
     suspend fun logout() {
-        val csrf = runCatching {
-            requireBody(api.getCsrfToken(), "Unable to sign out").csrfToken
-        }.getOrElse { return }
+        try {
+            val csrf = runCatching {
+                requireBody(api.getCsrfToken(), "Unable to sign out").csrfToken
+            }.getOrNull()
 
-        val callbackUrl = secureConfigStore.buildAbsoluteAppUrl("/login") ?: "/login"
-
-        api.signOut(
-            payload = mapOf(
-                "csrfToken" to csrf,
-                "callbackUrl" to callbackUrl,
-            ),
-        )
-        secureConfigStore.clearOfflineSyncState()
+            if (!csrf.isNullOrBlank()) {
+                val callbackUrl = secureConfigStore.buildAbsoluteAppUrl("/login") ?: "/login"
+                runCatching {
+                    api.signOut(
+                        payload = mapOf(
+                            "csrfToken" to csrf,
+                            "callbackUrl" to callbackUrl,
+                        ),
+                    )
+                }
+            }
+        } finally {
+            clearLocalSessionArtifacts()
+        }
     }
 
     suspend fun syncTimezone() {
@@ -2302,6 +2312,24 @@ class TdayRepository @Inject constructor(
         return next
     }
 
+    private fun clearLocalSessionArtifacts() {
+        val previous = lastPersistedState ?: decodeOfflineSyncState(
+            raw = secureConfigStore.getOfflineSyncStateRaw().orEmpty(),
+        )
+        val cleared = OfflineSyncState()
+
+        secureConfigStore.clearCredentials()
+        secureConfigStore.clearOfflineSyncState()
+        secureConfigStore.clearListIconCache()
+        themePreferenceStore.clear()
+        runCatching { cookieManager.cookieStore?.removeAll() }
+
+        lastPersistedState = cleared
+        if (hasUiDataChanges(previous, cleared)) {
+            cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+        }
+    }
+
     private fun loadOfflineState(): OfflineSyncState {
         val decoded = decodeOfflineSyncState(
             raw = secureConfigStore.getOfflineSyncStateRaw().orEmpty(),
@@ -2598,7 +2626,7 @@ class TdayRepository @Inject constructor(
 
     private fun ensureSecureTransport(serverUrl: HttpUrl) {
         if (serverUrl.scheme == "https") return
-        if (isLocalDevelopmentHost(serverUrl.host)) return
+        if (BuildConfig.DEBUG && isLocalDevelopmentHost(serverUrl.host)) return
         throw ServerProbeException.InsecureTransport()
     }
 

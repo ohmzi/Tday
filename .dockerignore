@@ -1,22 +1,41 @@
-node_modules
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
 .DS_Store
 *.pem
+
+# debug
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
 .pnpm-debug.log*
+
+# env
 .env*
 !.env.example
+
+# vercel
+.vercel
+
+# typescript
 *.tsbuildinfo
-.git
-.cursor
-android-compose
-tday-web/node_modules
-tday-web/dist
-tday-backend/build
-tday-backend/.gradle
-tday-backend/.kotlin
-shared/build
-shared/.gradle
-.gradle
-build
-.kotlin
+next-env.d.ts
