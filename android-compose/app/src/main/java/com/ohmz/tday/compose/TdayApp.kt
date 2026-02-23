@@ -181,6 +181,7 @@ fun TdayApp() {
                                     onCreateTask = { payload ->
                                         homeViewModel.createTask(payload)
                                     },
+                                    onParseTaskTitleNlp = homeViewModel::parseTaskTitleNlp,
                                     onCreateList = { name, color, iconKey ->
                                         homeViewModel.createList(
                                             name = name,
@@ -203,6 +204,7 @@ fun TdayApp() {
                                     onOpenTaskFromSearch = {},
                                     onOpenList = { _, _ -> },
                                     onCreateTask = { _ -> },
+                                    onParseTaskTitleNlp = { _, _, _ -> null },
                                     onCreateList = { _, _, _ -> },
                                 )
                             }
@@ -361,6 +363,7 @@ fun TdayApp() {
                         onBack = { navController.popBackStack() },
                         onRefresh = viewModel::refresh,
                         onCreateTask = viewModel::createTask,
+                        onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
                         onCompleteTask = viewModel::complete,
                         onUncompleteTask = viewModel::uncomplete,
                         onUpdateTask = viewModel::updateTask,
@@ -425,6 +428,7 @@ private fun TodosRoute(
         highlightedTodoId = highlightTodoId,
         onSummarize = viewModel::summarizeCurrentMode,
         onAddTask = viewModel::addTask,
+        onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
         onUpdateTask = viewModel::updateTask,
         onComplete = viewModel::toggleComplete,
         onDelete = { todo ->

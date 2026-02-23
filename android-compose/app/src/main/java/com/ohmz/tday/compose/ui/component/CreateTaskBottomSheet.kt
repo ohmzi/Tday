@@ -56,6 +56,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -83,10 +84,12 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay
 
 private enum class TaskSheetPage {
     MAIN,
@@ -137,6 +140,11 @@ fun CreateTaskBottomSheet(
     defaultPriority: String? = null,
     initialStartEpochMs: Long? = null,
     initialDueEpochMs: Long? = null,
+    onParseTaskTitleNlp: (suspend (
+        title: String,
+        referenceStartEpochMs: Long,
+        referenceDueEpochMs: Long,
+    ) -> TodoTitleNlpResponse?)? = null,
     onDismiss: () -> Unit,
     onCreateTask: (CreateTaskPayload) -> Unit,
     onUpdateTask: ((todo: TodoItem, payload: CreateTaskPayload) -> Unit)? = null,
@@ -185,6 +193,33 @@ fun CreateTaskBottomSheet(
                 resolvedStartEpochMs + DEFAULT_TASK_DURATION_MS
             },
         )
+    }
+    LaunchedEffect(title, onParseTaskTitleNlp) {
+        val nlpParser = onParseTaskTitleNlp ?: return@LaunchedEffect
+        val inputTitle = title.trim()
+        if (inputTitle.isBlank()) return@LaunchedEffect
+
+        delay(260)
+        val parseResult = runCatching {
+            nlpParser(
+                inputTitle,
+                startEpochMs,
+                dueEpochMs,
+            )
+        }.getOrNull() ?: return@LaunchedEffect
+
+        val parsedStartEpochMs = parseResult.startEpochMs ?: return@LaunchedEffect
+        val parsedDueEpochMs = parseResult.dueEpochMs ?: return@LaunchedEffect
+        if (parsedDueEpochMs <= parsedStartEpochMs) return@LaunchedEffect
+
+        val cleanTitle = parseResult.cleanTitle
+        if (cleanTitle != title) {
+            title = cleanTitle
+        }
+        if (parsedStartEpochMs != startEpochMs || parsedDueEpochMs != dueEpochMs) {
+            startEpochMs = parsedStartEpochMs
+            dueEpochMs = parsedDueEpochMs
+        }
     }
     var selectedRepeat by rememberSaveable(editingTask?.id) {
         mutableStateOf(repeatPresetFromRrule(editingTask?.rrule).name)
