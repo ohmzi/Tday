@@ -1,5 +1,6 @@
 import {
   buildFallbackSummary,
+  buildSummaryTaskCandidates,
   filterTodosForSummaryMode,
 } from "@/lib/todoSummary";
 import { TodoItemType } from "@/types";
@@ -137,7 +138,32 @@ describe("todoSummary mode filtering", () => {
       timeZone: "UTC",
       now,
     });
-    expect(summary).toContain("- Start with");
+    expect(summary).toContain("Start with");
     expect(summary).toContain("(due today)");
+  });
+
+  test("all mode prioritizes near-term due tasks over far future high priority", () => {
+    const candidates = buildSummaryTaskCandidates(
+      [
+        makeTodo("far-high", {
+          due: new Date("2026-03-22T11:00:00.000Z"),
+          dtstart: new Date("2026-03-22T08:00:00.000Z"),
+          priority: "High",
+        }),
+        makeTodo("today-low", {
+          due: new Date("2026-02-22T21:00:00.000Z"),
+          dtstart: new Date("2026-02-22T20:00:00.000Z"),
+          priority: "Low",
+        }),
+      ],
+      {
+        mode: "all",
+        timeZone: "UTC",
+        now,
+      },
+    );
+
+    expect(candidates[0]?.title).toBe("Task today-low");
+    expect(candidates[1]?.title).toBe("Task far-high");
   });
 });
