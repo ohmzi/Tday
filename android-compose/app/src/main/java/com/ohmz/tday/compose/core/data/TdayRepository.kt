@@ -19,6 +19,8 @@ import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.model.TodoTitleNlpRequest
+import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.TodoSummaryRequest
 import com.ohmz.tday.compose.core.model.TodoSummaryResponse
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
@@ -58,6 +60,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.TimeZone
 import java.util.UUID
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -421,6 +424,39 @@ class TdayRepository @Inject constructor(
             ),
             "Could not summarize tasks",
         )
+    }
+
+    suspend fun parseTodoTitleNlp(
+        text: String,
+        referenceStartEpochMs: Long,
+        referenceDueEpochMs: Long,
+    ): TodoTitleNlpResponse? {
+        val trimmedText = text.trim()
+        if (trimmedText.isBlank()) return null
+
+        val durationMinutes = ((referenceDueEpochMs - referenceStartEpochMs) / 60_000L)
+            .coerceAtLeast(1L)
+            .coerceAtMost(24L * 60L)
+            .toInt()
+        val timezoneOffsetMinutes = ZoneId.systemDefault()
+            .rules
+            .getOffset(Instant.ofEpochMilli(referenceStartEpochMs))
+            .totalSeconds / 60
+
+        return runCatching {
+            requireBody(
+                api.parseTodoTitleNlp(
+                    TodoTitleNlpRequest(
+                        text = trimmedText,
+                        locale = Locale.getDefault().toLanguageTag(),
+                        referenceEpochMs = referenceStartEpochMs,
+                        timezoneOffsetMinutes = timezoneOffsetMinutes,
+                        defaultDurationMinutes = durationMinutes,
+                    ),
+                ),
+                "Could not parse task title",
+            )
+        }.getOrNull()
     }
 
     private fun buildTodosForMode(
