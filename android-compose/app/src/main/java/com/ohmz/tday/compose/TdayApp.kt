@@ -370,10 +370,18 @@ fun TdayApp() {
                 }
 
                 composable(AppRoute.Settings.route) {
+                    OnRouteResume {
+                        appViewModel.refreshAdminAiSummarySetting()
+                    }
                     SettingsScreen(
                         user = appUiState.user,
                         selectedThemeMode = appUiState.themeMode,
+                        adminAiSummaryEnabled = appUiState.adminAiSummaryEnabled,
+                        isAdminAiSummaryLoading = appUiState.isAdminAiSummaryLoading,
+                        isAdminAiSummarySaving = appUiState.isAdminAiSummarySaving,
+                        adminAiSummaryError = appUiState.adminAiSummaryError,
                         onThemeModeSelected = appViewModel::setThemeMode,
+                        onToggleAdminAiSummary = appViewModel::setAdminAiSummaryEnabled,
                         onBack = { navController.popBackStack() },
                         onLogout = { appViewModel.logout() },
                     )
@@ -412,6 +420,7 @@ private fun TodosRoute(
         onBack = onBack,
         onRefresh = viewModel::refresh,
         highlightedTodoId = highlightTodoId,
+        onSummarize = viewModel::summarizeCurrentMode,
         onAddTask = viewModel::addTask,
         onUpdateTask = viewModel::updateTask,
         onComplete = viewModel::toggleComplete,
