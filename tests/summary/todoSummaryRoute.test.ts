@@ -21,18 +21,25 @@ jest.mock("@/lib/resolveTimeZone", () => ({
   resolveTimezone: jest.fn(),
 }));
 
-function makeTodo(id: string): TodoItemType {
+function makeTodo(
+  id: string,
+  params: {
+    priority?: string;
+    due?: Date;
+    dtstart?: Date;
+  } = {},
+): TodoItemType {
   const now = new Date();
-  const start = new Date(now.getTime() - 60 * 60 * 1000);
-  const due = new Date(now.getTime() + 60 * 60 * 1000);
+  const due = params.due ?? new Date(now.getTime() + 60 * 60 * 1000);
+  const start = params.dtstart ?? new Date(due.getTime() - 60 * 60 * 1000);
   return {
     id,
-    title: "Mock Task",
+    title: `Task ${id}`,
     description: null,
     pinned: false,
     createdAt: now,
     order: 0,
-    priority: "High",
+    priority: params.priority ?? "High",
     dtstart: start,
     durationMinutes: 60,
     due,
@@ -148,6 +155,60 @@ describe("POST /api/todo/summary", () => {
     expect(payload.summary).toContain("(due");
     expect(payload.summary).not.toMatch(/\b\d{1,2}(:\d{2})?\s*(AM|PM)\b/i);
     expect(payload.summary).not.toContain("priority");
+
+    (global as any).fetch = originalFetch;
+  });
+
+  test("keeps all-mode AI summary start aligned with earliest due task", async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: "user-1",
+        timeZone: "UTC",
+      },
+    } as any);
+    const base = Date.now();
+    fetchTimelineMock.mockResolvedValue([
+      makeTodo("far-high", {
+        priority: "High",
+        due: new Date(base + 30 * 24 * 60 * 60 * 1000),
+        dtstart: new Date(base + 30 * 24 * 60 * 60 * 1000 - 60 * 60 * 1000),
+      }),
+      makeTodo("today-low", {
+        priority: "Low",
+        due: new Date(base + 2 * 60 * 60 * 1000),
+        dtstart: new Date(base + 60 * 60 * 1000),
+      }),
+    ]);
+
+    const originalFetch = global.fetch;
+    (global as any).fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          response: JSON.stringify({
+            startId: "T2",
+            thenIds: ["T1"],
+          }),
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    const request = new Request("http://localhost/api/todo/summary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "all" }),
+    });
+
+    const response = await POST(request as any);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.source).toBe("ai");
+    expect(payload.summary).toContain("Start with Task today-low");
+    expect(payload.summary).toContain("(due today)");
 
     (global as any).fetch = originalFetch;
   });

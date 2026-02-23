@@ -5,6 +5,7 @@ import { getGlobalAppConfig } from "@/lib/appConfig";
 import { fetchTimelineTodosForUser } from "@/lib/fetchTimelineTodos";
 import {
   buildFallbackSummary,
+  buildReadableTaskSummary,
   buildSummaryPrompt,
   buildSummaryTaskCandidates,
   filterTodosForSummaryMode,
@@ -55,16 +56,10 @@ function normalizeTaskId(value: unknown): string | null {
   return id;
 }
 
-function joinTaskTitles(titles: string[]): string {
-  if (titles.length === 0) return "";
-  if (titles.length === 1) return titles[0];
-  if (titles.length === 2) return `${titles[0]} and ${titles[1]}`;
-  return `${titles[0]}, ${titles[1]}, and ${titles[2]}`;
-}
-
 function normalizeAiSummary(
   raw: string | null | undefined,
   candidates: SummaryTaskCandidate[],
+  mode: TodoSummaryMode,
 ): string | null {
   const parsedRaw = (raw ?? "").replace(/\r/g, "\n").trim();
   if (!parsedRaw) return null;
@@ -82,36 +77,44 @@ function normalizeAiSummary(
   const candidateById = new Map(
     candidates.map((candidate) => [candidate.id.toUpperCase(), candidate]),
   );
+  const candidateOrder = new Map(candidates.map((candidate, index) => [candidate.id, index]));
   const startId = normalizeTaskId(parsed.startId);
-  const startTask = startId ? candidateById.get(startId) : null;
-  if (!startTask) return null;
+  const defaultStartTask = candidates[0];
+  if (!defaultStartTask) return null;
+  let startTask = startId ? candidateById.get(startId) : null;
+  if (!startTask) {
+    startTask = defaultStartTask;
+  }
+  if (mode !== "priority" && startTask.id !== defaultStartTask.id) {
+    // For non-priority views, keep recommendations chronological by due urgency.
+    startTask = defaultStartTask;
+  }
 
   const thenIds = Array.isArray(parsed.thenIds) ? parsed.thenIds : [];
-  const selectedThenTitles = thenIds
+  const selectedThenIds = thenIds
     .map((item) => normalizeTaskId(item))
-    .filter((id): id is string => id != null)
-    .map((id) => candidateById.get(id))
-    .filter((candidate): candidate is SummaryTaskCandidate => Boolean(candidate))
-    .filter((candidate) => candidate.id !== startTask.id)
-    .map((candidate) => `${candidate.title} (${candidate.dueLabel})`);
+    .filter((id): id is string => id != null && candidateById.has(id) && id !== startTask.id);
 
-  const fallbackThenTitles = candidates
+  const fallbackThenIds = candidates
     .filter((candidate) => candidate.id !== startTask.id)
-    .map((candidate) => `${candidate.title} (${candidate.dueLabel})`)
+    .map((candidate) => candidate.id)
     .slice(0, 3);
 
-  const thenTitles = Array.from(
-    new Set(selectedThenTitles.length > 0 ? selectedThenTitles : fallbackThenTitles),
-  ).slice(0, 3);
+  const normalizedThenIds = Array.from(
+    new Set(selectedThenIds.length > 0 ? selectedThenIds : fallbackThenIds),
+  )
+    .sort((a, b) => (candidateOrder.get(a) ?? 999) - (candidateOrder.get(b) ?? 999))
+    .slice(0, 3);
 
-  const startTitle = `${startTask.title} (${startTask.dueLabel})`;
-  const lines = [`- Start with ${startTitle}.`];
-  if (thenTitles.length > 0) {
-    lines.push(`- Then move through ${joinTaskTitles(thenTitles)}.`);
-  }
-  const summary = lines.join("\n");
+  const thenTasks = normalizedThenIds
+    .map((id) => candidateById.get(id))
+    .filter((candidate): candidate is SummaryTaskCandidate => Boolean(candidate));
+  const summary = buildReadableTaskSummary({
+    startTask,
+    thenTasks,
+  });
 
-  if (summary.length > 420) {
+  if (summary.length > 460) {
     return null;
   }
 
@@ -129,10 +132,12 @@ async function requestSummaryFromOllama({
   prompt,
   timeoutMs,
   candidates,
+  mode,
 }: {
   prompt: string;
   timeoutMs: number;
   candidates: SummaryTaskCandidate[];
+  mode: TodoSummaryMode;
 }): Promise<string> {
   const ollamaUrl = process.env.OLLAMA_URL?.trim() || "http://ollama:11434";
   const model = process.env.OLLAMA_MODEL?.trim() || "qwen2.5:0.5b";
@@ -162,7 +167,7 @@ async function requestSummaryFromOllama({
     }
 
     const data = (await response.json()) as OllamaGenerateResponse;
-    const summary = normalizeAiSummary(data.response, candidates);
+    const summary = normalizeAiSummary(data.response, candidates, mode);
     if (!summary) {
       throw new Error("Model returned an empty summary");
     }
@@ -208,6 +213,7 @@ export async function POST(req: NextRequest) {
       now,
     });
     const summaryCandidates = buildSummaryTaskCandidates(filteredTodos, {
+      mode,
       now,
       timeZone,
     });
@@ -252,6 +258,7 @@ export async function POST(req: NextRequest) {
         prompt,
         timeoutMs,
         candidates: summaryCandidates,
+        mode,
       });
     } catch (error) {
       fallbackReason =
