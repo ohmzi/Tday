@@ -206,9 +206,10 @@ export async function requiresCaptchaChallenge(params: {
 
     if (!current) continue;
 
+    const lastFailureAt = safeDate(current.lastFailureAt);
     const activeFailureCount =
-      current.lastFailureAt &&
-      now - current.lastFailureAt.getTime() <= LOCKOUT_RESET_MS
+      lastFailureAt &&
+      now - lastFailureAt.getTime() <= LOCKOUT_RESET_MS
         ? current.failureCount
         : 0;
 
@@ -251,9 +252,11 @@ export async function recordCredentialSuccessSignal(params: {
     },
   });
 
+  const previousSeenAt = safeDate(previous?.lastSeenAt);
   if (
     previous &&
-    now.getTime() - previous.lastSeenAt.getTime() <= AUTH_SIGNAL_ANOMALY_WINDOW_MS &&
+    previousSeenAt &&
+    now.getTime() - previousSeenAt.getTime() <= AUTH_SIGNAL_ANOMALY_WINDOW_MS &&
     previous.lastIpHash &&
     previous.lastIpHash !== ipHash &&
     previous.lastDeviceHash &&
@@ -335,18 +338,20 @@ async function consumeRequestQuota(params: {
       return { allowed: true };
     }
 
-    if (current.lockUntil && current.lockUntil.getTime() > now.getTime()) {
+    const currentLockUntil = safeDate(current.lockUntil);
+    if (currentLockUntil && currentLockUntil.getTime() > now.getTime()) {
       return {
         allowed: false,
         reasonCode: "auth_lockout",
-        retryAfterSeconds: retryAfterFromDate(current.lockUntil, now),
+        retryAfterSeconds: retryAfterFromDate(currentLockUntil, now),
         dimension: subject.dimension,
       };
     }
 
+    const currentWindowStart = safeDate(current.windowStart) ?? now;
     const windowResetNeeded =
-      now.getTime() - current.windowStart.getTime() >= policy.windowMs;
-    const nextWindowStart = windowResetNeeded ? now : current.windowStart;
+      now.getTime() - currentWindowStart.getTime() >= policy.windowMs;
+    const nextWindowStart = windowResetNeeded ? now : currentWindowStart;
     const nextRequestCount = windowResetNeeded ? 1 : current.requestCount + 1;
 
     await tx.authThrottle.update({
@@ -390,18 +395,20 @@ async function incrementFailureCounter(subject: SubjectKey): Promise<{
       },
     });
 
+    const lastFailureAt = safeDate(current?.lastFailureAt);
     const baseFailureCount =
       current &&
-      current.lastFailureAt &&
-      now.getTime() - current.lastFailureAt.getTime() <= LOCKOUT_RESET_MS
+      lastFailureAt &&
+      now.getTime() - lastFailureAt.getTime() <= LOCKOUT_RESET_MS
         ? current.failureCount
         : 0;
 
     const nextFailureCount = baseFailureCount + 1;
     const computedLockUntil = lockUntilFromFailures(nextFailureCount, now);
+    const currentLockUntil = safeDate(current?.lockUntil);
     const activeExistingLockUntil =
-      current?.lockUntil && current.lockUntil.getTime() > now.getTime()
-        ? current.lockUntil
+      currentLockUntil && currentLockUntil.getTime() > now.getTime()
+        ? currentLockUntil
         : null;
 
     const lockUntil = laterDate(computedLockUntil, activeExistingLockUntil);
@@ -510,6 +517,16 @@ function laterDate(a: Date | null, b: Date | null): Date | null {
 function retryAfterFromDate(target: Date, now: Date): number {
   const seconds = Math.ceil((target.getTime() - now.getTime()) / 1000);
   return Math.max(1, seconds);
+}
+
+function safeDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isFinite(value.getTime()) ? value : null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
 }
 
 async function runSerializable<T>(

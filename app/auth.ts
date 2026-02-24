@@ -1,9 +1,9 @@
 import NextAuth from "next-auth";
+import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma/client";
 import type { Adapter } from "next-auth/adapters";
-import { CredentialsSignin } from "@auth/core/errors";
 import { hashPassword, verifyPassword } from "@/lib/security/password";
 import { getSecretValue } from "@/lib/security/secretSource";
 import {
@@ -26,7 +26,6 @@ export const { handlers, auth } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
   secret: authSecret,
   trustHost: process.env.AUTH_TRUST_HOST === "true",
-  useSecureCookies: process.env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
     maxAge: maxSessionAgeSeconds,
@@ -43,24 +42,25 @@ export const { handlers, auth } = NextAuth({
       authorize: async (credentials) => {
         runSecurityConfigChecks();
 
-        const { email, password } = credentials as {
-          email: string;
-          password: string;
-        };
+        const email = normalizeCredentialField(credentials?.email);
+        const password = normalizeCredentialField(credentials?.password);
+        if (!email || !password) {
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email: email },
         });
 
         if (!user || !user.password) {
-          throw new Error("Invalid credentials.");
+          return null;
         }
 
         try {
           const verification = verifyPassword(password, user.password);
           if (!verification.valid) {
             // Keep login errors generic to avoid account enumeration.
-            throw new Error("Invalid credentials.");
+            return null;
           }
 
           if (verification.needsRehash) {
@@ -79,7 +79,9 @@ export const { handlers, auth } = NextAuth({
           if (error instanceof PendingApprovalError) {
             throw error;
           }
-          throw new Error("Authentication failed.");
+          // Keep credential failures generic for clients while avoiding
+          // misclassifying them as server configuration errors.
+          return null;
         }
       },
     }),
@@ -173,3 +175,9 @@ export const { handlers, auth } = NextAuth({
     },
   },
 });
+
+function normalizeCredentialField(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
