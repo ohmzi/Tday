@@ -1,9 +1,9 @@
-import { createHash, createHmac } from "crypto";
+import { createHash, createHmac, randomBytes } from "crypto";
 import { NextRequest } from "next/server";
 import { getSecretValue } from "@/lib/security/secretSource";
 
-const HASH_FALLBACK_SECRET = "tday-auth-signal-fallback";
 let cachedHashSecret: string | null = null;
+let warnedAboutMissingAuthSecret = false;
 
 export function getClientIp(request: NextRequest): string {
   const cloudflareIp = request.headers.get("cf-connecting-ip")?.trim();
@@ -56,9 +56,16 @@ function hashSecret(): string {
     return cachedHashSecret;
   }
 
-  // Keep deterministic fallback for development/test environments.
+  if (!warnedAboutMissingAuthSecret) {
+    warnedAboutMissingAuthSecret = true;
+    console.warn(
+      "[security] auth_secret_missing generating process-scoped fallback hash key; configure AUTH_SECRET for stable security signal hashing",
+    );
+  }
+
+  // Fallback is scoped to this process when AUTH_SECRET is not configured.
   cachedHashSecret = createHash("sha256")
-    .update(HASH_FALLBACK_SECRET)
+    .update(randomBytes(32))
     .digest("hex");
   return cachedHashSecret;
 }
