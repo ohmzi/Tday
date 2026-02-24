@@ -1,0 +1,76 @@
+import { readdirSync } from "fs";
+import path from "path";
+import { NextRequest } from "next/server";
+
+jest.mock("next-intl/middleware", () => ({
+  __esModule: true,
+  default: () => () => new Response(null, { status: 200 }),
+}));
+
+jest.mock("next-intl/routing", () => ({
+  defineRouting: (config: unknown) => config,
+}));
+
+jest.mock("next-auth/jwt", () => ({
+  getToken: jest.fn().mockResolvedValue(null),
+}));
+
+import middleware from "@/middleware";
+
+const PUBLIC_API_PREFIXES = ["/api/auth", "/api/mobile/probe"];
+
+function discoverApiPaths(): string[] {
+  const apiRoot = path.join(process.cwd(), "app", "api");
+  const paths: string[] = [];
+
+  const walk = (dirPath: string) => {
+    for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
+      const absolutePath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        walk(absolutePath);
+        continue;
+      }
+      if (entry.name !== "route.ts") continue;
+
+      const relative = path.relative(apiRoot, absolutePath).replace(/\\/g, "/");
+      const withoutRouteSuffix = relative.replace(/\/route\.ts$/, "");
+      const withDynamicParams = withoutRouteSuffix
+        .split("/")
+        .map((segment) => {
+          if (segment.startsWith("[...")) return "dynamic";
+          if (segment.startsWith("[") && segment.endsWith("]")) {
+            return "dynamic-id";
+          }
+          return segment;
+        })
+        .join("/");
+
+      const apiPath = `/api/${withDynamicParams}`.replace(/\/+/g, "/");
+      paths.push(apiPath.endsWith("/") ? apiPath.slice(0, -1) : apiPath);
+    }
+  };
+
+  walk(apiRoot);
+  return Array.from(new Set(paths)).sort();
+}
+
+describe("middleware private API authorization", () => {
+  test("returns 401 for every discovered private API endpoint when unauthenticated", async () => {
+    const discoveredPaths = discoverApiPaths();
+    const privateApiPaths = discoveredPaths.filter(
+      (apiPath) =>
+        !PUBLIC_API_PREFIXES.some(
+          (publicPrefix) =>
+            apiPath === publicPrefix || apiPath.startsWith(`${publicPrefix}/`),
+        ),
+    );
+
+    expect(privateApiPaths.length).toBeGreaterThan(0);
+
+    for (const apiPath of privateApiPaths) {
+      const req = new NextRequest(`http://localhost${apiPath}`);
+      const response = await middleware(req);
+      expect(response.status).toBe(401);
+    }
+  });
+});

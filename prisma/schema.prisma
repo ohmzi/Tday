@@ -31,6 +31,7 @@ model User {
   timeZone  String?
   role      UserRole       @default(USER)
   approvalStatus ApprovalStatus @default(PENDING)
+  tokenVersion Int          @default(0)
   approvedAt DateTime?
   approvedById String?
   approvedBy User? @relation("UserApprovalAdmin", fields: [approvedById], references: [id], onDelete: SetNull)
@@ -249,6 +250,18 @@ model AuthThrottle {
 
   @@unique([scope, bucketKey])
   @@index([scope, lockUntil])
+}
+
+model AuthSignal {
+  id            String   @id @default(cuid())
+  identifierHash String  @unique
+  lastIpHash    String?
+  lastDeviceHash String?
+  lastSeenAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([lastSeenAt])
 }
  
 model File{
