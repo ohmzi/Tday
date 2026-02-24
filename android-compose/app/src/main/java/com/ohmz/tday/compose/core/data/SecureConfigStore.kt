@@ -20,6 +20,9 @@ data class SavedCredentials(
 class SecureConfigStore @Inject constructor(
     @ApplicationContext context: Context,
 ) {
+    @Volatile
+    private var runtimeServerUrl: String? = null
+
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
@@ -34,14 +37,51 @@ class SecureConfigStore @Inject constructor(
 
     fun hasServerUrl(): Boolean = !getServerUrl().isNullOrBlank()
 
-    fun getServerUrl(): String? = prefs.getString(KEY_SERVER_URL, null)
+    fun getServerUrl(): String? {
+        val inMemory = runtimeServerUrl?.takeIf { it.isNotBlank() }
+        if (inMemory != null) return inMemory
 
-    fun saveServerUrl(rawUrl: String): Result<String> {
+        val persisted = prefs.getString(KEY_SERVER_URL, null)
+            ?.takeIf { it.isNotBlank() }
+        if (persisted != null) {
+            runtimeServerUrl = persisted
+        }
+        return persisted
+    }
+
+    fun saveServerUrl(
+        rawUrl: String,
+        persist: Boolean = false,
+    ): Result<String> {
         val normalized = normalizeServerUrl(rawUrl)
             ?: return Result.failure(IllegalArgumentException("Invalid server URL"))
 
-        prefs.edit().putString(KEY_SERVER_URL, normalized).apply()
+        runtimeServerUrl = normalized
+        if (persist) {
+            prefs.edit().putString(KEY_SERVER_URL, normalized).apply()
+        } else {
+            prefs.edit().remove(KEY_SERVER_URL).apply()
+        }
         return Result.success(normalized)
+    }
+
+    fun persistRuntimeServerUrl(): Result<String> {
+        val current = getServerUrl()
+            ?: return Result.failure(IllegalStateException("Server URL is not configured"))
+
+        runtimeServerUrl = current
+        prefs.edit().putString(KEY_SERVER_URL, current).apply()
+        return Result.success(current)
+    }
+
+    fun clearServerUrl() {
+        runtimeServerUrl = null
+        prefs.edit().remove(KEY_SERVER_URL).apply()
+    }
+
+    fun clearAllLocalData() {
+        runtimeServerUrl = null
+        prefs.edit().clear().apply()
     }
 
     fun normalizeServerUrl(raw: String): String? {

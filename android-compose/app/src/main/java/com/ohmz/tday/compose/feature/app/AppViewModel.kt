@@ -57,6 +57,7 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null, isManualSyncing = false) }
             if (!repository.hasServerConfigured()) {
+                repository.clearAllLocalUserDataForUnauthenticatedState()
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -110,113 +111,14 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            val savedCredentials = repository.getSavedCredentials()
-            if (savedCredentials != null) {
-                when (
-                    repository.login(
-                        email = savedCredentials.email,
-                        password = savedCredentials.password,
-                    )
-                ) {
-                    com.ohmz.tday.compose.core.model.AuthResult.Success -> {
-                        val authed = repository.restoreSession()
-                        val adminUser = isAdmin(authed)
-                        _uiState.update {
-                            it.copy(
-                                loading = false,
-                                authenticated = authed?.id != null,
-                                requiresServerSetup = false,
-                                serverUrl = repository.getServerUrl(),
-                                user = authed,
-                                error = null,
-                                canResetServerTrust = false,
-                                pendingApprovalMessage = null,
-                                isManualSyncing = false,
-                                adminAiSummaryEnabled = if (adminUser) {
-                                    repository.isAiSummaryEnabledSnapshot()
-                                } else {
-                                    null
-                                },
-                                isAdminAiSummaryLoading = adminUser,
-                                isAdminAiSummarySaving = false,
-                                adminAiSummaryError = null,
-                            )
-                        }
-                        ensureResyncLoop(authenticated = authed?.id != null)
-                        if (authed?.id != null) {
-                            launchStartupSync()
-                            if (adminUser) {
-                                refreshAdminAiSummarySetting()
-                            }
-                        }
-                        return@launch
-                    }
-
-                    com.ohmz.tday.compose.core.model.AuthResult.PendingApproval -> {
-                        _uiState.update {
-                            it.copy(
-                                loading = false,
-                                authenticated = false,
-                                requiresServerSetup = false,
-                                serverUrl = repository.getServerUrl(),
-                                user = null,
-                                error = null,
-                                canResetServerTrust = false,
-                                pendingApprovalMessage = "Account pending admin approval.",
-                                isManualSyncing = false,
-                                adminAiSummaryEnabled = null,
-                                isAdminAiSummaryLoading = false,
-                                isAdminAiSummarySaving = false,
-                                adminAiSummaryError = null,
-                            )
-                        }
-                        ensureResyncLoop(authenticated = false)
-                        return@launch
-                    }
-
-                    is com.ohmz.tday.compose.core.model.AuthResult.Error -> {
-                        // fall through to login screen
-                    }
-                }
-            }
-
-            if (savedCredentials != null && repository.hasCachedData()) {
-                val offlineName = savedCredentials.email
-                    .substringBefore('@')
-                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-                    .ifBlank { "Offline" }
-                _uiState.update {
-                    it.copy(
-                        loading = false,
-                        authenticated = true,
-                        requiresServerSetup = false,
-                        serverUrl = repository.getServerUrl(),
-                        user = SessionUser(
-                            id = "offline-cached-user",
-                            name = offlineName,
-                            email = savedCredentials.email,
-                        ),
-                        error = null,
-                        canResetServerTrust = false,
-                        pendingApprovalMessage = null,
-                        isManualSyncing = false,
-                        adminAiSummaryEnabled = null,
-                        isAdminAiSummaryLoading = false,
-                        isAdminAiSummarySaving = false,
-                        adminAiSummaryError = null,
-                    )
-                }
-                ensureResyncLoop(authenticated = true)
-                launchStartupSync()
-                return@launch
-            }
+            repository.clearAllLocalUserDataForUnauthenticatedState()
 
             _uiState.update {
                 it.copy(
                     loading = false,
                     authenticated = false,
-                    requiresServerSetup = false,
-                    serverUrl = repository.getServerUrl(),
+                    requiresServerSetup = true,
+                    serverUrl = null,
                     user = null,
                     error = null,
                     canResetServerTrust = false,
@@ -381,7 +283,8 @@ class AppViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     authenticated = false,
-                    requiresServerSetup = false,
+                    requiresServerSetup = true,
+                    serverUrl = null,
                     user = null,
                     error = null,
                     loading = false,
