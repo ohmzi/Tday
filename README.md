@@ -30,10 +30,27 @@ GPU acceleration:
 - Mobile/server probe endpoint: `GET /api/mobile/probe`
 - Backend auth throttling + lockout is configurable via `.env.docker` auth limit variables
 - Password hashing uses PBKDF2 with configurable iterations (`AUTH_PBKDF2_ITERATIONS`)
+- Session revocation is server-enforced using token versioning (sign-out and password change revoke active sessions)
+- Session lifetime is configurable via `AUTH_SESSION_MAX_AGE_SEC` (default 24h, persistent across app/browser restarts)
+- Adaptive CAPTCHA can be required after repeated failures (`AUTH_CAPTCHA_*`)
 - API responses are served with `Cache-Control: no-store` and hardened security headers
 - Production middleware enforces HTTPS (except local development hosts)
+- Optional server-side field encryption at rest for sensitive text (`DATA_ENCRYPTION_*`)
 - Cloudflare edge rule recommendations are documented in:
   `/home/ohmz/StudioProjects/Tday/docs/security/cloudflare-auth-hardening.md`
+
+## Secrets And Rotation
+
+- Production secrets should come from a secrets manager or mounted secret files.
+- Docker entrypoint supports `*_FILE` for:
+  - `AUTH_SECRET`
+  - `CRONJOB_SECRET`
+  - `DATABASE_URL`
+  - `AUTH_CAPTCHA_SECRET`
+  - `DATA_ENCRYPTION_KEY`
+  - `DATA_ENCRYPTION_KEYS`
+  - `DATA_ENCRYPTION_AAD`
+- Rotate secrets on a schedule and keep previous encryption keys in `DATA_ENCRYPTION_KEYS` during rollover windows.
 
 ## Native Android (Compose)
 
