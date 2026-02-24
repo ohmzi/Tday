@@ -29,7 +29,42 @@ type MenuContextType = {
 
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
 const SIDEBAR_STORAGE_KEY = "tday.sidebar.desktop.open";
+const TAB_STORAGE_KEY = "tab";
 const DESKTOP_BREAKPOINT = 1024;
+
+function isValidMenuState(value: unknown): value is MenuState {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as {
+    name?: unknown;
+    open?: unknown;
+    children?: unknown;
+  };
+
+  if (typeof candidate.name !== "string" || candidate.name.trim().length === 0) {
+    return false;
+  }
+
+  if (candidate.open !== undefined && typeof candidate.open !== "boolean") {
+    return false;
+  }
+
+  if (candidate.children !== undefined && !isValidMenuState(candidate.children)) {
+    return false;
+  }
+
+  return true;
+}
+
+function parseStoredMenuState(raw: string | null): MenuState | null {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return isValidMenuState(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
   const { width } = useWindowSize();
@@ -154,17 +189,20 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
       setActiveMenu({ name: "Completed" });
       return;
     }
-    const tab = localStorage.getItem("tab");
-    if (tab) {
-      const tabObj = JSON.parse(tab);
-      setActiveMenu(tabObj);
+    const parsedTab = parseStoredMenuState(localStorage.getItem(TAB_STORAGE_KEY));
+    if (parsedTab) {
+      setActiveMenu(parsedTab);
+      return;
     }
+
+    localStorage.removeItem(TAB_STORAGE_KEY);
+    setActiveMenu({ name: "Todo" });
   }, [mounted, pathName]);
 
   // Sync local menu state with local storage when menu state changes
   useEffect(() => {
     if (mounted) {
-      localStorage.setItem("tab", JSON.stringify(activeMenu));
+      localStorage.setItem(TAB_STORAGE_KEY, JSON.stringify(activeMenu));
     }
   }, [activeMenu, mounted]);
 
