@@ -73,7 +73,8 @@ describe("auth credential envelope", () => {
     };
 
     const expectedEmail = "secure.user@example.com";
-    const expectedPassword = "super-secret-password";
+    const expectedPassword = randomBytes(24).toString("base64url");
+    const csrfToken = randomBytes(16).toString("hex");
     const envelope = encryptCredentialEnvelope({
       publicKey: keyPayload.publicKey,
       email: expectedEmail,
@@ -81,7 +82,7 @@ describe("auth credential envelope", () => {
     });
 
     const form = new URLSearchParams({
-      csrfToken: "csrf-token",
+      csrfToken,
       redirect: "false",
       callbackUrl: "https://tday.ohmz.cloud/app/tday",
       encryptedPayload: envelope.encryptedPayload,
