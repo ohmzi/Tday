@@ -150,6 +150,7 @@ class TdayRepository @Inject constructor(
         val user = runCatching { restoreSession() }.getOrNull()
         return if (user?.id != null) {
             syncTimezone()
+            runCatching { secureConfigStore.persistRuntimeServerUrl() }
             secureConfigStore.saveCredentials(email = email, password = password)
             AuthResult.Success
         } else {
@@ -190,10 +191,6 @@ class TdayRepository @Inject constructor(
         }
 
         val body = response.body()
-        secureConfigStore.saveCredentials(
-            email = email.trim(),
-            password = password,
-        )
         return RegisterOutcome(
             success = true,
             requiresApproval = body?.requiresApproval ?: false,
@@ -275,7 +272,10 @@ class TdayRepository @Inject constructor(
         validateProbeContract(probeBody)
         verifyAndPersistServerTrust(parsedServerUrl, probeResponse)
 
-        val saved = secureConfigStore.saveServerUrl(normalizedServerUrl).getOrThrow()
+        val saved = secureConfigStore.saveServerUrl(
+            rawUrl = normalizedServerUrl,
+            persist = false,
+        ).getOrThrow()
         secureConfigStore.clearOfflineSyncState()
         saved
     }
@@ -287,6 +287,10 @@ class TdayRepository @Inject constructor(
     fun getSavedCredentials(): SavedCredentials? = secureConfigStore.getSavedCredentials()
 
     fun hasPendingMutations(): Boolean = loadOfflineState().pendingMutations.isNotEmpty()
+
+    fun clearAllLocalUserDataForUnauthenticatedState() {
+        clearLocalSessionArtifacts()
+    }
 
     suspend fun syncCachedData(
         force: Boolean = false,
@@ -2318,9 +2322,7 @@ class TdayRepository @Inject constructor(
         )
         val cleared = OfflineSyncState()
 
-        secureConfigStore.clearCredentials()
-        secureConfigStore.clearOfflineSyncState()
-        secureConfigStore.clearListIconCache()
+        secureConfigStore.clearAllLocalData()
         themePreferenceStore.clear()
         runCatching { cookieManager.cookieStore?.removeAll() }
 
