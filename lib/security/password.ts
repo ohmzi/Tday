@@ -10,7 +10,7 @@ const MAX_ITERATIONS = 2_000_000;
 const SALT_SIZE_BYTES = 16;
 const DERIVED_KEY_LENGTH = 32;
 
-type ParsedPasswordHash =
+export type PasswordHashMetadata =
   | {
       format: "modern";
       iterations: number;
@@ -29,7 +29,7 @@ export type PasswordVerification =
   | { valid: true; needsRehash: boolean };
 
 export function hashPassword(plainTextPassword: string): string {
-  const iterations = configuredIterations();
+  const iterations = configuredPasswordIterations();
   const salt = randomBytes(SALT_SIZE_BYTES);
   const saltHex = bytesToHex(salt);
   const hashHex = deriveHashHex(plainTextPassword, salt, iterations);
@@ -60,11 +60,17 @@ export function verifyPassword(
     return { valid: false, needsRehash: false };
   }
 
-  const targetIterations = configuredIterations();
+  const targetIterations = configuredPasswordIterations();
   const needsRehash =
     parsed.format === "legacy" || parsed.iterations < targetIterations;
 
   return { valid: true, needsRehash };
+}
+
+export function parsePasswordHash(
+  storedPasswordHash: string,
+): PasswordHashMetadata | null {
+  return parseStoredHash(storedPasswordHash);
 }
 
 function deriveHashHex(
@@ -79,7 +85,7 @@ function deriveHashHex(
   return bytesToHex(hash);
 }
 
-function parseStoredHash(stored: string): ParsedPasswordHash | null {
+function parseStoredHash(stored: string): PasswordHashMetadata | null {
   const trimmed = stored.trim();
   if (!trimmed) return null;
 
@@ -113,7 +119,7 @@ function parseStoredHash(stored: string): ParsedPasswordHash | null {
   return null;
 }
 
-function configuredIterations(): number {
+export function configuredPasswordIterations(): number {
   const configured = Number(process.env.AUTH_PBKDF2_ITERATIONS);
   if (!Number.isFinite(configured)) return DEFAULT_ITERATIONS;
   const rounded = Math.floor(configured);
