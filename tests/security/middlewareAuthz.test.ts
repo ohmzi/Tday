@@ -80,13 +80,28 @@ describe("middleware private API authorization", () => {
       expect(response.status).toBe(401);
     }
   });
+
+  test("marks authenticated private API responses as no-store", async () => {
+    mockGetToken.mockResolvedValue({
+      id: "user_123",
+      approvalStatus: "APPROVED",
+    });
+
+    const req = new NextRequest("http://localhost/api/todo");
+    const response = await middleware(req);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+  });
 });
 
 describe("middleware secure transport handling", () => {
   const originalNodeEnv = process.env.NODE_ENV;
+  const originalHttpsRedirectSetting = process.env.AUTH_ENFORCE_HTTPS_REDIRECT;
 
   beforeAll(() => {
     process.env.NODE_ENV = "production";
+    process.env.AUTH_ENFORCE_HTTPS_REDIRECT = "false";
   });
 
   beforeEach(() => {
@@ -96,6 +111,19 @@ describe("middleware secure transport handling", () => {
 
   afterAll(() => {
     process.env.NODE_ENV = originalNodeEnv;
+    process.env.AUTH_ENFORCE_HTTPS_REDIRECT = originalHttpsRedirectSetting;
+  });
+
+  test("does not force redirect over plain http when enforcement is disabled", async () => {
+    const req = new NextRequest("http://tday.ohmz.cloud/", {
+      headers: {
+        host: "tday.ohmz.cloud",
+        "x-forwarded-proto": "http",
+      },
+    });
+
+    const response = await middleware(req);
+    expect(response.status).toBe(200);
   });
 
   test("does not force redirect when Cloudflare reports https visitor scheme", async () => {
@@ -111,20 +139,8 @@ describe("middleware secure transport handling", () => {
     expect(response.status).toBe(200);
   });
 
-  test("forces redirect to https for non-local production hosts over plain http", async () => {
-    const req = new NextRequest("http://tday.ohmz.cloud/", {
-      headers: {
-        host: "tday.ohmz.cloud",
-        "x-forwarded-proto": "http",
-      },
-    });
-
-    const response = await middleware(req);
-    expect(response.status).toBe(308);
-    expect(response.headers.get("location")).toBe("https://tday.ohmz.cloud/");
-  });
-
-  test("uses forwarded host when building https redirect location", async () => {
+  test("forces redirect to https only when explicit enforcement flag is enabled", async () => {
+    process.env.AUTH_ENFORCE_HTTPS_REDIRECT = "true";
     const req = new NextRequest("http://localhost:3000/", {
       headers: {
         host: "localhost:3000",
@@ -136,6 +152,8 @@ describe("middleware secure transport handling", () => {
     const response = await middleware(req);
     expect(response.status).toBe(308);
     expect(response.headers.get("location")).toBe("https://tday.ohmz.cloud/");
+
+    process.env.AUTH_ENFORCE_HTTPS_REDIRECT = "false";
   });
 });
 

@@ -11,6 +11,11 @@ import {
   sessionMaxAgeSeconds,
 } from "@/lib/security/sessionControl";
 import { runSecurityConfigChecks } from "@/lib/security/configHealth";
+import {
+  consumePasswordProofChallenge,
+  normalizePasswordProofEmail,
+  verifyPasswordProofChallenge,
+} from "@/lib/security/passwordProof";
 
 class PendingApprovalError extends CredentialsSignin {
   code = "pending_approval";
@@ -43,36 +48,70 @@ export const { handlers, auth } = NextAuth({
         encryptedIv: {},
         credentialKeyId: {},
         credentialEnvelopeVersion: {},
+        passwordProof: {},
+        passwordProofChallengeId: {},
+        passwordProofVersion: {},
       },
       authorize: async (credentials) => {
         runSecurityConfigChecks();
 
-        const email = normalizeCredentialField(credentials?.email);
+        const email = normalizeEmailCredentialField(credentials?.email);
         const password = normalizeCredentialField(credentials?.password);
-        if (!email || !password) {
+        const passwordProof = normalizeCredentialField(credentials?.passwordProof);
+        const passwordProofChallengeId = normalizeCredentialField(
+          credentials?.passwordProofChallengeId,
+        );
+        const passwordProofVersion = normalizeCredentialField(
+          credentials?.passwordProofVersion,
+        );
+
+        if (!email) {
           return null;
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: email },
+          where: { email },
         });
 
         if (!user || !user.password) {
+          if (passwordProofChallengeId) {
+            consumePasswordProofChallenge(passwordProofChallengeId);
+          }
           return null;
         }
 
         try {
-          const verification = verifyPassword(password, user.password);
-          if (!verification.valid) {
-            // Keep login errors generic to avoid account enumeration.
-            return null;
-          }
+          const usingPasswordProof =
+            !password && Boolean(passwordProof && passwordProofChallengeId);
 
-          if (verification.needsRehash) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { password: hashPassword(password) },
+          if (usingPasswordProof) {
+            const proofValid = verifyPasswordProofChallenge({
+              email,
+              challengeId: passwordProofChallengeId as string,
+              proofHex: passwordProof as string,
+              proofVersion: passwordProofVersion,
+              storedPasswordHash: user.password,
             });
+            if (!proofValid) {
+              return null;
+            }
+          } else {
+            if (!password) {
+              return null;
+            }
+
+            const verification = verifyPassword(password, user.password);
+            if (!verification.valid) {
+              // Keep login errors generic to avoid account enumeration.
+              return null;
+            }
+
+            if (verification.needsRehash) {
+              await prisma.user.update({
+                where: { id: user.id },
+                data: { password: hashPassword(password) },
+              });
+            }
           }
 
           if (user.approvalStatus !== "APPROVED") {
@@ -185,4 +224,9 @@ function normalizeCredentialField(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeEmailCredentialField(value: unknown): string | null {
+  const normalized = normalizeCredentialField(value);
+  return normalizePasswordProofEmail(normalized);
 }

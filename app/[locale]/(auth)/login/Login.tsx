@@ -40,28 +40,11 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      let credentialEnvelope: Record<string, string> = {};
-      let usePlainCredentialsFallback = false;
-      try {
-        credentialEnvelope = await createClientCredentialEnvelope(email, password);
-      } catch {
-        // Browsers on non-HTTPS LAN origins may not expose crypto.subtle.
-        // Fall back to normal credentials so self-hosted local-IP login still works.
-        usePlainCredentialsFallback =
-          typeof window !== "undefined" && window.location.protocol === "http:";
-        if (!usePlainCredentialsFallback) {
-          throw new Error("Unable to initialize secure sign-in.");
-        }
-      }
+      const credentialPayload = await createClientCredentialEnvelope(email, password);
 
       const result = await signIn("credentials", {
-        ...credentialEnvelope,
-        ...(usePlainCredentialsFallback
-          ? {
-              email,
-              password,
-            }
-          : {}),
+        email: email.trim().toLowerCase(),
+        ...credentialPayload,
         redirect: false,
       });
 
@@ -86,7 +69,11 @@ export default function LoginPage() {
       router.refresh();
     } catch (error) {
       console.error(error);
-      setErrorMessage("Unable to sign in. Please try again.");
+      setErrorMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : "Unable to sign in. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }

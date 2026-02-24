@@ -14,6 +14,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import UnauthenticatedCacheGuard from "@/components/auth/UnauthenticatedCacheGuard";
 
 type Slide = {
   title: string;
@@ -130,6 +131,7 @@ export default function OnboardingLanding() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      <UnauthenticatedCacheGuard />
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/35" />
       <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_12%_12%,hsla(var(--accent),0.11),transparent),radial-gradient(900px_500px_at_90%_18%,hsla(var(--primary),0.1),transparent)]" />
 

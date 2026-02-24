@@ -2,6 +2,7 @@ import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./i18n/routing";
 import { getToken } from "next-auth/jwt";
+import { getSecretValue } from "@/lib/security/secretSource";
 
 const intlMiddleware = createMiddleware(routing);
 const localeSet: ReadonlySet<string> = new Set(routing.locales);
@@ -15,7 +16,9 @@ const SESSION_COOKIE_CANDIDATES = [
 ] as const;
 
 export default async function middleware(req: NextRequest) {
-  const secureResponse = enforceSecureTransport(req);
+  const secureResponse = shouldEnforceSecureTransportRedirect()
+    ? enforceSecureTransport(req)
+    : null;
   if (secureResponse) {
     return applySecurityHeaders(secureResponse);
   }
@@ -29,7 +32,9 @@ export default async function middleware(req: NextRequest) {
   const protectedAppPath = isProtectedAppPath(normalizedPath);
 
   if (pathname.startsWith("/api/")) {
-    if (!isPublicApiPath(pathname) && !user?.id) {
+    const publicApiPath = isPublicApiPath(pathname);
+
+    if (!publicApiPath && !user?.id) {
       return applySecurityHeaders(
         NextResponse.json(
           { message: "Authentication required" },
@@ -46,7 +51,7 @@ export default async function middleware(req: NextRequest) {
     }
 
     if (
-      !isPublicApiPath(pathname) &&
+      !publicApiPath &&
       user?.approvalStatus &&
       user.approvalStatus !== APPROVED_STATUS
     ) {
@@ -65,7 +70,17 @@ export default async function middleware(req: NextRequest) {
       );
     }
 
-    return applySecurityHeaders(NextResponse.next());
+    const apiResponse = NextResponse.next();
+    if (!publicApiPath) {
+      apiResponse.headers.set(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate",
+      );
+      apiResponse.headers.set("Pragma", "no-cache");
+      apiResponse.headers.set("Expires", "0");
+    }
+
+    return applySecurityHeaders(apiResponse);
   }
 
   if (protectedAppPath && !user?.id) {
@@ -100,14 +115,17 @@ export const config = {
   matcher: ["/((?!api|trpc|_next|_vercel|.*\\..*).*)", "/api/:path*"],
 };
 
-function enforceSecureTransport(req: NextRequest): NextResponse | null {
-  if (process.env.NODE_ENV !== "production") {
-    return null;
-  }
+function shouldEnforceSecureTransportRedirect(): boolean {
+  return (
+    process.env.NODE_ENV === "production" &&
+    process.env.AUTH_ENFORCE_HTTPS_REDIRECT === "true"
+  );
+}
 
+function enforceSecureTransport(req: NextRequest): NextResponse | null {
   const host = resolveRequestHost(req);
   const parsedHost = host ? parseHostHeader(host) : null;
-  if (!parsedHost || isLocalHostname(parsedHost.hostname)) {
+  if (!parsedHost) {
     return null;
   }
 
@@ -203,16 +221,6 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
-function isLocalHostname(hostname: string): boolean {
-  if (hostname === "localhost" || hostname === "10.0.2.2") return true;
-  if (hostname.endsWith(".local")) return true;
-  if (hostname === "127.0.0.1") return true;
-  if (hostname.startsWith("127.")) return true;
-  if (hostname.startsWith("10.")) return true;
-  if (hostname.startsWith("192.168.")) return true;
-  return /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
-}
-
 function isPublicApiPath(pathname: string): boolean {
   return PUBLIC_API_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -268,7 +276,10 @@ function contentSecurityPolicyValue(): string {
 }
 
 async function resolveSessionToken(req: NextRequest) {
-  const secret = process.env.AUTH_SECRET;
+  const secret = getSecretValue({
+    envVar: "AUTH_SECRET",
+    fileEnvVar: "AUTH_SECRET_FILE",
+  });
   const defaultToken = await getToken({
     req,
     secret,
