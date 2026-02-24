@@ -56,6 +56,20 @@ const LOCKOUT_FAIL_THRESHOLD = envInt("AUTH_LOCKOUT_FAIL_THRESHOLD", 5);
 const LOCKOUT_BASE_MS = envSeconds("AUTH_LOCKOUT_BASE_SEC", 30) * 1000;
 const LOCKOUT_MAX_MS = envSeconds("AUTH_LOCKOUT_MAX_SEC", 1800) * 1000;
 const LOCKOUT_RESET_MS = envSeconds("AUTH_LOCKOUT_RESET_SEC", 86400) * 1000;
+const CAPTCHA_TRIGGER_FAILURE_COUNT = envInt(
+  "AUTH_CAPTCHA_TRIGGER_FAILURES",
+  3,
+);
+const ALERT_IP_FAILURE_THRESHOLD = envInt(
+  "AUTH_ALERT_IP_FAILURE_THRESHOLD",
+  12,
+);
+const ALERT_LOCKOUT_BURST_SECONDS = envInt(
+  "AUTH_ALERT_LOCKOUT_BURST_SEC",
+  900,
+);
+const AUTH_SIGNAL_ANOMALY_WINDOW_MS =
+  envSeconds("AUTH_SIGNAL_ANOMALY_WINDOW_SEC", 86400) * 1000;
 
 export async function enforceAuthRateLimit(params: {
   action: AuthThrottleAction;
@@ -85,6 +99,17 @@ export async function enforceAuthRateLimit(params: {
       retryAfterSeconds: blocked.retryAfterSeconds,
       dimension: blocked.dimension,
     });
+
+    if (
+      action === "credentials" &&
+      blocked.reasonCode === "auth_limit_ip" &&
+      blocked.retryAfterSeconds >= 60
+    ) {
+      await logSecurityEvent("auth_alert_ip_concentration", {
+        action,
+        retryAfterSeconds: blocked.retryAfterSeconds,
+      });
+    }
     return blocked;
   }
 
@@ -99,15 +124,36 @@ export async function recordCredentialFailure(params: {
   const subjects = buildSubjects("credentials", request, identifier);
 
   let longestLockSeconds = 0;
+  let highestIpFailureCount = 0;
   for (const subject of subjects) {
-    const lockSeconds = await incrementFailureCounter(subject);
-    longestLockSeconds = Math.max(longestLockSeconds, lockSeconds);
+    const verdict = await incrementFailureCounter(subject);
+    longestLockSeconds = Math.max(longestLockSeconds, verdict.lockSeconds);
+    if (subject.dimension === "ip") {
+      highestIpFailureCount = Math.max(
+        highestIpFailureCount,
+        verdict.failureCount,
+      );
+    }
   }
 
   if (longestLockSeconds > 0) {
     await logSecurityEvent("auth_lockout", {
       action: "credentials",
       retryAfterSeconds: longestLockSeconds,
+    });
+
+    if (longestLockSeconds >= ALERT_LOCKOUT_BURST_SECONDS) {
+      await logSecurityEvent("auth_alert_lockout_burst", {
+        action: "credentials",
+        retryAfterSeconds: longestLockSeconds,
+      });
+    }
+  }
+
+  if (highestIpFailureCount >= ALERT_IP_FAILURE_THRESHOLD) {
+    await logSecurityEvent("auth_alert_ip_concentration", {
+      action: "credentials",
+      ipFailureCount: highestIpFailureCount,
     });
   }
 }
@@ -132,6 +178,108 @@ export async function clearCredentialFailures(params: {
       },
     });
   }
+}
+
+export async function requiresCaptchaChallenge(params: {
+  action: "credentials" | "register";
+  request: NextRequest;
+  identifier?: string | null;
+}): Promise<boolean> {
+  const { action, request, identifier = null } = params;
+  const subjects = buildSubjects(action, request, identifier);
+  const now = Date.now();
+
+  for (const subject of subjects) {
+    const current = await prisma.authThrottle.findUnique({
+      where: {
+        scope_bucketKey: {
+          scope: subject.scope,
+          bucketKey: subject.bucketKey,
+        },
+      },
+      select: {
+        failureCount: true,
+        requestCount: true,
+        lastFailureAt: true,
+      },
+    });
+
+    if (!current) continue;
+
+    const activeFailureCount =
+      current.lastFailureAt &&
+      now - current.lastFailureAt.getTime() <= LOCKOUT_RESET_MS
+        ? current.failureCount
+        : 0;
+
+    if (activeFailureCount >= CAPTCHA_TRIGGER_FAILURE_COUNT) {
+      return true;
+    }
+
+    if (
+      action === "register" &&
+      current.requestCount >= Math.max(3, Math.floor(POLICIES.register.maxRequests / 2))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export async function recordCredentialSuccessSignal(params: {
+  request: NextRequest;
+  identifier?: string | null;
+}) {
+  const identifier = normalizeIdentifier(params.identifier);
+  if (!identifier) return;
+
+  const identifierHash = hashSecurityValue(`email:${identifier}`);
+  const ipHash = hashSecurityValue(`ip:${getClientIp(params.request)}`);
+  const deviceHint = getDeviceHint(params.request);
+  const deviceHash = deviceHint
+    ? hashSecurityValue(`device:${deviceHint}`)
+    : null;
+  const now = new Date();
+
+  const previous = await prisma.authSignal.findUnique({
+    where: { identifierHash },
+    select: {
+      lastIpHash: true,
+      lastDeviceHash: true,
+      lastSeenAt: true,
+    },
+  });
+
+  if (
+    previous &&
+    now.getTime() - previous.lastSeenAt.getTime() <= AUTH_SIGNAL_ANOMALY_WINDOW_MS &&
+    previous.lastIpHash &&
+    previous.lastIpHash !== ipHash &&
+    previous.lastDeviceHash &&
+    deviceHash &&
+    previous.lastDeviceHash !== deviceHash
+  ) {
+    await logSecurityEvent("auth_signal_anomaly", {
+      reason: "ip_and_device_changed",
+      identifierHash,
+    });
+  }
+
+  await prisma.authSignal.upsert({
+    where: { identifierHash },
+    create: {
+      identifierHash,
+      lastIpHash: ipHash,
+      lastDeviceHash: deviceHash,
+      lastSeenAt: now,
+    },
+    update: {
+      lastIpHash: ipHash,
+      lastDeviceHash: deviceHash,
+      lastSeenAt: now,
+    },
+  });
 }
 
 export function buildAuthThrottleResponse(
@@ -226,7 +374,10 @@ async function consumeRequestQuota(params: {
   });
 }
 
-async function incrementFailureCounter(subject: SubjectKey): Promise<number> {
+async function incrementFailureCounter(subject: SubjectKey): Promise<{
+  lockSeconds: number;
+  failureCount: number;
+}> {
   const now = new Date();
 
   return runSerializable(async (tx) => {
@@ -278,7 +429,10 @@ async function incrementFailureCounter(subject: SubjectKey): Promise<number> {
       });
     }
 
-    return lockUntil ? retryAfterFromDate(lockUntil, now) : 0;
+    return {
+      lockSeconds: lockUntil ? retryAfterFromDate(lockUntil, now) : 0,
+      failureCount: nextFailureCount,
+    };
   });
 }
 

@@ -9,9 +9,15 @@ import {
 import {
   buildAuthThrottleResponse,
   enforceAuthRateLimit,
+  requiresCaptchaChallenge,
 } from "@/lib/security/authThrottle";
 import { Prisma } from "@prisma/client";
 import { hashPassword } from "@/lib/security/password";
+import {
+  extractCaptchaTokenFromObject,
+  verifyCaptchaToken,
+} from "@/lib/security/captcha";
+import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,6 +35,36 @@ export async function POST(req: NextRequest) {
     });
     if (!throttleResult.allowed) {
       return buildAuthThrottleResponse(throttleResult);
+    }
+
+    const captchaRequired = await requiresCaptchaChallenge({
+      action: "register",
+      request: req,
+      identifier: extractEmailCandidate(body),
+    });
+    if (captchaRequired) {
+      const captchaResult = await verifyCaptchaToken({
+        token: extractCaptchaTokenFromObject(body),
+        request: req,
+        action: "register",
+      });
+      if (!captchaResult.ok) {
+        await logSecurityEvent("register_captcha_failed", {
+          reason: captchaResult.reason,
+        });
+        return NextResponse.json(
+          {
+            message: "Additional verification required.",
+            reason: "captcha_required",
+          },
+          {
+            status: 403,
+            headers: {
+              "Cache-Control": "no-store",
+            },
+          },
+        );
+      }
     }
 
     // validate the body with zod

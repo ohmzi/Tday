@@ -41,7 +41,6 @@ services:
       - "2525:3000"
     env_file:
       - .env.docker
-    command: sh -c "npx prisma migrate deploy && npm run start"
     security_opt:
       - no-new-privileges:true
     cap_drop:

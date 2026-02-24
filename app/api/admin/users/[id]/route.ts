@@ -95,15 +95,15 @@ export async function DELETE(
       }
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.completedTodo.deleteMany({ where: { userID: targetUser.id } });
-      await tx.note.deleteMany({ where: { userID: targetUser.id } });
-      await tx.file.deleteMany({ where: { userID: targetUser.id } });
-      await tx.todo.deleteMany({ where: { userID: targetUser.id } });
-      await tx.list.deleteMany({ where: { userID: targetUser.id } });
-      await tx.userPreferences.deleteMany({ where: { userID: targetUser.id } });
-      await tx.user.delete({ where: { id: targetUser.id } });
-    });
+    await prisma.$transaction([
+      prisma.completedTodo.deleteMany({ where: { userID: targetUser.id } }),
+      prisma.note.deleteMany({ where: { userID: targetUser.id } }),
+      prisma.file.deleteMany({ where: { userID: targetUser.id } }),
+      prisma.todo.deleteMany({ where: { userID: targetUser.id } }),
+      prisma.list.deleteMany({ where: { userID: targetUser.id } }),
+      prisma.userPreferences.deleteMany({ where: { userID: targetUser.id } }),
+      prisma.user.delete({ where: { id: targetUser.id } }),
+    ]);
 
     return NextResponse.json({ message: "user deleted" }, { status: 200 });
   } catch (error) {

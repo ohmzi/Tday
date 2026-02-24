@@ -1,14 +1,14 @@
 import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./i18n/routing";
-import { auth } from "./app/auth";
+import { getToken } from "next-auth/jwt";
 
 const intlMiddleware = createMiddleware(routing);
 const localeSet: ReadonlySet<string> = new Set(routing.locales);
 const PUBLIC_API_PREFIXES = ["/api/auth", "/api/mobile/probe"];
 const APPROVED_STATUS = "APPROVED";
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const secureResponse = enforceSecureTransport(req);
   if (secureResponse) {
     return applySecurityHeaders(secureResponse);
@@ -16,7 +16,11 @@ export default auth((req) => {
 
   const pathname = req.nextUrl.pathname;
   const normalizedPath = stripLocalePrefix(pathname);
-  const user = req.auth?.user as
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+  });
+  const user = token as
     | { id?: string; approvalStatus?: string | null }
     | undefined;
   const protectedAppPath = isProtectedAppPath(normalizedPath);
@@ -87,7 +91,7 @@ export default auth((req) => {
   }
 
   return applySecurityHeaders(response);
-});
+}
 
 export const config = {
   matcher: ["/((?!api|trpc|_next|_vercel|.*\\..*).*)", "/api/:path*"],
