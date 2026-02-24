@@ -74,3 +74,55 @@ describe("middleware private API authorization", () => {
     }
   });
 });
+
+describe("middleware secure transport handling", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  beforeAll(() => {
+    process.env.NODE_ENV = "production";
+  });
+
+  afterAll(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+  });
+
+  test("does not force redirect when Cloudflare reports https visitor scheme", async () => {
+    const req = new NextRequest("http://tday.ohmz.cloud/", {
+      headers: {
+        host: "tday.ohmz.cloud",
+        "x-forwarded-proto": "http",
+        "cf-visitor": "{\"scheme\":\"https\"}",
+      },
+    });
+
+    const response = await middleware(req);
+    expect(response.status).toBe(200);
+  });
+
+  test("forces redirect to https for non-local production hosts over plain http", async () => {
+    const req = new NextRequest("http://tday.ohmz.cloud/", {
+      headers: {
+        host: "tday.ohmz.cloud",
+        "x-forwarded-proto": "http",
+      },
+    });
+
+    const response = await middleware(req);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("https://tday.ohmz.cloud/");
+  });
+
+  test("uses forwarded host when building https redirect location", async () => {
+    const req = new NextRequest("http://localhost:3000/", {
+      headers: {
+        host: "localhost:3000",
+        "x-forwarded-host": "tday.ohmz.cloud",
+        "x-forwarded-proto": "http",
+      },
+    });
+
+    const response = await middleware(req);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("https://tday.ohmz.cloud/");
+  });
+});

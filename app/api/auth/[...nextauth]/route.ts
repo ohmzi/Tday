@@ -15,36 +15,39 @@ const CSRF_PATH = "/api/auth/csrf";
 const CREDENTIALS_CALLBACK_PATH = "/api/auth/callback/credentials";
 
 export async function GET(request: NextRequest) {
-  if (isCsrfRequest(request)) {
+  const authRequest = normalizeAuthRequestOrigin(request);
+
+  if (isCsrfRequest(authRequest)) {
     const limitResult = await enforceAuthRateLimit({
       action: "csrf",
-      request,
+      request: authRequest,
     });
     if (!limitResult.allowed) {
       return buildAuthThrottleResponse(limitResult);
     }
   }
 
-  return handlers.GET(request);
+  return handlers.GET(authRequest);
 }
 
 export async function POST(request: NextRequest) {
-  const credentialsRequest = isCredentialsCallbackRequest(request);
+  const authRequest = normalizeAuthRequestOrigin(request);
+  const credentialsRequest = isCredentialsCallbackRequest(authRequest);
   const identifier = credentialsRequest
-    ? await getFormField(request, "email")
+    ? await getFormField(authRequest, "email")
     : null;
 
   if (credentialsRequest) {
     const captchaRequired = await requiresCaptchaChallenge({
       action: "credentials",
-      request,
+      request: authRequest,
       identifier,
     });
     if (captchaRequired) {
-      const captchaToken = await getCaptchaTokenFromForm(request);
+      const captchaToken = await getCaptchaTokenFromForm(authRequest);
       const captchaResult = await verifyCaptchaToken({
         token: captchaToken,
-        request,
+        request: authRequest,
         action: "credentials",
       });
       if (!captchaResult.ok) {
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     const limitResult = await enforceAuthRateLimit({
       action: "credentials",
-      request,
+      request: authRequest,
       identifier,
     });
     if (!limitResult.allowed) {
@@ -77,20 +80,20 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const response = await handlers.POST(request);
+  const response = await handlers.POST(authRequest);
 
   if (!credentialsRequest) {
     return response;
   }
 
-  const outcome = await parseCredentialsCallbackOutcome(request, response);
+  const outcome = await parseCredentialsCallbackOutcome(authRequest, response);
   if (outcome === "success" || outcome === "pending_approval") {
     await clearCredentialFailures({
-      request,
+      request: authRequest,
       identifier,
     });
     await recordCredentialSuccessSignal({
-      request,
+      request: authRequest,
       identifier,
     });
     return response;
@@ -98,7 +101,7 @@ export async function POST(request: NextRequest) {
 
   if (outcome === "invalid_credentials") {
     await recordCredentialFailure({
-      request,
+      request: authRequest,
       identifier,
     });
   }
@@ -112,6 +115,89 @@ function isCsrfRequest(request: NextRequest): boolean {
 
 function isCredentialsCallbackRequest(request: NextRequest): boolean {
   return request.nextUrl.pathname.endsWith(CREDENTIALS_CALLBACK_PATH);
+}
+
+function normalizeAuthRequestOrigin(request: NextRequest): NextRequest {
+  const forwardedHost = extractForwardedHeaderValue(
+    request.headers.get("x-forwarded-host"),
+  );
+  const host = forwardedHost ?? extractForwardedHeaderValue(request.headers.get("host"));
+  if (!host) {
+    return request;
+  }
+
+  const parsedHost = parseHostHeader(host);
+  if (!parsedHost) {
+    return request;
+  }
+
+  const protocol = detectForwardedProtocol(request);
+  const normalizedUrl = request.nextUrl.clone();
+
+  try {
+    normalizedUrl.hostname = parsedHost.hostname;
+    normalizedUrl.port = parsedHost.port ?? "";
+    normalizedUrl.protocol = `${protocol}:`;
+  } catch {
+    return request;
+  }
+
+  if (normalizedUrl.toString() === request.url) {
+    return request;
+  }
+
+  return new NextRequest(normalizedUrl, request);
+}
+
+function extractForwardedHeaderValue(value: string | null): string | null {
+  if (!value) return null;
+  const first = value.split(",")[0]?.trim();
+  return first ? first : null;
+}
+
+function parseHostHeader(host: string): { hostname: string; port?: string } | null {
+  try {
+    const parsed = new URL(`http://${host}`);
+    const hostname = parsed.hostname.trim();
+    if (!hostname) {
+      return null;
+    }
+
+    const port = parsed.port.trim();
+    return port ? { hostname, port } : { hostname };
+  } catch {
+    return null;
+  }
+}
+
+function detectForwardedProtocol(request: NextRequest): "http" | "https" {
+  const cfVisitor = request.headers.get("cf-visitor");
+  if (cfVisitor) {
+    try {
+      const parsed = JSON.parse(cfVisitor) as { scheme?: unknown };
+      if (parsed.scheme === "http" || parsed.scheme === "https") {
+        return parsed.scheme;
+      }
+      if (typeof parsed.scheme === "string") {
+        const lowered = parsed.scheme.toLowerCase();
+        if (lowered === "http" || lowered === "https") {
+          return lowered;
+        }
+      }
+    } catch {
+      // Ignore malformed proxy headers and fall back to standard forwarding headers.
+    }
+  }
+
+  const forwardedProto = extractForwardedHeaderValue(
+    request.headers.get("x-forwarded-proto"),
+  )?.toLowerCase();
+  if (forwardedProto === "http" || forwardedProto === "https") {
+    return forwardedProto;
+  }
+
+  const protocol = request.nextUrl.protocol.replace(":", "").toLowerCase();
+  return protocol === "http" ? "http" : "https";
 }
 
 async function getFormField(
