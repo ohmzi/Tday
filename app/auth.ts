@@ -5,18 +5,35 @@ import { prisma } from "@/lib/prisma/client";
 import type { Adapter } from "next-auth/adapters";
 import { CredentialsSignin } from "@auth/core/errors";
 import { hashPassword, verifyPassword } from "@/lib/security/password";
+import { getSecretValue } from "@/lib/security/secretSource";
+import {
+  revokeUserSessions,
+  sessionMaxAgeSeconds,
+} from "@/lib/security/sessionControl";
+import { runSecurityConfigChecks } from "@/lib/security/configHealth";
 
 class PendingApprovalError extends CredentialsSignin {
   code = "pending_approval";
 }
 
+const authSecret = getSecretValue({
+  envVar: "AUTH_SECRET",
+  fileEnvVar: "AUTH_SECRET_FILE",
+});
+const maxSessionAgeSeconds = sessionMaxAgeSeconds();
+
 export const { handlers, auth } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
-  secret: process.env.AUTH_SECRET,
+  secret: authSecret,
   trustHost: process.env.AUTH_TRUST_HOST === "true",
   useSecureCookies: process.env.NODE_ENV === "production",
-  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },
-  jwt: { maxAge: 60 * 60 * 24 * 7 },
+  session: {
+    strategy: "jwt",
+    maxAge: maxSessionAgeSeconds,
+  },
+  jwt: {
+    maxAge: maxSessionAgeSeconds,
+  },
   providers: [
     Credentials({
       credentials: {
@@ -24,6 +41,8 @@ export const { handlers, auth } = NextAuth({
         password: {},
       },
       authorize: async (credentials) => {
+        runSecurityConfigChecks();
+
         const { email, password } = credentials as {
           email: string;
           password: string;
@@ -65,8 +84,27 @@ export const { handlers, auth } = NextAuth({
       },
     }),
   ],
+  events: {
+    async signOut(message) {
+      const userId =
+        "token" in message && typeof message.token?.id === "string"
+          ? message.token.id
+          : null;
+      if (!userId) return;
+
+      try {
+        await revokeUserSessions(userId);
+      } catch (error) {
+        console.warn(
+          `[security] revoke_sessions_on_signout_failed userId=${userId} error=${String(
+            error,
+          )}`,
+        );
+      }
+    },
+  },
   callbacks: {
-    jwt({ token, user, account }) {
+    async jwt({ token, user, account }) {
       if (user) {
         if (!user.id) {
           throw new Error("Authentication failed.");
@@ -75,14 +113,54 @@ export const { handlers, auth } = NextAuth({
         token.timeZone = user.timeZone;
         token.role = user.role;
         token.approvalStatus = user.approvalStatus;
+        token.tokenVersion = user.tokenVersion;
+        token.revoked = false;
         if (account?.provider === "credentials") {
           token.name = user.name;
         }
       }
+
+      if (!token.id) {
+        token.revoked = true;
+        return token;
+      }
+
+      const latestUser = await prisma.user.findUnique({
+        where: { id: token.id },
+        select: {
+          id: true,
+          timeZone: true,
+          role: true,
+          approvalStatus: true,
+          tokenVersion: true,
+        },
+      });
+
+      if (!latestUser) {
+        token.revoked = true;
+        return token;
+      }
+
+      if ((token.tokenVersion ?? -1) !== latestUser.tokenVersion) {
+        token.revoked = true;
+        return token;
+      }
+
+      token.revoked = false;
+      token.tokenVersion = latestUser.tokenVersion;
+      token.timeZone = latestUser.timeZone;
+      token.role = latestUser.role;
+      token.approvalStatus = latestUser.approvalStatus;
       return token;
     },
     session({ session, token }) {
-      if (!token.id || !token.role || !token.approvalStatus) {
+      if (
+        token.revoked ||
+        !token.id ||
+        !token.role ||
+        !token.approvalStatus ||
+        typeof token.tokenVersion !== "number"
+      ) {
         throw new Error("Invalid session.");
       }
 
@@ -90,6 +168,7 @@ export const { handlers, auth } = NextAuth({
       session.user.timeZone = token.timeZone ?? null;
       session.user.role = token.role;
       session.user.approvalStatus = token.approvalStatus;
+      session.user.tokenVersion = token.tokenVersion;
       return session;
     },
   },

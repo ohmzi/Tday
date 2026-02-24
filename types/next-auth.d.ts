@@ -8,6 +8,7 @@ declare module "next-auth" {
     timeZone: string | null;
     role: UserRole;
     approvalStatus: ApprovalStatus;
+    tokenVersion: number;
   }
 
   interface Session {
@@ -16,6 +17,7 @@ declare module "next-auth" {
       timeZone: string | null;
       role: UserRole;
       approvalStatus: ApprovalStatus;
+      tokenVersion: number;
     } & DefaultSession["user"];
   }
 }
@@ -26,6 +28,7 @@ declare module "next-auth/jwt" {
     timeZone?: string | null;
     role?: UserRole;
     approvalStatus?: ApprovalStatus;
+    tokenVersion?: number;
+    revoked?: boolean;
   }
 }
-
