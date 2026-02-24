@@ -7,6 +7,7 @@ import {
 import { prisma } from "@/lib/prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { hashPassword, verifyPassword } from "@/lib/security/password";
+import { revokeUserSessions } from "@/lib/security/sessionControl";
 
 const STRONG_PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
 
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
       where: { id: user.id },
       data: { password: hashPassword(newPassword) },
     });
+    await revokeUserSessions(user.id);
 
     return NextResponse.json({ message: "Password changed successfully" }, { status: 200 });
   } catch (error) {
