@@ -1,5 +1,9 @@
-import { createHash } from "crypto";
+import { createHash, createHmac } from "crypto";
 import { NextRequest } from "next/server";
+import { getSecretValue } from "@/lib/security/secretSource";
+
+const HASH_FALLBACK_SECRET = "tday-auth-signal-fallback";
+let cachedHashSecret: string | null = null;
 
 export function getClientIp(request: NextRequest): string {
   const cloudflareIp = request.headers.get("cf-connecting-ip")?.trim();
@@ -36,5 +40,25 @@ export function normalizeIdentifier(value: string | null | undefined): string | 
 }
 
 export function hashSecurityValue(raw: string): string {
-  return createHash("sha256").update(raw).digest("hex");
+  return createHmac("sha256", hashSecret()).update(raw).digest("hex");
+}
+
+function hashSecret(): string {
+  if (cachedHashSecret) return cachedHashSecret;
+
+  const configured = getSecretValue({
+    envVar: "AUTH_SECRET",
+    fileEnvVar: "AUTH_SECRET_FILE",
+  });
+
+  if (configured && configured.length >= 16) {
+    cachedHashSecret = configured;
+    return cachedHashSecret;
+  }
+
+  // Keep deterministic fallback for development/test environments.
+  cachedHashSecret = createHash("sha256")
+    .update(HASH_FALLBACK_SECRET)
+    .digest("hex");
+  return cachedHashSecret;
 }
