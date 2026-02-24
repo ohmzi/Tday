@@ -102,28 +102,80 @@ function enforceSecureTransport(req: NextRequest): NextResponse | null {
     return null;
   }
 
-  const hostHeader =
-    req.headers.get("x-forwarded-host") ??
-    req.headers.get("host") ??
-    req.nextUrl.host;
-  const hostname = hostHeader.split(",")[0]?.trim().split(":")[0]?.toLowerCase();
-  if (!hostname || isLocalHostname(hostname)) {
+  const host = resolveRequestHost(req);
+  const parsedHost = host ? parseHostHeader(host) : null;
+  if (!parsedHost || isLocalHostname(parsedHost.hostname)) {
     return null;
   }
 
-  const forwardedProto = req.headers.get("x-forwarded-proto");
-  const protocol = (
-    forwardedProto?.split(",")[0]?.trim().toLowerCase() ??
-    req.nextUrl.protocol.replace(":", "").toLowerCase()
-  );
+  const protocol = resolveRequestProtocol(req);
 
   if (protocol === "https") {
     return null;
   }
 
   const redirectUrl = req.nextUrl.clone();
+  if (parsedHost) {
+    redirectUrl.hostname = parsedHost.hostname;
+    redirectUrl.port = parsedHost.port ?? "";
+  }
   redirectUrl.protocol = "https:";
   return NextResponse.redirect(redirectUrl, 308);
+}
+
+function resolveRequestHost(req: NextRequest): string | null {
+  const hostHeader =
+    req.headers.get("x-forwarded-host") ??
+    req.headers.get("host") ??
+    req.nextUrl.host;
+  const host = hostHeader.split(",")[0]?.trim();
+  return host ? host : null;
+}
+
+function parseHostHeader(
+  host: string,
+): { hostname: string; port?: string } | null {
+  try {
+    const parsed = new URL(`http://${host}`);
+    const hostname = parsed.hostname.toLowerCase();
+    if (!hostname) {
+      return null;
+    }
+
+    const port = parsed.port.trim();
+    return port ? { hostname, port } : { hostname };
+  } catch {
+    return null;
+  }
+}
+
+function resolveRequestProtocol(req: NextRequest): "http" | "https" {
+  const cfVisitor = req.headers.get("cf-visitor");
+  if (cfVisitor) {
+    try {
+      const parsed = JSON.parse(cfVisitor) as { scheme?: unknown };
+      if (parsed.scheme === "http" || parsed.scheme === "https") {
+        return parsed.scheme;
+      }
+      if (typeof parsed.scheme === "string") {
+        const lowered = parsed.scheme.toLowerCase();
+        if (lowered === "http" || lowered === "https") {
+          return lowered;
+        }
+      }
+    } catch {
+      // Ignore malformed proxy headers and fall back to standard forwarding headers.
+    }
+  }
+
+  const forwardedProto = req.headers.get("x-forwarded-proto");
+  const firstForwardedProto = forwardedProto?.split(",")[0]?.trim().toLowerCase();
+  if (firstForwardedProto === "http" || firstForwardedProto === "https") {
+    return firstForwardedProto;
+  }
+
+  const protocol = req.nextUrl.protocol.replace(":", "").toLowerCase();
+  return protocol === "http" ? "http" : "https";
 }
 
 function applySecurityHeaders(response: NextResponse): NextResponse {
