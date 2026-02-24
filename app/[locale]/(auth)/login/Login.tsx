@@ -50,7 +50,15 @@ export default function LoginPage() {
           setPendingApprovalOpen(true);
           return;
         }
-        setErrorMessage("Invalid email or password.");
+        if (result.error === "MissingCSRF") {
+          setErrorMessage("Session verification failed. Refresh and try again.");
+          return;
+        }
+        if (result.error === "CredentialsSignin") {
+          setErrorMessage("Invalid email or password.");
+          return;
+        }
+        setErrorMessage("Unable to sign in. Please try again.");
         return;
       }
 
