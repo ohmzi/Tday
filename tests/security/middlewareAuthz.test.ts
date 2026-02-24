@@ -1,6 +1,7 @@
 import { readdirSync } from "fs";
 import path from "path";
 import { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 jest.mock("next-intl/middleware", () => ({
   __esModule: true,
@@ -18,6 +19,7 @@ jest.mock("next-auth/jwt", () => ({
 import middleware from "@/middleware";
 
 const PUBLIC_API_PREFIXES = ["/api/auth", "/api/mobile/probe"];
+const mockGetToken = getToken as jest.Mock;
 
 function discoverApiPaths(): string[] {
   const apiRoot = path.join(process.cwd(), "app", "api");
@@ -55,6 +57,11 @@ function discoverApiPaths(): string[] {
 }
 
 describe("middleware private API authorization", () => {
+  beforeEach(() => {
+    mockGetToken.mockReset();
+    mockGetToken.mockResolvedValue(null);
+  });
+
   test("returns 401 for every discovered private API endpoint when unauthenticated", async () => {
     const discoveredPaths = discoverApiPaths();
     const privateApiPaths = discoveredPaths.filter(
@@ -80,6 +87,11 @@ describe("middleware secure transport handling", () => {
 
   beforeAll(() => {
     process.env.NODE_ENV = "production";
+  });
+
+  beforeEach(() => {
+    mockGetToken.mockReset();
+    mockGetToken.mockResolvedValue(null);
   });
 
   afterAll(() => {
@@ -124,5 +136,30 @@ describe("middleware secure transport handling", () => {
     const response = await middleware(req);
     expect(response.status).toBe(308);
     expect(response.headers.get("location")).toBe("https://tday.ohmz.cloud/");
+  });
+});
+
+describe("middleware token resolution", () => {
+  beforeEach(() => {
+    mockGetToken.mockReset();
+    mockGetToken.mockResolvedValue(null);
+  });
+
+  test("accepts __Secure-authjs session cookies through explicit fallback lookup", async () => {
+    mockGetToken.mockImplementation(async (options?: { cookieName?: string }) => {
+      if (options?.cookieName === "__Secure-authjs.session-token") {
+        return { id: "user_123", approvalStatus: "APPROVED" };
+      }
+      return null;
+    });
+
+    const req = new NextRequest("http://tday.ohmz.cloud/en/app/tday", {
+      headers: {
+        host: "tday.ohmz.cloud",
+      },
+    });
+
+    const response = await middleware(req);
+    expect(response.status).toBe(200);
   });
 });
