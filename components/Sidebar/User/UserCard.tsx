@@ -62,9 +62,16 @@ const UserCard = ({
     queryClient.clear();
     await clearClientUserData();
 
-    await signOut({ redirectTo: "/login" }).catch(() => {
-      router.replace("/login");
+    await signOut({ redirect: false }).catch(() => {
+      // Ignore sign-out transport failures; we'll still route user away locally.
     });
+
+    if (typeof window !== "undefined") {
+      window.location.replace(window.location.origin);
+      return;
+    }
+
+    router.replace("/");
   };
 
   return (
