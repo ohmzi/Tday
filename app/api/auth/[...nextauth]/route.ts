@@ -10,6 +10,7 @@ import {
 } from "@/lib/security/authThrottle";
 import { verifyCaptchaToken } from "@/lib/security/captcha";
 import { logSecurityEvent } from "@/lib/security/logSecurityEvent";
+import { decryptCredentialEnvelope } from "@/lib/security/credentialEnvelope";
 
 const CSRF_PATH = "/api/auth/csrf";
 const CREDENTIALS_CALLBACK_PATH = "/api/auth/callback/credentials";
@@ -31,11 +32,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authRequest = normalizeAuthRequestOrigin(request);
-  const credentialsRequest = isCredentialsCallbackRequest(authRequest);
-  const identifier = credentialsRequest
-    ? await getFormField(authRequest, "email")
+  const normalizedRequest = normalizeAuthRequestOrigin(request);
+  const credentialsRequest = isCredentialsCallbackRequest(normalizedRequest);
+  const credentialResolution = credentialsRequest
+    ? await resolveCredentialRequest(normalizedRequest)
     : null;
+  const authRequest = credentialResolution?.request ?? normalizedRequest;
+  const identifier = credentialResolution?.identifier ?? null;
 
   if (credentialsRequest) {
     const captchaRequired = await requiresCaptchaChallenge({
@@ -115,6 +118,54 @@ function isCsrfRequest(request: NextRequest): boolean {
 
 function isCredentialsCallbackRequest(request: NextRequest): boolean {
   return request.nextUrl.pathname.endsWith(CREDENTIALS_CALLBACK_PATH);
+}
+
+async function resolveCredentialRequest(
+  request: NextRequest,
+): Promise<{ request: NextRequest; identifier: string | null }> {
+  const formData = await safeReadFormData(request);
+  if (!formData) {
+    return {
+      request,
+      identifier: null,
+    };
+  }
+
+  const encryptedPayload = normalizeFormValue(formData.get("encryptedPayload"));
+  const encryptedKey = normalizeFormValue(formData.get("encryptedKey"));
+  const encryptedIv = normalizeFormValue(formData.get("encryptedIv"));
+  const keyId = normalizeFormValue(formData.get("credentialKeyId"));
+  const version = normalizeFormValue(formData.get("credentialEnvelopeVersion"));
+
+  if (!encryptedPayload || !encryptedKey || !encryptedIv) {
+    return {
+      request,
+      identifier: normalizeFormValue(formData.get("email"))?.toLowerCase() ?? null,
+    };
+  }
+
+  try {
+    const decrypted = decryptCredentialEnvelope({
+      encryptedPayload,
+      encryptedKey,
+      encryptedIv,
+      keyId,
+      version,
+    });
+
+    return {
+      request: buildDecryptedCredentialRequest(request, formData, decrypted),
+      identifier: decrypted.email,
+    };
+  } catch (error) {
+    await logSecurityEvent("auth_credential_envelope_invalid", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      request,
+      identifier: null,
+    };
+  }
 }
 
 function normalizeAuthRequestOrigin(request: NextRequest): NextRequest {
@@ -198,6 +249,55 @@ function detectForwardedProtocol(request: NextRequest): "http" | "https" {
 
   const protocol = request.nextUrl.protocol.replace(":", "").toLowerCase();
   return protocol === "http" ? "http" : "https";
+}
+
+function buildDecryptedCredentialRequest(
+  request: NextRequest,
+  formData: FormData,
+  decrypted: { email: string; password: string },
+): NextRequest {
+  const payload = new URLSearchParams();
+  for (const [key, value] of formData.entries()) {
+    if (typeof value !== "string") continue;
+    if (
+      key === "email" ||
+      key === "password" ||
+      key === "encryptedPayload" ||
+      key === "encryptedKey" ||
+      key === "encryptedIv" ||
+      key === "credentialKeyId" ||
+      key === "credentialEnvelopeVersion"
+    ) {
+      continue;
+    }
+    payload.append(key, value);
+  }
+
+  payload.set("email", decrypted.email);
+  payload.set("password", decrypted.password);
+
+  const headers = new Headers(request.headers);
+  headers.set("content-type", "application/x-www-form-urlencoded;charset=UTF-8");
+
+  return new NextRequest(request.nextUrl, {
+    method: request.method,
+    headers,
+    body: payload.toString(),
+  });
+}
+
+async function safeReadFormData(request: NextRequest): Promise<FormData | null> {
+  try {
+    return await request.clone().formData();
+  } catch {
+    return null;
+  }
+}
+
+function normalizeFormValue(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
 }
 
 async function getFormField(
