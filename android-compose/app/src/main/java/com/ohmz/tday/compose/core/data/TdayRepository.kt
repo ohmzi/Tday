@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.core.data
 
+import android.util.Base64
 import android.util.Log
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.core.model.AuthResult
@@ -55,7 +56,10 @@ import java.net.CookieManager
 import java.net.URI
 import java.net.URLDecoder
 import java.security.MessageDigest
+import java.security.KeyFactory
+import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import java.security.spec.X509EncodedKeySpec
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -63,6 +67,9 @@ import java.time.ZonedDateTime
 import java.util.TimeZone
 import java.util.UUID
 import java.util.Locale
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -99,6 +106,12 @@ class TdayRepository @Inject constructor(
             return AuthResult.Error("Server URL is not configured")
         }
 
+        val credentialEnvelope = runCatching {
+            createCredentialEnvelope(email, password)
+        }.getOrElse {
+            return AuthResult.Error(it.message ?: "Could not prepare secure sign-in flow")
+        }
+
         val csrf = runCatching {
             requireBody(api.getCsrfToken(), "Could not start sign-in flow").csrfToken
         }.getOrElse { return AuthResult.Error(it.message ?: "Could not start sign-in flow") }
@@ -111,8 +124,11 @@ class TdayRepository @Inject constructor(
                 payload =
                     mapOf(
                     "csrfToken" to csrf,
-                    "email" to email,
-                    "password" to password,
+                    "encryptedPayload" to credentialEnvelope.encryptedPayload,
+                    "encryptedKey" to credentialEnvelope.encryptedKey,
+                    "encryptedIv" to credentialEnvelope.encryptedIv,
+                    "credentialKeyId" to credentialEnvelope.keyId,
+                    "credentialEnvelopeVersion" to credentialEnvelope.version,
                     "redirect" to "false",
                     "callbackUrl" to requestCallbackUrl,
                 ),
@@ -2576,23 +2592,17 @@ class TdayRepository @Inject constructor(
     private fun validateProbeContract(probeBody: com.ohmz.tday.compose.core.model.MobileProbeResponse) {
         val serviceOk = probeBody.service.equals("tday", ignoreCase = true)
         val versionOk = probeBody.version == "1"
-        val authOk = probeBody.auth.csrfPath == CSRF_PATH &&
-            probeBody.auth.credentialsPath == CREDENTIALS_PATH &&
-            probeBody.auth.registerPath == REGISTER_PATH
 
-        if (serviceOk && versionOk && authOk) {
+        if (serviceOk && versionOk) {
             return
         }
 
         Log.w(
             LOG_TAG,
-            "probe_failed_contract service=${probeBody.service} version=${probeBody.version} auth=${probeBody.auth}",
+            "probe_failed_contract service=${probeBody.service} version=${probeBody.version} probe=${probeBody.probe}",
         )
 
-        if (!serviceOk || !versionOk) {
-            throw ServerProbeException.NotTdayServer()
-        }
-        throw ServerProbeException.AuthContractMismatch()
+        throw ServerProbeException.NotTdayServer()
     }
 
     private fun verifyAndPersistServerTrust(
@@ -2666,6 +2676,67 @@ class TdayRepository @Inject constructor(
         }.getOrElse { emptyMap() }
     }
 
+    private suspend fun createCredentialEnvelope(
+        email: String,
+        password: String,
+    ): CredentialEnvelope {
+        val credentialKey = requireBody(
+            api.getCredentialKey(),
+            "Could not initialize secure sign-in",
+        )
+        if (credentialKey.version != CREDENTIAL_ENVELOPE_VERSION) {
+            throw IllegalStateException("Unsupported secure sign-in version")
+        }
+
+        val publicKeyBytes = decodeBase64Url(credentialKey.publicKey)
+        val publicKey = KeyFactory.getInstance("RSA")
+            .generatePublic(X509EncodedKeySpec(publicKeyBytes))
+
+        val aesKey = ByteArray(AES_KEY_BYTES).also { secureRandom.nextBytes(it) }
+        val iv = ByteArray(AES_GCM_IV_BYTES).also { secureRandom.nextBytes(it) }
+
+        val credentialPayload = json.encodeToString(
+            CredentialEnvelopePayload(
+                email = email.trim().lowercase(Locale.US),
+                password = password,
+            ),
+        ).toByteArray(Charsets.UTF_8)
+
+        val aesCipher = Cipher.getInstance("AES/GCM/NoPadding")
+        aesCipher.init(
+            Cipher.ENCRYPT_MODE,
+            SecretKeySpec(aesKey, "AES"),
+            GCMParameterSpec(AES_GCM_TAG_BITS, iv),
+        )
+        val encryptedPayload = aesCipher.doFinal(credentialPayload)
+
+        val rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
+        rsaCipher.init(Cipher.ENCRYPT_MODE, publicKey)
+        val encryptedKey = rsaCipher.doFinal(aesKey)
+
+        return CredentialEnvelope(
+            encryptedPayload = encodeBase64Url(encryptedPayload),
+            encryptedKey = encodeBase64Url(encryptedKey),
+            encryptedIv = encodeBase64Url(iv),
+            keyId = credentialKey.keyId,
+            version = credentialKey.version,
+        )
+    }
+
+    private fun encodeBase64Url(value: ByteArray): String {
+        return Base64.encodeToString(
+            value,
+            Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
+        )
+    }
+
+    private fun decodeBase64Url(value: String): ByteArray {
+        return Base64.decode(
+            value,
+            Base64.URL_SAFE or Base64.NO_WRAP,
+        )
+    }
+
     private fun mapAuthError(errorCode: String): String {
         return when (errorCode.lowercase()) {
             "credentialssignin" -> "Invalid email or password"
@@ -2703,15 +2774,32 @@ class TdayRepository @Inject constructor(
         const val LOG_TAG = "TdayRepository"
         const val PROBE_TIMEOUT_MS = 7_000L
         const val PROBE_PATH = "/api/mobile/probe"
-        const val CSRF_PATH = "/api/auth/csrf"
-        const val CREDENTIALS_PATH = "/api/auth/callback/credentials"
-        const val REGISTER_PATH = "/api/auth/register"
+        const val CREDENTIAL_ENVELOPE_VERSION = "1"
+        const val AES_KEY_BYTES = 32
+        const val AES_GCM_IV_BYTES = 12
+        const val AES_GCM_TAG_BITS = 128
         const val OFFLINE_RESYNC_INTERVAL_MS = 5 * 60 * 1000L
         const val MIN_FORCE_SYNC_INTERVAL_MS = 1_200L
         const val LOCAL_TODO_PREFIX = "local-todo-"
         const val LOCAL_LIST_PREFIX = "local-list-"
         const val LOCAL_COMPLETED_PREFIX = "local-completed-"
     }
+
+    private val secureRandom = SecureRandom()
+
+    @kotlinx.serialization.Serializable
+    private data class CredentialEnvelopePayload(
+        val email: String,
+        val password: String,
+    )
+
+    private data class CredentialEnvelope(
+        val encryptedPayload: String,
+        val encryptedKey: String,
+        val encryptedIv: String,
+        val keyId: String,
+        val version: String,
+    )
 }
 
 private class ApiCallException(
