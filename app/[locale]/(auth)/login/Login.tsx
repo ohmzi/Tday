@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import PendingApprovalDialog from "@/components/auth/PendingApprovalDialog";
+import { createClientCredentialEnvelope } from "@/lib/security/clientCredentialEnvelope";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,9 +40,28 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      let credentialEnvelope: Record<string, string> = {};
+      let usePlainCredentialsFallback = false;
+      try {
+        credentialEnvelope = await createClientCredentialEnvelope(email, password);
+      } catch {
+        // Browsers on non-HTTPS LAN origins may not expose crypto.subtle.
+        // Fall back to normal credentials so self-hosted local-IP login still works.
+        usePlainCredentialsFallback =
+          typeof window !== "undefined" && window.location.protocol === "http:";
+        if (!usePlainCredentialsFallback) {
+          throw new Error("Unable to initialize secure sign-in.");
+        }
+      }
+
       const result = await signIn("credentials", {
-        email,
-        password,
+        ...credentialEnvelope,
+        ...(usePlainCredentialsFallback
+          ? {
+              email,
+              password,
+            }
+          : {}),
         redirect: false,
       });
 

@@ -10,6 +10,7 @@ import com.ohmz.tday.compose.core.model.CreateListResponse
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.CreateTodoResponse
 import com.ohmz.tday.compose.core.model.CsrfResponse
+import com.ohmz.tday.compose.core.model.CredentialKeyResponse
 import com.ohmz.tday.compose.core.model.DeleteCompletedTodoRequest
 import com.ohmz.tday.compose.core.model.DeleteListRequest
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
@@ -62,6 +63,9 @@ interface TdayApiService {
 
     @GET("/api/auth/csrf")
     suspend fun getCsrfToken(): Response<CsrfResponse>
+
+    @GET("/api/auth/credentials-key")
+    suspend fun getCredentialKey(): Response<CredentialKeyResponse>
 
     @FormUrlEncoded
     @POST("/api/auth/callback/credentials")

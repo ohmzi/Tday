@@ -7,6 +7,12 @@ const intlMiddleware = createMiddleware(routing);
 const localeSet: ReadonlySet<string> = new Set(routing.locales);
 const PUBLIC_API_PREFIXES = ["/api/auth", "/api/mobile/probe"];
 const APPROVED_STATUS = "APPROVED";
+const SESSION_COOKIE_CANDIDATES = [
+  "__Secure-authjs.session-token",
+  "authjs.session-token",
+  "__Secure-next-auth.session-token",
+  "next-auth.session-token",
+] as const;
 
 export default async function middleware(req: NextRequest) {
   const secureResponse = enforceSecureTransport(req);
@@ -16,10 +22,7 @@ export default async function middleware(req: NextRequest) {
 
   const pathname = req.nextUrl.pathname;
   const normalizedPath = stripLocalePrefix(pathname);
-  const token = await getToken({
-    req,
-    secret: process.env.AUTH_SECRET,
-  });
+  const token = await resolveSessionToken(req);
   const user = token as
     | { id?: string; approvalStatus?: string | null }
     | undefined;
@@ -262,4 +265,27 @@ function contentSecurityPolicyValue(): string {
     scriptSrc,
     connectSrc,
   ].join("; ");
+}
+
+async function resolveSessionToken(req: NextRequest) {
+  const secret = process.env.AUTH_SECRET;
+  const defaultToken = await getToken({
+    req,
+    secret,
+  });
+  if (defaultToken) return defaultToken;
+
+  for (const cookieName of SESSION_COOKIE_CANDIDATES) {
+    const token = await getToken({
+      req,
+      secret,
+      cookieName,
+      secureCookie: cookieName.startsWith("__Secure-"),
+    });
+    if (token) {
+      return token;
+    }
+  }
+
+  return null;
 }
