@@ -47,16 +47,17 @@ data class RegisterResponse(
 @Serializable
 data class MobileProbeResponse(
     val service: String,
-    val auth: MobileProbeAuthContract,
+    val probe: String? = null,
     val version: String,
     val serverTime: String,
 )
 
 @Serializable
-data class MobileProbeAuthContract(
-    val csrfPath: String,
-    val credentialsPath: String,
-    val registerPath: String,
+data class CredentialKeyResponse(
+    val version: String,
+    val algorithm: String,
+    val keyId: String,
+    val publicKey: String,
 )
 
 @Serializable

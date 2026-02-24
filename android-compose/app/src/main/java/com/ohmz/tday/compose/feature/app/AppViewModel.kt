@@ -367,8 +367,6 @@ class AppViewModel @Inject constructor(
             is ServerProbeException.InsecureTransport -> error.message ?: "Use HTTPS for remote server URLs."
             is ServerProbeException.NotTdayServer ->
                 "Server is reachable but does not expose a valid T'Day auth probe."
-            is ServerProbeException.AuthContractMismatch ->
-                "Server probe is incomplete. Required auth endpoints are missing."
             is ServerProbeException.CertificateChanged ->
                 error.message ?: "Server certificate changed. Reset trusted server to continue."
             else -> error.message ?: "Could not connect to server"

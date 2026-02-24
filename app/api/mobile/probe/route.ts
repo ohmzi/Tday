@@ -6,11 +6,7 @@ export async function GET() {
     return NextResponse.json(
       {
         service: "tday",
-        auth: {
-          csrfPath: "/api/auth/csrf",
-          credentialsPath: "/api/auth/callback/credentials",
-          registerPath: "/api/auth/register",
-        },
+        probe: "ok",
         version: "1",
         serverTime: new Date().toISOString(),
       },

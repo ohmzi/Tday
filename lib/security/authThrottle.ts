@@ -288,20 +288,25 @@ export async function recordCredentialSuccessSignal(params: {
 export function buildAuthThrottleResponse(
   blocked: Extract<AuthThrottleResult, { allowed: false }>,
 ): NextResponse {
+  const retryAfterSeconds = Math.max(1, Math.floor(blocked.retryAfterSeconds));
+  const retryAtIso = new Date(Date.now() + retryAfterSeconds * 1000).toISOString();
+  const waitLabel = formatRetryWaitLabel(retryAfterSeconds);
   const message =
     blocked.reasonCode === "auth_lockout"
-      ? "Too many failed sign-in attempts. Try again after the cooldown."
-      : "Too many authentication requests. Please slow down and try again.";
+      ? `Too many failed sign-in attempts. Try again in ${waitLabel}.`
+      : `Too many authentication requests. Try again in ${waitLabel}.`;
 
   return NextResponse.json(
     {
       message,
       reason: blocked.reasonCode,
+      retryAfterSeconds,
+      retryAt: retryAtIso,
     },
     {
       status: 429,
       headers: {
-        "Retry-After": String(blocked.retryAfterSeconds),
+        "Retry-After": String(retryAfterSeconds),
         "Cache-Control": "no-store",
       },
     },
@@ -517,6 +522,19 @@ function laterDate(a: Date | null, b: Date | null): Date | null {
 function retryAfterFromDate(target: Date, now: Date): number {
   const seconds = Math.ceil((target.getTime() - now.getTime()) / 1000);
   return Math.max(1, seconds);
+}
+
+function formatRetryWaitLabel(retryAfterSeconds: number): string {
+  if (retryAfterSeconds < 60) {
+    return `${retryAfterSeconds}s`;
+  }
+
+  const minutes = Math.floor(retryAfterSeconds / 60);
+  const seconds = retryAfterSeconds % 60;
+  if (seconds === 0) {
+    return `${minutes}m`;
+  }
+  return `${minutes}m ${seconds}s`;
 }
 
 function safeDate(value: Date | string | null | undefined): Date | null {
