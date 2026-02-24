@@ -38,6 +38,11 @@ export const { handlers, auth } = NextAuth({
       credentials: {
         email: {},
         password: {},
+        encryptedPayload: {},
+        encryptedKey: {},
+        encryptedIv: {},
+        credentialKeyId: {},
+        credentialEnvelopeVersion: {},
       },
       authorize: async (credentials) => {
         runSecurityConfigChecks();
