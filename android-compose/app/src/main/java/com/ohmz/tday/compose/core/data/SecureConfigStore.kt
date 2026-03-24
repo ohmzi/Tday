@@ -11,11 +11,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
 import java.util.UUID
 
-data class SavedCredentials(
-    val email: String,
-    val password: String,
-)
-
 @Singleton
 class SecureConfigStore @Inject constructor(
     @ApplicationContext context: Context,
@@ -161,24 +156,20 @@ class SecureConfigStore @Inject constructor(
         return Result.success(Unit)
     }
 
-    fun getSavedCredentials(): SavedCredentials? {
-        val email = prefs.getString(KEY_EMAIL, null).orEmpty()
-        val password = prefs.getString(KEY_PASSWORD, null).orEmpty()
-        if (email.isBlank() || password.isBlank()) return null
-        return SavedCredentials(email = email, password = password)
-    }
+    fun getLastEmail(): String? =
+        prefs.getString(KEY_EMAIL, null)?.takeIf { it.isNotBlank() }
 
-    fun saveCredentials(email: String, password: String) {
+    fun saveLastEmail(email: String) {
         prefs.edit()
             .putString(KEY_EMAIL, email)
-            .putString(KEY_PASSWORD, password)
+            .remove("password")
             .apply()
     }
 
-    fun clearCredentials() {
+    fun clearLastEmail() {
         prefs.edit()
             .remove(KEY_EMAIL)
-            .remove(KEY_PASSWORD)
+            .remove("password")
             .apply()
     }
 
@@ -247,7 +238,6 @@ class SecureConfigStore @Inject constructor(
         const val PREF_NAME = "tday_secure_config"
         const val KEY_SERVER_URL = "server_url"
         const val KEY_EMAIL = "email"
-        const val KEY_PASSWORD = "password"
         const val KEY_DEVICE_ID = "device_id"
         const val KEY_CERT_FINGERPRINT_PREFIX = "cert_fp_"
         const val KEY_LIST_ICON_MAP = "list_icon_map"

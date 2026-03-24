@@ -68,7 +68,7 @@ data class AppSettingsResponse(
 @Serializable
 data class AdminSettingsResponse(
     val aiSummaryEnabled: Boolean = true,
-    val updatedAt: String? = null,
+    val validationError: String? = null,
 )
 
 @Serializable

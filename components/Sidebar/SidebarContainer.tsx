@@ -9,6 +9,7 @@ import {
   Calendar1Icon,
   CheckCircleIcon,
   Flag,
+  Layers,
   Plus,
   Sun,
 } from "lucide-react";
@@ -113,7 +114,8 @@ const SidebarContainer = () => {
     }
   }, [isDesktop, setShowMenu]);
 
-  const isTodoActive = pathname?.includes("/app/tday") || pathname?.includes("/app/todo");
+  const isTodayActive = pathname?.includes("/app/tday");
+  const isAllTasksActive = pathname?.includes("/app/todo");
   const isCompletedActive = pathname?.includes("/app/completed");
   const isPriorityActive = pathname?.includes("/app/priority");
   const isCalendarActive = pathname?.includes("/app/calendar");
@@ -141,9 +143,11 @@ const SidebarContainer = () => {
           <ExpandedSidebarContent
             isDesktop={isDesktop}
             todosCount={todos.length}
+            allTasksCount={timelineTodos.length}
             completedCount={completedTodos.length}
             priorityCount={priorityCount}
-            isTodoActive={Boolean(isTodoActive)}
+            isTodayActive={Boolean(isTodayActive)}
+            isAllTasksActive={Boolean(isAllTasksActive)}
             isCompletedActive={Boolean(isCompletedActive)}
             isPriorityActive={Boolean(isPriorityActive)}
             isCalendarActive={Boolean(isCalendarActive)}
@@ -166,9 +170,11 @@ const SidebarContainer = () => {
         <ExpandedSidebarContent
           isDesktop={isDesktop}
           todosCount={todos.length}
+          allTasksCount={timelineTodos.length}
           completedCount={completedTodos.length}
           priorityCount={priorityCount}
-          isTodoActive={Boolean(isTodoActive)}
+          isTodayActive={Boolean(isTodayActive)}
+          isAllTasksActive={Boolean(isAllTasksActive)}
           isCompletedActive={Boolean(isCompletedActive)}
           isPriorityActive={Boolean(isPriorityActive)}
           isCalendarActive={Boolean(isCalendarActive)}
@@ -184,9 +190,11 @@ export default SidebarContainer;
 function ExpandedSidebarContent({
   isDesktop,
   todosCount,
+  allTasksCount,
   completedCount,
   priorityCount,
-  isTodoActive,
+  isTodayActive,
+  isAllTasksActive,
   isCompletedActive,
   isPriorityActive,
   isCalendarActive,
@@ -194,9 +202,11 @@ function ExpandedSidebarContent({
 }: {
   isDesktop: boolean;
   todosCount: number;
+  allTasksCount: number;
   completedCount: number;
   priorityCount: number;
-  isTodoActive: boolean;
+  isTodayActive: boolean;
+  isAllTasksActive: boolean;
   isCompletedActive: boolean;
   isPriorityActive: boolean;
   isCalendarActive: boolean;
@@ -280,11 +290,11 @@ function ExpandedSidebarContent({
             }}
             className={cn(
               expandedNavButtonBase,
-              isTodoActive
+              isTodayActive
                 ? expandedNavButtonActive
                 : expandedNavButtonIdle,
             )}
-            aria-current={isTodoActive ? "page" : undefined}
+            aria-current={isTodayActive ? "page" : undefined}
           >
             <span className={railIconSlot}>
               <Sun className={railIconClass} />
@@ -293,12 +303,43 @@ function ExpandedSidebarContent({
             <span
               className={cn(
                 countBadgeBase,
-                isTodoActive
+                isTodayActive
                   ? "text-sidebar-accent-foreground/80"
                   : "text-sidebar-foreground/40",
               )}
             >
               {todosCount}
+            </span>
+          </Link>
+
+          <Link
+            href="/app/todo"
+            prefetch
+            onClick={() => {
+              setActiveMenu({ name: "AllTasks" });
+              onNavigate?.();
+            }}
+            className={cn(
+              expandedNavButtonBase,
+              isAllTasksActive
+                ? expandedNavButtonActive
+                : expandedNavButtonIdle,
+            )}
+            aria-current={isAllTasksActive ? "page" : undefined}
+          >
+            <span className={railIconSlot}>
+              <Layers className={railIconClass} />
+            </span>
+            <span className="truncate whitespace-nowrap">All Tasks</span>
+            <span
+              className={cn(
+                countBadgeBase,
+                isAllTasksActive
+                  ? "text-sidebar-accent-foreground/80"
+                  : "text-sidebar-foreground/40",
+              )}
+            >
+              {allTasksCount}
             </span>
           </Link>
 
@@ -400,7 +441,8 @@ function ExpandedSidebarContent({
 function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { setActiveMenu, setShowMenu } = useMenu();
   const pathname = usePathname();
-  const isTodoActive = pathname?.includes("/app/tday") || pathname?.includes("/app/todo");
+  const isTodayActive = pathname?.includes("/app/tday");
+  const isAllTasksActive = pathname?.includes("/app/todo");
   const isCompletedActive = pathname?.includes("/app/completed");
   const isPriorityActive = pathname?.includes("/app/priority");
   const isCalendarActive = pathname?.includes("/app/calendar");
@@ -473,7 +515,7 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 }}
                 className={cn(
                   collapsedRailButtonBase,
-                  isTodoActive && expandedNavButtonActive,
+                  isTodayActive && expandedNavButtonActive,
                 )}
                 aria-label="Today"
               >
@@ -482,6 +524,28 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={10}>
               Today
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/app/todo"
+                onClick={() => {
+                  setActiveMenu({ name: "AllTasks" });
+                  onNavigate?.();
+                }}
+                className={cn(
+                  collapsedRailButtonBase,
+                  isAllTasksActive && expandedNavButtonActive,
+                )}
+                aria-label="All Tasks"
+              >
+                <Layers className={railIconClass} />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={10}>
+              All Tasks
             </TooltipContent>
           </Tooltip>
 
