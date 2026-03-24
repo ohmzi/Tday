@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Command, Flag, Menu, Search, Sun, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Command, Flag, Layers, Menu, Search, Sun, X } from "lucide-react";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
@@ -40,7 +40,7 @@ type TimelineSection = {
   todos: TodoItemType[];
 };
 
-type TimelineScope = "today" | "priority";
+type TimelineScope = "today" | "all" | "priority";
 
 const getTimeZoneDate = (date: Date, timeZone?: string) =>
   new Date(date.toLocaleString("en-US", { timeZone: timeZone || "UTC" }));
@@ -95,10 +95,10 @@ const getDayLabel = ({
 };
 
 const getTimelinePriority = (dayDiff: number) => {
+  if (dayDiff < 0) return -1; // Earlier – above everything
   if (dayDiff === 0) return 0; // Today
   if (dayDiff === 1) return 1; // Tomorrow
-  if (dayDiff > 1) return 2; // Future dates
-  return 3; // Past dates
+  return 2; // Future dates
 };
 
 const compareTimelineItems = (a: TimelineItem, b: TimelineItem) => {
@@ -163,6 +163,12 @@ const isPriorityTask = (priority: string | null | undefined) => {
     normalized === "urgent";
 };
 
+const SCOPE_CONFIG: Record<TimelineScope, { icon: React.ElementType; headingKey: string; emptyMessage: string }> = {
+  today: { icon: Sun, headingKey: "today", emptyMessage: "No tasks for today" },
+  all: { icon: Layers, headingKey: "today", emptyMessage: "No tasks" },
+  priority: { icon: Flag, headingKey: "priority", emptyMessage: "No priority tasks" },
+};
+
 const AllTasksTimelineContainer = ({
   scope = "today",
 }: {
@@ -179,19 +185,18 @@ const AllTasksTimelineContainer = ({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [earlierExpanded, setEarlierExpanded] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const pageHeading = scope === "priority" ? appDict("priority") : appDict("today");
-  const emptyStateMessage = scope === "priority"
-    ? "No priority tasks"
-    : "No tasks for today";
+  const { icon: ScopeIcon, emptyMessage: emptyStateMessage } = SCOPE_CONFIG[scope];
+  const pageHeading = scope === "all" ? "All Tasks" : appDict(SCOPE_CONFIG[scope].headingKey);
   const isMac =
     typeof window !== "undefined" &&
     navigator.userAgent.toLowerCase().includes("mac");
 
-  const scopedTodos = useMemo(
-    () => (scope === "priority" ? todos.filter((todo) => isPriorityTask(todo.priority)) : todos),
-    [scope, todos],
-  );
+  const scopedTodos = useMemo(() => {
+    if (scope === "priority") return todos.filter((todo) => isPriorityTask(todo.priority));
+    return todos;
+  }, [scope, todos]);
 
   const timelineItems = useMemo(() => {
     return scopedTodos
@@ -234,26 +239,48 @@ const AllTasksTimelineContainer = ({
     });
   }, [listMetaData, searchQuery, timelineItems]);
 
+  const scopeFilteredItems = useMemo(() => {
+    if (scope === "today") {
+      return filteredTimelineItems.filter((item) => item.dayDiff === 0);
+    }
+    return filteredTimelineItems;
+  }, [filteredTimelineItems, scope]);
+
   const visibleTimelineItems = useMemo(
-    () => filteredTimelineItems.slice(0, visibleCount),
-    [filteredTimelineItems, visibleCount],
+    () => scopeFilteredItems.slice(0, visibleCount),
+    [scopeFilteredItems, visibleCount],
   );
   const sections = useMemo(
     () => toSections(visibleTimelineItems),
     [visibleTimelineItems],
   );
+  const earlierSections = useMemo(
+    () => sections.filter((s) => s.dayDiff < 0),
+    [sections],
+  );
+  const regularSections = useMemo(
+    () => sections.filter((s) => s.dayDiff >= 0),
+    [sections],
+  );
+  const earlierTaskCount = useMemo(
+    () => earlierSections.reduce((sum, s) => sum + s.todos.length, 0),
+    [earlierSections],
+  );
   const hasScopedTasks = useMemo(() => {
     if (scope === "priority") {
-      return filteredTimelineItems.length > 0;
+      return scopeFilteredItems.length > 0;
     }
-    return filteredTimelineItems.some((item) => item.dayDiff === 0);
-  }, [filteredTimelineItems, scope]);
+    if (scope === "all") {
+      return scopeFilteredItems.length > 0;
+    }
+    return scopeFilteredItems.some((item) => item.dayDiff === 0);
+  }, [scopeFilteredItems, scope]);
 
-  const hasMore = visibleCount < filteredTimelineItems.length;
+  const hasMore = visibleCount < scopeFilteredItems.length;
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [filteredTimelineItems.length]);
+  }, [scopeFilteredItems.length]);
 
   useEffect(() => {
     if (!hasMore || !sentinelRef.current) {
@@ -267,7 +294,7 @@ const AllTasksTimelineContainer = ({
           return;
         }
         setVisibleCount((prev) =>
-          Math.min(prev + PAGE_SIZE, filteredTimelineItems.length),
+          Math.min(prev + PAGE_SIZE, scopeFilteredItems.length),
         );
       },
       {
@@ -280,7 +307,7 @@ const AllTasksTimelineContainer = ({
     return () => {
       observer.disconnect();
     };
-  }, [filteredTimelineItems.length, hasMore]);
+  }, [scopeFilteredItems.length, hasMore]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -425,11 +452,7 @@ const AllTasksTimelineContainer = ({
         </header>
 
         <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center gap-2">
-          {scope === "priority" ? (
-            <Flag className="h-6 w-6 text-accent" />
-          ) : (
-            <Sun className="h-6 w-6 text-accent" />
-          )}
+          <ScopeIcon className="h-6 w-6 text-accent" />
           <h3 className="select-none text-2xl font-semibold tracking-tight">
             {pageHeading}
           </h3>
@@ -444,7 +467,7 @@ const AllTasksTimelineContainer = ({
           </div>
         )}
 
-        {!todoLoading && searchQuery.trim() && filteredTimelineItems.length === 0 && (
+        {!todoLoading && searchQuery.trim() && scopeFilteredItems.length === 0 && (
           <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
             <div className="relative mb-6">
               <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted/50">
@@ -469,7 +492,45 @@ const AllTasksTimelineContainer = ({
           </div>
         )}
 
-        {sections.map((section) => (
+        {scope === "all" && earlierSections.length > 0 && (
+          <section className="mb-8 lg:mb-10">
+            <button
+              type="button"
+              onClick={() => setEarlierExpanded((v) => !v)}
+              className="mb-3 mt-6 flex w-full items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10"
+            >
+              {earlierExpanded ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+              <h3 className="select-none text-lg font-semibold tracking-tight">
+                Earlier
+              </h3>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {earlierTaskCount}
+              </span>
+              <LineSeparator className="flex-1 border-border/70" />
+            </button>
+
+            {earlierExpanded &&
+              earlierSections.map((section) => (
+                <div key={section.key}>
+                  <div className="mb-3 flex items-center gap-2 lg:mb-4">
+                    <h4 className="select-none text-base font-medium tracking-tight text-muted-foreground">
+                      {section.label}
+                    </h4>
+                    <LineSeparator className="flex-1 border-border/70" />
+                  </div>
+                  <div className="mb-4">
+                    <TodoGroup todos={section.todos} overdue={true} />
+                  </div>
+                </div>
+              ))}
+          </section>
+        )}
+
+        {regularSections.map((section) => (
           <section
             key={section.key}
             className={cn(
@@ -477,7 +538,7 @@ const AllTasksTimelineContainer = ({
               section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
             )}
           >
-            {section.dayDiff !== 0 && (
+            {(section.dayDiff !== 0 || scope === "all") && (
               <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
                 <h3 className="select-none text-lg font-semibold tracking-tight">
                   {section.label}
@@ -485,7 +546,7 @@ const AllTasksTimelineContainer = ({
                 <LineSeparator className="flex-1 border-border/70" />
               </div>
             )}
-            <TodoGroup todos={section.todos} overdue={section.dayDiff < 0} />
+            <TodoGroup todos={section.todos} overdue={false} perTaskOverdue={section.dayDiff === 0} />
           </section>
         ))}
 

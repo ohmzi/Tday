@@ -52,8 +52,7 @@ GPU acceleration:
   - `DATA_ENCRYPTION_AAD`
 - Rotate secrets on a schedule and keep previous encryption keys in `DATA_ENCRYPTION_KEYS` during rollover windows.
 
-## Native Android (Compose)
-
+## Native Android 
 A new native Android client now lives in:
 
 `/home/ohmz/StudioProjects/Tday/android-compose`

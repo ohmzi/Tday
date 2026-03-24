@@ -1,16 +1,22 @@
 package com.ohmz.tday.compose
 
 import android.net.Uri
+import com.ohmz.tday.compose.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -32,6 +38,8 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -382,12 +390,16 @@ fun TdayApp() {
                     SettingsScreen(
                         user = appUiState.user,
                         selectedThemeMode = appUiState.themeMode,
+                        selectedReminder = appUiState.selectedReminder,
                         adminAiSummaryEnabled = appUiState.adminAiSummaryEnabled,
                         isAdminAiSummaryLoading = appUiState.isAdminAiSummaryLoading,
                         isAdminAiSummarySaving = appUiState.isAdminAiSummarySaving,
                         adminAiSummaryError = appUiState.adminAiSummaryError,
+                        aiSummaryValidationError = appUiState.aiSummaryValidationError,
                         onThemeModeSelected = appViewModel::setThemeMode,
+                        onReminderSelected = appViewModel::setDefaultReminder,
                         onToggleAdminAiSummary = appViewModel::setAdminAiSummaryEnabled,
+                        onDismissAiValidationError = appViewModel::dismissAiSummaryValidationError,
                         onBack = { navController.popBackStack() },
                         onLogout = { appViewModel.logout() },
                     )
@@ -534,20 +546,56 @@ private fun TdayBottomToastHost(
     }
 }
 
+private val splashTaglines = listOf(
+    "Your server remembers, so you don\u2019t have to",
+    "Hosted by you, haunted by deadlines",
+    "Because \u2018I\u2019ll remember later\u2019 is always a lie",
+    "Self-hosted sanity, one task at a time",
+    "Nagging you from your own hardware",
+    "Your data, your server, your no-excuse zone",
+    "Making procrastination slightly harder since v0.1",
+    "Running on your server, running your life",
+    "Because sticky notes don\u2019t have push notifications",
+    "Turning \u2018I forgot\u2019 into \u2018I got this\u2019",
+    "Your personal nudge machine",
+    "Self-hosted, self-organized\u2026 well, getting there",
+    "Where forgotten tasks go to get found",
+    "Adulting, but make it self-hosted",
+    "Taming chaos from a server near you",
+    "Future you says thanks in advance",
+    "The cloud is just someone else\u2019s server. This one\u2019s yours.",
+    "Organizing your life, no landlord required",
+    "Zero trust\u2026 except your own server",
+    "Syncing your tasks, judging your priorities",
+)
+
 @Composable
 private fun SplashScreen() {
+    val tagline = remember { splashTaglines.random() }
+
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Image(
+                painter = painterResource(id = R.drawable.splash_icon),
+                contentDescription = "T'Day",
+                modifier = Modifier.size(160.dp),
+            )
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "T'Day",
+                text = "T\u2019Day",
                 style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                text = "Loading native workspace...",
+                text = tagline,
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
