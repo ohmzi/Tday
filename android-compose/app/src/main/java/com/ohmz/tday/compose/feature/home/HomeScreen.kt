@@ -104,6 +104,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
@@ -986,7 +988,7 @@ private fun CreateTaskButton(
                 imageVector = Icons.Rounded.Add,
                 contentDescription = "Create task",
                 tint = Color.White,
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(40.dp),
             )
         }
     }
