@@ -3,4 +3,5 @@
     <color name="tday_orange">#FFE67E4A</color>
     <color name="tday_white">#FFFFFFFF</color>
     <color name="ic_launcher_background">#FFFFFFFF</color>
+    <color name="splash_background">#FFFFFFFF</color>
 </resources>
