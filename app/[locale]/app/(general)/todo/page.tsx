@@ -1,7 +1,12 @@
-import { redirect } from "next/navigation";
+import React from "react";
+import AllTasksTimelineContainer from "@/features/todayTodos/component/AllTasksTimelineContainer";
 
 const Page = () => {
-  redirect("/app/tday");
+  return (
+    <div className="select-none bg-inherit">
+      <AllTasksTimelineContainer scope="all" />
+    </div>
+  );
 };
 
 export default Page;
