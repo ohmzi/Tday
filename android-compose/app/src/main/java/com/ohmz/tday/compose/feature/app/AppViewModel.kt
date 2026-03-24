@@ -23,6 +23,7 @@ data class AppUiState(
     val loading: Boolean = true,
     val authenticated: Boolean = false,
     val requiresServerSetup: Boolean = false,
+    val requiresLogin: Boolean = false,
     val serverUrl: String? = null,
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val user: SessionUser? = null,
@@ -63,6 +64,7 @@ class AppViewModel @Inject constructor(
                         loading = false,
                         authenticated = false,
                         requiresServerSetup = true,
+                        requiresLogin = false,
                         serverUrl = null,
                         user = null,
                         error = null,
@@ -87,6 +89,7 @@ class AppViewModel @Inject constructor(
                         loading = false,
                         authenticated = true,
                         requiresServerSetup = false,
+                        requiresLogin = false,
                         serverUrl = repository.getServerUrl(),
                         user = sessionUser,
                         error = null,
@@ -111,14 +114,15 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            repository.clearAllLocalUserDataForUnauthenticatedState()
+            repository.clearSessionOnly()
 
             _uiState.update {
                 it.copy(
                     loading = false,
                     authenticated = false,
-                    requiresServerSetup = true,
-                    serverUrl = null,
+                    requiresServerSetup = false,
+                    requiresLogin = true,
+                    serverUrl = repository.getServerUrl(),
                     user = null,
                     error = null,
                     canResetServerTrust = false,
@@ -225,6 +229,7 @@ class AppViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         requiresServerSetup = false,
+                        requiresLogin = true,
                         serverUrl = normalized,
                         error = null,
                         canResetServerTrust = false,
@@ -284,6 +289,7 @@ class AppViewModel @Inject constructor(
                 it.copy(
                     authenticated = false,
                     requiresServerSetup = true,
+                    requiresLogin = false,
                     serverUrl = null,
                     user = null,
                     error = null,
