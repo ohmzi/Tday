@@ -24,10 +24,11 @@ const TodoFormContainer = dynamic(
 
 type TodoItemContainerProps = {
   todoItem: TodoItemType,
-  overdue?: boolean
+  overdue?: boolean,
+  perTaskOverdue?: boolean,
 }
 
-export const TodoItemContainer = ({ todoItem, overdue }: TodoItemContainerProps) => {
+export const TodoItemContainer = ({ todoItem, overdue, perTaskOverdue }: TodoItemContainerProps) => {
   const { listMetaData } = useListMetaData();
   const { useCompleteTodo } = useTodoMutation();
   const { completeMutateFn } = useCompleteTodo();
@@ -41,6 +42,7 @@ export const TodoItemContainer = ({ todoItem, overdue }: TodoItemContainerProps)
     transition,
   };
   const { title, description, completed, priority, rrule, dtstart } = todoItem;
+  const isOverdue = overdue || (perTaskOverdue && !completed && todoItem.due < new Date());
   const itemListID = todoItem.listID;
   const [displayForm, setDisplayForm] = useState(false);
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
@@ -109,7 +111,7 @@ export const TodoItemContainer = ({ todoItem, overdue }: TodoItemContainerProps)
             {description}
           </pre>
           <div className="flex flex-wrap items-center justify-start gap-2 text-xs sm:text-sm">
-            <p className={clsx(overdue ? "text-orange" : "text-lime")}>
+            <p className={clsx(isOverdue ? "text-red" : "text-lime")}>
               {getDisplayDate(dtstart, true, locale, userTimeZone?.timeZone)}
             </p>
             {itemListID &&
@@ -120,8 +122,8 @@ export const TodoItemContainer = ({ todoItem, overdue }: TodoItemContainerProps)
                 </span>
               </p>
             }
-            {overdue && (
-              <p className='rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-orange'>
+            {isOverdue && (
+              <p className='rounded-full border border-red/30 bg-red/10 px-2 py-[0.2rem] text-red font-medium'>
                 overdue
               </p>
             )}
