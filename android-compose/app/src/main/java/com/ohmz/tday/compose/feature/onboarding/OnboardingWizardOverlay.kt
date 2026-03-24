@@ -225,12 +225,9 @@ fun OnboardingWizardOverlay(
         }
     }
 
-    LaunchedEffect(authUiState.savedEmail, authUiState.savedPassword) {
+    LaunchedEffect(authUiState.savedEmail) {
         if (email.isBlank() && authUiState.savedEmail.isNotBlank()) {
             email = authUiState.savedEmail
-        }
-        if (authMode == AuthPanelMode.SIGN_IN && password.isBlank() && authUiState.savedPassword.isNotBlank()) {
-            password = authUiState.savedPassword
         }
     }
 

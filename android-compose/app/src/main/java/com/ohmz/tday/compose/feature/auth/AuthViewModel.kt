@@ -18,7 +18,6 @@ data class AuthUiState(
     val infoMessage: String? = null,
     val pendingApproval: Boolean = false,
     val savedEmail: String = "",
-    val savedPassword: String = "",
 )
 
 @HiltViewModel
@@ -30,14 +29,9 @@ class AuthViewModel @Inject constructor(
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
-        val saved = repository.getSavedCredentials()
-        if (saved != null) {
-            _uiState.update {
-                it.copy(
-                    savedEmail = saved.email,
-                    savedPassword = saved.password,
-                )
-            }
+        val lastEmail = repository.getLastEmail()
+        if (!lastEmail.isNullOrBlank()) {
+            _uiState.update { it.copy(savedEmail = lastEmail) }
         }
     }
 
@@ -152,7 +146,6 @@ class AuthViewModel @Inject constructor(
                     infoMessage = if (outcome.success) outcome.message else null,
                     pendingApproval = outcome.requiresApproval,
                     savedEmail = if (outcome.success) email.trim() else it.savedEmail,
-                    savedPassword = if (outcome.success) password else it.savedPassword,
                 )
             }
 
