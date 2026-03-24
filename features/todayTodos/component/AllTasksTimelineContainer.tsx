@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronDown, ChevronRight, Command, Flag, Layers, Menu, Search, Sun, X } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronRight, Command, Flag, Layers, Menu, Search, Sun, X } from "lucide-react";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
@@ -40,7 +40,7 @@ type TimelineSection = {
   todos: TodoItemType[];
 };
 
-type TimelineScope = "today" | "all" | "priority";
+type TimelineScope = "today" | "scheduled" | "all" | "priority";
 
 const getTimeZoneDate = (date: Date, timeZone?: string) =>
   new Date(date.toLocaleString("en-US", { timeZone: timeZone || "UTC" }));
@@ -163,10 +163,11 @@ const isPriorityTask = (priority: string | null | undefined) => {
     normalized === "urgent";
 };
 
-const SCOPE_CONFIG: Record<TimelineScope, { icon: React.ElementType; headingKey: string; emptyMessage: string }> = {
-  today: { icon: Sun, headingKey: "today", emptyMessage: "No tasks for today" },
-  all: { icon: Layers, headingKey: "today", emptyMessage: "No tasks" },
-  priority: { icon: Flag, headingKey: "priority", emptyMessage: "No priority tasks" },
+const SCOPE_CONFIG: Record<TimelineScope, { icon: React.ElementType; heading: string; emptyMessage: string }> = {
+  today: { icon: Sun, heading: "today", emptyMessage: "No tasks for today" },
+  scheduled: { icon: CalendarClock, heading: "Scheduled", emptyMessage: "No upcoming tasks" },
+  all: { icon: Layers, heading: "All Tasks", emptyMessage: "No tasks" },
+  priority: { icon: Flag, heading: "priority", emptyMessage: "No priority tasks" },
 };
 
 const AllTasksTimelineContainer = ({
@@ -187,8 +188,8 @@ const AllTasksTimelineContainer = ({
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [earlierExpanded, setEarlierExpanded] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const { icon: ScopeIcon, emptyMessage: emptyStateMessage } = SCOPE_CONFIG[scope];
-  const pageHeading = scope === "all" ? "All Tasks" : appDict(SCOPE_CONFIG[scope].headingKey);
+  const { icon: ScopeIcon, emptyMessage: emptyStateMessage, heading: scopeHeading } = SCOPE_CONFIG[scope];
+  const pageHeading = scope === "today" || scope === "priority" ? appDict(scopeHeading) : scopeHeading;
   const isMac =
     typeof window !== "undefined" &&
     navigator.userAgent.toLowerCase().includes("mac");
@@ -243,6 +244,10 @@ const AllTasksTimelineContainer = ({
     if (scope === "today") {
       return filteredTimelineItems.filter((item) => item.dayDiff === 0);
     }
+    if (scope === "scheduled") {
+      const now = new Date();
+      return filteredTimelineItems.filter((item) => item.todo.due >= now);
+    }
     return filteredTimelineItems;
   }, [filteredTimelineItems, scope]);
 
@@ -267,13 +272,10 @@ const AllTasksTimelineContainer = ({
     [earlierSections],
   );
   const hasScopedTasks = useMemo(() => {
-    if (scope === "priority") {
-      return scopeFilteredItems.length > 0;
+    if (scope === "today") {
+      return scopeFilteredItems.some((item) => item.dayDiff === 0);
     }
-    if (scope === "all") {
-      return scopeFilteredItems.length > 0;
-    }
-    return scopeFilteredItems.some((item) => item.dayDiff === 0);
+    return scopeFilteredItems.length > 0;
   }, [scopeFilteredItems, scope]);
 
   const hasMore = visibleCount < scopeFilteredItems.length;
@@ -538,7 +540,7 @@ const AllTasksTimelineContainer = ({
               section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
             )}
           >
-            {(section.dayDiff !== 0 || scope === "all") && (
+            {(section.dayDiff !== 0 || scope === "all" || scope === "scheduled") && (
               <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
                 <h3 className="select-none text-lg font-semibold tracking-tight">
                   {section.label}
