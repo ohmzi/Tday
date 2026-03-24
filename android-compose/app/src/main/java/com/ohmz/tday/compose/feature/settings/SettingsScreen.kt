@@ -22,17 +22,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.BrightnessAuto
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,17 +52,20 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 
 @Composable
 fun SettingsScreen(
     user: SessionUser?,
     selectedThemeMode: AppThemeMode,
+    selectedReminder: ReminderOption,
     adminAiSummaryEnabled: Boolean?,
     isAdminAiSummaryLoading: Boolean,
     isAdminAiSummarySaving: Boolean,
     adminAiSummaryError: String?,
     onThemeModeSelected: (AppThemeMode) -> Unit,
+    onReminderSelected: (ReminderOption) -> Unit,
     onToggleAdminAiSummary: (Boolean) -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit,
@@ -148,6 +159,40 @@ fun SettingsScreen(
                 ThemeModeSelector(
                     selectedThemeMode = selectedThemeMode,
                     onThemeModeSelected = onThemeModeSelected,
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Notifications,
+                        contentDescription = null,
+                        tint = colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = "Reminders",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurface,
+                    )
+                }
+                ReminderSelector(
+                    selectedReminder = selectedReminder,
+                    onReminderSelected = onReminderSelected,
                 )
             }
         }
@@ -348,6 +393,88 @@ private fun ThemeModeSelector(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReminderSelector(
+    selectedReminder: ReminderOption,
+    onReminderSelected: (ReminderOption) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                expanded = true
+            },
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Default reminder",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = colorScheme.onSurface,
+                )
+                Text(
+                    text = selectedReminder.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            ReminderOption.entries.forEach { option ->
+                val isSelected = option == selectedReminder
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = option.label,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    },
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK,
+                        )
+                        onReminderSelected(option)
+                        expanded = false
+                    },
+                    trailingIcon = if (isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                )
             }
         }
     }
