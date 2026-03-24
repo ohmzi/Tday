@@ -167,7 +167,7 @@ class TdayRepository @Inject constructor(
         return if (user?.id != null) {
             syncTimezone()
             runCatching { secureConfigStore.persistRuntimeServerUrl() }
-            secureConfigStore.saveCredentials(email = email, password = password)
+            secureConfigStore.saveLastEmail(email)
             AuthResult.Success
         } else {
             AuthResult.Error("Sign in failed. Please check backend URL and credentials.")
@@ -232,7 +232,7 @@ class TdayRepository @Inject constructor(
                 }
             }
         } finally {
-            clearLocalSessionArtifacts()
+            clearAllLocalData()
         }
     }
 
@@ -300,12 +300,33 @@ class TdayRepository @Inject constructor(
         return secureConfigStore.clearTrustedServerFingerprintForUrl(rawUrl)
     }
 
-    fun getSavedCredentials(): SavedCredentials? = secureConfigStore.getSavedCredentials()
+    fun getLastEmail(): String? = secureConfigStore.getLastEmail()
 
     fun hasPendingMutations(): Boolean = loadOfflineState().pendingMutations.isNotEmpty()
 
     fun clearAllLocalUserDataForUnauthenticatedState() {
-        clearLocalSessionArtifacts()
+        clearAllLocalData()
+    }
+
+    /**
+     * Clears session cookies and offline sync state but preserves server URL,
+     * device ID, certificate fingerprints, theme preferences, and saved email.
+     * Used when a session expires or is revoked but the user should only need
+     * to re-authenticate (not re-onboard).
+     */
+    fun clearSessionOnly() {
+        val previous = lastPersistedState ?: decodeOfflineSyncState(
+            raw = secureConfigStore.getOfflineSyncStateRaw().orEmpty(),
+        )
+        val cleared = OfflineSyncState()
+
+        runCatching { cookieManager.cookieStore?.removeAll() }
+        secureConfigStore.clearOfflineSyncState()
+
+        lastPersistedState = cleared
+        if (hasUiDataChanges(previous, cleared)) {
+            cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+        }
     }
 
     suspend fun syncCachedData(
@@ -2332,7 +2353,7 @@ class TdayRepository @Inject constructor(
         return next
     }
 
-    private fun clearLocalSessionArtifacts() {
+    private fun clearAllLocalData() {
         val previous = lastPersistedState ?: decodeOfflineSyncState(
             raw = secureConfigStore.getOfflineSyncStateRaw().orEmpty(),
         )
