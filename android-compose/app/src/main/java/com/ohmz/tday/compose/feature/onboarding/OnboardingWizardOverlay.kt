@@ -225,12 +225,9 @@ fun OnboardingWizardOverlay(
         }
     }
 
-    LaunchedEffect(authUiState.savedEmail, authUiState.savedPassword) {
+    LaunchedEffect(authUiState.savedEmail) {
         if (email.isBlank() && authUiState.savedEmail.isNotBlank()) {
             email = authUiState.savedEmail
-        }
-        if (authMode == AuthPanelMode.SIGN_IN && password.isBlank() && authUiState.savedPassword.isNotBlank()) {
-            password = authUiState.savedPassword
         }
     }
 
@@ -247,10 +244,16 @@ fun OnboardingWizardOverlay(
         else -> WizardViewState.SERVER
     }
 
-    val focusColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = Color.Black,
-        focusedLabelColor = Color.Black,
-        cursorColor = Color.Black,
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = colorScheme.onSurface,
+        unfocusedTextColor = colorScheme.onSurface,
+        focusedBorderColor = colorScheme.onSurface,
+        unfocusedBorderColor = colorScheme.onSurface.copy(alpha = 0.3f),
+        focusedLabelColor = colorScheme.onSurface,
+        unfocusedLabelColor = colorScheme.onSurface.copy(alpha = 0.6f),
+        cursorColor = colorScheme.onSurface,
+        focusedPlaceholderColor = colorScheme.onSurface.copy(alpha = 0.4f),
+        unfocusedPlaceholderColor = colorScheme.onSurface.copy(alpha = 0.4f),
     )
 
     Box(
@@ -271,16 +274,17 @@ fun OnboardingWizardOverlay(
                 .padding(horizontal = 18.dp),
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 22.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .drawWithCache {
+                        val tint = colorScheme.onSurface
                         val wash = Brush.linearGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.16f),
-                                Color.White.copy(alpha = 0.06f),
+                                tint.copy(alpha = 0.06f),
+                                tint.copy(alpha = 0.02f),
                                 Color.Transparent,
                             ),
                         )
@@ -294,7 +298,7 @@ fun OnboardingWizardOverlay(
                 Icon(
                     imageVector = if (step == WizardStep.SERVER) Icons.Rounded.Language else Icons.Rounded.Lock,
                     contentDescription = null,
-                    tint = lerp(colorScheme.surfaceVariant, colorScheme.primary, 0.3f).copy(alpha = 0.35f),
+                    tint = lerp(colorScheme.surface, colorScheme.primary, 0.3f).copy(alpha = 0.25f),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .size(130.dp),
@@ -310,7 +314,7 @@ fun OnboardingWizardOverlay(
                     Text(
                         text = "Secure onboarding wizard",
                         style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurfaceVariant,
+                        color = colorScheme.onSurface.copy(alpha = 0.6f),
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -347,7 +351,7 @@ fun OnboardingWizardOverlay(
                                             onGo = { connectToServer() },
                                             onDone = { connectToServer() },
                                         ),
-                                        colors = focusColors,
+                                        colors = fieldColors,
                                     )
 
                                     serverError?.let { message ->
@@ -434,7 +438,7 @@ fun OnboardingWizardOverlay(
                                                 keyboardActions = KeyboardActions(
                                                     onNext = { passwordFocusRequester.requestFocus() },
                                                 ),
-                                                colors = focusColors,
+                                                colors = fieldColors,
                                             )
                                             OutlinedTextField(
                                                 modifier = Modifier
@@ -454,7 +458,7 @@ fun OnboardingWizardOverlay(
                                                     onDone = { signIn() },
                                                 ),
                                                 visualTransformation = PasswordVisualTransformation(),
-                                                colors = focusColors,
+                                                colors = fieldColors,
                                             )
 
                                             localAuthError?.let { message ->
@@ -547,7 +551,7 @@ fun OnboardingWizardOverlay(
                                                 keyboardActions = KeyboardActions(
                                                     onNext = { passwordFocusRequester.requestFocus() },
                                                 ),
-                                                colors = focusColors,
+                                                colors = fieldColors,
                                             )
                                             OutlinedTextField(
                                                 modifier = Modifier
@@ -566,7 +570,7 @@ fun OnboardingWizardOverlay(
                                                 keyboardActions = KeyboardActions(
                                                     onNext = { registerPasswordFocusRequester.requestFocus() },
                                                 ),
-                                                colors = focusColors,
+                                                colors = fieldColors,
                                             )
                                             OutlinedTextField(
                                                 modifier = Modifier
@@ -586,7 +590,7 @@ fun OnboardingWizardOverlay(
                                                     onNext = { registerConfirmFocusRequester.requestFocus() },
                                                 ),
                                                 visualTransformation = PasswordVisualTransformation(),
-                                                colors = focusColors,
+                                                colors = fieldColors,
                                             )
                                             OutlinedTextField(
                                                 modifier = Modifier
@@ -606,7 +610,7 @@ fun OnboardingWizardOverlay(
                                                     onDone = { createAccount() },
                                                 ),
                                                 visualTransformation = PasswordVisualTransformation(),
-                                                colors = focusColors,
+                                                colors = fieldColors,
                                             )
 
                                             localAuthError?.let { message ->
@@ -747,11 +751,12 @@ private fun WizardLoading(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         )
     }
 }
@@ -773,7 +778,7 @@ private fun WizardStepChip(
         animationSpec = tween(durationMillis = 180),
         label = "wizardStepChipBorderWidth",
     )
-    val ringColor = lerp(color, Color.Black, 0.35f)
+    val ringColor = lerp(color, MaterialTheme.colorScheme.onSurface, 0.35f)
 
     Card(
         modifier = modifier.graphicsLayer(

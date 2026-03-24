@@ -18,10 +18,12 @@ const TodoGroup = ({
   todos,
   className,
   overdue,
+  perTaskOverdue,
 }: {
   todos: TodoItemType[];
   className?: string;
   overdue?: boolean;
+  perTaskOverdue?: boolean;
 }) => {
   const { toast } = useToast()
   const { preferences } = useUserPreferences();
@@ -97,7 +99,7 @@ const TodoGroup = ({
               toast({ title: "Drag disabled; a global filter is active" })
             }}
           >
-            <TodoItemContainer todoItem={item} overdue={overdue} />
+            <TodoItemContainer todoItem={item} overdue={overdue} perTaskOverdue={perTaskOverdue} />
           </div>
         ))}
       </div>
@@ -116,7 +118,7 @@ const TodoGroup = ({
           items={items}
           strategy={verticalListSortingStrategy}>
           {items.map((item) => (
-            <TodoItemContainer todoItem={item} key={item.id} overdue={overdue} />
+            <TodoItemContainer todoItem={item} key={item.id} overdue={overdue} perTaskOverdue={perTaskOverdue} />
           ))}
         </SortableContext>
       </DndContext>

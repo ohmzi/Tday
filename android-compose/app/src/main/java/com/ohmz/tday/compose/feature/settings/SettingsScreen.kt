@@ -22,17 +22,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.BrightnessAuto
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,18 +54,23 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 
 @Composable
 fun SettingsScreen(
     user: SessionUser?,
     selectedThemeMode: AppThemeMode,
+    selectedReminder: ReminderOption,
     adminAiSummaryEnabled: Boolean?,
     isAdminAiSummaryLoading: Boolean,
     isAdminAiSummarySaving: Boolean,
     adminAiSummaryError: String?,
+    aiSummaryValidationError: String?,
     onThemeModeSelected: (AppThemeMode) -> Unit,
+    onReminderSelected: (ReminderOption) -> Unit,
     onToggleAdminAiSummary: (Boolean) -> Unit,
+    onDismissAiValidationError: () -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit,
 ) {
@@ -100,8 +115,8 @@ fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -117,14 +132,14 @@ fun SettingsScreen(
                     Text(
                         text = user?.email.orEmpty(),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = colorScheme.onSurfaceVariant,
+                        color = colorScheme.onSurface.copy(alpha = 0.7f),
                     )
                 }
                 Text(
                     modifier = Modifier.padding(top = 2.dp),
                     text = "Role: ${user?.role ?: "USER"}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurfaceVariant,
+                    color = colorScheme.onSurface.copy(alpha = 0.55f),
                 )
             }
         }
@@ -132,8 +147,8 @@ fun SettingsScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -152,12 +167,46 @@ fun SettingsScreen(
             }
         }
 
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Notifications,
+                        contentDescription = null,
+                        tint = colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = "Reminders",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurface,
+                    )
+                }
+                ReminderSelector(
+                    selectedReminder = selectedReminder,
+                    onReminderSelected = onReminderSelected,
+                )
+            }
+        }
+
         if (isAdminUser) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -202,7 +251,7 @@ fun SettingsScreen(
                         Text(
                             text = "Saving admin setting...",
                             style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.onSurfaceVariant,
+                            color = colorScheme.onSurface.copy(alpha = 0.55f),
                         )
                     }
                     if (!adminAiSummaryError.isNullOrBlank()) {
@@ -220,8 +269,8 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             onClick = onLogout,
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         ) {
             Row(
                 modifier = Modifier
@@ -244,6 +293,26 @@ fun SettingsScreen(
             }
         }
     }
+
+    if (aiSummaryValidationError != null) {
+        AlertDialog(
+            onDismissRequest = onDismissAiValidationError,
+            title = {
+                Text(
+                    text = "AI Summary Unavailable",
+                    fontWeight = FontWeight.SemiBold,
+                )
+            },
+            text = {
+                Text(text = aiSummaryValidationError)
+            },
+            confirmButton = {
+                TextButton(onClick = onDismissAiValidationError) {
+                    Text("OK")
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -260,8 +329,8 @@ private fun SettingsHeaderButton(
             onClick()
         },
         shape = CircleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.15f)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
         Box(
@@ -292,7 +361,7 @@ private fun ThemeModeSelector(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            containerColor = colorScheme.surfaceVariant,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
@@ -318,7 +387,7 @@ private fun ThemeModeSelector(
                         .clip(RoundedCornerShape(14.dp))
                         .background(
                             color = if (selected) {
-                                colorScheme.background
+                                colorScheme.primary.copy(alpha = 0.15f)
                             } else {
                                 Color.Transparent
                             },
@@ -336,7 +405,7 @@ private fun ThemeModeSelector(
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = if (selected) colorScheme.onSurface else colorScheme.onSurfaceVariant,
+                            tint = if (selected) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.6f),
                             modifier = Modifier.size(14.dp),
                         )
                         Text(
@@ -344,10 +413,92 @@ private fun ThemeModeSelector(
                             text = mode.label,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                            color = if (selected) colorScheme.onSurface else colorScheme.onSurfaceVariant,
+                            color = if (selected) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.6f),
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReminderSelector(
+    selectedReminder: ReminderOption,
+    onReminderSelected: (ReminderOption) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                expanded = true
+            },
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = colorScheme.surfaceVariant,
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Default reminder",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = colorScheme.onSurface,
+                )
+                Text(
+                    text = selectedReminder.label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.primary,
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            ReminderOption.entries.forEach { option ->
+                val isSelected = option == selectedReminder
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = option.label,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    },
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK,
+                        )
+                        onReminderSelected(option)
+                        expanded = false
+                    },
+                    trailingIcon = if (isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                )
             }
         }
     }

@@ -45,7 +45,7 @@ export function filterTodosForSummaryMode({
     }
 
     if (mode === "scheduled") {
-      return activeTodos.filter((todo) => todo.due >= start);
+      return activeTodos.filter((todo) => todo.due >= now);
     }
 
     if (mode === "priority") {
@@ -128,12 +128,12 @@ function joinTaskTitles(titles: string[]): string {
   return `${titles.slice(0, -1).join(", ")}, and ${titles[titles.length - 1]}`;
 }
 
-function taskPhrase(task: Pick<SummaryTaskCandidate, "title" | "dueLabel" | "dueDayDelta">): string {
+function taskPhrase(task: Pick<SummaryTaskCandidate, "title" | "dueLabel" | "dueDayDelta" | "isOverdue">): string {
   const duePhrase = task.dueLabel.replace(/^due\s+/i, "").trim();
-  if (duePhrase.toLowerCase() === "tonight") {
+  if (duePhrase.toLowerCase() === "tonight" && !task.isOverdue) {
     return `${task.title} by tonight`;
   }
-  const isPast = (task.dueDayDelta ?? 0) < 0;
+  const isPast = task.isOverdue || (task.dueDayDelta ?? 0) < 0;
   return `${task.title}, which ${isPast ? "was" : "is"} due ${duePhrase}`;
 }
 
@@ -252,7 +252,7 @@ function buildDayGroupedPhrase(tasks: SummaryTaskCandidate[]): string {
   const joinedTaskPhrases = joinTaskTitles(windowPhrases);
   const dueTarget = tasks[0].dueDayTarget ?? tasks[0].dueLabel.replace(/^due\s+/, "");
   const qualifier = tasks.length === 2 ? "both" : "all";
-  const isPast = (tasks[0].dueDayDelta ?? 0) < 0;
+  const isPast = tasks[0].isOverdue || (tasks[0].dueDayDelta ?? 0) < 0;
   return `${joinedTaskPhrases}, ${qualifier} ${isPast ? "were" : "are"} due ${dueTarget}`;
 }
 
@@ -266,6 +266,7 @@ export type SummaryTaskCandidate = {
   dueDayKey?: string;
   dueDayTarget?: string;
   dueWindowPhrase?: string;
+  isOverdue?: boolean;
 };
 
 export function buildReadableTaskSummary({
@@ -325,6 +326,7 @@ export function buildSummaryTaskCandidates(
       return 0;
     });
 
+  const nowMs = now.getTime();
   return ranked.map(({ todo, dueEpochMs, dayDelta }, index) => ({
     ...buildDueDescriptor(todo.due, now, timeZone),
     id: `T${index + 1}`,
@@ -332,6 +334,7 @@ export function buildSummaryTaskCandidates(
     priorityLabel: summaryPriorityLabel(todo.priority),
     dueEpochMs,
     dueDayDelta: dayDelta,
+    isOverdue: dueEpochMs < nowMs,
   }));
 }
 
@@ -373,7 +376,7 @@ export function buildSummaryPrompt({
     "- summary must consider all tasks shown in this view, not just the first few.",
     "- Write as a chronological plan, for example: Start with ..., Next up ..., Then ..., Later on [date] ....",
     "- Do not start with generic strategy lines like 'Handle the most urgent work first'.",
-    "- summary should mention due timing in plain language (today/tomorrow/date).",
+    "- summary should mention due timing in plain language (today/tomorrow/date). Use past tense ('was due') for overdue tasks.",
     "- Use morning/afternoon/night only for tasks due within 3 days of now; for tasks farther away, treat them as all-day.",
     "- Convey urgency through ordering and due timing, not labels.",
     "- Keep phrasing conversational and avoid parenthetical '(...due ...)' technical pointers.",
@@ -383,7 +386,10 @@ export function buildSummaryPrompt({
     "- No prose, no markdown, no code fences.",
     "",
     "Tasks:",
-    ...candidates.map((task) => `- ${task.id}: ${task.title} (${urgencyStyle(task.priorityLabel)}, ${task.dueLabel})`),
+    ...candidates.map((task) => {
+      const overdueTag = task.isOverdue ? ", OVERDUE" : "";
+      return `- ${task.id}: ${task.title} (${urgencyStyle(task.priorityLabel)}, ${task.dueLabel}${overdueTag})`;
+    }),
   ].join("\n");
 }
 

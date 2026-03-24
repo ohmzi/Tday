@@ -36,9 +36,8 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideCookieManager(): CookieManager = CookieManager().apply {
-        setCookiePolicy(CookiePolicy.ACCEPT_ORIGINAL_SERVER)
-    }
+    fun provideCookieManager(cookieStore: EncryptedCookieStore): CookieManager =
+        CookieManager(cookieStore, CookiePolicy.ACCEPT_ORIGINAL_SERVER)
 
     @Provides
     @Singleton
