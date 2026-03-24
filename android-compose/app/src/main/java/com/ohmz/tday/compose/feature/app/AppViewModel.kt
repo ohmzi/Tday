@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.TdayRepository
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
+import com.ohmz.tday.compose.core.model.AdminSettingsResponse
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
@@ -39,6 +40,7 @@ data class AppUiState(
     val isAdminAiSummaryLoading: Boolean = false,
     val isAdminAiSummarySaving: Boolean = false,
     val adminAiSummaryError: String? = null,
+    val aiSummaryValidationError: String? = null,
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
 )
 
@@ -187,7 +189,7 @@ class AppViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAdminAiSummaryLoading = false,
-                            adminAiSummaryError = error.message ?: "Could not load admin settings",
+                            adminAiSummaryError = friendlyAdminError(error, "Could not load admin settings"),
                         )
                     }
                 }
@@ -201,31 +203,49 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
+                    adminAiSummaryEnabled = enabled,
                     isAdminAiSummarySaving = true,
                     adminAiSummaryError = null,
                 )
             }
             runCatching { repository.updateAdminAiSummaryEnabled(enabled) }
-                .onSuccess { updated ->
+                .onSuccess { response ->
+                    val validationFailed = response.validationError != null
+                    if (validationFailed) {
+                        android.util.Log.e(
+                            "AppViewModel",
+                            "AI summary validation failed: ${response.validationError}",
+                        )
+                    }
                     _uiState.update {
                         it.copy(
-                            adminAiSummaryEnabled = updated,
+                            adminAiSummaryEnabled = response.aiSummaryEnabled,
                             isAdminAiSummaryLoading = false,
                             isAdminAiSummarySaving = false,
                             adminAiSummaryError = null,
+                            aiSummaryValidationError = response.validationError,
                         )
                     }
                 }
                 .onFailure { error ->
+                    android.util.Log.e(
+                        "AppViewModel",
+                        "AI summary toggle failed",
+                        error,
+                    )
                     _uiState.update {
                         it.copy(
                             isAdminAiSummarySaving = false,
-                            adminAiSummaryError = error.message ?: "Could not update admin settings",
+                            adminAiSummaryError = friendlyAdminError(error, "Could not update admin settings"),
                         )
                     }
                     refreshAdminAiSummarySetting()
                 }
         }
+    }
+
+    fun dismissAiSummaryValidationError() {
+        _uiState.update { it.copy(aiSummaryValidationError = null) }
     }
 
     fun saveServerUrl(
@@ -392,6 +412,15 @@ class AppViewModel @Inject constructor(
 
     private fun isAdmin(user: SessionUser?): Boolean {
         return user?.role?.equals("ADMIN", ignoreCase = true) == true
+    }
+
+    private fun friendlyAdminError(error: Throwable, fallback: String): String {
+        if (error is kotlinx.serialization.SerializationException) {
+            return "$fallback — server returned an invalid response"
+        }
+        val msg = error.message
+        if (msg.isNullOrBlank() || msg.length > 120) return fallback
+        return msg
     }
 
     private fun toServerSetupMessage(error: Throwable): String {
