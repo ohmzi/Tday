@@ -6,9 +6,13 @@ import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.TdayRepository
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.core.notification.ReminderOption
+import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,12 +39,15 @@ data class AppUiState(
     val isAdminAiSummaryLoading: Boolean = false,
     val isAdminAiSummarySaving: Boolean = false,
     val adminAiSummaryError: String? = null,
+    val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
 )
 
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val repository: TdayRepository,
     private val themePreferenceStore: ThemePreferenceStore,
+    private val reminderScheduler: TaskReminderScheduler,
+    private val reminderPreferenceStore: ReminderPreferenceStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -49,7 +56,10 @@ class AppViewModel @Inject constructor(
 
     init {
         _uiState.update {
-            it.copy(themeMode = themePreferenceStore.getThemeMode())
+            it.copy(
+                themeMode = themePreferenceStore.getThemeMode(),
+                selectedReminder = reminderPreferenceStore.getDefaultReminder(),
+            )
         }
         bootstrap()
     }
@@ -284,6 +294,7 @@ class AppViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             runCatching { repository.logout() }
+            runCatching { reminderScheduler.cancelAll() }
             ensureResyncLoop(authenticated = false)
             _uiState.update {
                 it.copy(
@@ -319,12 +330,27 @@ class AppViewModel @Inject constructor(
                 )
             }
             _uiState.update { it.copy(isManualSyncing = false) }
+            launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
         }
     }
 
     fun setThemeMode(mode: AppThemeMode) {
         themePreferenceStore.setThemeMode(mode)
         _uiState.update { it.copy(themeMode = mode) }
+    }
+
+    fun setDefaultReminder(option: ReminderOption) {
+        reminderPreferenceStore.setDefaultReminder(option)
+        _uiState.update { it.copy(selectedReminder = option) }
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
+        }
+    }
+
+    fun rescheduleReminders() {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
+        }
     }
 
     fun clearPendingApprovalNotice() {
@@ -351,6 +377,7 @@ class AppViewModel @Inject constructor(
                 }.getOrDefault(RESYNC_INTERVAL_MS)
                 delay(delayMs)
                 runCatching { repository.syncCachedData(force = true) }
+                launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
             }
         }
     }
@@ -359,6 +386,7 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { repository.syncCachedData(force = true) }
             runCatching { repository.syncTimezone() }
+            launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
         }
     }
 

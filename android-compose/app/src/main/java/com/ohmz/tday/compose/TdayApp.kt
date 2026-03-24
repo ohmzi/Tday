@@ -389,11 +389,13 @@ fun TdayApp() {
                     SettingsScreen(
                         user = appUiState.user,
                         selectedThemeMode = appUiState.themeMode,
+                        selectedReminder = appUiState.selectedReminder,
                         adminAiSummaryEnabled = appUiState.adminAiSummaryEnabled,
                         isAdminAiSummaryLoading = appUiState.isAdminAiSummaryLoading,
                         isAdminAiSummarySaving = appUiState.isAdminAiSummarySaving,
                         adminAiSummaryError = appUiState.adminAiSummaryError,
                         onThemeModeSelected = appViewModel::setThemeMode,
+                        onReminderSelected = appViewModel::setDefaultReminder,
                         onToggleAdminAiSummary = appViewModel::setAdminAiSummaryEnabled,
                         onBack = { navController.popBackStack() },
                         onLogout = { appViewModel.logout() },
