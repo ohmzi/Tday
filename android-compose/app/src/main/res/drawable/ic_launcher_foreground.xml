@@ -4,18 +4,23 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Solid T letterform with rounded corners -->
+    <!-- T stem — pill-width, rounded bottom, matches crossbar thickness -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M36,28 L72,28 A5,5 0 0,1 77,33 A5,5 0 0,1 72,38 L59,38 L59,56 A5,5 0 0,1 49,56 L49,38 L36,38 A5,5 0 0,1 31,33 A5,5 0 0,1 36,28 Z" />
+        android:fillColor="#6EA8E1"
+        android:pathData="M47,40 L61,40 L61,79 A7,7 0 0,1 47,79 Z" />
 
-    <!-- Bold checkmark -->
+    <!-- Checkmark — thick rounded stroke in soft coral -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M36,64 L48,76 L72,54"
-        android:strokeColor="#FFFFFF"
+        android:pathData="M30,66 L44,80 L72,26"
+        android:strokeColor="#E57373"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:strokeWidth="9" />
+        android:strokeWidth="12" />
+
+    <!-- T crossbar — pill shape with semicircular ends -->
+    <path
+        android:fillColor="#6EA8E1"
+        android:pathData="M33,26 L75,26 A7,7 0 0,1 82,33 A7,7 0 0,1 75,40 L33,40 A7,7 0 0,1 26,33 A7,7 0 0,1 33,26 Z" />
 
 </vector>
