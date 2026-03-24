@@ -395,9 +395,11 @@ fun TdayApp() {
                         isAdminAiSummaryLoading = appUiState.isAdminAiSummaryLoading,
                         isAdminAiSummarySaving = appUiState.isAdminAiSummarySaving,
                         adminAiSummaryError = appUiState.adminAiSummaryError,
+                        aiSummaryValidationError = appUiState.aiSummaryValidationError,
                         onThemeModeSelected = appViewModel::setThemeMode,
                         onReminderSelected = appViewModel::setDefaultReminder,
                         onToggleAdminAiSummary = appViewModel::setAdminAiSummaryEnabled,
+                        onDismissAiValidationError = appViewModel::dismissAiSummaryValidationError,
                         onBack = { navController.popBackStack() },
                         onLogout = { appViewModel.logout() },
                     )

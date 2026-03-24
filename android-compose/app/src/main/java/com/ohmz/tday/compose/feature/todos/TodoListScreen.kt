@@ -1835,8 +1835,15 @@ private fun SwipeTaskRow(
         DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
     val dueDateTimeText =
         DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
+    val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
-    val dueSubtitleText = if (showDuePrefix) "Due $dueBodyText" else dueBodyText
+    val dueSubtitleText = if (isOverdue) {
+        "Overdue, $dueBodyText"
+    } else if (showDuePrefix) {
+        "Due $dueBodyText"
+    } else {
+        dueBodyText
+    }
     val rowShape = RoundedCornerShape(16.dp)
     val actionContainerColor =
         colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
@@ -2060,7 +2067,7 @@ private fun SwipeTaskRow(
                                 if (showDueText) {
                                     Text(
                                         text = dueSubtitleText,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                        color = if (isOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
@@ -2111,6 +2118,8 @@ private fun TodayTodoRow(
     val colorScheme = MaterialTheme.colorScheme
     val dueText =
         DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
+    val isDetailOverdue = !todo.completed && todo.due.isBefore(Instant.now())
+    val detailDueText = if (isDetailOverdue) "Overdue, $dueText" else dueText
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -2141,8 +2150,8 @@ private fun TodayTodoRow(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = dueText,
-                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    text = detailDueText,
+                    color = if (isDetailOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }

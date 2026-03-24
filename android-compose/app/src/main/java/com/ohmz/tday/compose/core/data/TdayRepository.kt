@@ -26,6 +26,7 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.TodoSummaryRequest
 import com.ohmz.tday.compose.core.model.TodoSummaryResponse
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
+import com.ohmz.tday.compose.core.model.AdminSettingsResponse
 import com.ohmz.tday.compose.core.model.UpdateAdminSettingsRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
@@ -438,19 +439,20 @@ class TdayRepository @Inject constructor(
         return enabled
     }
 
-    suspend fun updateAdminAiSummaryEnabled(enabled: Boolean): Boolean {
-        val updated = requireBody(
+    suspend fun updateAdminAiSummaryEnabled(enabled: Boolean): AdminSettingsResponse {
+        val response = requireBody(
             api.patchAdminSettings(
                 UpdateAdminSettingsRequest(
                     aiSummaryEnabled = enabled,
                 ),
             ),
             "Could not update admin settings",
-        ).aiSummaryEnabled
+        )
         updateOfflineState { state ->
-            if (state.aiSummaryEnabled == updated) state else state.copy(aiSummaryEnabled = updated)
+            if (state.aiSummaryEnabled == response.aiSummaryEnabled) state
+            else state.copy(aiSummaryEnabled = response.aiSummaryEnabled)
         }
-        return updated
+        return response
     }
 
     suspend fun summarizeTodos(
