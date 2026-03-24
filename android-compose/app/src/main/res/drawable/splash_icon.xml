@@ -1,0 +1,32 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="192dp"
+    android:height="192dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Subtle drop shadow -->
+    <path
+        android:fillAlpha="0.06"
+        android:fillColor="#000000"
+        android:pathData="M54,56.5 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
+
+    <!-- Blue circle background -->
+    <path
+        android:fillColor="#6EA8E1"
+        android:pathData="M54,54 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
+
+    <!-- Solid T letterform with rounded corners -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M36,28 L72,28 A5,5 0 0,1 77,33 A5,5 0 0,1 72,38 L59,38 L59,56 A5,5 0 0,1 49,56 L49,38 L36,38 A5,5 0 0,1 31,33 A5,5 0 0,1 36,28 Z" />
+
+    <!-- Bold checkmark -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M36,64 L48,76 L72,54"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="9" />
+
+</vector>

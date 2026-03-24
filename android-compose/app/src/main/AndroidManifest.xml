@@ -7,16 +7,17 @@
         android:name=".TdayApplication"
         android:allowBackup="false"
         android:fullBackupContent="false"
-        android:icon="@android:drawable/sym_def_app_icon"
+        android:icon="@mipmap/ic_launcher"
         android:label="T'Day"
-        android:roundIcon="@android:drawable/sym_def_app_icon"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Tday"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.Tday.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
