@@ -123,6 +123,10 @@ async function transformSensitiveFields<T>(
     return value;
   }
 
+  if (value instanceof Date || value instanceof Uint8Array || value instanceof ArrayBuffer) {
+    return value;
+  }
+
   const record = value as Record<string, unknown>;
   const next: Record<string, unknown> = {};
 
