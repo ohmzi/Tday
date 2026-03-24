@@ -17,7 +17,7 @@ Native Kotlin + Jetpack Compose Android client for T'Day.
 
 First launch behavior:
 - The app shows a server URL dialog before login.
-- Enter your host (for example: `tday.ohmz.cloud`).
+- Enter your host.
 - URL is normalized and kept in memory for the current auth flow.
 
 Persistence:
