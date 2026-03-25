@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,7 +17,7 @@ import javax.inject.Singleton
 class TaskReminderScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
     private val alarmManager: AlarmManager,
-    private val repository: TdayRepository,
+    private val repository: TodoRepository,
     private val preferenceStore: ReminderPreferenceStore,
 ) {
     fun rescheduleAll() {

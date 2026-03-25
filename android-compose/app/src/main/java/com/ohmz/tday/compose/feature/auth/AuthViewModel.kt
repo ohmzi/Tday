@@ -2,7 +2,7 @@ package com.ohmz.tday.compose.feature.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.model.AuthResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -22,14 +22,14 @@ data class AuthUiState(
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val repository: TdayRepository,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     init {
-        val lastEmail = repository.getLastEmail()
+        val lastEmail = authRepository.getLastEmail()
         if (!lastEmail.isNullOrBlank()) {
             _uiState.update { it.copy(savedEmail = lastEmail) }
         }
@@ -65,10 +65,7 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null, infoMessage = null) }
 
             val result = runCatching {
-                repository.login(
-                    email = email.trim(),
-                    password = password,
-                )
+                authRepository.login(email = email.trim(), password = password)
             }.getOrElse { error ->
                 _uiState.update {
                     it.copy(
@@ -121,7 +118,7 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null, infoMessage = null) }
 
             val outcome = runCatching {
-                repository.register(
+                authRepository.register(
                     firstName = firstName.trim(),
                     lastName = lastName.trim(),
                     email = email.trim(),
