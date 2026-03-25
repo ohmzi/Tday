@@ -1,0 +1,62 @@
+---
+description: Prevent AI-injected trailers (Made-with, Co-authored-by) in git commits
+globs:
+alwaysApply: true
+---
+
+# No AI Trailers in Git Commits
+
+## Problem
+
+The Cursor IDE silently appends `Made-with: Cursor` trailers to commits created via `git commit`. This project strictly forbids any AI attribution in commit history.
+
+## Rules
+
+1. **NEVER use `git commit`** directly — Cursor intercepts it and injects trailers.
+2. **ALWAYS use `git commit-tree`** (a plumbing command Cursor cannot intercept) to create commits.
+3. **NEVER use `--no-verify`** to bypass hooks.
+4. **NEVER include** `Made-with:`, `Co-authored-by: Cursor`, `Generated-by:`, or similar AI attribution in commit messages or PR descriptions.
+
+## How to Commit (Required Pattern)
+
+```bash
+# 1. Stage your changes
+git add <files>
+
+# 2. Write the tree
+TREE=$(git write-tree)
+
+# 3. Create the commit object directly (bypasses Cursor's trailer injection)
+COMMIT_MSG="Your commit message here"
+NEW_COMMIT=$(echo "$COMMIT_MSG" | git commit-tree "$TREE" -p HEAD)
+
+# 4. Move the branch pointer
+git reset --hard "$NEW_COMMIT"
+```
+
+For multi-line messages use a heredoc:
+
+```bash
+NEW_COMMIT=$(cat <<'EOF' | git commit-tree "$TREE" -p HEAD
+feat(api): add batch completion endpoint
+
+Allows clients to mark multiple todos as complete in a single request,
+reducing round-trips for bulk operations.
+EOF
+)
+git reset --hard "$NEW_COMMIT"
+```
+
+## Verification
+
+After committing, always verify no trailers were added:
+
+```bash
+git log -1 --format="%(trailers)"
+```
+
+The output must be empty. If it is not, the commit must be recreated.
+
+## Safety Net
+
+This project also has a `commit-msg` git hook (`scripts/commit-msg`) that strips these trailers automatically, but the plumbing approach above is the primary defense since the hook may not run in all environments.
