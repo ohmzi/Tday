@@ -112,10 +112,6 @@
     <string name="todos_summary_title">Summary</string>
     <string name="todos_summary_close">Close summary</string>
     <string name="todos_summary_loading">Creating your task summary…</string>
-    <string name="todos_summary_source">Source: %1$s</string>
-    <string name="todos_summary_generated_at">Generated at %1$s</string>
-    <string name="todos_summary_refresh">Refresh summary</string>
-    <string name="todos_summary_summarizing">Summarizing…</string>
     <string name="todos_list_settings">List settings</string>
     <string name="todos_save_list_settings">Save list settings</string>
     <string name="todos_due_overdue_prefix">Overdue, </string>
@@ -160,6 +156,7 @@
     <string name="offline_banner_with_pending">Offline — %1$d pending change(s)</string>
     <string name="error_auth_expired">Session expired. Please sign in again.</string>
     <string name="error_server">Server error. Please try again later.</string>
-    <string name="error_connectivity">Unable to connect. Check your network.</string>
+    <string name="error_connectivity_title">No Internet Connection</string>
+    <string name="error_connectivity">Unable to connect. Please check your network connection and try again.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
 </resources>
