@@ -15,3 +15,27 @@ jobs:
             exit 1
           fi
           echo "Source branch is develop — allowed."
+
+  lint-and-test:
+    runs-on: ubuntu-latest
+    needs: check-source-branch
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test
+        env:
+          TZ: UTC
