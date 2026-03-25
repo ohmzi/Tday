@@ -44,6 +44,18 @@
             android:exported="false" />
 
         <receiver
+            android:name=".feature.widget.TodayTasksWidgetReceiver"
+            android:exported="true"
+            android:label="Today's Tasks">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_tasks_widget_info" />
+        </receiver>
+
+        <receiver
             android:name=".core.notification.BootRescheduleReceiver"
             android:exported="false">
             <intent-filter>
