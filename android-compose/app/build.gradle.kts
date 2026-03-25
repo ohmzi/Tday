@@ -7,6 +7,17 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+val projectVersion: String by lazy {
+    val packageJson = File(rootProject.projectDir.parentFile, "package.json")
+    val match = Regex(""""version"\s*:\s*"([^"]+)"""").find(packageJson.readText())
+    match?.groupValues?.get(1) ?: error("Could not read version from package.json")
+}
+
+val projectVersionCode: Int by lazy {
+    val (major, minor, patch) = projectVersion.split(".").map { it.toInt() }
+    major * 10000 + minor * 100 + patch
+}
+
 android {
     namespace = "com.ohmz.tday.compose"
     compileSdk = 35
@@ -15,8 +26,8 @@ android {
         applicationId = "com.ohmz.tday.compose"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = projectVersionCode
+        versionName = projectVersion
         manifestPlaceholders["usesCleartextTraffic"] = "false"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
