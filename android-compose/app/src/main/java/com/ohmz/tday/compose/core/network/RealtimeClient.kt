@@ -46,9 +46,7 @@ class RealtimeClient @Inject constructor(
         if (socket != null) return
 
         val baseUrl = secureConfigStore.getServerUrl()?.toHttpUrlOrNull() ?: return
-        val wsScheme = if (baseUrl.isHttps) "wss" else "ws"
         val wsUrl = baseUrl.newBuilder()
-            .scheme(wsScheme)
             .addPathSegments("api/realtime")
             .build()
 
