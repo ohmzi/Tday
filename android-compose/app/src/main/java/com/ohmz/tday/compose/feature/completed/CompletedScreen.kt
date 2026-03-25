@@ -61,6 +61,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
@@ -70,6 +71,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -185,6 +187,7 @@ fun CompletedScreen(
             items(timelineSections, key = { it.key }) { section ->
                 val isCollapsed = collapsedSectionKeys.contains(section.key)
                 CompletedTimelineSection(
+                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                     section = section,
                     isCollapsed = isCollapsed,
                     onHeaderClick = {
@@ -206,9 +209,9 @@ fun CompletedScreen(
                 item {
                     EmptyCompletedState(
                         message = if (uiState.isLoading) {
-                            "Loading..."
+                            stringResource(R.string.label_loading)
                         } else {
-                            "No completed tasks yet"
+                            stringResource(R.string.completed_empty)
                         },
                     )
                 }
@@ -216,10 +219,9 @@ fun CompletedScreen(
 
             uiState.errorMessage?.let { message ->
                 item {
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                    com.ohmz.tday.compose.core.ui.ErrorRetryCard(
+                        message = message,
+                        onRetry = onRefresh,
                     )
                 }
             }
@@ -273,12 +275,12 @@ private fun CompletedTopBar(
                 CompletedHeaderButton(
                     onClick = onBack,
                     icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                 )
                 CompletedHeaderButton(
                     onClick = { },
                     icon = Icons.Rounded.MoreHoriz,
-                    contentDescription = "More options",
+                    contentDescription = stringResource(R.string.action_more_options),
                 )
             }
             if (collapsedTitleAlpha > 0.001f) {
@@ -299,7 +301,7 @@ private fun CompletedTopBar(
                         modifier = Modifier.size(28.dp),
                     )
                     Text(
-                        text = "Completed",
+                        text = stringResource(R.string.completed_title),
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF4E8A67),
@@ -330,7 +332,7 @@ private fun CompletedTopBar(
                         modifier = Modifier.size(28.dp),
                     )
                     Text(
-                        text = "Completed",
+                        text = stringResource(R.string.completed_title),
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF4E8A67),
@@ -375,7 +377,31 @@ private fun CompletedHeaderButton(
 }
 
 @Composable
+private fun completedSectionDisplayTitle(section: CompletedSection): String {
+    val zoneId = ZoneId.systemDefault()
+    val today = LocalDate.now(zoneId)
+    return when {
+        section.key == "earlier" -> stringResource(R.string.completed_section_earlier)
+        section.key.startsWith("day-") -> {
+            val date = LocalDate.parse(section.key.removePrefix("day-"))
+            when (date) {
+                today -> stringResource(R.string.completed_section_today)
+                today.plusDays(1) -> stringResource(R.string.completed_section_tomorrow)
+                else -> section.title
+            }
+        }
+        section.key.startsWith("rest-") -> {
+            val yearMonth = YearMonth.parse(section.key.removePrefix("rest-"))
+            val monthName = yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+            stringResource(R.string.completed_section_rest_of, monthName)
+        }
+        else -> section.title
+    }
+}
+
+@Composable
 private fun CompletedTimelineSection(
+    modifier: Modifier = Modifier,
     section: CompletedSection,
     isCollapsed: Boolean,
     onHeaderClick: () -> Unit,
@@ -391,7 +417,7 @@ private fun CompletedTimelineSection(
         label = "completedSectionChevronRotation",
     )
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
@@ -405,14 +431,18 @@ private fun CompletedTimelineSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = section.title,
+                text = completedSectionDisplayTitle(section),
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
             )
             Icon(
                 imageVector = Icons.Rounded.ExpandMore,
-                contentDescription = if (isCollapsed) "Expand section" else "Collapse section",
+                contentDescription = if (isCollapsed) {
+                    stringResource(R.string.action_expand_section)
+                } else {
+                    stringResource(R.string.action_collapse_section)
+                },
                 tint = colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
                 modifier = Modifier
                     .padding(start = 6.dp)
@@ -504,7 +534,7 @@ private fun CompletedSwipeRow(
                 ) {
                     SwipeActionCircle(
                         icon = Icons.Rounded.Info,
-                        contentDescription = "Edit task",
+                        contentDescription = stringResource(R.string.action_edit_task),
                         tint = colorScheme.onSurface,
                         background = colorScheme.surface,
                         onClick = {
@@ -518,7 +548,7 @@ private fun CompletedSwipeRow(
                     )
                     SwipeActionCircle(
                         icon = Icons.Rounded.DeleteSweep,
-                        contentDescription = "Delete task",
+                        contentDescription = stringResource(R.string.action_delete_task),
                         tint = colorScheme.error,
                         background = colorScheme.surface,
                         onClick = {
@@ -572,7 +602,7 @@ private fun CompletedSwipeRow(
                             } else {
                                 Icons.Rounded.RadioButtonUnchecked
                             },
-                            contentDescription = "Undo complete",
+                            contentDescription = stringResource(R.string.label_undo_complete),
                             tint = if (showCompletedState) {
                                 Color(0xFF6FBF86)
                             } else {
@@ -614,13 +644,13 @@ private fun CompletedSwipeRow(
                                 },
                             )
                             Text(
-                                text = "Created: $createdAtText",
+                                text = stringResource(R.string.completed_created_prefix) + createdAtText,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 1,
                             )
                             Text(
-                                text = "Completed: $completedAtText",
+                                text = stringResource(R.string.completed_at_prefix) + completedAtText,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 1,
@@ -635,14 +665,14 @@ private fun CompletedSwipeRow(
                                 if (showListIndicator) {
                                     Icon(
                                         imageVector = listIconForKey(listMeta?.iconKey),
-                                        contentDescription = "Task list",
+                                        contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
                                 Icon(
                                     imageVector = Icons.Rounded.Flag,
-                                    contentDescription = "Priority task",
+                                    contentDescription = stringResource(R.string.label_priority_task),
                                     tint = priorityColor(item.priority),
                                     modifier = Modifier.size(18.dp),
                                 )
@@ -650,7 +680,7 @@ private fun CompletedSwipeRow(
                         } else if (showListIndicator) {
                             Icon(
                                 imageVector = listIconForKey(listMeta?.iconKey),
-                                contentDescription = "Task list",
+                                contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
                                 modifier = Modifier.size(18.dp),
                             )

@@ -10,6 +10,8 @@ import { listCreateSchema, listPatchSchema } from "@/schema";
 import { auth } from "@/app/auth";
 import { errorHandler } from "@/lib/errorHandler";
 import { z } from "zod";
+import { apiCache, cacheKey, invalidateListCaches } from "@/lib/cache/memoryCache";
+import { apiTimer } from "@/lib/performance/apiTimer";
 
 const listPatchByIdSchema = listPatchSchema.extend({
   id: z
@@ -43,6 +45,8 @@ export async function POST(req: NextRequest) {
     });
     if (!list)
       throw new InternalError("note cannot be created at this time");
+
+    invalidateListCaches(user.id);
 
     return NextResponse.json(
       { message: "list created", list },
@@ -79,6 +83,14 @@ export async function GET() {
     if (!user?.id)
       throw new UnauthorizedError("you must be logged in to do this");
 
+    const done = apiTimer("GET /api/list");
+    const key = cacheKey(user.id, "list");
+    const cached = apiCache.get<unknown>(key);
+    if (cached) {
+      done();
+      return NextResponse.json(cached, { status: 200 });
+    }
+
     const listRows = await prisma.list.findMany({
       where: { userID: user.id },
       orderBy: { createdAt: "desc" },
@@ -100,12 +112,11 @@ export async function GET() {
       todoCount: _count.todos,
     }));
 
-    return NextResponse.json(
-      {
-        lists,
-      },
-      { status: 200 },
-    );
+    const body = { lists };
+    apiCache.set(key, body, 60_000);
+    done();
+
+    return NextResponse.json(body, { status: 200 });
   } catch (error) {
     console.log(error);
 
@@ -157,6 +168,8 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
+    invalidateListCaches(user.id);
+
     return NextResponse.json(
       { message: "list updated", list },
       { status: 200 },
@@ -186,6 +199,8 @@ export async function DELETE(req: NextRequest) {
         userID: user.id,
       },
     });
+
+    invalidateListCaches(user.id);
 
     return NextResponse.json({ message: "list deleted" }, { status: 200 });
   } catch (error) {

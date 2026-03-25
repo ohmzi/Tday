@@ -61,6 +61,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.feature.auth.AuthUiState
 
 private enum class WizardStep {
@@ -306,13 +308,13 @@ fun OnboardingWizardOverlay(
 
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Set Up T'Day",
+                        text = stringResource(R.string.onboarding_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "Secure onboarding wizard",
+                        text = stringResource(R.string.onboarding_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = colorScheme.onSurface.copy(alpha = 0.6f),
                     )
@@ -320,13 +322,15 @@ fun OnboardingWizardOverlay(
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         WizardStepChip(
                             modifier = Modifier.weight(1f),
-                            title = "Server",
+                            title = stringResource(R.string.onboarding_step_server),
+                            isServerStep = true,
                             color = Color(0xFF6EA8E1),
                             active = step == WizardStep.SERVER,
                         )
                         WizardStepChip(
                             modifier = Modifier.weight(1f),
-                            title = "Login",
+                            title = stringResource(R.string.onboarding_step_login),
+                            isServerStep = false,
                             color = Color(0xFFD48A8C),
                             active = step == WizardStep.LOGIN,
                         )
@@ -343,8 +347,8 @@ fun OnboardingWizardOverlay(
                                             serverUrl = it
                                             serverError = null
                                         },
-                                        label = { Text("Server URL") },
-                                        placeholder = { Text("https://app.example.com") },
+                                        label = { Text(stringResource(R.string.onboarding_server_url_label)) },
+                                        placeholder = { Text(stringResource(R.string.onboarding_server_url_placeholder)) },
                                         singleLine = true,
                                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                                         keyboardActions = KeyboardActions(
@@ -392,7 +396,13 @@ fun OnboardingWizardOverlay(
                                                     }
                                                 },
                                             ) {
-                                                Text(if (isResettingTrust) "Resetting trust..." else "Reset trusted server")
+                                                Text(
+                                                    if (isResettingTrust) {
+                                                        stringResource(R.string.onboarding_resetting_trust)
+                                                    } else {
+                                                        stringResource(R.string.onboarding_reset_trust)
+                                                    },
+                                                )
                                             }
                                         }
                                     }
@@ -408,15 +418,15 @@ fun OnboardingWizardOverlay(
                                             contentColor = colorScheme.onPrimary,
                                         ),
                                     ) {
-                                        Text("Connect")
+                                        Text(stringResource(R.string.onboarding_connect))
                                     }
                                 }
                             }
 
                             WizardViewState.CONNECTING -> {
                                 WizardLoading(
-                                    title = "Connecting to server...",
-                                    subtitle = "Checking endpoint, TLS, and workspace settings",
+                                    title = stringResource(R.string.onboarding_connecting_title),
+                                    subtitle = stringResource(R.string.onboarding_connecting_subtitle),
                                 )
                             }
 
@@ -432,7 +442,7 @@ fun OnboardingWizardOverlay(
                                                     localAuthError = null
                                                     onClearAuthStatus()
                                                 },
-                                                label = { Text("Email") },
+                                                label = { Text(stringResource(R.string.onboarding_email_label)) },
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                                                 keyboardActions = KeyboardActions(
@@ -451,7 +461,7 @@ fun OnboardingWizardOverlay(
                                                     localAuthError = null
                                                     onClearAuthStatus()
                                                 },
-                                                label = { Text("Password") },
+                                                label = { Text(stringResource(R.string.onboarding_password_label)) },
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                                                 keyboardActions = KeyboardActions(
@@ -507,7 +517,7 @@ fun OnboardingWizardOverlay(
                                                     contentColor = colorScheme.onPrimary,
                                                 ),
                                             ) {
-                                                Text("Sign in")
+                                                Text(stringResource(R.string.onboarding_sign_in))
                                             }
 
                                             Row(
@@ -522,7 +532,7 @@ fun OnboardingWizardOverlay(
                                                         onClearAuthStatus()
                                                     },
                                                 ) {
-                                                    Text("Create account")
+                                                    Text(stringResource(R.string.onboarding_create_account))
                                                 }
                                                 TextButton(
                                                     onClick = {
@@ -531,7 +541,7 @@ fun OnboardingWizardOverlay(
                                                         onClearAuthStatus()
                                                     },
                                                 ) {
-                                                    Text("Change server")
+                                                    Text(stringResource(R.string.onboarding_change_server))
                                                 }
                                             }
                                         }
@@ -545,7 +555,7 @@ fun OnboardingWizardOverlay(
                                                     localAuthError = null
                                                     onClearAuthStatus()
                                                 },
-                                                label = { Text("First name") },
+                                                label = { Text(stringResource(R.string.onboarding_first_name_label)) },
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                                                 keyboardActions = KeyboardActions(
@@ -564,7 +574,7 @@ fun OnboardingWizardOverlay(
                                                     localAuthError = null
                                                     onClearAuthStatus()
                                                 },
-                                                label = { Text("Email") },
+                                                label = { Text(stringResource(R.string.onboarding_email_label)) },
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                                                 keyboardActions = KeyboardActions(
@@ -583,7 +593,7 @@ fun OnboardingWizardOverlay(
                                                     localAuthError = null
                                                     onClearAuthStatus()
                                                 },
-                                                label = { Text("Password") },
+                                                label = { Text(stringResource(R.string.onboarding_password_label)) },
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                                                 keyboardActions = KeyboardActions(
@@ -603,7 +613,7 @@ fun OnboardingWizardOverlay(
                                                     localAuthError = null
                                                     onClearAuthStatus()
                                                 },
-                                                label = { Text("Confirm password") },
+                                                label = { Text(stringResource(R.string.onboarding_confirm_password_label)) },
                                                 singleLine = true,
                                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                                                 keyboardActions = KeyboardActions(
@@ -656,9 +666,9 @@ fun OnboardingWizardOverlay(
                                             ) {
                                                 Text(
                                                     if (authUiState.isLoading || isRegisterInFlight) {
-                                                        "Creating account..."
+                                                        stringResource(R.string.onboarding_creating_account)
                                                     } else {
-                                                        "Create account"
+                                                        stringResource(R.string.onboarding_create_account)
                                                     },
                                                 )
                                             }
@@ -675,7 +685,7 @@ fun OnboardingWizardOverlay(
                                                         onClearAuthStatus()
                                                     },
                                                 ) {
-                                                    Text("Back to sign in")
+                                                    Text(stringResource(R.string.onboarding_back_to_sign_in))
                                                 }
                                                 TextButton(
                                                     onClick = {
@@ -685,7 +695,7 @@ fun OnboardingWizardOverlay(
                                                         onClearAuthStatus()
                                                     },
                                                 ) {
-                                                    Text("Change server")
+                                                    Text(stringResource(R.string.onboarding_change_server))
                                                 }
                                             }
                                         }
@@ -696,14 +706,14 @@ fun OnboardingWizardOverlay(
                             WizardViewState.AUTHENTICATING -> {
                                 WizardLoading(
                                     title = if (authMode == AuthPanelMode.CREATE_ACCOUNT) {
-                                        "Creating account..."
+                                        stringResource(R.string.onboarding_creating_account)
                                     } else {
-                                        "Authenticating..."
+                                        stringResource(R.string.onboarding_authenticating_title)
                                     },
                                     subtitle = if (authMode == AuthPanelMode.CREATE_ACCOUNT) {
-                                        "Submitting registration and waiting for approval status"
+                                        stringResource(R.string.onboarding_authenticating_register_subtitle)
                                     } else {
-                                        "Encrypting session and loading your workspace"
+                                        stringResource(R.string.onboarding_authenticating_login_subtitle)
                                     },
                                 )
                             }
@@ -765,6 +775,7 @@ private fun WizardLoading(
 private fun WizardStepChip(
     modifier: Modifier,
     title: String,
+    isServerStep: Boolean,
     color: Color,
     active: Boolean,
 ) {
@@ -793,7 +804,7 @@ private fun WizardStepChip(
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = if (title == "Server") Icons.Rounded.Language else Icons.Rounded.Person,
+                    imageVector = if (isServerStep) Icons.Rounded.Language else Icons.Rounded.Person,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(14.dp),
