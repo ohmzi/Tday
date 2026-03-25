@@ -8,6 +8,7 @@ import {
 import { prisma } from "@/lib/prisma/client";
 import { Prisma } from "@prisma/client";
 import { errorHandler } from "@/lib/errorHandler";
+import { invalidateTodoCaches } from "@/lib/cache/memoryCache";
 
 function parseInstanceDate(value: unknown): Date | null {
   if (value == null) return null;
@@ -128,6 +129,8 @@ export async function PATCH(req: NextRequest) {
         listColor: todo.list?.color ?? null,
       },
     });
+
+    invalidateTodoCaches(user.id);
 
     return NextResponse.json(
       { message: "todo completed successfully!" },
