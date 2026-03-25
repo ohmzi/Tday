@@ -35,8 +35,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.NoteItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,12 +67,15 @@ fun NotesScreen(
                             imageVector = Icons.Rounded.Description,
                             contentDescription = null,
                         )
-                        Text("Notes")
+                        Text(stringResource(R.string.notes_title))
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back),
+                        )
                     }
                 },
             )
@@ -81,7 +86,7 @@ fun NotesScreen(
                 containerColor = colorScheme.primary,
                 contentColor = colorScheme.onPrimary,
             ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Add note")
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.notes_add))
             }
         },
     ) { padding ->
@@ -95,7 +100,11 @@ fun NotesScreen(
             if (uiState.notes.isEmpty()) {
                 item {
                     Text(
-                        text = if (uiState.isLoading) "Loading..." else "No notes yet",
+                        text = if (uiState.isLoading) {
+                            stringResource(R.string.label_loading)
+                        } else {
+                            stringResource(R.string.notes_empty)
+                        },
                         color = colorScheme.onSurfaceVariant,
                     )
                 }
@@ -123,14 +132,14 @@ fun NotesScreen(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("New note") },
+            title = { Text(stringResource(R.string.notes_new_title)) },
             text = {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = noteName,
                     onValueChange = { noteName = it },
                     singleLine = true,
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.notes_name_label)) },
                 )
             },
             confirmButton = {
@@ -143,12 +152,12 @@ fun NotesScreen(
                         }
                     },
                 ) {
-                    Text("Create")
+                    Text(stringResource(R.string.action_create))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCreateDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -182,7 +191,7 @@ private fun NoteRow(
             }
             TextButton(onClick = onDelete) {
                 Icon(Icons.Rounded.Delete, contentDescription = null)
-                Text("Delete")
+                Text(stringResource(R.string.action_delete))
             }
         }
     }
