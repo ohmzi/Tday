@@ -41,7 +41,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -78,6 +80,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
@@ -103,12 +106,13 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
@@ -421,6 +425,7 @@ fun HomeScreen(
                                     onOpenCalendar()
                                 },
                             )
+
                         }
                     }
 
@@ -473,10 +478,9 @@ fun HomeScreen(
 
                     uiState.errorMessage?.let { message ->
                         item {
-                            Text(
-                                text = message,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
+                            com.ohmz.tday.compose.core.ui.ErrorRetryCard(
+                                message = message,
+                                onRetry = onRefresh,
                             )
                         }
                     }
@@ -526,6 +530,8 @@ fun HomeScreen(
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
+                                                .semantics(mergeDescendants = true) {}
+                                                .heightIn(min = 48.dp)
                                                 .clickable {
                                                     closeSearch()
                                                     onOpenTaskFromSearch(todo.id)
@@ -676,7 +682,7 @@ private fun CreateListBottomSheet(
                     confirmEnabled = canCreate,
                 )
 
-                ListSheetSectionTitle("List")
+                ListSheetSectionTitle(stringResource(R.string.home_section_list))
                 ListSheetCard {
                     Column(
                         modifier = Modifier
@@ -720,7 +726,7 @@ private fun CreateListBottomSheet(
                                 ) {
                                     if (listName.isBlank()) {
                                         Text(
-                                            text = "List name",
+                                            text = stringResource(R.string.home_list_name_placeholder),
                                             style = MaterialTheme.typography.headlineSmall,
                                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                                             fontWeight = FontWeight.Bold,
@@ -733,7 +739,7 @@ private fun CreateListBottomSheet(
                     }
                 }
 
-                ListSheetSectionTitle("Color")
+                ListSheetSectionTitle(stringResource(R.string.home_section_color))
                 ListSheetCard {
                     Row(
                         modifier = Modifier
@@ -747,7 +753,7 @@ private fun CreateListBottomSheet(
                             val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
                                     .background(option.color)
                                     .border(
@@ -759,7 +765,7 @@ private fun CreateListBottomSheet(
                                         interactionSource = interactionSource,
                                         indication = ripple(
                                             bounded = true,
-                                            radius = 21.dp,
+                                            radius = 24.dp,
                                         ),
                                     ) { onListColorChange(option.key) },
                             )
@@ -767,7 +773,7 @@ private fun CreateListBottomSheet(
                     }
                 }
 
-                ListSheetSectionTitle("Icon")
+                ListSheetSectionTitle(stringResource(R.string.home_section_icon))
                 ListSheetCard {
                     Row(
                         modifier = Modifier
@@ -779,9 +785,10 @@ private fun CreateListBottomSheet(
                         LIST_ICON_OPTIONS.forEach { option ->
                             val selected = listIconKey == option.key
                             val interactionSource = remember { MutableInteractionSource() }
+                            val iconOptionDescription = stringResource(R.string.home_list_icon_option, option.key)
                             Box(
                                 modifier = Modifier
-                                    .size(46.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
                                     .background(
                                         if (selected) {
@@ -799,14 +806,14 @@ private fun CreateListBottomSheet(
                                         interactionSource = interactionSource,
                                         indication = ripple(
                                             bounded = true,
-                                            radius = 23.dp,
+                                            radius = 24.dp,
                                         ),
                                     ) { onListIconChange(option.key) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     imageVector = option.icon,
-                                    contentDescription = null,
+                                    contentDescription = iconOptionDescription,
                                     tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -833,14 +840,14 @@ private fun ListSheetHeader(
     ) {
         ListSheetActionButton(
             icon = Icons.Rounded.Close,
-            contentDescription = "Close",
+            contentDescription = stringResource(R.string.action_close),
             enabled = true,
             accentColor = Color(0xFFE35A5A),
             onClick = onClose,
         )
 
         Text(
-            text = "New list",
+            text = stringResource(R.string.home_new_list),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
@@ -848,7 +855,7 @@ private fun ListSheetHeader(
 
         ListSheetActionButton(
             icon = Icons.Rounded.Check,
-            contentDescription = "Create list",
+            contentDescription = stringResource(R.string.action_create_list),
             enabled = confirmEnabled,
             accentColor = Color(0xFF2FA35B),
             onClick = onConfirm,
@@ -986,7 +993,7 @@ private fun CreateTaskButton(
         ) {
             Icon(
                 imageVector = Icons.Rounded.Add,
-                contentDescription = "Create task",
+                contentDescription = stringResource(R.string.action_create_task),
                 tint = Color.White,
                 modifier = Modifier.size(40.dp),
             )
@@ -1049,7 +1056,7 @@ private fun TopSearchBar(
                     modifier = Modifier.size(26.dp),
                 )
                 Text(
-                    text = "T'Day",
+                    text = stringResource(R.string.home_title),
                     style = MaterialTheme.typography.headlineLarge,
                     color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
@@ -1098,7 +1105,7 @@ private fun TopSearchBar(
                     ) {
                         PressableIconButton(
                             icon = Icons.Rounded.Search,
-                            contentDescription = if (searchExpanded) "Close search" else "Search",
+                            contentDescription = if (searchExpanded) stringResource(R.string.action_close_search) else stringResource(R.string.action_search),
                             tint = colorScheme.onSurface,
                             compact = true,
                             onClick = {
@@ -1130,7 +1137,7 @@ private fun TopSearchBar(
                                     ) {
                                         if (searchQuery.isBlank()) {
                                             Text(
-                                                text = "Search",
+                                                text = stringResource(R.string.home_search_placeholder),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 color = colorScheme.onSurfaceVariant,
                                             )
@@ -1145,13 +1152,13 @@ private fun TopSearchBar(
 
                 PressableIconButton(
                     icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                    contentDescription = "Create list",
+                    contentDescription = stringResource(R.string.action_create_list),
                     tint = colorScheme.onSurface,
                     onClick = onCreateList,
                 )
                 PressableIconButton(
                     icon = Icons.Rounded.MoreHoriz,
-                    contentDescription = "More",
+                    contentDescription = stringResource(R.string.action_more),
                     tint = colorScheme.onSurface,
                     onClick = onOpenSettings,
                 )
@@ -1184,7 +1191,7 @@ private fun MyListsHeader() {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
          Text(
-            text = "My Lists",
+            text = stringResource(R.string.home_my_lists),
             style = MaterialTheme.typography.headlineMedium,
             color = colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
@@ -1263,7 +1270,7 @@ private fun CategoryGrid(
                 color = Color(0xFF6EA8E1),
                 icon = Icons.Rounded.WbSunny,
                 backgroundWatermark = Icons.Rounded.WbSunny,
-                title = "Today",
+                title = stringResource(R.string.home_category_today),
                 count = todayCount,
                 onClick = onOpenToday,
             )
@@ -1272,7 +1279,7 @@ private fun CategoryGrid(
                 color = Color(0xFFDDB37D),
                 icon = Icons.Rounded.Schedule,
                 backgroundWatermark = Icons.Rounded.Schedule,
-                title = "Scheduled",
+                title = stringResource(R.string.home_category_scheduled),
                 count = scheduledCount,
                 onClick = onOpenScheduled,
             )
@@ -1283,7 +1290,7 @@ private fun CategoryGrid(
                 color = Color(0xFF4E4E50),
                 icon = Icons.Rounded.Inbox,
                 backgroundWatermark = Icons.Rounded.Inbox,
-                title = "All",
+                title = stringResource(R.string.home_category_all),
                 count = allCount,
                 onClick = onOpenAll,
             )
@@ -1292,7 +1299,7 @@ private fun CategoryGrid(
                 color = Color(0xFFD48A8C),
                 icon = Icons.Rounded.Flag,
                 backgroundWatermark = Icons.Rounded.Flag,
-                title = "Priority",
+                title = stringResource(R.string.home_category_priority),
                 count = priorityCount,
                 onClick = onOpenPriority,
             )
@@ -1302,7 +1309,7 @@ private fun CategoryGrid(
             color = completedColor,
             icon = Icons.Rounded.Check,
             backgroundWatermark = Icons.Rounded.Check,
-            title = "Completed",
+            title = stringResource(R.string.home_category_completed),
             count = completedCount,
             onClick = onOpenCompleted,
         )
@@ -1357,7 +1364,7 @@ private fun CategoryCard(
     backgroundWatermark: ImageVector? = null,
     backgroundGrid: Boolean = false,
     title: String,
-    count: Int,
+    count: Int? = null,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
@@ -1378,6 +1385,7 @@ private fun CategoryCard(
 
     Card(
         modifier = modifier
+            .semantics(mergeDescendants = true) {}
             .offset(y = animatedOffsetY)
             .graphicsLayer {
                 scaleX = animatedScale
@@ -1504,12 +1512,14 @@ private fun CategoryCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(icon, contentDescription = null, tint = Color.White)
-                    Text(
-                        text = count.toString(),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Black,
-                    )
+                    if (count != null) {
+                        Text(
+                            text = count.toString(),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
                 }
 
                 Text(
@@ -1561,6 +1571,7 @@ private fun ListRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(70.dp)
+            .semantics(mergeDescendants = true) {}
             .offset(y = animatedOffsetY)
             .graphicsLayer {
                 scaleX = animatedScale

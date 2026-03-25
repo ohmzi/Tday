@@ -209,10 +209,54 @@ describe("dependency and configuration hygiene", () => {
       expect(template).toMatch(/[Nn]o AI tool attribution/);
     });
 
+    it("PR template should explicitly mention Made-with trailer", () => {
+      const template = readSource(
+        path.join(ROOT, ".github", "PULL_REQUEST_TEMPLATE.md"),
+      );
+      expect(template).toMatch(/Made-with/);
+    });
+
     it("CONTRIBUTING.md should document the no-AI-attribution rule", () => {
       const contributing = readSource(path.join(ROOT, "CONTRIBUTING.md"));
       expect(contributing).toMatch(/[Nn]o AI attribution/);
       expect(contributing).toMatch(/[Cc]ursor|[Cc]odex|[Cc]opilot/);
+    });
+
+    it("CONTRIBUTING.md should warn about auto-injected trailers", () => {
+      const contributing = readSource(path.join(ROOT, "CONTRIBUTING.md"));
+      expect(contributing).toMatch(/Made-with/);
+      expect(contributing).toMatch(/commit-msg.*hook/i);
+    });
+
+    it("commit-msg hook script should exist in scripts/", () => {
+      expect(existsSync(path.join(ROOT, "scripts", "commit-msg"))).toBe(true);
+    });
+
+    it("commit-msg hook should strip Made-with trailers", () => {
+      const hook = readSource(path.join(ROOT, "scripts", "commit-msg"));
+      expect(hook).toMatch(/Made-with/);
+      expect(hook).toMatch(/sed/);
+    });
+
+    it("commit-msg hook should strip AI Co-authored-by trailers", () => {
+      const hook = readSource(path.join(ROOT, "scripts", "commit-msg"));
+      expect(hook).toMatch(/Co-authored-by/);
+      expect(hook).toMatch(/cursor|codex|copilot/i);
+    });
+
+    it("install-hooks.sh script should exist", () => {
+      expect(existsSync(path.join(ROOT, "scripts", "install-hooks.sh"))).toBe(
+        true,
+      );
+    });
+
+    it("CODING_STANDARDS.md should document git commit hygiene rules", () => {
+      const standards = readSource(
+        path.join(ROOT, "docs", "CODING_STANDARDS.md"),
+      );
+      expect(standards).toMatch(/Git Commit Hygiene/);
+      expect(standards).toMatch(/Made-with/);
+      expect(standards).toMatch(/commit-msg/);
     });
   });
 
