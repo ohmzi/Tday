@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -76,6 +77,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -89,6 +91,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -463,6 +466,7 @@ private fun CalendarViewModeTabs(
                                 Color.Transparent
                             },
                         )
+                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .clickable { onModeSelected(mode) }
                         .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center,
@@ -643,7 +647,7 @@ private fun CalendarWeekDayCell(
     }
 
     Card(
-        modifier = modifier,
+        modifier = modifier.minimumInteractiveComponentSize(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = BorderStroke(
@@ -1148,6 +1152,7 @@ private fun CalendarDayCell(
 
     Box(
         modifier = modifier
+            .minimumInteractiveComponentSize()
             .aspectRatio(1f)
             .background(
                 color = containerColor,
@@ -1233,7 +1238,9 @@ private fun CalendarTodoRow(
     val foregroundColor = colorScheme.background
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Box(
@@ -1423,7 +1430,9 @@ private fun CalendarCompletedTodoRow(
     val rowShape = RoundedCornerShape(16.dp)
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Card(
@@ -1546,7 +1555,7 @@ private fun CalendarSwipeActionCircle(
     )
     Card(
         modifier = Modifier
-            .size(42.dp)
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -1582,14 +1591,14 @@ private fun CalendarCompletionToggleIcon(
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .size(28.dp)
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
             .clip(CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 14.dp,
+                    radius = 24.dp,
                 ),
                 onClick = onClick,
             ),

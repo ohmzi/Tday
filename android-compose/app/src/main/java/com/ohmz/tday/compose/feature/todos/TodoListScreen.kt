@@ -28,11 +28,14 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -91,6 +94,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -1118,6 +1122,8 @@ private fun ListSettingsBottomSheet(
                             val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
+                                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                    .wrapContentSize(Alignment.Center)
                                     .size(42.dp)
                                     .clip(CircleShape)
                                     .background(swatchColor, CircleShape)
@@ -1201,7 +1207,7 @@ private fun ListSettingsBottomSheet(
                             ) {
                                 Icon(
                                     imageVector = option.icon,
-                                    contentDescription = null,
+                                    contentDescription = stringResource(R.string.home_section_icon),
                                     tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -1324,17 +1330,21 @@ private fun TimelineSection(
                 .fillMaxWidth()
                 .then(
                     if (onHeaderClick != null) {
-                        Modifier.clickable(
-                            interactionSource = headerInteractionSource,
-                            indication = null,
-                            onClick = onHeaderClick,
-                        )
+                        Modifier
+                            .heightIn(min = 48.dp)
+                            .clickable(
+                                interactionSource = headerInteractionSource,
+                                indication = null,
+                                onClick = onHeaderClick,
+                            )
                     } else if (onTapForQuickAdd != null) {
-                        Modifier.clickable(
-                            interactionSource = headerInteractionSource,
-                            indication = null,
-                            onClick = onTapForQuickAdd,
-                        )
+                        Modifier
+                            .heightIn(min = 48.dp)
+                            .clickable(
+                                interactionSource = headerInteractionSource,
+                                indication = null,
+                                onClick = onTapForQuickAdd,
+                            )
                     } else {
                         Modifier
                     },
@@ -1781,6 +1791,8 @@ private fun SwipeActionCircle(
     )
     Card(
         modifier = Modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .wrapContentSize(Alignment.Center)
             .size(42.dp)
             .graphicsLayer {
                 scaleX = scale
@@ -2036,7 +2048,8 @@ private fun SwipeTaskRow(
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 4.dp, vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING),
+                            .padding(horizontal = 4.dp, vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING)
+                            .semantics(mergeDescendants = true) {},
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Row(
@@ -2179,29 +2192,36 @@ private fun TodayTodoRow(
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CircularCheckToggleIcon(
-                imageVector = Icons.Rounded.CheckCircle,
-                contentDescription = stringResource(R.string.action_complete),
-                tint = TASK_CHECKMARK_GREEN,
-                onClick = onComplete,
-            )
-
-            Column(
+            Row(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 10.dp),
+                    .semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = todo.title,
-                    color = colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                CircularCheckToggleIcon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = stringResource(R.string.action_complete),
+                    tint = TASK_CHECKMARK_GREEN,
+                    onClick = onComplete,
                 )
-                Text(
-                    text = detailDueText,
-                    color = if (isDetailOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 10.dp),
+                ) {
+                    Text(
+                        text = todo.title,
+                        color = colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = detailDueText,
+                        color = if (isDetailOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
 
             IconButton(onClick = onDelete) {
@@ -2244,7 +2264,9 @@ private fun TodoRow(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics(mergeDescendants = true) {},
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularCheckToggleIcon(
@@ -2291,14 +2313,15 @@ private fun CircularCheckToggleIcon(
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .size(28.dp)
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .wrapContentSize(Alignment.Center)
             .clip(CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 14.dp,
+                    radius = 24.dp,
                 ),
                 onClick = onClick,
             ),

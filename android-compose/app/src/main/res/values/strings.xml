@@ -46,6 +46,7 @@
     <string name="home_section_list">List</string>
     <string name="home_section_color">Color</string>
     <string name="home_section_icon">Icon</string>
+    <string name="home_list_icon_option">Select %1$s list icon</string>
 
     <!-- Settings screen -->
     <string name="settings_title">Settings</string>
