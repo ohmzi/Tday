@@ -17,6 +17,8 @@ import { overrideBy } from "@/lib/overrideBy";
 import { recurringTodoItemType } from "@/types";
 import { getMovedInstances } from "@/lib/getMovedInstances";
 import { z } from "zod";
+import { apiCache, cacheKey, invalidateTodoCaches } from "@/lib/cache/memoryCache";
+import { apiTimer } from "@/lib/performance/apiTimer";
 
 const todoPatchByIdSchema = todoSchema
   .partial()
@@ -79,7 +81,8 @@ export async function POST(req: NextRequest) {
       },
     });
     if (!todo) throw new InternalError("todo cannot be created at this time");
-    // console.log(todo);
+
+    invalidateTodoCaches(user.id);
 
     return NextResponse.json(
       {
@@ -210,6 +213,8 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
+    invalidateTodoCaches(userId);
+
     return NextResponse.json({ message: "Todo updated" }, { status: 200 });
   } catch (error) {
     return errorHandler(error);
@@ -239,6 +244,8 @@ export async function DELETE(req: NextRequest) {
       },
     });
 
+    invalidateTodoCaches(user.id);
+
     return NextResponse.json(
       {
         message: deleted.count > 0 ? "todo deleted" : "todo already deleted",
@@ -258,6 +265,8 @@ export async function GET(req: NextRequest) {
     if (!user?.id) {
       throw new UnauthorizedError("You must be logged in to do this");
     }
+
+    const done = apiTimer("GET /api/todo");
     const timeZone = await resolveTimezone(user, req);
     const timelineMode = req.nextUrl.searchParams.get("timeline") === "true";
 
@@ -270,18 +279,27 @@ export async function GET(req: NextRequest) {
         ? Math.min(Math.max(Math.floor(recurringFutureDaysRaw), 1), 3650)
         : 365;
 
+      const key = cacheKey(user.id, "todo", {
+        timeline: "true",
+        days: String(recurringFutureDays),
+      });
+      const cached = apiCache.get<unknown>(key);
+      if (cached) {
+        done();
+        return NextResponse.json(cached, { status: 200 });
+      }
+
       const allTodos = await fetchTimelineTodosForUser({
         userId: user.id,
         timeZone,
         recurringFutureDays,
       });
 
-      return NextResponse.json(
-        { todos: allTodos },
-        {
-          status: 200,
-        },
-      );
+      const body = { todos: allTodos };
+      apiCache.set(key, body, 30_000);
+      done();
+
+      return NextResponse.json(body, { status: 200 });
     }
 
     const start = req.nextUrl.searchParams.get("start");
