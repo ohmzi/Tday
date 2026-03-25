@@ -90,6 +90,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -105,6 +106,7 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import java.time.Instant
 import java.time.LocalDate
@@ -308,9 +310,9 @@ fun TodoListScreen(
                         Icons.Rounded.MoreHoriz
                     },
                     actionContentDescription = if (canSummarizeCurrentMode) {
-                        "Summarize tasks"
+                        stringResource(R.string.todos_summarize)
                     } else {
-                        "More options"
+                        stringResource(R.string.action_more_options)
                     },
                     onAction = {
                         if (canSummarizeCurrentMode) {
@@ -353,7 +355,10 @@ fun TodoListScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ArrowBack,
+                                contentDescription = stringResource(R.string.action_back),
+                            )
                         }
                     },
                 )
@@ -405,7 +410,7 @@ fun TodoListScreen(
                         Text(
                             modifier = Modifier.padding(18.dp),
                             text = if (uiState.isLoading) {
-                                "Loading..."
+                                stringResource(R.string.label_loading)
                             } else {
                                 emptyStateMessageForMode(uiState.mode)
                             },
@@ -623,7 +628,7 @@ private fun TodayTopBar(
                 TodayHeaderButton(
                     onClick = onBack,
                     icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                 )
                 if (showActionButton) {
                     TodayHeaderButton(
@@ -768,7 +773,7 @@ private fun SummaryBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Summary",
+                    text = stringResource(R.string.todos_summary_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = colorScheme.onBackground,
@@ -776,7 +781,7 @@ private fun SummaryBottomSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
-                        contentDescription = "Close summary",
+                        contentDescription = stringResource(R.string.todos_summary_close),
                         tint = colorScheme.onBackground,
                     )
                 }
@@ -793,7 +798,7 @@ private fun SummaryBottomSheet(
                         strokeWidth = 2.dp,
                     )
                     Text(
-                        text = "Creating your task summary...",
+                        text = stringResource(R.string.todos_summary_loading),
                         style = MaterialTheme.typography.bodyLarge,
                         color = colorScheme.onSurfaceVariant,
                     )
@@ -829,18 +834,16 @@ private fun SummaryBottomSheet(
                     if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
                 }.orEmpty()
                 val generatedLabel = summaryGeneratedAt.orEmpty()
+                val footerParts = buildList {
+                    if (sourceLabel.isNotBlank()) {
+                        add(stringResource(R.string.todos_summary_source, sourceLabel))
+                    }
+                    if (generatedLabel.isNotBlank()) {
+                        add(stringResource(R.string.todos_summary_generated_at, generatedLabel))
+                    }
+                }
                 Text(
-                    text = buildString {
-                        if (sourceLabel.isNotBlank()) {
-                            append("Source: ")
-                            append(sourceLabel)
-                        }
-                        if (generatedLabel.isNotBlank()) {
-                            if (isNotEmpty()) append(" • ")
-                            append("Generated at ")
-                            append(generatedLabel)
-                        }
-                    },
+                    text = footerParts.joinToString(separator = " • "),
                     style = MaterialTheme.typography.bodySmall,
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
                 )
@@ -855,7 +858,11 @@ private fun SummaryBottomSheet(
             ) {
                 Text(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    text = if (isLoading) "Summarizing..." else "Refresh summary",
+                    text = if (isLoading) {
+                        stringResource(R.string.todos_summary_summarizing)
+                    } else {
+                        stringResource(R.string.todos_summary_refresh)
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     color = colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold,
@@ -895,7 +902,7 @@ private fun CreateTaskButton(
         ) {
             Icon(
                 imageVector = Icons.Rounded.Add,
-                contentDescription = "Create task",
+                contentDescription = stringResource(R.string.action_create_task),
                 tint = Color.White,
                 modifier = Modifier.size(26.dp),
             )
@@ -958,7 +965,7 @@ private fun ListSettingsBottomSheet(
                 ) {
                     ListSettingsActionButton(
                         icon = Icons.Rounded.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.action_close),
                         enabled = true,
                         accentColor = Color(0xFFE35A5A),
                         onClick = {
@@ -968,7 +975,7 @@ private fun ListSettingsBottomSheet(
                     )
 
                     Text(
-                        text = "List settings",
+                        text = stringResource(R.string.todos_list_settings),
                         style = MaterialTheme.typography.headlineSmall,
                         color = colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
@@ -976,7 +983,7 @@ private fun ListSettingsBottomSheet(
 
                     ListSettingsActionButton(
                         icon = Icons.Rounded.Check,
-                        contentDescription = "Save list settings",
+                        contentDescription = stringResource(R.string.todos_save_list_settings),
                         enabled = canSave,
                         accentColor = Color(0xFF2FA35B),
                         onClick = {
@@ -987,7 +994,7 @@ private fun ListSettingsBottomSheet(
                 }
 
                 Text(
-                    text = "List",
+                    text = stringResource(R.string.home_section_list),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -1066,7 +1073,7 @@ private fun ListSettingsBottomSheet(
                                 ) {
                                     if (listName.isBlank()) {
                                         Text(
-                                            text = "List name",
+                                            text = stringResource(R.string.home_list_name_placeholder),
                                             style = MaterialTheme.typography.headlineSmall,
                                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                                             fontWeight = FontWeight.Bold,
@@ -1086,7 +1093,7 @@ private fun ListSettingsBottomSheet(
                 }
 
                 Text(
-                    text = "Color",
+                    text = stringResource(R.string.home_section_color),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -1138,7 +1145,7 @@ private fun ListSettingsBottomSheet(
                 }
 
                 Text(
-                    text = "Icon",
+                    text = stringResource(R.string.home_section_icon),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -1335,7 +1342,7 @@ private fun TimelineSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = section.title,
+                text = localizedSectionTitle(section),
                 color = if (useMinimalStyle) {
                     colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
                 } else {
@@ -1351,7 +1358,11 @@ private fun TimelineSection(
             if (onHeaderClick != null) {
                 Icon(
                     imageVector = Icons.Rounded.ExpandMore,
-                    contentDescription = if (isCollapsed) "Expand section" else "Collapse section",
+                    contentDescription = if (isCollapsed) {
+                        stringResource(R.string.action_expand_section)
+                    } else {
+                        stringResource(R.string.action_collapse_section)
+                    },
                     tint = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.72f else 1f),
                     modifier = Modifier
                         .padding(start = 6.dp)
@@ -1652,13 +1663,43 @@ private fun monthTitle(
     }
 }
 
+@Composable
+private fun localizedSectionTitle(section: TodoSection): String {
+    return when {
+        section.key == "today-morning" -> stringResource(R.string.todos_section_morning)
+        section.key == "today-afternoon" -> stringResource(R.string.todos_section_afternoon)
+        section.key == "today-tonight" -> stringResource(R.string.todos_section_tonight)
+        section.key == "earlier" -> stringResource(R.string.todos_section_earlier)
+        section.key.startsWith("day-") -> {
+            val zoneId = ZoneId.systemDefault()
+            val date = runCatching { LocalDate.parse(section.key.removePrefix("day-")) }.getOrNull()
+            val today = LocalDate.now(zoneId)
+            when (date) {
+                today -> stringResource(R.string.todos_section_today)
+                today.plusDays(1) -> stringResource(R.string.todos_section_tomorrow)
+                else -> section.title
+            }
+        }
+        section.key.startsWith("rest-") -> {
+            val ymPart = section.key.removePrefix("rest-")
+            runCatching {
+                val ym = YearMonth.parse(ymPart)
+                val monthName = ym.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                stringResource(R.string.todos_section_rest_of, monthName)
+            }.getOrElse { section.title }
+        }
+        else -> section.title
+    }
+}
+
+@Composable
 private fun emptyStateMessageForMode(mode: TodoListMode): String {
     return when (mode) {
-        TodoListMode.TODAY -> "No tasks for today"
-        TodoListMode.PRIORITY -> "No priority tasks"
-        TodoListMode.SCHEDULED -> "No scheduled tasks"
-        TodoListMode.ALL -> "No tasks yet"
-        TodoListMode.LIST -> "No tasks in this list"
+        TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
+        TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
+        TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
+        TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
+        TodoListMode.LIST -> stringResource(R.string.todos_empty_list)
     }
 }
 
@@ -1837,10 +1878,12 @@ private fun SwipeTaskRow(
         DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
     val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
+    val overduePrefix = stringResource(R.string.todos_due_overdue_prefix)
+    val duePrefix = stringResource(R.string.todos_due_prefix)
     val dueSubtitleText = if (isOverdue) {
-        "Overdue, $dueBodyText"
+        overduePrefix + dueBodyText
     } else if (showDuePrefix) {
-        "Due $dueBodyText"
+        duePrefix + dueBodyText
     } else {
         dueBodyText
     }
@@ -1930,7 +1973,7 @@ private fun SwipeTaskRow(
                 ) {
                     SwipeActionCircle(
                         icon = Icons.Rounded.Info,
-                        contentDescription = "Edit task",
+                        contentDescription = stringResource(R.string.action_edit_task),
                         tint = colorScheme.onSurface,
                         background = colorScheme.surface,
                         onClick = {
@@ -1944,7 +1987,7 @@ private fun SwipeTaskRow(
                     )
                     SwipeActionCircle(
                         icon = Icons.Rounded.DeleteSweep,
-                        contentDescription = "Delete task",
+                        contentDescription = stringResource(R.string.action_delete_task),
                         tint = colorScheme.error,
                         background = colorScheme.surface,
                         onClick = {
@@ -2012,7 +2055,11 @@ private fun SwipeTaskRow(
                                 } else {
                                     Icons.Rounded.CheckCircle
                                 },
-                                contentDescription = if (visuallyCompleted) "Completed" else "Mark complete",
+                                contentDescription = if (visuallyCompleted) {
+                                    stringResource(R.string.label_completed)
+                                } else {
+                                    stringResource(R.string.label_mark_complete)
+                                },
                                 tint = if (!visuallyCompleted) {
                                     colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                                 } else {
@@ -2082,7 +2129,7 @@ private fun SwipeTaskRow(
                                 if (showListIndicator) {
                                     Icon(
                                         imageVector = listIconForKey(listMeta?.iconKey),
-                                        contentDescription = "Task list",
+                                        contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
                                         modifier = Modifier.size(18.dp),
                                     )
@@ -2090,7 +2137,7 @@ private fun SwipeTaskRow(
                                 if (showPriorityFlag) {
                                     Icon(
                                         imageVector = Icons.Rounded.Flag,
-                                        contentDescription = "Priority task",
+                                        contentDescription = stringResource(R.string.label_priority_task),
                                         tint = priorityColor(todo.priority),
                                         modifier = Modifier.size(18.dp),
                                     )
@@ -2119,7 +2166,8 @@ private fun TodayTodoRow(
     val dueText =
         DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
     val isDetailOverdue = !todo.completed && todo.due.isBefore(Instant.now())
-    val detailDueText = if (isDetailOverdue) "Overdue, $dueText" else dueText
+    val overduePrefix = stringResource(R.string.todos_due_overdue_prefix)
+    val detailDueText = if (isDetailOverdue) overduePrefix + dueText else dueText
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -2133,7 +2181,7 @@ private fun TodayTodoRow(
         ) {
             CircularCheckToggleIcon(
                 imageVector = Icons.Rounded.CheckCircle,
-                contentDescription = "Complete",
+                contentDescription = stringResource(R.string.action_complete),
                 tint = TASK_CHECKMARK_GREEN,
                 onClick = onComplete,
             )
@@ -2159,7 +2207,7 @@ private fun TodayTodoRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Rounded.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.action_delete),
                     tint = colorScheme.error,
                 )
             }
@@ -2201,7 +2249,7 @@ private fun TodoRow(
             ) {
                 CircularCheckToggleIcon(
                     imageVector = Icons.Rounded.CheckCircle,
-                    contentDescription = "Complete",
+                    contentDescription = stringResource(R.string.action_complete),
                     tint = TASK_CHECKMARK_GREEN,
                     onClick = onComplete,
                 )
@@ -2224,7 +2272,7 @@ private fun TodoRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Rounded.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.action_delete),
                     tint = colorScheme.error,
                 )
             }

@@ -103,12 +103,13 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
@@ -862,7 +863,7 @@ private fun ListSheetHeader(
 
         ListSheetActionButton(
             icon = Icons.Rounded.Check,
-            contentDescription = "Create list",
+            contentDescription = stringResource(R.string.action_create_list),
             enabled = confirmEnabled,
             accentColor = Color(0xFF2FA35B),
             onClick = onConfirm,
@@ -1000,7 +1001,7 @@ private fun CreateTaskButton(
         ) {
             Icon(
                 imageVector = Icons.Rounded.Add,
-                contentDescription = "Create task",
+                contentDescription = stringResource(R.string.action_create_task),
                 tint = Color.White,
                 modifier = Modifier.size(40.dp),
             )
@@ -1063,7 +1064,7 @@ private fun TopSearchBar(
                     modifier = Modifier.size(26.dp),
                 )
                 Text(
-                    text = "T'Day",
+                    text = stringResource(R.string.home_title),
                     style = MaterialTheme.typography.headlineLarge,
                     color = colorScheme.onBackground,
                     fontWeight = FontWeight.Bold,
@@ -1112,7 +1113,7 @@ private fun TopSearchBar(
                     ) {
                         PressableIconButton(
                             icon = Icons.Rounded.Search,
-                            contentDescription = if (searchExpanded) "Close search" else "Search",
+                            contentDescription = if (searchExpanded) stringResource(R.string.action_close_search) else stringResource(R.string.action_search),
                             tint = colorScheme.onSurface,
                             compact = true,
                             onClick = {
@@ -1144,7 +1145,7 @@ private fun TopSearchBar(
                                     ) {
                                         if (searchQuery.isBlank()) {
                                             Text(
-                                                text = "Search",
+                                                text = stringResource(R.string.home_search_placeholder),
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 color = colorScheme.onSurfaceVariant,
                                             )
@@ -1159,13 +1160,13 @@ private fun TopSearchBar(
 
                 PressableIconButton(
                     icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                    contentDescription = "Create list",
+                    contentDescription = stringResource(R.string.action_create_list),
                     tint = colorScheme.onSurface,
                     onClick = onCreateList,
                 )
                 PressableIconButton(
                     icon = Icons.Rounded.MoreHoriz,
-                    contentDescription = "More",
+                    contentDescription = stringResource(R.string.action_more),
                     tint = colorScheme.onSurface,
                     onClick = onOpenSettings,
                 )
@@ -1198,7 +1199,7 @@ private fun MyListsHeader() {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
          Text(
-            text = "My Lists",
+            text = stringResource(R.string.home_my_lists),
             style = MaterialTheme.typography.headlineMedium,
             color = colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
@@ -1277,7 +1278,7 @@ private fun CategoryGrid(
                 color = Color(0xFF6EA8E1),
                 icon = Icons.Rounded.WbSunny,
                 backgroundWatermark = Icons.Rounded.WbSunny,
-                title = "Today",
+                title = stringResource(R.string.home_category_today),
                 count = todayCount,
                 onClick = onOpenToday,
             )
@@ -1286,7 +1287,7 @@ private fun CategoryGrid(
                 color = Color(0xFFDDB37D),
                 icon = Icons.Rounded.Schedule,
                 backgroundWatermark = Icons.Rounded.Schedule,
-                title = "Scheduled",
+                title = stringResource(R.string.home_category_scheduled),
                 count = scheduledCount,
                 onClick = onOpenScheduled,
             )
@@ -1297,7 +1298,7 @@ private fun CategoryGrid(
                 color = Color(0xFF4E4E50),
                 icon = Icons.Rounded.Inbox,
                 backgroundWatermark = Icons.Rounded.Inbox,
-                title = "All",
+                title = stringResource(R.string.home_category_all),
                 count = allCount,
                 onClick = onOpenAll,
             )
@@ -1306,7 +1307,7 @@ private fun CategoryGrid(
                 color = Color(0xFFD48A8C),
                 icon = Icons.Rounded.Flag,
                 backgroundWatermark = Icons.Rounded.Flag,
-                title = "Priority",
+                title = stringResource(R.string.home_category_priority),
                 count = priorityCount,
                 onClick = onOpenPriority,
             )
@@ -1316,7 +1317,7 @@ private fun CategoryGrid(
             color = completedColor,
             icon = Icons.Rounded.Check,
             backgroundWatermark = Icons.Rounded.Check,
-            title = "Completed",
+            title = stringResource(R.string.home_category_completed),
             count = completedCount,
             onClick = onOpenCompleted,
         )
