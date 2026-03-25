@@ -3,7 +3,11 @@ package com.ohmz.tday.compose.feature.todos
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.settings.SettingsRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
@@ -37,7 +41,11 @@ data class TodoListUiState(
 
 @HiltViewModel
 class TodoListViewModel @Inject constructor(
-    private val repository: TdayRepository,
+    private val todoRepository: TodoRepository,
+    private val listRepository: ListRepository,
+    private val settingsRepository: SettingsRepository,
+    private val syncManager: SyncManager,
+    private val cacheManager: OfflineCacheManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TodoListUiState())
@@ -50,7 +58,7 @@ class TodoListViewModel @Inject constructor(
 
     private fun observeCacheChanges() {
         viewModelScope.launch {
-            repository.cacheDataVersion
+            cacheManager.cacheDataVersion
                 .collect {
                     if (!hasLoadedMode) return@collect
                     hydrateFromCache(
@@ -74,7 +82,7 @@ class TodoListViewModel @Inject constructor(
                     TodoListMode.PRIORITY -> "Priority"
                     TodoListMode.LIST -> listName ?: "List"
                 },
-                aiSummaryEnabled = repository.isAiSummaryEnabledSnapshot(),
+                aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
                 summaryText = null,
                 summarySource = null,
                 summaryGeneratedAt = null,
@@ -82,10 +90,7 @@ class TodoListViewModel @Inject constructor(
                 isSummarizing = false,
             )
         }
-        hydrateFromCache(
-            mode = mode,
-            listId = listId,
-        )
+        hydrateFromCache(mode = mode, listId = listId)
         refreshAiSummaryAvailability()
     }
 
@@ -93,18 +98,12 @@ class TodoListViewModel @Inject constructor(
         val current = _uiState.value
         if (current.isSummarizing) return
         if (!current.aiSummaryEnabled) {
-            _uiState.update {
-                it.copy(
-                    summaryError = "AI summary is disabled by admin",
-                )
-            }
+            _uiState.update { it.copy(summaryError = "AI summary is disabled by admin") }
             return
         }
         if (current.mode == TodoListMode.LIST) {
             _uiState.update {
-                it.copy(
-                    summaryError = "Summary is available only for Today, Scheduled, All, and Priority",
-                )
+                it.copy(summaryError = "Summary is available only for Today, Scheduled, All, and Priority")
             }
             return
         }
@@ -121,10 +120,7 @@ class TodoListViewModel @Inject constructor(
 
         viewModelScope.launch {
             runCatching {
-                repository.summarizeTodos(
-                    mode = current.mode,
-                    listId = current.listId,
-                )
+                todoRepository.summarizeTodos(mode = current.mode, listId = current.listId)
             }.onSuccess { response ->
                 _uiState.update {
                     it.copy(
@@ -147,10 +143,7 @@ class TodoListViewModel @Inject constructor(
     }
 
     fun refresh() {
-        refreshInternal(
-            forceSync = true,
-            showLoading = true,
-        )
+        refreshInternal(forceSync = true, showLoading = true)
     }
 
     suspend fun parseTaskTitleNlp(
@@ -158,21 +151,18 @@ class TodoListViewModel @Inject constructor(
         referenceStartEpochMs: Long,
         referenceDueEpochMs: Long,
     ): TodoTitleNlpResponse? {
-        return repository.parseTodoTitleNlp(
+        return todoRepository.parseTodoTitleNlp(
             text = text,
             referenceStartEpochMs = referenceStartEpochMs,
             referenceDueEpochMs = referenceDueEpochMs,
         )
     }
 
-    private fun hydrateFromCache(
-        mode: TodoListMode,
-        listId: String?,
-    ) {
+    private fun hydrateFromCache(mode: TodoListMode, listId: String?) {
         runCatching {
-            val todos = repository.fetchTodosSnapshot(mode = mode, listId = listId)
-            val lists = repository.fetchListsSnapshot()
-            val aiSummaryEnabled = repository.isAiSummaryEnabledSnapshot()
+            val todos = todoRepository.fetchTodosSnapshot(mode = mode, listId = listId)
+            val lists = listRepository.fetchListsSnapshot()
+            val aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot()
             Triple(todos, lists, aiSummaryEnabled)
         }.onSuccess { (todos, lists, aiSummaryEnabled) ->
             _uiState.update { current ->
@@ -186,10 +176,7 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
-    private fun refreshInternal(
-        forceSync: Boolean,
-        showLoading: Boolean,
-    ) {
+    private fun refreshInternal(forceSync: Boolean, showLoading: Boolean) {
         val mode = _uiState.value.mode
         val listId = _uiState.value.listId
 
@@ -207,14 +194,11 @@ class TodoListViewModel @Inject constructor(
 
             runCatching {
                 if (forceSync) {
-                    // Pull-to-refresh should fetch latest server state first.
-                    repository.syncCachedData(
-                        force = true,
-                        replayPendingMutations = true,
-                    ).onFailure { /* fall back to local cache */ }
+                    syncManager.syncCachedData(force = true, replayPendingMutations = true)
+                        .onFailure { /* fall back to local cache */ }
                 }
-                val todos = repository.fetchTodos(mode = mode, listId = listId)
-                val lists = repository.fetchLists()
+                val todos = todoRepository.fetchTodos(mode = mode, listId = listId)
+                val lists = listRepository.fetchLists()
                 todos to lists
             }.onSuccess { (todos, lists) ->
                 _uiState.update { current ->
@@ -239,13 +223,10 @@ class TodoListViewModel @Inject constructor(
 
     private fun refreshAiSummaryAvailability() {
         viewModelScope.launch {
-            val enabled = repository.refreshAiSummaryEnabled()
+            val enabled = settingsRepository.refreshAiSummaryEnabled()
             _uiState.update { current ->
-                if (current.aiSummaryEnabled == enabled) {
-                    current
-                } else {
-                    current.copy(aiSummaryEnabled = enabled)
-                }
+                if (current.aiSummaryEnabled == enabled) current
+                else current.copy(aiSummaryEnabled = enabled)
             }
         }
     }
@@ -257,11 +238,11 @@ class TodoListViewModel @Inject constructor(
 
         viewModelScope.launch {
             runCatching {
-                repository.createTodo(payload)
+                todoRepository.createTodo(payload)
             }.onSuccess {
                 runCatching {
-                    val todos = repository.fetchTodosCached(mode = mode, listId = listId)
-                    val lists = repository.fetchLists()
+                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
+                    val lists = listRepository.fetchLists()
                     todos to lists
                 }.onSuccess { (todos, lists) ->
                     _uiState.update { current ->
@@ -271,22 +252,14 @@ class TodoListViewModel @Inject constructor(
                             errorMessage = null,
                         )
                     }
-                }.onFailure {
-                    refreshInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
-                }
+                }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
             }.onFailure { error ->
                 _uiState.update { it.copy(errorMessage = error.message ?: "Could not create task") }
             }
         }
     }
 
-    fun updateTask(
-        todo: TodoItem,
-        payload: CreateTaskPayload,
-    ) {
+    fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
         val normalizedTitle = payload.title.trim()
         if (normalizedTitle.isBlank()) return
 
@@ -326,16 +299,12 @@ class TodoListViewModel @Inject constructor(
                         item.id == todo.id &&
                         item.listId != current.listId
                 }
-            current.copy(
-                items = optimisticItems,
-                errorMessage = null,
-            )
+            current.copy(items = optimisticItems, errorMessage = null)
         }
 
         viewModelScope.launch {
-
             runCatching {
-                repository.updateTodo(
+                todoRepository.updateTodo(
                     todo = todo,
                     payload = CreateTaskPayload(
                         title = normalizedTitle,
@@ -349,8 +318,8 @@ class TodoListViewModel @Inject constructor(
                 )
             }.onSuccess {
                 runCatching {
-                    val todos = repository.fetchTodosCached(mode = mode, listId = currentListId)
-                    val lists = repository.fetchLists()
+                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = currentListId)
+                    val lists = listRepository.fetchLists()
                     todos to lists
                 }.onSuccess { (todos, lists) ->
                     _uiState.update { current ->
@@ -360,12 +329,7 @@ class TodoListViewModel @Inject constructor(
                             errorMessage = null,
                         )
                     }
-                }.onFailure {
-                    refreshInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
-                }
+                }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
                     errorMessage = error.message ?: "Could not update task",
@@ -384,12 +348,9 @@ class TodoListViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                repository.completeTodo(todo)
+                todoRepository.completeTodo(todo)
             }.onSuccess {
-                refreshInternal(
-                    forceSync = false,
-                    showLoading = false,
-                )
+                refreshInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
@@ -401,10 +362,7 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
-    fun delete(
-        todo: TodoItem,
-        onDeleted: (() -> Unit)? = null,
-    ) {
+    fun delete(todo: TodoItem, onDeleted: (() -> Unit)? = null) {
         val previousItems = _uiState.value.items
         val mode = _uiState.value.mode
         val listId = _uiState.value.listId
@@ -416,12 +374,12 @@ class TodoListViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                repository.deleteTodo(todo)
+                todoRepository.deleteTodo(todo)
             }.onSuccess {
                 onDeleted?.invoke()
                 runCatching {
-                    val todos = repository.fetchTodosCached(mode = mode, listId = listId)
-                    val lists = repository.fetchLists()
+                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
+                    val lists = listRepository.fetchLists()
                     todos to lists
                 }.onSuccess { (todos, lists) ->
                     _uiState.update { current ->
@@ -431,12 +389,7 @@ class TodoListViewModel @Inject constructor(
                             errorMessage = null,
                         )
                     }
-                }.onFailure {
-                    refreshInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
-                }
+                }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(
@@ -473,11 +426,7 @@ class TodoListViewModel @Inject constructor(
         val previousState = currentState
         _uiState.update { current ->
             current.copy(
-                title = if (current.mode == TodoListMode.LIST) {
-                    trimmedName
-                } else {
-                    current.title
-                },
+                title = if (current.mode == TodoListMode.LIST) trimmedName else current.title,
                 lists = current.lists.map { list ->
                     if (list.id == resolvedListId) {
                         list.copy(
@@ -495,7 +444,7 @@ class TodoListViewModel @Inject constructor(
 
         viewModelScope.launch {
             runCatching {
-                repository.updateList(
+                listRepository.updateList(
                     listId = resolvedListId,
                     name = trimmedName,
                     color = color,

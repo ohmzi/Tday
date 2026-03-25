@@ -2,7 +2,7 @@ package com.ohmz.tday.compose.feature.notes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.notes.NotesRepository
 import com.ohmz.tday.compose.core.model.NoteItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -20,7 +20,7 @@ data class NotesUiState(
 
 @HiltViewModel
 class NotesViewModel @Inject constructor(
-    private val repository: TdayRepository,
+    private val notesRepository: NotesRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotesUiState())
@@ -47,7 +47,7 @@ class NotesViewModel @Inject constructor(
                 }
             }
             runCatching {
-                repository.fetchNotes()
+                notesRepository.fetchNotes()
             }.onSuccess { notes ->
                 _uiState.update { current ->
                     current.copy(
@@ -70,24 +70,20 @@ class NotesViewModel @Inject constructor(
     fun create(name: String) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            runCatching { repository.createNote(name) }
+            runCatching { notesRepository.createNote(name) }
                 .onSuccess { loadInternal(showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.message ?: "Could not create note")
-                    }
+                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not create note") }
                 }
         }
     }
 
     fun delete(noteId: String) {
         viewModelScope.launch {
-            runCatching { repository.deleteNote(noteId) }
+            runCatching { notesRepository.deleteNote(noteId) }
                 .onSuccess { loadInternal(showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.message ?: "Could not delete note")
-                    }
+                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not delete note") }
                 }
         }
     }
