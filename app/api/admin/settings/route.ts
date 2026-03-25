@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { errorHandler } from "@/lib/errorHandler";
 import { getGlobalAppConfig, setGlobalAiSummaryEnabled } from "@/lib/appConfig";
 import { BadRequestError } from "@/lib/customError";
+import { apiCache } from "@/lib/cache/memoryCache";
 
 const adminSettingsSchema = z.object({
   aiSummaryEnabled: z.boolean(),
@@ -83,6 +84,9 @@ export async function PATCH(req: NextRequest) {
       enabled: wantsEnabled,
       updatedById: admin.id,
     });
+
+    // App-settings is global; flush all cached entries for it
+    apiCache.clear();
 
     return NextResponse.json(
       {
