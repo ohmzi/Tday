@@ -2,7 +2,10 @@ package com.ohmz.tday.compose.feature.completed
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.completed.CompletedRepository
+import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -24,15 +27,18 @@ data class CompletedUiState(
 
 @HiltViewModel
 class CompletedViewModel @Inject constructor(
-    private val repository: TdayRepository,
+    private val completedRepository: CompletedRepository,
+    private val listRepository: ListRepository,
+    private val syncManager: SyncManager,
+    private val cacheManager: OfflineCacheManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         runCatching {
             CompletedUiState(
                 isLoading = false,
-                items = repository.fetchCompletedItemsSnapshot(),
-                lists = repository.fetchListsSnapshot(),
+                items = completedRepository.fetchCompletedItemsSnapshot(),
+                lists = listRepository.fetchListsSnapshot(),
                 errorMessage = null,
             )
         }.getOrElse { CompletedUiState() },
@@ -46,7 +52,7 @@ class CompletedViewModel @Inject constructor(
 
     private fun observeCacheChanges() {
         viewModelScope.launch {
-            repository.cacheDataVersion
+            cacheManager.cacheDataVersion
                 .collect {
                     if (!hasLoadedScreen) return@collect
                     hydrateFromCache()
@@ -61,15 +67,12 @@ class CompletedViewModel @Inject constructor(
 
     fun refresh() {
         hasLoadedScreen = true
-        loadInternal(
-            forceSync = true,
-            showLoading = true,
-        )
+        loadInternal(forceSync = true, showLoading = true)
     }
 
     private fun hydrateFromCache() {
         runCatching {
-            repository.fetchCompletedItemsSnapshot() to repository.fetchListsSnapshot()
+            completedRepository.fetchCompletedItemsSnapshot() to listRepository.fetchListsSnapshot()
         }.onSuccess { (items, lists) ->
             _uiState.update { current ->
                 current.copy(
@@ -82,10 +85,7 @@ class CompletedViewModel @Inject constructor(
         }
     }
 
-    private fun loadInternal(
-        forceSync: Boolean,
-        showLoading: Boolean,
-    ) {
+    private fun loadInternal(forceSync: Boolean, showLoading: Boolean) {
         viewModelScope.launch {
             if (showLoading) {
                 _uiState.update { current ->
@@ -99,15 +99,12 @@ class CompletedViewModel @Inject constructor(
             }
             runCatching {
                 if (forceSync) {
-                    // Keep completed list aligned with latest server state on refresh.
-                    repository.syncCachedData(
-                        force = true,
-                        replayPendingMutations = false,
-                    ).onFailure { /* fall back to local cache */ }
+                    syncManager.syncCachedData(force = true, replayPendingMutations = false)
+                        .onFailure { /* fall back to local cache */ }
                 }
                 Pair(
-                    repository.fetchCompletedItems(),
-                    repository.fetchLists(),
+                    completedRepository.fetchCompletedItems(),
+                    listRepository.fetchLists(),
                 )
             }.onSuccess { (items, lists) ->
                 _uiState.update { current ->
@@ -131,55 +128,33 @@ class CompletedViewModel @Inject constructor(
 
     fun uncomplete(item: CompletedItem) {
         viewModelScope.launch {
-            runCatching { repository.uncomplete(item) }
-                .onSuccess {
-                    loadInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
-                }
+            runCatching { completedRepository.uncomplete(item) }
+                .onSuccess { loadInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.message ?: "Could not restore task")
-                    }
+                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not restore task") }
                 }
         }
     }
 
-    fun delete(
-        item: CompletedItem,
-        onDeleted: (() -> Unit)? = null,
-    ) {
+    fun delete(item: CompletedItem, onDeleted: (() -> Unit)? = null) {
         viewModelScope.launch {
-            runCatching { repository.deleteCompletedTodo(item) }
+            runCatching { completedRepository.deleteCompletedTodo(item) }
                 .onSuccess {
                     onDeleted?.invoke()
-                    loadInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
+                    loadInternal(forceSync = false, showLoading = false)
                 }
                 .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.message ?: "Could not delete task")
-                    }
+                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not delete task") }
                 }
         }
     }
 
     fun update(item: CompletedItem, payload: CreateTaskPayload) {
         viewModelScope.launch {
-            runCatching { repository.updateCompletedTodo(item, payload) }
-                .onSuccess {
-                    loadInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
-                }
+            runCatching { completedRepository.updateCompletedTodo(item, payload) }
+                .onSuccess { loadInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.message ?: "Could not update task")
-                    }
+                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not update task") }
                 }
         }
     }
