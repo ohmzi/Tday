@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.core.data.sync
 
+import android.content.Context
 import android.util.Log
 import com.ohmz.tday.compose.core.data.CachedListRecord
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
@@ -32,6 +33,8 @@ import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
+import com.ohmz.tday.compose.feature.widget.TodayTasksWidget
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
@@ -39,6 +42,7 @@ import javax.inject.Singleton
 
 @Singleton
 class SyncManager @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val api: TdayApiService,
     private val cacheManager: OfflineCacheManager,
     private val secureConfigStore: SecureConfigStore,
@@ -56,6 +60,7 @@ class SyncManager @Inject constructor(
                 replayPendingMutations = replayPendingMutations,
             )
         }
+        runCatching { TodayTasksWidget().updateAll(context) }
     }
 
     private suspend fun syncLocalCache(

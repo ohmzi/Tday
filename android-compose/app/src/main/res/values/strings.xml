@@ -151,4 +151,7 @@
     <string name="error_connectivity_title">No Internet Connection</string>
     <string name="error_connectivity">Unable to connect. Please check your network connection and try again.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
+
+    <string name="widget_today_tasks_description">Shows today\'s tasks at a glance</string>
+    <string name="widget_loading">Loading tasks…</string>
 </resources>
