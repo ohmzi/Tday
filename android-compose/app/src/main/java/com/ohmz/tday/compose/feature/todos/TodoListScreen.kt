@@ -498,10 +498,9 @@ fun TodoListScreen(
 
             uiState.errorMessage?.let { message ->
                 item {
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                    com.ohmz.tday.compose.core.ui.ErrorRetryCard(
+                        message = message,
+                        onRetry = onRefresh,
                     )
                 }
             }

@@ -23,6 +23,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -56,6 +61,8 @@ import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
+import com.ohmz.tday.compose.core.ui.OfflineBanner
+import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
 import com.ohmz.tday.compose.feature.calendar.CalendarViewModel
@@ -81,6 +88,20 @@ fun TdayApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     var activeToast by remember { mutableStateOf<AppToastMessage?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        appViewModel.snackbarManager.events.collect { event ->
+            val result = snackbarHostState.showSnackbar(
+                message = event.message,
+                actionLabel = event.actionLabel,
+                duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                event.onAction?.invoke()
+            }
+        }
+    }
 
     fun showTaskDeletedToast() {
         activeToast = AppToastMessage(
@@ -406,6 +427,27 @@ fun TdayApp() {
                         onLogout = { appViewModel.logout() },
                     )
                 }
+            }
+
+            OfflineBanner(
+                visible = appUiState.isOffline && appUiState.authenticated,
+                pendingMutationCount = appUiState.pendingMutationCount,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 60.dp),
+            ) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.inverseSurface,
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    actionColor = MaterialTheme.colorScheme.inversePrimary,
+                )
             }
 
             TdayBottomToastHost(
