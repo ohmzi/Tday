@@ -41,7 +41,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -78,6 +80,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
@@ -541,6 +544,8 @@ fun HomeScreen(
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
+                                                .semantics(mergeDescendants = true) {}
+                                                .heightIn(min = 48.dp)
                                                 .clickable {
                                                     closeSearch()
                                                     onOpenTaskFromSearch(todo.id)
@@ -691,7 +696,7 @@ private fun CreateListBottomSheet(
                     confirmEnabled = canCreate,
                 )
 
-                ListSheetSectionTitle("List")
+                ListSheetSectionTitle(stringResource(R.string.home_section_list))
                 ListSheetCard {
                     Column(
                         modifier = Modifier
@@ -735,7 +740,7 @@ private fun CreateListBottomSheet(
                                 ) {
                                     if (listName.isBlank()) {
                                         Text(
-                                            text = "List name",
+                                            text = stringResource(R.string.home_list_name_placeholder),
                                             style = MaterialTheme.typography.headlineSmall,
                                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                                             fontWeight = FontWeight.Bold,
@@ -748,7 +753,7 @@ private fun CreateListBottomSheet(
                     }
                 }
 
-                ListSheetSectionTitle("Color")
+                ListSheetSectionTitle(stringResource(R.string.home_section_color))
                 ListSheetCard {
                     Row(
                         modifier = Modifier
@@ -762,7 +767,7 @@ private fun CreateListBottomSheet(
                             val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
                                     .background(option.color)
                                     .border(
@@ -774,7 +779,7 @@ private fun CreateListBottomSheet(
                                         interactionSource = interactionSource,
                                         indication = ripple(
                                             bounded = true,
-                                            radius = 21.dp,
+                                            radius = 24.dp,
                                         ),
                                     ) { onListColorChange(option.key) },
                             )
@@ -782,7 +787,7 @@ private fun CreateListBottomSheet(
                     }
                 }
 
-                ListSheetSectionTitle("Icon")
+                ListSheetSectionTitle(stringResource(R.string.home_section_icon))
                 ListSheetCard {
                     Row(
                         modifier = Modifier
@@ -794,9 +799,10 @@ private fun CreateListBottomSheet(
                         LIST_ICON_OPTIONS.forEach { option ->
                             val selected = listIconKey == option.key
                             val interactionSource = remember { MutableInteractionSource() }
+                            val iconOptionDescription = stringResource(R.string.home_list_icon_option, option.key)
                             Box(
                                 modifier = Modifier
-                                    .size(46.dp)
+                                    .size(48.dp)
                                     .clip(CircleShape)
                                     .background(
                                         if (selected) {
@@ -814,14 +820,14 @@ private fun CreateListBottomSheet(
                                         interactionSource = interactionSource,
                                         indication = ripple(
                                             bounded = true,
-                                            radius = 23.dp,
+                                            radius = 24.dp,
                                         ),
                                     ) { onListIconChange(option.key) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     imageVector = option.icon,
-                                    contentDescription = null,
+                                    contentDescription = iconOptionDescription,
                                     tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -848,14 +854,14 @@ private fun ListSheetHeader(
     ) {
         ListSheetActionButton(
             icon = Icons.Rounded.Close,
-            contentDescription = "Close",
+            contentDescription = stringResource(R.string.action_close),
             enabled = true,
             accentColor = Color(0xFFE35A5A),
             onClick = onClose,
         )
 
         Text(
-            text = "New list",
+            text = stringResource(R.string.home_new_list),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
@@ -1397,6 +1403,7 @@ private fun CategoryCard(
 
     Card(
         modifier = modifier
+            .semantics(mergeDescendants = true) {}
             .offset(y = animatedOffsetY)
             .graphicsLayer {
                 scaleX = animatedScale
@@ -1582,6 +1589,7 @@ private fun ListRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(70.dp)
+            .semantics(mergeDescendants = true) {}
             .offset(y = animatedOffsetY)
             .graphicsLayer {
                 scaleX = animatedScale
