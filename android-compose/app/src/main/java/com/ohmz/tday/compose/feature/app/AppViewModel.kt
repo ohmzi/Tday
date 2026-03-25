@@ -8,9 +8,12 @@ import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
+import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.domain.BootstrapSessionUseCase
 import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
+import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
@@ -47,6 +50,8 @@ data class AppUiState(
     val adminAiSummaryError: String? = null,
     val aiSummaryValidationError: String? = null,
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
+    val isOffline: Boolean = false,
+    val pendingMutationCount: Int = 0,
 )
 
 @HiltViewModel
@@ -61,6 +66,7 @@ class AppViewModel @Inject constructor(
     private val themePreferenceStore: ThemePreferenceStore,
     private val reminderScheduler: TaskReminderScheduler,
     private val reminderPreferenceStore: ReminderPreferenceStore,
+    val snackbarManager: SnackbarManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -391,17 +397,46 @@ class AppViewModel @Inject constructor(
 
         resyncJob = viewModelScope.launch {
             while (isActive) {
-                val delayMs = runCatching {
-                    if (syncManager.hasPendingMutations()) {
-                        PENDING_RESYNC_INTERVAL_MS
-                    } else {
-                        RESYNC_INTERVAL_MS
-                    }
-                }.getOrDefault(RESYNC_INTERVAL_MS)
+                val hasPending = runCatching { syncManager.hasPendingMutations() }.getOrDefault(false)
+                val pendingCount = runCatching {
+                    cacheManager.loadOfflineState().pendingMutations.size
+                }.getOrDefault(0)
+                _uiState.update { it.copy(pendingMutationCount = pendingCount) }
+
+                val delayMs = if (hasPending) PENDING_RESYNC_INTERVAL_MS else RESYNC_INTERVAL_MS
                 delay(delayMs)
-                runCatching { syncAndRefresh(force = true) }
+
+                val result = runCatching { syncAndRefresh(force = true) }
+                val syncError = result.exceptionOrNull()
+                _uiState.update {
+                    it.copy(
+                        isOffline = syncError != null && isLikelyConnectivityIssue(syncError),
+                        pendingMutationCount = runCatching {
+                            cacheManager.loadOfflineState().pendingMutations.size
+                        }.getOrDefault(it.pendingMutationCount),
+                    )
+                }
+                if (syncError != null) {
+                    classifyAndShowError(syncError)
+                } else {
+                    _uiState.update { it.copy(isOffline = false) }
+                }
                 launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
             }
+        }
+    }
+
+    private fun classifyAndShowError(error: Throwable) {
+        if (isLikelyConnectivityIssue(error)) return
+        when {
+            error is ApiCallException && error.statusCode == 401 ->
+                snackbarManager.showError("Session expired. Please sign in again.")
+            error is ApiCallException && error.statusCode in 500..599 ->
+                snackbarManager.showError("Server error. Please try again later.") { syncNow() }
+            else ->
+                snackbarManager.showError(
+                    error.message ?: "Something went wrong.",
+                ) { syncNow() }
         }
     }
 

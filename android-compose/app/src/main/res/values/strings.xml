@@ -153,4 +153,13 @@
     <string name="calendar_task_count_one">1 task due</string>
     <string name="calendar_task_count_many">%1$d tasks due</string>
     <string name="calendar_task_count_cap">9+</string>
+
+    <!-- Error handling / retry / offline -->
+    <string name="action_retry">Retry</string>
+    <string name="offline_banner">You are offline</string>
+    <string name="offline_banner_with_pending">Offline — %1$d pending change(s)</string>
+    <string name="error_auth_expired">Session expired. Please sign in again.</string>
+    <string name="error_server">Server error. Please try again later.</string>
+    <string name="error_connectivity">Unable to connect. Check your network.</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
 </resources>
