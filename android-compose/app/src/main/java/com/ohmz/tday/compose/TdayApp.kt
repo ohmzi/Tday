@@ -2,6 +2,7 @@ package com.ohmz.tday.compose
 
 import android.net.Uri
 import com.ohmz.tday.compose.R
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -153,16 +154,42 @@ fun TdayApp() {
             NavHost(
                 navController = navController,
                 startDestination = AppRoute.Splash.route,
+                enterTransition = {
+                    fadeIn(tween(300)) + slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Start,
+                        tween(300),
+                    )
+                },
+                exitTransition = { fadeOut(tween(200)) },
+                popEnterTransition = {
+                    fadeIn(tween(300)) + slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.End,
+                        tween(300),
+                    )
+                },
+                popExitTransition = { fadeOut(tween(200)) },
             ) {
-                composable(AppRoute.Splash.route) {
+                composable(
+                    route = AppRoute.Splash.route,
+                    enterTransition = { fadeIn(tween(300)) },
+                    exitTransition = { fadeOut(tween(300)) },
+                ) {
                     SplashScreen()
                 }
 
-                composable(AppRoute.ServerSetup.route) {
+                composable(
+                    route = AppRoute.ServerSetup.route,
+                    enterTransition = { fadeIn(tween(300)) },
+                    exitTransition = { fadeOut(tween(300)) },
+                ) {
                     SplashScreen()
                 }
 
-                composable(AppRoute.Login.route) {
+                composable(
+                    route = AppRoute.Login.route,
+                    enterTransition = { fadeIn(tween(300)) },
+                    exitTransition = { fadeOut(tween(300)) },
+                ) {
                     SplashScreen()
                 }
 
@@ -389,7 +416,17 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.Settings.route) {
+                composable(
+                    route = AppRoute.Settings.route,
+                    enterTransition = {
+                        slideInVertically(tween(300)) { it } + fadeIn(tween(300))
+                    },
+                    exitTransition = { fadeOut(tween(200)) },
+                    popEnterTransition = { fadeIn(tween(300)) },
+                    popExitTransition = {
+                        slideOutVertically(tween(200)) { it } + fadeOut(tween(200))
+                    },
+                ) {
                     OnRouteResume {
                         appViewModel.refreshAdminAiSummarySetting()
                     }

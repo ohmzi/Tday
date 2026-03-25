@@ -436,6 +436,7 @@ fun TodoListScreen(
                     }
                     val isCollapsed = sectionCanCollapse && collapsedSectionKeys.contains(section.key)
                     TimelineSection(
+                        modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                         section = section,
                         mode = uiState.mode,
                         lists = uiState.lists,
@@ -1281,6 +1282,7 @@ private fun ListSettingsActionButton(
 
 @Composable
 private fun TimelineSection(
+    modifier: Modifier = Modifier,
     section: TodoSection,
     mode: TodoListMode,
     lists: List<ListSummary>,
@@ -1301,7 +1303,7 @@ private fun TimelineSection(
         label = "sectionChevronRotation",
     )
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (showTopDivider) {
