@@ -10,6 +10,8 @@ import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
+import com.ohmz.tday.compose.core.network.RealtimeClient
+import com.ohmz.tday.compose.core.network.RealtimeEvent
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.domain.BootstrapSessionUseCase
 import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
@@ -67,11 +69,13 @@ class AppViewModel @Inject constructor(
     private val reminderScheduler: TaskReminderScheduler,
     private val reminderPreferenceStore: ReminderPreferenceStore,
     val snackbarManager: SnackbarManager,
+    private val realtimeClient: RealtimeClient,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
     private var resyncJob: Job? = null
+    private var realtimeJob: Job? = null
 
     init {
         _uiState.update {
@@ -390,8 +394,13 @@ class AppViewModel @Inject constructor(
         if (!authenticated) {
             resyncJob?.cancel()
             resyncJob = null
+            realtimeJob?.cancel()
+            realtimeJob = null
+            realtimeClient.disconnect()
             return
         }
+
+        startRealtimeListener()
 
         if (resyncJob?.isActive == true) return
 
@@ -440,6 +449,35 @@ class AppViewModel @Inject constructor(
         }
     }
 
+    private fun startRealtimeListener() {
+        if (realtimeJob?.isActive == true) return
+
+        realtimeClient.connect()
+        realtimeJob = viewModelScope.launch {
+            realtimeClient.events.collect { event ->
+                when (event) {
+                    is RealtimeEvent.TodoChanged,
+                    is RealtimeEvent.ListChanged,
+                    is RealtimeEvent.CompletedChanged,
+                    is RealtimeEvent.NoteChanged,
+                    -> {
+                        runCatching { syncAndRefresh(force = true, replayPendingMutations = false) }
+                    }
+                    is RealtimeEvent.Disconnected -> {
+                        delay(REALTIME_RECONNECT_DELAY_MS)
+                        if (_uiState.value.authenticated) realtimeClient.connect()
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        realtimeClient.disconnect()
+    }
+
     private fun isAdmin(user: SessionUser?): Boolean {
         return user?.role?.equals("ADMIN", ignoreCase = true) == true
     }
@@ -469,5 +507,6 @@ class AppViewModel @Inject constructor(
     private companion object {
         const val PENDING_RESYNC_INTERVAL_MS = 20 * 1000L
         const val RESYNC_INTERVAL_MS = 5 * 60 * 1000L
+        const val REALTIME_RECONNECT_DELAY_MS = 5_000L
     }
 }
