@@ -75,12 +75,6 @@ data class CompletedItem(
     val listColor: String? = null,
 )
 
-data class NoteItem(
-    val id: String,
-    val name: String,
-    val content: String?,
-)
-
 data class RegisterOutcome(
     val success: Boolean,
     val requiresApproval: Boolean,
