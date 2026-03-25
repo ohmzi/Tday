@@ -3,7 +3,7 @@ package com.ohmz.tday.compose.core.data
 import kotlinx.serialization.Serializable
 
 @Serializable
-internal data class OfflineSyncState(
+data class OfflineSyncState(
     val lastSuccessfulSyncEpochMs: Long = 0L,
     val lastSyncAttemptEpochMs: Long = 0L,
     val todos: List<CachedTodoRecord> = emptyList(),
@@ -14,7 +14,7 @@ internal data class OfflineSyncState(
 )
 
 @Serializable
-internal data class CachedTodoRecord(
+data class CachedTodoRecord(
     val id: String,
     val canonicalId: String,
     val title: String,
@@ -31,7 +31,7 @@ internal data class CachedTodoRecord(
 )
 
 @Serializable
-internal data class CachedListRecord(
+data class CachedListRecord(
     val id: String,
     val name: String,
     val color: String? = null,
@@ -41,7 +41,7 @@ internal data class CachedListRecord(
 )
 
 @Serializable
-internal data class CachedCompletedRecord(
+data class CachedCompletedRecord(
     val id: String,
     val originalTodoId: String? = null,
     val title: String,
@@ -57,7 +57,7 @@ internal data class CachedCompletedRecord(
 )
 
 @Serializable
-internal data class PendingMutationRecord(
+data class PendingMutationRecord(
     val mutationId: String,
     val kind: MutationKind,
     val targetId: String? = null,
@@ -78,7 +78,7 @@ internal data class PendingMutationRecord(
 )
 
 @Serializable
-internal enum class MutationKind {
+enum class MutationKind {
     CREATE_LIST,
     UPDATE_LIST,
     CREATE_TODO,

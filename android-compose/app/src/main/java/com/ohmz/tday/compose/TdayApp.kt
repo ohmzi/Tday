@@ -2,6 +2,7 @@ package com.ohmz.tday.compose
 
 import android.net.Uri
 import com.ohmz.tday.compose.R
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -23,6 +24,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -52,10 +58,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
+import androidx.compose.ui.platform.LocalContext
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
+import com.ohmz.tday.compose.core.ui.OfflineBanner
+import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
 import com.ohmz.tday.compose.feature.calendar.CalendarViewModel
@@ -65,8 +75,6 @@ import com.ohmz.tday.compose.feature.completed.CompletedViewModel
 import com.ohmz.tday.compose.feature.home.HomeScreen
 import com.ohmz.tday.compose.feature.home.HomeUiState
 import com.ohmz.tday.compose.feature.home.HomeViewModel
-import com.ohmz.tday.compose.feature.notes.NotesScreen
-import com.ohmz.tday.compose.feature.notes.NotesViewModel
 import com.ohmz.tday.compose.feature.onboarding.OnboardingWizardOverlay
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
@@ -81,6 +89,29 @@ fun TdayApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     var activeToast by remember { mutableStateOf<AppToastMessage?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val activity = LocalContext.current as? MainActivity
+    val deepLinkIntent by activity?.deepLinkIntent?.collectAsStateWithLifecycle()
+        ?: remember { mutableStateOf(null) }
+
+    LaunchedEffect(deepLinkIntent) {
+        val intent = deepLinkIntent ?: return@LaunchedEffect
+        navController.handleDeepLink(intent)
+    }
+
+    LaunchedEffect(Unit) {
+        appViewModel.snackbarManager.events.collect { event ->
+            val result = snackbarHostState.showSnackbar(
+                message = event.message,
+                actionLabel = event.actionLabel,
+                duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                event.onAction?.invoke()
+            }
+        }
+    }
 
     fun showTaskDeletedToast() {
         activeToast = AppToastMessage(
@@ -134,20 +165,49 @@ fun TdayApp() {
             NavHost(
                 navController = navController,
                 startDestination = AppRoute.Splash.route,
+                enterTransition = {
+                    fadeIn(tween(300)) + slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Start,
+                        tween(300),
+                    )
+                },
+                exitTransition = { fadeOut(tween(200)) },
+                popEnterTransition = {
+                    fadeIn(tween(300)) + slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.End,
+                        tween(300),
+                    )
+                },
+                popExitTransition = { fadeOut(tween(200)) },
             ) {
-                composable(AppRoute.Splash.route) {
+                composable(
+                    route = AppRoute.Splash.route,
+                    enterTransition = { fadeIn(tween(300)) },
+                    exitTransition = { fadeOut(tween(300)) },
+                ) {
                     SplashScreen()
                 }
 
-                composable(AppRoute.ServerSetup.route) {
+                composable(
+                    route = AppRoute.ServerSetup.route,
+                    enterTransition = { fadeIn(tween(300)) },
+                    exitTransition = { fadeOut(tween(300)) },
+                ) {
                     SplashScreen()
                 }
 
-                composable(AppRoute.Login.route) {
+                composable(
+                    route = AppRoute.Login.route,
+                    enterTransition = { fadeIn(tween(300)) },
+                    exitTransition = { fadeOut(tween(300)) },
+                ) {
                     SplashScreen()
                 }
 
-                composable(AppRoute.Home.route) {
+                composable(
+                    route = AppRoute.Home.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://home" }),
+                ) {
                     val authViewModel: AuthViewModel = hiltViewModel()
                     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
                     val showOnboardingWizard = !appUiState.authenticated
@@ -268,7 +328,10 @@ fun TdayApp() {
                     }
                 }
 
-                composable(AppRoute.TodayTodos.route) {
+                composable(
+                    route = AppRoute.TodayTodos.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/today" }),
+                ) {
                     TodosRoute(
                         mode = TodoListMode.TODAY,
                         onBack = { navController.popBackStack() },
@@ -276,7 +339,10 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.ScheduledTodos.route) {
+                composable(
+                    route = AppRoute.ScheduledTodos.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/scheduled" }),
+                ) {
                     TodosRoute(
                         mode = TodoListMode.SCHEDULED,
                         onBack = { navController.popBackStack() },
@@ -293,6 +359,9 @@ fun TdayApp() {
                             defaultValue = null
                         },
                     ),
+                    deepLinks = listOf(
+                        navDeepLink { uriPattern = "tday://todos/all?highlightTodoId={highlightTodoId}" },
+                    ),
                 ) { entry ->
                     val highlightTodoId = Uri.decode(
                         entry.arguments?.getString("highlightTodoId").orEmpty(),
@@ -305,7 +374,10 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.PriorityTodos.route) {
+                composable(
+                    route = AppRoute.PriorityTodos.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/priority" }),
+                ) {
                     TodosRoute(
                         mode = TodoListMode.PRIORITY,
                         onBack = { navController.popBackStack() },
@@ -319,6 +391,9 @@ fun TdayApp() {
                         navArgument("listId") { type = NavType.StringType },
                         navArgument("listName") { type = NavType.StringType },
                     ),
+                    deepLinks = listOf(
+                        navDeepLink { uriPattern = "tday://todos/list/{listId}/{listName}" },
+                    ),
                 ) { entry ->
                     val listId = entry.arguments?.getString("listId").orEmpty()
                     val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
@@ -331,7 +406,10 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.Completed.route) {
+                composable(
+                    route = AppRoute.Completed.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://completed" }),
+                ) {
                     val viewModel: CompletedViewModel = hiltViewModel()
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     OnRouteResume { viewModel.load() }
@@ -349,20 +427,10 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.Notes.route) {
-                    val viewModel: NotesViewModel = hiltViewModel()
-                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                    OnRouteResume { viewModel.load() }
-                    NotesScreen(
-                        uiState = uiState,
-                        onBack = { navController.popBackStack() },
-                        onRefresh = viewModel::refresh,
-                        onCreate = viewModel::create,
-                        onDelete = viewModel::delete,
-                    )
-                }
-
-                composable(AppRoute.Calendar.route) {
+                composable(
+                    route = AppRoute.Calendar.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://calendar" }),
+                ) {
                     val viewModel: CalendarViewModel = hiltViewModel()
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     OnRouteResume { viewModel.load() }
@@ -383,7 +451,18 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.Settings.route) {
+                composable(
+                    route = AppRoute.Settings.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://settings" }),
+                    enterTransition = {
+                        slideInVertically(tween(300)) { it } + fadeIn(tween(300))
+                    },
+                    exitTransition = { fadeOut(tween(200)) },
+                    popEnterTransition = { fadeIn(tween(300)) },
+                    popExitTransition = {
+                        slideOutVertically(tween(200)) { it } + fadeOut(tween(200))
+                    },
+                ) {
                     OnRouteResume {
                         appViewModel.refreshAdminAiSummarySetting()
                     }
@@ -404,6 +483,27 @@ fun TdayApp() {
                         onLogout = { appViewModel.logout() },
                     )
                 }
+            }
+
+            OfflineBanner(
+                visible = appUiState.isOffline && appUiState.authenticated,
+                pendingMutationCount = appUiState.pendingMutationCount,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 60.dp),
+            ) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.inverseSurface,
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    actionColor = MaterialTheme.colorScheme.inversePrimary,
+                )
             }
 
             TdayBottomToastHost(
@@ -439,6 +539,7 @@ private fun TodosRoute(
         onRefresh = viewModel::refresh,
         highlightedTodoId = highlightTodoId,
         onSummarize = viewModel::summarizeCurrentMode,
+        onDismissSummaryConnectivityError = viewModel::dismissSummaryConnectivityError,
         onAddTask = viewModel::addTask,
         onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
         onUpdateTask = viewModel::updateTask,

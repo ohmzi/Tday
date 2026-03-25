@@ -22,17 +22,38 @@
             android:name=".MainActivity"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Tday">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="tday" />
+            </intent-filter>
         </activity>
 
         <receiver
             android:name=".core.notification.TaskReminderReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".feature.widget.TodayTasksWidgetReceiver"
+            android:exported="true"
+            android:label="Today's Tasks">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_tasks_widget_info" />
+        </receiver>
 
         <receiver
             android:name=".core.notification.BootRescheduleReceiver"
