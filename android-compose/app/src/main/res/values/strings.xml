@@ -37,7 +37,6 @@
     <string name="home_category_priority">Priority</string>
     <string name="home_category_completed">Completed</string>
     <string name="home_category_calendar">Calendar</string>
-    <string name="home_category_notes">Notes</string>
     <string name="home_search_placeholder">Search</string>
     <string name="home_search_no_results">No matching tasks</string>
     <string name="home_my_lists">My Lists</string>
@@ -126,13 +125,6 @@
     <string name="completed_section_today">Today</string>
     <string name="completed_section_tomorrow">Tomorrow</string>
     <string name="completed_section_rest_of">Rest of %1$s</string>
-
-    <!-- Notes screen -->
-    <string name="notes_title">Notes</string>
-    <string name="notes_add">Add note</string>
-    <string name="notes_empty">No notes yet</string>
-    <string name="notes_new_title">New note</string>
-    <string name="notes_name_label">Name</string>
 
     <!-- Calendar screen -->
     <string name="calendar_title">Calendar</string>
