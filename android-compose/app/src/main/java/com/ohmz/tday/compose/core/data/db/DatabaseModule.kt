@@ -20,7 +20,7 @@ object DatabaseModule {
             context,
             TdayDatabase::class.java,
             "tday_offline_cache.db",
-        ).build()
+        ).allowMainThreadQueries().build()
     }
 
     @Provides
