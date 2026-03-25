@@ -2,7 +2,11 @@ package com.ohmz.tday.compose.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.todo.TodoRepository
+import com.ohmz.tday.compose.core.domain.CreateTodoUseCase
+import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -35,15 +39,19 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: TdayRepository,
+    private val todoRepository: TodoRepository,
+    private val listRepository: ListRepository,
+    private val syncAndRefresh: SyncAndRefreshUseCase,
+    private val createTodoUseCase: CreateTodoUseCase,
+    private val cacheManager: OfflineCacheManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         runCatching {
             HomeUiState(
                 isLoading = false,
-                summary = repository.fetchDashboardSummarySnapshot(),
-                searchableTodos = repository.fetchTodosSnapshot(mode = TodoListMode.ALL),
+                summary = todoRepository.fetchDashboardSummarySnapshot(),
+                searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
                 errorMessage = null,
             )
         }.getOrElse { HomeUiState() },
@@ -56,7 +64,7 @@ class HomeViewModel @Inject constructor(
 
     private fun observeCacheChanges() {
         viewModelScope.launch {
-            repository.cacheDataVersion
+            cacheManager.cacheDataVersion
                 .collect {
                     refreshFromCache()
                 }
@@ -65,7 +73,7 @@ class HomeViewModel @Inject constructor(
 
     fun refreshFromCache() {
         runCatching {
-            repository.fetchDashboardSummarySnapshot() to repository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+            todoRepository.fetchDashboardSummarySnapshot() to todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
         }.onSuccess { (summary, todos) ->
             _uiState.update { current ->
                 current.copy(
@@ -86,16 +94,10 @@ class HomeViewModel @Inject constructor(
     }
 
     fun refresh() {
-        refreshInternal(
-            forceSync = true,
-            showLoading = true,
-        )
+        refreshInternal(forceSync = true, showLoading = true)
     }
 
-    private fun refreshInternal(
-        forceSync: Boolean,
-        showLoading: Boolean,
-    ) {
+    private fun refreshInternal(forceSync: Boolean, showLoading: Boolean) {
         viewModelScope.launch {
             if (showLoading) {
                 _uiState.update { current ->
@@ -109,13 +111,10 @@ class HomeViewModel @Inject constructor(
             }
             runCatching {
                 if (forceSync) {
-                    // Pull-to-refresh should force a remote sync before re-reading cached summary.
-                    repository.syncCachedData(
-                        force = true,
-                        replayPendingMutations = true,
-                    ).onFailure { /* fall back to local cache */ }
+                    syncAndRefresh(force = true, replayPendingMutations = true)
+                        .onFailure { /* fall back to local cache */ }
                 }
-                repository.fetchDashboardSummary() to repository.fetchTodos(mode = TodoListMode.ALL)
+                todoRepository.fetchDashboardSummary() to todoRepository.fetchTodos(mode = TodoListMode.ALL)
             }.onSuccess { (summary, todos) ->
                 _uiState.update { current ->
                     current.copy(
@@ -136,25 +135,14 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun createList(
-        name: String,
-        color: String? = null,
-        iconKey: String? = null,
-    ) {
+    fun createList(name: String, color: String? = null, iconKey: String? = null) {
         val normalizedName = capitalizeFirstListLetter(name).trim()
         if (normalizedName.isBlank()) return
         viewModelScope.launch {
-            runCatching { repository.createList(normalizedName, color = color, iconKey = iconKey) }
-                .onSuccess {
-                    refreshInternal(
-                        forceSync = false,
-                        showLoading = false,
-                    )
-                }
+            runCatching { listRepository.createList(normalizedName, color = color, iconKey = iconKey) }
+                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.message ?: "Could not create list")
-                    }
+                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not create list") }
                 }
         }
     }
@@ -162,12 +150,12 @@ class HomeViewModel @Inject constructor(
     fun createTask(payload: CreateTaskPayload) {
         if (payload.title.isBlank()) return
         viewModelScope.launch {
-            runCatching { repository.createTodo(payload) }
+            runCatching { createTodoUseCase(payload) }
                 .onSuccess {
-                    runCatching { repository.fetchDashboardSummaryCached() }
+                    runCatching { todoRepository.fetchDashboardSummaryCached() }
                         .onSuccess { summary ->
                             val todos = runCatching {
-                                repository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+                                todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
                             }.getOrDefault(emptyList())
                             _uiState.update { current ->
                                 current.copy(
@@ -181,17 +169,10 @@ class HomeViewModel @Inject constructor(
                                 )
                             }
                         }
-                        .onFailure {
-                            refreshInternal(
-                                forceSync = false,
-                                showLoading = false,
-                            )
-                        }
+                        .onFailure { refreshInternal(forceSync = false, showLoading = false) }
                 }
                 .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.message ?: "Could not create task")
-                    }
+                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not create task") }
                 }
         }
     }
@@ -201,7 +182,7 @@ class HomeViewModel @Inject constructor(
         referenceStartEpochMs: Long,
         referenceDueEpochMs: Long,
     ): TodoTitleNlpResponse? {
-        return repository.parseTodoTitleNlp(
+        return todoRepository.parseTodoTitleNlp(
             text = text,
             referenceStartEpochMs = referenceStartEpochMs,
             referenceDueEpochMs = referenceDueEpochMs,

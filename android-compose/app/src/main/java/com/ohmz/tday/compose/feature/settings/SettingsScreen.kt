@@ -49,10 +49,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
@@ -89,7 +91,7 @@ fun SettingsScreen(
         Box(modifier = Modifier.fillMaxWidth()) {
             SettingsHeaderButton(
                 icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.action_back),
                 onClick = onBack,
             )
         }
@@ -105,7 +107,7 @@ fun SettingsScreen(
                 modifier = Modifier.size(28.dp),
             )
             Text(
-                text = "Settings",
+                text = stringResource(R.string.settings_title),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = colorScheme.onBackground,
@@ -123,7 +125,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = user?.name ?: "Unknown user",
+                    text = user?.name ?: stringResource(R.string.settings_unknown_user),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurface,
@@ -137,7 +139,8 @@ fun SettingsScreen(
                 }
                 Text(
                     modifier = Modifier.padding(top = 2.dp),
-                    text = "Role: ${user?.role ?: "USER"}",
+                    text = stringResource(R.string.settings_role_prefix) +
+                        (user?.role ?: stringResource(R.string.settings_role_default)),
                     style = MaterialTheme.typography.bodySmall,
                     color = colorScheme.onSurface.copy(alpha = 0.55f),
                 )
@@ -155,7 +158,7 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "Appearance",
+                    text = stringResource(R.string.settings_appearance),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurface,
@@ -188,7 +191,7 @@ fun SettingsScreen(
                         modifier = Modifier.size(20.dp),
                     )
                     Text(
-                        text = "Reminders",
+                        text = stringResource(R.string.settings_reminders),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = colorScheme.onSurface,
@@ -213,7 +216,7 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(
-                        text = "Feature toggle",
+                        text = stringResource(R.string.settings_feature_toggle),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = colorScheme.onSurface,
@@ -228,7 +231,7 @@ fun SettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
                             Text(
-                                text = "AI task summary",
+                                text = stringResource(R.string.settings_ai_task_summary),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = colorScheme.onSurface,
                                 fontWeight = FontWeight.SemiBold,
@@ -246,13 +249,6 @@ fun SettingsScreen(
                                 enabled = !isAdminAiSummarySaving,
                             )
                         }
-                    }
-                    if (isAdminAiSummarySaving) {
-                        Text(
-                            text = "Saving admin setting...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.onSurface.copy(alpha = 0.55f),
-                        )
                     }
                     if (!adminAiSummaryError.isNullOrBlank()) {
                         Text(
@@ -280,7 +276,7 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Sign out",
+                    text = stringResource(R.string.action_sign_out),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.error,
@@ -299,7 +295,7 @@ fun SettingsScreen(
             onDismissRequest = onDismissAiValidationError,
             title = {
                 Text(
-                    text = "AI Summary Unavailable",
+                    text = stringResource(R.string.settings_ai_unavailable_title),
                     fontWeight = FontWeight.SemiBold,
                 )
             },
@@ -308,7 +304,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = onDismissAiValidationError) {
-                    Text("OK")
+                    Text(stringResource(R.string.action_ok))
                 }
             },
         )

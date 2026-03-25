@@ -3,9 +3,19 @@ package com.ohmz.tday.compose.feature.app
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.ServerProbeException
-import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.auth.AuthRepository
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
+import com.ohmz.tday.compose.core.data.settings.SettingsRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
-import com.ohmz.tday.compose.core.model.AdminSettingsResponse
+import com.ohmz.tday.compose.core.network.RealtimeClient
+import com.ohmz.tday.compose.core.network.RealtimeEvent
+import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
+import com.ohmz.tday.compose.core.domain.BootstrapSessionUseCase
+import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
+import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
@@ -42,19 +52,30 @@ data class AppUiState(
     val adminAiSummaryError: String? = null,
     val aiSummaryValidationError: String? = null,
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
+    val isOffline: Boolean = false,
+    val pendingMutationCount: Int = 0,
 )
 
 @HiltViewModel
 class AppViewModel @Inject constructor(
-    private val repository: TdayRepository,
+    private val authRepository: AuthRepository,
+    private val serverConfigRepository: ServerConfigRepository,
+    private val syncManager: SyncManager,
+    private val syncAndRefresh: SyncAndRefreshUseCase,
+    private val bootstrapSession: BootstrapSessionUseCase,
+    private val settingsRepository: SettingsRepository,
+    private val cacheManager: OfflineCacheManager,
     private val themePreferenceStore: ThemePreferenceStore,
     private val reminderScheduler: TaskReminderScheduler,
     private val reminderPreferenceStore: ReminderPreferenceStore,
+    val snackbarManager: SnackbarManager,
+    private val realtimeClient: RealtimeClient,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
     private var resyncJob: Job? = null
+    private var realtimeJob: Job? = null
 
     init {
         _uiState.update {
@@ -69,8 +90,8 @@ class AppViewModel @Inject constructor(
     fun bootstrap() {
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null, isManualSyncing = false) }
-            if (!repository.hasServerConfigured()) {
-                repository.clearAllLocalUserDataForUnauthenticatedState()
+            if (!serverConfigRepository.hasServerConfigured()) {
+                authRepository.clearAllLocalUserDataForUnauthenticatedState()
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -93,8 +114,8 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            val sessionUser = runCatching { repository.restoreSession() }.getOrNull()
-            if (sessionUser?.id != null) {
+            val sessionUser = runCatching { bootstrapSession() }.getOrNull()
+            if (sessionUser != null) {
                 val adminUser = isAdmin(sessionUser)
                 _uiState.update {
                     it.copy(
@@ -102,14 +123,14 @@ class AppViewModel @Inject constructor(
                         authenticated = true,
                         requiresServerSetup = false,
                         requiresLogin = false,
-                        serverUrl = repository.getServerUrl(),
+                        serverUrl = serverConfigRepository.getServerUrl(),
                         user = sessionUser,
                         error = null,
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
                         isManualSyncing = false,
                         adminAiSummaryEnabled = if (adminUser) {
-                            repository.isAiSummaryEnabledSnapshot()
+                            settingsRepository.isAiSummaryEnabledSnapshot()
                         } else {
                             null
                         },
@@ -119,14 +140,13 @@ class AppViewModel @Inject constructor(
                     )
                 }
                 ensureResyncLoop(authenticated = true)
-                launchStartupSync()
                 if (adminUser) {
                     refreshAdminAiSummarySetting()
                 }
                 return@launch
             }
 
-            repository.clearSessionOnly()
+            authRepository.clearSessionOnly()
 
             _uiState.update {
                 it.copy(
@@ -134,7 +154,7 @@ class AppViewModel @Inject constructor(
                     authenticated = false,
                     requiresServerSetup = false,
                     requiresLogin = true,
-                    serverUrl = repository.getServerUrl(),
+                    serverUrl = serverConfigRepository.getServerUrl(),
                     user = null,
                     error = null,
                     canResetServerTrust = false,
@@ -172,10 +192,10 @@ class AppViewModel @Inject constructor(
                     isAdminAiSummaryLoading = true,
                     adminAiSummaryError = null,
                     adminAiSummaryEnabled = it.adminAiSummaryEnabled
-                        ?: repository.isAiSummaryEnabledSnapshot(),
+                        ?: settingsRepository.isAiSummaryEnabledSnapshot(),
                 )
             }
-            runCatching { repository.fetchAdminAiSummaryEnabled() }
+            runCatching { settingsRepository.fetchAdminAiSummaryEnabled() }
                 .onSuccess { enabled ->
                     _uiState.update {
                         it.copy(
@@ -208,7 +228,7 @@ class AppViewModel @Inject constructor(
                     adminAiSummaryError = null,
                 )
             }
-            runCatching { repository.updateAdminAiSummaryEnabled(enabled) }
+            runCatching { settingsRepository.updateAdminAiSummaryEnabled(enabled) }
                 .onSuccess { response ->
                     val validationFailed = response.validationError != null
                     if (validationFailed) {
@@ -228,11 +248,7 @@ class AppViewModel @Inject constructor(
                     }
                 }
                 .onFailure { error ->
-                    android.util.Log.e(
-                        "AppViewModel",
-                        "AI summary toggle failed",
-                        error,
-                    )
+                    android.util.Log.e("AppViewModel", "AI summary toggle failed", error)
                     _uiState.update {
                         it.copy(
                             isAdminAiSummarySaving = false,
@@ -254,7 +270,7 @@ class AppViewModel @Inject constructor(
         onFailure: (String) -> Unit = {},
     ) {
         viewModelScope.launch {
-            val result = repository.saveServerUrl(rawUrl)
+            val result = serverConfigRepository.saveServerUrl(rawUrl)
             result.onSuccess { normalized ->
                 _uiState.update {
                     it.copy(
@@ -287,7 +303,7 @@ class AppViewModel @Inject constructor(
         onFailure: (String) -> Unit = {},
     ) {
         viewModelScope.launch {
-            val result = repository.resetTrustedServer(rawUrl)
+            val result = serverConfigRepository.resetTrustedServer(rawUrl)
             result.onSuccess {
                 _uiState.update {
                     it.copy(
@@ -313,7 +329,7 @@ class AppViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            runCatching { repository.logout() }
+            runCatching { authRepository.logout() }
             runCatching { reminderScheduler.cancelAll() }
             ensureResyncLoop(authenticated = false)
             _uiState.update {
@@ -344,10 +360,7 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isManualSyncing = true) }
             runCatching {
-                repository.syncCachedData(
-                    force = true,
-                    replayPendingMutations = false,
-                )
+                syncAndRefresh(force = true, replayPendingMutations = false)
             }
             _uiState.update { it.copy(isManualSyncing = false) }
             launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
@@ -381,33 +394,87 @@ class AppViewModel @Inject constructor(
         if (!authenticated) {
             resyncJob?.cancel()
             resyncJob = null
+            realtimeJob?.cancel()
+            realtimeJob = null
+            realtimeClient.disconnect()
             return
         }
+
+        startRealtimeListener()
 
         if (resyncJob?.isActive == true) return
 
         resyncJob = viewModelScope.launch {
             while (isActive) {
-                val delayMs = runCatching {
-                    if (repository.hasPendingMutations()) {
-                        PENDING_RESYNC_INTERVAL_MS
-                    } else {
-                        RESYNC_INTERVAL_MS
-                    }
-                }.getOrDefault(RESYNC_INTERVAL_MS)
+                val hasPending = runCatching { syncManager.hasPendingMutations() }.getOrDefault(false)
+                val pendingCount = runCatching {
+                    cacheManager.loadOfflineState().pendingMutations.size
+                }.getOrDefault(0)
+                _uiState.update { it.copy(pendingMutationCount = pendingCount) }
+
+                val delayMs = if (hasPending) PENDING_RESYNC_INTERVAL_MS else RESYNC_INTERVAL_MS
                 delay(delayMs)
-                runCatching { repository.syncCachedData(force = true) }
+
+                val result = runCatching { syncAndRefresh(force = true) }
+                val syncError = result.exceptionOrNull()
+                _uiState.update {
+                    it.copy(
+                        isOffline = syncError != null && isLikelyConnectivityIssue(syncError),
+                        pendingMutationCount = runCatching {
+                            cacheManager.loadOfflineState().pendingMutations.size
+                        }.getOrDefault(it.pendingMutationCount),
+                    )
+                }
+                if (syncError != null) {
+                    classifyAndShowError(syncError)
+                } else {
+                    _uiState.update { it.copy(isOffline = false) }
+                }
                 launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
             }
         }
     }
 
-    private fun launchStartupSync() {
-        viewModelScope.launch {
-            runCatching { repository.syncCachedData(force = true) }
-            runCatching { repository.syncTimezone() }
-            launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
+    private fun classifyAndShowError(error: Throwable) {
+        if (isLikelyConnectivityIssue(error)) return
+        when {
+            error is ApiCallException && error.statusCode == 401 ->
+                snackbarManager.showError("Session expired. Please sign in again.")
+            error is ApiCallException && error.statusCode in 500..599 ->
+                snackbarManager.showError("Server error. Please try again later.") { syncNow() }
+            else ->
+                snackbarManager.showError(
+                    error.message ?: "Something went wrong.",
+                ) { syncNow() }
         }
+    }
+
+    private fun startRealtimeListener() {
+        if (realtimeJob?.isActive == true) return
+
+        realtimeClient.connect()
+        realtimeJob = viewModelScope.launch {
+            realtimeClient.events.collect { event ->
+                when (event) {
+                    is RealtimeEvent.TodoChanged,
+                    is RealtimeEvent.ListChanged,
+                    is RealtimeEvent.CompletedChanged,
+                    -> {
+                        runCatching { syncAndRefresh(force = true, replayPendingMutations = false) }
+                    }
+                    is RealtimeEvent.Disconnected -> {
+                        delay(REALTIME_RECONNECT_DELAY_MS)
+                        if (_uiState.value.authenticated) realtimeClient.connect()
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        realtimeClient.disconnect()
     }
 
     private fun isAdmin(user: SessionUser?): Boolean {
@@ -439,5 +506,6 @@ class AppViewModel @Inject constructor(
     private companion object {
         const val PENDING_RESYNC_INTERVAL_MS = 20 * 1000L
         const val RESYNC_INTERVAL_MS = 5 * 60 * 1000L
+        const val REALTIME_RECONNECT_DELAY_MS = 5_000L
     }
 }

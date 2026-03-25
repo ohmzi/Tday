@@ -2,7 +2,13 @@ package com.ohmz.tday.compose.feature.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.completed.CompletedRepository
+import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.todo.TodoRepository
+import com.ohmz.tday.compose.core.domain.CompleteTodoUseCase
+import com.ohmz.tday.compose.core.domain.CreateTodoUseCase
+import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -28,16 +34,22 @@ data class CalendarUiState(
 
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
-    private val repository: TdayRepository,
+    private val todoRepository: TodoRepository,
+    private val completedRepository: CompletedRepository,
+    private val listRepository: ListRepository,
+    private val syncAndRefresh: SyncAndRefreshUseCase,
+    private val createTodoUseCase: CreateTodoUseCase,
+    private val completeTodoUseCase: CompleteTodoUseCase,
+    private val cacheManager: OfflineCacheManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         runCatching {
             CalendarUiState(
                 isLoading = false,
-                items = repository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED),
-                completedItems = repository.fetchCompletedItemsSnapshot(),
-                lists = repository.fetchListsSnapshot(),
+                items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED),
+                completedItems = completedRepository.fetchCompletedItemsSnapshot(),
+                lists = listRepository.fetchListsSnapshot(),
                 errorMessage = null,
             )
         }.getOrElse { CalendarUiState() },
@@ -51,7 +63,7 @@ class CalendarViewModel @Inject constructor(
 
     private fun observeCacheChanges() {
         viewModelScope.launch {
-            repository.cacheDataVersion
+            cacheManager.cacheDataVersion
                 .collect {
                     if (!hasLoadedScreen) return@collect
                     hydrateFromCache()
@@ -66,10 +78,7 @@ class CalendarViewModel @Inject constructor(
 
     fun refresh() {
         hasLoadedScreen = true
-        loadInternal(
-            forceSync = true,
-            showLoading = true,
-        )
+        loadInternal(forceSync = true, showLoading = true)
     }
 
     suspend fun parseTaskTitleNlp(
@@ -77,7 +86,7 @@ class CalendarViewModel @Inject constructor(
         referenceStartEpochMs: Long,
         referenceDueEpochMs: Long,
     ): TodoTitleNlpResponse? {
-        return repository.parseTodoTitleNlp(
+        return todoRepository.parseTodoTitleNlp(
             text = text,
             referenceStartEpochMs = referenceStartEpochMs,
             referenceDueEpochMs = referenceDueEpochMs,
@@ -86,9 +95,9 @@ class CalendarViewModel @Inject constructor(
 
     private fun hydrateFromCache() {
         runCatching {
-            val todos = repository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED)
-            val completedItems = repository.fetchCompletedItemsSnapshot()
-            val lists = repository.fetchListsSnapshot()
+            val todos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED)
+            val completedItems = completedRepository.fetchCompletedItemsSnapshot()
+            val lists = listRepository.fetchListsSnapshot()
             Triple(todos, completedItems, lists)
         }.onSuccess { (todos, completedItems, lists) ->
             _uiState.update { current ->
@@ -107,10 +116,7 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    private fun loadInternal(
-        forceSync: Boolean,
-        showLoading: Boolean,
-    ) {
+    private fun loadInternal(forceSync: Boolean, showLoading: Boolean) {
         viewModelScope.launch {
             if (showLoading) {
                 _uiState.update { current ->
@@ -125,14 +131,12 @@ class CalendarViewModel @Inject constructor(
 
             runCatching {
                 if (forceSync) {
-                    repository.syncCachedData(
-                        force = true,
-                        replayPendingMutations = false,
-                    ).onFailure { /* fall back to cache */ }
+                    syncAndRefresh(force = true, replayPendingMutations = false)
+                        .onFailure { /* fall back to cache */ }
                 }
-                val todos = repository.fetchTodos(mode = TodoListMode.SCHEDULED)
-                val completedItems = repository.fetchCompletedItems()
-                val lists = repository.fetchLists()
+                val todos = todoRepository.fetchTodos(mode = TodoListMode.SCHEDULED)
+                val completedItems = completedRepository.fetchCompletedItems()
+                val lists = listRepository.fetchLists()
                 Triple(todos, completedItems, lists)
             }.onSuccess { (todos, completedItems, lists) ->
                 _uiState.update { current ->
@@ -163,17 +167,12 @@ class CalendarViewModel @Inject constructor(
         if (payload.title.isBlank()) return
         viewModelScope.launch {
             runCatching {
-                repository.createTodo(payload)
+                createTodoUseCase(payload)
             }.onSuccess {
-                loadInternal(
-                    forceSync = false,
-                    showLoading = false,
-                )
+                loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
-                    current.copy(
-                        errorMessage = error.message ?: "Could not create task",
-                    )
+                    current.copy(errorMessage = error.message ?: "Could not create task")
                 }
             }
         }
@@ -189,12 +188,9 @@ class CalendarViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                repository.completeTodo(todo)
+                completeTodoUseCase(todo)
             }.onSuccess {
-                loadInternal(
-                    forceSync = false,
-                    showLoading = false,
-                )
+                loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
                     current.copy(
@@ -216,12 +212,9 @@ class CalendarViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                repository.uncomplete(item)
+                completedRepository.uncomplete(item)
             }.onSuccess {
-                loadInternal(
-                    forceSync = false,
-                    showLoading = false,
-                )
+                loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
                     current.copy(
@@ -233,10 +226,7 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    fun updateTask(
-        todo: TodoItem,
-        payload: CreateTaskPayload,
-    ) {
+    fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
         val normalizedTitle = payload.title.trim()
         if (normalizedTitle.isBlank()) return
 
@@ -276,7 +266,7 @@ class CalendarViewModel @Inject constructor(
 
         viewModelScope.launch {
             runCatching {
-                repository.updateTodo(
+                todoRepository.updateTodo(
                     todo = todo,
                     payload = CreateTaskPayload(
                         title = normalizedTitle,
@@ -289,10 +279,7 @@ class CalendarViewModel @Inject constructor(
                     ),
                 )
             }.onSuccess {
-                loadInternal(
-                    forceSync = false,
-                    showLoading = false,
-                )
+                loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
                     errorMessage = error.message ?: "Could not update task",
@@ -301,10 +288,7 @@ class CalendarViewModel @Inject constructor(
         }
     }
 
-    fun delete(
-        todo: TodoItem,
-        onDeleted: (() -> Unit)? = null,
-    ) {
+    fun delete(todo: TodoItem, onDeleted: (() -> Unit)? = null) {
         val previousItems = _uiState.value.items
         _uiState.update { current ->
             current.copy(
@@ -314,13 +298,10 @@ class CalendarViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                repository.deleteTodo(todo)
+                todoRepository.deleteTodo(todo)
             }.onSuccess {
                 onDeleted?.invoke()
-                loadInternal(
-                    forceSync = false,
-                    showLoading = false,
-                )
+                loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
                     current.copy(

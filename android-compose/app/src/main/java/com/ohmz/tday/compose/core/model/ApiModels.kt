@@ -257,25 +257,6 @@ data class DeleteListRequest(
 )
 
 @Serializable
-data class NotesResponse(
-    val notes: List<NoteDto> = emptyList(),
-)
-
-@Serializable
-data class NoteDto(
-    val id: String,
-    val name: String,
-    val content: String? = null,
-    val createdAt: String? = null,
-)
-
-@Serializable
-data class CreateNoteRequest(
-    val name: String,
-    val content: String? = null,
-)
-
-@Serializable
 data class CompletedTodosResponse(
     val completedTodos: List<CompletedTodoDto> = emptyList(),
 )
