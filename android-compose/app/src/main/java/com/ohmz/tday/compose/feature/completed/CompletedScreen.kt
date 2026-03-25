@@ -187,6 +187,7 @@ fun CompletedScreen(
             items(timelineSections, key = { it.key }) { section ->
                 val isCollapsed = collapsedSectionKeys.contains(section.key)
                 CompletedTimelineSection(
+                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                     section = section,
                     isCollapsed = isCollapsed,
                     onHeaderClick = {
@@ -400,6 +401,7 @@ private fun completedSectionDisplayTitle(section: CompletedSection): String {
 
 @Composable
 private fun CompletedTimelineSection(
+    modifier: Modifier = Modifier,
     section: CompletedSection,
     isCollapsed: Boolean,
     onHeaderClick: () -> Unit,
@@ -415,7 +417,7 @@ private fun CompletedTimelineSection(
         label = "completedSectionChevronRotation",
     )
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
