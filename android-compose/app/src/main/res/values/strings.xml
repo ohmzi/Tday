@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">T\'Day</string>
+
+    <!-- Shared / reusable -->
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_search">Search</string>
+    <string name="action_close_search">Close search</string>
+    <string name="action_create_task">Create task</string>
+    <string name="action_create_list">Create list</string>
+    <string name="action_edit_task">Edit task</string>
+    <string name="action_delete_task">Delete task</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_complete">Complete</string>
+    <string name="action_more">More</string>
+    <string name="action_more_options">More options</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_create">Create</string>
+    <string name="action_ok">OK</string>
+    <string name="action_sign_out">Sign out</string>
+    <string name="action_expand_section">Expand section</string>
+    <string name="action_collapse_section">Collapse section</string>
+    <string name="label_completed">Completed</string>
+    <string name="label_mark_complete">Mark complete</string>
+    <string name="label_undo_complete">Undo complete</string>
+    <string name="label_task_list">Task list</string>
+    <string name="label_priority_task">Priority task</string>
+    <string name="label_loading">Loading…</string>
+
+    <!-- Home screen -->
+    <string name="home_title">T\'Day</string>
+    <string name="home_category_today">Today</string>
+    <string name="home_category_scheduled">Scheduled</string>
+    <string name="home_category_all">All</string>
+    <string name="home_category_priority">Priority</string>
+    <string name="home_category_completed">Completed</string>
+    <string name="home_category_calendar">Calendar</string>
+    <string name="home_category_notes">Notes</string>
+    <string name="home_search_placeholder">Search</string>
+    <string name="home_search_no_results">No matching tasks</string>
+    <string name="home_my_lists">My Lists</string>
+    <string name="home_new_list">New list</string>
+    <string name="home_list_name_placeholder">List name</string>
+    <string name="home_section_list">List</string>
+    <string name="home_section_color">Color</string>
+    <string name="home_section_icon">Icon</string>
+
+    <!-- Settings screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_unknown_user">Unknown user</string>
+    <string name="settings_role_prefix">Role: </string>
+    <string name="settings_role_default">USER</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_reminders">Reminders</string>
+    <string name="settings_feature_toggle">Feature toggle</string>
+    <string name="settings_ai_task_summary">AI task summary</string>
+    <string name="settings_saving_admin">Saving admin setting…</string>
+    <string name="settings_ai_unavailable_title">AI Summary Unavailable</string>
+
+    <!-- Onboarding / wizard -->
+    <string name="onboarding_title">Set Up T\'Day</string>
+    <string name="onboarding_subtitle">Secure onboarding wizard</string>
+    <string name="onboarding_step_server">Server</string>
+    <string name="onboarding_step_login">Login</string>
+    <string name="onboarding_server_url_label">Server URL</string>
+    <string name="onboarding_server_url_placeholder">https://app.example.com</string>
+    <string name="onboarding_reset_trust">Reset trusted server</string>
+    <string name="onboarding_resetting_trust">Resetting trust…</string>
+    <string name="onboarding_connect">Connect</string>
+    <string name="onboarding_connecting_title">Connecting to server…</string>
+    <string name="onboarding_connecting_subtitle">Checking endpoint, TLS, and workspace settings</string>
+    <string name="onboarding_email_label">Email</string>
+    <string name="onboarding_password_label">Password</string>
+    <string name="onboarding_sign_in">Sign in</string>
+    <string name="onboarding_create_account">Create account</string>
+    <string name="onboarding_change_server">Change server</string>
+    <string name="onboarding_first_name_label">First name</string>
+    <string name="onboarding_confirm_password_label">Confirm password</string>
+    <string name="onboarding_creating_account">Creating account…</string>
+    <string name="onboarding_back_to_sign_in">Back to sign in</string>
+    <string name="onboarding_authenticating_title">Authenticating…</string>
+    <string name="onboarding_authenticating_register_subtitle">Submitting registration and waiting for approval status</string>
+    <string name="onboarding_authenticating_login_subtitle">Encrypting session and loading your workspace</string>
+    <string name="onboarding_error_connect_fallback">Could not connect to server</string>
+    <string name="onboarding_error_reset_trust_fallback">Could not reset trusted server</string>
+    <string name="onboarding_validation_first_name_min">First name must be at least 2 characters</string>
+    <string name="onboarding_validation_email_required">Email is required</string>
+    <string name="onboarding_validation_email_invalid">Please enter a valid email address</string>
+    <string name="onboarding_validation_password_required">Password and confirmation are required</string>
+    <string name="onboarding_validation_password_min">Password must be at least 8 characters</string>
+    <string name="onboarding_validation_password_uppercase">Password must include at least one uppercase letter</string>
+    <string name="onboarding_validation_password_special">Password must include at least one special character</string>
+    <string name="onboarding_validation_password_mismatch">Passwords do not match</string>
+
+    <!-- Todo list screen -->
+    <string name="todos_summarize">Summarize tasks</string>
+    <string name="todos_empty_today">No tasks for today</string>
+    <string name="todos_empty_priority">No priority tasks</string>
+    <string name="todos_empty_scheduled">No scheduled tasks</string>
+    <string name="todos_empty_all">No tasks yet</string>
+    <string name="todos_empty_list">No tasks in this list</string>
+    <string name="todos_section_morning">Morning</string>
+    <string name="todos_section_afternoon">Afternoon</string>
+    <string name="todos_section_tonight">Tonight</string>
+    <string name="todos_section_earlier">Earlier</string>
+    <string name="todos_section_today">Today</string>
+    <string name="todos_section_tomorrow">Tomorrow</string>
+    <string name="todos_section_rest_of">Rest of %1$s</string>
+    <string name="todos_summary_title">Summary</string>
+    <string name="todos_summary_close">Close summary</string>
+    <string name="todos_summary_loading">Creating your task summary…</string>
+    <string name="todos_summary_source">Source: %1$s</string>
+    <string name="todos_summary_generated_at">Generated at %1$s</string>
+    <string name="todos_summary_refresh">Refresh summary</string>
+    <string name="todos_summary_summarizing">Summarizing…</string>
+    <string name="todos_list_settings">List settings</string>
+    <string name="todos_save_list_settings">Save list settings</string>
+    <string name="todos_due_overdue_prefix">Overdue, </string>
+    <string name="todos_due_prefix">Due </string>
+
+    <!-- Completed screen -->
+    <string name="completed_title">Completed</string>
+    <string name="completed_empty">No completed tasks yet</string>
+    <string name="completed_created_prefix">Created: </string>
+    <string name="completed_at_prefix">Completed: </string>
+    <string name="completed_section_earlier">Earlier</string>
+    <string name="completed_section_today">Today</string>
+    <string name="completed_section_tomorrow">Tomorrow</string>
+    <string name="completed_section_rest_of">Rest of %1$s</string>
+
+    <!-- Notes screen -->
+    <string name="notes_title">Notes</string>
+    <string name="notes_add">Add note</string>
+    <string name="notes_empty">No notes yet</string>
+    <string name="notes_new_title">New note</string>
+    <string name="notes_name_label">Name</string>
+
+    <!-- Calendar screen -->
+    <string name="calendar_title">Calendar</string>
+    <string name="calendar_jump_to_today">Jump to today</string>
+    <string name="calendar_tasks_due">Tasks due %1$s</string>
+    <string name="calendar_no_pending">No pending task due for this day</string>
+    <string name="calendar_completed_header">Completed:</string>
+    <string name="calendar_prev_month">Previous month</string>
+    <string name="calendar_next_month">Next month</string>
+    <string name="calendar_prev_week">Previous week</string>
+    <string name="calendar_next_week">Next week</string>
+    <string name="calendar_prev_day">Previous day</string>
+    <string name="calendar_next_day">Next day</string>
+    <string name="calendar_task_count_one">1 task due</string>
+    <string name="calendar_task_count_many">%1$d tasks due</string>
+    <string name="calendar_task_count_cap">9+</string>
+</resources>
