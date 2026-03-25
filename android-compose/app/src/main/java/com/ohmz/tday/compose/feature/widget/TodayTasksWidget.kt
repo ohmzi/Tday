@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.widget
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Composable
@@ -128,20 +129,15 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
     }
 }
 
+@SuppressLint("RestrictedApi")
 @Composable
 private fun TaskRow(task: CachedTodoRecord) {
     val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
     val dueText = timeFormatter.format(Instant.ofEpochMilli(task.dueEpochMs))
     val priorityColor = when (task.priority.lowercase()) {
-        "high" -> ColorProvider(
-            day = android.graphics.Color.parseColor("#E53935"),
-            night = android.graphics.Color.parseColor("#EF5350"),
-        )
-        "medium" -> ColorProvider(
-            day = android.graphics.Color.parseColor("#FB8C00"),
-            night = android.graphics.Color.parseColor("#FFA726"),
-        )
+        "high" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFE53935))
+        "medium" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFFB8C00))
         else -> GlanceTheme.colors.onSurfaceVariant
     }
 

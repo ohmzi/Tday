@@ -250,13 +250,6 @@ fun SettingsScreen(
                             )
                         }
                     }
-                    if (isAdminAiSummarySaving) {
-                        Text(
-                            text = stringResource(R.string.settings_saving_admin),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colorScheme.onSurface.copy(alpha = 0.55f),
-                        )
-                    }
                     if (!adminAiSummaryError.isNullOrBlank()) {
                         Text(
                             text = adminAiSummaryError,

@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.core.data.sync
 
 import android.content.Context
 import android.util.Log
+import androidx.glance.appwidget.updateAll
 import com.ohmz.tday.compose.core.data.CachedListRecord
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.MutationKind
