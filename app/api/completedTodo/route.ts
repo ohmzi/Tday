@@ -9,6 +9,8 @@ import { prisma } from "@/lib/prisma/client";
 import { auth } from "@/app/auth";
 import { Priority } from "@prisma/client";
 import { z } from "zod";
+import { apiCache, cacheKey, invalidateCompletedCaches, invalidateTodoCaches } from "@/lib/cache/memoryCache";
+import { apiTimer } from "@/lib/performance/apiTimer";
 
 const completedPatchSchema = z.object({
   id: z
@@ -39,7 +41,14 @@ export async function GET() {
     if (!user?.id)
       throw new UnauthorizedError("you must be logged in to do this");
 
-    //get completed todos
+    const done = apiTimer("GET /api/completedTodo");
+    const key = cacheKey(user.id, "completedTodo");
+    const cached = apiCache.get<unknown>(key);
+    if (cached) {
+      done();
+      return NextResponse.json(cached, { status: 200 });
+    }
+
     const completedTodos = await prisma.completedTodo.findMany({
       where: { userID: user.id },
       orderBy: { dtstart: "desc" },
@@ -91,12 +100,11 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json(
-      { completedTodos: mergedCompletedTodos },
-      {
-        status: 200,
-      },
-    );
+    const body = { completedTodos: mergedCompletedTodos };
+    apiCache.set(key, body, 60_000);
+    done();
+
+    return NextResponse.json(body, { status: 200 });
   } catch (error) {
     console.log(error);
 
@@ -209,6 +217,9 @@ export async function PATCH(req: NextRequest) {
       });
     });
 
+    invalidateCompletedCaches(user.id);
+    invalidateTodoCaches(user.id);
+
     return NextResponse.json({ message: "completed todo updated" }, { status: 200 });
   } catch (error) {
     if (error instanceof BaseServerError) {
@@ -270,6 +281,9 @@ export async function DELETE(req: NextRequest) {
         where: { originalTodoID: completed.originalTodoID, userID: user.id },
       });
     });
+
+    invalidateCompletedCaches(user.id);
+    invalidateTodoCaches(user.id);
 
     return NextResponse.json({ message: "completed todo deleted" }, { status: 200 });
   } catch (error) {
