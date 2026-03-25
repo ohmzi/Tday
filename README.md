@@ -1,60 +1,96 @@
 # T'Day
 
-Personal task planner.
+Personal task planner — self-hosted, private, multilingual.
 
-- Tasks with priorities, pinning, and drag-and-drop reordering
+- Tasks with priorities, pinning, drag-and-drop reordering, and RFC 5545 recurrence
 - Calendar with month, week, and day views
-- Notes with a rich text editor
-- Tags and projects for organization
-- Completion history
-- 11 languages
+- Notes with a rich text editor (TipTap)
+- Lists (projects) for organization with colors and icons
+- Completion history and AI-powered task summaries (Ollama)
+- 11 languages via next-intl
+- Native Android client (Kotlin + Jetpack Compose)
 
-Built with Next.js, Postgres, Prisma, and Ollama. Runs in Docker.
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Web app | Next.js 15 (App Router), React 18, TypeScript 5, Tailwind CSS 4 |
+| Database | PostgreSQL 15, Prisma 6 |
+| Auth | NextAuth v5 (JWT sessions, PBKDF2 credentials, optional OAuth) |
+| AI | Ollama (local, e.g. qwen2.5:0.5b) |
+| Android | Kotlin, Jetpack Compose, Hilt, Retrofit, Material 3 |
+| Infra | Docker Compose, GitHub Actions CI/CD, GHCR |
+
+## Quick Start
+
+### Docker (recommended)
 
 ```bash
+cp .env.example .env.docker
+# Edit .env.docker — at minimum set AUTH_SECRET and DATABASE_URL
+
 docker compose up -d --build
 docker exec -it tday_ollama ollama pull qwen2.5:0.5b
 ```
 
-Docker services started by compose:
-- `tday` (Next.js app)
-- `tday_db` (Postgres)
-- `tday_ollama` (local AI runtime for summaries)
+Docker Compose starts three services:
 
-GPU acceleration:
-- `tday_ollama` is configured with `gpus: all` by default.
-- Ensure NVIDIA Container Toolkit is installed on the Docker host.
+| Service | Container | Port |
+|---------|-----------|------|
+| Next.js app | `tday` | `2525 → 3000` |
+| PostgreSQL | `tday_db` | 5432 (internal) |
+| Ollama | `tday_ollama` | 11434 (internal) |
 
-## Auth Hardening
+GPU acceleration: `tday_ollama` uses `gpus: all` by default — install the NVIDIA Container Toolkit on the Docker host.
 
-- Mobile/server probe endpoint: `GET /api/mobile/probe`
-- Backend auth throttling + lockout is configurable via `.env.docker` auth limit variables
-- Password hashing uses PBKDF2 with configurable iterations (`AUTH_PBKDF2_ITERATIONS`)
-- Session revocation is server-enforced using token versioning (sign-out and password change revoke active sessions)
-- Session lifetime is configurable via `AUTH_SESSION_MAX_AGE_SEC` (default 24h, persistent across app/browser restarts)
-- Adaptive CAPTCHA can be required after repeated failures (`AUTH_CAPTCHA_*`)
-- API responses are served with `Cache-Control: no-store` and hardened security headers
-- Production middleware enforces HTTPS (except local development hosts)
-- Optional server-side field encryption at rest for sensitive text (`DATA_ENCRYPTION_*`)
-- Cloudflare edge rule recommendations are documented in:
-  `/home/ohmz/StudioProjects/Tday/docs/security/cloudflare-auth-hardening.md`
+### Local Development
 
-## Secrets And Rotation
+```bash
+npm install
+# Requires a running PostgreSQL instance
+npx prisma migrate deploy
+npm run dev          # starts Next.js with Turbopack
+npm run lint         # ESLint
+npm run test         # Jest
+```
 
-- Production secrets should come from a secrets manager or mounted secret files.
-- Docker entrypoint supports `*_FILE` for:
-  - `AUTH_SECRET`
-  - `CRONJOB_SECRET`
-  - `DATABASE_URL`
-  - `AUTH_CAPTCHA_SECRET`
-  - `DATA_ENCRYPTION_KEY`
-  - `DATA_ENCRYPTION_KEYS`
-  - `DATA_ENCRYPTION_AAD`
-- Rotate secrets on a schedule and keep previous encryption keys in `DATA_ENCRYPTION_KEYS` during rollover windows.
+### Android
 
-## Native Android 
-A new native Android client now lives in:
+Open `android-compose/` in Android Studio (SDK 35 required) and run on device or emulator. See [`android-compose/README.md`](android-compose/README.md) for first-launch behavior and persistence details.
 
-`/home/ohmz/StudioProjects/Tday/android-compose`
+## Project Structure
 
-Open that folder in Android Studio to run the Kotlin + Jetpack Compose app.
+```
+Tday/
+├── app/                    # Next.js App Router (pages, API routes, auth)
+├── android-compose/        # Native Android client (Kotlin + Compose)
+├── components/             # Shared React components (UI, todo, sidebar, admin)
+├── features/               # Feature modules (calendar, list, notes, todos, user)
+├── hooks/                  # Shared React hooks
+├── i18n/                   # next-intl routing and request config
+├── lib/                    # Server utilities (Prisma, security, dates, NLP)
+├── messages/               # Locale JSON files (11 languages)
+├── prisma/                 # Schema and migrations
+├── providers/              # React context providers
+├── public/                 # Static assets
+├── scripts/                # Docker entrypoint
+├── tests/                  # Jest test suites
+└── docs/                   # Architecture, coding standards, guides
+```
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Developer setup, conventions, PR process |
+| [`SECURITY.md`](SECURITY.md) | Security practices and responsible disclosure |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design, domain boundaries, data flow |
+| [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) | Code quality rules, naming, patterns |
+| [`docs/API_GUIDELINES.md`](docs/API_GUIDELINES.md) | REST API contracts and conventions |
+| [`docs/TESTING.md`](docs/TESTING.md) | Testing strategy and expectations |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Docker, CI/CD, secrets, releases |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records |
+
+## License
+
+Private repository. All rights reserved.

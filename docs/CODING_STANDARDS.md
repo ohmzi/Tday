@@ -1,0 +1,636 @@
+# Coding Standards
+
+Detailed code quality rules for both the TypeScript (web) and Kotlin (Android) codebases.
+
+## Table of Contents
+
+- [General Principles](#general-principles)
+- [TypeScript Standards](#typescript-standards)
+- [Kotlin Standards](#kotlin-standards)
+- [Shared Rules](#shared-rules)
+
+---
+
+## General Principles
+
+### Clean Code
+
+- Functions do one thing. If a function needs a comment explaining what the "next section" does, extract it.
+- Prefer explicit over clever. Readable code wins over terse code.
+- No dead code. Delete unused imports, variables, functions, and commented-out blocks.
+- No magic numbers. Use named constants.
+
+### DRY — Extract Reusable Logic into Utilities
+
+If a piece of logic appears (or could appear) in more than one place, extract it into a utility function, hook, or extension. Duplicate code is a maintenance hazard — when the logic needs to change, every copy must be found and updated.
+
+**When to extract:**
+
+- The same transformation, validation, or formatting appears in two or more files.
+- A block of logic is self-contained and could be described with a short function name.
+- A pattern is likely to be needed again in the future, even if currently used only once (e.g., date formatting, ID validation, safe JSON parsing).
+
+**Where to put shared utilities:**
+
+| Codebase | Location | Purpose |
+|----------|----------|---------|
+| **Web (shared)** | `lib/` | Pure functions, server utilities, helpers (e.g., `lib/resolveTimeZone.ts`, `lib/formatDayAbbr.ts`, `lib/listColorMap.ts`) |
+| **Web (shared hooks)** | `hooks/` | React hooks used across multiple features (e.g., `hooks/useWindowSize.ts`, `hooks/use-toast.ts`) |
+| **Web (feature-scoped)** | `features/<name>/lib/` or `components/<name>/lib/` | Utilities tightly coupled to one feature (e.g., `components/todo/lib/rruleDateToLocal.ts`) |
+| **Web (feature-scoped hooks)** | `features/<name>/hooks/` or `components/<name>/hooks/` | Hooks tightly coupled to one feature (e.g., `components/todo/hooks/useNextRepeatDate.ts`) |
+| **Android (shared)** | `core/` subpackages | Repository helpers, network utilities, model mapping |
+| **Android (UI shared)** | `ui/component/` | Reusable Composables (e.g., `TdayPullRefresh`, `CreateTaskBottomSheet`) |
+| **Android (feature-scoped)** | Within the feature package | Helpers used only by that feature |
+
+**Rules:**
+
+- Start in the narrowest scope (feature-level). Promote to shared (`lib/`, `hooks/`, `core/`) when a second consumer appears.
+- Utility functions must be **pure** when possible — same input, same output, no side effects.
+- Name the file after the function it exports (e.g., `resolveTimeZone.ts` exports `resolveTimeZone()`).
+- Do not create a catch-all `utils.ts` / `helpers.ts` that grows unbounded. Group by domain: `lib/date/`, `lib/security/`, `lib/auth/`.
+- Kotlin extension functions are the idiomatic way to add utility behavior to existing types — prefer them over static helper classes.
+
+```typescript
+// Bad: date formatting duplicated in two components
+// In CalendarHeader.tsx:
+const label = new Date(date).toLocaleDateString("en", { weekday: "short" });
+// In TodoDueDate.tsx:
+const label = new Date(date).toLocaleDateString("en", { weekday: "short" });
+
+// Good: extracted to lib/formatDayAbbr.ts, imported in both
+import { formatDayAbbr } from "@/lib/formatDayAbbr";
+const label = formatDayAbbr(date);
+```
+
+```kotlin
+// Bad: same null-safe date formatting in three ViewModels
+val display = instant?.atZone(ZoneId.of(tz))?.format(formatter) ?: ""
+
+// Good: extension function in core/model/
+fun Instant?.formatDisplay(timeZone: String): String {
+    if (this == null) return ""
+    return atZone(ZoneId.of(timeZone)).format(DateTimeFormatter.ISO_LOCAL_DATE)
+}
+
+// Used in any ViewModel:
+val display = todo.due.formatDisplay(userTimeZone)
+```
+
+### SOLID
+
+- **S — Single Responsibility**: A module, class, or function should have one reason to change.
+- **O — Open/Closed**: Extend behavior through composition or new types, not by modifying existing code. Use sealed classes/interfaces for domain variants.
+- **L — Liskov Substitution**: Subclasses must be substitutable for their base types. Applies to error hierarchies (`BaseServerError`, `ServerProbeException`).
+- **I — Interface Segregation**: Clients should not depend on methods they don't use. Keep Retrofit interface methods grouped but don't force a single God interface if it grows beyond ~30 methods.
+- **D — Dependency Inversion**: High-level modules depend on abstractions. ViewModels depend on `TdayRepository` (injected via Hilt), not on Retrofit directly.
+
+### Null Safety, Type Safety, and Explicit Types
+
+These rules apply across **both** TypeScript and Kotlin. Language-specific details are in their respective sections below.
+
+- **No force assertions.** Never use `!!` (Kotlin) or `!` non-null assertion (TypeScript). These bypass the type system's safety guarantees and produce runtime crashes or undefined behavior. Always handle null/undefined explicitly.
+- **Explicit parameter types.** All function parameters must have explicit type annotations. Do not rely on type inference for function signatures — it obscures intent and makes code harder to review.
+- **Explicit return types on public APIs.** Exported functions (TypeScript) and public/internal functions (Kotlin) must declare their return type. Private one-liners may use inference.
+- **No unsafe casts.** Avoid `as any` / `as Type` (TypeScript) and `as` (Kotlin). Use Zod validation (TypeScript) or `as?` safe casts (Kotlin) instead.
+- **Prefer non-nullable types.** Default to non-nullable. Use nullable types only when null carries domain meaning.
+- **Handle every nullable access.** Use optional chaining (`?.`), Elvis (`?:`), nullish coalescing (`??`), or explicit `if` checks. Never assume a value is non-null.
+
+### Single Source of Version
+
+The app version is defined **once** in `package.json` at the project root. Every other system reads from it — never duplicate or hardcode a version elsewhere.
+
+| Consumer | How it reads the version |
+|----------|------------------------|
+| **Web (Next.js)** | Bundled automatically by Next.js from `package.json` |
+| **CI/CD (release.yml)** | `node -p "require('./package.json').version"` → Docker tags, Git tags, GitHub release |
+| **Android (Gradle)** | `app/build.gradle.kts` parses `package.json` at build time → `versionName` and `versionCode` |
+| **Android runtime** | `BuildConfig.VERSION_NAME` (sent in `X-Tday-App-Version` header) |
+
+**Rules:**
+
+- To bump the version, edit **only** `package.json`. All other systems derive from it.
+- Use `npm version patch|minor|major` to bump — it updates `package.json` and creates a commit+tag.
+- Never set `versionName` or `versionCode` directly in `build.gradle.kts`.
+- `versionCode` is computed as `major * 10000 + minor * 100 + patch` (e.g., `1.5.0` → `10500`).
+
+### No Hardcoded Colors or Dimensions
+
+Colors and spacing/sizing values must come from the project's centralized design tokens — never as inline hex codes, raw pixel/dp literals, or arbitrary magic numbers.
+
+- **Web**: Use Tailwind utility classes that map to CSS custom properties defined in `app/globals.css` (e.g., `bg-card`, `text-foreground`, `border-border`). Never write inline `style={{ color: "#2A6DC2" }}` or raw `hsl(...)` values. If a new semantic color is needed, add a CSS variable in `globals.css` under `:root` and `.dark`, map it in the `@theme inline` block, then use the Tailwind class.
+- **Android**: Use `MaterialTheme.colorScheme.*` for all colors in Composables. If a color is not in the Material scheme, add it as a named constant in `ui/theme/Color.kt` — never write `Color(0xFF...)` directly in a screen or component file.
+- **Android dimensions**: Use the centralized `TdayDimens` object (`ui/theme/Dimens.kt`) for all spacing, sizing, corner radius, and elevation values. Never write raw `.dp` literals like `padding(18.dp)` directly in screens — use `TdayDimens.SpacingMd` or similar.
+
+```kotlin
+// Good: colors and dimensions from centralized sources
+Card(
+    shape = RoundedCornerShape(TdayDimens.RadiusLg),
+    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+    modifier = Modifier.padding(TdayDimens.SpacingMd),
+)
+
+// Bad: hardcoded color and magic dimension
+Card(
+    shape = RoundedCornerShape(18.dp),
+    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
+    modifier = Modifier.padding(18.dp),
+)
+```
+
+```typescript
+// Good: Tailwind token from CSS variable
+<div className="rounded-lg bg-card text-card-foreground p-4 border border-border">
+
+// Bad: inline hex color, arbitrary pixel value
+<div style={{ backgroundColor: "#FFFFFF", color: "#1C2333", padding: "18px" }}>
+```
+
+### No Hardcoded Strings
+
+All user-facing strings must live in a single centralized source — never inline in component code, screen layouts, or route handlers. This applies to labels, button text, error messages shown to users, placeholders, tooltips, and any other text the user sees.
+
+- **Web**: Use `next-intl` translation keys backed by `messages/*.json` files. Components access strings via `useTranslations()`.
+- **Android**: Use Android string resources (`res/values/strings.xml`). Screens access strings via `stringResource(R.string.*)`.
+- Internal log messages and developer-facing error strings (not shown to users) are exempt.
+- When adding a new screen or feature, add its strings to the centralized source **first**, then reference the keys.
+
+### Comments Policy
+
+- Do not write comments that restate what the code does.
+- Write comments that explain **why** — non-obvious trade-offs, workarounds, or business rules.
+- Use KDoc/JSDoc for public API surfaces that other developers will consume.
+- TODO comments must include a name or issue number: `// TODO(ohmz): migrate to streaming API #123`.
+
+---
+
+## TypeScript Standards
+
+### Naming
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Files (modules) | `kebab-case` | `get-list-todos.ts`, `api-client.ts` |
+| Files (components) | `PascalCase` | `TodoCard.tsx`, `Sidebar.tsx` |
+| Interfaces | `PascalCase` | `TodoItemType`, `ListItemMetaType` |
+| Types (unions/mapped) | `PascalCase` | `Priority`, `ApprovalStatus` |
+| Functions | `camelCase` | `errorHandler`, `fetchTodos` |
+| Constants | `UPPER_SNAKE_CASE` | `PUBLIC_API_PREFIXES`, `APPROVED_STATUS` |
+| React hooks | `camelCase` with `use` prefix | `useToast`, `useWindowSize` |
+| Environment variables | `UPPER_SNAKE_CASE` | `AUTH_SECRET`, `DATABASE_URL` |
+
+### Type Safety and Null Safety
+
+- **Strict mode is on.** Do not add `@ts-ignore` or `as any` without a comment explaining why.
+- Use `interface` for object shapes. Use `type` for unions, intersections, and mapped types.
+- Prefer `unknown` over `any` in catch blocks: `catch (error: unknown)`.
+- Validate external input (request bodies, query params) with **Zod schemas** before use.
+- **No non-null assertions (`!`).** Never use the `!` postfix operator to bypass null checks. Handle nullability explicitly with conditional checks, nullish coalescing (`??`), or optional chaining (`?.`).
+- **Explicit parameter types.** Always declare parameter types on functions, callbacks, and method signatures. Do not rely on implicit `any` inference.
+- **Explicit return types on exported functions.** Public/exported functions must have an explicit return type annotation.
+- **No type-only assertions to bypass safety.** Avoid `as` type casts unless narrowing from a validated `unknown`. Never use `as` to silence type errors.
+
+```typescript
+// Good: explicit parameter types, null handled safely
+function findTodo(id: string, todos: TodoItemType[]): TodoItemType | undefined {
+  return todos.find((todo: TodoItemType) => todo.id === id);
+}
+
+const title = todo?.title ?? "Untitled";
+
+// Bad: non-null assertion, implicit parameter types
+function findTodo(id, todos) {
+  return todos.find(todo => todo.id === id)!;
+}
+
+const title = todo!.title;
+```
+
+```typescript
+// Good: validate then use
+const schema = z.object({ aiSummaryEnabled: z.boolean() });
+const parsed = schema.safeParse(body);
+if (!parsed.success) throw new BadRequestError("Invalid input");
+const { aiSummaryEnabled } = parsed.data;
+
+// Bad: cast to any, skip validation
+const body = await req.json() as any;
+const enabled = body.aiSummaryEnabled;
+```
+
+```typescript
+// Good: explicit return type, safe null handling
+export async function getUserName(session: Session | null): Promise<string> {
+  if (!session?.user?.name) {
+    return "Anonymous";
+  }
+  return session.user.name;
+}
+
+// Bad: no return type, force-asserted nullable
+export async function getUserName(session) {
+  return session!.user!.name;
+}
+```
+
+### Imports
+
+- Use `@/` path alias for all imports. Never use relative paths that climb more than one directory (`../../`).
+- Order: framework (`next`, `react`) → third-party → `@/lib` → `@/components` → `@/features` → relative.
+- Use `type` imports when importing only types: `import type { Adapter } from "@auth/core/adapters"`.
+
+### Error Handling
+
+- API route handlers: wrap body in `try/catch`, delegate to `errorHandler(error)`.
+- Throw specific `BaseServerError` subclasses with meaningful messages.
+- Never swallow errors silently. At minimum, log and rethrow or return an error response.
+- Client-side: handle errors in React Query's `onError` callbacks or error boundaries.
+
+```typescript
+// Good: specific error with context
+throw new NotFoundError(`Todo ${id} not found`);
+
+// Bad: generic throw
+throw new Error("not found");
+```
+
+### API Route Structure
+
+Every `route.ts` file should follow this pattern:
+
+```typescript
+import { NextResponse } from "next/server";
+import { auth } from "@/app/auth";
+import { errorHandler } from "@/lib/errorHandler";
+
+export async function GET() {
+  try {
+    const session = await auth();
+    // ... business logic
+    return NextResponse.json(data, { status: 200 });
+  } catch (error) {
+    return errorHandler(error);
+  }
+}
+```
+
+### React Components
+
+- One component per file (exception: small helper components tightly coupled to the main export).
+- Props interfaces live in the same file as the component.
+- Use `"use client"` directive only when the component needs client-side interactivity.
+- Avoid `useEffect` for data fetching — use React Query instead.
+
+### Colors and Spacing (Web)
+
+All visual tokens are defined as CSS custom properties in `app/globals.css` and exposed as Tailwind utility classes via the `@theme inline` block.
+
+- **Colors**: Use Tailwind semantic classes (`bg-card`, `text-foreground`, `border-border`, `text-muted-foreground`). Never use inline hex, rgb, or raw `hsl(...)` in component code. If a shadow or overlay needs an opacity variant, use the CSS variable form: `hsl(var(--shadow)/0.08)`.
+- **New colors**: Add the HSL variable in `globals.css` under both `:root` and `.dark`, map it in `@theme inline`, then use the generated Tailwind class.
+- **Spacing/sizing**: Use Tailwind's spacing scale (`p-4`, `gap-3`, `rounded-2xl`). Avoid arbitrary values like `p-[18px]` unless there is no close Tailwind equivalent.
+- **Radius**: Radius tokens are defined in `globals.css` (`--radius`, `--radius-md`, `--radius-sm`) and mapped in `@theme inline`. Use `rounded-lg`, `rounded-md`, `rounded-sm`.
+
+```typescript
+// Good: semantic Tailwind tokens
+<div className="rounded-lg bg-card p-4 text-card-foreground shadow-sm">
+
+// Bad: raw hex in JSX
+<div style={{ backgroundColor: "#FFFFFF", borderRadius: "18px", padding: "18px" }}>
+```
+
+### String Management (Web)
+
+All user-facing strings live in `messages/*.json` and are accessed via `next-intl`. Never hardcode display text in components or pages.
+
+- Use `useTranslations(namespace)` in client components to get a `t` function.
+- Use `getTranslations(namespace)` in server components and API route error messages shown to users.
+- Organize keys by feature namespace (e.g., `"landingPage"`, `"todoList"`, `"settings"`).
+- When adding a new feature, add keys to **all** 11 locale files (`en.json` is the source of truth; other locales can fall back to English until translated).
+
+```typescript
+// Good: string from translation file
+const t = useTranslations("todoList");
+return <h1>{t("title")}</h1>;
+
+// Bad: hardcoded string in component
+return <h1>My Tasks</h1>;
+```
+
+```typescript
+// Good: error message for user via translation
+throw new BadRequestError(t("errors.invalidInput"));
+
+// Acceptable: internal log message (not shown to user)
+console.error("Failed to parse rrule", error);
+```
+
+### Logging
+
+- Use `console.error` for errors that need investigation.
+- Use `console.warn` for non-fatal issues (degraded behavior, fallback paths).
+- Never log secrets, tokens, passwords, or full request/response bodies.
+- Use the `logSecurityEvent` utility for auth and security events.
+
+---
+
+## Kotlin Standards
+
+### Naming
+
+| Element | Convention | Example |
+|---------|-----------|---------|
+| Packages | `lowercase.dot.separated` | `com.ohmz.tday.compose.core.data` |
+| Classes / Objects | `PascalCase` | `TdayRepository`, `AppViewModel` |
+| Files | Match primary type | `AppViewModel.kt`, `DomainModels.kt` |
+| Functions / Properties | `camelCase` | `bootstrap()`, `saveServerUrl` |
+| Private mutable state | Leading `_` | `_uiState` (public: `uiState`) |
+| Constants | `UPPER_SNAKE_CASE` in `companion object` | `RESYNC_INTERVAL_MS` |
+| Sealed variants | `PascalCase` | `AuthResult.Success`, `AuthResult.PendingApproval` |
+
+### Null Safety and Type Safety
+
+- **No force-unwrap (`!!`).** Never use the `!!` operator. It crashes on null and is a sign of unhandled nullability. Use safe calls (`?.`), `let`, `Elvis` (`?:`), or early returns instead.
+- **Explicit parameter types.** Always declare types on function parameters, lambda parameters, and return types for public/internal functions. Do not rely on type inference for function signatures.
+- **Explicit return types on public functions.** Every `public` or `internal` function must have an explicit return type. Private functions may use inference for trivial one-liners only.
+- **No `as` unsafe casts.** Use `as?` (safe cast) instead of `as`. Handle the null case from the safe cast explicitly.
+- **Prefer non-nullable types.** Design data classes and function signatures with non-nullable types as the default. Use nullable types (`?`) only when null is a meaningful domain value, not as a convenience.
+- **Use `require` and `check` for preconditions**, not `!!`. These provide meaningful error messages and make the contract explicit.
+
+```kotlin
+// Good: safe call + Elvis
+val name = user?.name ?: "Unknown"
+
+// Good: explicit null check with early return
+fun getDisplayName(user: User?): String {
+    if (user == null) return "Anonymous"
+    return user.name.ifBlank { user.email }
+}
+
+// Good: safe cast
+val todo = item as? TodoItem ?: return
+
+// Bad: force unwrap — crashes at runtime
+val name = user!!.name
+
+// Bad: unsafe cast — ClassCastException at runtime
+val todo = item as TodoItem
+```
+
+```kotlin
+// Good: explicit parameter and return types
+fun formatDueDate(instant: Instant, timeZone: String): String {
+    val zoned = instant.atZone(ZoneId.of(timeZone))
+    return zoned.format(DateTimeFormatter.ISO_LOCAL_DATE)
+}
+
+// Good: lambda with explicit parameter types
+todos.filter { todo: TodoItem -> todo.priority == Priority.High }
+
+// Bad: implicit types everywhere
+fun formatDueDate(instant, timeZone) = ...
+
+// Bad: untyped lambda parameters
+todos.filter { it.priority == Priority.High }  // avoid 'it' when the lambda is non-trivial
+```
+
+### State Management
+
+- Use `StateFlow` for UI state. Never use `LiveData` in this project.
+- Immutable state updates only: `_uiState.update { it.copy(loading = true) }`.
+- One `UiState` data class per ViewModel, kept at the top of the file.
+- ViewModels expose `StateFlow<UiState>` (read-only) and action methods.
+
+```kotlin
+// Good: immutable update
+_uiState.update { it.copy(loading = false, error = message) }
+
+// Bad: mutable state
+uiState.value.loading = false
+```
+
+### Coroutines
+
+- Launch coroutines in `viewModelScope` (ViewModels) or repository scope.
+- Use `Dispatchers.Default` for CPU work, `Dispatchers.IO` for disk/network (Retrofit handles its own dispatcher).
+- Use `Mutex` to serialize concurrent operations (e.g., sync in `TdayRepository`).
+- Use `withTimeout` for network operations that might hang.
+- Use `runCatching` with `.getOrNull()` / `.onSuccess` / `.onFailure` for error handling.
+
+```kotlin
+// Good: structured error handling
+viewModelScope.launch {
+    runCatching { repository.syncData() }
+        .onFailure { _uiState.update { it.copy(error = "Sync failed") } }
+}
+
+// Bad: unhandled exception
+viewModelScope.launch {
+    repository.syncData() // crashes on failure
+}
+```
+
+### Dependency Injection
+
+- All ViewModels use `@HiltViewModel` with `@Inject constructor`.
+- Singletons use `@Singleton` scope.
+- Module providers go in dedicated `@Module` classes in the `core/` layer.
+- Never create dependencies manually — always inject.
+
+### Sealed Types
+
+- Use `sealed class` or `sealed interface` for domain variants (errors, results, routes).
+- Prefer `data object` for variants without parameters, `data class` for variants with parameters.
+
+```kotlin
+sealed interface AuthResult {
+    data object Success : AuthResult
+    data object PendingApproval : AuthResult
+    data class Error(val message: String) : AuthResult
+}
+```
+
+### Data Classes and DTOs
+
+- API DTOs (`@Serializable`) live in `core/model/ApiModels.kt`.
+- UI-facing domain models live in `core/model/DomainModels.kt`.
+- Never expose DTOs directly to the UI layer — map them in the repository.
+- Use `kotlinx.serialization` for all JSON serialization (no Gson, no Moshi).
+
+### Colors and Dimensions (Android)
+
+All colors and dimension values must come from centralized theme files — never hardcoded in screens or components.
+
+**Colors:**
+
+- Use `MaterialTheme.colorScheme.*` in Composables for all standard colors (`primary`, `surface`, `onSurface`, `error`, etc.).
+- Custom colors not in the Material scheme are defined as named constants in `ui/theme/Color.kt` (e.g., `TdayDarkPrimary`, `TdayLightError`).
+- Never write `Color(0xFF...)` directly in a screen or component file. If a new color is needed, add it to `Color.kt` first.
+
+```kotlin
+// Good: theme color
+val colorScheme = MaterialTheme.colorScheme
+Icon(tint = colorScheme.primary, ...)
+Card(colors = CardDefaults.cardColors(containerColor = colorScheme.surface))
+
+// Bad: inline hex color
+Icon(tint = Color(0xFF2A6DC2), ...)
+Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)))
+```
+
+**Dimensions:**
+
+- All spacing, sizing, corner radius, and elevation values are defined in `ui/theme/Dimens.kt` as the `TdayDimens` object.
+- Use `TdayDimens.*` in screens instead of raw `.dp` literals.
+- If a new dimension is needed, add it to `TdayDimens` with a descriptive name — do not scatter unnamed values across files.
+
+```kotlin
+// Good: dimension from centralized object
+Modifier
+    .padding(horizontal = TdayDimens.ContentPaddingHorizontal)
+    .padding(vertical = TdayDimens.ContentPaddingVertical)
+
+Card(shape = RoundedCornerShape(TdayDimens.RadiusLg))
+Spacer(Modifier.height(TdayDimens.BottomScrollSpacer))
+
+// Bad: magic dp values
+Modifier.padding(horizontal = 18.dp, vertical = 14.dp)
+Card(shape = RoundedCornerShape(18.dp))
+Spacer(Modifier.height(96.dp))
+```
+
+**`TdayDimens` categories:**
+
+| Category | Examples |
+|----------|---------|
+| Spacing scale | `SpacingXxs` (2), `SpacingXs` (4), `SpacingSm` (6), `SpacingMd` (8), `SpacingLg` (12), `SpacingXl` (14), `SpacingXxl` (18), `Spacing3xl` (24) |
+| Content padding | `ContentPaddingHorizontal` (18), `ContentPaddingVertical` (14) |
+| Corner radii | `RadiusSm` (8), `RadiusMd` (14), `RadiusLg` (18), `RadiusXl` (24), `RadiusSheet` (34), `RadiusFull` (999) |
+| Icon sizes | `IconSm` (20), `IconMd` (26), `IconLg` (28), `IconXl` (30) |
+| Component sizes | `FabSize` (56), `PullRefreshIndicator` (26), `BorderWidth` (1), `BorderWidthThick` (1.5) |
+
+### String Management (Android)
+
+All user-facing strings must live in `res/values/strings.xml`. Never hardcode display text in Kotlin files or Composables.
+
+- Use `stringResource(R.string.key)` in Composables.
+- Use `context.getString(R.string.key)` in ViewModels or non-Composable code when a string is needed (pass the resource ID when possible instead).
+- Parameterized strings use XML placeholders: `<string name="task_count">%d tasks</string>` → `stringResource(R.string.task_count, count)`.
+- Group keys with a consistent prefix per feature: `home_`, `todo_`, `settings_`, `auth_`, `error_`.
+- Plural forms use `<plurals>` resources.
+- Internal log messages passed to `Log.d` / `Log.w` / `Log.e` are exempt — those are developer-facing and should not be translated.
+
+```kotlin
+// Good: string from resources
+Text(text = stringResource(R.string.home_title))
+Text(text = stringResource(R.string.todo_due_date, formattedDate))
+
+// Bad: hardcoded string in Composable
+Text(text = "My Tasks")
+Text(text = "Due: $formattedDate")
+```
+
+```kotlin
+// Good: resource ID passed to ViewModel, resolved in UI
+data class UiState(
+    val errorMessageRes: Int? = null,  // R.string.*
+)
+
+// In Composable:
+state.errorMessageRes?.let { Text(text = stringResource(it)) }
+
+// Acceptable: internal log (not user-facing)
+Log.d(TAG, "Sync completed in ${elapsed}ms")
+```
+
+### File Organization (Kotlin)
+
+Within a ViewModel file:
+
+1. `data class UiState(...)` at the top.
+2. `@HiltViewModel class` declaration with injected dependencies.
+3. `MutableStateFlow` and public `StateFlow`.
+4. `init { }` block.
+5. Public action methods.
+6. Private helper methods.
+7. `companion object` with constants at the bottom.
+
+---
+
+## Shared Rules
+
+### Folder and Module Structure
+
+- **Web**: group by technical layer at root (`lib/`, `components/`, `providers/`) and by feature domain in `features/`.
+- **Android**: group by feature (`feature/home/`, `feature/todos/`), shared code in `core/` and `ui/`.
+- A new feature should create its own subdirectory, not grow an existing file.
+
+### Error Messages
+
+- User-facing error messages should be helpful but not leak internal details.
+- Internal log messages should include enough context to diagnose (IDs, operation names, error types).
+- Never include stack traces, SQL, or file paths in API responses.
+
+### Dependencies
+
+- Add dependencies through the package manager (`npm install`, Gradle `dependencies {}`).
+- Do not manually specify versions you haven't verified. Use latest stable.
+- Review changelogs before major version bumps.
+- Keep Android dependencies version-locked in `build.gradle.kts`.
+
+### Git Hygiene
+
+- Do not commit `node_modules/`, `.next/`, `app/build/`, `.gradle/`, `.env`, or IDE-specific files.
+- Keep `.gitignore` updated when adding new build artifacts or tool caches.
+- Do not commit generated files (Prisma client, build outputs).
+
+### Examples: Good vs Bad
+
+**Error handling (TypeScript):**
+
+```typescript
+// Good
+export async function GET() {
+  try {
+    await requireAdmin();
+    const data = await prisma.appConfig.findFirst();
+    return NextResponse.json(data, { status: 200 });
+  } catch (error) {
+    return errorHandler(error);
+  }
+}
+
+// Bad: no error handling, leaks internals
+export async function GET() {
+  const data = await prisma.appConfig.findFirst();
+  return NextResponse.json(data);
+}
+```
+
+**State updates (Kotlin):**
+
+```kotlin
+// Good: copy-based immutable update
+_uiState.update { state ->
+    state.copy(
+        todos = freshTodos,
+        loading = false,
+    )
+}
+
+// Bad: multiple separate emissions cause UI flicker
+_uiState.update { it.copy(todos = freshTodos) }
+_uiState.update { it.copy(loading = false) }
+```
+
+**Naming:**
+
+```
+// Good
+getListTodos.ts         → module (kebab-case)
+TodoListViewModel.kt    → class (PascalCase)
+AUTH_SESSION_MAX_AGE_SEC → constant (UPPER_SNAKE)
+
+// Bad
+GetListTodos.ts          → module should be kebab-case
+todolistviewmodel.kt     → class should be PascalCase
+authSessionMaxAge        → constant should be UPPER_SNAKE
+```
