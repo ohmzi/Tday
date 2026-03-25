@@ -58,6 +58,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
+import androidx.compose.ui.platform.LocalContext
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
@@ -88,6 +90,15 @@ fun TdayApp() {
     val currentRoute = backStackEntry?.destination?.route
     var activeToast by remember { mutableStateOf<AppToastMessage?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val activity = LocalContext.current as? MainActivity
+    val deepLinkIntent by activity?.deepLinkIntent?.collectAsStateWithLifecycle()
+        ?: remember { mutableStateOf(null) }
+
+    LaunchedEffect(deepLinkIntent) {
+        val intent = deepLinkIntent ?: return@LaunchedEffect
+        navController.handleDeepLink(intent)
+    }
 
     LaunchedEffect(Unit) {
         appViewModel.snackbarManager.events.collect { event ->
@@ -193,7 +204,10 @@ fun TdayApp() {
                     SplashScreen()
                 }
 
-                composable(AppRoute.Home.route) {
+                composable(
+                    route = AppRoute.Home.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://home" }),
+                ) {
                     val authViewModel: AuthViewModel = hiltViewModel()
                     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
                     val showOnboardingWizard = !appUiState.authenticated
@@ -314,7 +328,10 @@ fun TdayApp() {
                     }
                 }
 
-                composable(AppRoute.TodayTodos.route) {
+                composable(
+                    route = AppRoute.TodayTodos.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/today" }),
+                ) {
                     TodosRoute(
                         mode = TodoListMode.TODAY,
                         onBack = { navController.popBackStack() },
@@ -322,7 +339,10 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.ScheduledTodos.route) {
+                composable(
+                    route = AppRoute.ScheduledTodos.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/scheduled" }),
+                ) {
                     TodosRoute(
                         mode = TodoListMode.SCHEDULED,
                         onBack = { navController.popBackStack() },
@@ -339,6 +359,9 @@ fun TdayApp() {
                             defaultValue = null
                         },
                     ),
+                    deepLinks = listOf(
+                        navDeepLink { uriPattern = "tday://todos/all?highlightTodoId={highlightTodoId}" },
+                    ),
                 ) { entry ->
                     val highlightTodoId = Uri.decode(
                         entry.arguments?.getString("highlightTodoId").orEmpty(),
@@ -351,7 +374,10 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.PriorityTodos.route) {
+                composable(
+                    route = AppRoute.PriorityTodos.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/priority" }),
+                ) {
                     TodosRoute(
                         mode = TodoListMode.PRIORITY,
                         onBack = { navController.popBackStack() },
@@ -365,6 +391,9 @@ fun TdayApp() {
                         navArgument("listId") { type = NavType.StringType },
                         navArgument("listName") { type = NavType.StringType },
                     ),
+                    deepLinks = listOf(
+                        navDeepLink { uriPattern = "tday://todos/list/{listId}/{listName}" },
+                    ),
                 ) { entry ->
                     val listId = entry.arguments?.getString("listId").orEmpty()
                     val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
@@ -377,7 +406,10 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.Completed.route) {
+                composable(
+                    route = AppRoute.Completed.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://completed" }),
+                ) {
                     val viewModel: CompletedViewModel = hiltViewModel()
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     OnRouteResume { viewModel.load() }
@@ -395,7 +427,10 @@ fun TdayApp() {
                     )
                 }
 
-                composable(AppRoute.Calendar.route) {
+                composable(
+                    route = AppRoute.Calendar.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://calendar" }),
+                ) {
                     val viewModel: CalendarViewModel = hiltViewModel()
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     OnRouteResume { viewModel.load() }
@@ -418,6 +453,7 @@ fun TdayApp() {
 
                 composable(
                     route = AppRoute.Settings.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://settings" }),
                     enterTransition = {
                         slideInVertically(tween(300)) { it } + fadeIn(tween(300))
                     },
