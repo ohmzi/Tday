@@ -4,13 +4,13 @@ This document describes the high-level system design, domain boundaries, and key
 
 ## System Overview
 
-T'Day is a **monolithic full-stack application** with a separate native mobile client:
+T'Day is a **monolithic full-stack application** with separate native mobile clients:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Clients                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │  Web (React)  │  │ Android App  │  │ Future: iOS/PWA  │  │
+│  │  Web (React)  │  │ Android App  │  │    iOS App      │  │
 │  └──────┬───────┘  └──────┬───────┘  └──────────────────┘  │
 │         │                 │                                  │
 └─────────┼─────────────────┼──────────────────────────────────┘
