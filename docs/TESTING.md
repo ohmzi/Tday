@@ -172,6 +172,12 @@ npm run test -- tests/guardrails/security   # security guardrails only
 | Docker Compose defines required services | Infrastructure as code |
 | Docker container drops capabilities and prevents privilege escalation | Container security hardening |
 | CI workflows exist for PR gate and release | Automated quality gates |
+| PR template explicitly mentions `Made-with` trailer | AI attribution awareness in review |
+| `CONTRIBUTING.md` warns about auto-injected trailers | Developer awareness of IDE trailer injection |
+| `commit-msg` hook script exists and strips `Made-with` trailers | Automated trailer removal |
+| `commit-msg` hook strips AI `Co-authored-by` trailers | No AI attribution in git history |
+| `install-hooks.sh` exists | Hook installation is documented and scriptable |
+| `CODING_STANDARDS.md` documents git commit hygiene | Rules are discoverable |
 | All required documentation files exist | Complete project documentation |
 | Version synchronizes from `package.json` to Android | Single source of version truth |
 
