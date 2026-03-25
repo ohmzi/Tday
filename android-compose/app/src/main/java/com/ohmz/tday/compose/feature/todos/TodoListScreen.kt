@@ -28,11 +28,14 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -48,6 +51,7 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,6 +62,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
@@ -90,6 +95,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -105,6 +112,7 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import java.time.Instant
 import java.time.LocalDate
@@ -126,6 +134,7 @@ fun TodoListScreen(
     onRefresh: () -> Unit,
     highlightedTodoId: String? = null,
     onSummarize: () -> Unit,
+    onDismissSummaryConnectivityError: () -> Unit,
     onAddTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceStartEpochMs: Long, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
@@ -308,9 +317,9 @@ fun TodoListScreen(
                         Icons.Rounded.MoreHoriz
                     },
                     actionContentDescription = if (canSummarizeCurrentMode) {
-                        "Summarize tasks"
+                        stringResource(R.string.todos_summarize)
                     } else {
-                        "More options"
+                        stringResource(R.string.action_more_options)
                     },
                     onAction = {
                         if (canSummarizeCurrentMode) {
@@ -353,7 +362,10 @@ fun TodoListScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ArrowBack,
+                                contentDescription = stringResource(R.string.action_back),
+                            )
                         }
                     },
                 )
@@ -405,7 +417,7 @@ fun TodoListScreen(
                         Text(
                             modifier = Modifier.padding(18.dp),
                             text = if (uiState.isLoading) {
-                                "Loading..."
+                                stringResource(R.string.label_loading)
                             } else {
                                 emptyStateMessageForMode(uiState.mode)
                             },
@@ -424,6 +436,7 @@ fun TodoListScreen(
                     }
                     val isCollapsed = sectionCanCollapse && collapsedSectionKeys.contains(section.key)
                     TimelineSection(
+                        modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                         section = section,
                         mode = uiState.mode,
                         lists = uiState.lists,
@@ -489,10 +502,9 @@ fun TodoListScreen(
 
             uiState.errorMessage?.let { message ->
                 item {
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                    com.ohmz.tday.compose.core.ui.ErrorRetryCard(
+                        message = message,
+                        onRetry = onRefresh,
                     )
                 }
             }
@@ -523,15 +535,44 @@ fun TodoListScreen(
         )
     }
 
+    LaunchedEffect(uiState.summaryConnectivityError) {
+        if (uiState.summaryConnectivityError) showSummarySheet = false
+    }
+
     if (showSummarySheet) {
         SummaryBottomSheet(
             isLoading = uiState.isSummarizing,
             summaryText = uiState.summaryText,
-            summarySource = uiState.summarySource,
-            summaryGeneratedAt = uiState.summaryGeneratedAt,
             errorMessage = uiState.summaryError,
             onDismiss = { showSummarySheet = false },
-            onRetry = onSummarize,
+        )
+    }
+
+    if (uiState.summaryConnectivityError) {
+        AlertDialog(
+            onDismissRequest = onDismissSummaryConnectivityError,
+            title = {
+                Text(
+                    text = stringResource(R.string.error_connectivity_title),
+                    fontWeight = FontWeight.SemiBold,
+                )
+            },
+            text = {
+                Text(text = stringResource(R.string.error_connectivity))
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissSummaryConnectivityError) {
+                    Text(stringResource(R.string.action_ok))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDismissSummaryConnectivityError()
+                    showSummarySheet = true
+                }) {
+                    Text(stringResource(R.string.action_retry))
+                }
+            },
         )
     }
 
@@ -623,7 +664,7 @@ private fun TodayTopBar(
                 TodayHeaderButton(
                     onClick = onBack,
                     icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                 )
                 if (showActionButton) {
                     TodayHeaderButton(
@@ -730,11 +771,8 @@ private fun TodayHeaderButton(
 private fun SummaryBottomSheet(
     isLoading: Boolean,
     summaryText: String?,
-    summarySource: String?,
-    summaryGeneratedAt: String?,
     errorMessage: String?,
     onDismiss: () -> Unit,
-    onRetry: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colorScheme = MaterialTheme.colorScheme
@@ -768,7 +806,7 @@ private fun SummaryBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Summary",
+                    text = stringResource(R.string.todos_summary_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = colorScheme.onBackground,
@@ -776,7 +814,7 @@ private fun SummaryBottomSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
-                        contentDescription = "Close summary",
+                        contentDescription = stringResource(R.string.todos_summary_close),
                         tint = colorScheme.onBackground,
                     )
                 }
@@ -793,7 +831,7 @@ private fun SummaryBottomSheet(
                         strokeWidth = 2.dp,
                     )
                     Text(
-                        text = "Creating your task summary...",
+                        text = stringResource(R.string.todos_summary_loading),
                         style = MaterialTheme.typography.bodyLarge,
                         color = colorScheme.onSurfaceVariant,
                     )
@@ -821,44 +859,6 @@ private fun SummaryBottomSheet(
                     text = errorMessage,
                     style = MaterialTheme.typography.bodyMedium,
                     color = colorScheme.error,
-                )
-            }
-
-            if (!summaryGeneratedAt.isNullOrBlank() || !summarySource.isNullOrBlank()) {
-                val sourceLabel = summarySource?.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-                }.orEmpty()
-                val generatedLabel = summaryGeneratedAt.orEmpty()
-                Text(
-                    text = buildString {
-                        if (sourceLabel.isNotBlank()) {
-                            append("Source: ")
-                            append(sourceLabel)
-                        }
-                        if (generatedLabel.isNotBlank()) {
-                            if (isNotEmpty()) append(" • ")
-                            append("Generated at ")
-                            append(generatedLabel)
-                        }
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
-                )
-            }
-
-            Card(
-                onClick = onRetry,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Text(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    text = if (isLoading) "Summarizing..." else "Refresh summary",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
                 )
             }
         }
@@ -895,7 +895,7 @@ private fun CreateTaskButton(
         ) {
             Icon(
                 imageVector = Icons.Rounded.Add,
-                contentDescription = "Create task",
+                contentDescription = stringResource(R.string.action_create_task),
                 tint = Color.White,
                 modifier = Modifier.size(26.dp),
             )
@@ -958,7 +958,7 @@ private fun ListSettingsBottomSheet(
                 ) {
                     ListSettingsActionButton(
                         icon = Icons.Rounded.Close,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.action_close),
                         enabled = true,
                         accentColor = Color(0xFFE35A5A),
                         onClick = {
@@ -968,7 +968,7 @@ private fun ListSettingsBottomSheet(
                     )
 
                     Text(
-                        text = "List settings",
+                        text = stringResource(R.string.todos_list_settings),
                         style = MaterialTheme.typography.headlineSmall,
                         color = colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
@@ -976,7 +976,7 @@ private fun ListSettingsBottomSheet(
 
                     ListSettingsActionButton(
                         icon = Icons.Rounded.Check,
-                        contentDescription = "Save list settings",
+                        contentDescription = stringResource(R.string.todos_save_list_settings),
                         enabled = canSave,
                         accentColor = Color(0xFF2FA35B),
                         onClick = {
@@ -987,7 +987,7 @@ private fun ListSettingsBottomSheet(
                 }
 
                 Text(
-                    text = "List",
+                    text = stringResource(R.string.home_section_list),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -1066,7 +1066,7 @@ private fun ListSettingsBottomSheet(
                                 ) {
                                     if (listName.isBlank()) {
                                         Text(
-                                            text = "List name",
+                                            text = stringResource(R.string.home_list_name_placeholder),
                                             style = MaterialTheme.typography.headlineSmall,
                                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                                             fontWeight = FontWeight.Bold,
@@ -1086,7 +1086,7 @@ private fun ListSettingsBottomSheet(
                 }
 
                 Text(
-                    text = "Color",
+                    text = stringResource(R.string.home_section_color),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -1111,6 +1111,8 @@ private fun ListSettingsBottomSheet(
                             val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
+                                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                    .wrapContentSize(Alignment.Center)
                                     .size(42.dp)
                                     .clip(CircleShape)
                                     .background(swatchColor, CircleShape)
@@ -1138,7 +1140,7 @@ private fun ListSettingsBottomSheet(
                 }
 
                 Text(
-                    text = "Icon",
+                    text = stringResource(R.string.home_section_icon),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -1194,7 +1196,7 @@ private fun ListSettingsBottomSheet(
                             ) {
                                 Icon(
                                     imageVector = option.icon,
-                                    contentDescription = null,
+                                    contentDescription = stringResource(R.string.home_section_icon),
                                     tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -1280,6 +1282,7 @@ private fun ListSettingsActionButton(
 
 @Composable
 private fun TimelineSection(
+    modifier: Modifier = Modifier,
     section: TodoSection,
     mode: TodoListMode,
     lists: List<ListSummary>,
@@ -1300,7 +1303,7 @@ private fun TimelineSection(
         label = "sectionChevronRotation",
     )
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (showTopDivider) {
@@ -1317,17 +1320,21 @@ private fun TimelineSection(
                 .fillMaxWidth()
                 .then(
                     if (onHeaderClick != null) {
-                        Modifier.clickable(
-                            interactionSource = headerInteractionSource,
-                            indication = null,
-                            onClick = onHeaderClick,
-                        )
+                        Modifier
+                            .heightIn(min = 48.dp)
+                            .clickable(
+                                interactionSource = headerInteractionSource,
+                                indication = null,
+                                onClick = onHeaderClick,
+                            )
                     } else if (onTapForQuickAdd != null) {
-                        Modifier.clickable(
-                            interactionSource = headerInteractionSource,
-                            indication = null,
-                            onClick = onTapForQuickAdd,
-                        )
+                        Modifier
+                            .heightIn(min = 48.dp)
+                            .clickable(
+                                interactionSource = headerInteractionSource,
+                                indication = null,
+                                onClick = onTapForQuickAdd,
+                            )
                     } else {
                         Modifier
                     },
@@ -1335,7 +1342,7 @@ private fun TimelineSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = section.title,
+                text = localizedSectionTitle(section),
                 color = if (useMinimalStyle) {
                     colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
                 } else {
@@ -1351,7 +1358,11 @@ private fun TimelineSection(
             if (onHeaderClick != null) {
                 Icon(
                     imageVector = Icons.Rounded.ExpandMore,
-                    contentDescription = if (isCollapsed) "Expand section" else "Collapse section",
+                    contentDescription = if (isCollapsed) {
+                        stringResource(R.string.action_expand_section)
+                    } else {
+                        stringResource(R.string.action_collapse_section)
+                    },
                     tint = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.72f else 1f),
                     modifier = Modifier
                         .padding(start = 6.dp)
@@ -1652,13 +1663,43 @@ private fun monthTitle(
     }
 }
 
+@Composable
+private fun localizedSectionTitle(section: TodoSection): String {
+    return when {
+        section.key == "today-morning" -> stringResource(R.string.todos_section_morning)
+        section.key == "today-afternoon" -> stringResource(R.string.todos_section_afternoon)
+        section.key == "today-tonight" -> stringResource(R.string.todos_section_tonight)
+        section.key == "earlier" -> stringResource(R.string.todos_section_earlier)
+        section.key.startsWith("day-") -> {
+            val zoneId = ZoneId.systemDefault()
+            val date = runCatching { LocalDate.parse(section.key.removePrefix("day-")) }.getOrNull()
+            val today = LocalDate.now(zoneId)
+            when (date) {
+                today -> stringResource(R.string.todos_section_today)
+                today.plusDays(1) -> stringResource(R.string.todos_section_tomorrow)
+                else -> section.title
+            }
+        }
+        section.key.startsWith("rest-") -> {
+            val ymPart = section.key.removePrefix("rest-")
+            runCatching {
+                val ym = YearMonth.parse(ymPart)
+                val monthName = ym.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                stringResource(R.string.todos_section_rest_of, monthName)
+            }.getOrElse { section.title }
+        }
+        else -> section.title
+    }
+}
+
+@Composable
 private fun emptyStateMessageForMode(mode: TodoListMode): String {
     return when (mode) {
-        TodoListMode.TODAY -> "No tasks for today"
-        TodoListMode.PRIORITY -> "No priority tasks"
-        TodoListMode.SCHEDULED -> "No scheduled tasks"
-        TodoListMode.ALL -> "No tasks yet"
-        TodoListMode.LIST -> "No tasks in this list"
+        TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
+        TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
+        TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
+        TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
+        TodoListMode.LIST -> stringResource(R.string.todos_empty_list)
     }
 }
 
@@ -1740,6 +1781,8 @@ private fun SwipeActionCircle(
     )
     Card(
         modifier = Modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .wrapContentSize(Alignment.Center)
             .size(42.dp)
             .graphicsLayer {
                 scaleX = scale
@@ -1837,10 +1880,12 @@ private fun SwipeTaskRow(
         DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
     val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
+    val overduePrefix = stringResource(R.string.todos_due_overdue_prefix)
+    val duePrefix = stringResource(R.string.todos_due_prefix)
     val dueSubtitleText = if (isOverdue) {
-        "Overdue, $dueBodyText"
+        overduePrefix + dueBodyText
     } else if (showDuePrefix) {
-        "Due $dueBodyText"
+        duePrefix + dueBodyText
     } else {
         dueBodyText
     }
@@ -1930,7 +1975,7 @@ private fun SwipeTaskRow(
                 ) {
                     SwipeActionCircle(
                         icon = Icons.Rounded.Info,
-                        contentDescription = "Edit task",
+                        contentDescription = stringResource(R.string.action_edit_task),
                         tint = colorScheme.onSurface,
                         background = colorScheme.surface,
                         onClick = {
@@ -1944,7 +1989,7 @@ private fun SwipeTaskRow(
                     )
                     SwipeActionCircle(
                         icon = Icons.Rounded.DeleteSweep,
-                        contentDescription = "Delete task",
+                        contentDescription = stringResource(R.string.action_delete_task),
                         tint = colorScheme.error,
                         background = colorScheme.surface,
                         onClick = {
@@ -1993,7 +2038,8 @@ private fun SwipeTaskRow(
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 4.dp, vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING),
+                            .padding(horizontal = 4.dp, vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING)
+                            .semantics(mergeDescendants = true) {},
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Row(
@@ -2012,7 +2058,11 @@ private fun SwipeTaskRow(
                                 } else {
                                     Icons.Rounded.CheckCircle
                                 },
-                                contentDescription = if (visuallyCompleted) "Completed" else "Mark complete",
+                                contentDescription = if (visuallyCompleted) {
+                                    stringResource(R.string.label_completed)
+                                } else {
+                                    stringResource(R.string.label_mark_complete)
+                                },
                                 tint = if (!visuallyCompleted) {
                                     colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                                 } else {
@@ -2082,7 +2132,7 @@ private fun SwipeTaskRow(
                                 if (showListIndicator) {
                                     Icon(
                                         imageVector = listIconForKey(listMeta?.iconKey),
-                                        contentDescription = "Task list",
+                                        contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
                                         modifier = Modifier.size(18.dp),
                                     )
@@ -2090,7 +2140,7 @@ private fun SwipeTaskRow(
                                 if (showPriorityFlag) {
                                     Icon(
                                         imageVector = Icons.Rounded.Flag,
-                                        contentDescription = "Priority task",
+                                        contentDescription = stringResource(R.string.label_priority_task),
                                         tint = priorityColor(todo.priority),
                                         modifier = Modifier.size(18.dp),
                                     )
@@ -2119,7 +2169,8 @@ private fun TodayTodoRow(
     val dueText =
         DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
     val isDetailOverdue = !todo.completed && todo.due.isBefore(Instant.now())
-    val detailDueText = if (isDetailOverdue) "Overdue, $dueText" else dueText
+    val overduePrefix = stringResource(R.string.todos_due_overdue_prefix)
+    val detailDueText = if (isDetailOverdue) overduePrefix + dueText else dueText
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -2131,35 +2182,42 @@ private fun TodayTodoRow(
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CircularCheckToggleIcon(
-                imageVector = Icons.Rounded.CheckCircle,
-                contentDescription = "Complete",
-                tint = TASK_CHECKMARK_GREEN,
-                onClick = onComplete,
-            )
-
-            Column(
+            Row(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 10.dp),
+                    .semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = todo.title,
-                    color = colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                CircularCheckToggleIcon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = stringResource(R.string.action_complete),
+                    tint = TASK_CHECKMARK_GREEN,
+                    onClick = onComplete,
                 )
-                Text(
-                    text = detailDueText,
-                    color = if (isDetailOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 10.dp),
+                ) {
+                    Text(
+                        text = todo.title,
+                        color = colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = detailDueText,
+                        color = if (isDetailOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
 
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Rounded.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.action_delete),
                     tint = colorScheme.error,
                 )
             }
@@ -2196,12 +2254,14 @@ private fun TodoRow(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics(mergeDescendants = true) {},
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularCheckToggleIcon(
                     imageVector = Icons.Rounded.CheckCircle,
-                    contentDescription = "Complete",
+                    contentDescription = stringResource(R.string.action_complete),
                     tint = TASK_CHECKMARK_GREEN,
                     onClick = onComplete,
                 )
@@ -2224,7 +2284,7 @@ private fun TodoRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Rounded.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.action_delete),
                     tint = colorScheme.error,
                 )
             }
@@ -2243,14 +2303,15 @@ private fun CircularCheckToggleIcon(
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .size(28.dp)
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .wrapContentSize(Alignment.Center)
             .clip(CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 14.dp,
+                    radius = 24.dp,
                 ),
                 onClick = onClick,
             ),
