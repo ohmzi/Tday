@@ -96,6 +96,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -107,6 +108,7 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import java.time.LocalDate
 import java.time.YearMonth
@@ -300,8 +302,10 @@ fun CalendarScreen(
                 }
 
                 item {
+                    val tasksDueDateLabel =
+                        selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
                     Text(
-                        text = "Tasks due ${selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d"))}",
+                        text = stringResource(R.string.calendar_tasks_due, tasksDueDateLabel),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -312,7 +316,7 @@ fun CalendarScreen(
                 if (selectedDatePendingTasks.isEmpty()) {
                     item {
                         Text(
-                            text = "No pending task due for this day",
+                            text = stringResource(R.string.calendar_no_pending),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
                             modifier = Modifier.padding(horizontal = 4.dp),
@@ -333,7 +337,7 @@ fun CalendarScreen(
                 if (selectedDateCompletedTasks.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Completed:",
+                            text = stringResource(R.string.calendar_completed_header),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -416,7 +420,7 @@ private fun CalendarCreateTaskFab(
     ) {
         Icon(
             imageVector = Icons.Rounded.Add,
-            contentDescription = "Create task",
+            contentDescription = stringResource(R.string.action_create_task),
             modifier = Modifier.size(26.dp),
         )
     }
@@ -572,7 +576,7 @@ private fun CalendarWeekCard(
                 ) {
                     MiniCalendarNavButton(
                         icon = Icons.Rounded.ChevronLeft,
-                        contentDescription = "Previous week",
+                        contentDescription = stringResource(R.string.calendar_prev_week),
                         enabled = canGoPrevWeek,
                         onClick = onPrevWeek,
                     )
@@ -589,7 +593,7 @@ private fun CalendarWeekCard(
                     }
                     MiniCalendarNavButton(
                         icon = Icons.Rounded.ChevronRight,
-                        contentDescription = "Next week",
+                        contentDescription = stringResource(R.string.calendar_next_week),
                         onClick = onNextWeek,
                     )
                 }
@@ -668,7 +672,11 @@ private fun CalendarWeekDayCell(
                 fontWeight = if (isSelected || isToday) FontWeight.SemiBold else FontWeight.Medium,
             )
             Text(
-                text = if (taskCount > 9) "9+" else taskCount.toString(),
+                text = if (taskCount > 9) {
+                    stringResource(R.string.calendar_task_count_cap)
+                } else {
+                    taskCount.toString()
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = if (taskCount > 0) colorScheme.secondary else colorScheme.onSurfaceVariant.copy(alpha = 0.42f),
                 fontWeight = FontWeight.SemiBold,
@@ -769,7 +777,7 @@ private fun CalendarDayCard(
                 ) {
                     MiniCalendarNavButton(
                         icon = Icons.Rounded.ChevronLeft,
-                        contentDescription = "Previous day",
+                        contentDescription = stringResource(R.string.calendar_prev_day),
                         enabled = canGoPrevDay,
                         onClick = onPrevDay,
                     )
@@ -786,7 +794,7 @@ private fun CalendarDayCard(
                     }
                     MiniCalendarNavButton(
                         icon = Icons.Rounded.ChevronRight,
-                        contentDescription = "Next day",
+                        contentDescription = stringResource(R.string.calendar_next_day),
                         onClick = onNextDay,
                     )
                 }
@@ -799,9 +807,9 @@ private fun CalendarDayCard(
                 )
                 Text(
                     text = if (taskCount == 1) {
-                        "1 task due"
+                        stringResource(R.string.calendar_task_count_one)
                     } else {
-                        "$taskCount tasks due"
+                        stringResource(R.string.calendar_task_count_many, taskCount)
                     },
                     style = MaterialTheme.typography.titleMedium,
                     color = colorScheme.onSurfaceVariant,
@@ -847,12 +855,12 @@ private fun CalendarTopBar(
         ) {
             CalendarCircleButton(
                 icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.action_back),
                 onClick = onBack,
             )
             CalendarCircleButton(
                 icon = Icons.Rounded.CalendarMonth,
-                contentDescription = "Jump to today",
+                contentDescription = stringResource(R.string.calendar_jump_to_today),
                 onClick = onJumpToday,
             )
         }
@@ -870,7 +878,7 @@ private fun CalendarTopBar(
                 modifier = Modifier.size(28.dp),
             )
             Text(
-                text = "Calendar",
+                text = stringResource(R.string.calendar_title),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF7D67B6),
@@ -1009,7 +1017,7 @@ private fun CalendarMonthCard(
                 ) {
                     MiniCalendarNavButton(
                         icon = Icons.Rounded.ChevronLeft,
-                        contentDescription = "Previous month",
+                        contentDescription = stringResource(R.string.calendar_prev_month),
                         enabled = canGoPrevMonth,
                         onClick = onPrevMonth,
                     )
@@ -1026,7 +1034,7 @@ private fun CalendarMonthCard(
                     }
                     MiniCalendarNavButton(
                         icon = Icons.Rounded.ChevronRight,
-                        contentDescription = "Next month",
+                        contentDescription = stringResource(R.string.calendar_next_month),
                         onClick = onNextMonth,
                     )
                 }
@@ -1177,7 +1185,11 @@ private fun CalendarDayCell(
                     modifier = Modifier.size(7.dp),
                 )
                 Text(
-                    text = if (taskCount > 9) "9+" else taskCount.toString(),
+                    text = if (taskCount > 9) {
+                        stringResource(R.string.calendar_task_count_cap)
+                    } else {
+                        taskCount.toString()
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold,
@@ -1240,7 +1252,7 @@ private fun CalendarTodoRow(
             ) {
                 CalendarSwipeActionCircle(
                     icon = Icons.Rounded.Info,
-                    contentDescription = "Edit task",
+                    contentDescription = stringResource(R.string.action_edit_task),
                     tint = colorScheme.onSurface,
                     background = colorScheme.surface,
                     onClick = {
@@ -1251,7 +1263,7 @@ private fun CalendarTodoRow(
                 )
                 CalendarSwipeActionCircle(
                     icon = Icons.Rounded.DeleteSweep,
-                    contentDescription = "Delete task",
+                    contentDescription = stringResource(R.string.action_delete_task),
                     tint = colorScheme.error,
                     background = colorScheme.surface,
                     onClick = {
@@ -1306,9 +1318,9 @@ private fun CalendarTodoRow(
                             Icons.Rounded.RadioButtonUnchecked
                         },
                         contentDescription = if (showCompletedState) {
-                            "Completed"
+                            stringResource(R.string.label_completed)
                         } else {
-                            "Mark complete"
+                            stringResource(R.string.label_mark_complete)
                         },
                         tint = if (showCompletedState) {
                             Color(0xFF6FBF86)
@@ -1361,7 +1373,7 @@ private fun CalendarTodoRow(
                             if (showListIndicator) {
                                 Icon(
                                     imageVector = listIconForKey(listMeta?.iconKey),
-                                    contentDescription = "Task list",
+                                    contentDescription = stringResource(R.string.label_task_list),
                                     tint = listIndicatorColor,
                                     modifier = Modifier.size(18.dp),
                                 )
@@ -1369,7 +1381,7 @@ private fun CalendarTodoRow(
                             if (showPriorityFlag) {
                                 Icon(
                                     imageVector = Icons.Rounded.Flag,
-                                    contentDescription = "Priority task",
+                                    contentDescription = stringResource(R.string.label_priority_task),
                                     tint = priorityColor(todo.priority),
                                     modifier = Modifier.size(18.dp),
                                 )
@@ -1434,7 +1446,7 @@ private fun CalendarCompletedTodoRow(
                     } else {
                         Icons.Rounded.RadioButtonUnchecked
                     },
-                    contentDescription = "Undo complete",
+                    contentDescription = stringResource(R.string.label_undo_complete),
                     tint = if (showCompletedState) {
                         Color(0xFF6FBF86)
                     } else {
@@ -1486,14 +1498,14 @@ private fun CalendarCompletedTodoRow(
                         if (showListIndicator) {
                             Icon(
                                 imageVector = listIconForKey(listMeta?.iconKey),
-                                contentDescription = "Task list",
+                                contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
                                 modifier = Modifier.size(18.dp),
                             )
                         }
                         Icon(
                             imageVector = Icons.Rounded.Flag,
-                            contentDescription = "Priority task",
+                            contentDescription = stringResource(R.string.label_priority_task),
                             tint = priorityColor(item.priority),
                             modifier = Modifier.size(18.dp),
                         )
@@ -1501,7 +1513,7 @@ private fun CalendarCompletedTodoRow(
                 } else if (showListIndicator) {
                     Icon(
                         imageVector = listIconForKey(listMeta?.iconKey),
-                        contentDescription = "Task list",
+                        contentDescription = stringResource(R.string.label_task_list),
                         tint = listIndicatorColor,
                         modifier = Modifier.size(18.dp),
                     )
