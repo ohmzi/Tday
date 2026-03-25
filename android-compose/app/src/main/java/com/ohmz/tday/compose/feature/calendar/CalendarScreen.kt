@@ -328,6 +328,7 @@ fun CalendarScreen(
                 } else {
                     items(selectedDatePendingTasks, key = { it.id }) { todo ->
                         CalendarTodoRow(
+                            modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                             todo = todo,
                             lists = uiState.lists,
                             onComplete = { onCompleteTask(todo) },
@@ -1205,6 +1206,7 @@ private fun CalendarDayCell(
 
 @Composable
 private fun CalendarTodoRow(
+    modifier: Modifier = Modifier,
     todo: TodoItem,
     lists: List<ListSummary>,
     onComplete: () -> Unit,
@@ -1237,7 +1239,7 @@ private fun CalendarTodoRow(
     val foregroundColor = colorScheme.background
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) { },
         verticalArrangement = Arrangement.spacedBy(4.dp),
