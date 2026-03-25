@@ -27,8 +27,19 @@ const strictTransportSecurityHeader =
       ]
     : [];
 
+const ktorBackendUrl = process.env.KTOR_BACKEND_URL || "";
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  async rewrites() {
+    if (!ktorBackendUrl) return [];
+    return [
+      {
+        source: "/api/:path((?!auth).*)",
+        destination: `${ktorBackendUrl}/api/:path*`,
+      },
+    ];
+  },
   async headers() {
     const securityHeaders = [
       ...baseSecurityHeaders,
