@@ -3,9 +3,12 @@ package com.ohmz.tday.compose.feature.app
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.ServerProbeException
-import com.ohmz.tday.compose.core.data.TdayRepository
+import com.ohmz.tday.compose.core.data.auth.AuthRepository
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
+import com.ohmz.tday.compose.core.data.settings.SettingsRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
-import com.ohmz.tday.compose.core.model.AdminSettingsResponse
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
@@ -46,7 +49,11 @@ data class AppUiState(
 
 @HiltViewModel
 class AppViewModel @Inject constructor(
-    private val repository: TdayRepository,
+    private val authRepository: AuthRepository,
+    private val serverConfigRepository: ServerConfigRepository,
+    private val syncManager: SyncManager,
+    private val settingsRepository: SettingsRepository,
+    private val cacheManager: OfflineCacheManager,
     private val themePreferenceStore: ThemePreferenceStore,
     private val reminderScheduler: TaskReminderScheduler,
     private val reminderPreferenceStore: ReminderPreferenceStore,
@@ -69,8 +76,8 @@ class AppViewModel @Inject constructor(
     fun bootstrap() {
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null, isManualSyncing = false) }
-            if (!repository.hasServerConfigured()) {
-                repository.clearAllLocalUserDataForUnauthenticatedState()
+            if (!serverConfigRepository.hasServerConfigured()) {
+                authRepository.clearAllLocalUserDataForUnauthenticatedState()
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -93,7 +100,7 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            val sessionUser = runCatching { repository.restoreSession() }.getOrNull()
+            val sessionUser = runCatching { authRepository.restoreSession() }.getOrNull()
             if (sessionUser?.id != null) {
                 val adminUser = isAdmin(sessionUser)
                 _uiState.update {
@@ -102,14 +109,14 @@ class AppViewModel @Inject constructor(
                         authenticated = true,
                         requiresServerSetup = false,
                         requiresLogin = false,
-                        serverUrl = repository.getServerUrl(),
+                        serverUrl = serverConfigRepository.getServerUrl(),
                         user = sessionUser,
                         error = null,
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
                         isManualSyncing = false,
                         adminAiSummaryEnabled = if (adminUser) {
-                            repository.isAiSummaryEnabledSnapshot()
+                            settingsRepository.isAiSummaryEnabledSnapshot()
                         } else {
                             null
                         },
@@ -126,7 +133,7 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            repository.clearSessionOnly()
+            authRepository.clearSessionOnly()
 
             _uiState.update {
                 it.copy(
@@ -134,7 +141,7 @@ class AppViewModel @Inject constructor(
                     authenticated = false,
                     requiresServerSetup = false,
                     requiresLogin = true,
-                    serverUrl = repository.getServerUrl(),
+                    serverUrl = serverConfigRepository.getServerUrl(),
                     user = null,
                     error = null,
                     canResetServerTrust = false,
@@ -172,10 +179,10 @@ class AppViewModel @Inject constructor(
                     isAdminAiSummaryLoading = true,
                     adminAiSummaryError = null,
                     adminAiSummaryEnabled = it.adminAiSummaryEnabled
-                        ?: repository.isAiSummaryEnabledSnapshot(),
+                        ?: settingsRepository.isAiSummaryEnabledSnapshot(),
                 )
             }
-            runCatching { repository.fetchAdminAiSummaryEnabled() }
+            runCatching { settingsRepository.fetchAdminAiSummaryEnabled() }
                 .onSuccess { enabled ->
                     _uiState.update {
                         it.copy(
@@ -208,7 +215,7 @@ class AppViewModel @Inject constructor(
                     adminAiSummaryError = null,
                 )
             }
-            runCatching { repository.updateAdminAiSummaryEnabled(enabled) }
+            runCatching { settingsRepository.updateAdminAiSummaryEnabled(enabled) }
                 .onSuccess { response ->
                     val validationFailed = response.validationError != null
                     if (validationFailed) {
@@ -228,11 +235,7 @@ class AppViewModel @Inject constructor(
                     }
                 }
                 .onFailure { error ->
-                    android.util.Log.e(
-                        "AppViewModel",
-                        "AI summary toggle failed",
-                        error,
-                    )
+                    android.util.Log.e("AppViewModel", "AI summary toggle failed", error)
                     _uiState.update {
                         it.copy(
                             isAdminAiSummarySaving = false,
@@ -254,7 +257,7 @@ class AppViewModel @Inject constructor(
         onFailure: (String) -> Unit = {},
     ) {
         viewModelScope.launch {
-            val result = repository.saveServerUrl(rawUrl)
+            val result = serverConfigRepository.saveServerUrl(rawUrl)
             result.onSuccess { normalized ->
                 _uiState.update {
                     it.copy(
@@ -287,7 +290,7 @@ class AppViewModel @Inject constructor(
         onFailure: (String) -> Unit = {},
     ) {
         viewModelScope.launch {
-            val result = repository.resetTrustedServer(rawUrl)
+            val result = serverConfigRepository.resetTrustedServer(rawUrl)
             result.onSuccess {
                 _uiState.update {
                     it.copy(
@@ -313,7 +316,7 @@ class AppViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            runCatching { repository.logout() }
+            runCatching { authRepository.logout() }
             runCatching { reminderScheduler.cancelAll() }
             ensureResyncLoop(authenticated = false)
             _uiState.update {
@@ -344,10 +347,7 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isManualSyncing = true) }
             runCatching {
-                repository.syncCachedData(
-                    force = true,
-                    replayPendingMutations = false,
-                )
+                syncManager.syncCachedData(force = true, replayPendingMutations = false)
             }
             _uiState.update { it.copy(isManualSyncing = false) }
             launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
@@ -389,14 +389,14 @@ class AppViewModel @Inject constructor(
         resyncJob = viewModelScope.launch {
             while (isActive) {
                 val delayMs = runCatching {
-                    if (repository.hasPendingMutations()) {
+                    if (syncManager.hasPendingMutations()) {
                         PENDING_RESYNC_INTERVAL_MS
                     } else {
                         RESYNC_INTERVAL_MS
                     }
                 }.getOrDefault(RESYNC_INTERVAL_MS)
                 delay(delayMs)
-                runCatching { repository.syncCachedData(force = true) }
+                runCatching { syncManager.syncCachedData(force = true) }
                 launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
             }
         }
@@ -404,8 +404,8 @@ class AppViewModel @Inject constructor(
 
     private fun launchStartupSync() {
         viewModelScope.launch {
-            runCatching { repository.syncCachedData(force = true) }
-            runCatching { repository.syncTimezone() }
+            runCatching { syncManager.syncCachedData(force = true) }
+            runCatching { authRepository.syncTimezone() }
             launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
         }
     }
