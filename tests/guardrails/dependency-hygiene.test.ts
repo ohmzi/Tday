@@ -182,10 +182,37 @@ describe("dependency and configuration hygiene", () => {
       expect(content).toContain("master");
     });
 
+    it("PR gate should run lint and tests", () => {
+      const content = readSource(path.join(workflowDir, "pr-gate.yml"));
+      expect(content).toContain("npm run lint");
+      expect(content).toContain("npm run test");
+    });
+
+    it("release workflow should run tests before building Docker image", () => {
+      const content = readSource(path.join(workflowDir, "release.yml"));
+      expect(content).toContain("lint-and-test");
+      expect(content).toContain("needs: lint-and-test");
+    });
+
     it("release workflow should read version from package.json", () => {
       const content = readSource(path.join(workflowDir, "release.yml"));
       expect(content).toContain("package.json");
       expect(content).toContain("version");
+    });
+  });
+
+  describe("commit and PR hygiene", () => {
+    it("PR template should include no-AI-attribution checklist item", () => {
+      const template = readSource(
+        path.join(ROOT, ".github", "PULL_REQUEST_TEMPLATE.md"),
+      );
+      expect(template).toMatch(/[Nn]o AI tool attribution/);
+    });
+
+    it("CONTRIBUTING.md should document the no-AI-attribution rule", () => {
+      const contributing = readSource(path.join(ROOT, "CONTRIBUTING.md"));
+      expect(contributing).toMatch(/[Nn]o AI attribution/);
+      expect(contributing).toMatch(/[Cc]ursor|[Cc]odex|[Cc]opilot/);
     });
   });
 
