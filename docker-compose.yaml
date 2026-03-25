@@ -30,15 +30,13 @@ services:
     volumes:
       - ollama_data:/root/.ollama
 
-  tday:
+  tday-backend:
     build:
-      context: .
-      dockerfile: dockerfile
-    image: tday:latest
-    container_name: tday
+      context: ./tday-backend
+      dockerfile: Dockerfile
+    image: tday-backend:latest
+    container_name: tday_backend
     restart: always
-    ports:
-      - "2525:3000"
     env_file:
       - .env.docker
     security_opt:
@@ -50,6 +48,31 @@ services:
         condition: service_healthy
       ollama:
         condition: service_healthy
+
+  tday:
+    build:
+      context: .
+      dockerfile: dockerfile
+    image: tday:latest
+    container_name: tday
+    restart: always
+    ports:
+      - "2525:3000"
+    env_file:
+      - .env.docker
+    environment:
+      KTOR_BACKEND_URL: http://tday-backend:8080
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      database:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      tday-backend:
+        condition: service_started
 
 volumes:
   postgres_data:
