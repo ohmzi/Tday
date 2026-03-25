@@ -483,6 +483,7 @@ private fun TodosRoute(
         onRefresh = viewModel::refresh,
         highlightedTodoId = highlightTodoId,
         onSummarize = viewModel::summarizeCurrentMode,
+        onDismissSummaryConnectivityError = viewModel::dismissSummaryConnectivityError,
         onAddTask = viewModel::addTask,
         onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
         onUpdateTask = viewModel::updateTask,

@@ -51,6 +51,7 @@ import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -61,6 +62,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
@@ -132,6 +134,7 @@ fun TodoListScreen(
     onRefresh: () -> Unit,
     highlightedTodoId: String? = null,
     onSummarize: () -> Unit,
+    onDismissSummaryConnectivityError: () -> Unit,
     onAddTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceStartEpochMs: Long, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
@@ -531,15 +534,44 @@ fun TodoListScreen(
         )
     }
 
+    LaunchedEffect(uiState.summaryConnectivityError) {
+        if (uiState.summaryConnectivityError) showSummarySheet = false
+    }
+
     if (showSummarySheet) {
         SummaryBottomSheet(
             isLoading = uiState.isSummarizing,
             summaryText = uiState.summaryText,
-            summarySource = uiState.summarySource,
-            summaryGeneratedAt = uiState.summaryGeneratedAt,
             errorMessage = uiState.summaryError,
             onDismiss = { showSummarySheet = false },
-            onRetry = onSummarize,
+        )
+    }
+
+    if (uiState.summaryConnectivityError) {
+        AlertDialog(
+            onDismissRequest = onDismissSummaryConnectivityError,
+            title = {
+                Text(
+                    text = stringResource(R.string.error_connectivity_title),
+                    fontWeight = FontWeight.SemiBold,
+                )
+            },
+            text = {
+                Text(text = stringResource(R.string.error_connectivity))
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissSummaryConnectivityError) {
+                    Text(stringResource(R.string.action_ok))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDismissSummaryConnectivityError()
+                    showSummarySheet = true
+                }) {
+                    Text(stringResource(R.string.action_retry))
+                }
+            },
         )
     }
 
@@ -738,11 +770,8 @@ private fun TodayHeaderButton(
 private fun SummaryBottomSheet(
     isLoading: Boolean,
     summaryText: String?,
-    summarySource: String?,
-    summaryGeneratedAt: String?,
     errorMessage: String?,
     onDismiss: () -> Unit,
-    onRetry: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colorScheme = MaterialTheme.colorScheme
@@ -829,46 +858,6 @@ private fun SummaryBottomSheet(
                     text = errorMessage,
                     style = MaterialTheme.typography.bodyMedium,
                     color = colorScheme.error,
-                )
-            }
-
-            if (!summaryGeneratedAt.isNullOrBlank() || !summarySource.isNullOrBlank()) {
-                val sourceLabel = summarySource?.replaceFirstChar {
-                    if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-                }.orEmpty()
-                val generatedLabel = summaryGeneratedAt.orEmpty()
-                val footerParts = buildList {
-                    if (sourceLabel.isNotBlank()) {
-                        add(stringResource(R.string.todos_summary_source, sourceLabel))
-                    }
-                    if (generatedLabel.isNotBlank()) {
-                        add(stringResource(R.string.todos_summary_generated_at, generatedLabel))
-                    }
-                }
-                Text(
-                    text = footerParts.joinToString(separator = " • "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
-                )
-            }
-
-            Card(
-                onClick = onRetry,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Text(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    text = if (isLoading) {
-                        stringResource(R.string.todos_summary_summarizing)
-                    } else {
-                        stringResource(R.string.todos_summary_refresh)
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
                 )
             }
         }
