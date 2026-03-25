@@ -179,6 +179,7 @@ fun TdayApp() {
                                     onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
                                     onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
                                     onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
+                                    onOpenNotes = { navController.navigate(AppRoute.Notes.route) },
                                     onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
                                     onOpenTaskFromSearch = { todoId ->
                                         navController.navigate(AppRoute.AllTodos.create(highlightTodoId = todoId))
@@ -208,6 +209,7 @@ fun TdayApp() {
                                     onOpenPriority = {},
                                     onOpenCompleted = {},
                                     onOpenCalendar = {},
+                                    onOpenNotes = {},
                                     onOpenSettings = {},
                                     onOpenTaskFromSearch = {},
                                     onOpenList = { _, _ -> },
