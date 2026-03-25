@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
-import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
+import com.ohmz.tday.compose.core.domain.CompleteTodoUseCase
+import com.ohmz.tday.compose.core.domain.CreateTodoUseCase
+import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -35,7 +37,9 @@ class CalendarViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val completedRepository: CompletedRepository,
     private val listRepository: ListRepository,
-    private val syncManager: SyncManager,
+    private val syncAndRefresh: SyncAndRefreshUseCase,
+    private val createTodoUseCase: CreateTodoUseCase,
+    private val completeTodoUseCase: CompleteTodoUseCase,
     private val cacheManager: OfflineCacheManager,
 ) : ViewModel() {
 
@@ -127,7 +131,7 @@ class CalendarViewModel @Inject constructor(
 
             runCatching {
                 if (forceSync) {
-                    syncManager.syncCachedData(force = true, replayPendingMutations = false)
+                    syncAndRefresh(force = true, replayPendingMutations = false)
                         .onFailure { /* fall back to cache */ }
                 }
                 val todos = todoRepository.fetchTodos(mode = TodoListMode.SCHEDULED)
@@ -163,7 +167,7 @@ class CalendarViewModel @Inject constructor(
         if (payload.title.isBlank()) return
         viewModelScope.launch {
             runCatching {
-                todoRepository.createTodo(payload)
+                createTodoUseCase(payload)
             }.onSuccess {
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
@@ -184,7 +188,7 @@ class CalendarViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                todoRepository.completeTodo(todo)
+                completeTodoUseCase(todo)
             }.onSuccess {
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
