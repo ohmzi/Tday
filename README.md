@@ -9,6 +9,7 @@ Personal task planner — self-hosted, private, multilingual.
 - Completion history and AI-powered task summaries (Ollama)
 - 11 languages via next-intl
 - Native Android client (Kotlin + Jetpack Compose)
+- Native iOS client (SwiftUI + SwiftData)
 
 ## Tech Stack
 
@@ -19,6 +20,7 @@ Personal task planner — self-hosted, private, multilingual.
 | Auth | NextAuth v5 (JWT sessions, PBKDF2 credentials, optional OAuth) |
 | AI | Ollama (local, e.g. qwen2.5:0.5b) |
 | Android | Kotlin, Jetpack Compose, Hilt, Retrofit, Material 3 |
+| iOS | SwiftUI, SwiftData, URLSession, Observation |
 | Infra | Docker Compose, GitHub Actions CI/CD, GHCR |
 
 ## Quick Start
@@ -58,12 +60,17 @@ npm run test         # Jest
 
 Open `android-compose/` in Android Studio (SDK 35 required) and run on device or emulator. See [`android-compose/README.md`](android-compose/README.md) for first-launch behavior and persistence details.
 
+### iOS
+
+Open `ios/` in Xcode on macOS and use the `Tday/` source tree for the native SwiftUI app. See [`ios/README.md`](ios/README.md) for the current structure and environment notes.
+
 ## Project Structure
 
 ```
 Tday/
 ├── app/                    # Next.js App Router (pages, API routes, auth)
 ├── android-compose/        # Native Android client (Kotlin + Compose)
+├── ios/                    # Native iOS client (SwiftUI + SwiftData)
 ├── components/             # Shared React components (UI, todo, sidebar, admin)
 ├── features/               # Feature modules (calendar, list, notes, todos, user)
 ├── hooks/                  # Shared React hooks
