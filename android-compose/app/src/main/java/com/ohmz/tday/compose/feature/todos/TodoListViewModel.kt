@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.todos
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
@@ -38,6 +39,7 @@ data class TodoListUiState(
     val summarySource: String? = null,
     val summaryGeneratedAt: String? = null,
     val summaryError: String? = null,
+    val summaryConnectivityError: Boolean = false,
     val isSummarizing: Boolean = false,
 )
 
@@ -91,6 +93,7 @@ class TodoListViewModel @Inject constructor(
                 summarySource = null,
                 summaryGeneratedAt = null,
                 summaryError = null,
+                summaryConnectivityError = false,
                 isSummarizing = false,
             )
         }
@@ -119,6 +122,7 @@ class TodoListViewModel @Inject constructor(
                 summarySource = null,
                 summaryGeneratedAt = null,
                 summaryError = null,
+                summaryConnectivityError = false,
             )
         }
 
@@ -137,13 +141,21 @@ class TodoListViewModel @Inject constructor(
                 }
             }.onFailure { error ->
                 _uiState.update {
-                    it.copy(
-                        isSummarizing = false,
-                        summaryError = error.message ?: "Could not summarize tasks",
-                    )
+                    if (isLikelyConnectivityIssue(error)) {
+                        it.copy(isSummarizing = false, summaryConnectivityError = true)
+                    } else {
+                        it.copy(
+                            isSummarizing = false,
+                            summaryError = error.message ?: "Could not summarize tasks",
+                        )
+                    }
                 }
             }
         }
+    }
+
+    fun dismissSummaryConnectivityError() {
+        _uiState.update { it.copy(summaryConnectivityError = false) }
     }
 
     fun refresh() {
