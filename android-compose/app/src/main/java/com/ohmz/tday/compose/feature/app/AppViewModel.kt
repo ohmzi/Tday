@@ -459,7 +459,6 @@ class AppViewModel @Inject constructor(
                     is RealtimeEvent.TodoChanged,
                     is RealtimeEvent.ListChanged,
                     is RealtimeEvent.CompletedChanged,
-                    is RealtimeEvent.NoteChanged,
                     -> {
                         runCatching { syncAndRefresh(force = true, replayPendingMutations = false) }
                     }
