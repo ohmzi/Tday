@@ -19,7 +19,6 @@ sealed interface RealtimeEvent {
     data object TodoChanged : RealtimeEvent
     data object ListChanged : RealtimeEvent
     data object CompletedChanged : RealtimeEvent
-    data object NoteChanged : RealtimeEvent
     data class Unknown(val type: String) : RealtimeEvent
     data object Connected : RealtimeEvent
     data object Disconnected : RealtimeEvent
@@ -102,7 +101,6 @@ class RealtimeClient @Inject constructor(
             type.startsWith("list.") -> RealtimeEvent.ListChanged
             type.startsWith("completed.") || type.startsWith("completedtodo.") ->
                 RealtimeEvent.CompletedChanged
-            type.startsWith("note.") -> RealtimeEvent.NoteChanged
             type.isNotBlank() -> RealtimeEvent.Unknown(type)
             else -> null
         }

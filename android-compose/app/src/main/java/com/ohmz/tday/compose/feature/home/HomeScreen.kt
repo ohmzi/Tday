@@ -135,7 +135,6 @@ fun HomeScreen(
     onOpenPriority: () -> Unit,
     onOpenCompleted: () -> Unit,
     onOpenCalendar: () -> Unit,
-    onOpenNotes: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTaskFromSearch: (todoId: String) -> Unit,
     onOpenList: (listId: String, listName: String) -> Unit,
@@ -427,18 +426,6 @@ fun HomeScreen(
                                 },
                             )
 
-                            CategoryCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = notesTileColor(),
-                                icon = Icons.AutoMirrored.Rounded.MenuBook,
-                                backgroundWatermark = Icons.AutoMirrored.Rounded.MenuBook,
-                                title = "Notes",
-                                count = null,
-                                onClick = {
-                                    closeSearch()
-                                    onOpenNotes()
-                                },
-                            )
                         }
                     }
 
@@ -1335,10 +1322,6 @@ private fun completedTileColor(colorScheme: ColorScheme): Color {
 
 private fun calendarTileColor(colorScheme: ColorScheme): Color {
     return Color(0xFFC3B4DF)
-}
-
-private fun notesTileColor(): Color {
-    return Color(0xFF8ABECC)
 }
 
 @Composable
