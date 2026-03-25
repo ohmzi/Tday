@@ -4,7 +4,6 @@ import com.ohmz.tday.compose.core.model.ChangePasswordRequest
 import com.ohmz.tday.compose.core.model.AppSettingsResponse
 import com.ohmz.tday.compose.core.model.AdminSettingsResponse
 import com.ohmz.tday.compose.core.model.CompletedTodosResponse
-import com.ohmz.tday.compose.core.model.CreateNoteRequest
 import com.ohmz.tday.compose.core.model.CreateListRequest
 import com.ohmz.tday.compose.core.model.CreateListResponse
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
@@ -16,7 +15,6 @@ import com.ohmz.tday.compose.core.model.DeleteListRequest
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.MessageResponse
 import com.ohmz.tday.compose.core.model.MobileProbeResponse
-import com.ohmz.tday.compose.core.model.NotesResponse
 import com.ohmz.tday.compose.core.model.PreferencesDto
 import com.ohmz.tday.compose.core.model.PreferencesResponse
 import com.ohmz.tday.compose.core.model.ListsResponse
@@ -180,25 +178,6 @@ interface TdayApiService {
     @HTTP(method = "DELETE", path = "/api/completedTodo", hasBody = true)
     suspend fun deleteCompletedTodoByBody(
         @Body payload: DeleteCompletedTodoRequest,
-    ): Response<MessageResponse>
-
-    @GET("/api/note")
-    suspend fun getNotes(): Response<NotesResponse>
-
-    @POST("/api/note")
-    suspend fun createNote(
-        @Body payload: CreateNoteRequest,
-    ): Response<MessageResponse>
-
-    @PATCH("/api/note/{id}")
-    suspend fun patchNote(
-        @Path("id") noteId: String,
-        @Body payload: JsonObject,
-    ): Response<MessageResponse>
-
-    @DELETE("/api/note/{id}")
-    suspend fun deleteNote(
-        @Path("id") noteId: String,
     ): Response<MessageResponse>
 
     @GET("/api/list")

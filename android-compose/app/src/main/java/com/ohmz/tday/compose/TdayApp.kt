@@ -72,8 +72,6 @@ import com.ohmz.tday.compose.feature.completed.CompletedViewModel
 import com.ohmz.tday.compose.feature.home.HomeScreen
 import com.ohmz.tday.compose.feature.home.HomeUiState
 import com.ohmz.tday.compose.feature.home.HomeViewModel
-import com.ohmz.tday.compose.feature.notes.NotesScreen
-import com.ohmz.tday.compose.feature.notes.NotesViewModel
 import com.ohmz.tday.compose.feature.onboarding.OnboardingWizardOverlay
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
@@ -200,7 +198,6 @@ fun TdayApp() {
                                     onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
                                     onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
                                     onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
-                                    onOpenNotes = { navController.navigate(AppRoute.Notes.route) },
                                     onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
                                     onOpenTaskFromSearch = { todoId ->
                                         navController.navigate(AppRoute.AllTodos.create(highlightTodoId = todoId))
@@ -230,7 +227,6 @@ fun TdayApp() {
                                     onOpenPriority = {},
                                     onOpenCompleted = {},
                                     onOpenCalendar = {},
-                                    onOpenNotes = {},
                                     onOpenSettings = {},
                                     onOpenTaskFromSearch = {},
                                     onOpenList = { _, _ -> },
@@ -369,19 +365,6 @@ fun TdayApp() {
                             }
                         },
                         onUpdateTask = viewModel::update,
-                    )
-                }
-
-                composable(AppRoute.Notes.route) {
-                    val viewModel: NotesViewModel = hiltViewModel()
-                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                    OnRouteResume { viewModel.load() }
-                    NotesScreen(
-                        uiState = uiState,
-                        onBack = { navController.popBackStack() },
-                        onRefresh = viewModel::refresh,
-                        onCreate = viewModel::create,
-                        onDelete = viewModel::delete,
                     )
                 }
 
