@@ -8,6 +8,7 @@ const intlMiddleware = createMiddleware(routing);
 const localeSet: ReadonlySet<string> = new Set(routing.locales);
 const PUBLIC_API_PREFIXES = ["/api/auth", "/api/mobile/probe"];
 const APPROVED_STATUS = "APPROVED";
+const KTOR_PROXIED = Boolean(process.env.KTOR_BACKEND_URL);
 const SESSION_COOKIE_CANDIDATES = [
   "__Secure-authjs.session-token",
   "authjs.session-token",
@@ -33,6 +34,11 @@ export default async function middleware(req: NextRequest) {
 
   if (pathname.startsWith("/api/")) {
     const publicApiPath = isPublicApiPath(pathname);
+    const proxiedToKtor = KTOR_PROXIED && !pathname.startsWith("/api/auth");
+
+    if (proxiedToKtor) {
+      return applySecurityHeaders(NextResponse.next());
+    }
 
     if (!publicApiPath && !user?.id) {
       return applySecurityHeaders(
