@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
-import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
+import com.ohmz.tday.compose.core.domain.CompleteTodoUseCase
+import com.ohmz.tday.compose.core.domain.CreateTodoUseCase
+import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
@@ -44,7 +46,9 @@ class TodoListViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val listRepository: ListRepository,
     private val settingsRepository: SettingsRepository,
-    private val syncManager: SyncManager,
+    private val syncAndRefresh: SyncAndRefreshUseCase,
+    private val createTodoUseCase: CreateTodoUseCase,
+    private val completeTodoUseCase: CompleteTodoUseCase,
     private val cacheManager: OfflineCacheManager,
 ) : ViewModel() {
 
@@ -194,7 +198,7 @@ class TodoListViewModel @Inject constructor(
 
             runCatching {
                 if (forceSync) {
-                    syncManager.syncCachedData(force = true, replayPendingMutations = true)
+                    syncAndRefresh(force = true, replayPendingMutations = true)
                         .onFailure { /* fall back to local cache */ }
                 }
                 val todos = todoRepository.fetchTodos(mode = mode, listId = listId)
@@ -238,7 +242,7 @@ class TodoListViewModel @Inject constructor(
 
         viewModelScope.launch {
             runCatching {
-                todoRepository.createTodo(payload)
+                createTodoUseCase(payload)
             }.onSuccess {
                 runCatching {
                     val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
@@ -348,7 +352,7 @@ class TodoListViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                todoRepository.completeTodo(todo)
+                completeTodoUseCase(todo)
             }.onSuccess {
                 refreshInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->

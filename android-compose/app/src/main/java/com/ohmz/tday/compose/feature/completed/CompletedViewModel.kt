@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
-import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -29,7 +29,7 @@ data class CompletedUiState(
 class CompletedViewModel @Inject constructor(
     private val completedRepository: CompletedRepository,
     private val listRepository: ListRepository,
-    private val syncManager: SyncManager,
+    private val syncAndRefresh: SyncAndRefreshUseCase,
     private val cacheManager: OfflineCacheManager,
 ) : ViewModel() {
 
@@ -99,7 +99,7 @@ class CompletedViewModel @Inject constructor(
             }
             runCatching {
                 if (forceSync) {
-                    syncManager.syncCachedData(force = true, replayPendingMutations = false)
+                    syncAndRefresh(force = true, replayPendingMutations = false)
                         .onFailure { /* fall back to local cache */ }
                 }
                 Pair(
