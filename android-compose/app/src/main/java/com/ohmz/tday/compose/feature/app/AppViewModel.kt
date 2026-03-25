@@ -9,6 +9,8 @@ import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
+import com.ohmz.tday.compose.core.domain.BootstrapSessionUseCase
+import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
@@ -52,6 +54,8 @@ class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val serverConfigRepository: ServerConfigRepository,
     private val syncManager: SyncManager,
+    private val syncAndRefresh: SyncAndRefreshUseCase,
+    private val bootstrapSession: BootstrapSessionUseCase,
     private val settingsRepository: SettingsRepository,
     private val cacheManager: OfflineCacheManager,
     private val themePreferenceStore: ThemePreferenceStore,
@@ -100,8 +104,8 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            val sessionUser = runCatching { authRepository.restoreSession() }.getOrNull()
-            if (sessionUser?.id != null) {
+            val sessionUser = runCatching { bootstrapSession() }.getOrNull()
+            if (sessionUser != null) {
                 val adminUser = isAdmin(sessionUser)
                 _uiState.update {
                     it.copy(
@@ -126,7 +130,6 @@ class AppViewModel @Inject constructor(
                     )
                 }
                 ensureResyncLoop(authenticated = true)
-                launchStartupSync()
                 if (adminUser) {
                     refreshAdminAiSummarySetting()
                 }
@@ -347,7 +350,7 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isManualSyncing = true) }
             runCatching {
-                syncManager.syncCachedData(force = true, replayPendingMutations = false)
+                syncAndRefresh(force = true, replayPendingMutations = false)
             }
             _uiState.update { it.copy(isManualSyncing = false) }
             launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
@@ -396,17 +399,9 @@ class AppViewModel @Inject constructor(
                     }
                 }.getOrDefault(RESYNC_INTERVAL_MS)
                 delay(delayMs)
-                runCatching { syncManager.syncCachedData(force = true) }
+                runCatching { syncAndRefresh(force = true) }
                 launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
             }
-        }
-    }
-
-    private fun launchStartupSync() {
-        viewModelScope.launch {
-            runCatching { syncManager.syncCachedData(force = true) }
-            runCatching { authRepository.syncTimezone() }
-            launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
         }
     }
 

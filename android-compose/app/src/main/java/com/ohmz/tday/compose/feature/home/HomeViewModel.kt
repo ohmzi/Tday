@@ -4,8 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.ListRepository
-import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
+import com.ohmz.tday.compose.core.domain.CreateTodoUseCase
+import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -40,7 +41,8 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val listRepository: ListRepository,
-    private val syncManager: SyncManager,
+    private val syncAndRefresh: SyncAndRefreshUseCase,
+    private val createTodoUseCase: CreateTodoUseCase,
     private val cacheManager: OfflineCacheManager,
 ) : ViewModel() {
 
@@ -109,7 +111,7 @@ class HomeViewModel @Inject constructor(
             }
             runCatching {
                 if (forceSync) {
-                    syncManager.syncCachedData(force = true, replayPendingMutations = true)
+                    syncAndRefresh(force = true, replayPendingMutations = true)
                         .onFailure { /* fall back to local cache */ }
                 }
                 todoRepository.fetchDashboardSummary() to todoRepository.fetchTodos(mode = TodoListMode.ALL)
@@ -148,7 +150,7 @@ class HomeViewModel @Inject constructor(
     fun createTask(payload: CreateTaskPayload) {
         if (payload.title.isBlank()) return
         viewModelScope.launch {
-            runCatching { todoRepository.createTodo(payload) }
+            runCatching { createTodoUseCase(payload) }
                 .onSuccess {
                     runCatching { todoRepository.fetchDashboardSummaryCached() }
                         .onSuccess { summary ->
