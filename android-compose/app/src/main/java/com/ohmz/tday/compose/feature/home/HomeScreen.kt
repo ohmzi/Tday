@@ -131,6 +131,7 @@ fun HomeScreen(
     onOpenPriority: () -> Unit,
     onOpenCompleted: () -> Unit,
     onOpenCalendar: () -> Unit,
+    onOpenNotes: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTaskFromSearch: (todoId: String) -> Unit,
     onOpenList: (listId: String, listName: String) -> Unit,
@@ -419,6 +420,19 @@ fun HomeScreen(
                                 onClick = {
                                     closeSearch()
                                     onOpenCalendar()
+                                },
+                            )
+
+                            CategoryCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = notesTileColor(),
+                                icon = Icons.AutoMirrored.Rounded.MenuBook,
+                                backgroundWatermark = Icons.AutoMirrored.Rounded.MenuBook,
+                                title = "Notes",
+                                count = null,
+                                onClick = {
+                                    closeSearch()
+                                    onOpenNotes()
                                 },
                             )
                         }
@@ -1317,6 +1331,10 @@ private fun calendarTileColor(colorScheme: ColorScheme): Color {
     return Color(0xFFC3B4DF)
 }
 
+private fun notesTileColor(): Color {
+    return Color(0xFF8ABECC)
+}
+
 @Composable
 private fun TopDownCascadeReveal(
     content: @Composable () -> Unit,
@@ -1357,7 +1375,7 @@ private fun CategoryCard(
     backgroundWatermark: ImageVector? = null,
     backgroundGrid: Boolean = false,
     title: String,
-    count: Int,
+    count: Int? = null,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
@@ -1504,12 +1522,14 @@ private fun CategoryCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(icon, contentDescription = null, tint = Color.White)
-                    Text(
-                        text = count.toString(),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Black,
-                    )
+                    if (count != null) {
+                        Text(
+                            text = count.toString(),
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
                 }
 
                 Text(
