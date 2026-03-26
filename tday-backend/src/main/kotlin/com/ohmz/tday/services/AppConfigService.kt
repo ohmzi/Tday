@@ -1,6 +1,10 @@
 package com.ohmz.tday.services
 
+import arrow.core.Either
+import arrow.core.right
 import com.ohmz.tday.db.tables.AppConfigs
+import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.models.response.AppConfigResponse
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
@@ -8,52 +12,57 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
 
-object AppConfigService {
-    private const val GLOBAL_ID = 1
+interface AppConfigService {
+    suspend fun getGlobalConfig(): Either<AppError, AppConfigResponse>
+    suspend fun setAiSummaryEnabled(enabled: Boolean, updatedById: String?): Either<AppError, AppConfigResponse>
+}
 
-    fun getGlobalConfig(): AppConfigRow {
-        return transaction {
-            val existing = AppConfigs.selectAll().where { AppConfigs.id eq GLOBAL_ID }.firstOrNull()
+class AppConfigServiceImpl : AppConfigService {
+    private val globalId = 1
+
+    override suspend fun getGlobalConfig(): Either<AppError, AppConfigResponse> {
+        val config = transaction {
+            val existing = AppConfigs.selectAll().where { AppConfigs.id eq globalId }.firstOrNull()
             if (existing != null) {
-                AppConfigRow(
+                AppConfigResponse(
                     aiSummaryEnabled = existing[AppConfigs.aiSummaryEnabled],
-                    updatedAt = existing[AppConfigs.updatedAt],
+                    updatedAt = existing[AppConfigs.updatedAt].toString(),
                 )
             } else {
                 val now = LocalDateTime.now()
                 AppConfigs.insert {
-                    it[AppConfigs.id] = GLOBAL_ID
+                    it[AppConfigs.id] = globalId
                     it[AppConfigs.aiSummaryEnabled] = true
                     it[AppConfigs.createdAt] = now
                     it[AppConfigs.updatedAt] = now
                 }
-                AppConfigRow(aiSummaryEnabled = true, updatedAt = now)
+                AppConfigResponse(aiSummaryEnabled = true, updatedAt = now.toString())
             }
         }
+        return config.right()
     }
 
-    fun setAiSummaryEnabled(enabled: Boolean, updatedById: String?): AppConfigRow {
-        return transaction {
+    override suspend fun setAiSummaryEnabled(enabled: Boolean, updatedById: String?): Either<AppError, AppConfigResponse> {
+        val config = transaction {
             val now = LocalDateTime.now()
-            val existing = AppConfigs.selectAll().where { AppConfigs.id eq GLOBAL_ID }.firstOrNull()
+            val existing = AppConfigs.selectAll().where { AppConfigs.id eq globalId }.firstOrNull()
             if (existing != null) {
-                AppConfigs.update({ AppConfigs.id eq GLOBAL_ID }) {
+                AppConfigs.update({ AppConfigs.id eq globalId }) {
                     it[AppConfigs.aiSummaryEnabled] = enabled
                     it[AppConfigs.updatedById] = updatedById
                     it[AppConfigs.updatedAt] = now
                 }
             } else {
                 AppConfigs.insert {
-                    it[AppConfigs.id] = GLOBAL_ID
+                    it[AppConfigs.id] = globalId
                     it[AppConfigs.aiSummaryEnabled] = enabled
                     it[AppConfigs.updatedById] = updatedById
                     it[AppConfigs.createdAt] = now
                     it[AppConfigs.updatedAt] = now
                 }
             }
-            AppConfigRow(aiSummaryEnabled = enabled, updatedAt = now)
+            AppConfigResponse(aiSummaryEnabled = enabled, updatedAt = now.toString())
         }
+        return config.right()
     }
-
-    data class AppConfigRow(val aiSummaryEnabled: Boolean, val updatedAt: LocalDateTime)
 }

@@ -7,31 +7,36 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 
 fun Route.loginChallengeRoutes() {
+    val userService by inject<UserService>()
+    val authThrottle by inject<AuthThrottle>()
+    val passwordProof by inject<PasswordProof>()
+
     route("/login-challenge") {
         post {
             val body = call.receive<LoginChallengeRequest>()
-            val email = PasswordProof.normalizeEmail(body.email)
+            val email = passwordProof.normalizeEmail(body.email)
             if (email.isNullOrBlank()) {
                 call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Email is required."))
                 return@post
             }
 
-            val throttle = AuthThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, email)
+            val throttle = authThrottle.enforceRateLimit(ThrottleAction.credentials, call.request, email)
             if (!throttle.allowed) {
                 call.respond(HttpStatusCode.TooManyRequests, mapOf(
-                    "message" to "Too many authentication requests. Try again in ${AuthThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    "message" to "Too many authentication requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
                     "reason" to (throttle.reasonCode ?: "auth_limit"),
                     "retryAfterSeconds" to throttle.retryAfterSeconds,
                 ))
                 return@post
             }
 
-            val user = UserService.findByEmail(email)
+            val user = userService.findByEmail(email)
             val storedHash = user?.get("password") as? String
 
-            val payload = PasswordProof.issueChallenge(email, storedHash)
+            val payload = passwordProof.issueChallenge(email, storedHash)
             call.respond(HttpStatusCode.OK, mapOf(
                 "version" to payload.version,
                 "algorithm" to payload.algorithm,
