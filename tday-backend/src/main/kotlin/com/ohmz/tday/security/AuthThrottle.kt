@@ -31,16 +31,31 @@ data class ThrottleResult(
 
 data class SubjectKey(val scope: String, val bucketKey: String, val dimension: ThrottleDimension)
 
-object AuthThrottle {
+interface AuthThrottle {
+    fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): ThrottleResult
+    fun recordFailure(request: ApplicationRequest, identifier: String? = null)
+    fun clearFailures(request: ApplicationRequest, identifier: String? = null)
+    fun requiresCaptcha(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): Boolean
+    fun recordSuccessSignal(request: ApplicationRequest, identifier: String? = null)
+    fun formatRetryWait(seconds: Int): String
+}
+
+class AuthThrottleImpl(
+    private val config: AppConfig,
+    private val clientSignals: ClientSignals,
+    private val eventLogger: SecurityEventLogger,
+) : AuthThrottle {
     private data class Policy(val windowMs: Long, val maxRequests: Int)
 
-    private val policies = mapOf(
-        ThrottleAction.credentials to Policy(AppConfig.limitCredentialsWindowSec * 1000L, AppConfig.limitCredentialsMax),
-        ThrottleAction.register to Policy(AppConfig.limitRegisterWindowSec * 1000L, AppConfig.limitRegisterMax),
-        ThrottleAction.csrf to Policy(AppConfig.limitCsrfWindowSec * 1000L, AppConfig.limitCsrfMax),
-    )
+    private val policies by lazy {
+        mapOf(
+            ThrottleAction.credentials to Policy(config.limitCredentialsWindowSec * 1000L, config.limitCredentialsMax),
+            ThrottleAction.register to Policy(config.limitRegisterWindowSec * 1000L, config.limitRegisterMax),
+            ThrottleAction.csrf to Policy(config.limitCsrfWindowSec * 1000L, config.limitCsrfMax),
+        )
+    }
 
-    fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): ThrottleResult {
+    override fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String?): ThrottleResult {
         val subjects = buildSubjects(action, request, identifier)
         val policy = policies[action] ?: return ThrottleResult(allowed = true)
 
@@ -53,7 +68,7 @@ object AuthThrottle {
         }
 
         if (blocked != null) {
-            SecurityEventLogger.log(
+            eventLogger.log(
                 blocked.reasonCode ?: "auth_limit",
                 mapOf(
                     "action" to action.name,
@@ -66,7 +81,7 @@ object AuthThrottle {
         return ThrottleResult(allowed = true)
     }
 
-    fun recordFailure(request: ApplicationRequest, identifier: String? = null) {
+    override fun recordFailure(request: ApplicationRequest, identifier: String?) {
         val subjects = buildSubjects(ThrottleAction.credentials, request, identifier)
         var longestLock = 0
         var highestIpFailures = 0
@@ -80,17 +95,17 @@ object AuthThrottle {
         }
 
         if (longestLock > 0) {
-            SecurityEventLogger.log("auth_lockout", mapOf("action" to "credentials", "retryAfterSeconds" to longestLock))
-            if (longestLock >= AppConfig.alertLockoutBurstSec) {
-                SecurityEventLogger.log("auth_alert_lockout_burst", mapOf("retryAfterSeconds" to longestLock))
+            eventLogger.log("auth_lockout", mapOf("action" to "credentials", "retryAfterSeconds" to longestLock))
+            if (longestLock >= config.alertLockoutBurstSec) {
+                eventLogger.log("auth_alert_lockout_burst", mapOf("retryAfterSeconds" to longestLock))
             }
         }
-        if (highestIpFailures >= AppConfig.alertIpFailureThreshold) {
-            SecurityEventLogger.log("auth_alert_ip_concentration", mapOf("ipFailureCount" to highestIpFailures))
+        if (highestIpFailures >= config.alertIpFailureThreshold) {
+            eventLogger.log("auth_alert_ip_concentration", mapOf("ipFailureCount" to highestIpFailures))
         }
     }
 
-    fun clearFailures(request: ApplicationRequest, identifier: String? = null) {
+    override fun clearFailures(request: ApplicationRequest, identifier: String?) {
         val subjects = buildSubjects(ThrottleAction.credentials, request, identifier)
         transaction {
             for (subject in subjects) {
@@ -105,7 +120,7 @@ object AuthThrottle {
         }
     }
 
-    fun requiresCaptcha(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): Boolean {
+    override fun requiresCaptcha(action: ThrottleAction, request: ApplicationRequest, identifier: String?): Boolean {
         val subjects = buildSubjects(action, request, identifier)
         val now = System.currentTimeMillis()
 
@@ -118,7 +133,7 @@ object AuthThrottle {
                 val lastFailure = row[AuthThrottles.lastFailureAt]
                 val failureCount = row[AuthThrottles.failureCount]
                 val requestCount = row[AuthThrottles.requestCount]
-                val resetMs = AppConfig.lockoutResetSec * 1000L
+                val resetMs = config.lockoutResetSec * 1000L
 
                 val activeFailures = if (lastFailure != null &&
                     now - lastFailure.toInstant(ZoneOffset.UTC).toEpochMilli() <= resetMs
@@ -128,7 +143,7 @@ object AuthThrottle {
                     0
                 }
 
-                if (activeFailures >= AppConfig.captchaTriggerFailures) return@transaction true
+                if (activeFailures >= config.captchaTriggerFailures) return@transaction true
 
                 if (action == ThrottleAction.register) {
                     val registerPolicy = policies[ThrottleAction.register] ?: continue
@@ -139,14 +154,14 @@ object AuthThrottle {
         }
     }
 
-    fun recordSuccessSignal(request: ApplicationRequest, identifier: String? = null) {
-        val normalized = ClientSignals.normalizeIdentifier(identifier) ?: return
-        val identifierHash = ClientSignals.hashSecurityValue("email:$normalized")
-        val ipHash = ClientSignals.hashSecurityValue("ip:${ClientSignals.getClientIp(request)}")
-        val deviceHint = ClientSignals.getDeviceHint(request)
-        val deviceHash = deviceHint?.let { ClientSignals.hashSecurityValue("device:$it") }
+    override fun recordSuccessSignal(request: ApplicationRequest, identifier: String?) {
+        val normalized = clientSignals.normalizeIdentifier(identifier) ?: return
+        val identifierHash = clientSignals.hashSecurityValue("email:$normalized")
+        val ipHash = clientSignals.hashSecurityValue("ip:${clientSignals.getClientIp(request)}")
+        val deviceHint = clientSignals.getDeviceHint(request)
+        val deviceHash = deviceHint?.let { clientSignals.hashSecurityValue("device:$it") }
         val now = LocalDateTime.now()
-        val anomalyWindowMs = AppConfig.signalAnomalyWindowSec * 1000L
+        val anomalyWindowMs = config.signalAnomalyWindowSec * 1000L
 
         transaction {
             val existing = AuthSignals.selectAll().where { AuthSignals.identifierHash eq identifierHash }.firstOrNull()
@@ -160,7 +175,7 @@ object AuthThrottle {
                     val elapsed = now.toInstant(ZoneOffset.UTC).toEpochMilli() -
                         lastSeen.toInstant(ZoneOffset.UTC).toEpochMilli()
                     if (elapsed <= anomalyWindowMs && lastIp != ipHash && lastDevice != deviceHash) {
-                        SecurityEventLogger.log(
+                        eventLogger.log(
                             "auth_signal_anomaly",
                             mapOf(
                                 "reason" to "ip_and_device_changed",
@@ -190,23 +205,30 @@ object AuthThrottle {
         }
     }
 
+    override fun formatRetryWait(seconds: Int): String {
+        if (seconds < 60) return "${seconds}s"
+        val m = seconds / 60
+        val s = seconds % 60
+        return if (s == 0) "${m}m" else "${m}m ${s}s"
+    }
+
     private fun buildSubjects(action: ThrottleAction, request: ApplicationRequest, identifier: String?): List<SubjectKey> {
         val subjects = mutableListOf<SubjectKey>()
-        val ip = ClientSignals.getClientIp(request)
+        val ip = clientSignals.getClientIp(request)
         subjects.add(makeSubject(action, ThrottleDimension.ip, ip))
 
-        val device = ClientSignals.getDeviceHint(request)
+        val device = clientSignals.getDeviceHint(request)
         if (device != null) subjects.add(makeSubject(action, ThrottleDimension.device, device))
 
         if (action != ThrottleAction.csrf) {
-            val norm = ClientSignals.normalizeIdentifier(identifier)
+            val norm = clientSignals.normalizeIdentifier(identifier)
             if (norm != null) subjects.add(makeSubject(action, ThrottleDimension.email, norm))
         }
         return subjects
     }
 
     private fun makeSubject(action: ThrottleAction, dimension: ThrottleDimension, value: String): SubjectKey =
-        SubjectKey("${action.name}:${dimension.name}", ClientSignals.hashSecurityValue("${dimension.name}:$value"), dimension)
+        SubjectKey("${action.name}:${dimension.name}", clientSignals.hashSecurityValue("${dimension.name}:$value"), dimension)
 
     private fun consumeRequestQuota(policy: Policy, subject: SubjectKey): ThrottleResult {
         val now = LocalDateTime.now()
@@ -266,7 +288,7 @@ object AuthThrottle {
 
     private fun incrementFailureCounter(subject: SubjectKey): Pair<Int, Int> {
         val now = LocalDateTime.now()
-        val lockoutResetMs = AppConfig.lockoutResetSec * 1000L
+        val lockoutResetMs = config.lockoutResetSec * 1000L
 
         return transaction {
             val row = AuthThrottles.selectAll().where {
@@ -314,11 +336,11 @@ object AuthThrottle {
     }
 
     private fun lockUntilFromFailures(failures: Int, now: LocalDateTime): LocalDateTime? {
-        if (failures < AppConfig.lockoutFailThreshold) return null
-        val exponent = max(0, failures - AppConfig.lockoutFailThreshold)
+        if (failures < config.lockoutFailThreshold) return null
+        val exponent = max(0, failures - config.lockoutFailThreshold)
         val lockMs = min(
-            AppConfig.lockoutMaxSec * 1000L,
-            AppConfig.lockoutBaseSec * 1000L * 2.0.pow(exponent).toLong(),
+            config.lockoutMaxSec * 1000L,
+            config.lockoutBaseSec * 1000L * 2.0.pow(exponent).toLong(),
         )
         return now.plusNanos(lockMs * 1_000_000)
     }
@@ -339,12 +361,5 @@ object AuthThrottle {
         if (candidate.reasonCode == "auth_lockout" && current.reasonCode != "auth_lockout") return candidate
         if (candidate.retryAfterSeconds > current.retryAfterSeconds) return candidate
         return current
-    }
-
-    fun formatRetryWait(seconds: Int): String {
-        if (seconds < 60) return "${seconds}s"
-        val m = seconds / 60
-        val s = seconds % 60
-        return if (s == 0) "${m}m" else "${m}m ${s}s"
     }
 }

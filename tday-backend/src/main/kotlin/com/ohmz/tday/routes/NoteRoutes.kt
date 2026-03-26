@@ -1,43 +1,50 @@
 package com.ohmz.tday.routes
 
+import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
-import com.ohmz.tday.plugins.*
 import com.ohmz.tday.services.NoteService
-import io.ktor.http.*
 import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 
 fun Route.noteRoutes() {
+    val noteService by inject<NoteService>()
+
     route("/note") {
         get {
-            val user = call.requireUser()
-            val notes = NoteService.getAll(user.id)
-            call.respond(HttpStatusCode.OK, mapOf("notes" to notes))
+            call.withAuth { user ->
+                noteService.getAll(user.id).map { mapOf("notes" to it) }
+            }
         }
 
         post {
-            val user = call.requireUser()
-            val body = call.receive<NoteCreateRequest>()
-            if (body.name.isBlank()) throw BadRequestException("title cannot be left empty")
-            val result = NoteService.create(user.id, body.name, body.content)
-            call.respond(HttpStatusCode.OK, mapOf("message" to "note created", "note" to result))
+            call.withAuth { user ->
+                val body = call.receive<NoteCreateRequest>()
+                if (body.name.isBlank()) return@withAuth arrow.core.Either.Left(AppError.BadRequest("title cannot be left empty"))
+                noteService.create(user.id, body.name, body.content)
+                    .map { mapOf("message" to "note created", "note" to it) }
+            }
         }
 
         route("/{id}") {
             patch {
-                val user = call.requireUser()
-                val noteId = call.parameters["id"] ?: throw BadRequestException("note id required")
-                val body = call.receive<NotePatchRequest>()
-                NoteService.update(user.id, noteId, body.name, body.content)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "note updated"))
+                call.withAuth { user ->
+                    val noteId = call.parameters["id"]
+                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("note id required"))
+                    val body = call.receive<NotePatchRequest>()
+                    noteService.update(user.id, noteId, body.name, body.content)
+                        .map { mapOf("message" to "note updated") }
+                }
             }
 
             delete {
-                val user = call.requireUser()
-                val noteId = call.parameters["id"] ?: throw BadRequestException("note id required")
-                NoteService.delete(user.id, noteId)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "note deleted"))
+                call.withAuth { user ->
+                    val noteId = call.parameters["id"]
+                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("note id required"))
+                    noteService.delete(user.id, noteId)
+                        .map { mapOf("message" to "note deleted") }
+                }
             }
         }
     }
