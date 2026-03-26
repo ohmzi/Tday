@@ -2,10 +2,38 @@ package com.ohmz.tday.compose.core.model
 
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class MessageResponse(
-    val message: String? = null,
-)
+typealias MessageResponse = com.ohmz.tday.shared.model.MessageResponse
+typealias MobileProbeResponse = com.ohmz.tday.shared.model.MobileProbeResponse
+typealias AppSettingsResponse = com.ohmz.tday.shared.model.AppSettingsResponse
+typealias AdminSettingsResponse = com.ohmz.tday.shared.model.AdminSettingsResponse
+typealias UpdateAdminSettingsRequest = com.ohmz.tday.shared.model.UpdateAdminSettingsRequest
+typealias TodosResponse = com.ohmz.tday.shared.model.TodosResponse
+typealias TodoSummaryRequest = com.ohmz.tday.shared.model.TodoSummaryRequest
+typealias TodoSummaryResponse = com.ohmz.tday.shared.model.TodoSummaryResponse
+typealias TodoTitleNlpRequest = com.ohmz.tday.shared.model.TodoTitleNlpRequest
+typealias TodoTitleNlpResponse = com.ohmz.tday.shared.model.TodoTitleNlpResponse
+typealias CreateTodoRequest = com.ohmz.tday.shared.model.CreateTodoRequest
+typealias TodoDto = com.ohmz.tday.shared.model.TodoDto
+typealias CreateTodoResponse = com.ohmz.tday.shared.model.CreateTodoResponse
+typealias UpdateTodoRequest = com.ohmz.tday.shared.model.UpdateTodoRequest
+typealias DeleteTodoRequest = com.ohmz.tday.shared.model.DeleteTodoRequest
+typealias TodoInstanceUpdateRequest = com.ohmz.tday.shared.model.TodoInstancePatchRequest
+typealias TodoInstanceDeleteRequest = com.ohmz.tday.shared.model.TodoInstanceDeleteRequest
+typealias TodoCompleteRequest = com.ohmz.tday.shared.model.TodoCompleteRequest
+typealias TodoUncompleteRequest = com.ohmz.tday.shared.model.TodoUncompleteRequest
+typealias TodoPrioritizeRequest = com.ohmz.tday.shared.model.TodoPrioritizeRequest
+typealias ListsResponse = com.ohmz.tday.shared.model.ListsResponse
+typealias CreateListRequest = com.ohmz.tday.shared.model.CreateListRequest
+typealias ListDto = com.ohmz.tday.shared.model.ListDto
+typealias CreateListResponse = com.ohmz.tday.shared.model.CreateListResponse
+typealias UpdateListRequest = com.ohmz.tday.shared.model.UpdateListRequest
+typealias DeleteListRequest = com.ohmz.tday.shared.model.DeleteListRequest
+typealias CompletedTodosResponse = com.ohmz.tday.shared.model.CompletedTodosResponse
+typealias CompletedTodoDto = com.ohmz.tday.shared.model.CompletedTodoDto
+typealias UpdateCompletedTodoRequest = com.ohmz.tday.shared.model.UpdateCompletedTodoRequest
+typealias DeleteCompletedTodoRequest = com.ohmz.tday.shared.model.DeleteCompletedTodoRequest
+typealias PreferencesResponse = com.ohmz.tday.shared.model.PreferencesResponse
+typealias PreferencesDto = com.ohmz.tday.shared.model.PreferencesDto
 
 @Serializable
 data class CsrfResponse(
@@ -45,162 +73,11 @@ data class RegisterResponse(
 )
 
 @Serializable
-data class MobileProbeResponse(
-    val service: String,
-    val probe: String? = null,
-    val version: String,
-    val serverTime: String,
-)
-
-@Serializable
 data class CredentialKeyResponse(
     val version: String,
     val algorithm: String,
     val keyId: String,
     val publicKey: String,
-)
-
-@Serializable
-data class AppSettingsResponse(
-    val aiSummaryEnabled: Boolean = true,
-)
-
-@Serializable
-data class AdminSettingsResponse(
-    val aiSummaryEnabled: Boolean = true,
-    val validationError: String? = null,
-)
-
-@Serializable
-data class UpdateAdminSettingsRequest(
-    val aiSummaryEnabled: Boolean,
-)
-
-@Serializable
-data class TodosResponse(
-    val todos: List<TodoDto> = emptyList(),
-)
-
-@Serializable
-data class TodoSummaryRequest(
-    val mode: String,
-    val listId: String? = null,
-)
-
-@Serializable
-data class TodoSummaryResponse(
-    val summary: String,
-    val source: String? = null,
-    val mode: String? = null,
-    val taskCount: Int? = null,
-    val generatedAt: String? = null,
-    val fallbackReason: String? = null,
-)
-
-@Serializable
-data class TodoTitleNlpRequest(
-    val text: String,
-    val locale: String? = null,
-    val referenceEpochMs: Long? = null,
-    val timezoneOffsetMinutes: Int? = null,
-    val defaultDurationMinutes: Int? = null,
-)
-
-@Serializable
-data class TodoTitleNlpResponse(
-    val cleanTitle: String,
-    val matchedText: String? = null,
-    val matchStart: Int? = null,
-    val startEpochMs: Long? = null,
-    val dueEpochMs: Long? = null,
-)
-
-@Serializable
-data class CreateTodoRequest(
-    val title: String,
-    val description: String? = null,
-    val priority: String = "Low",
-    val dtstart: String,
-    val due: String,
-    val rrule: String? = null,
-    val listID: String? = null,
-)
-
-@Serializable
-data class TodoDto(
-    val id: String,
-    val title: String = "",
-    val description: String? = null,
-    val pinned: Boolean = false,
-    val priority: String = "Low",
-    val dtstart: String,
-    val due: String,
-    val rrule: String? = null,
-    val instanceDate: String? = null,
-    val completed: Boolean = false,
-    val listID: String? = null,
-    val updatedAt: String? = null,
-    val createdAt: String? = null,
-)
-
-@Serializable
-data class CreateTodoResponse(
-    val message: String? = null,
-    val todo: TodoDto? = null,
-)
-
-@Serializable
-data class UpdateTodoRequest(
-    val id: String,
-    val title: String? = null,
-    val description: String? = null,
-    val pinned: Boolean? = null,
-    val priority: String? = null,
-    val completed: Boolean? = null,
-    val dtstart: String? = null,
-    val due: String? = null,
-    val rrule: String? = null,
-    val listID: String? = null,
-    val dateChanged: Boolean? = null,
-    val rruleChanged: Boolean? = null,
-    val instanceDate: String? = null,
-)
-
-@Serializable
-data class DeleteTodoRequest(
-    val id: String,
-    val instanceDate: Long? = null,
-)
-
-@Serializable
-data class TodoInstanceUpdateRequest(
-    val id: String,
-    val title: String? = null,
-    val description: String? = null,
-    val priority: String? = null,
-    val dtstart: String? = null,
-    val due: String? = null,
-    val rrule: String? = null,
-    val instanceDate: String,
-)
-
-@Serializable
-data class TodoCompleteRequest(
-    val id: String,
-    val instanceDate: Long? = null,
-)
-
-@Serializable
-data class TodoUncompleteRequest(
-    val id: String,
-    val instanceDate: Long? = null,
-)
-
-@Serializable
-data class TodoPrioritizeRequest(
-    val id: String,
-    val priority: String,
-    val instanceDate: Long? = null,
 )
 
 @Serializable
@@ -212,98 +89,6 @@ data class TodoInstanceRequest(
 data class ReorderItemRequest(
     val id: String,
     val order: Int,
-)
-
-@Serializable
-data class ListsResponse(
-    val lists: List<ListDto> = emptyList(),
-)
-
-@Serializable
-data class CreateListRequest(
-    val name: String,
-    val color: String? = null,
-    val iconKey: String? = null,
-)
-
-@Serializable
-data class ListDto(
-    val id: String,
-    val name: String,
-    val color: String? = null,
-    val todoCount: Int = 0,
-    val iconKey: String? = null,
-    val updatedAt: String? = null,
-    val createdAt: String? = null,
-)
-
-@Serializable
-data class CreateListResponse(
-    val message: String? = null,
-    val list: ListDto? = null,
-)
-
-@Serializable
-data class UpdateListRequest(
-    val id: String,
-    val name: String? = null,
-    val color: String? = null,
-    val iconKey: String? = null,
-)
-
-@Serializable
-data class DeleteListRequest(
-    val id: String,
-)
-
-@Serializable
-data class CompletedTodosResponse(
-    val completedTodos: List<CompletedTodoDto> = emptyList(),
-)
-
-@Serializable
-data class CompletedTodoDto(
-    val id: String,
-    val originalTodoID: String? = null,
-    val title: String,
-    val description: String? = null,
-    val priority: String = "Low",
-    val dtstart: String,
-    val due: String,
-    val completedAt: String? = null,
-    val rrule: String? = null,
-    val instanceDate: String? = null,
-    val listName: String? = null,
-    val listColor: String? = null,
-)
-
-@Serializable
-data class UpdateCompletedTodoRequest(
-    val id: String,
-    val title: String? = null,
-    val description: String? = null,
-    val priority: String? = null,
-    val dtstart: String? = null,
-    val due: String? = null,
-    val rrule: String? = null,
-    val listID: String? = null,
-)
-
-@Serializable
-data class DeleteCompletedTodoRequest(
-    val id: String,
-)
-
-@Serializable
-data class PreferencesResponse(
-    val userPreferences: PreferencesDto? = null,
-)
-
-@Serializable
-data class PreferencesDto(
-    val sortBy: String? = null,
-    val groupBy: String? = null,
-    val direction: String? = null,
 )
 
 @Serializable
