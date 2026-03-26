@@ -13,27 +13,32 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
 
-object TodoSummaryService {
-    private val logger = LoggerFactory.getLogger(TodoSummaryService::class.java)
+interface TodoSummaryService {
+    suspend fun generateSummary(prompt: String): String?
+    suspend fun isHealthy(): Boolean
+}
+
+class TodoSummaryServiceImpl(private val config: AppConfig) : TodoSummaryService {
+    private val logger = LoggerFactory.getLogger(TodoSummaryServiceImpl::class.java)
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = true }
 
     private val client = HttpClient(CIO) {
         engine {
-            requestTimeout = AppConfig.ollamaTimeoutMs
+            requestTimeout = config.ollamaTimeoutMs
         }
     }
 
-    suspend fun generateSummary(prompt: String): String? {
+    override suspend fun generateSummary(prompt: String): String? {
         return try {
             val bodyJson = json.encodeToString(
                 OllamaRequest.serializer(),
                 OllamaRequest(
-                    model = AppConfig.ollamaModel,
+                    model = config.ollamaModel,
                     prompt = prompt,
                     stream = false,
                 ),
             )
-            val response = client.post("${AppConfig.ollamaUrl}/api/generate") {
+            val response = client.post("${config.ollamaUrl}/api/generate") {
                 contentType(ContentType.Application.Json)
                 setBody(bodyJson)
             }
@@ -51,9 +56,9 @@ object TodoSummaryService {
         }
     }
 
-    suspend fun isHealthy(): Boolean {
+    override suspend fun isHealthy(): Boolean {
         return try {
-            val response = client.get("${AppConfig.ollamaUrl}/api/tags")
+            val response = client.get("${config.ollamaUrl}/api/tags")
             response.status.isSuccess()
         } catch (_: Exception) {
             false
