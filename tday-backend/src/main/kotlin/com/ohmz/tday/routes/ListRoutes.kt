@@ -5,6 +5,7 @@ import arrow.core.raise.either
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
+import com.ohmz.tday.shared.validation.ContractValidators
 import com.ohmz.tday.services.ListService
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
@@ -23,7 +24,10 @@ fun Route.listRoutes() {
         post {
             call.withAuth { user ->
                 val body = call.receive<ListCreateRequest>()
-                if (body.name.isBlank()) return@withAuth Either.Left(AppError.BadRequest("title cannot be left empty"))
+                val validationErrors = ContractValidators.validateListCreate(body)
+                if (validationErrors.isNotEmpty()) {
+                    return@withAuth Either.Left(AppError.BadRequest(validationErrors.first()))
+                }
                 listService.create(user.id, body.name, body.color, body.iconKey)
                     .map { mapOf("message" to "list created", "list" to it) }
             }
