@@ -1,0 +1,24 @@
+[
+  {
+    "slug": "RRULE_todo_scheduling_system",
+    "title": "RRULE Todo Scheduling System - Instance Semantics and Overrides",
+    "excerpt": "The recurring task model now treats the parent todo as the canonical recurrence definition and every single-occurrence change as an exception layered on top.",
+    "date": "2024-12-14",
+    "readTime": "6 min read",
+    "category": "documentation",
+    "heroImage": "/sunflowers.png",
+    "heroAlt": "Sunflowers header for recurrence documentation",
+    "contentFile": "content/blog/RRULE_todo_scheduling_system.html"
+  },
+  {
+    "slug": "instanceDate_drifting_problem",
+    "title": "Drifting instanceDate problem",
+    "excerpt": "Why recurring overrides drift when the parent sequence moves, and how the Kotlin-first backend should treat canonical occurrence identity going forward.",
+    "date": "2024-12-08",
+    "readTime": "5 min read",
+    "category": "documentation",
+    "heroImage": "/coffee.jpg",
+    "heroAlt": "Coffee header for instance date drift documentation",
+    "contentFile": "content/blog/instanceDate_drifting_problem.html"
+  }
+]
