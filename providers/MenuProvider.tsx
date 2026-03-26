@@ -94,7 +94,6 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
     [],
   );
 
-  // Mount + initialize sidebar state from persisted desktop preference
   useEffect(() => {
     setMounted(true);
     const desktop = window.innerWidth >= DESKTOP_BREAKPOINT;
@@ -113,7 +112,6 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
     setSidebarReady(true);
   }, []);
 
-  // Keep sidebar behavior stable when crossing desktop/mobile breakpoint
   useEffect(() => {
     if (!mounted || !sidebarReady) return;
 
@@ -136,7 +134,6 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [mounted, sidebarReady, width]);
 
-  // Always close the mobile sidebar after route changes
   useEffect(() => {
     if (!mounted || !sidebarReady) return;
 
@@ -146,7 +143,6 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [mounted, pathName, sidebarReady, width]);
 
-  // Infer last visited tab from pathname or retrieve from local storage
   useEffect(() => {
     if (!mounted) return;
 
@@ -199,14 +195,12 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
     setActiveMenu({ name: "Todo" });
   }, [mounted, pathName]);
 
-  // Sync local menu state with local storage when menu state changes
   useEffect(() => {
     if (mounted) {
       localStorage.setItem(TAB_STORAGE_KEY, JSON.stringify(activeMenu));
     }
   }, [activeMenu, mounted]);
 
-  // Toggle menu on ctrl+`
   useEffect(() => {
     function closeOnKey(e: KeyboardEvent) {
       if (e.ctrlKey && e.key.toLowerCase() === "`") {
