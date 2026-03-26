@@ -4,9 +4,12 @@ import com.ohmz.tday.security.SecurityEventLogger
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 import java.time.Instant
 
 fun Route.mobileProbeRoutes() {
+    val eventLogger by inject<SecurityEventLogger>()
+
     route("/mobile/probe") {
         get {
             try {
@@ -17,7 +20,7 @@ fun Route.mobileProbeRoutes() {
                     "serverTime" to Instant.now().toString(),
                 ))
             } catch (e: Exception) {
-                SecurityEventLogger.log("probe_failed_contract", mapOf("error" to e.message))
+                eventLogger.log("probe_failed_contract", mapOf("error" to e.message))
                 call.respond(HttpStatusCode.InternalServerError, mapOf("message" to "Probe unavailable"))
             }
         }

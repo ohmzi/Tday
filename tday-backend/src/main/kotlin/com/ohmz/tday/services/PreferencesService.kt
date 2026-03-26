@@ -1,27 +1,39 @@
 package com.ohmz.tday.services
 
+import arrow.core.Either
+import arrow.core.right
 import com.ohmz.tday.db.enums.Direction
 import com.ohmz.tday.db.enums.GroupBy
 import com.ohmz.tday.db.enums.SortBy
 import com.ohmz.tday.db.tables.UserPreferences
 import com.ohmz.tday.db.util.CuidGenerator
+import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.models.response.PreferencesResponse
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 
-object PreferencesService {
-    fun get(userId: String): Map<String, Any?> = transaction {
-        val prefs = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
-        mapOf(
-            "sortBy" to prefs?.get(UserPreferences.sortBy)?.name,
-            "groupBy" to prefs?.get(UserPreferences.groupBy)?.let { GroupBy.toPrisma(it) },
-            "direction" to prefs?.get(UserPreferences.direction)?.name,
-        )
+interface PreferencesService {
+    suspend fun get(userId: String): Either<AppError, PreferencesResponse>
+    suspend fun update(userId: String, sortBy: String?, groupBy: String?, direction: String?): Either<AppError, Unit>
+}
+
+class PreferencesServiceImpl : PreferencesService {
+    override suspend fun get(userId: String): Either<AppError, PreferencesResponse> {
+        val prefs = transaction {
+            val row = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
+            PreferencesResponse(
+                sortBy = row?.get(UserPreferences.sortBy)?.name,
+                groupBy = row?.get(UserPreferences.groupBy)?.let { GroupBy.toPrisma(it) },
+                direction = row?.get(UserPreferences.direction)?.name,
+            )
+        }
+        return prefs.right()
     }
 
-    fun update(userId: String, sortBy: String?, groupBy: String?, direction: String?) {
+    override suspend fun update(userId: String, sortBy: String?, groupBy: String?, direction: String?): Either<AppError, Unit> {
         transaction {
             val existing = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
             if (existing != null) {
@@ -40,5 +52,6 @@ object PreferencesService {
                 }
             }
         }
+        return Unit.right()
     }
 }

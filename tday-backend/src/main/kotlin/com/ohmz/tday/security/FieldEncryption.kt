@@ -7,43 +7,53 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-object FieldEncryption {
-    private const val ENC_PREFIX = "enc:v1"
-    private const val IV_LENGTH_BYTES = 12
-    private const val KEY_LENGTH_BYTES = 32
-    private const val TAG_LENGTH_BITS = 128
-    private val SENSITIVE_FIELDS = setOf("description", "content", "overriddenDescription")
+interface FieldEncryption {
+    fun isConfigured(): Boolean
+    fun encrypt(plaintext: String): String
+    fun decrypt(raw: String): String
+    fun isSensitiveField(fieldName: String): Boolean
+    fun isEncrypted(value: String): Boolean
+    fun encryptIfSensitive(fieldName: String, value: String?): String?
+    fun decryptIfEncrypted(value: String?): String?
+}
+
+class FieldEncryptionImpl(private val config: AppConfig) : FieldEncryption {
+    private val encPrefix = "enc:v1"
+    private val ivLengthBytes = 12
+    private val keyLengthBytes = 32
+    private val tagLengthBits = 128
+    private val sensitiveFields = setOf("description", "content", "overriddenDescription")
     private val random = SecureRandom()
 
     private val keyring: Map<String, ByteArray> by lazy { parseKeyring() }
     private val activeKeyId: String? by lazy {
-        val explicitId = AppConfig.dataEncryptionKeyId
+        val explicitId = config.dataEncryptionKeyId
         if (keyring.containsKey(explicitId)) explicitId
         else keyring.keys.firstOrNull()
     }
 
-    fun isConfigured(): Boolean = activeKeyId != null
+    override fun isConfigured(): Boolean = activeKeyId != null
 
-    fun encrypt(plaintext: String): String {
+    override fun encrypt(plaintext: String): String {
         if (plaintext.isEmpty() || isEncrypted(plaintext)) return plaintext
         val keyId = activeKeyId ?: return plaintext
         val keyBytes = keyring[keyId] ?: return plaintext
 
-        val iv = ByteArray(IV_LENGTH_BYTES).also { random.nextBytes(it) }
+        val iv = ByteArray(ivLengthBytes).also { random.nextBytes(it) }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val key = SecretKeySpec(keyBytes, "AES")
-        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(TAG_LENGTH_BITS, iv))
+        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(tagLengthBits, iv))
 
-        val aad = AppConfig.dataEncryptionAad
+        val aad = config.dataEncryptionAad
         if (!aad.isNullOrBlank()) {
             cipher.updateAAD(aad.toByteArray(Charsets.UTF_8))
         }
 
         val ciphertext = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
-        return "$ENC_PREFIX:$keyId:${iv.toBase64Url()}:${ciphertext.toBase64Url()}"
+        return "$encPrefix:$keyId:${iv.toBase64Url()}:${ciphertext.toBase64Url()}"
     }
 
-    fun decrypt(raw: String): String {
+    override fun decrypt(raw: String): String {
         if (raw.isEmpty() || !isEncrypted(raw)) return raw
         val parts = raw.split(":")
         if (parts.size != 5) throw IllegalArgumentException("Malformed encrypted payload")
@@ -58,9 +68,9 @@ object FieldEncryption {
 
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         val key = SecretKeySpec(keyBytes, "AES")
-        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_LENGTH_BITS, iv))
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(tagLengthBits, iv))
 
-        val aad = AppConfig.dataEncryptionAad
+        val aad = config.dataEncryptionAad
         if (!aad.isNullOrBlank()) {
             cipher.updateAAD(aad.toByteArray(Charsets.UTF_8))
         }
@@ -68,16 +78,16 @@ object FieldEncryption {
         return String(cipher.doFinal(ciphertext), Charsets.UTF_8)
     }
 
-    fun isSensitiveField(fieldName: String): Boolean = fieldName in SENSITIVE_FIELDS
+    override fun isSensitiveField(fieldName: String): Boolean = fieldName in sensitiveFields
 
-    fun isEncrypted(value: String): Boolean = value.startsWith("$ENC_PREFIX:")
+    override fun isEncrypted(value: String): Boolean = value.startsWith("$encPrefix:")
 
-    fun encryptIfSensitive(fieldName: String, value: String?): String? {
+    override fun encryptIfSensitive(fieldName: String, value: String?): String? {
         if (value == null || !isConfigured() || !isSensitiveField(fieldName)) return value
         return encrypt(value)
     }
 
-    fun decryptIfEncrypted(value: String?): String? {
+    override fun decryptIfEncrypted(value: String?): String? {
         if (value == null) return null
         if (!isEncrypted(value)) return value
         return decrypt(value)
@@ -86,7 +96,7 @@ object FieldEncryption {
     private fun parseKeyring(): Map<String, ByteArray> {
         val map = mutableMapOf<String, ByteArray>()
 
-        val keySetRaw = AppConfig.dataEncryptionKeys
+        val keySetRaw = config.dataEncryptionKeys
         if (!keySetRaw.isNullOrBlank()) {
             for (entry in keySetRaw.split(",")) {
                 val trimmed = entry.trim()
@@ -101,9 +111,9 @@ object FieldEncryption {
             }
         }
 
-        val explicitKey = AppConfig.dataEncryptionKey
+        val explicitKey = config.dataEncryptionKey
         if (!explicitKey.isNullOrBlank()) {
-            map[AppConfig.dataEncryptionKeyId] = parseKeyMaterial(explicitKey)
+            map[config.dataEncryptionKeyId] = parseKeyMaterial(explicitKey)
         }
 
         return map
@@ -118,11 +128,11 @@ object FieldEncryption {
         } catch (_: Exception) {
             null
         }
-        if (asBase64 != null && asBase64.size == KEY_LENGTH_BYTES) return asBase64
+        if (asBase64 != null && asBase64.size == keyLengthBytes) return asBase64
 
         if (Regex("^[0-9a-fA-F]{64}$").matches(normalized)) {
             val asHex = normalized.hexToBytes()
-            if (asHex != null && asHex.size == KEY_LENGTH_BYTES) return asHex
+            if (asHex != null && asHex.size == keyLengthBytes) return asHex
         }
 
         throw IllegalArgumentException("Invalid field encryption key. Expected 32-byte base64 or 64-char hex.")
