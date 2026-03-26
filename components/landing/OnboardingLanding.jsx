@@ -16,14 +16,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import UnauthenticatedCacheGuard from "@/components/auth/UnauthenticatedCacheGuard";
 
-type Slide = {
-  title: string;
-  description: string;
-  bullets: string[];
-  icon: React.ComponentType<{ className?: string }>;
-};
-
-const slides: Slide[] = [
+const slides = [
   {
     title: "A calmer way to run your day",
     description:
@@ -161,7 +154,7 @@ export default function OnboardingLanding() {
           </CardHeader>
 
           <CardContent className="px-6 pb-6 sm:px-8 sm:pb-8">
-            <h1 className="text-3xl font-serif font-semibold leading-tight text-foreground">
+            <h1 className="font-serif text-3xl font-semibold leading-tight text-foreground">
               {currentSlide.title}
             </h1>
             <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
