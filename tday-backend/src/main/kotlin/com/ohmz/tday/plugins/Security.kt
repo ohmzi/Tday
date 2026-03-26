@@ -8,9 +8,9 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.util.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.koin.ktor.ext.inject
 
 private val SESSION_COOKIE_NAMES = listOf(
     "__Secure-authjs.session-token",
@@ -27,10 +27,12 @@ fun ApplicationCall.requireUser(): JwtUserClaims =
     authUser() ?: throw IllegalStateException("Authentication required")
 
 fun Application.configureSecurity() {
+    val jwtService by inject<JwtService>()
+
     install(Authentication) {
         bearer("jwt") {
             authenticate { tokenCredential ->
-                val claims = JwtService.decode(tokenCredential.token)
+                val claims = jwtService.decode(tokenCredential.token)
                 if (claims != null) UserIdPrincipal(claims.id) else null
             }
         }
@@ -39,7 +41,7 @@ fun Application.configureSecurity() {
     intercept(ApplicationCallPipeline.Plugins) {
         val token = resolveSessionToken(call)
         if (token != null) {
-            val claims = JwtService.decode(token)
+            val claims = jwtService.decode(token)
             if (claims != null) {
                 val dbUser = transaction {
                     Users.selectAll().where { Users.id eq claims.id }

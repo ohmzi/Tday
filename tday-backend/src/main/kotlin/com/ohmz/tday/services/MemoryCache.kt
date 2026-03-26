@@ -4,14 +4,26 @@ import java.util.concurrent.ConcurrentHashMap
 
 data class CacheEntry<T>(val data: T, val expiresAt: Long)
 
-object MemoryCache {
-    private const val DEFAULT_TTL_MS = 60_000L
-    private const val CLEANUP_INTERVAL_MS = 5 * 60_000L
+interface CacheService {
+    fun <T> get(key: String): T?
+    fun <T> set(key: String, data: T, ttlMs: Long = 60_000L)
+    fun invalidateForUser(userId: String)
+    fun invalidateUserEndpoint(userId: String, endpoint: String)
+    fun clear()
+    fun cacheKey(userId: String, endpoint: String, params: Map<String, String>? = null): String
+    fun invalidateTodoCaches(userId: String)
+    fun invalidateListCaches(userId: String)
+    fun invalidateCompletedCaches(userId: String)
+}
+
+class CacheServiceImpl : CacheService {
+    private val defaultTtlMs = 60_000L
+    private val cleanupIntervalMs = 5 * 60_000L
     private val store = ConcurrentHashMap<String, CacheEntry<Any?>>()
     private var lastCleanup = System.currentTimeMillis()
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> get(key: String): T? {
+    override fun <T> get(key: String): T? {
         lazyCleanup()
         val entry = store[key] ?: return null
         if (System.currentTimeMillis() > entry.expiresAt) {
@@ -21,45 +33,45 @@ object MemoryCache {
         return entry.data as? T
     }
 
-    fun <T> set(key: String, data: T, ttlMs: Long = DEFAULT_TTL_MS) {
+    override fun <T> set(key: String, data: T, ttlMs: Long) {
         store[key] = CacheEntry(data, System.currentTimeMillis() + ttlMs)
     }
 
-    fun invalidateForUser(userId: String) {
+    override fun invalidateForUser(userId: String) {
         val prefix = "$userId:"
         store.keys.filter { it.startsWith(prefix) }.forEach { store.remove(it) }
     }
 
-    fun invalidateUserEndpoint(userId: String, endpoint: String) {
+    override fun invalidateUserEndpoint(userId: String, endpoint: String) {
         val prefix = "$userId:$endpoint"
         store.keys.filter { it.startsWith(prefix) }.forEach { store.remove(it) }
     }
 
-    fun clear() = store.clear()
+    override fun clear() = store.clear()
 
-    fun cacheKey(userId: String, endpoint: String, params: Map<String, String>? = null): String {
+    override fun cacheKey(userId: String, endpoint: String, params: Map<String, String>?): String {
         if (params.isNullOrEmpty()) return "$userId:$endpoint"
         val sorted = params.entries.sortedBy { it.key }.joinToString("&") { "${it.key}=${it.value}" }
         return "$userId:$endpoint:$sorted"
     }
 
-    fun invalidateTodoCaches(userId: String) {
+    override fun invalidateTodoCaches(userId: String) {
         invalidateUserEndpoint(userId, "todo")
         invalidateUserEndpoint(userId, "completedTodo")
     }
 
-    fun invalidateListCaches(userId: String) {
+    override fun invalidateListCaches(userId: String) {
         invalidateUserEndpoint(userId, "list")
         invalidateUserEndpoint(userId, "todo")
     }
 
-    fun invalidateCompletedCaches(userId: String) {
+    override fun invalidateCompletedCaches(userId: String) {
         invalidateUserEndpoint(userId, "completedTodo")
     }
 
     private fun lazyCleanup() {
         val now = System.currentTimeMillis()
-        if (now - lastCleanup < CLEANUP_INTERVAL_MS) return
+        if (now - lastCleanup < cleanupIntervalMs) return
         lastCleanup = now
         store.entries.removeIf { now > it.value.expiresAt }
     }

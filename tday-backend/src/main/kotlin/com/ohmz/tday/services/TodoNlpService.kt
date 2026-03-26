@@ -13,16 +13,20 @@ data class NlpParseResult(
     val dueEpochMs: Long?,
 )
 
-object TodoNlpService {
-    private const val DEFAULT_DURATION_MINUTES = 180
+interface TodoNlpService {
+    fun parse(text: String, locale: String? = null, referenceEpochMs: Long? = null, timezoneOffsetMinutes: Int? = null, defaultDurationMinutes: Int? = null): NlpParseResult
+}
+
+class TodoNlpServiceImpl : TodoNlpService {
+    private val defaultDuration = 180
 
     @Suppress("UNUSED_PARAMETER")
-    fun parse(
+    override fun parse(
         text: String,
-        locale: String? = null,
-        referenceEpochMs: Long? = null,
-        timezoneOffsetMinutes: Int? = null,
-        defaultDurationMinutes: Int? = null,
+        locale: String?,
+        referenceEpochMs: Long?,
+        timezoneOffsetMinutes: Int?,
+        defaultDurationMinutes: Int?,
     ): NlpParseResult {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return NlpParseResult("", null, null, null, null)
@@ -62,7 +66,7 @@ object TodoNlpService {
     }
 
     private fun sanitizeDuration(raw: Int?): Int {
-        if (raw == null || raw <= 0) return DEFAULT_DURATION_MINUTES
+        if (raw == null || raw <= 0) return defaultDuration
         return raw.coerceIn(1, 24 * 60)
     }
 }
