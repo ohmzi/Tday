@@ -4,6 +4,7 @@ import com.ohmz.tday.config.AppConfig
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
+import java.math.BigInteger
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.MessageDigest
@@ -11,7 +12,6 @@ import java.security.PrivateKey
 import java.security.interfaces.RSAPrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.RSAPublicKeySpec
-import java.math.BigInteger
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
@@ -35,29 +35,40 @@ data class CredentialEnvelopeInput(
     val version: String? = null,
 )
 
-object CredentialEnvelope {
-    private val logger = LoggerFactory.getLogger(CredentialEnvelope::class.java)
-    private const val ENVELOPE_VERSION = "1"
-    private const val ENVELOPE_ALGORITHM = "RSA-OAEP-256+A256GCM"
-    private const val AES_KEY_BYTES = 32
-    private const val AES_GCM_IV_BYTES = 12
-    private const val AES_GCM_TAG_BITS = 128
+interface CredentialEnvelope {
+    fun getPublicKeyDescriptor(): CredentialPublicKeyDescriptor
+    fun decrypt(envelope: CredentialEnvelopeInput): DecryptedCredentials
+}
+
+class CredentialEnvelopeImpl(private val config: AppConfig) : CredentialEnvelope {
+    private val logger = LoggerFactory.getLogger(CredentialEnvelopeImpl::class.java)
+    private val envelopeVersion = "1"
+    private val envelopeAlgorithm = "RSA-OAEP-256+A256GCM"
+    private val aesKeyBytes = 32
+    private val aesGcmIvBytes = 12
+    private val aesGcmTagBits = 128
+
+    private data class KeyMaterial(
+        val keyId: String,
+        val privateKey: PrivateKey,
+        val publicKeySpkiDer: ByteArray,
+    )
 
     private val keyMaterial: KeyMaterial by lazy { loadKeyMaterial() }
 
-    fun getPublicKeyDescriptor(): CredentialPublicKeyDescriptor {
+    override fun getPublicKeyDescriptor(): CredentialPublicKeyDescriptor {
         val km = keyMaterial
         return CredentialPublicKeyDescriptor(
-            version = ENVELOPE_VERSION,
-            algorithm = ENVELOPE_ALGORITHM,
+            version = envelopeVersion,
+            algorithm = envelopeAlgorithm,
             keyId = km.keyId,
             publicKey = km.publicKeySpkiDer.toBase64Url(),
         )
     }
 
-    fun decrypt(envelope: CredentialEnvelopeInput): DecryptedCredentials {
+    override fun decrypt(envelope: CredentialEnvelopeInput): DecryptedCredentials {
         val km = keyMaterial
-        if (envelope.version != null && envelope.version != ENVELOPE_VERSION) {
+        if (envelope.version != null && envelope.version != envelopeVersion) {
             throw IllegalArgumentException("unsupported_envelope_version")
         }
         if (envelope.keyId != null && envelope.keyId != km.keyId) {
@@ -68,20 +79,20 @@ object CredentialEnvelope {
         val encryptedKey = envelope.encryptedKey.fromBase64Url()
         val encryptedIv = envelope.encryptedIv.fromBase64Url()
 
-        if (encryptedIv.size != AES_GCM_IV_BYTES) throw IllegalArgumentException("invalid_envelope_iv")
+        if (encryptedIv.size != aesGcmIvBytes) throw IllegalArgumentException("invalid_envelope_iv")
         if (encryptedPayload.size <= 16) throw IllegalArgumentException("invalid_envelope_payload")
 
         val rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
         rsaCipher.init(Cipher.DECRYPT_MODE, km.privateKey)
         val symmetricKey = rsaCipher.doFinal(encryptedKey)
 
-        if (symmetricKey.size != AES_KEY_BYTES) throw IllegalArgumentException("invalid_envelope_key")
+        if (symmetricKey.size != aesKeyBytes) throw IllegalArgumentException("invalid_envelope_key")
 
         val aesCipher = Cipher.getInstance("AES/GCM/NoPadding")
         aesCipher.init(
             Cipher.DECRYPT_MODE,
             SecretKeySpec(symmetricKey, "AES"),
-            GCMParameterSpec(AES_GCM_TAG_BITS, encryptedIv),
+            GCMParameterSpec(aesGcmTagBits, encryptedIv),
         )
 
         val plaintext = String(aesCipher.doFinal(encryptedPayload), Charsets.UTF_8)
@@ -97,14 +108,8 @@ object CredentialEnvelope {
     @Serializable
     private data class CredentialPayloadJson(val email: String? = null, val password: String? = null)
 
-    private data class KeyMaterial(
-        val keyId: String,
-        val privateKey: PrivateKey,
-        val publicKeySpkiDer: ByteArray,
-    )
-
     private fun loadKeyMaterial(): KeyMaterial {
-        val configuredPem = AppConfig.credentialsPrivateKeyPem
+        val configuredPem = config.credentialsPrivateKeyPem
         if (!configuredPem.isNullOrBlank()) {
             val normalizedPem = configuredPem.replace("\\n", "\n")
             val keyFactory = KeyFactory.getInstance("RSA")
