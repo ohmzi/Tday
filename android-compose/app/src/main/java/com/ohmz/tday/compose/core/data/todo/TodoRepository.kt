@@ -18,6 +18,7 @@ import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
+import com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoSummaryRequest
@@ -380,9 +381,11 @@ class TodoRepository @Inject constructor(
             if (isRecurringInstanceDelete) {
                 requireApiBody(
                     api.deleteTodoInstanceByBody(
-                        DeleteTodoRequest(
-                            id = canonicalId,
-                            instanceDate = instanceDateEpochMs ?: return@runCatching,
+                        TodoInstanceDeleteRequest(
+                            todoId = canonicalId,
+                            instanceDate = Instant.ofEpochMilli(
+                                instanceDateEpochMs ?: return@runCatching,
+                            ).toString(),
                         ),
                     ),
                     "Could not delete recurring task instance",
@@ -465,7 +468,9 @@ class TodoRepository @Inject constructor(
                     api.completeTodoByBody(
                         TodoCompleteRequest(
                             id = todo.canonicalId,
-                            instanceDate = todo.instanceDateEpochMillis,
+                            instanceDate = todo.instanceDateEpochMillis?.let {
+                                Instant.ofEpochMilli(it).toString()
+                            },
                         ),
                     ),
                     "Could not complete recurring task",
