@@ -8,7 +8,12 @@ plugins {
 }
 
 val projectVersion: String by lazy {
-    val packageJson = File(rootProject.projectDir.parentFile, "package.json")
+    val packageJsonCandidates = listOf(
+        File(rootProject.projectDir, "package.json"),
+        File(rootProject.projectDir.parentFile, "package.json"),
+    )
+    val packageJson = packageJsonCandidates.firstOrNull { it.exists() }
+        ?: error("Could not locate package.json from ${rootProject.projectDir}")
     val match = Regex(""""version"\s*:\s*"([^"]+)"""").find(packageJson.readText())
     match?.groupValues?.get(1) ?: error("Could not read version from package.json")
 }
@@ -75,6 +80,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":shared"))
+
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
     implementation("androidx.core:core-ktx:1.15.0")

@@ -76,7 +76,9 @@ class CompletedRepository @Inject constructor(
                 api.uncompleteTodoByBody(
                     TodoUncompleteRequest(
                         id = originalTodoId,
-                        instanceDate = instanceDateEpochMs,
+                        instanceDate = instanceDateEpochMs?.let {
+                            java.time.Instant.ofEpochMilli(it).toString()
+                        },
                     ),
                 ),
                 "Could not restore task",
