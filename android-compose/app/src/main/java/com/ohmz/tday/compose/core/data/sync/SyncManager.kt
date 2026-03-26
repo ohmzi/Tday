@@ -311,9 +311,9 @@ class SyncManager @Inject constructor(
                         if (instanceDateEpochMs != null) {
                             requireApiBody(
                                 api.deleteTodoInstanceByBody(
-                                    DeleteTodoRequest(
-                                        id = targetId,
-                                        instanceDate = instanceDateEpochMs,
+                                    com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest(
+                                        todoId = targetId,
+                                        instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
                                     ),
                                 ),
                                 "Could not delete recurring task instance",
@@ -358,7 +358,7 @@ class SyncManager @Inject constructor(
                                     TodoPrioritizeRequest(
                                         id = targetId,
                                         priority = priority,
-                                        instanceDate = instanceDateEpochMs,
+                                        instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
                                     ),
                                 ),
                                 "Could not update priority",
@@ -393,7 +393,9 @@ class SyncManager @Inject constructor(
                             api.completeTodoByBody(
                                 TodoCompleteRequest(
                                     id = targetId,
-                                    instanceDate = mutation.instanceDateEpochMs,
+                                    instanceDate = mutation.instanceDateEpochMs?.let {
+                                        Instant.ofEpochMilli(it).toString()
+                                    },
                                 ),
                             ),
                             "Could not complete recurring task",
@@ -408,7 +410,9 @@ class SyncManager @Inject constructor(
                             api.uncompleteTodoByBody(
                                 TodoUncompleteRequest(
                                     id = targetId,
-                                    instanceDate = mutation.instanceDateEpochMs,
+                                    instanceDate = mutation.instanceDateEpochMs?.let {
+                                        Instant.ofEpochMilli(it).toString()
+                                    },
                                 ),
                             ),
                             "Could not restore task",
