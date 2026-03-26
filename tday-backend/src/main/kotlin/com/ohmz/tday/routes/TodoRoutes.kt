@@ -5,6 +5,7 @@ import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
 import com.ohmz.tday.plugins.*
+import com.ohmz.tday.shared.validation.ContractValidators
 import com.ohmz.tday.services.AppConfigService
 import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoService
@@ -26,7 +27,10 @@ fun Route.todoRoutes() {
         post {
             call.withAuth { user ->
                 val body = call.receive<TodoCreateRequest>()
-                if (body.title.isBlank()) return@withAuth arrow.core.Either.Left(AppError.BadRequest("title cannot be left empty"))
+                val validationErrors = ContractValidators.validateTodoCreate(body)
+                if (validationErrors.isNotEmpty()) {
+                    return@withAuth arrow.core.Either.Left(AppError.BadRequest(validationErrors.first()))
+                }
                 val dtstart = LocalDateTime.parse(body.dtstart)
                 val due = LocalDateTime.parse(body.due)
                 todoService.create(user.id, body.title, body.description, body.priority, dtstart, due, body.rrule, body.listID)
