@@ -3,10 +3,10 @@ package com.ohmz.tday.security
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWEHeader
-import com.nimbusds.jwt.EncryptedJWT
-import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jose.crypto.DirectDecrypter
 import com.nimbusds.jose.crypto.DirectEncrypter
+import com.nimbusds.jwt.EncryptedJWT
+import com.nimbusds.jwt.JWTClaimsSet
 import com.ohmz.tday.config.AppConfig
 import org.bouncycastle.crypto.digests.SHA256Digest
 import org.bouncycastle.crypto.generators.HKDFBytesGenerator
@@ -25,10 +25,15 @@ data class JwtUserClaims(
     val timeZone: String? = null,
 )
 
-object JwtService {
-    private val encryptionKey: ByteArray by lazy { deriveEncryptionKey(AppConfig.authSecret) }
+interface JwtService {
+    fun decode(token: String): JwtUserClaims?
+    fun encode(claims: JwtUserClaims): String
+}
 
-    fun decode(token: String): JwtUserClaims? {
+class JwtServiceImpl(private val config: AppConfig) : JwtService {
+    private val encryptionKey: ByteArray by lazy { deriveEncryptionKey(config.authSecret) }
+
+    override fun decode(token: String): JwtUserClaims? {
         return try {
             val jwe = EncryptedJWT.parse(token)
             val decrypter = DirectDecrypter(encryptionKey)
@@ -54,9 +59,9 @@ object JwtService {
         }
     }
 
-    fun encode(claims: JwtUserClaims): String {
+    override fun encode(claims: JwtUserClaims): String {
         val now = Instant.now()
-        val exp = now.plusSeconds(AppConfig.sessionMaxAgeSec.toLong())
+        val exp = now.plusSeconds(config.sessionMaxAgeSec.toLong())
 
         val jwtClaims = JWTClaimsSet.Builder()
             .subject(claims.id)

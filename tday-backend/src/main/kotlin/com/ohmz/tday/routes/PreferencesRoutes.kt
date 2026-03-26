@@ -1,26 +1,29 @@
 package com.ohmz.tday.routes
 
+import arrow.core.right
+import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.PreferencesPatchRequest
-import com.ohmz.tday.plugins.*
 import com.ohmz.tday.services.PreferencesService
-import io.ktor.http.*
 import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 
 fun Route.preferencesRoutes() {
+    val preferencesService by inject<PreferencesService>()
+
     route("/preferences") {
         get {
-            val user = call.requireUser()
-            val prefs = PreferencesService.get(user.id)
-            call.respond(HttpStatusCode.OK, prefs)
+            call.withAuth { user ->
+                preferencesService.get(user.id)
+            }
         }
 
         patch {
-            val user = call.requireUser()
-            val body = call.receive<PreferencesPatchRequest>()
-            PreferencesService.update(user.id, body.sortBy, body.groupBy, body.direction)
-            call.respond(HttpStatusCode.OK, mapOf("message" to "preferences updated"))
+            call.withAuth { user ->
+                val body = call.receive<PreferencesPatchRequest>()
+                preferencesService.update(user.id, body.sortBy, body.groupBy, body.direction)
+                    .map { mapOf("message" to "preferences updated") }
+            }
         }
     }
 }

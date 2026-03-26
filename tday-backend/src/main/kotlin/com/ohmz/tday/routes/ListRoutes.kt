@@ -1,51 +1,62 @@
 package com.ohmz.tday.routes
 
+import arrow.core.Either
+import arrow.core.raise.either
+import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
-import com.ohmz.tday.plugins.*
 import com.ohmz.tday.services.ListService
-import io.ktor.http.*
 import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 
 fun Route.listRoutes() {
+    val listService by inject<ListService>()
+
     route("/list") {
         get {
-            val user = call.requireUser()
-            val lists = ListService.getAll(user.id)
-            call.respond(HttpStatusCode.OK, mapOf("lists" to lists))
+            call.withAuth { user ->
+                listService.getAll(user.id).map { mapOf("lists" to it) }
+            }
         }
 
         post {
-            val user = call.requireUser()
-            val body = call.receive<ListCreateRequest>()
-            if (body.name.isBlank()) throw BadRequestException("title cannot be left empty")
-            val result = ListService.create(user.id, body.name, body.color, body.iconKey)
-            call.respond(HttpStatusCode.OK, mapOf("message" to "list created", "list" to result))
+            call.withAuth { user ->
+                val body = call.receive<ListCreateRequest>()
+                if (body.name.isBlank()) return@withAuth Either.Left(AppError.BadRequest("title cannot be left empty"))
+                listService.create(user.id, body.name, body.color, body.iconKey)
+                    .map { mapOf("message" to "list created", "list" to it) }
+            }
         }
 
         patch {
-            val user = call.requireUser()
-            val body = call.receive<ListPatchRequest>()
-            if (body.id.isBlank()) throw BadRequestException("list id is required")
-            ListService.update(user.id, body.id, body.name, body.color, body.iconKey)
-            call.respond(HttpStatusCode.OK, mapOf("message" to "list updated"))
+            call.withAuth { user ->
+                val body = call.receive<ListPatchRequest>()
+                if (body.id.isBlank()) return@withAuth Either.Left(AppError.BadRequest("list id is required"))
+                listService.update(user.id, body.id, body.name, body.color, body.iconKey)
+                    .map { mapOf("message" to "list updated") }
+            }
         }
 
         delete {
-            val user = call.requireUser()
-            val body = call.receive<ListDeleteRequest>()
-            if (body.id.isBlank()) throw BadRequestException("list id is required")
-            ListService.delete(user.id, body.id)
-            call.respond(HttpStatusCode.OK, mapOf("message" to "list deleted"))
+            call.withAuth { user ->
+                val body = call.receive<ListDeleteRequest>()
+                if (body.id.isBlank()) return@withAuth Either.Left(AppError.BadRequest("list id is required"))
+                listService.delete(user.id, body.id)
+                    .map { mapOf("message" to "list deleted") }
+            }
         }
 
         get("/{id}") {
-            val user = call.requireUser()
-            val listId = call.parameters["id"] ?: throw BadRequestException("list id is required")
-            val list = ListService.getById(user.id, listId) ?: throw NotFoundException("list not found")
-            val todos = ListService.getTodosForList(user.id, listId)
-            call.respond(HttpStatusCode.OK, mapOf("list" to list, "todos" to todos))
+            call.withAuth { user ->
+                val listId = call.parameters["id"]
+                    ?: return@withAuth Either.Left(AppError.BadRequest("list id is required"))
+                either<AppError, Map<String, Any?>> {
+                    val list = listService.getById(user.id, listId).bind()
+                    val todos = listService.getTodosForList(user.id, listId).bind()
+                    mapOf("list" to list, "todos" to todos)
+                }
+            }
         }
     }
 }

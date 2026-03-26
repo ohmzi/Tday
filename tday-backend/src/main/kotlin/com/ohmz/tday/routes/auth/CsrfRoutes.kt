@@ -5,15 +5,18 @@ import com.ohmz.tday.security.ThrottleAction
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 import java.security.SecureRandom
 
 fun Route.csrfRoutes() {
+    val authThrottle by inject<AuthThrottle>()
+
     route("/csrf") {
         get {
-            val throttle = AuthThrottle.enforceRateLimit(ThrottleAction.csrf, call.request)
+            val throttle = authThrottle.enforceRateLimit(ThrottleAction.csrf, call.request)
             if (!throttle.allowed) {
                 call.respond(HttpStatusCode.TooManyRequests, mapOf(
-                    "message" to "Too many requests. Try again in ${AuthThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    "message" to "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
                     "reason" to (throttle.reasonCode ?: "auth_limit"),
                 ))
                 return@get

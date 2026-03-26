@@ -1,24 +1,20 @@
 package com.ohmz.tday.services
 
+import arrow.core.Either
+import arrow.core.right
 import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.db.tables.CompletedTodos
 import com.ohmz.tday.db.tables.TodoInstances
 import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
+import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.security.FieldEncryption
-import org.jetbrains.exposed.sql.JoinType
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.update
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.Timestamp
@@ -27,17 +23,31 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 
-object TodoService {
-    fun create(
-        userId: String,
-        title: String,
-        description: String?,
-        priority: String,
-        dtstart: LocalDateTime,
-        due: LocalDateTime,
-        rrule: String?,
-        listID: String?,
-    ): Map<String, Any?> {
+interface TodoService {
+    suspend fun create(userId: String, title: String, description: String?, priority: String, dtstart: LocalDateTime, due: LocalDateTime, rrule: String?, listID: String?): Either<AppError, TodoResponse>
+    suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String): Either<AppError, List<TodoResponse>>
+    suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int): Either<AppError, List<TodoResponse>>
+    suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit>
+    suspend fun delete(userId: String, id: String): Either<AppError, Int>
+    suspend fun completeTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit>
+    suspend fun uncompleteTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit>
+    suspend fun prioritize(userId: String, todoId: String, priority: String): Either<AppError, Unit>
+    suspend fun reorder(userId: String, todoId: String, newOrder: Int): Either<AppError, Unit>
+    suspend fun getOverdue(userId: String, timeZone: String): Either<AppError, List<TodoResponse>>
+    suspend fun patchInstance(userId: String, todoId: String, instanceDate: LocalDateTime, fields: Map<String, Any?>): Either<AppError, Unit>
+    suspend fun deleteInstance(userId: String, todoId: String, instanceDate: LocalDateTime): Either<AppError, Unit>
+}
+
+class TodoServiceImpl(
+    private val fieldEncryption: FieldEncryption,
+    private val cache: CacheService,
+) : TodoService {
+
+    override suspend fun create(
+        userId: String, title: String, description: String?,
+        priority: String, dtstart: LocalDateTime, due: LocalDateTime,
+        rrule: String?, listID: String?,
+    ): Either<AppError, TodoResponse> {
         val durationMinutes = Duration.between(dtstart, due).toMinutes().toInt()
         val id = CuidGenerator.newCuid()
         val now = LocalDateTime.now()
@@ -46,7 +56,7 @@ object TodoService {
             Todos.insert {
                 it[Todos.id] = id
                 it[Todos.title] = title
-                it[Todos.description] = FieldEncryption.encryptIfSensitive("description", description)
+                it[Todos.description] = fieldEncryption.encryptIfSensitive("description", description)
                 it[Todos.priority] = Priority.valueOf(priority)
                 it[Todos.dtstart] = dtstart
                 it[Todos.due] = due
@@ -59,54 +69,62 @@ object TodoService {
                 it[Todos.exdates] = emptyList()
             }
         }
-        MemoryCache.invalidateTodoCaches(userId)
-        return mapOf("id" to id, "title" to title)
+        cache.invalidateTodoCaches(userId)
+        return TodoResponse(
+            id = id, title = title, description = description,
+            priority = priority, dtstart = dtstart.toString(), due = due.toString(),
+            durationMinutes = durationMinutes, rrule = rrule, timeZone = "UTC",
+            completed = false, pinned = false, order = 0, listID = listID,
+            userID = userId, createdAt = now.toString(), updatedAt = now.toString(),
+        ).right()
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String): List<Map<String, Any?>> {
+    override suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String): Either<AppError, List<TodoResponse>> {
         val dateRangeStart = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(start), ZoneOffset.UTC)
         val dateRangeEnd = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(end), ZoneOffset.UTC)
 
-        return transaction {
+        val todos = transaction {
             val oneOff = Todos.selectAll().where {
                 (Todos.userID eq userId) and Todos.rrule.isNull() and
                     (Todos.completed eq false) and (Todos.due greaterEq dateRangeStart) and
                     (Todos.dtstart lessEq dateRangeEnd)
-            }.orderBy(Todos.createdAt, SortOrder.DESC).map { it.toTodoMap() }
+            }.orderBy(Todos.createdAt, SortOrder.DESC).map { it.toTodoResponse() }
 
             val recurring = Todos.join(TodoInstances, JoinType.LEFT, Todos.id, TodoInstances.todoId)
                 .selectAll().where {
                     (Todos.userID eq userId) and Todos.rrule.isNotNull() and
                         (Todos.dtstart lessEq dateRangeEnd) and (Todos.completed eq false)
-                }.map { it.toTodoMap() }
+                }.map { it.toTodoResponse() }
 
             oneOff + recurring
         }
+        return todos.right()
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int): List<Map<String, Any?>> {
-        return transaction {
+    override suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int): Either<AppError, List<TodoResponse>> {
+        val todos = transaction {
             val oneOff = Todos.selectAll().where {
                 (Todos.userID eq userId) and Todos.rrule.isNull() and (Todos.completed eq false)
-            }.orderBy(Todos.due to SortOrder.ASC, Todos.order to SortOrder.ASC).map { it.toTodoMap() }
+            }.orderBy(Todos.due to SortOrder.ASC, Todos.order to SortOrder.ASC).map { it.toTodoResponse() }
 
             val recurring = Todos.join(TodoInstances, JoinType.LEFT, Todos.id, TodoInstances.todoId)
                 .selectAll().where {
                     (Todos.userID eq userId) and Todos.rrule.isNotNull() and (Todos.completed eq false)
-                }.map { it.toTodoMap() }
+                }.map { it.toTodoResponse() }
 
             oneOff + recurring
         }
+        return todos.right()
     }
 
-    fun update(userId: String, id: String, fields: Map<String, Any?>) {
+    override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit> {
         transaction {
             Todos.update({ (Todos.id eq id) and (Todos.userID eq userId) }) { stmt ->
                 fields["title"]?.let { stmt[Todos.title] = it as String }
                 fields["description"]?.let {
-                    stmt[Todos.description] = FieldEncryption.encryptIfSensitive("description", it as? String)
+                    stmt[Todos.description] = fieldEncryption.encryptIfSensitive("description", it as? String)
                 }
                 fields["priority"]?.let { stmt[Todos.priority] = Priority.valueOf(it as String) }
                 fields["pinned"]?.let { stmt[Todos.pinned] = it as Boolean }
@@ -124,18 +142,19 @@ object TodoService {
                 }
             }
         }
-        MemoryCache.invalidateTodoCaches(userId)
+        cache.invalidateTodoCaches(userId)
+        return Unit.right()
     }
 
-    fun delete(userId: String, id: String): Int {
+    override suspend fun delete(userId: String, id: String): Either<AppError, Int> {
         val count = transaction {
             Todos.deleteWhere { (Todos.id eq id) and (Todos.userID eq userId) }
         }
-        MemoryCache.invalidateTodoCaches(userId)
-        return count
+        cache.invalidateTodoCaches(userId)
+        return count.right()
     }
 
-    fun completeTodo(userId: String, todoId: String, instanceDate: LocalDateTime?) {
+    override suspend fun completeTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {
         transaction {
             val todo = Todos.selectAll().where {
                 (Todos.id eq todoId) and (Todos.userID eq userId)
@@ -187,10 +206,11 @@ object TodoService {
                 }
             }
         }
-        MemoryCache.invalidateTodoCaches(userId)
+        cache.invalidateTodoCaches(userId)
+        return Unit.right()
     }
 
-    fun uncompleteTodo(userId: String, todoId: String, instanceDate: LocalDateTime?) {
+    override suspend fun uncompleteTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {
         transaction {
             if (instanceDate != null) {
                 TodoInstances.update({
@@ -203,45 +223,44 @@ object TodoService {
                 }
             }
         }
-        MemoryCache.invalidateTodoCaches(userId)
+        cache.invalidateTodoCaches(userId)
+        return Unit.right()
     }
 
-    fun prioritize(userId: String, todoId: String, priority: String) {
+    override suspend fun prioritize(userId: String, todoId: String, priority: String): Either<AppError, Unit> {
         transaction {
             Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
                 it[Todos.priority] = Priority.valueOf(priority)
                 it[Todos.updatedAt] = LocalDateTime.now()
             }
         }
-        MemoryCache.invalidateTodoCaches(userId)
+        cache.invalidateTodoCaches(userId)
+        return Unit.right()
     }
 
-    fun reorder(userId: String, todoId: String, newOrder: Int) {
+    override suspend fun reorder(userId: String, todoId: String, newOrder: Int): Either<AppError, Unit> {
         transaction {
             Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
                 it[Todos.order] = newOrder
                 it[Todos.updatedAt] = LocalDateTime.now()
             }
         }
-        MemoryCache.invalidateTodoCaches(userId)
+        cache.invalidateTodoCaches(userId)
+        return Unit.right()
     }
 
-    fun getOverdue(userId: String, timeZone: String): List<Map<String, Any?>> {
+    override suspend fun getOverdue(userId: String, timeZone: String): Either<AppError, List<TodoResponse>> {
         val now = LocalDateTime.now(ZoneId.of(timeZone))
-        return transaction {
+        val todos = transaction {
             Todos.selectAll().where {
                 (Todos.userID eq userId) and (Todos.completed eq false) and
                     Todos.rrule.isNull() and (Todos.due less now)
-            }.orderBy(Todos.due, SortOrder.ASC).map { it.toTodoMap() }
+            }.orderBy(Todos.due, SortOrder.ASC).map { it.toTodoResponse() }
         }
+        return todos.right()
     }
 
-    fun patchInstance(
-        userId: String,
-        todoId: String,
-        instanceDate: LocalDateTime,
-        fields: Map<String, Any?>,
-    ) {
+    override suspend fun patchInstance(userId: String, todoId: String, instanceDate: LocalDateTime, fields: Map<String, Any?>): Either<AppError, Unit> {
         transaction {
             Todos.selectAll().where {
                 (Todos.id eq todoId) and (Todos.userID eq userId)
@@ -258,7 +277,7 @@ object TodoService {
                     fields["title"]?.let { stmt[TodoInstances.overriddenTitle] = it as? String }
                     fields["description"]?.let {
                         stmt[TodoInstances.overriddenDescription] =
-                            FieldEncryption.encryptIfSensitive("overriddenDescription", it as? String)
+                            fieldEncryption.encryptIfSensitive("overriddenDescription", it as? String)
                     }
                     fields["priority"]?.let { p ->
                         stmt[TodoInstances.overriddenPriority] = Priority.valueOf(p as String)
@@ -276,7 +295,7 @@ object TodoService {
                     fields["title"]?.let { stmt[TodoInstances.overriddenTitle] = it as? String }
                     fields["description"]?.let {
                         stmt[TodoInstances.overriddenDescription] =
-                            FieldEncryption.encryptIfSensitive("overriddenDescription", it as? String)
+                            fieldEncryption.encryptIfSensitive("overriddenDescription", it as? String)
                     }
                     fields["priority"]?.let { p ->
                         stmt[TodoInstances.overriddenPriority] = Priority.valueOf(p as String)
@@ -287,10 +306,11 @@ object TodoService {
                 }
             }
         }
-        MemoryCache.invalidateTodoCaches(userId)
+        cache.invalidateTodoCaches(userId)
+        return Unit.right()
     }
 
-    fun deleteInstance(userId: String, todoId: String, instanceDate: LocalDateTime) {
+    override suspend fun deleteInstance(userId: String, todoId: String, instanceDate: LocalDateTime): Either<AppError, Unit> {
         transaction {
             Todos.selectAll().where {
                 (Todos.id eq todoId) and (Todos.userID eq userId)
@@ -306,25 +326,26 @@ object TodoService {
                 "UPDATE todos SET exdates = array_append(exdates, '$tsLiteral'::timestamp) WHERE id = '$idLiteral'",
             )
         }
-        MemoryCache.invalidateTodoCaches(userId)
+        cache.invalidateTodoCaches(userId)
+        return Unit.right()
     }
 
-    private fun ResultRow.toTodoMap(): Map<String, Any?> = mapOf(
-        "id" to this[Todos.id],
-        "title" to this[Todos.title],
-        "description" to FieldEncryption.decryptIfEncrypted(this[Todos.description]),
-        "createdAt" to this[Todos.createdAt].toString(),
-        "updatedAt" to this[Todos.updatedAt].toString(),
-        "userID" to this[Todos.userID],
-        "pinned" to this[Todos.pinned],
-        "order" to this[Todos.order],
-        "priority" to this[Todos.priority].name,
-        "dtstart" to this[Todos.dtstart].toString(),
-        "due" to this[Todos.due].toString(),
-        "durationMinutes" to this[Todos.durationMinutes],
-        "rrule" to this[Todos.rrule],
-        "timeZone" to this[Todos.timeZone],
-        "completed" to this[Todos.completed],
-        "listID" to this[Todos.listID],
+    private fun ResultRow.toTodoResponse(): TodoResponse = TodoResponse(
+        id = this[Todos.id],
+        title = this[Todos.title],
+        description = fieldEncryption.decryptIfEncrypted(this[Todos.description]),
+        createdAt = this[Todos.createdAt].toString(),
+        updatedAt = this[Todos.updatedAt].toString(),
+        userID = this[Todos.userID],
+        pinned = this[Todos.pinned],
+        order = this[Todos.order],
+        priority = this[Todos.priority].name,
+        dtstart = this[Todos.dtstart].toString(),
+        due = this[Todos.due].toString(),
+        durationMinutes = this[Todos.durationMinutes],
+        rrule = this[Todos.rrule],
+        timeZone = this[Todos.timeZone],
+        completed = this[Todos.completed],
+        listID = this[Todos.listID],
     )
 }

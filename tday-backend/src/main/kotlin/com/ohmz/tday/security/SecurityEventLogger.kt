@@ -11,11 +11,15 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 
-object SecurityEventLogger {
+interface SecurityEventLogger {
+    fun log(reasonCode: String, details: Map<String, Any?> = emptyMap())
+}
+
+class SecurityEventLoggerImpl : SecurityEventLogger {
     private val logger = LoggerFactory.getLogger("security")
     private val json = Json { encodeDefaults = true }
 
-    fun log(reasonCode: String, details: Map<String, Any?> = emptyMap()) {
+    override fun log(reasonCode: String, details: Map<String, Any?>) {
         val payload = buildJsonObject {
             put("reasonCode", JsonPrimitive(reasonCode))
             put("at", JsonPrimitive(java.time.Instant.now().toString()))
