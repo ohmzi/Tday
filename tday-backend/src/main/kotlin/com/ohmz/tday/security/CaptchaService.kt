@@ -13,15 +13,25 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
 data class CaptchaResult(val ok: Boolean, val reason: String? = null)
 
-object CaptchaService {
-    private const val TURNSTILE_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+interface CaptchaService {
+    fun isConfigured(): Boolean
+    suspend fun verify(token: String?, request: ApplicationRequest, action: String): CaptchaResult
+    fun extractTokenFromJson(body: kotlinx.serialization.json.JsonObject?): String?
+}
+
+class CaptchaServiceImpl(
+    private val config: AppConfig,
+    private val clientSignals: ClientSignals,
+) : CaptchaService {
+    private val turnstileUrl = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
     private val client = HttpClient(CIO)
 
-    fun isConfigured(): Boolean = !AppConfig.captchaSecret.isNullOrBlank()
+    override fun isConfigured(): Boolean = !config.captchaSecret.isNullOrBlank()
 
-    suspend fun verify(
+    override suspend fun verify(
         token: String?,
         request: ApplicationRequest,
         @Suppress("UNUSED_PARAMETER") action: String,
@@ -29,15 +39,15 @@ object CaptchaService {
         if (!isConfigured()) return CaptchaResult(ok = true)
         val trimmed = token?.trim()
         if (trimmed.isNullOrEmpty()) return CaptchaResult(ok = false, reason = "missing_captcha_token")
-        val secret = AppConfig.captchaSecret ?: return CaptchaResult(ok = false, reason = "captcha_secret_missing")
+        val secret = config.captchaSecret ?: return CaptchaResult(ok = false, reason = "captcha_secret_missing")
 
         return try {
             val response = client.submitForm(
-                url = TURNSTILE_URL,
+                url = turnstileUrl,
                 formParameters = parameters {
                     append("secret", secret)
                     append("response", trimmed)
-                    append("remoteip", ClientSignals.getClientIp(request))
+                    append("remoteip", clientSignals.getClientIp(request))
                 },
             )
 
@@ -59,7 +69,7 @@ object CaptchaService {
         }
     }
 
-    fun extractTokenFromJson(body: kotlinx.serialization.json.JsonObject?): String? {
+    override fun extractTokenFromJson(body: kotlinx.serialization.json.JsonObject?): String? {
         if (body == null) return null
         body["captchaToken"]?.jsonPrimitive?.contentOrNull?.trim()?.ifEmpty { null }?.let { return it }
         body["cf-turnstile-response"]?.jsonPrimitive?.contentOrNull?.trim()?.ifEmpty { null }?.let { return it }

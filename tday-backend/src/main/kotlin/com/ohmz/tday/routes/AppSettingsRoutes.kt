@@ -1,17 +1,18 @@
 package com.ohmz.tday.routes
 
-import com.ohmz.tday.plugins.*
+import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.services.AppConfigService
-import io.ktor.http.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 
 fun Route.appSettingsRoutes() {
+    val appConfigService by inject<AppConfigService>()
+
     route("/app-settings") {
         get {
-            call.requireUser()
-            val config = AppConfigService.getGlobalConfig()
-            call.respond(HttpStatusCode.OK, mapOf("aiSummaryEnabled" to config.aiSummaryEnabled))
+            call.withAuth { _ ->
+                appConfigService.getGlobalConfig().map { mapOf("aiSummaryEnabled" to it.aiSummaryEnabled) }
+            }
         }
     }
 }
