@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.1.0"
-    kotlin("plugin.serialization") version "2.1.0"
-    id("io.ktor.plugin") version "3.0.3"
+    kotlin("jvm")
+    kotlin("plugin.serialization")
+    id("io.ktor.plugin")
     application
 }
 
@@ -12,13 +12,11 @@ application {
     mainClass.set("com.ohmz.tday.ApplicationKt")
 }
 
-repositories {
-    mavenCentral()
-}
-
 val exposedVersion = "0.57.0"
 
 dependencies {
+    implementation(project(":shared"))
+
     implementation("io.ktor:ktor-server-core-jvm")
     implementation("io.ktor:ktor-server-netty-jvm")
     implementation("io.ktor:ktor-server-content-negotiation-jvm")

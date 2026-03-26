@@ -22,6 +22,7 @@ import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.RegisterResponse
 import com.ohmz.tday.compose.core.model.ReorderItemRequest
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
+import com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoTitleNlpRequest
@@ -164,7 +165,7 @@ interface TdayApiService {
 
     @HTTP(method = "DELETE", path = "/api/todo/instance", hasBody = true)
     suspend fun deleteTodoInstanceByBody(
-        @Body payload: DeleteTodoRequest,
+        @Body payload: TodoInstanceDeleteRequest,
     ): Response<MessageResponse>
 
     @GET("/api/completedTodo")
