@@ -2,8 +2,7 @@ package com.ohmz.tday.models.response
 
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class MessageResponse(val message: String)
+typealias MessageResponse = com.ohmz.tday.shared.model.MessageResponse
 
 @Serializable
 data class ThrottleResponse(
