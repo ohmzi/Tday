@@ -1,33 +1,38 @@
 package com.ohmz.tday.routes.auth
 
 import com.ohmz.tday.models.request.RegisterRequest
-import com.ohmz.tday.plugins.BadRequestException
 import com.ohmz.tday.security.*
 import com.ohmz.tday.services.UserService
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 
 fun Route.registerRoutes() {
+    val userService by inject<UserService>()
+    val authThrottle by inject<AuthThrottle>()
+    val captchaService by inject<CaptchaService>()
+    val eventLogger by inject<SecurityEventLogger>()
+
     route("/register") {
         post {
             val body = call.receive<RegisterRequest>()
 
-            val throttle = AuthThrottle.enforceRateLimit(ThrottleAction.register, call.request, body.email)
+            val throttle = authThrottle.enforceRateLimit(ThrottleAction.register, call.request, body.email)
             if (!throttle.allowed) {
                 call.respond(HttpStatusCode.TooManyRequests, mapOf(
-                    "message" to "Too many authentication requests. Try again in ${AuthThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    "message" to "Too many authentication requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
                     "reason" to (throttle.reasonCode ?: "auth_limit"),
                     "retryAfterSeconds" to throttle.retryAfterSeconds,
                 ))
                 return@post
             }
 
-            if (AuthThrottle.requiresCaptcha(ThrottleAction.register, call.request, body.email)) {
-                val captchaResult = CaptchaService.verify(body.captchaToken, call.request, "register")
+            if (authThrottle.requiresCaptcha(ThrottleAction.register, call.request, body.email)) {
+                val captchaResult = captchaService.verify(body.captchaToken, call.request, "register")
                 if (!captchaResult.ok) {
-                    SecurityEventLogger.log("register_captcha_failed", mapOf("reason" to captchaResult.reason))
+                    eventLogger.log("register_captcha_failed", mapOf("reason" to captchaResult.reason))
                     call.respond(HttpStatusCode.Forbidden, mapOf(
                         "message" to "Additional verification required.",
                         "reason" to "captcha_required",
@@ -36,23 +41,45 @@ fun Route.registerRoutes() {
                 }
             }
 
-            if (body.fname.trim().length < 2) throw BadRequestException("first name is at least two characters")
-            if (body.email.isBlank() || !body.email.contains("@")) throw BadRequestException("email is incorrect")
-            if (body.password.length < 8) throw BadRequestException("password cannot be smaller than 8")
-            if (!body.password.any { it.isUpperCase() }) throw BadRequestException("password must have at least one uppercase letter")
-            if (!body.password.any { !it.isLetterOrDigit() }) throw BadRequestException("password must have at least one special character")
-
-            if (UserService.emailExists(body.email.trim().lowercase())) {
-                throw BadRequestException("this email is taken")
+            if (body.fname.trim().length < 2) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "first name is at least two characters"))
+                return@post
+            }
+            if (body.email.isBlank() || !body.email.contains("@")) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "email is incorrect"))
+                return@post
+            }
+            if (body.password.length < 8) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "password cannot be smaller than 8"))
+                return@post
+            }
+            if (!body.password.any { it.isUpperCase() }) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "password must have at least one uppercase letter"))
+                return@post
+            }
+            if (!body.password.any { !it.isLetterOrDigit() }) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "password must have at least one special character"))
+                return@post
             }
 
-            val result = UserService.register(body.fname, body.lname, body.email.trim().lowercase(), body.password)
+            if (userService.emailExists(body.email.trim().lowercase())) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("message" to "this email is taken"))
+                return@post
+            }
 
-            call.respond(HttpStatusCode.OK, mapOf(
-                "message" to if (result.requiresApproval) "Account registered. Waiting for admin approval." else "account created",
-                "requiresApproval" to result.requiresApproval,
-                "isBootstrapAdmin" to result.isBootstrapAdmin,
-            ))
+            val result = userService.register(body.fname, body.lname, body.email.trim().lowercase(), body.password)
+            result.fold(
+                { error ->
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("message" to error.message))
+                },
+                { reg ->
+                    call.respond(HttpStatusCode.OK, mapOf(
+                        "message" to if (reg.requiresApproval) "Account registered. Waiting for admin approval." else "account created",
+                        "requiresApproval" to reg.requiresApproval,
+                        "isBootstrapAdmin" to reg.isBootstrapAdmin,
+                    ))
+                },
+            )
         }
     }
 }

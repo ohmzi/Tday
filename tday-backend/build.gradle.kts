@@ -47,6 +47,21 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("ch.qos.logback:logback-classic:1.5.12")
 
+    implementation("io.insert-koin:koin-ktor:4.0.4")
+    implementation("io.insert-koin:koin-logger-slf4j:4.0.4")
+
+    implementation("io.arrow-kt:arrow-core:2.1.2")
+    implementation("io.arrow-kt:arrow-fx-coroutines:2.1.2")
+
+    implementation("io.konform:konform-jvm:0.11.1")
+
+    implementation("io.ktor:ktor-server-swagger-jvm")
+    implementation("io.ktor:ktor-server-websockets-jvm")
+    implementation("io.ktor:ktor-server-resources-jvm")
+
+    implementation("org.flywaydb:flyway-core:10.22.0")
+    implementation("org.flywaydb:flyway-database-postgresql:10.22.0")
+
     testImplementation("io.ktor:ktor-server-test-host-jvm")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 }
