@@ -7,10 +7,15 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 
-object SessionControl {
-    fun sessionMaxAgeSeconds(): Int = AppConfig.sessionMaxAgeSec
+interface SessionControl {
+    fun sessionMaxAgeSeconds(): Int
+    fun revokeUserSessions(userId: String)
+}
 
-    fun revokeUserSessions(userId: String) {
+class SessionControlImpl(private val config: AppConfig) : SessionControl {
+    override fun sessionMaxAgeSeconds(): Int = config.sessionMaxAgeSec
+
+    override fun revokeUserSessions(userId: String) {
         if (userId.isBlank()) return
         transaction {
             Users.update({ Users.id eq userId }) {
