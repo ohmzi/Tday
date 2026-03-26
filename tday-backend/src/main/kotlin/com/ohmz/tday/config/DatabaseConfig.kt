@@ -2,15 +2,43 @@ package com.ohmz.tday.config
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.Database
 import org.slf4j.LoggerFactory
+import java.net.URI
 
-object DatabaseConfig {
+data class ParsedDatabaseUrl(val jdbcUrl: String, val username: String?, val password: String?)
+
+class DatabaseConfig(private val config: AppConfig) {
     private val logger = LoggerFactory.getLogger(DatabaseConfig::class.java)
 
+    private fun parseDatabaseUrl(raw: String): ParsedDatabaseUrl {
+        if (raw.startsWith("jdbc:")) {
+            return ParsedDatabaseUrl(raw, null, null)
+        }
+
+        val normalized = if (raw.startsWith("postgres://")) {
+            "postgresql://${raw.removePrefix("postgres://")}"
+        } else raw
+
+        val uri = URI(normalized)
+        val userInfo = uri.userInfo
+        val user = userInfo?.substringBefore(':')
+        val pass = userInfo?.substringAfter(':', "")?.ifEmpty { null }
+        val hostPort = buildString {
+            append(uri.host)
+            if (uri.port > 0) append(":${uri.port}")
+        }
+        val jdbcUrl = "jdbc:postgresql://$hostPort${uri.path}${uri.query?.let { "?$it" } ?: ""}"
+        return ParsedDatabaseUrl(jdbcUrl, user, pass)
+    }
+
     fun init() {
-        val config = HikariConfig().apply {
-            jdbcUrl = AppConfig.databaseUrl
+        val parsed = parseDatabaseUrl(config.databaseUrl)
+        val hikariConfig = HikariConfig().apply {
+            jdbcUrl = parsed.jdbcUrl
+            parsed.username?.let { username = it }
+            parsed.password?.let { password = it }
             driverClassName = "org.postgresql.Driver"
             maximumPoolSize = 10
             minimumIdle = 2
@@ -19,8 +47,16 @@ object DatabaseConfig {
             maxLifetime = 1_800_000
             isAutoCommit = false
         }
-        val dataSource = HikariDataSource(config)
+        val dataSource = HikariDataSource(hikariConfig)
+
+        Flyway.configure()
+            .dataSource(dataSource)
+            .locations("classpath:db/migration")
+            .baselineOnMigrate(true)
+            .load()
+            .migrate()
+
         Database.connect(dataSource)
-        logger.info("Database connected via HikariCP")
+        logger.info("Database connected via HikariCP with Flyway migrations applied")
     }
 }

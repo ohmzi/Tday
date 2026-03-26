@@ -1,35 +1,39 @@
 package com.ohmz.tday.routes
 
-import com.ohmz.tday.plugins.*
+import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.services.CompletedTodoService
-import io.ktor.http.*
 import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import org.koin.ktor.ext.inject
 
 @Serializable
 private data class CompletedTodoPatchBody(val id: String)
 
 fun Route.completedTodoRoutes() {
+    val completedTodoService by inject<CompletedTodoService>()
+
     route("/completedTodo") {
         get {
-            val user = call.requireUser()
-            val todos = CompletedTodoService.getAll(user.id)
-            call.respond(HttpStatusCode.OK, mapOf("completedTodos" to todos))
+            call.withAuth { user ->
+                completedTodoService.getAll(user.id)
+                    .map { mapOf("completedTodos" to it) }
+            }
         }
 
         delete {
-            val user = call.requireUser()
-            CompletedTodoService.deleteAll(user.id)
-            call.respond(HttpStatusCode.OK, mapOf("message" to "completed todos cleared"))
+            call.withAuth { user ->
+                completedTodoService.deleteAll(user.id)
+                    .map { mapOf("message" to "completed todos cleared") }
+            }
         }
 
         patch {
-            val user = call.requireUser()
-            val body = call.receive<CompletedTodoPatchBody>()
-            CompletedTodoService.deleteById(user.id, body.id)
-            call.respond(HttpStatusCode.OK, mapOf("message" to "completed todo removed"))
+            call.withAuth { user ->
+                val body = call.receive<CompletedTodoPatchBody>()
+                completedTodoService.deleteById(user.id, body.id)
+                    .map { mapOf("message" to "completed todo removed") }
+            }
         }
     }
 }

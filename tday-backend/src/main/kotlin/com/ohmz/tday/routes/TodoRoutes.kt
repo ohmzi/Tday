@@ -1,197 +1,208 @@
 package com.ohmz.tday.routes
 
+import arrow.core.right
+import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
 import com.ohmz.tday.plugins.*
+import com.ohmz.tday.services.AppConfigService
+import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoService
+import com.ohmz.tday.services.TodoSummaryService
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 import java.time.LocalDateTime
 
 fun Route.todoRoutes() {
+    val todoService by inject<TodoService>()
+    val todoNlpService by inject<TodoNlpService>()
+    val appConfigService by inject<AppConfigService>()
+    val todoSummaryService by inject<TodoSummaryService>()
+
     route("/todo") {
         post {
-            val user = call.requireUser()
-            val body = call.receive<TodoCreateRequest>()
-            if (body.title.isBlank()) throw BadRequestException("title cannot be left empty")
-
-            val dtstart = LocalDateTime.parse(body.dtstart)
-            val due = LocalDateTime.parse(body.due)
-
-            val result = TodoService.create(
-                userId = user.id, title = body.title, description = body.description,
-                priority = body.priority, dtstart = dtstart, due = due,
-                rrule = body.rrule, listID = body.listID,
-            )
-            call.respond(HttpStatusCode.OK, mapOf("message" to "todo created", "todo" to result))
+            call.withAuth { user ->
+                val body = call.receive<TodoCreateRequest>()
+                if (body.title.isBlank()) return@withAuth arrow.core.Either.Left(AppError.BadRequest("title cannot be left empty"))
+                val dtstart = LocalDateTime.parse(body.dtstart)
+                val due = LocalDateTime.parse(body.due)
+                todoService.create(user.id, body.title, body.description, body.priority, dtstart, due, body.rrule, body.listID)
+                    .map { mapOf("message" to "todo created", "todo" to it) }
+            }
         }
 
         get {
-            val user = call.requireUser()
-            val timeZone = user.timeZone ?: "UTC"
-            val timeline = call.request.queryParameters["timeline"] == "true"
+            call.withAuth { user ->
+                val timeZone = user.timeZone ?: "UTC"
+                val timeline = call.request.queryParameters["timeline"] == "true"
 
-            if (timeline) {
-                val days = call.request.queryParameters["recurringFutureDays"]?.toIntOrNull() ?: 365
-                val todos = TodoService.getTimeline(user.id, timeZone, days.coerceIn(1, 3650))
-                call.respond(HttpStatusCode.OK, mapOf("todos" to todos))
-                return@get
+                if (timeline) {
+                    val days = call.request.queryParameters["recurringFutureDays"]?.toIntOrNull() ?: 365
+                    todoService.getTimeline(user.id, timeZone, days.coerceIn(1, 3650))
+                        .map { mapOf("todos" to it) }
+                } else {
+                    val start = call.request.queryParameters["start"]?.toLongOrNull()
+                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("date range start not specified"))
+                    val end = call.request.queryParameters["end"]?.toLongOrNull()
+                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("date range end not specified"))
+                    todoService.getByDateRange(user.id, start, end, timeZone)
+                        .map { mapOf("todos" to it) }
+                }
             }
-
-            val start = call.request.queryParameters["start"]?.toLongOrNull()
-                ?: throw BadRequestException("date range start not specified")
-            val end = call.request.queryParameters["end"]?.toLongOrNull()
-                ?: throw BadRequestException("date range end not specified")
-
-            val todos = TodoService.getByDateRange(user.id, start, end, timeZone)
-            call.respond(HttpStatusCode.OK, mapOf("todos" to todos))
         }
 
         patch {
-            val user = call.requireUser()
-            val body = call.receive<TodoPatchRequest>()
-            if (body.id.isBlank()) throw BadRequestException("todo id is required")
-
-            val fields = mutableMapOf<String, Any?>()
-            body.title?.let { fields["title"] = it }
-            body.description?.let { fields["description"] = it }
-            body.priority?.let { fields["priority"] = it }
-            body.pinned?.let { fields["pinned"] = it }
-            body.completed?.let { fields["completed"] = it }
-            body.dtstart?.let { fields["dtstart"] = LocalDateTime.parse(it) }
-            body.due?.let { fields["due"] = LocalDateTime.parse(it) }
-            body.rrule?.let { fields["rrule"] = it }
-            body.listID?.let { fields["listID"] = it }
-
-            TodoService.update(user.id, body.id, fields)
-            call.respond(HttpStatusCode.OK, mapOf("message" to "Todo updated"))
+            call.withAuth { user ->
+                val body = call.receive<TodoPatchRequest>()
+                if (body.id.isBlank()) return@withAuth arrow.core.Either.Left(AppError.BadRequest("todo id is required"))
+                val fields = mutableMapOf<String, Any?>()
+                body.title?.let { fields["title"] = it }
+                body.description?.let { fields["description"] = it }
+                body.priority?.let { fields["priority"] = it }
+                body.pinned?.let { fields["pinned"] = it }
+                body.completed?.let { fields["completed"] = it }
+                body.dtstart?.let { fields["dtstart"] = LocalDateTime.parse(it) }
+                body.due?.let { fields["due"] = LocalDateTime.parse(it) }
+                body.rrule?.let { fields["rrule"] = it }
+                body.listID?.let { fields["listID"] = it }
+                todoService.update(user.id, body.id, fields)
+                    .map { mapOf("message" to "Todo updated") }
+            }
         }
 
         delete {
-            val user = call.requireUser()
-            val body = call.receive<TodoDeleteRequest>()
-            if (body.id.isBlank()) throw BadRequestException("todo id is required")
-
-            val count = TodoService.delete(user.id, body.id)
-            val message = if (count > 0) "todo deleted" else "todo already deleted"
-            call.respond(HttpStatusCode.OK, mapOf("message" to message))
+            call.withAuth { user ->
+                val body = call.receive<TodoDeleteRequest>()
+                if (body.id.isBlank()) return@withAuth arrow.core.Either.Left(AppError.BadRequest("todo id is required"))
+                todoService.delete(user.id, body.id)
+                    .map { count -> mapOf("message" to if (count > 0) "todo deleted" else "todo already deleted") }
+            }
         }
 
         route("/complete") {
             patch {
-                val user = call.requireUser()
-                val body = call.receive<TodoCompleteRequest>()
-                val instanceDate = body.instanceDate?.let { LocalDateTime.parse(it) }
-                TodoService.completeTodo(user.id, body.id, instanceDate)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "todo completed"))
+                call.withAuth { user ->
+                    val body = call.receive<TodoCompleteRequest>()
+                    val instanceDate = body.instanceDate?.let { LocalDateTime.parse(it) }
+                    todoService.completeTodo(user.id, body.id, instanceDate)
+                        .map { mapOf("message" to "todo completed") }
+                }
             }
         }
 
         route("/uncomplete") {
             patch {
-                val user = call.requireUser()
-                val body = call.receive<TodoCompleteRequest>()
-                val instanceDate = body.instanceDate?.let { LocalDateTime.parse(it) }
-                TodoService.uncompleteTodo(user.id, body.id, instanceDate)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "todo uncompleted"))
+                call.withAuth { user ->
+                    val body = call.receive<TodoCompleteRequest>()
+                    val instanceDate = body.instanceDate?.let { LocalDateTime.parse(it) }
+                    todoService.uncompleteTodo(user.id, body.id, instanceDate)
+                        .map { mapOf("message" to "todo uncompleted") }
+                }
             }
         }
 
         route("/prioritize") {
             patch {
-                val user = call.requireUser()
-                val body = call.receive<TodoPrioritizeRequest>()
-                TodoService.prioritize(user.id, body.id, body.priority)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "priority updated"))
+                call.withAuth { user ->
+                    val body = call.receive<TodoPrioritizeRequest>()
+                    todoService.prioritize(user.id, body.id, body.priority)
+                        .map { mapOf("message" to "priority updated") }
+                }
             }
         }
 
         route("/reorder") {
             patch {
-                val user = call.requireUser()
-                val body = call.receive<TodoReorderRequest>()
-                TodoService.reorder(user.id, body.id, body.order)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "order updated"))
+                call.withAuth { user ->
+                    val body = call.receive<TodoReorderRequest>()
+                    todoService.reorder(user.id, body.id, body.order)
+                        .map { mapOf("message" to "order updated") }
+                }
             }
         }
 
         route("/instance") {
             patch {
-                val user = call.requireUser()
-                val body = call.receive<TodoInstancePatchRequest>()
-                val instanceDate = LocalDateTime.parse(body.instanceDate)
-                val fields = mutableMapOf<String, Any?>()
-                body.title?.let { fields["title"] = it }
-                body.description?.let { fields["description"] = it }
-                body.priority?.let { fields["priority"] = it }
-                body.dtstart?.let { fields["dtstart"] = LocalDateTime.parse(it) }
-                body.due?.let { fields["due"] = LocalDateTime.parse(it) }
-                body.durationMinutes?.let { fields["durationMinutes"] = it }
-                TodoService.patchInstance(user.id, body.todoId, instanceDate, fields)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "instance updated"))
+                call.withAuth { user ->
+                    val body = call.receive<TodoInstancePatchRequest>()
+                    val instanceDate = LocalDateTime.parse(body.instanceDate)
+                    val fields = mutableMapOf<String, Any?>()
+                    body.title?.let { fields["title"] = it }
+                    body.description?.let { fields["description"] = it }
+                    body.priority?.let { fields["priority"] = it }
+                    body.dtstart?.let { fields["dtstart"] = LocalDateTime.parse(it) }
+                    body.due?.let { fields["due"] = LocalDateTime.parse(it) }
+                    body.durationMinutes?.let { fields["durationMinutes"] = it }
+                    todoService.patchInstance(user.id, body.todoId, instanceDate, fields)
+                        .map { mapOf("message" to "instance updated") }
+                }
             }
 
             delete {
-                val user = call.requireUser()
-                val body = call.receive<TodoInstanceDeleteRequest>()
-                val instanceDate = LocalDateTime.parse(body.instanceDate)
-                TodoService.deleteInstance(user.id, body.todoId, instanceDate)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "instance deleted"))
+                call.withAuth { user ->
+                    val body = call.receive<TodoInstanceDeleteRequest>()
+                    val instanceDate = LocalDateTime.parse(body.instanceDate)
+                    todoService.deleteInstance(user.id, body.todoId, instanceDate)
+                        .map { mapOf("message" to "instance deleted") }
+                }
             }
         }
 
         route("/overdue") {
             get {
-                val user = call.requireUser()
-                val timeZone = user.timeZone ?: "UTC"
-                val todos = TodoService.getOverdue(user.id, timeZone)
-                call.respond(HttpStatusCode.OK, mapOf("todos" to todos))
+                call.withAuth { user ->
+                    val timeZone = user.timeZone ?: "UTC"
+                    todoService.getOverdue(user.id, timeZone)
+                        .map { mapOf("todos" to it) }
+                }
             }
         }
 
         route("/nlp") {
             post {
-                call.requireUser()
-                val body = call.receive<TodoNlpRequest>()
-                val result = com.ohmz.tday.services.TodoNlpService.parse(
-                    text = body.text,
-                    locale = body.locale,
-                    referenceEpochMs = body.referenceEpochMs,
-                    timezoneOffsetMinutes = body.timezoneOffsetMinutes,
-                    defaultDurationMinutes = body.defaultDurationMinutes,
-                )
-                call.respond(HttpStatusCode.OK, mapOf(
-                    "cleanTitle" to result.cleanTitle,
-                    "matchedText" to result.matchedText,
-                    "matchStart" to result.matchStart,
-                    "startEpochMs" to result.startEpochMs,
-                    "dueEpochMs" to result.dueEpochMs,
-                ))
+                call.withAuth { _ ->
+                    val body = call.receive<TodoNlpRequest>()
+                    val result = todoNlpService.parse(
+                        text = body.text,
+                        locale = body.locale,
+                        referenceEpochMs = body.referenceEpochMs,
+                        timezoneOffsetMinutes = body.timezoneOffsetMinutes,
+                        defaultDurationMinutes = body.defaultDurationMinutes,
+                    )
+                    mapOf(
+                        "cleanTitle" to result.cleanTitle,
+                        "matchedText" to result.matchedText,
+                        "matchStart" to result.matchStart,
+                        "startEpochMs" to result.startEpochMs,
+                        "dueEpochMs" to result.dueEpochMs,
+                    ).right()
+                }
             }
         }
 
         route("/summary") {
             post {
-                val user = call.requireUser()
-                val body = call.receive<TodoSummaryRequest>()
-                val timeZone = body.timeZone ?: user.timeZone ?: "UTC"
+                call.withAuth { user ->
+                    val body = call.receive<TodoSummaryRequest>()
+                    val timeZone = body.timeZone ?: user.timeZone ?: "UTC"
 
-                val config = com.ohmz.tday.services.AppConfigService.getGlobalConfig()
-                if (!config.aiSummaryEnabled) {
-                    call.respond(HttpStatusCode.OK, mapOf("summary" to null, "reason" to "disabled"))
-                    return@post
+                    val config = appConfigService.getGlobalConfig().getOrNull()
+                    if (config != null && !config.aiSummaryEnabled) {
+                        return@withAuth mapOf("summary" to null, "reason" to "disabled").right()
+                    }
+
+                    val todos = todoService.getTimeline(user.id, timeZone, 365).getOrNull() ?: emptyList()
+                    if (todos.isEmpty()) {
+                        return@withAuth mapOf("summary" to "You're clear for now. No tasks need attention in this view.").right()
+                    }
+
+                    val prompt = "Summarize these ${todos.size} tasks briefly for the user."
+                    val summary = todoSummaryService.generateSummary(prompt)
+                    mapOf("summary" to summary).right()
                 }
-
-                val todos = TodoService.getTimeline(user.id, timeZone, 365)
-                if (todos.isEmpty()) {
-                    call.respond(HttpStatusCode.OK, mapOf("summary" to "You're clear for now. No tasks need attention in this view."))
-                    return@post
-                }
-
-                val prompt = "Summarize these ${todos.size} tasks briefly for the user."
-                val summary = com.ohmz.tday.services.TodoSummaryService.generateSummary(prompt)
-                call.respond(HttpStatusCode.OK, mapOf("summary" to summary))
             }
         }
     }
