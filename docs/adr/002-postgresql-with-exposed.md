@@ -22,7 +22,7 @@ For migrations:
 - Keep **PostgreSQL 15** as the primary data store.
 - Use **JetBrains Exposed 0.57.0** (DSL/Table API) for type-safe database access.
 - Use **HikariCP** for connection pooling.
-- Use **Flyway** for schema migrations with `baselineOnMigrate=true` to bridge the legacy Prisma-managed schema.
+- Use **Flyway** for schema migrations with `baselineOnMigrate=true`, a baseline version of `2` for legacy databases, and a checked-in full schema snapshot for clean installs.
 
 ## Rationale
 
@@ -31,7 +31,7 @@ For migrations:
 - Exposed is lightweight and coroutine-compatible, fitting well with Ktor's architecture.
 - HikariCP is the standard JVM connection pool with excellent performance characteristics.
 - Flyway's SQL-based migrations are transparent and reviewable — each migration is a plain `.sql` file.
-- `baselineOnMigrate` allowed a smooth transition from the Prisma-managed schema without data loss.
+- `baselineOnMigrate` plus a version `2` baseline allows a smooth transition from the legacy Prisma-managed schema without replaying the full schema snapshot on existing databases.
 
 ## Consequences
 

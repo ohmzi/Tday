@@ -26,7 +26,16 @@ import { useDateRange } from "../hooks/useDateRange";
 import { useCalendarTodo } from "../query/get-calendar-todo";
 import { useEditCalendarTodo } from "../query/update-calendar-todo";
 import { useEditCalendarTodoInstance } from "../query/update-calendar-todo-instance";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Spinner from "@/components/ui/spinner";
 import { subMilliseconds } from "date-fns";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
@@ -55,12 +64,22 @@ function MonthDateCellWrapper({
   value: Date;
 }) {
   const drillToDay = useContext(DrillToDayContext);
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+      event.preventDefault();
+      drillToDay?.(value);
+    }
+  };
+
   return (
     <div
       role="button"
-      tabIndex={-1}
+      tabIndex={0}
+      aria-label={format(value, "PPP")}
       style={{ flex: 1, display: "flex" }}
       onClick={() => drillToDay?.(value)}
+      onKeyDown={handleKeyDown}
     >
       {children}
     </div>

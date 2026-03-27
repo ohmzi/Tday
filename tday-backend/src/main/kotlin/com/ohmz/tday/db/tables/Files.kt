@@ -9,7 +9,7 @@ object Files : Table("File") {
     val url = text("url")
     val size = integer("size")
     val createdAt = datetime("createdAt")
-    val userID = varchar("userID", 30).references(Users.id)
+    val userID = varchar("userID", 30).references(Users.id).index()
     val s3Key = text("s3Key")
 
     override val primaryKey = PrimaryKey(id)

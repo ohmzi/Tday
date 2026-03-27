@@ -28,6 +28,6 @@ export const useNote = () => {
     if (isError === true) {
       toast({ description: error.message, variant: "destructive" });
     }
-  }, [isError]);
+  }, [error, isError, toast]);
   return { notes, notesLoading, isFetching, isPending };
 };

@@ -18,7 +18,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 
-enum class ThrottleAction { credentials, register, csrf }
+enum class ThrottleAction { credentials, register, csrf, session }
 
 enum class ThrottleDimension { ip, email, device }
 
@@ -52,6 +52,7 @@ class AuthThrottleImpl(
             ThrottleAction.credentials to Policy(config.limitCredentialsWindowSec * 1000L, config.limitCredentialsMax),
             ThrottleAction.register to Policy(config.limitRegisterWindowSec * 1000L, config.limitRegisterMax),
             ThrottleAction.csrf to Policy(config.limitCsrfWindowSec * 1000L, config.limitCsrfMax),
+            ThrottleAction.session to Policy(config.limitSessionWindowSec * 1000L, config.limitSessionMax),
         )
     }
 
@@ -260,7 +261,7 @@ class AuthThrottleImpl(
                 )
             }
 
-            val windowStart = row[AuthThrottles.windowStart] ?: now
+            val windowStart = row[AuthThrottles.windowStart]
             val windowResetNeeded = java.time.Duration.between(windowStart, now).toMillis() >= policy.windowMs
             val nextWindowStart = if (windowResetNeeded) now else windowStart
             val nextRequestCount = if (windowResetNeeded) 1 else row[AuthThrottles.requestCount] + 1

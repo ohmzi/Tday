@@ -4,6 +4,7 @@ import com.ohmz.tday.db.tables.*
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.flywaydb.core.Flyway
+import org.flywaydb.core.api.MigrationVersion
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -56,6 +57,7 @@ class DatabaseConfig(private val config: AppConfig) {
             .dataSource(dataSource)
             .locations("classpath:db/migration")
             .baselineOnMigrate(true)
+            .baselineVersion(MigrationVersion.fromVersion("2"))
             .load()
             .migrate()
 
