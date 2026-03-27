@@ -1,0 +1,93 @@
+<section class="space-y-4">
+  <p>
+    This note defines the current recurring-task model in plain language. The
+    parent <code>Todo</code> row is the recurrence definition, while
+    <code>TodoInstance</code> rows are exceptional edits layered on top of the
+    generated schedule.
+  </p>
+  <p>
+    The goal is predictable behavior across web, Android, iOS, and the Ktor
+    backend: the recurrence itself stays canonical, and per-occurrence changes
+    never mutate the underlying rule for the whole series.
+  </p>
+</section>
+
+<section class="space-y-4">
+  <h2 class="text-lg font-semibold">1. Canonical model</h2>
+  <ul class="list-disc space-y-2 pl-6">
+    <li>
+      <code>Todo</code> stores the series definition: title, description,
+      priority, <code>dtstart</code>, <code>due</code>,
+      <code>durationMinutes</code>, timezone, <code>rrule</code>, and
+      <code>exdates</code>.
+    </li>
+    <li>
+      Generated recurring occurrences are virtual. They are produced at runtime
+      from the canonical parent plus its exclusions.
+    </li>
+    <li>
+      <code>TodoInstance</code> stores a single override: edited title,
+      description, priority, or shifted timing for one occurrence only.
+    </li>
+  </ul>
+</section>
+
+<section class="space-y-4">
+  <h2 class="text-lg font-semibold">2. Identity rules</h2>
+  <p>
+    Every generated occurrence needs a stable identity so clients can complete,
+    move, reorder, and render it consistently. The important fields are:
+  </p>
+  <ul class="list-disc space-y-2 pl-6">
+    <li>
+      <code>id</code>: the parent todo id.
+    </li>
+    <li>
+      <code>instanceDate</code>: the original occurrence being referenced.
+    </li>
+    <li>
+      <code>recurId</code>: the serialized form of that anchored occurrence in
+      override rows.
+    </li>
+  </ul>
+  <pre class="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 p-4 text-sm"><code>Todo = recurrence definition
+TodoInstance = exception row
+instanceDate = canonical occurrence anchor
+recurId = string form of that anchor</code></pre>
+</section>
+
+<section class="space-y-4">
+  <h2 class="text-lg font-semibold">3. Behavioral rules</h2>
+  <ul class="list-disc space-y-2 pl-6">
+    <li>
+      Editing one occurrence creates or updates an exception row.
+    </li>
+    <li>
+      Editing the series updates the parent todo and leaves one-off exceptions
+      as explicit overrides.
+    </li>
+    <li>
+      Completing a recurring occurrence records completion against the anchored
+      occurrence instead of marking the whole parent series complete.
+    </li>
+    <li>
+      Deleting one occurrence should behave like adding an exclusion, not like
+      deleting the recurrence definition itself.
+    </li>
+  </ul>
+</section>
+
+<section class="space-y-4">
+  <h2 class="text-lg font-semibold">4. Practical guidance</h2>
+  <p>
+    The Kotlin backend should stay authoritative for RRULE expansion, exception
+    merging, and timeline materialization. Shared KMP code can own DTOs,
+    validation, and safe helper logic, but the final expansion logic should run
+    in one place so every client sees the same series shape.
+  </p>
+  <p>
+    When in doubt, preserve the parent recurrence as source of truth and model
+    single-occurrence edits as explicit exceptions rather than series
+    mutations.
+  </p>
+</section>

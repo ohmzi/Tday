@@ -7,7 +7,7 @@ Personal task planner — self-hosted, private, multilingual.
 - Notes with a rich text editor (TipTap)
 - Lists (projects) for organization with colors and icons
 - Completion history and AI-powered task summaries (Ollama)
-- 11 languages via next-intl
+- 11 languages via i18next
 - Native Android client (Kotlin + Jetpack Compose)
 - Native iOS client (SwiftUI + SwiftData)
 
@@ -15,9 +15,10 @@ Personal task planner — self-hosted, private, multilingual.
 
 | Layer | Technology |
 |-------|-----------|
-| Web app | Next.js 15 (App Router), React 18, TypeScript 5, Tailwind CSS 4 |
-| Database | PostgreSQL 15, Prisma 6 |
-| Auth | NextAuth v5 (JWT sessions, PBKDF2 credentials, optional OAuth) |
+| Frontend | Vite, React 18, TypeScript 5, React Router, Tailwind CSS 4, i18next |
+| Backend | Ktor (Kotlin), Exposed ORM, Flyway migrations |
+| Database | PostgreSQL 15 |
+| Auth | JWE sessions, PBKDF2 credentials, credential envelope encryption |
 | AI | Ollama (local, e.g. qwen2.5:0.5b) |
 | Android | Kotlin, Jetpack Compose, Hilt, Retrofit, Material 3 |
 | iOS | SwiftUI, SwiftData, URLSession, Observation |
@@ -39,7 +40,7 @@ Docker Compose starts three services:
 
 | Service | Container | Port |
 |---------|-----------|------|
-| Next.js app | `tday` | `2525 → 3000` |
+| Ktor backend + Vite SPA | `tday_backend` | `2525 → 8080` |
 | PostgreSQL | `tday_db` | 5432 (internal) |
 | Ollama | `tday_ollama` | 11434 (internal) |
 
@@ -48,13 +49,21 @@ GPU acceleration: `tday_ollama` uses `gpus: all` by default — install the NVID
 ### Local Development
 
 ```bash
+# Frontend (Vite SPA)
+cd tday-web
 npm install
-# Requires a running PostgreSQL instance
-npx prisma migrate deploy
-npm run dev          # starts Next.js with Turbopack
-npm run lint         # ESLint
-npm run test         # Jest
+npm run dev              # starts Vite dev server
+
+# Backend (Ktor)
+./gradlew :tday-backend:run   # starts Ktor on port 8080
+
+# Linting & testing
+cd tday-web && npm run lint    # ESLint
+cd tday-web && npm run test    # Vitest
+./gradlew :tday-backend:test   # Kotlin JUnit 5
 ```
+
+Requires a running PostgreSQL instance. The Ktor backend applies Flyway migrations automatically on startup.
 
 ### Android
 
@@ -62,27 +71,42 @@ Open `android-compose/` in Android Studio (SDK 35 required) and run on device or
 
 ### iOS
 
-Open `ios/` in Xcode on macOS and use the `Tday/` source tree for the native SwiftUI app. See [`ios/README.md`](ios/README.md) for the current structure and environment notes.
+Open `ios-swiftUI/` in Xcode on macOS and use the `Tday/` source tree for the native SwiftUI app. See [`ios-swiftUI/README.md`](ios-swiftUI/README.md) for the current structure and environment notes.
 
 ## Project Structure
 
 ```
 Tday/
-├── app/                    # Next.js App Router (pages, API routes, auth)
-├── android-compose/        # Native Android client (Kotlin + Compose)
-├── ios/                    # Native iOS client (SwiftUI + SwiftData)
-├── components/             # Shared React components (UI, todo, sidebar, admin)
-├── features/               # Feature modules (calendar, list, notes, todos, user)
-├── hooks/                  # Shared React hooks
-├── i18n/                   # next-intl routing and request config
-├── lib/                    # Server utilities (Prisma, security, dates, NLP)
-├── messages/               # Locale JSON files (11 languages)
-├── prisma/                 # Schema and migrations
-├── providers/              # React context providers
-├── public/                 # Static assets
-├── scripts/                # Docker entrypoint
-├── tests/                  # Jest test suites
-└── docs/                   # Architecture, coding standards, guides
+├── tday-web/                  # Vite SPA (React + TypeScript + Tailwind)
+│   ├── src/
+│   │   ├── components/        # Shared React components
+│   │   ├── features/          # Feature modules (calendar, list, notes, todos)
+│   │   ├── hooks/             # Shared React hooks
+│   │   ├── lib/               # Client utilities (security, dates, API client)
+│   │   ├── pages/             # Route pages
+│   │   └── providers/         # React context providers
+│   ├── messages/              # Bundled default locale fallback (`en.json`)
+│   ├── public/                # Static assets and lazy-loaded locale bundles
+│   └── tests/                 # Vitest guardrail and unit suites
+├── tday-backend/              # Ktor backend (Kotlin)
+│   └── src/main/kotlin/
+│       └── com/ohmz/tday/
+│           ├── config/        # App configuration
+│           ├── db/            # Exposed tables and migrations
+│           ├── di/            # Koin dependency injection
+│           ├── domain/        # Domain types and validation
+│           ├── models/        # Request/response DTOs
+│           ├── plugins/       # Ktor plugins (routing, auth, headers)
+│           ├── routes/        # API route handlers
+│           ├── security/      # Auth, encryption, throttling
+│           └── services/      # Business logic
+├── shared/                    # Shared Kotlin Multiplatform code
+├── android-compose/           # Native Android client (Kotlin + Compose)
+├── ios-swiftUI/               # Native iOS client (SwiftUI)
+├── scripts/                   # Git hooks
+├── docs/                      # Architecture, coding standards, guides
+├── Dockerfile.backend         # Multi-stage Docker build (Vite + Ktor)
+└── docker-compose.yaml        # Full stack orchestration
 ```
 
 ## Documentation
