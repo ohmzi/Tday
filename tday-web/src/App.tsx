@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import QueryProvider from "@/providers/QueryProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function App() {
   return (
@@ -11,7 +12,9 @@ export default function App() {
       <QueryProvider>
         <AuthProvider>
           <TooltipProvider>
-            <RouterProvider router={router} />
+            <ErrorBoundary>
+              <RouterProvider router={router} />
+            </ErrorBoundary>
           </TooltipProvider>
         </AuthProvider>
       </QueryProvider>

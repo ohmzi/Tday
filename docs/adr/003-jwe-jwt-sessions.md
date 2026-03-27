@@ -24,7 +24,7 @@ Options considered:
 - Store user and account data in PostgreSQL via Exposed (no separate session table).
 - Implement **token versioning** (`tokenVersion` on User model) for server-side revocation.
 - Support **credential envelope encryption** for enhanced credential transit security (RSA).
-- Maintain backward-compatible cookie names for smooth migration from NextAuth.
+- Use authjs-compatible cookie names (`__Secure-authjs.session-token` in production, `authjs.session-token` otherwise) for browser and mobile session delivery.
 
 ## Rationale
 
