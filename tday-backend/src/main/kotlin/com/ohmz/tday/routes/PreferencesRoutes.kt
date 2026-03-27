@@ -6,7 +6,7 @@ import com.ohmz.tday.models.request.PreferencesPatchRequest
 import com.ohmz.tday.services.PreferencesService
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
-import org.koin.ktor.ext.inject
+import com.ohmz.tday.di.inject
 
 fun Route.preferencesRoutes() {
     val preferencesService by inject<PreferencesService>()

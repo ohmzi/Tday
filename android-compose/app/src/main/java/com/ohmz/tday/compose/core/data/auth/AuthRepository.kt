@@ -7,6 +7,7 @@ import com.ohmz.tday.compose.core.data.extractApiErrorMessage
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.AuthSession
+import com.ohmz.tday.compose.core.model.CredentialsCallbackRequest
 import com.ohmz.tday.compose.core.model.RegisterOutcome
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.SessionUser
@@ -21,11 +22,14 @@ import java.net.URI
 import java.net.URLDecoder
 import java.security.KeyFactory
 import java.security.SecureRandom
+import java.security.spec.MGF1ParameterSpec
 import java.security.spec.X509EncodedKeySpec
 import java.util.Locale
 import java.util.TimeZone
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.OAEPParameterSpec
+import javax.crypto.spec.PSource
 import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -71,15 +75,15 @@ class AuthRepository @Inject constructor(
 
         val callback = runCatching {
             api.signInWithCredentials(
-                payload = mapOf(
-                    "csrfToken" to csrf,
-                    "encryptedPayload" to credentialEnvelope.encryptedPayload,
-                    "encryptedKey" to credentialEnvelope.encryptedKey,
-                    "encryptedIv" to credentialEnvelope.encryptedIv,
-                    "credentialKeyId" to credentialEnvelope.keyId,
-                    "credentialEnvelopeVersion" to credentialEnvelope.version,
-                    "redirect" to "false",
-                    "callbackUrl" to requestCallbackUrl,
+                payload = CredentialsCallbackRequest(
+                    csrfToken = csrf,
+                    encryptedPayload = credentialEnvelope.encryptedPayload,
+                    encryptedKey = credentialEnvelope.encryptedKey,
+                    encryptedIv = credentialEnvelope.encryptedIv,
+                    credentialKeyId = credentialEnvelope.keyId,
+                    credentialEnvelopeVersion = credentialEnvelope.version,
+                    redirect = "false",
+                    callbackUrl = requestCallbackUrl,
                 ),
             )
         }.getOrElse {
@@ -163,21 +167,7 @@ class AuthRepository @Inject constructor(
 
     suspend fun logout() {
         try {
-            val csrf = runCatching {
-                requireApiBody(api.getCsrfToken(), "Unable to sign out").csrfToken
-            }.getOrNull()
-
-            if (!csrf.isNullOrBlank()) {
-                val callbackUrl = secureConfigStore.buildAbsoluteAppUrl("/login") ?: "/login"
-                runCatching {
-                    api.signOut(
-                        payload = mapOf(
-                            "csrfToken" to csrf,
-                            "callbackUrl" to callbackUrl,
-                        ),
-                    )
-                }
-            }
+            runCatching { api.signOut() }
         } finally {
             cacheManager.clearAllLocalData()
         }
@@ -234,8 +224,17 @@ class AuthRepository @Inject constructor(
         )
         val encryptedPayload = aesCipher.doFinal(credentialPayload)
 
-        val rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
-        rsaCipher.init(Cipher.ENCRYPT_MODE, publicKey)
+        val rsaCipher = Cipher.getInstance("RSA/ECB/OAEPPadding")
+        rsaCipher.init(
+            Cipher.ENCRYPT_MODE,
+            publicKey,
+            OAEPParameterSpec(
+                "SHA-256",
+                "MGF1",
+                MGF1ParameterSpec.SHA256,
+                PSource.PSpecified.DEFAULT,
+            ),
+        )
         val encryptedKey = rsaCipher.doFinal(aesKey)
 
         return CredentialEnvelope(

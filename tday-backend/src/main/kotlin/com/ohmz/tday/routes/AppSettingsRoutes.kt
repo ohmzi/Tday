@@ -3,7 +3,7 @@ package com.ohmz.tday.routes
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.services.AppConfigService
 import io.ktor.server.routing.*
-import org.koin.ktor.ext.inject
+import com.ohmz.tday.di.inject
 
 fun Route.appSettingsRoutes() {
     val appConfigService by inject<AppConfigService>()

@@ -4,10 +4,15 @@ import android.net.Uri
 import com.ohmz.tday.compose.R
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -80,6 +85,16 @@ import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.theme.TdayTheme
+import kotlin.math.roundToInt
+
+private const val NAV_ENTER_DURATION_MS = 440
+private const val NAV_EXIT_DURATION_MS = 320
+private const val NAV_FADE_IN_DURATION_MS = 360
+private const val NAV_FADE_OUT_DURATION_MS = 240
+private const val NAV_SLIDE_FRACTION = 0.18f
+private const val SETTINGS_ENTER_DURATION_MS = 380
+private const val SETTINGS_EXIT_DURATION_MS = 260
+private const val SETTINGS_VERTICAL_FRACTION = 0.22f
 
 @Composable
 fun TdayApp() {
@@ -166,19 +181,63 @@ fun TdayApp() {
                 navController = navController,
                 startDestination = AppRoute.Splash.route,
                 enterTransition = {
-                    fadeIn(tween(300)) + slideIntoContainer(
+                    fadeIn(
+                        animationSpec = tween(
+                            durationMillis = NAV_FADE_IN_DURATION_MS,
+                            easing = LinearOutSlowInEasing,
+                        ),
+                    ) + slideIntoContainer(
                         AnimatedContentTransitionScope.SlideDirection.Start,
-                        tween(300),
+                        animationSpec = tween(
+                            durationMillis = NAV_ENTER_DURATION_MS,
+                            easing = LinearOutSlowInEasing,
+                        ),
+                        initialOffset = ::navigationSlideOffset,
                     )
                 },
-                exitTransition = { fadeOut(tween(200)) },
+                exitTransition = {
+                    fadeOut(
+                        animationSpec = tween(
+                            durationMillis = NAV_FADE_OUT_DURATION_MS,
+                            easing = FastOutLinearInEasing,
+                        ),
+                    ) + slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> -navigationSlideOffset(fullWidth) },
+                        animationSpec = tween(
+                            durationMillis = NAV_EXIT_DURATION_MS,
+                            easing = FastOutLinearInEasing,
+                        ),
+                    )
+                },
                 popEnterTransition = {
-                    fadeIn(tween(300)) + slideIntoContainer(
+                    fadeIn(
+                        animationSpec = tween(
+                            durationMillis = NAV_FADE_IN_DURATION_MS,
+                            easing = LinearOutSlowInEasing,
+                        ),
+                    ) + slideIntoContainer(
                         AnimatedContentTransitionScope.SlideDirection.End,
-                        tween(300),
+                        animationSpec = tween(
+                            durationMillis = NAV_ENTER_DURATION_MS,
+                            easing = LinearOutSlowInEasing,
+                        ),
+                        initialOffset = ::navigationSlideOffset,
                     )
                 },
-                popExitTransition = { fadeOut(tween(200)) },
+                popExitTransition = {
+                    fadeOut(
+                        animationSpec = tween(
+                            durationMillis = NAV_FADE_OUT_DURATION_MS,
+                            easing = FastOutLinearInEasing,
+                        ),
+                    ) + slideOutHorizontally(
+                        targetOffsetX = ::navigationSlideOffset,
+                        animationSpec = tween(
+                            durationMillis = NAV_EXIT_DURATION_MS,
+                            easing = FastOutLinearInEasing,
+                        ),
+                    )
+                },
             ) {
                 composable(
                     route = AppRoute.Splash.route,
@@ -455,12 +514,16 @@ fun TdayApp() {
                     route = AppRoute.Settings.route,
                     deepLinks = listOf(navDeepLink { uriPattern = "tday://settings" }),
                     enterTransition = {
-                        slideInVertically(tween(300)) { it } + fadeIn(tween(300))
+                        settingsEnterTransition()
                     },
-                    exitTransition = { fadeOut(tween(200)) },
-                    popEnterTransition = { fadeIn(tween(300)) },
+                    exitTransition = {
+                        settingsExitTransition()
+                    },
+                    popEnterTransition = {
+                        settingsEnterTransition()
+                    },
                     popExitTransition = {
-                        slideOutVertically(tween(200)) { it } + fadeOut(tween(200))
+                        settingsExitTransition()
                     },
                 ) {
                     OnRouteResume {
@@ -583,6 +646,40 @@ private data class AppToastMessage(
     val id: Long,
     val message: String,
 )
+
+private fun navigationSlideOffset(fullDistance: Int): Int =
+    (fullDistance * NAV_SLIDE_FRACTION).roundToInt()
+
+private fun settingsVerticalOffset(fullHeight: Int): Int =
+    (fullHeight * SETTINGS_VERTICAL_FRACTION).roundToInt()
+
+private fun settingsEnterTransition(): EnterTransition =
+    slideInVertically(
+        animationSpec = tween(
+            durationMillis = SETTINGS_ENTER_DURATION_MS,
+            easing = LinearOutSlowInEasing,
+        ),
+        initialOffsetY = ::settingsVerticalOffset,
+    ) + fadeIn(
+        animationSpec = tween(
+            durationMillis = NAV_FADE_IN_DURATION_MS,
+            easing = LinearOutSlowInEasing,
+        ),
+    )
+
+private fun settingsExitTransition(): ExitTransition =
+    slideOutVertically(
+        animationSpec = tween(
+            durationMillis = SETTINGS_EXIT_DURATION_MS,
+            easing = FastOutLinearInEasing,
+        ),
+        targetOffsetY = ::settingsVerticalOffset,
+    ) + fadeOut(
+        animationSpec = tween(
+            durationMillis = NAV_FADE_OUT_DURATION_MS,
+            easing = FastOutLinearInEasing,
+        ),
+    )
 
 @Composable
 private fun TdayBottomToastHost(
