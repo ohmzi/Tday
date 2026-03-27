@@ -223,7 +223,7 @@ Every PR must satisfy these before merge:
 - [ ] No secrets or credentials in the diff.
 - [ ] No AI tool attribution in commits or PR description — no `Co-authored-by`, `Made-with`, or any trailer/text referencing Cursor, Codex, Copilot, ChatGPT, Claude, etc.
 - [ ] Backward compatibility maintained (or migration provided).
-- [ ] Flyway migration reviewed if schema changed.
+- [ ] Flyway migration SQL and corresponding Exposed table changes reviewed if schema changed.
 - [ ] Error handling and logging added where appropriate.
 - [ ] API changes documented in the PR description.
 - [ ] Android changes tested on emulator or device.
