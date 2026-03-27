@@ -8,7 +8,7 @@ object Notes : Table("Note") {
     val name = text("name")
     val content = text("content").nullable()
     val createdAt = datetime("createdAt")
-    val userID = varchar("userID", 30).references(Users.id)
+    val userID = varchar("userID", 30).references(Users.id).index()
 
     override val primaryKey = PrimaryKey(id)
 }

@@ -13,8 +13,11 @@ import java.security.interfaces.RSAPrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.RSAPublicKeySpec
 import java.util.Base64
+import java.security.spec.MGF1ParameterSpec
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.OAEPParameterSpec
+import javax.crypto.spec.PSource
 import javax.crypto.spec.SecretKeySpec
 
 @Serializable
@@ -82,8 +85,9 @@ class CredentialEnvelopeImpl(private val config: AppConfig) : CredentialEnvelope
         if (encryptedIv.size != aesGcmIvBytes) throw IllegalArgumentException("invalid_envelope_iv")
         if (encryptedPayload.size <= 16) throw IllegalArgumentException("invalid_envelope_payload")
 
-        val rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
-        rsaCipher.init(Cipher.DECRYPT_MODE, km.privateKey)
+        val rsaCipher = Cipher.getInstance("RSA/ECB/OAEPPadding")
+        val oaepParams = OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT)
+        rsaCipher.init(Cipher.DECRYPT_MODE, km.privateKey, oaepParams)
         val symmetricKey = rsaCipher.doFinal(encryptedKey)
 
         if (symmetricKey.size != aesKeyBytes) throw IllegalArgumentException("invalid_envelope_key")

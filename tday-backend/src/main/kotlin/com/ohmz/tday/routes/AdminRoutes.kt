@@ -19,7 +19,7 @@ import io.ktor.server.routing.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.koin.ktor.ext.inject
+import com.ohmz.tday.di.inject
 import java.time.LocalDateTime
 
 fun Route.adminRoutes() {

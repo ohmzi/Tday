@@ -6,7 +6,7 @@ import com.ohmz.tday.models.request.*
 import com.ohmz.tday.services.NoteService
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
-import org.koin.ktor.ext.inject
+import com.ohmz.tday.di.inject
 
 fun Route.noteRoutes() {
     val noteService by inject<NoteService>()

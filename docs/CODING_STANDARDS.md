@@ -1,6 +1,6 @@
 # Coding Standards
 
-Detailed code quality rules for both the TypeScript (web) and Kotlin (Android) codebases.
+Detailed code quality rules for the TypeScript (web), Kotlin (backend), and Kotlin (Android) codebases.
 
 ## Table of Contents
 
@@ -55,10 +55,11 @@ If a piece of logic appears (or could appear) in more than one place, extract it
 
 | Codebase | Location | Purpose |
 |----------|----------|---------|
-| **Web (shared)** | `lib/` | Pure functions, server utilities, helpers (e.g., `lib/resolveTimeZone.ts`, `lib/formatDayAbbr.ts`, `lib/listColorMap.ts`) |
-| **Web (shared hooks)** | `hooks/` | React hooks used across multiple features (e.g., `hooks/useWindowSize.ts`, `hooks/use-toast.ts`) |
-| **Web (feature-scoped)** | `features/<name>/lib/` or `components/<name>/lib/` | Utilities tightly coupled to one feature (e.g., `components/todo/lib/rruleDateToLocal.ts`) |
-| **Web (feature-scoped hooks)** | `features/<name>/hooks/` or `components/<name>/hooks/` | Hooks tightly coupled to one feature (e.g., `components/todo/hooks/useNextRepeatDate.ts`) |
+| **Web (shared)** | `src/lib/` | Pure functions, server utilities, helpers (e.g., `lib/api-client.ts`, `lib/security/`) |
+| **Web (shared hooks)** | `src/hooks/` | React hooks used across multiple features (e.g., `hooks/useWindowSize.ts`) |
+| **Web (feature-scoped)** | `src/features/<name>/lib/` or `src/components/<name>/lib/` | Utilities tightly coupled to one feature |
+| **Web (feature-scoped hooks)** | `src/features/<name>/hooks/` or `src/components/<name>/hooks/` | Hooks tightly coupled to one feature |
+| **Backend (shared)** | `services/`, `security/`, `domain/` | Business logic, security utilities, domain types |
 | **Android (shared)** | `core/` subpackages | Repository helpers, network utilities, model mapping |
 | **Android (UI shared)** | `ui/component/` | Reusable Composables (e.g., `TdayPullRefresh`, `CreateTaskBottomSheet`) |
 | **Android (feature-scoped)** | Within the feature package | Helpers used only by that feature |
@@ -101,9 +102,9 @@ val display = todo.due.formatDisplay(userTimeZone)
 
 - **S — Single Responsibility**: A module, class, or function should have one reason to change.
 - **O — Open/Closed**: Extend behavior through composition or new types, not by modifying existing code. Use sealed classes/interfaces for domain variants.
-- **L — Liskov Substitution**: Subclasses must be substitutable for their base types. Applies to error hierarchies (`BaseServerError`, `ServerProbeException`).
+- **L — Liskov Substitution**: Subclasses must be substitutable for their base types. Applies to error hierarchies (`AppError`, `ApiException`).
 - **I — Interface Segregation**: Clients should not depend on methods they don't use. Keep Retrofit interface methods grouped but don't force a single God interface if it grows beyond ~30 methods.
-- **D — Dependency Inversion**: High-level modules depend on abstractions. ViewModels depend on `TdayRepository` (injected via Hilt), not on Retrofit directly.
+- **D — Dependency Inversion**: High-level modules depend on abstractions. ViewModels depend on `TdayRepository` (injected via Hilt), not on Retrofit directly. Backend services are injected via Koin.
 
 ### Null Safety, Type Safety, and Explicit Types
 
@@ -118,19 +119,19 @@ These rules apply across **both** TypeScript and Kotlin. Language-specific detai
 
 ### Single Source of Version
 
-The app version is defined **once** in `package.json` at the project root. Every other system reads from it — never duplicate or hardcode a version elsewhere.
+The app version is defined **once** in `tday-web/package.json`. Every other system reads from it — never duplicate or hardcode a version elsewhere.
 
 | Consumer | How it reads the version |
 |----------|------------------------|
-| **Web (Next.js)** | Bundled automatically by Next.js from `package.json` |
-| **CI/CD (release.yml)** | `node -p "require('./package.json').version"` → Docker tags, Git tags, GitHub release |
-| **Android (Gradle)** | `app/build.gradle.kts` parses `package.json` at build time → `versionName` and `versionCode` |
+| **Web (Vite)** | Bundled automatically by Vite from `package.json` |
+| **CI/CD (release.yml)** | `node -p "require('./tday-web/package.json').version"` → Docker tags, Git tags, GitHub release |
+| **Android (Gradle)** | `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and `versionCode` |
 | **Android runtime** | `BuildConfig.VERSION_NAME` (sent in `X-Tday-App-Version` header) |
 
 **Rules:**
 
-- To bump the version, edit **only** `package.json`. All other systems derive from it.
-- Use `npm version patch|minor|major` to bump — it updates `package.json` and creates a commit+tag.
+- To bump the version, edit **only** `tday-web/package.json`. All other systems derive from it.
+- Use `npm version patch|minor|major` in the `tday-web/` directory to bump.
 - Never set `versionName` or `versionCode` directly in `build.gradle.kts`.
 - `versionCode` is computed as `major * 10000 + minor * 100 + patch` (e.g., `1.5.0` → `10500`).
 
@@ -138,7 +139,7 @@ The app version is defined **once** in `package.json` at the project root. Every
 
 Colors and spacing/sizing values must come from the project's centralized design tokens — never as inline hex codes, raw pixel/dp literals, or arbitrary magic numbers.
 
-- **Web**: Use Tailwind utility classes that map to CSS custom properties defined in `app/globals.css` (e.g., `bg-card`, `text-foreground`, `border-border`). Never write inline `style={{ color: "#2A6DC2" }}` or raw `hsl(...)` values. If a new semantic color is needed, add a CSS variable in `globals.css` under `:root` and `.dark`, map it in the `@theme inline` block, then use the Tailwind class.
+- **Web**: Use Tailwind utility classes that map to CSS custom properties defined in `src/globals.css` (e.g., `bg-card`, `text-foreground`, `border-border`). Never write inline `style={{ color: "#2A6DC2" }}` or raw `hsl(...)` values. If a new semantic color is needed, add a CSS variable in `globals.css` under `:root` and `.dark`, map it in the `@theme inline` block, then use the Tailwind class.
 - **Android**: Use `MaterialTheme.colorScheme.*` for all colors in Composables. If a color is not in the Material scheme, add it as a named constant in `ui/theme/Color.kt` — never write `Color(0xFF...)` directly in a screen or component file.
 - **Android dimensions**: Use the centralized `TdayDimens` object (`ui/theme/Dimens.kt`) for all spacing, sizing, corner radius, and elevation values. Never write raw `.dp` literals like `padding(18.dp)` directly in screens — use `TdayDimens.SpacingMd` or similar.
 
@@ -170,7 +171,7 @@ Card(
 
 All user-facing strings must live in a single centralized source — never inline in component code, screen layouts, or route handlers. This applies to labels, button text, error messages shown to users, placeholders, tooltips, and any other text the user sees.
 
-- **Web**: Use `next-intl` translation keys backed by `messages/*.json` files. Components access strings via `useTranslations()`.
+- **Web**: Use **i18next** translation keys backed by `tday-web/public/locales/<lng>/translation.json`, with `tday-web/messages/en.json` kept as the bundled English fallback. Components access strings via `useTranslation()`.
 - **Android**: Use Android string resources (`res/values/strings.xml`). Screens access strings via `stringResource(R.string.*)`.
 - Internal log messages and developer-facing error strings (not shown to users) are exempt.
 - When adding a new screen or feature, add its strings to the centralized source **first**, then reference the keys.
@@ -190,21 +191,21 @@ All user-facing strings must live in a single centralized source — never inlin
 
 | Element | Convention | Example |
 |---------|-----------|---------|
-| Files (modules) | `kebab-case` | `get-list-todos.ts`, `api-client.ts` |
+| Files (modules) | `kebab-case` | `api-client.ts` |
 | Files (components) | `PascalCase` | `TodoCard.tsx`, `Sidebar.tsx` |
 | Interfaces | `PascalCase` | `TodoItemType`, `ListItemMetaType` |
 | Types (unions/mapped) | `PascalCase` | `Priority`, `ApprovalStatus` |
-| Functions | `camelCase` | `errorHandler`, `fetchTodos` |
-| Constants | `UPPER_SNAKE_CASE` | `PUBLIC_API_PREFIXES`, `APPROVED_STATUS` |
+| Functions | `camelCase` | `fetchTodos`, `formatDayAbbr` |
+| Constants | `UPPER_SNAKE_CASE` | `PUBLIC_API_PREFIXES`, `DEFAULT_LOCALE` |
 | React hooks | `camelCase` with `use` prefix | `useToast`, `useWindowSize` |
-| Environment variables | `UPPER_SNAKE_CASE` | `AUTH_SECRET`, `DATABASE_URL` |
+| Environment variables | `UPPER_SNAKE_CASE` | `VITE_API_URL` |
 
 ### Type Safety and Null Safety
 
 - **Strict mode is on.** Do not add `@ts-ignore` or `as any` without a comment explaining why.
 - Use `interface` for object shapes. Use `type` for unions, intersections, and mapped types.
 - Prefer `unknown` over `any` in catch blocks: `catch (error: unknown)`.
-- Validate external input (request bodies, query params) with **Zod schemas** before use.
+- Validate external input with **Zod schemas** where applicable.
 - **No non-null assertions (`!`).** Never use the `!` postfix operator to bypass null checks. Handle nullability explicitly with conditional checks, nullish coalescing (`??`), or optional chaining (`?.`).
 - **Explicit parameter types.** Always declare parameter types on functions, callbacks, and method signatures. Do not rely on implicit `any` inference.
 - **Explicit return types on exported functions.** Public/exported functions must have an explicit return type annotation.
@@ -230,80 +231,43 @@ const title = todo!.title;
 // Good: validate then use
 const schema = z.object({ aiSummaryEnabled: z.boolean() });
 const parsed = schema.safeParse(body);
-if (!parsed.success) throw new BadRequestError("Invalid input");
+if (!parsed.success) throw new Error("Invalid input");
 const { aiSummaryEnabled } = parsed.data;
 
 // Bad: cast to any, skip validation
-const body = await req.json() as any;
+const body = await res.json() as any;
 const enabled = body.aiSummaryEnabled;
-```
-
-```typescript
-// Good: explicit return type, safe null handling
-export async function getUserName(session: Session | null): Promise<string> {
-  if (!session?.user?.name) {
-    return "Anonymous";
-  }
-  return session.user.name;
-}
-
-// Bad: no return type, force-asserted nullable
-export async function getUserName(session) {
-  return session!.user!.name;
-}
 ```
 
 ### Imports
 
 - Use `@/` path alias for all imports. Never use relative paths that climb more than one directory (`../../`).
-- Order: framework (`next`, `react`) → third-party → `@/lib` → `@/components` → `@/features` → relative.
-- Use `type` imports when importing only types: `import type { Adapter } from "@auth/core/adapters"`.
+- Order: framework (`react`, `react-router`) → third-party → `@/lib` → `@/components` → `@/features` → relative.
+- Use `type` imports when importing only types: `import type { TodoItemType } from "@/types"`.
 
 ### Error Handling
 
-- API route handlers: wrap body in `try/catch`, delegate to `errorHandler(error)`.
-- Throw specific `BaseServerError` subclasses with meaningful messages.
+- Handle errors in React Query's `onError` callbacks or error boundaries.
+- Use `try/catch` in async utility functions.
 - Never swallow errors silently. At minimum, log and rethrow or return an error response.
-- Client-side: handle errors in React Query's `onError` callbacks or error boundaries.
 
 ```typescript
 // Good: specific error with context
-throw new NotFoundError(`Todo ${id} not found`);
+console.error(`Failed to fetch todo ${id}:`, error);
 
-// Bad: generic throw
-throw new Error("not found");
-```
-
-### API Route Structure
-
-Every `route.ts` file should follow this pattern:
-
-```typescript
-import { NextResponse } from "next/server";
-import { auth } from "@/app/auth";
-import { errorHandler } from "@/lib/errorHandler";
-
-export async function GET() {
-  try {
-    const session = await auth();
-    // ... business logic
-    return NextResponse.json(data, { status: 200 });
-  } catch (error) {
-    return errorHandler(error);
-  }
-}
+// Bad: silent swallow
+try { await fetchTodo(id); } catch {}
 ```
 
 ### React Components
 
 - One component per file (exception: small helper components tightly coupled to the main export).
 - Props interfaces live in the same file as the component.
-- Use `"use client"` directive only when the component needs client-side interactivity.
 - Avoid `useEffect` for data fetching — use React Query instead.
 
 ### Colors and Spacing (Web)
 
-All visual tokens are defined as CSS custom properties in `app/globals.css` and exposed as Tailwind utility classes via the `@theme inline` block.
+All visual tokens are defined as CSS custom properties in `src/globals.css` and exposed as Tailwind utility classes via the `@theme inline` block.
 
 - **Colors**: Use Tailwind semantic classes (`bg-card`, `text-foreground`, `border-border`, `text-muted-foreground`). Never use inline hex, rgb, or raw `hsl(...)` in component code. If a shadow or overlay needs an opacity variant, use the CSS variable form: `hsl(var(--shadow)/0.08)`.
 - **New colors**: Add the HSL variable in `globals.css` under both `:root` and `.dark`, map it in `@theme inline`, then use the generated Tailwind class.
@@ -320,28 +284,19 @@ All visual tokens are defined as CSS custom properties in `app/globals.css` and 
 
 ### String Management (Web)
 
-All user-facing strings live in `messages/*.json` and are accessed via `next-intl`. Never hardcode display text in components or pages.
+All user-facing strings live in the i18n locale bundles (`tday-web/public/locales/<lng>/translation.json`, with bundled English fallback in `tday-web/messages/en.json`) and are accessed via **i18next**. Never hardcode display text in components or pages.
 
-- Use `useTranslations(namespace)` in client components to get a `t` function.
-- Use `getTranslations(namespace)` in server components and API route error messages shown to users.
+- Use `useTranslation(namespace)` in components to get a `t` function.
 - Organize keys by feature namespace (e.g., `"landingPage"`, `"todoList"`, `"settings"`).
-- When adding a new feature, add keys to **all** 11 locale files (`en.json` is the source of truth; other locales can fall back to English until translated).
+- When adding a new feature, add keys to the bundled English source first and keep all 11 locale bundles in parity (`tests/guardrails/i18n-parity.test.ts` enforces matching keys).
 
 ```typescript
 // Good: string from translation file
-const t = useTranslations("todoList");
+const { t } = useTranslation("todoList");
 return <h1>{t("title")}</h1>;
 
 // Bad: hardcoded string in component
 return <h1>My Tasks</h1>;
-```
-
-```typescript
-// Good: error message for user via translation
-throw new BadRequestError(t("errors.invalidInput"));
-
-// Acceptable: internal log message (not shown to user)
-console.error("Failed to parse rrule", error);
 ```
 
 ### Logging
@@ -349,23 +304,24 @@ console.error("Failed to parse rrule", error);
 - Use `console.error` for errors that need investigation.
 - Use `console.warn` for non-fatal issues (degraded behavior, fallback paths).
 - Never log secrets, tokens, passwords, or full request/response bodies.
-- Use the `logSecurityEvent` utility for auth and security events.
 
 ---
 
 ## Kotlin Standards
+
+These rules apply to both the **Ktor backend** and the **Android** codebase.
 
 ### Naming
 
 | Element | Convention | Example |
 |---------|-----------|---------|
 | Packages | `lowercase.dot.separated` | `com.ohmz.tday.compose.core.data` |
-| Classes / Objects | `PascalCase` | `TdayRepository`, `AppViewModel` |
-| Files | Match primary type | `AppViewModel.kt`, `DomainModels.kt` |
+| Classes / Objects | `PascalCase` | `TdayRepository`, `TodoService` |
+| Files | Match primary type | `AppViewModel.kt`, `TodoService.kt` |
 | Functions / Properties | `camelCase` | `bootstrap()`, `saveServerUrl` |
 | Private mutable state | Leading `_` | `_uiState` (public: `uiState`) |
 | Constants | `UPPER_SNAKE_CASE` in `companion object` | `RESYNC_INTERVAL_MS` |
-| Sealed variants | `PascalCase` | `AuthResult.Success`, `AuthResult.PendingApproval` |
+| Sealed variants | `PascalCase` | `AuthResult.Success`, `AppError.NotFound` |
 
 ### Null Safety and Type Safety
 
@@ -413,7 +369,15 @@ fun formatDueDate(instant, timeZone) = ...
 todos.filter { it.priority == Priority.High }  // avoid 'it' when the lambda is non-trivial
 ```
 
-### State Management
+### Backend-Specific (Ktor)
+
+- **DI**: Use **Koin** modules (`configModule`, `securityModule`, `serviceModule`) in `di/AppModule.kt`. Services are `single { }` scoped.
+- **Error handling**: Services return `Either<AppError, T>` (Arrow). Routes fold the result into HTTP responses.
+- **Validation**: Use **Konform** validators and shared model validation from `domain/Validations.kt`.
+- **Database**: All database access goes through **Exposed** `transaction { }` blocks. Table definitions in `db/tables/`.
+- **Serialization**: `kotlinx.serialization` for all JSON. No Gson, no Jackson.
+
+### State Management (Android)
 
 - Use `StateFlow` for UI state. Never use `LiveData` in this project.
 - Immutable state updates only: `_uiState.update { it.copy(loading = true) }`.
@@ -449,7 +413,7 @@ viewModelScope.launch {
 }
 ```
 
-### Dependency Injection
+### Dependency Injection (Android)
 
 - All ViewModels use `@HiltViewModel` with `@Inject constructor`.
 - Singletons use `@Singleton` scope.
@@ -471,10 +435,11 @@ sealed interface AuthResult {
 
 ### Data Classes and DTOs
 
-- API DTOs (`@Serializable`) live in `core/model/ApiModels.kt`.
-- UI-facing domain models live in `core/model/DomainModels.kt`.
-- Never expose DTOs directly to the UI layer — map them in the repository.
-- Use `kotlinx.serialization` for all JSON serialization (no Gson, no Moshi).
+- Shared DTOs (`@Serializable`) live in the `shared` KMP module.
+- Backend request/response models are typealiases to shared models or small wrappers in `models/`.
+- Android API DTOs live in `core/model/ApiModels.kt`; UI-facing domain models in `core/model/DomainModels.kt`.
+- Never expose DTOs directly to the Android UI layer — map them in the repository.
+- Use `kotlinx.serialization` for all JSON serialization (no Gson, no Moshi, no Jackson).
 
 ### Colors and Dimensions (Android)
 
@@ -580,8 +545,10 @@ Within a ViewModel file:
 
 ### Folder and Module Structure
 
-- **Web**: group by technical layer at root (`lib/`, `components/`, `providers/`) and by feature domain in `features/`.
+- **Web**: group by technical layer at root (`src/lib/`, `src/components/`, `src/providers/`) and by feature domain in `src/features/`.
+- **Backend**: group by layer (`routes/`, `services/`, `db/`, `security/`, `domain/`, `config/`, `plugins/`).
 - **Android**: group by feature (`feature/home/`, `feature/todos/`), shared code in `core/` and `ui/`.
+- **Shared KMP**: DTOs, enums, and validators in `shared/` consumed by all three platforms.
 - A new feature should create its own subdirectory, not grow an existing file.
 
 ### Error Messages
@@ -596,37 +563,38 @@ Within a ViewModel file:
 - Do not manually specify versions you haven't verified. Use latest stable.
 - Review changelogs before major version bumps.
 - Keep Android dependencies version-locked in `build.gradle.kts`.
+- Backend dependencies use Ktor's BOM for server artifacts; pin explicit versions for other libraries.
 
 ### Git Hygiene
 
-- Do not commit `node_modules/`, `.next/`, `app/build/`, `.gradle/`, `.env`, or IDE-specific files.
+- Do not commit `node_modules/`, `tday-web/dist/`, `**/build/`, `.gradle/`, `.env`, or IDE-specific files.
 - Keep `.gitignore` updated when adding new build artifacts or tool caches.
-- Do not commit generated files (Prisma client, build outputs).
+- Do not commit generated files (build outputs, coverage reports).
 
 ### Examples: Good vs Bad
 
-**Error handling (TypeScript):**
+**Error handling (Backend — Ktor):**
 
-```typescript
-// Good
-export async function GET() {
-  try {
-    await requireAdmin();
-    const data = await prisma.appConfig.findFirst();
-    return NextResponse.json(data, { status: 200 });
-  } catch (error) {
-    return errorHandler(error);
-  }
+```kotlin
+// Good: typed error with Either
+fun getTodo(userId: String, todoId: String): Either<AppError, Todo> {
+    val todo = transaction {
+        Todos.selectAll().where {
+            (Todos.id eq todoId) and (Todos.userID eq userId)
+        }.firstOrNull()
+    } ?: return AppError.NotFound("Todo $todoId not found").left()
+    return todo.toResponse().right()
 }
 
 // Bad: no error handling, leaks internals
-export async function GET() {
-  const data = await prisma.appConfig.findFirst();
-  return NextResponse.json(data);
+fun getTodo(userId: String, todoId: String): Todo {
+    return transaction {
+        Todos.selectAll().where { Todos.id eq todoId }.first().toResponse()
+    }
 }
 ```
 
-**State updates (Kotlin):**
+**State updates (Kotlin — Android):**
 
 ```kotlin
 // Good: copy-based immutable update
@@ -646,12 +614,12 @@ _uiState.update { it.copy(loading = false) }
 
 ```
 // Good
-getListTodos.ts         → module (kebab-case)
+api-client.ts           → module (kebab-case)
 TodoListViewModel.kt    → class (PascalCase)
 AUTH_SESSION_MAX_AGE_SEC → constant (UPPER_SNAKE)
 
 // Bad
-GetListTodos.ts          → module should be kebab-case
+ApiClient.ts             → module should be kebab-case
 todolistviewmodel.kt     → class should be PascalCase
 authSessionMaxAge        → constant should be UPPER_SNAKE
 ```

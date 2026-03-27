@@ -4,7 +4,7 @@ import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.javatime.datetime
 
 object Accounts : Table("Account") {
-    val userId = varchar("userId", 30).references(Users.id)
+    val userId = varchar("userId", 30).references(Users.id).index()
     val type = varchar("type", 64)
     val provider = varchar("provider", 64)
     val providerAccountId = varchar("providerAccountId", 255)
