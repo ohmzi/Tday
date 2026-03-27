@@ -144,6 +144,8 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 
 | Variable | Purpose |
 |----------|---------|
+| `TDAY_ENV` | Runtime mode (`production` enables production-only behavior such as HSTS and secure session cookies; `NODE_ENV` is still accepted as a fallback) |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed cross-origin web origins (same-origin requests work without it) |
 | `AUTH_CREDENTIALS_PRIVATE_KEY` | RSA key for credential envelope encryption |
 | `AUTH_CAPTCHA_SECRET` | Cloudflare Turnstile secret for adaptive CAPTCHA |
 | `DATA_ENCRYPTION_KEY` / `DATA_ENCRYPTION_KEY_ID` | Field-level encryption at rest |
@@ -167,12 +169,18 @@ The Ktor backend's `AppConfig` reads file contents into the corresponding variab
 
 T'Day uses **Flyway** for database migrations. Flyway runs automatically on Ktor backend startup (`DatabaseConfig.kt`), applying any pending migrations from `tday-backend/src/main/resources/db/migration/`.
 
-Migration files follow the naming convention: `V<number>__<description>.sql` (e.g., `V2__add_notes_table.sql`).
+Migration files follow the naming convention: `V<number>__<description>.sql`. The current baseline sequence is:
+
+- `V1__baseline.sql`: legacy placeholder kept for compatibility.
+- `V2__full_schema.sql`: full schema snapshot generated from the live PostgreSQL schema for clean installs.
+- `V3__add_missing_indexes.sql`: first incremental migration after the schema snapshot.
+
+Existing databases with pre-Flyway schema but no migration history are baselined at version `2`, which skips the placeholder and full-schema migrations and applies only new incremental migrations.
 
 ### Creating Migrations
 
-1. Create a new SQL file in `tday-backend/src/main/resources/db/migration/` following the naming convention.
-2. Write the DDL/DML statements.
+1. Create the next SQL file in `tday-backend/src/main/resources/db/migration/` following the naming convention (`V4__...`, `V5__...`, and so on).
+2. Write the DDL/DML statements, or generate/review SQL from a local database when a full snapshot is explicitly needed.
 3. Update the corresponding Exposed `Table` objects in `tday-backend/src/main/kotlin/com/ohmz/tday/db/tables/` to match.
 4. Restart the backend — Flyway applies the migration automatically.
 5. Commit both the migration SQL and the Exposed table changes.
@@ -180,6 +188,7 @@ Migration files follow the naming convention: `V<number>__<description>.sql` (e.
 ### Migration Safety
 
 - Always review generated SQL before committing.
+- Do not regenerate `V2__full_schema.sql` for routine schema changes. Add a new incremental migration instead.
 - Backward-compatible changes are preferred (add columns with defaults, don't drop columns immediately).
 - For destructive changes, use a multi-step migration:
   1. Add new column / table.
@@ -245,5 +254,6 @@ docker compose pull && docker compose up -d
 ### Post-Update
 
 - Flyway migrations run automatically on container start.
+- Existing databases without Flyway history are baselined at version `2`; empty databases replay the full schema snapshot and then incremental migrations.
 - Verify the app is healthy by checking `GET /health` returns `{ "status": "ok" }`.
 - Review `docker logs tday_backend` for startup errors.

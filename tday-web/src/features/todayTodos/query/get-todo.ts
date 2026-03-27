@@ -54,7 +54,7 @@ export const useTodo = () => {
     if (isError === true) {
       toast({ description: error.message, variant: "destructive" });
     }
-  }, [isError]);
+  }, [error, isError, toast]);
 
   return { todos, todoLoading };
 };

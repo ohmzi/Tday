@@ -2,6 +2,7 @@ package com.ohmz.tday.routes.auth
 
 import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.models.request.CredentialsCallbackRequest
+import com.ohmz.tday.plugins.sessionCookieName
 import com.ohmz.tday.security.*
 import com.ohmz.tday.services.UserService
 import io.ktor.http.*
@@ -145,8 +146,8 @@ fun Route.credentialsCallbackRoutes() {
             ))
 
             val maxAge = config.sessionMaxAgeSec
-            val secure = System.getenv("NODE_ENV") == "production"
-            val cookieName = if (secure) "__Secure-authjs.session-token" else "authjs.session-token"
+            val secure = config.isProduction
+            val cookieName = sessionCookieName(secure)
 
             call.response.cookies.append(Cookie(
                 name = cookieName,

@@ -4,6 +4,23 @@ type fetchOptions = {
   body?: string | FormData;
 };
 
+type ApiErrorPayload = {
+  code?: string;
+  message?: string;
+  reason?: string;
+};
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 const fetchApi = async (url: string, options: fetchOptions) => {
   const res = await fetch(url, {
     method: options.method,
@@ -18,9 +35,10 @@ const fetchApi = async (url: string, options: fetchOptions) => {
   );
 
   if (!res.ok) {
-    const payload = isJson ? ((await res.json()) as { message?: string }) : null;
-    const message = payload?.message || `a ${res.statusText} error ocurred`;
-    throw new Error(message);
+    const payload = isJson ? ((await res.json()) as ApiErrorPayload) : null;
+    const message =
+      payload?.message || `a ${res.statusText || "request"} error occurred`;
+    throw new ApiError(message, res.status, payload?.code ?? payload?.reason);
   }
 
   if (!isJson || res.status === 204) {
