@@ -35,7 +35,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { toast } from "sonner";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.6.0";
 
 const localeOptions = [
   { code: "en", label: "English" },
