@@ -8,6 +8,7 @@ import com.ohmz.tday.compose.core.model.CreateListRequest
 import com.ohmz.tday.compose.core.model.CreateListResponse
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.CreateTodoResponse
+import com.ohmz.tday.compose.core.model.CredentialsCallbackRequest
 import com.ohmz.tday.compose.core.model.CsrfResponse
 import com.ohmz.tday.compose.core.model.CredentialKeyResponse
 import com.ohmz.tday.compose.core.model.DeleteCompletedTodoRequest
@@ -42,8 +43,6 @@ import kotlinx.serialization.json.JsonObject
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
-import retrofit2.http.FieldMap
-import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.HTTP
@@ -66,22 +65,16 @@ interface TdayApiService {
     @GET("/api/auth/credentials-key")
     suspend fun getCredentialKey(): Response<CredentialKeyResponse>
 
-    @FormUrlEncoded
     @POST("/api/auth/callback/credentials")
     suspend fun signInWithCredentials(
-        @Header("X-Auth-Return-Redirect") returnRedirect: String = "1",
-        @FieldMap payload: Map<String, String>,
+        @Body payload: CredentialsCallbackRequest,
     ): Response<JsonElement>
 
     @GET("/api/auth/session")
     suspend fun getSession(): Response<JsonElement>
 
-    @FormUrlEncoded
-    @POST("/api/auth/signout")
-    suspend fun signOut(
-        @Header("X-Auth-Return-Redirect") returnRedirect: String = "1",
-        @FieldMap payload: Map<String, String>,
-    ): Response<JsonElement>
+    @POST("/api/auth/logout")
+    suspend fun signOut(): Response<MessageResponse>
 
     @POST("/api/auth/register")
     suspend fun register(
