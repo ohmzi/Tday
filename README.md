@@ -71,7 +71,7 @@ Open `android-compose/` in Android Studio (SDK 35 required) and run on device or
 
 ### iOS
 
-Open `ios/` in Xcode on macOS and use the `Tday/` source tree for the native SwiftUI app. See [`ios/README.md`](ios/README.md) for the current structure and environment notes.
+Open `ios-swiftUI/` in Xcode on macOS and use the `Tday/` source tree for the native SwiftUI app. See [`ios-swiftUI/README.md`](ios-swiftUI/README.md) for the current structure and environment notes.
 
 ## Project Structure
 
