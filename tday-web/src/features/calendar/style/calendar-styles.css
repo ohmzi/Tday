@@ -1,0 +1,207 @@
+/* ── Force calendar to fill available viewport ── */
+.rbc-calendar {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+}
+.rbc-month-view {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+.rbc-month-row {
+  flex: 1 1 0%;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.rbc-time-view {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+.rbc-time-content {
+  min-height: auto;
+}
+
+.rbc-selected-cell {
+  background-color: hsla(0, 0%, 0%, 0.45) !important;
+}
+
+/* month view */
+.rbc-off-range-bg {
+  background-color: hsl(var(--background));
+  color: hsl(var(--muted-foreground));
+}
+.rbc-month-row {
+  border-top: 1px solid hsl(var(--calendar-border)) !important;
+}
+.rbc-month-view {
+  border: 1px solid hsl(var(--calendar-border)) !important;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.rbc-day-bg {
+  border-left: 1px solid hsl(var(--calendar-border)) !important;
+}
+.rbc-header {
+  border: none !important;
+  background-color: hsl(var(--calendar-border)) !important;
+  font-weight: 600 !important;
+}
+
+.rbc-today {
+  background-color: hsl(var(--calendar-border)) !important;
+}
+
+/* week / day time-view — override library defaults that clip the 2-line header */
+.rbc-time-view .rbc-header {
+  overflow: visible !important;
+  white-space: normal !important;
+  text-overflow: unset !important;
+  min-height: auto !important;
+  padding: 4px 0 6px !important;
+}
+/* Ensure the header row auto-sizes to fit content */
+.rbc-time-header-content > .rbc-row:first-child {
+  min-height: auto !important;
+}
+.rbc-time-header-content > .rbc-row:first-child .rbc-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rbc-allday-cell {
+  margin: 0px !important;
+  padding: 1px !important;
+}
+
+.rbc-time-view {
+  border: 1px solid hsl(var(--calendar-border)) !important;
+  border-radius: 10px;
+  overflow: hidden;
+}
+/* Allow the time-slot body to scroll while the border-radius clips */
+.rbc-time-view .rbc-time-content {
+  overflow-y: auto;
+}
+.rbc-time-content {
+  border-top: transparent !important;
+}
+.rbc-time-slot {
+  border: 1px solid hsl(var(--calendar-border)) !important;
+}
+
+.rbc-timeslot-group {
+  border: transparent !important;
+}
+.rbc-events-container {
+  border: transparent !important;
+}
+.rbc-time-header-content {
+  border: transparent !important;
+}
+
+/* agenda view */
+
+.rbc-agenda-table {
+  border: transparent !important;
+  border-bottom: 1px solid hsl(var(--calendar-border)) !important;
+}
+.rbc-agenda-time-cell {
+  border: transparent !important;
+}
+.rbc-agenda-event-cell {
+  border: transparent !important;
+}
+
+/* calendar show more */
+.rbc-month-view .rbc-show-more {
+  background-color: transparent;
+  color: hsl(var(--foreground));
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.rbc-addons-dnd-resize-ew-anchor:first-child {
+  top: 0px !important;
+  left: -5px !important;
+}
+/* Move the Right Handle further right */
+.rbc-addons-dnd-resize-ew-anchor:last-child {
+  top: 0px !important;
+  right: -5px !important;
+}
+.rbc-addons-dnd-resize-ew-icon,
+.rbc-addons-dnd-resize-ns-icon {
+  border: 2px solid white !important;
+  height: 100% !important;
+  width: 8px !important;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+.rbc-addons-dnd-resize-ew-icon:active,
+.rbc-addons-dnd-resize-ns-icon:active {
+  background-color: rgb(190, 0, 0) !important;
+}
+/* responsive drag handle size */
+@media (max-width: 400px) {
+  .rbc-addons-dnd-resize-ew-icon,
+  .rbc-addons-dnd-resize-ns-icon {
+    width: 10px !important;
+  }
+}
+
+.rbc-addons-dnd-resize-ns-anchor:first-child .rbc-addons-dnd-resize-ns-icon {
+  border-radius: 0px 0px 4px 4px !important;
+}
+
+.rbc-addons-dnd-resize-ns-anchor:last-child .rbc-addons-dnd-resize-ns-icon {
+  border-radius: 4px 4px 0px 0px !important;
+}
+
+/* ── Day view specific ── */
+.rbc-time-view .rbc-time-gutter {
+  font-size: 0.7rem;
+  color: hsl(var(--muted-foreground));
+}
+@media (min-width: 640px) {
+  .rbc-time-view .rbc-time-gutter {
+    font-size: 0.8rem;
+  }
+}
+
+/* Clickable day cells in month view — show pointer cursor */
+.rbc-month-view .rbc-day-bg {
+  cursor: pointer;
+}
+.rbc-month-view .rbc-day-bg:hover {
+  background-color: hsl(var(--accent) / 0.06);
+}
+
+/* ── Calendar slide transitions ── */
+@keyframes cal-slide-in-left {
+  from {
+    transform: translateX(-6%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes cal-slide-in-right {
+  from {
+    transform: translateX(6%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.cal-slide-from-left {
+  animation: cal-slide-in-left 0.3s ease-out both;
+}
+.cal-slide-from-right {
+  animation: cal-slide-in-right 0.3s ease-out both;
+}
