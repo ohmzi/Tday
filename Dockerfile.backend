@@ -1,0 +1,32 @@
+FROM node:20-alpine AS frontend
+WORKDIR /web
+COPY tday-web/package*.json ./
+RUN npm ci
+COPY tday-web/ .
+RUN npm run build
+
+FROM eclipse-temurin:21-jdk-alpine AS backend
+WORKDIR /project
+COPY gradlew ./
+COPY gradle/wrapper ./gradle/wrapper
+RUN chmod +x gradlew
+COPY docker/settings.gradle.kts settings.gradle.kts
+COPY docker/build.gradle.kts build.gradle.kts
+COPY tday-backend/gradle.properties tday-backend/gradle.properties
+COPY tday-backend/build.gradle.kts tday-backend/build.gradle.kts
+COPY tday-backend/settings.gradle.kts tday-backend/settings.gradle.kts
+COPY docker/shared-build.gradle.kts shared/build.gradle.kts
+RUN ./gradlew :tday-backend:dependencies --no-daemon || true
+COPY shared/src shared/src
+COPY tday-backend/src tday-backend/src
+RUN ./gradlew :tday-backend:buildFatJar --no-daemon -x test
+
+FROM eclipse-temurin:21-jre-alpine
+RUN addgroup -S tday && adduser -S tday -G tday
+WORKDIR /app
+COPY --from=backend /project/tday-backend/build/libs/tday-backend-all.jar app.jar
+COPY --from=frontend /web/dist /app/static
+USER tday
+EXPOSE 8080
+ENV STATIC_FILES_DIR=/app/static
+ENTRYPOINT ["java", "-jar", "app.jar"]
