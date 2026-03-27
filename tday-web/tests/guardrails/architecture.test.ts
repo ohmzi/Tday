@@ -82,31 +82,33 @@ describe("web architecture guardrails", () => {
   });
 
   describe("internationalization completeness", () => {
-    const messagesDir = path.join(ROOT, "messages");
+    const localesDir = path.join(ROOT, "public", "locales");
     const EXPECTED_LOCALES = [
       "en", "zh", "de", "ja", "ar", "ru", "es", "fr", "ms", "it", "pt",
     ];
 
     it.each(EXPECTED_LOCALES)(
-      "locale file %s.json should exist",
+      "locale file %s/translation.json should exist",
       (locale) => {
-        expect(existsSync(path.join(messagesDir, `${locale}.json`))).toBe(true);
+        expect(
+          existsSync(path.join(localesDir, locale, "translation.json")),
+        ).toBe(true);
       },
     );
 
-    it("en.json should be valid JSON", () => {
-      const content = readSource(path.join(messagesDir, "en.json"));
+    it("en/translation.json should be valid JSON", () => {
+      const content = readSource(path.join(localesDir, "en", "translation.json"));
       expect(() => JSON.parse(content)).not.toThrow();
     });
 
-    it("all locale files should have the same top-level keys as en.json", () => {
+    it("all locale files should have the same top-level keys as english", () => {
       const enContent = JSON.parse(
-        readSource(path.join(messagesDir, "en.json")),
+        readSource(path.join(localesDir, "en", "translation.json")),
       );
       const enKeys = Object.keys(enContent).sort();
 
       for (const locale of EXPECTED_LOCALES.filter((l) => l !== "en")) {
-        const localePath = path.join(messagesDir, `${locale}.json`);
+        const localePath = path.join(localesDir, locale, "translation.json");
         if (!existsSync(localePath)) continue;
         const localeContent = JSON.parse(readSource(localePath));
         const localeKeys = Object.keys(localeContent).sort();
