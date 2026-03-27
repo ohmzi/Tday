@@ -1,4 +1,0 @@
--- AlterTable
-ALTER TABLE "UserPreferences" ALTER COLUMN "sortBy" DROP NOT NULL,
-ALTER COLUMN "groupBy" DROP NOT NULL,
-ALTER COLUMN "direction" DROP NOT NULL;

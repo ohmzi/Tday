@@ -9,6 +9,8 @@ plugins {
 
 val projectVersion: String by lazy {
     val packageJsonCandidates = listOf(
+        File(rootProject.projectDir, "tday-web/package.json"),
+        File(rootProject.projectDir.parentFile, "tday-web/package.json"),
         File(rootProject.projectDir, "package.json"),
         File(rootProject.projectDir.parentFile, "package.json"),
     )
