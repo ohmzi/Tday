@@ -23,7 +23,7 @@
 - [ ] No secrets or credentials in the diff
 - [ ] No AI tool attribution in commits or PR description — no `Co-authored-by`, `Made-with`, or any trailer/text referencing Cursor, Codex, Copilot, ChatGPT, Claude, etc.
 - [ ] Backward compatibility maintained (or migration provided)
-- [ ] Prisma migration reviewed (if schema changed)
+- [ ] Flyway migration reviewed (if schema changed)
 - [ ] Error handling and logging added where needed
 - [ ] API changes follow [API Guidelines](docs/API_GUIDELINES.md)
 - [ ] Android changes tested on emulator or device (if applicable)
