@@ -7,6 +7,7 @@ import com.ohmz.tday.compose.core.data.extractApiErrorMessage
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.AuthSession
+import com.ohmz.tday.compose.core.model.CredentialsCallbackRequest
 import com.ohmz.tday.compose.core.model.RegisterOutcome
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.SessionUser
@@ -71,15 +72,15 @@ class AuthRepository @Inject constructor(
 
         val callback = runCatching {
             api.signInWithCredentials(
-                payload = mapOf(
-                    "csrfToken" to csrf,
-                    "encryptedPayload" to credentialEnvelope.encryptedPayload,
-                    "encryptedKey" to credentialEnvelope.encryptedKey,
-                    "encryptedIv" to credentialEnvelope.encryptedIv,
-                    "credentialKeyId" to credentialEnvelope.keyId,
-                    "credentialEnvelopeVersion" to credentialEnvelope.version,
-                    "redirect" to "false",
-                    "callbackUrl" to requestCallbackUrl,
+                payload = CredentialsCallbackRequest(
+                    csrfToken = csrf,
+                    encryptedPayload = credentialEnvelope.encryptedPayload,
+                    encryptedKey = credentialEnvelope.encryptedKey,
+                    encryptedIv = credentialEnvelope.encryptedIv,
+                    credentialKeyId = credentialEnvelope.keyId,
+                    credentialEnvelopeVersion = credentialEnvelope.version,
+                    redirect = "false",
+                    callbackUrl = requestCallbackUrl,
                 ),
             )
         }.getOrElse {
@@ -163,21 +164,7 @@ class AuthRepository @Inject constructor(
 
     suspend fun logout() {
         try {
-            val csrf = runCatching {
-                requireApiBody(api.getCsrfToken(), "Unable to sign out").csrfToken
-            }.getOrNull()
-
-            if (!csrf.isNullOrBlank()) {
-                val callbackUrl = secureConfigStore.buildAbsoluteAppUrl("/login") ?: "/login"
-                runCatching {
-                    api.signOut(
-                        payload = mapOf(
-                            "csrfToken" to csrf,
-                            "callbackUrl" to callbackUrl,
-                        ),
-                    )
-                }
-            }
+            runCatching { api.signOut() }
         } finally {
             cacheManager.clearAllLocalData()
         }

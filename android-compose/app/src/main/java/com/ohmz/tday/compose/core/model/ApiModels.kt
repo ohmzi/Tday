@@ -81,6 +81,24 @@ data class CredentialKeyResponse(
 )
 
 @Serializable
+data class CredentialsCallbackRequest(
+    val email: String? = null,
+    val password: String? = null,
+    val encryptedPayload: String? = null,
+    val encryptedKey: String? = null,
+    val encryptedIv: String? = null,
+    val credentialKeyId: String? = null,
+    val credentialEnvelopeVersion: String? = null,
+    val passwordProof: String? = null,
+    val passwordProofChallengeId: String? = null,
+    val passwordProofVersion: String? = null,
+    val captchaToken: String? = null,
+    val csrfToken: String? = null,
+    val redirect: String? = null,
+    val callbackUrl: String? = null,
+)
+
+@Serializable
 data class TodoInstanceRequest(
     val instanceDate: String? = null,
 )
