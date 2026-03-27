@@ -5,7 +5,7 @@ import com.ohmz.tday.security.ThrottleAction
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.koin.ktor.ext.inject
+import com.ohmz.tday.di.inject
 import java.security.SecureRandom
 
 fun Route.csrfRoutes() {

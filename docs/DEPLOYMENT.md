@@ -7,7 +7,7 @@ How T'Day is built, deployed, and operated in production.
 | Environment | Branch | URL | Deployment |
 |-------------|--------|-----|------------|
 | Production | `master` | `tday.ohmz.cloud` | Auto via GitHub Actions → Docker image to GHCR |
-| Development | `develop` | Local only | `docker compose up` or `npm run dev` |
+| Development | `develop` | Local only | `docker compose up` or local dev servers |
 
 ## Docker
 
@@ -15,20 +15,20 @@ How T'Day is built, deployed, and operated in production.
 
 ```
 docker-compose.yaml
-├── tday          (Next.js app, port 2525 → 3000)
-├── tday_db       (PostgreSQL 15, internal port 5432)
-└── tday_ollama   (Ollama AI, internal port 11434)
+├── tday_backend    (Ktor + Vite SPA, port 2525 → 8080)
+├── tday_db         (PostgreSQL 15, internal port 5432)
+└── tday_ollama     (Ollama AI, internal port 11434)
 ```
 
 ### Build
 
-The Docker image is a multi-stage Node 20 Alpine build:
+The Docker image (`Dockerfile.backend`) is a multi-stage build:
 
-1. `npm install` (all dependencies)
-2. `prisma generate` (generate Prisma client)
-3. `next build` (compile Next.js)
-4. Prune dev dependencies
-5. Copy build output to final image
+1. **Stage 1 — Frontend** (`node:20-alpine`): `npm ci` + `npm run build` in `tday-web/` → static assets at `/web/dist`
+2. **Stage 2 — Backend** (`eclipse-temurin:21-jdk-alpine`): Copies Docker-specific Gradle files from `docker/`, `shared/src`, and `tday-backend/src`, then runs `./gradlew :tday-backend:buildFatJar -x test`
+3. **Stage 3 — Runtime** (`eclipse-temurin:21-jre-alpine`): Non-root user `tday`, copies fat JAR to `app.jar` and static files to `/app/static`, sets `STATIC_FILES_DIR=/app/static`
+
+The production image is a **single JVM process** serving both the REST API and the static SPA.
 
 ```bash
 # Local build
@@ -40,7 +40,7 @@ docker exec -it tday_ollama ollama pull qwen2.5:0.5b
 
 ### Docker Security
 
-The `tday` container runs with:
+The `tday_backend` container runs with:
 - `security_opt: no-new-privileges:true`
 - `cap_drop: ALL`
 - No privileged mode
@@ -51,7 +51,7 @@ The `tday` container runs with:
 |---------|-------|----------|
 | PostgreSQL | `pg_isready` | 1s (10 retries) |
 | Ollama | `ollama list` | 20s (5 retries) |
-| T'Day app | Depends on both above being healthy | — |
+| T'Day backend | Depends on both above being healthy | — |
 
 ## CI/CD Pipeline
 
@@ -59,7 +59,7 @@ The `tday` container runs with:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
-| `pr-gate.yml` | PR to `master` | Validates source branch, runs lint + full test suite |
+| `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
 | `release.yml` | Push to `master` | Runs lint + tests, then builds Docker image, pushes to GHCR, creates release |
 | `cronjob.yml` | Schedule + manual | Calls production cron endpoint for task maintenance |
 
@@ -67,7 +67,7 @@ The `tday` container runs with:
 
 **No Docker image is built or published unless all tests pass.** This is enforced in both CI workflows:
 
-- **PR Gate** (`pr-gate.yml`): On every PR to `master`, the pipeline validates the source branch is `develop`, then runs `npm run lint` and `npm run test`. PRs cannot merge if either step fails.
+- **PR Gate** (`pr-gate.yml`): On every PR to `master`, the pipeline validates the source branch is `develop`, then runs `npm run lint` and `npm run test` in `tday-web/`, followed by `./gradlew :tday-backend:test`. PRs cannot merge if either step fails.
 - **Release** (`release.yml`): On push to `master`, a `lint-and-test` job runs first. The `build-and-release` job (Docker build, push, tag, release) has `needs: lint-and-test` — it will not start unless lint and tests pass.
 
 ```
@@ -98,21 +98,22 @@ This ensures:
 
 ### Version Bumping
 
-The **single source of truth** for the app version is `package.json` in the project root. All other systems derive from it:
+The **single source of truth** for the app version is `tday-web/package.json`. All other systems derive from it:
 
-- **CI/CD**: Reads `package.json` → Docker image tags (`:v1.5.0`, `:latest`), Git tags, GitHub releases.
-- **Android**: `app/build.gradle.kts` parses `package.json` at build time → `versionName` and computed `versionCode`.
+- **CI/CD**: Reads `tday-web/package.json` → Docker image tags (`:v1.5.0`, `:latest`), Git tags, GitHub releases.
+- **Android**: `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and computed `versionCode`.
 - **Runtime**: Android sends `BuildConfig.VERSION_NAME` in the `X-Tday-App-Version` HTTP header.
 
 To bump the version before merging to `master`:
 
 ```bash
+cd tday-web
 npm version patch   # 1.5.0 → 1.5.1
 npm version minor   # 1.5.0 → 1.6.0
 npm version major   # 1.5.0 → 2.0.0
 ```
 
-**Never** set version numbers directly in `build.gradle.kts` or any other file. Edit only `package.json`.
+**Never** set version numbers directly in `build.gradle.kts` or any other file. Edit only `tday-web/package.json`.
 
 ## Configuration
 
@@ -120,12 +121,14 @@ npm version major   # 1.5.0 → 2.0.0
 
 All configuration is via environment variables. See `.env.example` for the full list with documentation.
 
+The Ktor backend (`AppConfig.kt`) loads all settings from environment variables and supports `_FILE` suffixes for secret file mounts (Docker/Kubernetes).
+
 #### Required
 
 | Variable | Purpose |
 |----------|---------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `AUTH_SECRET` | JWT signing secret (generate: `openssl rand -base64 32`) |
+| `DATABASE_URL` | PostgreSQL connection string (JDBC or `postgresql://` format) |
+| `AUTH_SECRET` | JWE encryption secret (generate: `openssl rand -base64 32`) |
 
 #### Recommended
 
@@ -141,8 +144,8 @@ All configuration is via environment variables. See `.env.example` for the full 
 
 | Variable | Purpose |
 |----------|---------|
-| `AUTH_TRUST_HOST` | Trust proxy host headers (for Cloudflare, reverse proxies) |
-| `AUTH_ENFORCE_HTTPS_REDIRECT` | Force HTTPS in production |
+| `TDAY_ENV` | Runtime mode (`production` enables production-only behavior such as HSTS and secure session cookies; `NODE_ENV` is still accepted as a fallback) |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed cross-origin web origins (same-origin requests work without it) |
 | `AUTH_CREDENTIALS_PRIVATE_KEY` | RSA key for credential envelope encryption |
 | `AUTH_CAPTCHA_SECRET` | Cloudflare Turnstile secret for adaptive CAPTCHA |
 | `DATA_ENCRYPTION_KEY` / `DATA_ENCRYPTION_KEY_ID` | Field-level encryption at rest |
@@ -158,32 +161,34 @@ DATABASE_URL_FILE=/run/secrets/database_url
 CRONJOB_SECRET_FILE=/run/secrets/cronjob_secret
 ```
 
-The Docker entrypoint (`scripts/docker-entrypoint.sh`) reads file contents into the corresponding variable at container start.
+The Ktor backend's `AppConfig` reads file contents into the corresponding variable at startup when `_FILE` variants are present.
 
 ## Database Migrations
 
-### Applying Migrations
+### How Migrations Work
 
-Migrations run automatically during Docker container startup (`prisma migrate deploy` in entrypoint).
+T'Day uses **Flyway** for database migrations. Flyway runs automatically on Ktor backend startup (`DatabaseConfig.kt`), applying any pending migrations from `tday-backend/src/main/resources/db/migration/`.
 
-For local development:
+Migration files follow the naming convention: `V<number>__<description>.sql`. The current baseline sequence is:
 
-```bash
-npx prisma migrate deploy     # apply pending migrations
-npx prisma migrate dev        # create a new migration during development
-npx prisma studio             # visual database browser
-```
+- `V1__baseline.sql`: legacy placeholder kept for compatibility.
+- `V2__full_schema.sql`: full schema snapshot generated from the live PostgreSQL schema for clean installs.
+- `V3__add_missing_indexes.sql`: first incremental migration after the schema snapshot.
+
+Existing databases with pre-Flyway schema but no migration history are baselined at version `2`, which skips the placeholder and full-schema migrations and applies only new incremental migrations.
 
 ### Creating Migrations
 
-1. Modify `prisma/schema.prisma`.
-2. Run `npx prisma migrate dev --name <descriptive-name>`.
-3. Review the generated SQL in `prisma/migrations/`.
-4. Commit both the schema change and the migration.
+1. Create the next SQL file in `tday-backend/src/main/resources/db/migration/` following the naming convention (`V4__...`, `V5__...`, and so on).
+2. Write the DDL/DML statements, or generate/review SQL from a local database when a full snapshot is explicitly needed.
+3. Update the corresponding Exposed `Table` objects in `tday-backend/src/main/kotlin/com/ohmz/tday/db/tables/` to match.
+4. Restart the backend — Flyway applies the migration automatically.
+5. Commit both the migration SQL and the Exposed table changes.
 
 ### Migration Safety
 
 - Always review generated SQL before committing.
+- Do not regenerate `V2__full_schema.sql` for routine schema changes. Add a new incremental migration instead.
 - Backward-compatible changes are preferred (add columns with defaults, don't drop columns immediately).
 - For destructive changes, use a multi-step migration:
   1. Add new column / table.
@@ -201,12 +206,12 @@ Pull and run the previous Docker image version:
 docker pull ghcr.io/ohmzi/tday:v1.4.0
 docker compose down
 # Update docker-compose.yaml image tag or use:
-docker run -d --name tday -p 2525:3000 --env-file .env.docker ghcr.io/ohmzi/tday:v1.4.0
+docker run -d --name tday -p 2525:8080 --env-file .env.docker ghcr.io/ohmzi/tday:v1.4.0
 ```
 
 ### Database Rollback
 
-Prisma does not support automatic down migrations. For rollbacks:
+Flyway does not support automatic down-migrations. For rollbacks:
 
 1. Write a manual SQL script to reverse the migration.
 2. Apply via `psql` or a migration tool.
@@ -216,23 +221,22 @@ Prisma does not support automatic down migrations. For rollbacks:
 
 ### Logging
 
-- Application logs go to stdout/stderr (Docker captures them).
+- Application logs go to stdout/stderr via **Logback** (Docker captures them).
 - Security events are written to the `eventLog` database table.
 - OkHttp (Android) logs at DEBUG level with cookie redaction.
-- Prisma logs queries in non-production environments.
+- Log configuration is in `tday-backend/src/main/resources/logback.xml`.
 
 ### Monitoring Recommendations
 
 - Monitor `auth_lockout` and `auth_limit_ip` event codes for abuse.
 - Set alerts for container restarts.
-- Monitor PostgreSQL connection pool and disk usage.
+- Monitor PostgreSQL connection pool (HikariCP) and disk usage.
 - Check Ollama health endpoint for AI availability.
 
 ### Backups
 
 - Database: Schedule automated PostgreSQL dumps with encryption at rest.
 - Secrets: Store in a secrets manager with audit logging.
-- See [`docs/security/operations-hardening.md`](security/operations-hardening.md) for the full operations checklist.
 
 ## Updating in Production
 
@@ -244,11 +248,12 @@ docker compose pull && docker compose up -d
 
 ### Portainer
 
-1. Containers → select **tday**.
+1. Containers → select **tday_backend**.
 2. Click **Recreate** → enable **Re-pull image** → click **Recreate**.
 
 ### Post-Update
 
-- Database migrations run automatically on container start.
-- Verify the app is healthy by checking `GET /api/mobile/probe` returns `{ "probe": "ok" }`.
-- Review `docker logs tday` for startup errors.
+- Flyway migrations run automatically on container start.
+- Existing databases without Flyway history are baselined at version `2`; empty databases replay the full schema snapshot and then incremental migrations.
+- Verify the app is healthy by checking `GET /health` returns `{ "status": "ok" }`.
+- Review `docker logs tday_backend` for startup errors.

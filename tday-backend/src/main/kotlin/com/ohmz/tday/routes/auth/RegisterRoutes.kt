@@ -7,7 +7,9 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.koin.ktor.ext.inject
+import com.ohmz.tday.di.inject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 fun Route.registerRoutes() {
     val userService by inject<UserService>()
@@ -73,11 +75,17 @@ fun Route.registerRoutes() {
                     call.respond(HttpStatusCode.InternalServerError, mapOf("message" to error.message))
                 },
                 { reg ->
-                    call.respond(HttpStatusCode.OK, mapOf(
-                        "message" to if (reg.requiresApproval) "Account registered. Waiting for admin approval." else "account created",
-                        "requiresApproval" to reg.requiresApproval,
-                        "isBootstrapAdmin" to reg.isBootstrapAdmin,
-                    ))
+                    call.respond(
+                        HttpStatusCode.OK,
+                        buildJsonObject {
+                            put(
+                                "message",
+                                if (reg.requiresApproval) "Account registered. Waiting for admin approval." else "account created",
+                            )
+                            put("requiresApproval", reg.requiresApproval)
+                            put("isBootstrapAdmin", reg.isBootstrapAdmin)
+                        },
+                    )
                 },
             )
         }

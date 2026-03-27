@@ -28,14 +28,27 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: tday-web/package-lock.json
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         run: npm ci
+        working-directory: tday-web
 
-      - name: Lint
+      - name: Lint frontend
         run: npm run lint
+        working-directory: tday-web
 
-      - name: Run tests
+      - name: Run frontend tests
         run: npm run test
+        working-directory: tday-web
         env:
           TZ: UTC
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Run backend tests
+        run: ./gradlew :tday-backend:test --no-daemon
