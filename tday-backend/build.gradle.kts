@@ -23,8 +23,6 @@ dependencies {
     implementation("io.ktor:ktor-server-auth-jvm")
     implementation("io.ktor:ktor-server-cors-jvm")
     implementation("io.ktor:ktor-server-status-pages-jvm")
-    implementation("io.ktor:ktor-server-double-receive-jvm")
-    implementation("io.ktor:ktor-server-call-logging-jvm")
     implementation("io.ktor:ktor-server-default-headers-jvm")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")
     implementation("io.ktor:ktor-client-core-jvm")
@@ -53,9 +51,7 @@ dependencies {
 
     implementation("io.konform:konform-jvm:0.11.1")
 
-    implementation("io.ktor:ktor-server-swagger-jvm")
     implementation("io.ktor:ktor-server-websockets-jvm")
-    implementation("io.ktor:ktor-server-resources-jvm")
 
     implementation("org.flywaydb:flyway-core:10.22.0")
     implementation("org.flywaydb:flyway-database-postgresql:10.22.0")

@@ -1,12 +1,17 @@
 import { CompletedTodoItemType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import parseApiDateTime, { parseOptionalApiDateTime } from "@/lib/date/parseApiDateTime";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 export const useCompletedTodo = () => {
+  const { toast } = useToast();
+  //get todos
   const {
     data: completedTodos = [],
     isLoading: todoLoading,
+    isError,
+    error,
   } = useQuery<CompletedTodoItemType[]>({
     queryKey: ["completedTodo"],
     retry: 2,
@@ -23,7 +28,7 @@ export const useCompletedTodo = () => {
 
       const completedTodoWithFormattedDates = completedTodos.map((todo) => {
         const todoInstanceDate = todo.instanceDate
-          ? parseApiDateTime(todo.instanceDate)
+          ? new Date(todo.instanceDate)
           : null;
 
         const todoInstanceDateTime = todoInstanceDate?.getTime();
@@ -32,15 +37,21 @@ export const useCompletedTodo = () => {
           ...todo,
           id: todoId,
           instanceDate: todoInstanceDate,
-          createdAt: parseApiDateTime(todo.createdAt),
-          due: parseOptionalApiDateTime(todo.due),
-          completedAt: parseApiDateTime(todo.completedAt),
+          dtstart: new Date(todo.dtstart),
+          createdAt: new Date(todo.createdAt),
+          due: new Date(todo.due),
+          completedAt: new Date(todo.completedAt),
         };
       });
 
       return completedTodoWithFormattedDates;
     },
   });
+  useEffect(() => {
+    if (isError === true) {
+      toast({ description: error.message, variant: "destructive" });
+    }
+  }, [error, isError, toast]);
 
   return { completedTodos, todoLoading };
 };

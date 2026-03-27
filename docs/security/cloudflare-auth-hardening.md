@@ -40,11 +40,10 @@ Structured security reason codes now emitted to logs/event table:
 - `auth_alert_ip_concentration`
 - `auth_alert_lockout_burst`
 - `auth_signal_anomaly`
-- `probe_failed_contract`
 
 Operational checks:
 
 1. Alert when `auth_lockout` grows rapidly in a short window.
 2. Alert when `auth_limit_ip` spikes from a narrow IP range.
-3. Alert when `probe_failed_contract` appears repeatedly from one source.
+3. Alert when `auth_signal_anomaly` appears repeatedly from one source or identifier.
 4. Compare Cloudflare challenged requests vs backend `429` counts to verify edge + app-layer defense-in-depth.
