@@ -1,6 +1,6 @@
 # ADR 006: RFC 5545 Recurrence Rules for Repeating Tasks
 
-**Status:** Accepted  
+**Status:** Accepted
 **Date:** 2024
 
 ## Context
@@ -16,7 +16,7 @@ Users need repeating tasks (daily, weekly, monthly, custom patterns). Options:
 - Store recurrence rules as **RFC 5545 RRULE strings** on the `Todo` model.
 - Support `dtstart`, `due`, `exdates` (exclusion dates), and `durationMinutes` alongside the RRULE.
 - Expand recurrence instances into `TodoInstance` records for per-occurrence overrides and completion tracking.
-- Use the `rrule` JavaScript library on the server for rule expansion.
+- Use **lib-recur** (Kotlin/JVM) on the backend for rule expansion, and **rrule** (JavaScript) on the web frontend.
 
 ## Rationale
 
@@ -28,5 +28,5 @@ Users need repeating tasks (daily, weekly, monthly, custom patterns). Options:
 ## Consequences
 
 - **Positive**: Flexible recurrence, future calendar export/import compatibility, per-instance overrides.
-- **Negative**: RRULE expansion logic is complex — requires thorough testing (covered in `tests/recurrence/`). Instance materialization adds database writes.
-- **Trade-off**: The legacy `RepeatInterval` enum still exists in the Prisma schema for backward compatibility but new features use RRULE.
+- **Negative**: RRULE expansion logic is complex — requires thorough testing (covered in `tday-web/tests/recurrence/` and backend tests). Instance materialization adds database writes.
+- **Trade-off**: The legacy `RepeatInterval` enum still exists in the database schema for backward compatibility but new features use RRULE.

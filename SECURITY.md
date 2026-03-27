@@ -24,10 +24,12 @@ We aim to acknowledge reports within 48 hours and provide a fix or mitigation pl
 
 ### Session Management
 
-- Sessions use **JWT** strategy via NextAuth v5.
+- Sessions use **encrypted JWT (JWE)** via **Nimbus JOSE JWT** + **BouncyCastle** key derivation.
 - Session lifetime is configurable (`AUTH_SESSION_MAX_AGE_SEC`, default 24h).
+- Sessions are delivered in HTTP-only authjs cookies: `__Secure-authjs.session-token` in production and `authjs.session-token` elsewhere. Bearer tokens are also accepted for API clients.
 - Sessions persist across browser/app restarts (no session-only cookies).
-- Server-enforced **token versioning** revokes all sessions on password change or sign-out.
+- Server-enforced **token versioning** (`tokenVersion` on User model) revokes all sessions on password change or sign-out.
+- The Ktor pipeline intercept validates tokens on every request by checking `tokenVersion`, expiry, role, and approval status against the database.
 - Mobile sessions use encrypted cookie storage with session restoration on app launch.
 
 ### Account Approval
@@ -46,43 +48,39 @@ We aim to acknowledge reports within 48 hours and provide a fix or mitigation pl
 ### Admin Access
 
 - Admin routes require both `APPROVED` status and `ADMIN` role.
-- Admin checks are centralized in `lib/auth/requireAdmin.ts`.
+- Admin checks are centralized in `requireAdminEither` in the backend security layer.
 
 ## API Security
 
-### Middleware Enforcement
+### Ktor Pipeline Enforcement
 
-All API requests pass through Next.js edge middleware that enforces:
+All API requests pass through a Ktor call pipeline intercept (`Security.kt`) that enforces:
 
-- **Authentication**: JWT validation required for all routes except `/api/auth/*` and `/api/mobile/probe`.
+- **Authentication**: JWE token validation (from Bearer header or session cookies) required for all routes except `/api/auth/*`, `/api/mobile/probe`, and `/health`.
 - **Approval gate**: Unapproved users receive 403 on private routes.
-- **Cache prevention**: Private API responses include `Cache-Control: no-store`.
+- **Token refresh**: Claims are verified against the database on every request (role, approval, `tokenVersion`).
 
 ### Security Headers
 
-Every response includes:
+Every response includes (via `SecurityHeaders.kt`):
 
 | Header | Value |
 |--------|-------|
 | `X-Content-Type-Options` | `nosniff` |
 | `X-Frame-Options` | `DENY` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Cross-Origin-Resource-Policy` | `same-origin` |
-| `Cross-Origin-Opener-Policy` | `same-origin` |
-| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
-| `Content-Security-Policy` | Restrictive policy with `frame-ancestors 'none'` |
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` (production only) |
 
 ### HTTPS Enforcement
 
-- Production middleware optionally enforces HTTPS via 308 redirects (`AUTH_ENFORCE_HTTPS_REDIRECT`).
-- Protocol detection respects `cf-visitor`, `x-forwarded-proto`, and `x-forwarded-host` for reverse proxy setups.
+- Production deployments should use a reverse proxy (e.g., Cloudflare, nginx) for TLS termination.
+- HSTS headers are applied when `TDAY_ENV=production` (`NODE_ENV=production` is still accepted as a compatibility fallback).
 
 ## Data Protection
 
 ### Field Encryption at Rest
 
-- Sensitive database fields are encrypted/decrypted transparently via a Prisma client extension.
+- Sensitive database fields can be encrypted/decrypted transparently at the service layer.
 - Uses AES-256-GCM with configurable key ID and AAD (`DATA_ENCRYPTION_*` variables).
 - Key rotation is supported: keep previous keys in `DATA_ENCRYPTION_KEYS` during rollover.
 
@@ -98,23 +96,21 @@ Every response includes:
 ## Secrets Management
 
 - Production secrets should come from a secrets manager or mounted files.
-- Docker entrypoint supports `*_FILE` suffix for all sensitive variables:
+- The Ktor backend (`AppConfig.kt`) supports `_FILE` suffix for all sensitive variables:
   `AUTH_SECRET`, `CRONJOB_SECRET`, `DATABASE_URL`, `AUTH_CAPTCHA_SECRET`, `DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEYS`, `DATA_ENCRYPTION_AAD`.
 - Never commit real secrets. `.env.example` and `.env.docker` contain placeholder values only.
 - Rotate secrets on a fixed schedule (recommended: 60-90 days).
-
-See [`docs/security/operations-hardening.md`](docs/security/operations-hardening.md) for the full operations checklist and [`docs/security/cloudflare-auth-hardening.md`](docs/security/cloudflare-auth-hardening.md) for edge-layer rules.
 
 ## Dependency Security
 
 - Keep dependencies updated regularly.
 - Review `npm audit` output before merging dependency updates.
-- Pin major versions in `package.json` to avoid surprise breaking changes.
-- Android dependencies are version-locked in `build.gradle.kts`.
+- Pin major versions in `tday-web/package.json` to avoid surprise breaking changes.
+- Android and backend dependencies are version-locked in `build.gradle.kts`.
 
 ## Security Event Monitoring
 
-Structured security event codes are emitted to the `eventLog` table:
+Structured security event codes are emitted to the `eventLog` database table:
 
 | Code | Meaning |
 |------|---------|
@@ -126,6 +122,5 @@ Structured security event codes are emitted to the `eventLog` table:
 | `auth_alert_ip_concentration` | Suspicious IP concentration detected |
 | `auth_alert_lockout_burst` | Burst of lockouts in a short window |
 | `auth_signal_anomaly` | Behavioral anomaly detected |
-| `probe_failed_contract` | Mobile probe contract validation failed |
 
 Alert when `auth_lockout` grows rapidly or `auth_limit_ip` spikes from a narrow IP range.
