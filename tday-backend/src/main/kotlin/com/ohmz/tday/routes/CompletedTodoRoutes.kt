@@ -5,7 +5,7 @@ import com.ohmz.tday.services.CompletedTodoService
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
-import org.koin.ktor.ext.inject
+import com.ohmz.tday.di.inject
 
 @Serializable
 private data class CompletedTodoPatchBody(val id: String)
