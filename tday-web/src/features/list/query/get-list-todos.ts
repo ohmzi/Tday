@@ -48,6 +48,6 @@ export const useList = ({ id }: { id: string }) => {
     if (isError === true) {
       toast({ description: error.message, variant: "destructive" });
     }
-  }, [isError]);
+  }, [error, isError, toast]);
   return { listTodos, listTodosLoading, isFetching, isPending };
 };
