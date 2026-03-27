@@ -5,7 +5,6 @@ import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
 import com.ohmz.tday.plugins.*
-import com.ohmz.tday.shared.validation.ContractValidators
 import com.ohmz.tday.services.AppConfigService
 import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoService
@@ -14,7 +13,7 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.koin.ktor.ext.inject
+import com.ohmz.tday.di.inject
 import java.time.LocalDateTime
 
 fun Route.todoRoutes() {
@@ -27,10 +26,7 @@ fun Route.todoRoutes() {
         post {
             call.withAuth { user ->
                 val body = call.receive<TodoCreateRequest>()
-                val validationErrors = ContractValidators.validateTodoCreate(body)
-                if (validationErrors.isNotEmpty()) {
-                    return@withAuth arrow.core.Either.Left(AppError.BadRequest(validationErrors.first()))
-                }
+                if (body.title.isBlank()) return@withAuth arrow.core.Either.Left(AppError.BadRequest("title cannot be left empty"))
                 val dtstart = LocalDateTime.parse(body.dtstart)
                 val due = LocalDateTime.parse(body.due)
                 todoService.create(user.id, body.title, body.description, body.priority, dtstart, due, body.rrule, body.listID)
