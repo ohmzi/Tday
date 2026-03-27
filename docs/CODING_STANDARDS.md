@@ -133,7 +133,7 @@ The app version is defined **once** in `tday-web/package.json`. Every other syst
 - To bump the version, edit **only** `tday-web/package.json`. All other systems derive from it.
 - Use `npm version patch|minor|major` in the `tday-web/` directory to bump.
 - Never set `versionName` or `versionCode` directly in `build.gradle.kts`.
-- `versionCode` is computed as `major * 10000 + minor * 100 + patch` (e.g., `1.5.0` → `10500`).
+- `versionCode` is computed as `major * 10000 + minor * 100 + patch` (e.g., `1.6.0` → `10600`).
 
 ### No Hardcoded Colors or Dimensions
 
