@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@/i18n";
+import { DEFAULT_LOCALE } from "@/i18n";
 import ProtectedRoute from "@/pages/ProtectedRoute";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
@@ -11,6 +11,7 @@ const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"));
 const TermsPage = lazy(() => import("@/pages/TermsPage"));
 const BlogsPage = lazy(() => import("@/pages/BlogsPage"));
 const BlogArticlePage = lazy(() => import("@/pages/BlogArticlePage"));
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 const AppLayout = lazy(() => import("@/pages/AppLayout"));
 const GeneralLayout = lazy(() => import("@/pages/GeneralLayout"));
 const CalendarLayout = lazy(() => import("@/pages/CalendarLayout"));
@@ -42,8 +43,6 @@ function SuspenseOutlet() {
     </Suspense>
   );
 }
-
-const localePattern = SUPPORTED_LOCALES.join("|");
 
 export const router = createBrowserRouter([
   {
@@ -98,6 +97,7 @@ export const router = createBrowserRouter([
           },
         ],
       },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ]);
