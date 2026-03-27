@@ -100,7 +100,7 @@ This ensures:
 
 The **single source of truth** for the app version is `tday-web/package.json`. All other systems derive from it:
 
-- **CI/CD**: Reads `tday-web/package.json` → Docker image tags (`:v1.5.0`, `:latest`), Git tags, GitHub releases.
+- **CI/CD**: Reads `tday-web/package.json` → Docker image tags (`:v1.6.0`, `:latest`), Git tags, GitHub releases.
 - **Android**: `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and computed `versionCode`.
 - **Runtime**: Android sends `BuildConfig.VERSION_NAME` in the `X-Tday-App-Version` HTTP header.
 
@@ -108,9 +108,9 @@ To bump the version before merging to `master`:
 
 ```bash
 cd tday-web
-npm version patch   # 1.5.0 → 1.5.1
-npm version minor   # 1.5.0 → 1.6.0
-npm version major   # 1.5.0 → 2.0.0
+npm version patch   # 1.6.0 → 1.6.1
+npm version minor   # 1.6.0 → 1.7.0
+npm version major   # 1.6.0 → 2.0.0
 ```
 
 **Never** set version numbers directly in `build.gradle.kts` or any other file. Edit only `tday-web/package.json`.
