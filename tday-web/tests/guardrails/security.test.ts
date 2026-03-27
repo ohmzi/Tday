@@ -141,7 +141,14 @@ describe("security guardrails", () => {
   describe("credential envelope uses RSA-OAEP + AES-GCM", () => {
     it("CredentialEnvelope should use RSA-OAEP for key unwrapping", () => {
       const content = readSource(path.join(BACKEND_SRC, "security", "CredentialEnvelope.kt"));
-      expect(content).toContain("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+      expect(
+        content.includes("RSA/ECB/OAEPWithSHA-256AndMGF1Padding") ||
+        (
+          content.includes("RSA/ECB/OAEPPadding") &&
+          content.includes('OAEPParameterSpec("SHA-256"') &&
+          content.includes("MGF1ParameterSpec.SHA256")
+        ),
+      ).toBe(true);
     });
 
     it("CredentialEnvelope should use AES-GCM for payload decryption", () => {
