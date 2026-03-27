@@ -209,7 +209,7 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 - `api.GET/POST/PATCH/DELETE` functions in `lib/api-client.ts`
 - `credentials: "same-origin"` for cookie-based sessions
 - `Cache-Control: no-store` on all requests
-- Dev: Vite proxy forwards `/api` and `/ws` to `http://localhost:8080`
+- Dev: Vite proxy forwards `/api` to `http://localhost:8080`
 - Production: Ktor serves the SPA as static files from `STATIC_FILES_DIR`
 
 ## Android Architecture
@@ -319,7 +319,7 @@ User ──┬── Todo ──── TodoInstance
 
 - **ORM**: JetBrains Exposed 0.57.0 (DSL/Table API with `transaction {}` blocks)
 - **Connection pool**: HikariCP 6.2.1 (max 10 connections, auto-commit off)
-- **Migrations**: Flyway 10.22.0 with `baselineOnMigrate=true`. Migration files live in `tday-backend/src/main/resources/db/migration/`.
+- **Migrations**: Flyway 10.22.0 with `baselineOnMigrate=true` and a baseline version of `2` for legacy databases. Migration files live in `tday-backend/src/main/resources/db/migration/`, with `V2__full_schema.sql` serving as the clean-install schema snapshot.
 - **Driver**: PostgreSQL JDBC 42.7.4
 
 ### PostgreSQL Enums
@@ -374,7 +374,7 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 - 11 locales: `en`, `zh`, `de`, `ja`, `ar`, `ru`, `es`, `fr`, `ms`, `it`, `pt`.
 - Managed via **i18next** + **react-i18next** with path-based locale detection.
-- Locale strings stored in `tday-web/messages/*.json`.
+- English is bundled from `tday-web/messages/en.json` for first paint; other locale bundles are lazy-loaded from `tday-web/public/locales/<lng>/translation.json`.
 - Routes are prefixed with `/:locale/` via React Router.
 
 ## AI Integration

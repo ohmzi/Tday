@@ -66,7 +66,7 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
     if (isError === true) {
       toast({ description: error.message, variant: "destructive" });
     }
-  }, [isError]);
+  }, [error, isError, toast]);
 
   return { todos, todoLoading };
 };

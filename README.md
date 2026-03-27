@@ -85,9 +85,9 @@ Tday/
 │   │   ├── lib/               # Client utilities (security, dates, API client)
 │   │   ├── pages/             # Route pages
 │   │   └── providers/         # React context providers
-│   ├── messages/              # Locale JSON files (11 languages)
-│   ├── public/                # Static assets
-│   └── tests/                 # Vitest guardrail suites
+│   ├── messages/              # Bundled default locale fallback (`en.json`)
+│   ├── public/                # Static assets and lazy-loaded locale bundles
+│   └── tests/                 # Vitest guardrail and unit suites
 ├── tday-backend/              # Ktor backend (Kotlin)
 │   └── src/main/kotlin/
 │       └── com/ohmz/tday/

@@ -26,6 +26,7 @@ We aim to acknowledge reports within 48 hours and provide a fix or mitigation pl
 
 - Sessions use **encrypted JWT (JWE)** via **Nimbus JOSE JWT** + **BouncyCastle** key derivation.
 - Session lifetime is configurable (`AUTH_SESSION_MAX_AGE_SEC`, default 24h).
+- Sessions are delivered in HTTP-only authjs cookies: `__Secure-authjs.session-token` in production and `authjs.session-token` elsewhere. Bearer tokens are also accepted for API clients.
 - Sessions persist across browser/app restarts (no session-only cookies).
 - Server-enforced **token versioning** (`tokenVersion` on User model) revokes all sessions on password change or sign-out.
 - The Ktor pipeline intercept validates tokens on every request by checking `tokenVersion`, expiry, role, and approval status against the database.
@@ -68,16 +69,12 @@ Every response includes (via `SecurityHeaders.kt`):
 | `X-Content-Type-Options` | `nosniff` |
 | `X-Frame-Options` | `DENY` |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Cross-Origin-Resource-Policy` | `same-origin` |
-| `Cross-Origin-Opener-Policy` | `same-origin` |
-| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
-| `Content-Security-Policy` | Restrictive policy with `frame-ancestors 'none'` |
 | `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` (production only) |
 
 ### HTTPS Enforcement
 
 - Production deployments should use a reverse proxy (e.g., Cloudflare, nginx) for TLS termination.
-- HSTS headers are applied when `NODE_ENV=production`.
+- HSTS headers are applied when `TDAY_ENV=production` (`NODE_ENV=production` is still accepted as a compatibility fallback).
 
 ## Data Protection
 
@@ -125,6 +122,5 @@ Structured security event codes are emitted to the `eventLog` database table:
 | `auth_alert_ip_concentration` | Suspicious IP concentration detected |
 | `auth_alert_lockout_burst` | Burst of lockouts in a short window |
 | `auth_signal_anomaly` | Behavioral anomaly detected |
-| `probe_failed_contract` | Mobile probe contract validation failed |
 
 Alert when `auth_lockout` grows rapidly or `auth_limit_ip` spikes from a narrow IP range.

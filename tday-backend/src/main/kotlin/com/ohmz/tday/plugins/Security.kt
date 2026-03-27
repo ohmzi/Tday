@@ -12,12 +12,16 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.koin.ktor.ext.inject
 
+private const val SECURE_SESSION_COOKIE_NAME = "__Secure-authjs.session-token"
+private const val SESSION_COOKIE_NAME = "authjs.session-token"
+
 private val SESSION_COOKIE_NAMES = listOf(
-    "__Secure-authjs.session-token",
-    "authjs.session-token",
-    "__Secure-next-auth.session-token",
-    "next-auth.session-token",
+    SECURE_SESSION_COOKIE_NAME,
+    SESSION_COOKIE_NAME,
 )
+
+fun sessionCookieName(isProduction: Boolean): String =
+    if (isProduction) SECURE_SESSION_COOKIE_NAME else SESSION_COOKIE_NAME
 
 val AuthUserKey = AttributeKey<JwtUserClaims>("AuthUser")
 

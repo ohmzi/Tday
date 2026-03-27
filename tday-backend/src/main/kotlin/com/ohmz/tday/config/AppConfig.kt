@@ -6,6 +6,8 @@ data class AppConfig(
     val port: Int,
     val databaseUrl: String,
     val authSecret: String,
+    val isProduction: Boolean,
+    val corsAllowedOrigins: List<String>,
     val pbkdf2Iterations: Int,
     val sessionMaxAgeSec: Int,
     val credentialsPrivateKeyPem: String?,
@@ -20,6 +22,8 @@ data class AppConfig(
     val limitCsrfMax: Int,
     val limitCredentialsWindowSec: Int,
     val limitCredentialsMax: Int,
+    val limitSessionWindowSec: Int,
+    val limitSessionMax: Int,
     val limitRegisterWindowSec: Int,
     val limitRegisterMax: Int,
     val lockoutFailThreshold: Int,
@@ -41,6 +45,8 @@ data class AppConfig(
                 ?: error("DATABASE_URL is required"),
             authSecret = secret("AUTH_SECRET", "AUTH_SECRET_FILE")
                 ?: error("AUTH_SECRET is required"),
+            isProduction = resolveEnvironmentName().equals("production", ignoreCase = true),
+            corsAllowedOrigins = envCsv("CORS_ALLOWED_ORIGINS"),
             pbkdf2Iterations = envInt("AUTH_PBKDF2_ITERATIONS", 310_000)
                 .coerceIn(100_000, 2_000_000),
             sessionMaxAgeSec = envInt("AUTH_SESSION_MAX_AGE_SEC", 86400)
@@ -57,6 +63,8 @@ data class AppConfig(
             limitCsrfMax = envInt("AUTH_LIMIT_CSRF_MAX", 40),
             limitCredentialsWindowSec = envInt("AUTH_LIMIT_CREDENTIALS_WINDOW_SEC", 300),
             limitCredentialsMax = envInt("AUTH_LIMIT_CREDENTIALS_MAX", 12),
+            limitSessionWindowSec = envInt("AUTH_LIMIT_SESSION_WINDOW_SEC", 60),
+            limitSessionMax = envInt("AUTH_LIMIT_SESSION_MAX", 60),
             limitRegisterWindowSec = envInt("AUTH_LIMIT_REGISTER_WINDOW_SEC", 3600),
             limitRegisterMax = envInt("AUTH_LIMIT_REGISTER_MAX", 6),
             lockoutFailThreshold = envInt("AUTH_LOCKOUT_FAIL_THRESHOLD", 5),
@@ -78,10 +86,22 @@ data class AppConfig(
         fun env(key: String): String? =
             System.getenv(key)?.trim()?.ifEmpty { null }
 
+        fun envCsv(key: String): List<String> =
+            env(key)
+                ?.split(',')
+                ?.map(String::trim)
+                ?.filter(String::isNotEmpty)
+                .orEmpty()
+
         fun envInt(key: String, default: Int): Int {
             val raw = System.getenv(key)?.trim() ?: return default
             return raw.toIntOrNull()?.takeIf { it > 0 } ?: default
         }
+
+        private fun resolveEnvironmentName(): String =
+            env("TDAY_ENV")
+                ?: env("NODE_ENV")
+                ?: "development"
 
         fun secret(envVar: String, fileEnvVar: String): String? {
             val direct = System.getenv(envVar)?.trim()?.ifEmpty { null }

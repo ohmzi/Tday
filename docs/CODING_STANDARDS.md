@@ -171,7 +171,7 @@ Card(
 
 All user-facing strings must live in a single centralized source — never inline in component code, screen layouts, or route handlers. This applies to labels, button text, error messages shown to users, placeholders, tooltips, and any other text the user sees.
 
-- **Web**: Use **i18next** translation keys backed by `tday-web/messages/*.json` files. Components access strings via `useTranslation()`.
+- **Web**: Use **i18next** translation keys backed by `tday-web/public/locales/<lng>/translation.json`, with `tday-web/messages/en.json` kept as the bundled English fallback. Components access strings via `useTranslation()`.
 - **Android**: Use Android string resources (`res/values/strings.xml`). Screens access strings via `stringResource(R.string.*)`.
 - Internal log messages and developer-facing error strings (not shown to users) are exempt.
 - When adding a new screen or feature, add its strings to the centralized source **first**, then reference the keys.
@@ -284,11 +284,11 @@ All visual tokens are defined as CSS custom properties in `src/globals.css` and 
 
 ### String Management (Web)
 
-All user-facing strings live in `tday-web/messages/*.json` and are accessed via **i18next**. Never hardcode display text in components or pages.
+All user-facing strings live in the i18n locale bundles (`tday-web/public/locales/<lng>/translation.json`, with bundled English fallback in `tday-web/messages/en.json`) and are accessed via **i18next**. Never hardcode display text in components or pages.
 
 - Use `useTranslation(namespace)` in components to get a `t` function.
 - Organize keys by feature namespace (e.g., `"landingPage"`, `"todoList"`, `"settings"`).
-- When adding a new feature, add keys to **all** 11 locale files (`en.json` is the source of truth; other locales can fall back to English until translated).
+- When adding a new feature, add keys to the bundled English source first and keep all 11 locale bundles in parity (`tests/guardrails/i18n-parity.test.ts` enforces matching keys).
 
 ```typescript
 // Good: string from translation file

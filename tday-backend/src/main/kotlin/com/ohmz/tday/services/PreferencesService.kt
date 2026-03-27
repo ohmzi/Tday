@@ -26,7 +26,7 @@ class PreferencesServiceImpl : PreferencesService {
             val row = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
             PreferencesResponse(
                 sortBy = row?.get(UserPreferences.sortBy)?.name,
-                groupBy = row?.get(UserPreferences.groupBy)?.let { GroupBy.toPrisma(it) },
+                groupBy = row?.get(UserPreferences.groupBy)?.let { GroupBy.toApi(it) },
                 direction = row?.get(UserPreferences.direction)?.name,
             )
         }
@@ -39,7 +39,7 @@ class PreferencesServiceImpl : PreferencesService {
             if (existing != null) {
                 UserPreferences.update({ UserPreferences.userID eq userId }) {
                     sortBy?.let { s -> it[UserPreferences.sortBy] = SortBy.valueOf(s) }
-                    groupBy?.let { g -> it[UserPreferences.groupBy] = GroupBy.fromPrisma(g) }
+                    groupBy?.let { g -> it[UserPreferences.groupBy] = GroupBy.fromApi(g) }
                     direction?.let { d -> it[UserPreferences.direction] = Direction.valueOf(d) }
                 }
             } else {
@@ -47,7 +47,7 @@ class PreferencesServiceImpl : PreferencesService {
                     it[UserPreferences.id] = CuidGenerator.newCuid()
                     it[UserPreferences.userID] = userId
                     sortBy?.let { s -> it[UserPreferences.sortBy] = SortBy.valueOf(s) }
-                    groupBy?.let { g -> it[UserPreferences.groupBy] = GroupBy.fromPrisma(g) }
+                    groupBy?.let { g -> it[UserPreferences.groupBy] = GroupBy.fromApi(g) }
                     direction?.let { d -> it[UserPreferences.direction] = Direction.valueOf(d) }
                 }
             }
