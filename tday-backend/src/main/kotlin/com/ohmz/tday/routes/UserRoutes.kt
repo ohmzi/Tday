@@ -8,7 +8,7 @@ import com.ohmz.tday.models.request.*
 import com.ohmz.tday.services.UserService
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
-import org.koin.ktor.ext.inject
+import com.ohmz.tday.di.inject
 
 private val BASE64_REGEX = Regex("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$")
 
