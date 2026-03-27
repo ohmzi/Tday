@@ -15,14 +15,24 @@ This document covers everything a developer needs to know before writing code, o
 
 ## Development Setup
 
-### Web (Next.js)
+### Frontend (Vite SPA)
 
 ```bash
-npm install                    # installs deps + runs prisma generate
-cp .env.example .env.local     # configure local env
-npx prisma migrate deploy      # apply migrations to local Postgres
+cd tday-web
+npm install
+npm run dev              # http://localhost:5173 (Vite HMR)
+```
+
+### Backend (Ktor)
+
+```bash
+./gradlew :tday-backend:run   # http://localhost:8080
+```
+
+The Ktor backend requires a running PostgreSQL instance and applies Flyway migrations automatically on startup. Configure the connection via environment variables (see `.env.example`).
+
+```bash
 bash scripts/install-hooks.sh  # install git hooks (required, one-time)
-npm run dev                    # http://localhost:3000 (Turbopack)
 ```
 
 ### Android (Compose)
@@ -70,7 +80,7 @@ docker exec -it tday_ollama ollama pull qwen2.5:0.5b
 ```
 feature/add-calendar-drag-drop
 fix/login-session-expiry-redirect
-chore/update-prisma-to-v7
+chore/update-ktor-to-v3
 ```
 
 Use lowercase, hyphens as separators, short but descriptive.
@@ -87,14 +97,14 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 **Types:** `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `test`, `perf`, `ci`
 
-**Scopes (examples):** `web`, `android`, `api`, `auth`, `prisma`, `ci`, `docker`
+**Scopes (examples):** `web`, `android`, `api`, `auth`, `backend`, `ci`, `docker`
 
 **Examples:**
 
 ```
 feat(api): add batch todo completion endpoint
 fix(android): handle expired session during background sync
-chore(deps): bump next.js to 15.6
+chore(deps): bump ktor to 3.1
 docs: add architecture decision record for offline sync
 ```
 
@@ -107,8 +117,8 @@ docs: add architecture decision record for offline sync
 
 1. Create a branch from `develop` following naming conventions.
 2. Make your changes following [coding standards](docs/CODING_STANDARDS.md).
-3. Ensure lint passes: `npm run lint`.
-4. Ensure tests pass: `npm run test` (includes guardrail tests).
+3. Ensure lint passes: `cd tday-web && npm run lint`.
+4. Ensure tests pass: `cd tday-web && npm run test` and `./gradlew :tday-backend:test`.
 5. Open a PR against `develop` using the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
 6. Request review from at least one maintainer.
 7. Address all review comments.
@@ -128,7 +138,7 @@ docs: add architecture decision record for offline sync
 - [ ] No secrets, tokens, or credentials in the diff.
 - [ ] Error handling covers failure paths.
 - [ ] New API endpoints follow [API guidelines](docs/API_GUIDELINES.md).
-- [ ] Database changes include a migration and are backward-compatible.
+- [ ] Database changes include a Flyway migration and are backward-compatible.
 - [ ] Tests cover the happy path and at least one error path.
 - [ ] No console.log / Log.d left from debugging.
 
@@ -136,36 +146,34 @@ docs: add architecture decision record for offline sync
 
 See [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) for the full rules. Key highlights:
 
-### TypeScript (Web)
+### TypeScript (Frontend)
 
 - Strict mode is enabled — no `any` unless absolutely unavoidable.
 - Use `interface` for object shapes, `type` for unions and mapped types.
-- Validate request bodies with Zod schemas.
 - Use `@/` path alias for imports (never relative paths that climb more than one level).
-- Error handling: throw `BaseServerError` subclasses; catch with `errorHandler`.
 
-### Kotlin (Android)
+### Kotlin (Backend + Android)
 
 - Follow [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html).
-- Use `StateFlow` for UI state, never `LiveData`.
+- Use `StateFlow` for UI state in Android, never `LiveData`.
 - Prefix private mutable state with `_` (e.g., `_uiState`).
-- All ViewModels use `@HiltViewModel` with constructor injection.
+- All Android ViewModels use `@HiltViewModel` with constructor injection.
 - Use `runCatching` for operations that can fail.
 - Constants in `companion object` with `UPPER_SNAKE_CASE`.
 
 ## Linting and Formatting
 
-### Web
+### Frontend
 
 ```bash
-npm run lint       # ESLint (next/core-web-vitals + next/typescript)
+cd tday-web && npm run lint    # ESLint
 ```
 
-ESLint is configured in `eslint.config.mjs`. Fix all warnings before committing.
+### Backend
 
-### Android
-
-Use Android Studio's built-in formatter with default Kotlin style. Run **Analyze > Inspect Code** before pushing.
+```bash
+./gradlew :tday-backend:test   # Kotlin JUnit 5 tests
+```
 
 ### General
 
@@ -178,17 +186,25 @@ Use Android Studio's built-in formatter with default Kotlin style. Run **Analyze
 
 See [`docs/TESTING.md`](docs/TESTING.md) for the full strategy. Quick reference:
 
-### Web
+### Frontend
 
 ```bash
-npm run test                       # all tests
-npx jest tests/security/           # security suite only
-npx jest --watch                   # watch mode
+cd tday-web
+npm run test                   # all Vitest suites
 ```
 
-- Tests live in `tests/` organized by domain.
+- Tests live in `tday-web/tests/` organized by domain.
 - Name files `*.test.ts`.
 - Security-critical code must have tests.
+
+### Backend
+
+```bash
+./gradlew :tday-backend:test   # all Kotlin JUnit 5 tests
+```
+
+- Tests live in `tday-backend/src/test/kotlin/`.
+- Security services (password, encryption, JWT, envelope, proof) have dedicated test classes.
 
 ### Android
 
@@ -200,13 +216,14 @@ npx jest --watch                   # watch mode
 
 Every PR must satisfy these before merge:
 
-- [ ] `npm run lint` passes with no warnings.
-- [ ] `npm run test` passes with no failures (including guardrail tests).
+- [ ] `cd tday-web && npm run lint` passes with no warnings.
+- [ ] `cd tday-web && npm run test` passes with no failures (including guardrail tests).
+- [ ] `./gradlew :tday-backend:test` passes with no failures.
 - [ ] CI pipeline passes (lint + tests are enforced automatically on PRs to `master`).
 - [ ] No secrets or credentials in the diff.
 - [ ] No AI tool attribution in commits or PR description — no `Co-authored-by`, `Made-with`, or any trailer/text referencing Cursor, Codex, Copilot, ChatGPT, Claude, etc.
 - [ ] Backward compatibility maintained (or migration provided).
-- [ ] Prisma migration reviewed if schema changed.
+- [ ] Flyway migration SQL and corresponding Exposed table changes reviewed if schema changed.
 - [ ] Error handling and logging added where appropriate.
 - [ ] API changes documented in the PR description.
 - [ ] Android changes tested on emulator or device.

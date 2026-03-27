@@ -1,0 +1,76 @@
+<section class="space-y-4">
+  <p>
+    <code>instanceDate</code> is the occurrence anchor that ties a generated
+    recurring task to its override row. The drifting bug appears when the
+    override still points at an old occurrence after the parent series has been
+    shifted to a new sequence.
+  </p>
+  <p>
+    The result is familiar: the moved override stays behind on its old anchor,
+    a new generated occurrence appears in the shifted series, and the user sees
+    what looks like a duplicate task.
+  </p>
+</section>
+
+<section class="space-y-4">
+  <h2 class="text-lg font-semibold">1. What goes wrong</h2>
+  <ol class="list-decimal space-y-2 pl-6">
+    <li>A recurring todo generates an occurrence on a specific day.</li>
+    <li>The user edits that one occurrence, so an override row is stored.</li>
+    <li>The parent todo later changes its <code>dtstart</code> or RRULE.</li>
+    <li>
+      The stored override still references the old anchored occurrence, even
+      though the series now generates a different sequence.
+    </li>
+  </ol>
+  <pre class="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 p-4 text-sm"><code>before shift: Tue Jan 20 is the anchored occurrence
+override: recurId = 2026-01-20T00:00:00Z
+after shift: the series now produces Wed Jan 21 instead
+result: Jan 19 override remains, Jan 21 generates again</code></pre>
+</section>
+
+<section class="space-y-4">
+  <h2 class="text-lg font-semibold">2. Root cause</h2>
+  <p>
+    <code>instanceDate</code> is static, but the recurrence sequence is not.
+    If the series is re-anchored, every stored override still points at the old
+    timeline unless something explicitly remaps it.
+  </p>
+  <ul class="list-disc space-y-2 pl-6">
+    <li>The override row is still valid as data.</li>
+    <li>The recurrence sequence is also valid after the series edit.</li>
+    <li>
+      The bug lives in the mismatch between the old occurrence identity and the
+      newly generated occurrence order.
+    </li>
+  </ul>
+</section>
+
+<section class="space-y-4">
+  <h2 class="text-lg font-semibold">3. Safer backend direction</h2>
+  <p>
+    The Ktor backend should own recurrence expansion and any sequence
+    reconciliation logic. When a parent recurrence changes materially, it needs
+    one of two explicit strategies:
+  </p>
+  <ul class="list-disc space-y-2 pl-6">
+    <li>
+      Re-map existing overrides onto the new sequence using deterministic
+      occurrence indexing or another canonical strategy.
+    </li>
+    <li>
+      Mark the old overrides as incompatible and require the client to recreate
+      them against the new sequence.
+    </li>
+  </ul>
+</section>
+
+<section class="space-y-4">
+  <h2 class="text-lg font-semibold">4. Takeaway</h2>
+  <p>
+    Drifting is a data-identity problem, not just a UI bug. The clean long-term
+    fix is to keep all recurrence interpretation in Kotlin, define one
+    canonical occurrence identity model, and make every client consume the same
+    reconciled result instead of each surface trying to infer it independently.
+  </p>
+</section>

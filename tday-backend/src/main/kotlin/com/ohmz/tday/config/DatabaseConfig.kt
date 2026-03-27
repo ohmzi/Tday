@@ -1,9 +1,13 @@
 package com.ohmz.tday.config
 
+import com.ohmz.tday.db.tables.*
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.flywaydb.core.Flyway
+import org.flywaydb.core.api.MigrationVersion
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
 import java.net.URI
 
@@ -53,10 +57,37 @@ class DatabaseConfig(private val config: AppConfig) {
             .dataSource(dataSource)
             .locations("classpath:db/migration")
             .baselineOnMigrate(true)
+            .baselineVersion(MigrationVersion.fromVersion("2"))
             .load()
             .migrate()
 
         Database.connect(dataSource)
+
+        transaction {
+            val pgEnums = listOf(
+                "\"UserRole\"" to listOf("ADMIN", "USER"),
+                "\"ApprovalStatus\"" to listOf("APPROVED", "PENDING"),
+                "\"SortBy\"" to listOf("dtstart", "due", "duration", "priority"),
+                "\"GroupBy\"" to listOf("dtstart", "due", "duration", "priority", "rrule", "project"),
+                "\"Direction\"" to listOf("Ascending", "Descending"),
+                "\"Priority\"" to listOf("Low", "Medium", "High"),
+                "\"ProjectColor\"" to listOf(
+                    "RED", "ORANGE", "YELLOW", "LIME", "BLUE", "PURPLE", "PINK", "TEAL",
+                    "CORAL", "GOLD", "DEEP_BLUE", "ROSE", "LIGHT_RED", "BRICK", "SLATE",
+                ),
+            )
+            for ((name, values) in pgEnums) {
+                val valList = values.joinToString(", ") { "'$it'" }
+                exec("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = ${name.replace("\"", "'")}) THEN CREATE TYPE $name AS ENUM ($valList); END IF; END $$;")
+            }
+
+            SchemaUtils.createMissingTablesAndColumns(
+                Users, Accounts, VerificationTokens, Lists, Todos, TodoInstances,
+                CompletedTodos, Notes, Files, UserPreferences, AppConfigs,
+                EventLogs, CronLogs, AuthThrottles, AuthSignals,
+            )
+        }
+
         logger.info("Database connected via HikariCP with Flyway migrations applied")
     }
 }

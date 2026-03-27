@@ -41,10 +41,6 @@ enum class GroupBy {
             project -> "list"
             else -> value.name
         }
-
-        fun fromPrisma(value: String): GroupBy = fromApi(value)
-
-        fun toPrisma(value: GroupBy): String = toApi(value)
     }
 }
 
