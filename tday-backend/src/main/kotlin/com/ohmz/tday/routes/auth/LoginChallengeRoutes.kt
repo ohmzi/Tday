@@ -8,6 +8,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.ohmz.tday.di.inject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 fun Route.loginChallengeRoutes() {
     val userService by inject<UserService>()
@@ -37,14 +39,17 @@ fun Route.loginChallengeRoutes() {
             val storedHash = user?.get("password") as? String
 
             val payload = passwordProof.issueChallenge(email, storedHash)
-            call.respond(HttpStatusCode.OK, mapOf(
-                "version" to payload.version,
-                "algorithm" to payload.algorithm,
-                "challengeId" to payload.challengeId,
-                "saltHex" to payload.saltHex,
-                "iterations" to payload.iterations,
-                "expiresAt" to payload.expiresAt,
-            ))
+            call.respond(
+                HttpStatusCode.OK,
+                buildJsonObject {
+                    put("version", payload.version)
+                    put("algorithm", payload.algorithm)
+                    put("challengeId", payload.challengeId)
+                    put("saltHex", payload.saltHex)
+                    put("iterations", payload.iterations)
+                    put("expiresAt", payload.expiresAt)
+                },
+            )
         }
     }
 }
