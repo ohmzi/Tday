@@ -1,9 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
+import resolveTimezone from "@/lib/date/resolveTimezone";
 
 export const useUserTimezone = () => {
   const queryClient = useQueryClient();
-  const timeZone = queryClient.getQueryData<{ timeZone: string }>([
+  const cachedTimeZone = queryClient.getQueryData<{ timeZone: string }>([
     "userTimezone",
   ]);
-  return timeZone;
+  return {
+    timeZone: resolveTimezone(cachedTimeZone?.timeZone),
+  };
 };
