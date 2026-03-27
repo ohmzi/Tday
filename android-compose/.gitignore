@@ -5,3 +5,4 @@ local.properties
 .cxx/
 .DS_Store
 captures/
+/.kotlin/
