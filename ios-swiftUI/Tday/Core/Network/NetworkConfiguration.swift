@@ -62,7 +62,7 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
     }
 
     var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.5.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.6.0"
     }
 
     func urlSession(
