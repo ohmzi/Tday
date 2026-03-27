@@ -22,11 +22,14 @@ import java.net.URI
 import java.net.URLDecoder
 import java.security.KeyFactory
 import java.security.SecureRandom
+import java.security.spec.MGF1ParameterSpec
 import java.security.spec.X509EncodedKeySpec
 import java.util.Locale
 import java.util.TimeZone
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.OAEPParameterSpec
+import javax.crypto.spec.PSource
 import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -221,8 +224,17 @@ class AuthRepository @Inject constructor(
         )
         val encryptedPayload = aesCipher.doFinal(credentialPayload)
 
-        val rsaCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding")
-        rsaCipher.init(Cipher.ENCRYPT_MODE, publicKey)
+        val rsaCipher = Cipher.getInstance("RSA/ECB/OAEPPadding")
+        rsaCipher.init(
+            Cipher.ENCRYPT_MODE,
+            publicKey,
+            OAEPParameterSpec(
+                "SHA-256",
+                "MGF1",
+                MGF1ParameterSpec.SHA256,
+                PSource.PSpecified.DEFAULT,
+            ),
+        )
         val encryptedKey = rsaCipher.doFinal(aesKey)
 
         return CredentialEnvelope(
