@@ -214,7 +214,7 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 
 ## Android Architecture
 
-### Pattern: MVVM with Single Repository
+### Pattern: MVVM with Domain Repositories
 
 ```
 ┌───────────────────────────────────────────────────┐
@@ -225,11 +225,14 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 ┌──────────────────────┴────────────────────────────┐
 │  @HiltViewModel classes (Presentation Layer)      │
 │  MutableStateFlow + viewModelScope.launch         │
+│  Coordinate repositories + app services directly  │
 └──────────────────────┬────────────────────────────┘
                        │
 ┌──────────────────────┴────────────────────────────┐
-│  TdayRepository (Data Layer)                      │
-│  API calls, offline cache, sync, mapping          │
+│  Data / App Services                              │
+│  TodoRepository, ListRepository, CompletedRepo,   │
+│  AuthRepository, SettingsRepository, SyncManager, │
+│  OfflineCacheManager, TaskReminderScheduler       │
 └──────┬───────────────────────────────┬────────────┘
        │                               │
 ┌──────┴──────┐              ┌─────────┴─────────┐
@@ -240,9 +243,10 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 
 ### Key Design Decisions (Android)
 
-- **Single fat repository**: `TdayRepository` is the sole data layer facade. All network calls, local cache operations, and domain mapping pass through it.
-- **Offline-first sync**: Local cache (`OfflineSyncState` serialized to encrypted prefs) with a pending mutation queue. Background sync loop in `AppViewModel` periodically pushes mutations and pulls fresh data.
-- **Cache invalidation**: `cacheDataVersion` `StateFlow<Long>` in the repository — ViewModels observe it and reload when incremented.
+- **MVVM without an Android use-case layer**: ViewModels coordinate repositories and app services directly instead of routing through Android-specific `UseCase` wrappers.
+- **Domain-specific repositories**: Data access is split by concern (`TodoRepository`, `ListRepository`, `CompletedRepository`, `AuthRepository`, `SettingsRepository`) instead of a single catch-all repository.
+- **Offline-first sync**: `OfflineCacheManager` stores the local source of truth, while `SyncManager` replays pending mutations and refreshes remote snapshots.
+- **Cache invalidation**: `OfflineCacheManager.cacheDataVersion` is observed by ViewModels so screens can hydrate from cache when local data changes.
 - **Auth compatibility**: The Android client implements the JWE credential flow (CSRF token fetch → credential callback → session cookie) using Retrofit + an encrypted cookie store.
 - **Navigation**: Programmatic Compose Navigation (`NavHost`) with `sealed class AppRoute` — no XML navigation graphs.
 - **Server discovery**: Runtime server URL configuration with optional certificate fingerprint pinning for self-hosted instances.
@@ -252,7 +256,7 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 ```
 com.ohmz.tday.compose/
 ├── core/
-│   ├── data/          # TdayRepository, SecureConfigStore, ThemePreferenceStore
+│   ├── data/          # Repositories, OfflineCacheManager, SyncManager, stores
 │   ├── model/         # ApiModels (DTOs), DomainModels (UI types)
 │   ├── navigation/    # AppRoute sealed class
 │   ├── network/       # Hilt NetworkModule, TdayApiService, EncryptedCookieStore
@@ -406,7 +410,7 @@ One JVM process serves both the REST API and the SPA. Docker Compose orchestrate
 
 ## Future Considerations
 
-- Extract `TdayRepository` into smaller domain-specific repositories as the Android app grows.
-- Add a domain/use-case layer in Android if business logic exceeds simple CRUD.
+- Keep ViewModel orchestration focused on presentation concerns; if shared Android workflows become complex, prefer extracting them into repositories or platform services before adding another app-layer abstraction.
+- Consider Room database if the Android cache grows beyond what the current encrypted snapshot approach handles comfortably.
 - Consider Redis or in-memory caching if web API latency becomes a concern under load.
 - Evaluate SSE as an alternative to WebSocket for clients that don't need bidirectional streaming.
