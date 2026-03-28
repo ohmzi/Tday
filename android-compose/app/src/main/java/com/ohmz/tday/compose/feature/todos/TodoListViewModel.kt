@@ -7,18 +7,18 @@ import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
-import com.ohmz.tday.compose.core.domain.CompleteTodoUseCase
-import com.ohmz.tday.compose.core.domain.CreateTodoUseCase
-import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,10 +48,9 @@ class TodoListViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val listRepository: ListRepository,
     private val settingsRepository: SettingsRepository,
-    private val syncAndRefresh: SyncAndRefreshUseCase,
-    private val createTodoUseCase: CreateTodoUseCase,
-    private val completeTodoUseCase: CompleteTodoUseCase,
+    private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
+    private val reminderScheduler: TaskReminderScheduler,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TodoListUiState())
@@ -210,7 +209,7 @@ class TodoListViewModel @Inject constructor(
 
             runCatching {
                 if (forceSync) {
-                    syncAndRefresh(force = true, replayPendingMutations = true)
+                    syncManager.syncCachedData(force = true, replayPendingMutations = true)
                         .onFailure { /* fall back to local cache */ }
                 }
                 val todos = todoRepository.fetchTodos(mode = mode, listId = listId)
@@ -254,8 +253,9 @@ class TodoListViewModel @Inject constructor(
 
         viewModelScope.launch {
             runCatching {
-                createTodoUseCase(payload)
+                todoRepository.createTodo(payload)
             }.onSuccess {
+                rescheduleReminders()
                 runCatching {
                     val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
                     val lists = listRepository.fetchLists()
@@ -333,6 +333,7 @@ class TodoListViewModel @Inject constructor(
                     ),
                 )
             }.onSuccess {
+                rescheduleReminders()
                 runCatching {
                     val todos = todoRepository.fetchTodosCached(mode = mode, listId = currentListId)
                     val lists = listRepository.fetchLists()
@@ -364,8 +365,9 @@ class TodoListViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                completeTodoUseCase(todo)
+                todoRepository.completeTodo(todo)
             }.onSuccess {
+                rescheduleReminders()
                 refreshInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update {
@@ -393,6 +395,7 @@ class TodoListViewModel @Inject constructor(
                 todoRepository.deleteTodo(todo)
             }.onSuccess {
                 onDeleted?.invoke()
+                rescheduleReminders()
                 runCatching {
                     val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
                     val lists = listRepository.fetchLists()
@@ -474,6 +477,12 @@ class TodoListViewModel @Inject constructor(
                     errorMessage = error.message ?: "Could not update list",
                 )
             }
+        }
+    }
+
+    private fun rescheduleReminders() {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
         }
     }
 
