@@ -13,8 +13,6 @@ import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.network.RealtimeClient
 import com.ohmz.tday.compose.core.network.RealtimeEvent
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
-import com.ohmz.tday.compose.core.domain.BootstrapSessionUseCase
-import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
@@ -25,6 +23,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,8 +60,6 @@ class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val serverConfigRepository: ServerConfigRepository,
     private val syncManager: SyncManager,
-    private val syncAndRefresh: SyncAndRefreshUseCase,
-    private val bootstrapSession: BootstrapSessionUseCase,
     private val settingsRepository: SettingsRepository,
     private val cacheManager: OfflineCacheManager,
     private val themePreferenceStore: ThemePreferenceStore,
@@ -114,7 +111,7 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            val sessionUser = runCatching { bootstrapSession() }.getOrNull()
+            val sessionUser = restoreSessionAndPrimeData()
             if (sessionUser != null) {
                 val adminUser = isAdmin(sessionUser)
                 _uiState.update {
@@ -168,6 +165,20 @@ class AppViewModel @Inject constructor(
             }
             ensureResyncLoop(authenticated = false)
         }
+    }
+
+    private suspend fun restoreSessionAndPrimeData(): SessionUser? {
+        val user = runCatching { authRepository.restoreSession() }.getOrNull()
+            ?: return null
+        if (user.id == null) return null
+
+        coroutineScope {
+            launch { runCatching { syncManager.syncCachedData(force = true, replayPendingMutations = true) } }
+            launch { runCatching { authRepository.syncTimezone() } }
+            launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
+        }
+
+        return user
     }
 
     fun refreshSession() = bootstrap()
@@ -359,10 +370,12 @@ class AppViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isManualSyncing = true) }
-            runCatching {
-                syncAndRefresh(force = true, replayPendingMutations = false)
-            }
+            val result = syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = false,
+            )
             _uiState.update { it.copy(isManualSyncing = false) }
+            result.exceptionOrNull()?.let(::classifyAndShowError)
             launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
         }
     }
@@ -415,7 +428,10 @@ class AppViewModel @Inject constructor(
                 val delayMs = if (hasPending) PENDING_RESYNC_INTERVAL_MS else RESYNC_INTERVAL_MS
                 delay(delayMs)
 
-                val result = runCatching { syncAndRefresh(force = true) }
+                val result = syncManager.syncCachedData(
+                    force = true,
+                    replayPendingMutations = false,
+                )
                 val syncError = result.exceptionOrNull()
                 _uiState.update {
                     it.copy(
@@ -460,7 +476,10 @@ class AppViewModel @Inject constructor(
                     is RealtimeEvent.ListChanged,
                     is RealtimeEvent.CompletedChanged,
                     -> {
-                        runCatching { syncAndRefresh(force = true, replayPendingMutations = false) }
+                        syncManager.syncCachedData(
+                            force = true,
+                            replayPendingMutations = false,
+                        )
                     }
                     is RealtimeEvent.Disconnected -> {
                         delay(REALTIME_RECONNECT_DELAY_MS)

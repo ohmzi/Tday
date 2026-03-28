@@ -16,7 +16,7 @@ The Android client needs to work reliably on unstable networks and provide insta
 - Implement **offline-first** architecture with a local JSON cache and a pending mutation queue.
 - Cache state is serialized to `EncryptedSharedPreferences` as `OfflineSyncState`.
 - Mutations made offline are queued as `PendingMutationRecord` entries and synced when connectivity returns.
-- `TdayRepository` exposes a `cacheDataVersion` `StateFlow` that increments on cache changes — ViewModels observe it to reload.
+- `OfflineCacheManager` exposes a `cacheDataVersion` `StateFlow` that increments on cache changes — ViewModels observe it to reload.
 - `AppViewModel` runs a periodic background sync loop.
 
 ## Rationale
@@ -29,5 +29,5 @@ The Android client needs to work reliably on unstable networks and provide insta
 ## Consequences
 
 - **Positive**: Instant UI, works offline, data survives app restarts and network outages.
-- **Negative**: Conflict resolution is limited — last-write-wins for most fields. Complex sync logic lives in `TdayRepository`, making it a large class.
-- **Future**: Consider Room database if cache complexity grows beyond JSON serialization capabilities. Consider extracting domain-specific repositories from the single `TdayRepository`.
+- **Negative**: Conflict resolution is limited — last-write-wins for most fields. Sync and mutation replay add coordination complexity across repositories and `SyncManager`.
+- **Future**: Consider Room database if cache complexity grows beyond JSON serialization capabilities. Keep Android on direct MVVM wiring with repositories/services rather than reintroducing a separate use-case layer by default.
