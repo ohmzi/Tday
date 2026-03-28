@@ -5,18 +5,18 @@ import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
-import com.ohmz.tday.compose.core.domain.CompleteTodoUseCase
-import com.ohmz.tday.compose.core.domain.CreateTodoUseCase
-import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,10 +37,9 @@ class CalendarViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val completedRepository: CompletedRepository,
     private val listRepository: ListRepository,
-    private val syncAndRefresh: SyncAndRefreshUseCase,
-    private val createTodoUseCase: CreateTodoUseCase,
-    private val completeTodoUseCase: CompleteTodoUseCase,
+    private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
+    private val reminderScheduler: TaskReminderScheduler,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -131,7 +130,7 @@ class CalendarViewModel @Inject constructor(
 
             runCatching {
                 if (forceSync) {
-                    syncAndRefresh(force = true, replayPendingMutations = false)
+                    syncManager.syncCachedData(force = true, replayPendingMutations = false)
                         .onFailure { /* fall back to cache */ }
                 }
                 val todos = todoRepository.fetchTodos(mode = TodoListMode.SCHEDULED)
@@ -167,8 +166,9 @@ class CalendarViewModel @Inject constructor(
         if (payload.title.isBlank()) return
         viewModelScope.launch {
             runCatching {
-                createTodoUseCase(payload)
+                todoRepository.createTodo(payload)
             }.onSuccess {
+                rescheduleReminders()
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
@@ -188,8 +188,9 @@ class CalendarViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                completeTodoUseCase(todo)
+                todoRepository.completeTodo(todo)
             }.onSuccess {
+                rescheduleReminders()
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
@@ -214,6 +215,7 @@ class CalendarViewModel @Inject constructor(
             runCatching {
                 completedRepository.uncomplete(item)
             }.onSuccess {
+                rescheduleReminders()
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
@@ -279,6 +281,7 @@ class CalendarViewModel @Inject constructor(
                     ),
                 )
             }.onSuccess {
+                rescheduleReminders()
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
@@ -301,6 +304,7 @@ class CalendarViewModel @Inject constructor(
                 todoRepository.deleteTodo(todo)
             }.onSuccess {
                 onDeleted?.invoke()
+                rescheduleReminders()
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
@@ -310,6 +314,12 @@ class CalendarViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    private fun rescheduleReminders() {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
         }
     }
 }
