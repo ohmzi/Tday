@@ -4,9 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
-import com.ohmz.tday.compose.core.domain.CreateTodoUseCase
-import com.ohmz.tday.compose.core.domain.SyncAndRefreshUseCase
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -14,8 +13,10 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,9 +42,9 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val listRepository: ListRepository,
-    private val syncAndRefresh: SyncAndRefreshUseCase,
-    private val createTodoUseCase: CreateTodoUseCase,
+    private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
+    private val reminderScheduler: TaskReminderScheduler,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -111,7 +112,7 @@ class HomeViewModel @Inject constructor(
             }
             runCatching {
                 if (forceSync) {
-                    syncAndRefresh(force = true, replayPendingMutations = true)
+                    syncManager.syncCachedData(force = true, replayPendingMutations = true)
                         .onFailure { /* fall back to local cache */ }
                 }
                 todoRepository.fetchDashboardSummary() to todoRepository.fetchTodos(mode = TodoListMode.ALL)
@@ -150,8 +151,9 @@ class HomeViewModel @Inject constructor(
     fun createTask(payload: CreateTaskPayload) {
         if (payload.title.isBlank()) return
         viewModelScope.launch {
-            runCatching { createTodoUseCase(payload) }
+            runCatching { todoRepository.createTodo(payload) }
                 .onSuccess {
+                    rescheduleReminders()
                     runCatching { todoRepository.fetchDashboardSummaryCached() }
                         .onSuccess { summary ->
                             val todos = runCatching {
@@ -174,6 +176,12 @@ class HomeViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update { it.copy(errorMessage = error.message ?: "Could not create task") }
                 }
+        }
+    }
+
+    private fun rescheduleReminders() {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
         }
     }
 
