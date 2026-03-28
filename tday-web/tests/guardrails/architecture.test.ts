@@ -253,4 +253,15 @@ describe("android architecture guardrails", () => {
       });
     },
   );
+
+  (skipAndroid ? describe.skip : describe)(
+    "mvvm guardrails",
+    () => {
+      it("should not contain Android use-case classes", () => {
+        const kotlinFiles = walkFiles(ANDROID_SRC, [".kt"]);
+        const useCaseFiles = kotlinFiles.filter((file) => file.endsWith("UseCase.kt"));
+        expect(useCaseFiles).toHaveLength(0);
+      });
+    },
+  );
 });

@@ -104,7 +104,7 @@ val display = todo.due.formatDisplay(userTimeZone)
 - **O — Open/Closed**: Extend behavior through composition or new types, not by modifying existing code. Use sealed classes/interfaces for domain variants.
 - **L — Liskov Substitution**: Subclasses must be substitutable for their base types. Applies to error hierarchies (`AppError`, `ApiException`).
 - **I — Interface Segregation**: Clients should not depend on methods they don't use. Keep Retrofit interface methods grouped but don't force a single God interface if it grows beyond ~30 methods.
-- **D — Dependency Inversion**: High-level modules depend on abstractions. ViewModels depend on `TdayRepository` (injected via Hilt), not on Retrofit directly. Backend services are injected via Koin.
+- **D — Dependency Inversion**: High-level modules depend on injected collaborators, not concrete transport details. Android ViewModels depend on repositories and app services provided by Hilt, not on Retrofit directly. Backend services are injected via Koin.
 
 ### Null Safety, Type Safety, and Explicit Types
 
@@ -316,7 +316,7 @@ These rules apply to both the **Ktor backend** and the **Android** codebase.
 | Element | Convention | Example |
 |---------|-----------|---------|
 | Packages | `lowercase.dot.separated` | `com.ohmz.tday.compose.core.data` |
-| Classes / Objects | `PascalCase` | `TdayRepository`, `TodoService` |
+| Classes / Objects | `PascalCase` | `TodoRepository`, `TodoService` |
 | Files | Match primary type | `AppViewModel.kt`, `TodoService.kt` |
 | Functions / Properties | `camelCase` | `bootstrap()`, `saveServerUrl` |
 | Private mutable state | Leading `_` | `_uiState` (public: `uiState`) |
@@ -396,7 +396,7 @@ uiState.value.loading = false
 
 - Launch coroutines in `viewModelScope` (ViewModels) or repository scope.
 - Use `Dispatchers.Default` for CPU work, `Dispatchers.IO` for disk/network (Retrofit handles its own dispatcher).
-- Use `Mutex` to serialize concurrent operations (e.g., sync in `TdayRepository`).
+- Use `Mutex` to serialize concurrent operations (e.g., sync in `SyncManager` or cache coordination code).
 - Use `withTimeout` for network operations that might hang.
 - Use `runCatching` with `.getOrNull()` / `.onSuccess` / `.onFailure` for error handling.
 
