@@ -64,7 +64,6 @@ The application is organized around these core domains:
 | **Auth** | Registration, login, sessions, approval, admin | `User`, `Account`, `AuthThrottle`, `AuthSignal` |
 | **Todos** | Task CRUD, RFC 5545 recurrence, priorities, ordering | `Todo`, `TodoInstance`, `CompletedTodo` |
 | **Lists** | Project grouping with colors and icons | `List` |
-| **Notes** | Rich text notes (TipTap) | `Note` |
 | **Files** | S3-backed file storage | `File` |
 | **Preferences** | Sort/group/direction settings per user | `UserPreferences` |
 | **Admin** | App configuration, user management | `AppConfig` |
@@ -81,7 +80,7 @@ Client Request
 Ktor Pipeline Intercept (Security.kt)
     ├── Read Bearer token or session cookie
     ├── Decode JWE → validate claims (expiry, tokenVersion)
-    ├── Refresh role/approval from database
+    ├── Check AuthUserCache (30s TTL) → DB lookup on miss
     └── Attach AuthUser to call attributes
     │
     ▼
@@ -94,12 +93,14 @@ Ktor Plugins
     ▼
 Route Handlers (routes/*.kt)
     ├── call.withAuth { } → require authenticated user
-    ├── Validate input (Konform / shared validators)
+    ├── Validate input via Konform validateOrFail() → Either<AppError, T>
     ├── Delegate to service layer
     └── Respond with JSON or WebSocket frames
     │
     ▼
 Services (services/*.kt)
+    ├── Return Either<AppError, T> (Arrow)
+    └── newSuspendedTransaction(Dispatchers.IO) { } for DB access
     │
     ▼
 Exposed ORM → PostgreSQL (via HikariCP)
@@ -134,7 +135,7 @@ tday-backend/src/main/kotlin/com/ohmz/tday/
 ├── routes/                 # HTTP route handlers by domain
 │   └── auth/               # Auth-specific routes
 ├── security/               # JWT, passwords, throttling, captcha, encryption
-└── services/               # Business logic (todo, list, note, user, etc.)
+└── services/               # Business logic (todo, list, user, admin, etc.)
 ```
 
 ### Installed Ktor Plugins
@@ -157,15 +158,15 @@ Route Handler
     ├── withAuth { } → business logic
     │       │
     │       ├── Returns Either<AppError, T>
-    │       └── AppError → ApiException with HTTP status
+    │       └── AppError → respondAppError with HTTP status
     │
     └── StatusPages plugin catches exceptions
             │
-            ├── ApiException → JSON { message, code } + HTTP status
+            ├── ApiException (deprecated) → JSON { message, code } + HTTP status
             └── Unknown error → 500 + generic message
 ```
 
-Typed error hierarchy in `domain/AppError.kt` maps to HTTP status codes. Internal details are never exposed to clients.
+The primary error path uses the `AppError` sealed interface with `Either<AppError, T>` from Arrow. The legacy `ApiException` hierarchy is `@Deprecated` and will be removed in a future release. `StatusPages.kt` handles both paths. Internal details are never exposed to clients.
 
 ## Web Architecture (Vite + React)
 
@@ -182,12 +183,12 @@ Typed error hierarchy in `domain/AppError.kt` maps to HTTP status codes. Interna
 ```
 tday-web/src/
 ├── main.tsx              # React DOM entry point
-├── App.tsx               # Provider tree: Theme → Query → Auth → Tooltip → Router
+├── App.tsx               # Provider tree: Theme → Query → Auth → Tooltip → ErrorBoundary → Router + Toaster
 ├── router.tsx            # Route definitions (public, protected, calendar layouts)
 ├── globals.css           # Tailwind @theme tokens, CSS variables
 ├── i18n.ts               # i18next configuration (11 locales, path-based detection)
 ├── components/           # Shared UI (ui/* primitives, Sidebar, auth, todo pieces)
-├── features/             # Feature modules (calendar, list, todayTodos, completed, notes)
+├── features/             # Feature modules (calendar, list, todayTodos, completed)
 ├── hooks/                # Shared React hooks
 ├── lib/                  # Utilities (api-client, navigation, security, dates)
 ├── pages/                # Route-level screens and layouts
@@ -197,16 +198,18 @@ tday-web/src/
 
 ### State Management (Web)
 
-- **Server state**: TanStack React Query (`useQuery`, `useMutation`) for all API-fetched data. Default `staleTime: 60_000`.
-- **Auth state**: Custom `AuthProvider` context managing session fetch/refresh from `/api/auth/session`.
+- **Server state**: TanStack React Query (`useQuery`, `useMutation`) for all API-fetched data. Default `staleTime: 60_000`. Global `QueryCache.onError` shows destructive toasts for all query failures.
+- **Auth state**: Custom `AuthProvider` context managing session fetch/refresh via the shared `api-client` (`api.GET`/`api.POST`).
 - **UI state**: React `useState`/`useReducer` within components. React Context for cross-cutting state (menu, preferences, todo form/mutations).
 - **Theme**: `next-themes` provider with system/light/dark modes via CSS `class` strategy.
+- **Toasts**: Sonner `<Toaster />` mounted at the app root. Components use `useToast()` hook; the `QueryCache` uses the imperative `toast` API directly.
 
 ### API Communication (Web)
 
 The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 
-- `api.GET/POST/PATCH/DELETE` functions in `lib/api-client.ts`
+- `api.GET/POST/PATCH/DELETE` functions in `lib/api-client.ts` with `ApiError` typing
+- All HTTP calls (including auth and preferences) route through the shared API client
 - `credentials: "same-origin"` for cookie-based sessions
 - `Cache-Control: no-store` on all requests
 - Dev: Vite proxy forwards `/api` to `http://localhost:8080`
@@ -268,7 +271,7 @@ com.ohmz.tday.compose/
 │   ├── todos/         # TodoListScreen + TodoListViewModel
 │   ├── completed/     # CompletedScreen + CompletedViewModel
 │   ├── calendar/      # CalendarScreen + CalendarViewModel
-│   ├── notes/         # NotesScreen + NotesViewModel
+│   ├── lists/         # ListsScreen + ListsViewModel
 │   ├── settings/      # SettingsScreen
 │   └── onboarding/    # OnboardingWizardOverlay
 └── ui/
@@ -312,7 +315,6 @@ No third-party Swift dependencies — all native frameworks.
 User ──┬── Todo ──── TodoInstance
        │      └──── List (Project)
        ├── CompletedTodo
-       ├── Note
        ├── File
        ├── UserPreferences
        ├── Account (OAuth)
@@ -321,7 +323,7 @@ User ──┬── Todo ──── TodoInstance
 
 ### ORM and Migrations
 
-- **ORM**: JetBrains Exposed 0.57.0 (DSL/Table API with `transaction {}` blocks)
+- **ORM**: JetBrains Exposed 0.57.0 (DSL/Table API with `newSuspendedTransaction(Dispatchers.IO) {}` for coroutine-safe DB access)
 - **Connection pool**: HikariCP 6.2.1 (max 10 connections, auto-commit off)
 - **Migrations**: Flyway 10.22.0 with `baselineOnMigrate=true` and a baseline version of `2` for legacy databases. Migration files live in `tday-backend/src/main/resources/db/migration/`, with `V2__full_schema.sql` serving as the clean-install schema snapshot.
 - **Driver**: PostgreSQL JDBC 42.7.4
@@ -372,7 +374,7 @@ App launch → Probe server (GET /api/mobile/probe)
 
 ## Real-Time Communication
 
-The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domain events (`DomainEvent` sealed class) are streamed as JSON frames — covering todo, list, and note changes. Each user has their own WebSocket channel.
+The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domain events (`DomainEvent` sealed class) are streamed as JSON frames — covering todo and list changes. Each user has their own WebSocket channel.
 
 ## Internationalization
 

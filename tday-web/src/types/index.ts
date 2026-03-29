@@ -3,13 +3,6 @@ export type ListColor =
   | "PINK" | "TEAL" | "CORAL" | "GOLD" | "DEEP_BLUE" | "ROSE"
   | "LIGHT_RED" | "BRICK" | "SLATE";
 
-export interface NoteItemType {
-  id: string;
-  name: string;
-  content?: string;
-  createdAt: Date;
-}
-
 export interface ListItemMetaType {
   id: string;
   name: string;

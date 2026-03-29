@@ -1,17 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
 import { TodoItemType } from "@/types";
 
 export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
-  const { toast } = useToast();
-  //get all of today's todos
   const {
     data: todos = [],
     isLoading: todoLoading,
-    isError,
-    error,
   } = useQuery<TodoItemType[]>({
     queryKey: [
       "calendarTodo",
@@ -62,11 +56,6 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
       return todoWithFormattedDates;
     },
   });
-  useEffect(() => {
-    if (isError === true) {
-      toast({ description: error.message, variant: "destructive" });
-    }
-  }, [error, isError, toast]);
 
   return { todos, todoLoading };
 };

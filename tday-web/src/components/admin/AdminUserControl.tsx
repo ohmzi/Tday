@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Check, Loader2, RefreshCcw, Trash2, Users } from "lucide-react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 
 type AdminUser = {
@@ -29,6 +29,7 @@ type AdminSettingsResponse = {
 
 export default function AdminUserControl() {
   const { user: sessionUser } = useAuth();
+  const { toast } = useToast();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionUserId, setActionUserId] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export default function AdminUserControl() {
       }
       setUsers(body.users || []);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load users");
+      toast({ description: error instanceof Error ? error.message : "Failed to load users", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -65,9 +66,7 @@ export default function AdminUserControl() {
       }
       setAiSummaryEnabled(Boolean(body.aiSummaryEnabled));
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to load admin settings",
-      );
+      toast({ description: error instanceof Error ? error.message : "Failed to load admin settings", variant: "destructive" });
     } finally {
       setSettingsLoading(false);
     }
@@ -96,10 +95,10 @@ export default function AdminUserControl() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message || "Failed to approve user");
-      toast.success("User approved");
+      toast({ description: "User approved" });
       await fetchUsers();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to approve user");
+      toast({ description: error instanceof Error ? error.message : "Failed to approve user", variant: "destructive" });
     } finally {
       setActionUserId(null);
       setActionType(null);
@@ -120,10 +119,10 @@ export default function AdminUserControl() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message || "Failed to delete user");
-      toast.success("User deleted");
+      toast({ description: "User deleted" });
       await fetchUsers();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete user");
+      toast({ description: error instanceof Error ? error.message : "Failed to delete user", variant: "destructive" });
     } finally {
       setActionUserId(null);
       setActionType(null);
@@ -146,15 +145,13 @@ export default function AdminUserControl() {
         throw new Error(body?.message || "Failed to update admin settings");
       }
       setAiSummaryEnabled(Boolean(body.aiSummaryEnabled));
-      toast.success(
-        body.aiSummaryEnabled
+      toast({
+        description: body.aiSummaryEnabled
           ? "AI summaries enabled for all users"
           : "AI summaries disabled for all users",
-      );
+      });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update admin settings",
-      );
+      toast({ description: error instanceof Error ? error.message : "Failed to update admin settings", variant: "destructive" });
     } finally {
       setSettingsSaving(false);
     }

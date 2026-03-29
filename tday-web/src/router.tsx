@@ -24,7 +24,6 @@ const AddTaskPage = lazy(() => import("@/pages/AddTaskPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const ListPage = lazy(() => import("@/pages/ListPage"));
-const NotePage = lazy(() => import("@/pages/NotePage"));
 const CalendarPage = lazy(() => import("@/pages/CalendarPage"));
 const AuthLayout = lazy(() => import("@/pages/AuthLayout"));
 
@@ -84,7 +83,6 @@ export const router = createBrowserRouter([
                   { path: "admin", element: <AdminPage /> },
                   { path: "settings", element: <SettingsPage /> },
                   { path: "list/:id", element: <ListPage /> },
-                  { path: "note/:id", element: <NotePage /> },
                 ],
               },
               {
