@@ -42,6 +42,7 @@ fun Application.module(config: AppConfig = AppConfig.load()) {
         masking = false
     }
 
+    configureCallLogging()
     configureSerialization()
     configureCors()
     configureSecurityHeaders()
