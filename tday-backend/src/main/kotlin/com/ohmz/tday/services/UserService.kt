@@ -14,7 +14,8 @@ import com.ohmz.tday.security.PasswordService
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
 
@@ -36,7 +37,7 @@ interface UserService {
 
 class UserServiceImpl(private val passwordService: PasswordService) : UserService {
     override suspend fun getUser(userId: String): Either<AppError, UserResponse> {
-        val user = transaction {
+        val user = newSuspendedTransaction(Dispatchers.IO) {
             Users.selectAll().where { Users.id eq userId }.firstOrNull()?.let {
                 UserResponse(
                     maxStorage = it[Users.maxStorage].toDouble(),
@@ -50,7 +51,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
     }
 
     override suspend fun updateEncryption(userId: String, enable: Boolean): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Users.update({ Users.id eq userId }) {
                 it[Users.enableEncryption] = enable
                 it[Users.updatedAt] = LocalDateTime.now()
@@ -60,7 +61,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
     }
 
     override suspend fun updateSymmetricKey(userId: String, key: String): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Users.update({ Users.id eq userId }) {
                 it[Users.protectedSymmetricKey] = key
                 it[Users.updatedAt] = LocalDateTime.now()
@@ -70,7 +71,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
     }
 
     override suspend fun getProfile(userId: String): Either<AppError, UserProfileResponse> {
-        val profile = transaction {
+        val profile = newSuspendedTransaction(Dispatchers.IO) {
             Users.selectAll().where { Users.id eq userId }.firstOrNull()?.let {
                 UserProfileResponse(
                     id = it[Users.id],
@@ -87,7 +88,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
     }
 
     override suspend fun updateProfile(userId: String, name: String?, image: String?): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Users.update({ Users.id eq userId }) {
                 name?.let { n -> it[Users.name] = n }
                 image?.let { i -> it[Users.image] = i }
@@ -98,11 +99,11 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
     }
 
     override suspend fun changePassword(userId: String, currentPassword: String, newPassword: String): Either<AppError, Boolean> {
-        val result = transaction {
-            val user = Users.selectAll().where { Users.id eq userId }.firstOrNull() ?: return@transaction false
-            val storedHash = user[Users.password] ?: return@transaction false
+        val result = newSuspendedTransaction(Dispatchers.IO) {
+            val user = Users.selectAll().where { Users.id eq userId }.firstOrNull() ?: return@newSuspendedTransaction false
+            val storedHash = user[Users.password] ?: return@newSuspendedTransaction false
             val verification = passwordService.verifyPassword(currentPassword, storedHash)
-            if (!verification.valid) return@transaction false
+            if (!verification.valid) return@newSuspendedTransaction false
 
             val newHash = passwordService.hashPassword(newPassword)
             Users.update({ Users.id eq userId }) {
@@ -118,7 +119,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         val hashedPassword = passwordService.hashPassword(password)
         val fullName = listOf(fname.trim(), lname?.trim() ?: "").filter { it.isNotEmpty() }.joinToString(" ")
 
-        val result = transaction {
+        val result = newSuspendedTransaction(Dispatchers.IO) {
             val userCount = Users.selectAll().count()
             val isFirst = userCount == 0L
 
@@ -146,7 +147,7 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         return result.right()
     }
 
-    override suspend fun findByEmail(email: String): Map<String, Any?>? = transaction {
+    override suspend fun findByEmail(email: String): Map<String, Any?>? = newSuspendedTransaction(Dispatchers.IO) {
         Users.selectAll().where { Users.email eq email }.firstOrNull()?.let {
             mapOf(
                 "id" to it[Users.id],
@@ -161,17 +162,17 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
         }
     }
 
-    override suspend fun isAdmin(userId: String): Boolean = transaction {
-        val user = Users.selectAll().where { Users.id eq userId }.firstOrNull() ?: return@transaction false
+    override suspend fun isAdmin(userId: String): Boolean = newSuspendedTransaction(Dispatchers.IO) {
+        val user = Users.selectAll().where { Users.id eq userId }.firstOrNull() ?: return@newSuspendedTransaction false
         user[Users.role] == UserRole.ADMIN && user[Users.approvalStatus] == ApprovalStatus.APPROVED
     }
 
-    override suspend fun emailExists(email: String): Boolean = transaction {
+    override suspend fun emailExists(email: String): Boolean = newSuspendedTransaction(Dispatchers.IO) {
         Users.selectAll().where { Users.email eq email }.count() > 0
     }
 
     override suspend fun updatePasswordHash(userId: String, newHash: String) {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Users.update({ Users.id eq userId }) {
                 it[Users.password] = newHash
                 it[Users.updatedAt] = LocalDateTime.now()

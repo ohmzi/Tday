@@ -7,9 +7,10 @@ import com.ohmz.tday.db.util.CuidGenerator
 import io.ktor.server.request.ApplicationRequest
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -32,11 +33,11 @@ data class ThrottleResult(
 data class SubjectKey(val scope: String, val bucketKey: String, val dimension: ThrottleDimension)
 
 interface AuthThrottle {
-    fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): ThrottleResult
-    fun recordFailure(request: ApplicationRequest, identifier: String? = null)
-    fun clearFailures(request: ApplicationRequest, identifier: String? = null)
-    fun requiresCaptcha(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): Boolean
-    fun recordSuccessSignal(request: ApplicationRequest, identifier: String? = null)
+    suspend fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): ThrottleResult
+    suspend fun recordFailure(request: ApplicationRequest, identifier: String? = null)
+    suspend fun clearFailures(request: ApplicationRequest, identifier: String? = null)
+    suspend fun requiresCaptcha(action: ThrottleAction, request: ApplicationRequest, identifier: String? = null): Boolean
+    suspend fun recordSuccessSignal(request: ApplicationRequest, identifier: String? = null)
     fun formatRetryWait(seconds: Int): String
 }
 
@@ -56,7 +57,7 @@ class AuthThrottleImpl(
         )
     }
 
-    override fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String?): ThrottleResult {
+    override suspend fun enforceRateLimit(action: ThrottleAction, request: ApplicationRequest, identifier: String?): ThrottleResult {
         val subjects = buildSubjects(action, request, identifier)
         val policy = policies[action] ?: return ThrottleResult(allowed = true)
 
@@ -82,7 +83,7 @@ class AuthThrottleImpl(
         return ThrottleResult(allowed = true)
     }
 
-    override fun recordFailure(request: ApplicationRequest, identifier: String?) {
+    override suspend fun recordFailure(request: ApplicationRequest, identifier: String?) {
         val subjects = buildSubjects(ThrottleAction.credentials, request, identifier)
         var longestLock = 0
         var highestIpFailures = 0
@@ -106,9 +107,9 @@ class AuthThrottleImpl(
         }
     }
 
-    override fun clearFailures(request: ApplicationRequest, identifier: String?) {
+    override suspend fun clearFailures(request: ApplicationRequest, identifier: String?) {
         val subjects = buildSubjects(ThrottleAction.credentials, request, identifier)
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             for (subject in subjects) {
                 AuthThrottles.update({
                     (AuthThrottles.scope eq subject.scope) and (AuthThrottles.bucketKey eq subject.bucketKey)
@@ -121,11 +122,11 @@ class AuthThrottleImpl(
         }
     }
 
-    override fun requiresCaptcha(action: ThrottleAction, request: ApplicationRequest, identifier: String?): Boolean {
+    override suspend fun requiresCaptcha(action: ThrottleAction, request: ApplicationRequest, identifier: String?): Boolean {
         val subjects = buildSubjects(action, request, identifier)
         val now = System.currentTimeMillis()
 
-        return transaction {
+        return newSuspendedTransaction(Dispatchers.IO) {
             for (subject in subjects) {
                 val row = AuthThrottles.selectAll().where {
                     (AuthThrottles.scope eq subject.scope) and (AuthThrottles.bucketKey eq subject.bucketKey)
@@ -144,18 +145,18 @@ class AuthThrottleImpl(
                     0
                 }
 
-                if (activeFailures >= config.captchaTriggerFailures) return@transaction true
+                if (activeFailures >= config.captchaTriggerFailures) return@newSuspendedTransaction true
 
                 if (action == ThrottleAction.register) {
                     val registerPolicy = policies[ThrottleAction.register] ?: continue
-                    if (requestCount >= max(3, registerPolicy.maxRequests / 2)) return@transaction true
+                    if (requestCount >= max(3, registerPolicy.maxRequests / 2)) return@newSuspendedTransaction true
                 }
             }
             false
         }
     }
 
-    override fun recordSuccessSignal(request: ApplicationRequest, identifier: String?) {
+    override suspend fun recordSuccessSignal(request: ApplicationRequest, identifier: String?) {
         val normalized = clientSignals.normalizeIdentifier(identifier) ?: return
         val identifierHash = clientSignals.hashSecurityValue("email:$normalized")
         val ipHash = clientSignals.hashSecurityValue("ip:${clientSignals.getClientIp(request)}")
@@ -164,7 +165,7 @@ class AuthThrottleImpl(
         val now = LocalDateTime.now()
         val anomalyWindowMs = config.signalAnomalyWindowSec * 1000L
 
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             val existing = AuthSignals.selectAll().where { AuthSignals.identifierHash eq identifierHash }.firstOrNull()
 
             if (existing != null) {
@@ -231,9 +232,9 @@ class AuthThrottleImpl(
     private fun makeSubject(action: ThrottleAction, dimension: ThrottleDimension, value: String): SubjectKey =
         SubjectKey("${action.name}:${dimension.name}", clientSignals.hashSecurityValue("${dimension.name}:$value"), dimension)
 
-    private fun consumeRequestQuota(policy: Policy, subject: SubjectKey): ThrottleResult {
+    private suspend fun consumeRequestQuota(policy: Policy, subject: SubjectKey): ThrottleResult {
         val now = LocalDateTime.now()
-        return transaction {
+        return newSuspendedTransaction(Dispatchers.IO) {
             val row = AuthThrottles.selectAll().where {
                 (AuthThrottles.scope eq subject.scope) and (AuthThrottles.bucketKey eq subject.bucketKey)
             }.forUpdate().firstOrNull()
@@ -248,12 +249,12 @@ class AuthThrottleImpl(
                     it[createdAt] = now
                     it[updatedAt] = now
                 }
-                return@transaction ThrottleResult(allowed = true)
+                return@newSuspendedTransaction ThrottleResult(allowed = true)
             }
 
             val lockUntil = row[AuthThrottles.lockUntil]
             if (lockUntil != null && lockUntil.isAfter(now)) {
-                return@transaction ThrottleResult(
+                return@newSuspendedTransaction ThrottleResult(
                     allowed = false,
                     reasonCode = "auth_lockout",
                     retryAfterSeconds = retryAfterFromDateTime(lockUntil, now),
@@ -274,7 +275,7 @@ class AuthThrottleImpl(
             }
 
             if (nextRequestCount <= policy.maxRequests) {
-                return@transaction ThrottleResult(allowed = true)
+                return@newSuspendedTransaction ThrottleResult(allowed = true)
             }
 
             val windowEndsAt = nextWindowStart.plusNanos(policy.windowMs * 1_000_000)
@@ -287,11 +288,11 @@ class AuthThrottleImpl(
         }
     }
 
-    private fun incrementFailureCounter(subject: SubjectKey): Pair<Int, Int> {
+    private suspend fun incrementFailureCounter(subject: SubjectKey): Pair<Int, Int> {
         val now = LocalDateTime.now()
         val lockoutResetMs = config.lockoutResetSec * 1000L
 
-        return transaction {
+        return newSuspendedTransaction(Dispatchers.IO) {
             val row = AuthThrottles.selectAll().where {
                 (AuthThrottles.scope eq subject.scope) and (AuthThrottles.bucketKey eq subject.bucketKey)
             }.forUpdate().firstOrNull()

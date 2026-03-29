@@ -1,15 +1,18 @@
 package com.ohmz.tday.plugins
 
 import com.ohmz.tday.db.tables.Users
+import com.ohmz.tday.security.AuthCachedUser
+import com.ohmz.tday.security.AuthUserCache
 import com.ohmz.tday.security.JwtService
 import com.ohmz.tday.security.JwtUserClaims
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.util.*
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.koin.ktor.ext.inject
 
 private const val SECURE_SESSION_COOKIE_NAME = "__Secure-authjs.session-token"
@@ -32,6 +35,7 @@ fun ApplicationCall.requireUser(): JwtUserClaims =
 
 fun Application.configureSecurity() {
     val jwtService by inject<JwtService>()
+    val authUserCache by inject<AuthUserCache>()
 
     install(Authentication) {
         bearer("jwt") {
@@ -47,21 +51,35 @@ fun Application.configureSecurity() {
         if (token != null) {
             val claims = jwtService.decode(token)
             if (claims != null) {
-                val dbUser = transaction {
-                    Users.selectAll().where { Users.id eq claims.id }
-                        .firstOrNull()
+                val cached = authUserCache.get(claims.id)
+                val user = if (cached != null) {
+                    cached
+                } else {
+                    val dbUser = newSuspendedTransaction(Dispatchers.IO) {
+                        Users.selectAll().where { Users.id eq claims.id }
+                            .firstOrNull()
+                    }
+                    if (dbUser != null) {
+                        val fetched = AuthCachedUser(
+                            role = dbUser[Users.role].name,
+                            approvalStatus = dbUser[Users.approvalStatus].name,
+                            tokenVersion = dbUser[Users.tokenVersion],
+                            timeZone = dbUser[Users.timeZone],
+                        )
+                        authUserCache.put(claims.id, fetched)
+                        fetched
+                    } else null
                 }
 
-                if (dbUser != null) {
-                    val dbTokenVersion = dbUser[Users.tokenVersion]
-                    if (claims.tokenVersion == null || claims.tokenVersion == dbTokenVersion) {
+                if (user != null) {
+                    if (claims.tokenVersion == null || claims.tokenVersion == user.tokenVersion) {
                         call.attributes.put(
                             AuthUserKey,
                             claims.copy(
-                                role = dbUser[Users.role].name,
-                                approvalStatus = dbUser[Users.approvalStatus].name,
-                                tokenVersion = dbTokenVersion,
-                                timeZone = dbUser[Users.timeZone],
+                                role = user.role,
+                                approvalStatus = user.approvalStatus,
+                                tokenVersion = user.tokenVersion,
+                                timeZone = user.timeZone,
                             ),
                         )
                     }
