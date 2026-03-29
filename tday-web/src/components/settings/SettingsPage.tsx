@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 
 const APP_VERSION = "1.6.0";
@@ -58,6 +58,7 @@ export default function SettingsPage() {
   const { t: shortcutsDict } = useTranslation("shortcuts");
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const [name, setName] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
@@ -82,7 +83,7 @@ export default function SettingsPage() {
     const trimmed = name.trim();
     if (!trimmed) return;
     if (trimmed === user?.name) {
-      toast.info("No changes to save");
+      toast({ description: "No changes to save" });
       return;
     }
     setProfileLoading(true);
@@ -94,9 +95,9 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update profile");
-      toast.success("Name updated successfully");
+      toast({ description: "Name updated successfully" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update");
+      toast({ description: err instanceof Error ? err.message : "Failed to update", variant: "destructive" });
     } finally {
       setProfileLoading(false);
     }
@@ -105,11 +106,11 @@ export default function SettingsPage() {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 8) {
-      toast.error("New password must be at least 8 characters");
+      toast({ description: "New password must be at least 8 characters", variant: "destructive" });
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
+      toast({ description: "Passwords do not match", variant: "destructive" });
       return;
     }
     setPasswordLoading(true);
@@ -121,12 +122,12 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to change password");
-      toast.success("Password changed successfully");
+      toast({ description: "Password changed successfully" });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to change password");
+      toast({ description: err instanceof Error ? err.message : "Failed to change password", variant: "destructive" });
     } finally {
       setPasswordLoading(false);
     }

@@ -149,7 +149,7 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 | `AUTH_CREDENTIALS_PRIVATE_KEY` | RSA key for credential envelope encryption |
 | `AUTH_CAPTCHA_SECRET` | Cloudflare Turnstile secret for adaptive CAPTCHA |
 | `DATA_ENCRYPTION_KEY` / `DATA_ENCRYPTION_KEY_ID` | Field-level encryption at rest |
-| `AWS_*` | S3 storage for notes/files |
+| `AWS_*` | S3 storage for files |
 
 ### Secrets via Files
 
