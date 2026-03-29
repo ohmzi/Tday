@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SortBy, GroupBy, Direction } from "@/types/enums";
+import { api } from "@/lib/api-client";
 
 type UserPreferences = {
   id: string;
@@ -20,9 +21,7 @@ type UserPreferencesContextType = {
 const UserPreferencesContext = createContext<UserPreferencesContextType | undefined>(undefined);
 
 async function fetchPreferences(): Promise<UserPreferences> {
-  const res = await fetch("/api/preferences");
-  if (!res.ok) throw new Error("Failed to fetch preferences");
-  const data = await res.json();
+  const data = await api.GET({ url: "/api/preferences" });
   return data.userPreferences;
 }
 
@@ -32,13 +31,11 @@ async function updatePreferencesAPI(
   const cleanedPrefs = Object.fromEntries(
     Object.entries(preferences).map(([key, value]) => [key, value === undefined ? null : value]),
   );
-  const res = await fetch("/api/preferences", {
-    method: "PATCH",
+  const data = await api.PATCH({
+    url: "/api/preferences",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cleanedPrefs),
   });
-  if (!res.ok) throw new Error("Failed to update preferences");
-  const data = await res.json();
   return data.userPreferences;
 }
 
