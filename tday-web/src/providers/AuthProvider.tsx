@@ -7,8 +7,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api-client";
 
 export type AuthUser = {
   id: string;
@@ -37,16 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchSession = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/session", {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user ?? null);
-      } else {
-        setUser(null);
-      }
+      const data = await api.GET({ url: "/api/auth/session" });
+      setUser(data?.user ?? null);
     } catch {
       setUser(null);
     } finally {
@@ -60,25 +52,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (email: string, credentialPayload: Record<string, string>) => {
-      const res = await fetch("/api/auth/callback/credentials", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, ...credentialPayload }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
+      try {
+        await api.POST({
+          url: "/api/auth/callback/credentials",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, ...credentialPayload }),
+        });
+        await fetchSession();
+        return { ok: true };
+      } catch (e) {
+        const err = e instanceof ApiError ? e : null;
         return {
           ok: false,
-          code: data.code ?? data.reason,
-          message: data.message ?? "Invalid credentials",
+          code: err?.code,
+          message: err?.message ?? "Invalid credentials",
         };
       }
-
-      await fetchSession();
-      return { ok: true };
     },
     [fetchSession],
   );
@@ -86,10 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     queryClient.clear();
     await clearClientUserData();
-    await fetch("/api/auth/logout", {
-      method: "POST",
-      credentials: "same-origin",
-    }).catch(() => {});
+    try {
+      await api.POST({ url: "/api/auth/logout", body: "{}" });
+    } catch {}
     setUser(null);
     window.location.replace(window.location.origin);
   }, [queryClient]);

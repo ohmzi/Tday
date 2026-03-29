@@ -1,6 +1,7 @@
 package com.ohmz.tday.domain
 
-import com.ohmz.tday.models.response.*
+import com.ohmz.tday.models.response.ListResponse
+import com.ohmz.tday.models.response.TodoResponse
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -16,7 +17,4 @@ sealed class DomainEvent {
 
     @Serializable
     data class ListChanged(val list: ListResponse) : DomainEvent()
-
-    @Serializable
-    data class NoteChanged(val note: NoteResponse) : DomainEvent()
 }

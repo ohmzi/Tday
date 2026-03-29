@@ -264,6 +264,9 @@ try { await fetchTodo(id); } catch {}
 - One component per file (exception: small helper components tightly coupled to the main export).
 - Props interfaces live in the same file as the component.
 - Avoid `useEffect` for data fetching — use React Query instead.
+- **Error toasts**: Query errors are handled globally via `QueryCache.onError` in `QueryProvider`. Do **not** add per-query `useEffect` blocks for error display.
+- **HTTP calls**: All API calls go through `lib/api-client.ts`. Do **not** use raw `fetch` for backend endpoints.
+- **Toasts**: Use `sonner` for toast notifications. The root-level `<Toaster>` is mounted in `App.tsx`.
 
 ### Colors and Spacing (Web)
 
@@ -373,8 +376,8 @@ todos.filter { it.priority == Priority.High }  // avoid 'it' when the lambda is 
 
 - **DI**: Use **Koin** modules (`configModule`, `securityModule`, `serviceModule`) in `di/AppModule.kt`. Services are `single { }` scoped.
 - **Error handling**: Services return `Either<AppError, T>` (Arrow). Routes fold the result into HTTP responses.
-- **Validation**: Use **Konform** validators and shared model validation from `domain/Validations.kt`.
-- **Database**: All database access goes through **Exposed** `transaction { }` blocks. Table definitions in `db/tables/`.
+- **Validation**: Use **Konform** validators from `domain/Validations.kt` with the `validateOrFail()` helper that returns `Either<AppError, T>`. Wire validators into routes via `validateCreateTodo.validateOrFail(body).bind()` inside `either` blocks.
+- **Database**: All database access goes through **Exposed** `newSuspendedTransaction(Dispatchers.IO) { }` blocks for coroutine-safe I/O dispatch. Table definitions in `db/tables/`.
 - **Serialization**: `kotlinx.serialization` for all JSON. No Gson, no Jackson.
 
 ### State Management (Android)
@@ -576,9 +579,9 @@ Within a ViewModel file:
 **Error handling (Backend — Ktor):**
 
 ```kotlin
-// Good: typed error with Either
-fun getTodo(userId: String, todoId: String): Either<AppError, Todo> {
-    val todo = transaction {
+// Good: typed error with Either + coroutine-safe transaction
+suspend fun getTodo(userId: String, todoId: String): Either<AppError, Todo> {
+    val todo = newSuspendedTransaction(Dispatchers.IO) {
         Todos.selectAll().where {
             (Todos.id eq todoId) and (Todos.userID eq userId)
         }.firstOrNull()
@@ -586,7 +589,7 @@ fun getTodo(userId: String, todoId: String): Either<AppError, Todo> {
     return todo.toResponse().right()
 }
 
-// Bad: no error handling, leaks internals
+// Bad: no error handling, blocking transaction, leaks internals
 fun getTodo(userId: String, todoId: String): Todo {
     return transaction {
         Todos.selectAll().where { Todos.id eq todoId }.first().toResponse()

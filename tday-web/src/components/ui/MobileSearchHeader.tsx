@@ -13,7 +13,7 @@ interface MobileSearchHeaderProps {
 export default function MobileSearchHeader({
   searchQuery: externalQuery,
   onSearchChange,
-  placeholder = "Search notes...",
+  placeholder = "Search tasks...",
 }: MobileSearchHeaderProps) {
   const { setShowMenu } = useMenu();
   const [internalQuery, setInternalQuery] = useState("");

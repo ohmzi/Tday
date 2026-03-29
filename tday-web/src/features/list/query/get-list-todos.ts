@@ -1,18 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
 import { endOfToday, startOfToday } from "date-fns";
 
 export const useList = ({ id }: { id: string }) => {
-  const { toast } = useToast();
-  //get Notes
   const {
     data: listTodos = [],
     isLoading: listTodosLoading,
-    isError,
-    error,
     isFetching,
     isPending,
   } = useQuery<TodoItemType[]>({
@@ -44,10 +38,5 @@ export const useList = ({ id }: { id: string }) => {
     },
   });
 
-  useEffect(() => {
-    if (isError === true) {
-      toast({ description: error.message, variant: "destructive" });
-    }
-  }, [error, isError, toast]);
   return { listTodos, listTodosLoading, isFetching, isPending };
 };

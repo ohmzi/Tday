@@ -4,7 +4,6 @@ Personal task planner — self-hosted, private, multilingual.
 
 - Tasks with priorities, pinning, drag-and-drop reordering, and RFC 5545 recurrence
 - Calendar with month, week, and day views
-- Notes with a rich text editor (TipTap)
 - Lists (projects) for organization with colors and icons
 - Completion history and AI-powered task summaries (Ollama)
 - 11 languages via i18next
@@ -80,7 +79,7 @@ Tday/
 ├── tday-web/                  # Vite SPA (React + TypeScript + Tailwind)
 │   ├── src/
 │   │   ├── components/        # Shared React components
-│   │   ├── features/          # Feature modules (calendar, list, notes, todos)
+│   │   ├── features/          # Feature modules (calendar, list, todos)
 │   │   ├── hooks/             # Shared React hooks
 │   │   ├── lib/               # Client utilities (security, dates, API client)
 │   │   ├── pages/             # Route pages

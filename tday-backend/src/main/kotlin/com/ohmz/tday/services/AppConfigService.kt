@@ -8,7 +8,8 @@ import com.ohmz.tday.models.response.AppConfigResponse
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
 
@@ -21,7 +22,7 @@ class AppConfigServiceImpl : AppConfigService {
     private val globalId = 1
 
     override suspend fun getGlobalConfig(): Either<AppError, AppConfigResponse> {
-        val config = transaction {
+        val config = newSuspendedTransaction(Dispatchers.IO) {
             val existing = AppConfigs.selectAll().where { AppConfigs.id eq globalId }.firstOrNull()
             if (existing != null) {
                 AppConfigResponse(
@@ -43,7 +44,7 @@ class AppConfigServiceImpl : AppConfigService {
     }
 
     override suspend fun setAiSummaryEnabled(enabled: Boolean, updatedById: String?): Either<AppError, AppConfigResponse> {
-        val config = transaction {
+        val config = newSuspendedTransaction(Dispatchers.IO) {
             val now = LocalDateTime.now()
             val existing = AppConfigs.selectAll().where { AppConfigs.id eq globalId }.firstOrNull()
             if (existing != null) {

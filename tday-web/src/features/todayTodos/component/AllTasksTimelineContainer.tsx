@@ -391,7 +391,7 @@ const AllTasksTimelineContainer = ({
                 <input
                   ref={searchInputRef}
                   type="text"
-                  placeholder="Search notes..."
+                  placeholder="Search tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}

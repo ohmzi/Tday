@@ -1,4 +1,5 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { ReactNode } from "react";
 
 let browserQueryClient: QueryClient | undefined;
@@ -6,6 +7,11 @@ let browserQueryClient: QueryClient | undefined;
 function getQueryClient(): QueryClient {
   if (!browserQueryClient) {
     browserQueryClient = new QueryClient({
+      queryCache: new QueryCache({
+        onError: (error) => {
+          toast.error(error.message || "An error occurred");
+        },
+      }),
       defaultOptions: {
         queries: {
           staleTime: 60_000,

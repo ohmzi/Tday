@@ -125,13 +125,6 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
       setActiveMenu({ name: "List", open: true, children: { name: listID } });
       return;
     }
-    if (pathname.includes("note")) {
-      if (pathname.endsWith("note")) { setActiveMenu({ name: "Note", open: true }); return; }
-      const parts = pathname.split("/");
-      const noteID = parts[parts.length - 1];
-      setActiveMenu({ name: "Note", open: true, children: { name: noteID } });
-      return;
-    }
     if (pathname.includes("tday") || pathname.includes("todo")) { setActiveMenu({ name: "Todo" }); return; }
     if (pathname.includes("calendar")) { setActiveMenu({ name: "Calendar" }); return; }
     if (pathname.includes("completed")) { setActiveMenu({ name: "Completed" }); return; }
