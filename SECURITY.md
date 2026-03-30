@@ -73,9 +73,10 @@ Every response includes (via `SecurityHeaders.kt`):
 
 ### HTTPS Enforcement
 
-- The Docker host port is bound to **`127.0.0.1` (localhost only) by default**, preventing direct external HTTP access. Traffic reaches the backend exclusively through the Cloudflare Tunnel, which provides HTTPS.
+- The Docker host port is bound to **`127.0.0.1` (localhost only) by default**, preventing direct external HTTP access. Traffic reaches the backend through a tunnel or VPN — see [Remote Access](docs/REMOTE_ACCESS.md) for all supported methods (Cloudflare Tunnel, Tailscale, WireGuard, ZeroTier, SSH tunnels, ngrok, frp).
 - Direct external access is opt-in: set `TDAY_HOST_BIND=0.0.0.0` in the project-root `.env` file. This is **discouraged** for production.
-- Production deployments should use a reverse proxy (e.g., Cloudflare Tunnel, nginx) for TLS termination.
+- Production deployments should use a method that provides TLS termination (Cloudflare Tunnel, ngrok, Caddy reverse proxy, or Tailscale Funnel).
+- VPN-based methods (Tailscale, WireGuard, ZeroTier) encrypt traffic at the tunnel layer; browser-trusted HTTPS is optional but recommended for production cookie security.
 - HSTS headers are applied when `TDAY_ENV=production` (`NODE_ENV=production` is still accepted as a compatibility fallback).
 
 ## Data Protection
