@@ -38,7 +38,7 @@ services:
     container_name: tday_backend
     restart: always
     ports:
-      - "2525:8080"
+      - "${TDAY_HOST_BIND:-127.0.0.1}:${TDAY_HOST_PORT:-2525}:8080"
     env_file:
       - .env.docker
     security_opt:

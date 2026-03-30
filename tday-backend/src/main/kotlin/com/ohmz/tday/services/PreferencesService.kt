@@ -12,7 +12,8 @@ import com.ohmz.tday.models.response.PreferencesResponse
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.update
 
 interface PreferencesService {
@@ -22,7 +23,7 @@ interface PreferencesService {
 
 class PreferencesServiceImpl : PreferencesService {
     override suspend fun get(userId: String): Either<AppError, PreferencesResponse> {
-        val prefs = transaction {
+        val prefs = newSuspendedTransaction(Dispatchers.IO) {
             val row = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
             PreferencesResponse(
                 sortBy = row?.get(UserPreferences.sortBy)?.name,
@@ -34,7 +35,7 @@ class PreferencesServiceImpl : PreferencesService {
     }
 
     override suspend fun update(userId: String, sortBy: String?, groupBy: String?, direction: String?): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             val existing = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
             if (existing != null) {
                 UserPreferences.update({ UserPreferences.userID eq userId }) {

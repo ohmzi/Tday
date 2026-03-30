@@ -2,15 +2,15 @@
 
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 
-const toastSpy = vi.fn();
+const toastErrorSpy = vi.fn();
 const getMock = vi.fn();
 
-vi.mock("@/hooks/use-toast", () => ({
-  useToast: () => ({
-    toast: toastSpy,
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), {
+    error: (...args: unknown[]) => toastErrorSpy(...args),
   }),
 }));
 
@@ -24,6 +24,11 @@ import { useTodo } from "@/features/todayTodos/query/get-todo";
 
 function createWrapper() {
   const queryClient = new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error) => {
+        toastErrorSpy(error.message || "An error occurred");
+      },
+    }),
     defaultOptions: {
       queries: {
         retryDelay: 0,
@@ -40,7 +45,7 @@ function createWrapper() {
 
 describe("useTodo", () => {
   afterEach(() => {
-    toastSpy.mockReset();
+    toastErrorSpy.mockReset();
     getMock.mockReset();
   });
 
@@ -85,7 +90,7 @@ describe("useTodo", () => {
     expect(result.current.todos[0]?.id).toBe("todo-1:1772442000000");
   });
 
-  it("surfaces query failures through the destructive toast", async () => {
+  it("surfaces query failures through the global error toast", async () => {
     getMock.mockRejectedValue(new Error("Network down"));
 
     renderHook(() => useTodo(), {
@@ -93,10 +98,7 @@ describe("useTodo", () => {
     });
 
     await waitFor(() => {
-      expect(toastSpy).toHaveBeenCalledWith({
-        description: "Network down",
-        variant: "destructive",
-      });
+      expect(toastErrorSpy).toHaveBeenCalledWith("Network down");
     });
   });
 });
