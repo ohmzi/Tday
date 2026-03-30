@@ -22,13 +22,13 @@ val securityModule = module {
     single<CaptchaService> { CaptchaServiceImpl(get(), get()) }
     single<CredentialEnvelope> { CredentialEnvelopeImpl(get()) }
     single<SessionControl> { SessionControlImpl(get()) }
+    single { AuthUserCache() }
 }
 
 val serviceModule = module {
     single<CacheService> { CacheServiceImpl() }
     single<TodoService> { TodoServiceImpl(get(), get()) }
     single<ListService> { ListServiceImpl(get()) }
-    single<NoteService> { NoteServiceImpl(get()) }
     single<UserService> { UserServiceImpl(get()) }
     single<CompletedTodoService> { CompletedTodoServiceImpl(get(), get()) }
     single<PreferencesService> { PreferencesServiceImpl() }
@@ -36,4 +36,5 @@ val serviceModule = module {
     single<TodoSummaryService> { TodoSummaryServiceImpl(get()) }
     single<TodoNlpService> { TodoNlpServiceImpl() }
     single<RealtimeService> { RealtimeServiceImpl() }
+    single<AdminService> { AdminServiceImpl() }
 }

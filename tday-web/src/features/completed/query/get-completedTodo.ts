@@ -1,17 +1,11 @@
 import { CompletedTodoItemType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
 
 export const useCompletedTodo = () => {
-  const { toast } = useToast();
-  //get todos
   const {
     data: completedTodos = [],
     isLoading: todoLoading,
-    isError,
-    error,
   } = useQuery<CompletedTodoItemType[]>({
     queryKey: ["completedTodo"],
     retry: 2,
@@ -47,11 +41,6 @@ export const useCompletedTodo = () => {
       return completedTodoWithFormattedDates;
     },
   });
-  useEffect(() => {
-    if (isError === true) {
-      toast({ description: error.message, variant: "destructive" });
-    }
-  }, [error, isError, toast]);
 
   return { completedTodos, todoLoading };
 };

@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BrainCircuit,
   CalendarDays,
-  FileText,
   Lock,
   Sparkles,
   Wand2,
@@ -24,7 +23,7 @@ const slides: Slide[] = [
   {
     title: "A calmer way to run your day",
     description:
-      "T'Day brings your tasks, notes, and schedule into one focused workspace so planning feels simple and execution stays sharp.",
+      "T'Day brings your tasks and schedule into one focused workspace so planning feels simple and execution stays sharp.",
     bullets: [
       "One home for planning, writing, and tracking",
       "Fast capture that turns into clear action",
@@ -68,18 +67,6 @@ const slides: Slide[] = [
     icon: CalendarDays,
   },
   {
-    title: "Notes that feel like a workspace",
-    description:
-      "Capture ideas in a clean editor built for planning sessions, docs, and meeting notes that stay connected to your tasks.",
-    bullets: [
-      "Markdown-first writing flow",
-      "Rich formatting for structured notes",
-      "Code snippets with syntax highlighting",
-      "Nested lists for deep outlines",
-    ],
-    icon: FileText,
-  },
-  {
     title: "Security built into every layer",
     description:
       "Across web, mobile, and backend services, T'Day applies practical safeguards for transport, sessions, storage, and access boundaries.",
@@ -113,10 +100,10 @@ const mockTasks = [
     status: "Reminder set",
   },
   {
-    title: "Write project design notes",
+    title: "Review project architecture",
     time: "8:00 PM",
     meta: "Deep Work · Medium",
-    status: "Notion page linked",
+    status: "Due tonight",
   },
 ];
 
@@ -251,7 +238,6 @@ function MockTodayWorkspace() {
           <div className="rounded-xl bg-accent/18 px-3 py-2 text-foreground">Today</div>
           <div className="rounded-xl px-3 py-2 text-muted-foreground">Completed</div>
           <div className="rounded-xl px-3 py-2 text-muted-foreground">Calendar</div>
-          <div className="rounded-xl px-3 py-2 text-muted-foreground">Notes</div>
           <div className="rounded-xl px-3 py-2 text-muted-foreground">Settings</div>
         </nav>
 

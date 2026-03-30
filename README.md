@@ -4,7 +4,6 @@ Personal task planner — self-hosted, private, multilingual.
 
 - Tasks with priorities, pinning, drag-and-drop reordering, and RFC 5545 recurrence
 - Calendar with month, week, and day views
-- Notes with a rich text editor (TipTap)
 - Lists (projects) for organization with colors and icons
 - Completion history and AI-powered task summaries (Ollama)
 - 11 languages via i18next
@@ -40,9 +39,11 @@ Docker Compose starts three services:
 
 | Service | Container | Port |
 |---------|-----------|------|
-| Ktor backend + Vite SPA | `tday_backend` | `2525 → 8080` |
+| Ktor backend + Vite SPA | `tday_backend` | `localhost:2525 → 8080` (localhost only by default) |
 | PostgreSQL | `tday_db` | 5432 (internal) |
 | Ollama | `tday_ollama` | 11434 (internal) |
+
+Port 2525 is bound to `127.0.0.1` by default so the backend is not exposed over HTTP to the network. External access goes through the Cloudflare Tunnel (HTTPS). Set `TDAY_HOST_BIND=0.0.0.0` in the root `.env` to open the port externally (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)).
 
 GPU acceleration: `tday_ollama` uses `gpus: all` by default — install the NVIDIA Container Toolkit on the Docker host.
 
@@ -80,7 +81,7 @@ Tday/
 ├── tday-web/                  # Vite SPA (React + TypeScript + Tailwind)
 │   ├── src/
 │   │   ├── components/        # Shared React components
-│   │   ├── features/          # Feature modules (calendar, list, notes, todos)
+│   │   ├── features/          # Feature modules (calendar, list, todos)
 │   │   ├── hooks/             # Shared React hooks
 │   │   ├── lib/               # Client utilities (security, dates, API client)
 │   │   ├── pages/             # Route pages

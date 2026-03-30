@@ -138,7 +138,7 @@ class AuthRoutesTest {
     ) : AuthThrottle {
         val actions = mutableListOf<ThrottleAction>()
 
-        override fun enforceRateLimit(
+        override suspend fun enforceRateLimit(
             action: ThrottleAction,
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,
@@ -147,23 +147,23 @@ class AuthRoutesTest {
             return result
         }
 
-        override fun recordFailure(
+        override suspend fun recordFailure(
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,
         ) = Unit
 
-        override fun clearFailures(
+        override suspend fun clearFailures(
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,
         ) = Unit
 
-        override fun requiresCaptcha(
+        override suspend fun requiresCaptcha(
             action: ThrottleAction,
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,
         ): Boolean = false
 
-        override fun recordSuccessSignal(
+        override suspend fun recordSuccessSignal(
             request: io.ktor.server.request.ApplicationRequest,
             identifier: String?,
         ) = Unit

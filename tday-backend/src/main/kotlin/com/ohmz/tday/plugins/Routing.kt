@@ -29,7 +29,6 @@ fun Application.configureRouting() {
         route("/api") {
             todoRoutes()
             listRoutes()
-            noteRoutes()
             userRoutes()
             preferencesRoutes()
             completedTodoRoutes()
