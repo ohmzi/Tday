@@ -43,7 +43,7 @@ Docker Compose starts three services:
 | PostgreSQL | `tday_db` | 5432 (internal) |
 | Ollama | `tday_ollama` | 11434 (internal) |
 
-Port 2525 is bound to `127.0.0.1` by default so the backend is not exposed over HTTP to the network. External access goes through the Cloudflare Tunnel (HTTPS). Set `TDAY_HOST_BIND=0.0.0.0` in the root `.env` to open the port externally (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)).
+Port 2525 is bound to `127.0.0.1` by default so the backend is not exposed over HTTP to the network. For remote access, see [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md) — it covers Cloudflare Tunnel, Tailscale, WireGuard, ZeroTier, SSH tunnels, ngrok, and frp. Set `TDAY_HOST_BIND=0.0.0.0` in the root `.env` to open the port externally (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)).
 
 GPU acceleration: `tday_ollama` uses `gpus: all` by default — install the NVIDIA Container Toolkit on the Docker host.
 
@@ -121,6 +121,7 @@ Tday/
 | [`docs/API_GUIDELINES.md`](docs/API_GUIDELINES.md) | REST API contracts and conventions |
 | [`docs/TESTING.md`](docs/TESTING.md) | Testing strategy and expectations |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Docker, CI/CD, secrets, releases |
+| [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md) | Remote access methods (Cloudflare Tunnel, Tailscale, WireGuard, etc.) |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records |
 
 ## License
