@@ -1,8 +1,6 @@
 import { TodoItemType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
 
 const getTodoTimeline = async () => {
   const data = await api.GET({
@@ -31,24 +29,14 @@ const getTodoTimeline = async () => {
 };
 
 export const useTodoTimeline = () => {
-  const { toast } = useToast();
-
   const {
     data: todos = [],
     isLoading: todoLoading,
-    isError,
-    error,
   } = useQuery<TodoItemType[]>({
     queryKey: ["todoTimeline"],
     retry: 2,
     queryFn: getTodoTimeline,
   });
-
-  useEffect(() => {
-    if (isError === true) {
-      toast({ description: (error as Error).message, variant: "destructive" });
-    }
-  }, [error, isError, toast]);
 
   return { todos, todoLoading };
 };

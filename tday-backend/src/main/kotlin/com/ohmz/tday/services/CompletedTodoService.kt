@@ -12,7 +12,8 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 
 interface CompletedTodoService {
     suspend fun getAll(userId: String): Either<AppError, List<CompletedTodoResponse>>
@@ -25,7 +26,7 @@ class CompletedTodoServiceImpl(
     private val cache: CacheService,
 ) : CompletedTodoService {
     override suspend fun getAll(userId: String): Either<AppError, List<CompletedTodoResponse>> {
-        val todos = transaction {
+        val todos = newSuspendedTransaction(Dispatchers.IO) {
             CompletedTodos.selectAll().where { CompletedTodos.userID eq userId }
                 .orderBy(CompletedTodos.completedAt, SortOrder.DESC)
                 .map { it.toCompletedResponse() }
@@ -34,7 +35,7 @@ class CompletedTodoServiceImpl(
     }
 
     override suspend fun deleteAll(userId: String): Either<AppError, Int> {
-        val count = transaction {
+        val count = newSuspendedTransaction(Dispatchers.IO) {
             CompletedTodos.deleteWhere { CompletedTodos.userID eq userId }
         }
         cache.invalidateCompletedCaches(userId)
@@ -42,7 +43,7 @@ class CompletedTodoServiceImpl(
     }
 
     override suspend fun deleteById(userId: String, id: String): Either<AppError, Int> {
-        val count = transaction {
+        val count = newSuspendedTransaction(Dispatchers.IO) {
             CompletedTodos.deleteWhere { (CompletedTodos.id eq id) and (CompletedTodos.userID eq userId) }
         }
         cache.invalidateCompletedCaches(userId)

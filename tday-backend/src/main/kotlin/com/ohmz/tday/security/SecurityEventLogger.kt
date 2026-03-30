@@ -6,20 +6,21 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 
 interface SecurityEventLogger {
-    fun log(reasonCode: String, details: Map<String, Any?> = emptyMap())
+    suspend fun log(reasonCode: String, details: Map<String, Any?> = emptyMap())
 }
 
 class SecurityEventLoggerImpl : SecurityEventLogger {
     private val logger = LoggerFactory.getLogger("security")
     private val json = Json { encodeDefaults = true }
 
-    override fun log(reasonCode: String, details: Map<String, Any?>) {
+    override suspend fun log(reasonCode: String, details: Map<String, Any?>) {
         val payload = buildJsonObject {
             put("reasonCode", JsonPrimitive(reasonCode))
             put("at", JsonPrimitive(java.time.Instant.now().toString()))
@@ -32,7 +33,7 @@ class SecurityEventLoggerImpl : SecurityEventLogger {
 
         try {
             val serialized = json.encodeToString(JsonElement.serializer(), payload).take(500)
-            transaction {
+            newSuspendedTransaction(Dispatchers.IO) {
                 EventLogs.insert {
                     it[id] = CuidGenerator.newCuid()
                     it[capturedTime] = LocalDateTime.now()
