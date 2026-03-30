@@ -73,7 +73,9 @@ Every response includes (via `SecurityHeaders.kt`):
 
 ### HTTPS Enforcement
 
-- Production deployments should use a reverse proxy (e.g., Cloudflare, nginx) for TLS termination.
+- The Docker host port is bound to **`127.0.0.1` (localhost only) by default**, preventing direct external HTTP access. Traffic reaches the backend exclusively through the Cloudflare Tunnel, which provides HTTPS.
+- Direct external access is opt-in: set `TDAY_HOST_BIND=0.0.0.0` in the project-root `.env` file. This is **discouraged** for production.
+- Production deployments should use a reverse proxy (e.g., Cloudflare Tunnel, nginx) for TLS termination.
 - HSTS headers are applied when `TDAY_ENV=production` (`NODE_ENV=production` is still accepted as a compatibility fallback).
 
 ## Data Protection
