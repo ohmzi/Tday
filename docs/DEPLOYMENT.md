@@ -47,11 +47,11 @@ The `tday_backend` container runs with:
 
 ### Network Security
 
-By default the backend port is bound to **`127.0.0.1`** (localhost only). External clients cannot reach it over HTTP — traffic arrives through the Cloudflare Tunnel (`tday.ohmz.cloud`), which provides HTTPS.
+By default the backend port is bound to **`127.0.0.1`** (localhost only). External clients cannot reach it over HTTP — an ingress method is required to bridge external traffic to `localhost:2525`.
 
 ```
 Browser / Mobile App
-  └─ HTTPS ─► Cloudflare Tunnel ─► cloudflared on server ─► localhost:2525 ─► tday_backend :8080
+  └─ HTTPS / VPN ─► [ ingress method ] ─► localhost:2525 ─► tday_backend :8080
 ```
 
 The binding is controlled by two variables in the **project-root `.env`** file (not `.env.docker`):
@@ -70,7 +70,7 @@ TDAY_HOST_BIND=0.0.0.0
 
 When exposing the port externally, set `TDAY_ENV=production` in `.env.docker` so the backend enables secure cookies and HSTS headers.
 
-Mobile apps and web access via the Cloudflare Tunnel are unaffected by this setting — the tunnel daemon connects to `localhost:2525` on the same host.
+For detailed instructions on all supported remote access methods — including Cloudflare Tunnel, Tailscale, WireGuard, ZeroTier, SSH tunnels, ngrok, and frp — see **[Remote Access](REMOTE_ACCESS.md)**.
 
 ### Health Checks
 

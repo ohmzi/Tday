@@ -81,6 +81,8 @@ import com.ohmz.tday.compose.feature.home.HomeScreen
 import com.ohmz.tday.compose.feature.home.HomeUiState
 import com.ohmz.tday.compose.feature.home.HomeViewModel
 import com.ohmz.tday.compose.feature.onboarding.OnboardingWizardOverlay
+import com.ohmz.tday.compose.feature.release.LatestReleaseScreen
+import com.ohmz.tday.compose.feature.release.LatestReleaseViewModel
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
@@ -544,6 +546,23 @@ fun TdayApp() {
                         onDismissAiValidationError = appViewModel::dismissAiSummaryValidationError,
                         onBack = { navController.popBackStack() },
                         onLogout = { appViewModel.logout() },
+                        onOpenLatestRelease = { navController.navigate(AppRoute.LatestRelease.route) },
+                    )
+                }
+
+                composable(
+                    route = AppRoute.LatestRelease.route,
+                    enterTransition = { settingsEnterTransition() },
+                    exitTransition = { settingsExitTransition() },
+                    popEnterTransition = { settingsEnterTransition() },
+                    popExitTransition = { settingsExitTransition() },
+                ) {
+                    val viewModel: LatestReleaseViewModel = hiltViewModel()
+                    val releaseUiState by viewModel.uiState.collectAsStateWithLifecycle()
+                    LatestReleaseScreen(
+                        uiState = releaseUiState,
+                        onBack = { navController.popBackStack() },
+                        onRetry = viewModel::load,
                     )
                 }
             }
