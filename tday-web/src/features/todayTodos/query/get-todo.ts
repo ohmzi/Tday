@@ -1,8 +1,6 @@
 import { TodoItemType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
 import { startOfToday, endOfToday } from "date-fns";
 
 const getTodo = async () => {
@@ -37,24 +35,14 @@ const getTodo = async () => {
 };
 
 export const useTodo = () => {
-  const { toast } = useToast();
-  //get todos
   const {
     data: todos = [],
     isLoading: todoLoading,
-    isError,
-    error,
   } = useQuery<TodoItemType[]>({
     queryKey: ["todo"],
     retry: 2,
-
     queryFn: getTodo,
   });
-  useEffect(() => {
-    if (isError === true) {
-      toast({ description: error.message, variant: "destructive" });
-    }
-  }, [error, isError, toast]);
 
   return { todos, todoLoading };
 };

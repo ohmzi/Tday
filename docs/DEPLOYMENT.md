@@ -45,6 +45,33 @@ The `tday_backend` container runs with:
 - `cap_drop: ALL`
 - No privileged mode
 
+### Network Security
+
+By default the backend port is bound to **`127.0.0.1`** (localhost only). External clients cannot reach it over HTTP — traffic arrives through the Cloudflare Tunnel (`tday.ohmz.cloud`), which provides HTTPS.
+
+```
+Browser / Mobile App
+  └─ HTTPS ─► Cloudflare Tunnel ─► cloudflared on server ─► localhost:2525 ─► tday_backend :8080
+```
+
+The binding is controlled by two variables in the **project-root `.env`** file (not `.env.docker`):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `TDAY_HOST_BIND` | `127.0.0.1` | Interface to bind on the Docker host |
+| `TDAY_HOST_PORT` | `2525` | Host port mapped to the container's `8080` |
+
+To allow direct external access (development / trusted LAN only):
+
+```bash
+# .env (project root)
+TDAY_HOST_BIND=0.0.0.0
+```
+
+When exposing the port externally, set `TDAY_ENV=production` in `.env.docker` so the backend enables secure cookies and HSTS headers.
+
+Mobile apps and web access via the Cloudflare Tunnel are unaffected by this setting — the tunnel daemon connects to `localhost:2525` on the same host.
+
 ### Health Checks
 
 | Service | Check | Interval |
@@ -102,7 +129,8 @@ The **single source of truth** for the app version is `tday-web/package.json`. A
 
 - **CI/CD**: Reads `tday-web/package.json` → Docker image tags (`:v1.6.0`, `:latest`), Git tags, GitHub releases.
 - **Android**: `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and computed `versionCode`.
-- **Runtime**: Android sends `BuildConfig.VERSION_NAME` in the `X-Tday-App-Version` HTTP header.
+- **iOS**: A `postversion` npm hook runs `scripts/sync-ios-version.sh`, which writes the version into `ios-swiftUI/Tday/Info.plist` and stages the change automatically.
+- **Runtime**: Android sends `BuildConfig.VERSION_NAME` and iOS sends `CFBundleShortVersionString` in the `X-Tday-App-Version` HTTP header.
 
 To bump the version before merging to `master`:
 
@@ -112,6 +140,8 @@ npm version patch   # 1.6.0 → 1.6.1
 npm version minor   # 1.6.0 → 1.7.0
 npm version major   # 1.6.0 → 2.0.0
 ```
+
+The `postversion` hook syncs the iOS `Info.plist` and stages it, so the version-bump commit includes the plist change.
 
 **Never** set version numbers directly in `build.gradle.kts` or any other file. Edit only `tday-web/package.json`.
 
@@ -140,6 +170,15 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 | `OLLAMA_URL` | Ollama service URL (default: `http://ollama:11434`) |
 | `OLLAMA_MODEL` | AI model for summaries (default: `qwen2.5:0.5b`) |
 
+#### Docker Compose (project-root `.env`)
+
+These variables are read by Docker Compose for port binding. They belong in the **root `.env`** file, not `.env.docker`.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `TDAY_HOST_BIND` | `127.0.0.1` | Network interface for the host port binding (`127.0.0.1` = localhost only, `0.0.0.0` = all interfaces) |
+| `TDAY_HOST_PORT` | `2525` | Host port mapped to the backend container's port `8080` |
+
 #### Optional
 
 | Variable | Purpose |
@@ -149,7 +188,7 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 | `AUTH_CREDENTIALS_PRIVATE_KEY` | RSA key for credential envelope encryption |
 | `AUTH_CAPTCHA_SECRET` | Cloudflare Turnstile secret for adaptive CAPTCHA |
 | `DATA_ENCRYPTION_KEY` / `DATA_ENCRYPTION_KEY_ID` | Field-level encryption at rest |
-| `AWS_*` | S3 storage for notes/files |
+| `AWS_*` | S3 storage for files |
 
 ### Secrets via Files
 

@@ -26,14 +26,15 @@ All API routes live under `/api/`. The web SPA consumes them via same-origin req
 
 ### Validation
 
-- Validate incoming request bodies using **Konform** validators and **shared model validators** from the `shared` KMP module.
-- Throw typed `AppError` variants for invalid input (maps to `400 Bad Request`).
+- Validate incoming request bodies using **Konform** validators from `domain/Validations.kt` with the `validateOrFail()` helper.
+- Return typed `AppError` variants via `Either.Left` for invalid input (maps to `400 Bad Request`).
 - Never trust client input without validation.
 
 ```kotlin
-val validated = validateTodoRequest(request)
-if (validated is Invalid) {
-    return AppError.BadRequest(validated.errors.joinToString()).left()
+either {
+    val body = call.receive<TodoCreateRequest>()
+    validateCreateTodo.validateOrFail(body).bind()
+    todoService.create(user.id, body.title, ...).bind()
 }
 ```
 
@@ -78,7 +79,7 @@ Always return a JSON object with a `message` field:
 }
 ```
 
-Error responses are produced by the `StatusPages` plugin from thrown `ApiException` instances, which are derived from typed `AppError` sealed variants.
+Error responses are produced by `respondAppError()` from the `withAuth` helper, or by `StatusPages` for unhandled exceptions. The legacy `ApiException` hierarchy is deprecated — new code should use `Either<AppError, T>` exclusively.
 
 ## HTTP Status Codes
 
@@ -201,15 +202,6 @@ Services return `Either<AppError, T>` (Arrow) for typed error handling. Routes f
 | PATCH | `/api/list` | Update a list |
 | DELETE | `/api/list` | Delete a list |
 | GET | `/api/list/{id}` | Get list with its todos |
-
-### Notes
-
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/api/note` | List notes |
-| POST | `/api/note` | Create a note |
-| PATCH | `/api/note/{id}` | Update a note |
-| DELETE | `/api/note/{id}` | Delete a note |
 
 ### User
 

@@ -11,7 +11,8 @@ import com.ohmz.tday.models.response.ListResponse
 import com.ohmz.tday.models.response.ListTodoResponse
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.time.LocalDateTime
 
 interface ListService {
@@ -25,7 +26,7 @@ interface ListService {
 
 class ListServiceImpl(private val cache: CacheService) : ListService {
     override suspend fun getAll(userId: String): Either<AppError, List<ListResponse>> {
-        val lists = transaction {
+        val lists = newSuspendedTransaction(Dispatchers.IO) {
             Lists.selectAll().where { Lists.userID eq userId }
                 .orderBy(Lists.createdAt, SortOrder.DESC)
                 .map { it.toListResponse() }
@@ -34,7 +35,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
     }
 
     override suspend fun getById(userId: String, listId: String): Either<AppError, ListResponse> {
-        val list = transaction {
+        val list = newSuspendedTransaction(Dispatchers.IO) {
             Lists.selectAll().where { (Lists.id eq listId) and (Lists.userID eq userId) }
                 .firstOrNull()?.toListResponse()
         }
@@ -42,7 +43,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
     }
 
     override suspend fun getTodosForList(userId: String, listId: String): Either<AppError, List<ListTodoResponse>> {
-        val todos = transaction {
+        val todos = newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
                 (Todos.userID eq userId) and (Todos.listID eq listId) and (Todos.completed eq false)
             }.orderBy(Todos.order, SortOrder.ASC).map { row ->
@@ -63,7 +64,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
     override suspend fun create(userId: String, name: String, color: String?, iconKey: String?): Either<AppError, ListResponse> {
         val id = CuidGenerator.newCuid()
         val now = LocalDateTime.now()
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Lists.insert {
                 it[Lists.id] = id
                 it[Lists.name] = name
@@ -82,7 +83,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
     }
 
     override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Lists.update({ (Lists.id eq id) and (Lists.userID eq userId) }) {
                 name?.let { n -> it[Lists.name] = n }
                 color?.let { c -> it[Lists.color] = ListColor.valueOf(c) }
@@ -95,7 +96,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
     }
 
     override suspend fun delete(userId: String, id: String): Either<AppError, Int> {
-        val count = transaction {
+        val count = newSuspendedTransaction(Dispatchers.IO) {
             Todos.update({ (Todos.listID eq id) and (Todos.userID eq userId) }) {
                 it[Todos.listID] = null
             }
