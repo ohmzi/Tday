@@ -10,10 +10,19 @@ import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("com.ohmz.tday.plugins.StatusPages")
 
+@Deprecated("Migrate to AppError sealed interface with Either<AppError, T>", ReplaceWith("AppError"))
 open class ApiException(val status: HttpStatusCode, override val message: String) : RuntimeException(message)
+
+@Deprecated("Use AppError.BadRequest instead", ReplaceWith("AppError.BadRequest(message)"))
 class BadRequestException(message: String = "The server received bad/malformed values") : ApiException(HttpStatusCode.BadRequest, message)
+
+@Deprecated("Use AppError.Unauthorized instead", ReplaceWith("AppError.Unauthorized(message)"))
 class UnauthorizedException(message: String = "Authentication required") : ApiException(HttpStatusCode.Unauthorized, message)
+
+@Deprecated("Use AppError.Forbidden instead", ReplaceWith("AppError.Forbidden(message)"))
 class ForbiddenException(message: String = "Access denied") : ApiException(HttpStatusCode.Forbidden, message)
+
+@Deprecated("Use AppError.NotFound instead", ReplaceWith("AppError.NotFound(message)"))
 class NotFoundException(message: String = "Resource not found") : ApiException(HttpStatusCode.NotFound, message)
 
 fun appErrorStatus(error: AppError): HttpStatusCode = when (error) {
@@ -43,6 +52,7 @@ suspend fun ApplicationCall.respondAppError(error: AppError) {
 
 fun Application.configureStatusPages() {
     install(StatusPages) {
+        @Suppress("DEPRECATION")
         exception<ApiException> { call, cause ->
             call.respondApiError(cause.status, cause.message.ifBlank { cause.status.description })
         }

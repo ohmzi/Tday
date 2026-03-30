@@ -14,7 +14,8 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.Timestamp
@@ -52,7 +53,7 @@ class TodoServiceImpl(
         val id = CuidGenerator.newCuid()
         val now = LocalDateTime.now()
 
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Todos.insert {
                 it[Todos.id] = id
                 it[Todos.title] = title
@@ -84,7 +85,7 @@ class TodoServiceImpl(
         val dateRangeStart = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(start), ZoneOffset.UTC)
         val dateRangeEnd = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(end), ZoneOffset.UTC)
 
-        val todos = transaction {
+        val todos = newSuspendedTransaction(Dispatchers.IO) {
             val oneOff = Todos.selectAll().where {
                 (Todos.userID eq userId) and Todos.rrule.isNull() and
                     (Todos.completed eq false) and (Todos.due greaterEq dateRangeStart) and
@@ -104,7 +105,7 @@ class TodoServiceImpl(
 
     @Suppress("UNUSED_PARAMETER")
     override suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int): Either<AppError, List<TodoResponse>> {
-        val todos = transaction {
+        val todos = newSuspendedTransaction(Dispatchers.IO) {
             val oneOff = Todos.selectAll().where {
                 (Todos.userID eq userId) and Todos.rrule.isNull() and (Todos.completed eq false)
             }.orderBy(Todos.due to SortOrder.ASC, Todos.order to SortOrder.ASC).map { it.toTodoResponse() }
@@ -120,7 +121,7 @@ class TodoServiceImpl(
     }
 
     override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Todos.update({ (Todos.id eq id) and (Todos.userID eq userId) }) { stmt ->
                 fields["title"]?.let { stmt[Todos.title] = it as String }
                 fields["description"]?.let {
@@ -147,7 +148,7 @@ class TodoServiceImpl(
     }
 
     override suspend fun delete(userId: String, id: String): Either<AppError, Int> {
-        val count = transaction {
+        val count = newSuspendedTransaction(Dispatchers.IO) {
             Todos.deleteWhere { (Todos.id eq id) and (Todos.userID eq userId) }
         }
         cache.invalidateTodoCaches(userId)
@@ -155,10 +156,10 @@ class TodoServiceImpl(
     }
 
     override suspend fun completeTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             val todo = Todos.selectAll().where {
                 (Todos.id eq todoId) and (Todos.userID eq userId)
-            }.firstOrNull() ?: return@transaction
+            }.firstOrNull() ?: return@newSuspendedTransaction
 
             val now = LocalDateTime.now()
             val todoDtstart = todo[Todos.dtstart]
@@ -211,7 +212,7 @@ class TodoServiceImpl(
     }
 
     override suspend fun uncompleteTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             if (instanceDate != null) {
                 TodoInstances.update({
                     (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
@@ -228,7 +229,7 @@ class TodoServiceImpl(
     }
 
     override suspend fun prioritize(userId: String, todoId: String, priority: String): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
                 it[Todos.priority] = Priority.valueOf(priority)
                 it[Todos.updatedAt] = LocalDateTime.now()
@@ -239,7 +240,7 @@ class TodoServiceImpl(
     }
 
     override suspend fun reorder(userId: String, todoId: String, newOrder: Int): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
                 it[Todos.order] = newOrder
                 it[Todos.updatedAt] = LocalDateTime.now()
@@ -251,7 +252,7 @@ class TodoServiceImpl(
 
     override suspend fun getOverdue(userId: String, timeZone: String): Either<AppError, List<TodoResponse>> {
         val now = LocalDateTime.now(ZoneId.of(timeZone))
-        val todos = transaction {
+        val todos = newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
                 (Todos.userID eq userId) and (Todos.completed eq false) and
                     Todos.rrule.isNull() and (Todos.due less now)
@@ -261,10 +262,10 @@ class TodoServiceImpl(
     }
 
     override suspend fun patchInstance(userId: String, todoId: String, instanceDate: LocalDateTime, fields: Map<String, Any?>): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
                 (Todos.id eq todoId) and (Todos.userID eq userId)
-            }.firstOrNull() ?: return@transaction
+            }.firstOrNull() ?: return@newSuspendedTransaction
 
             val existing = TodoInstances.selectAll().where {
                 (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
@@ -311,10 +312,10 @@ class TodoServiceImpl(
     }
 
     override suspend fun deleteInstance(userId: String, todoId: String, instanceDate: LocalDateTime): Either<AppError, Unit> {
-        transaction {
+        newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
                 (Todos.id eq todoId) and (Todos.userID eq userId)
-            }.firstOrNull() ?: return@transaction
+            }.firstOrNull() ?: return@newSuspendedTransaction
 
             TodoInstances.deleteWhere {
                 (TodoInstances.todoId eq todoId) and (TodoInstances.instanceDate eq instanceDate)
