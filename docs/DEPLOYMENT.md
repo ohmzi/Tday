@@ -129,7 +129,8 @@ The **single source of truth** for the app version is `tday-web/package.json`. A
 
 - **CI/CD**: Reads `tday-web/package.json` → Docker image tags (`:v1.6.0`, `:latest`), Git tags, GitHub releases.
 - **Android**: `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and computed `versionCode`.
-- **Runtime**: Android sends `BuildConfig.VERSION_NAME` in the `X-Tday-App-Version` HTTP header.
+- **iOS**: A `postversion` npm hook runs `scripts/sync-ios-version.sh`, which writes the version into `ios-swiftUI/Tday/Info.plist` and stages the change automatically.
+- **Runtime**: Android sends `BuildConfig.VERSION_NAME` and iOS sends `CFBundleShortVersionString` in the `X-Tday-App-Version` HTTP header.
 
 To bump the version before merging to `master`:
 
@@ -139,6 +140,8 @@ npm version patch   # 1.6.0 → 1.6.1
 npm version minor   # 1.6.0 → 1.7.0
 npm version major   # 1.6.0 → 2.0.0
 ```
+
+The `postversion` hook syncs the iOS `Info.plist` and stages it, so the version-bump commit includes the plist change.
 
 **Never** set version numbers directly in `build.gradle.kts` or any other file. Edit only `tday-web/package.json`.
 
