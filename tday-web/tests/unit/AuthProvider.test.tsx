@@ -56,10 +56,11 @@ describe("AuthProvider", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/auth/session", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/session", expect.objectContaining({
+      method: "GET",
       cache: "no-store",
       credentials: "same-origin",
-    });
+    }));
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.email).toBe("taylor@example.com");
   });
