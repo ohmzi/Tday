@@ -50,13 +50,6 @@ export const todoInstanceSchema = z.object({
   rrule: z.string().nullable(),
 });
 
-export const noteSchema = z.object({
-  name: z
-    .string({ message: "title cannot be left empty" })
-    .trim()
-    .min(1, { message: "title cannot be left empty" }),
-  content: z.string().nullable().optional(),
-});
 const listColorValues = [
   "RED",
   "ORANGE",

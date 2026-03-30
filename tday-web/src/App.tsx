@@ -5,6 +5,7 @@ import QueryProvider from "@/providers/QueryProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { SonnerToaster } from "@/components/ui/sonner";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           </TooltipProvider>
         </AuthProvider>
       </QueryProvider>
+      <SonnerToaster />
     </ThemeProvider>
   );
 }

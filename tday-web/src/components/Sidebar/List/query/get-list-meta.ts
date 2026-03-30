@@ -1,16 +1,11 @@
 import { ListItemMetaMapType, ListItemMetaType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
 
 export const useListMetaData = () => {
-  const { toast } = useToast();
   const {
     data: listMetaData = {},
     isLoading: listMetaLoading,
-    isError,
-    error,
     isFetching,
     isPending,
   } = useQuery<ListItemMetaMapType>({
@@ -30,13 +25,6 @@ export const useListMetaData = () => {
       return listMap;
     },
   });
-
-  useEffect(() => {
-    if (isError) {
-      toast({ description: error.message, variant: "destructive" });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isError]);
 
   return {
     listMetaData,

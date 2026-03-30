@@ -1,10 +1,20 @@
 package com.ohmz.tday.domain
 
+import arrow.core.Either
+import arrow.core.right
 import com.ohmz.tday.models.request.*
 import io.konform.validation.Validation
 import io.konform.validation.constraints.maxLength
 import io.konform.validation.constraints.minLength
 import io.konform.validation.constraints.pattern
+
+fun <T> Validation<T>.validateOrFail(value: T): Either<AppError, T> {
+    val result = this(value)
+    return if (result.isValid) value.right()
+    else Either.Left(AppError.BadRequest(
+        result.errors.joinToString("; ") { it.message }
+    ))
+}
 
 val validateCreateTodo = Validation<TodoCreateRequest> {
     TodoCreateRequest::title {
@@ -29,13 +39,6 @@ val validateCreateList = Validation<ListCreateRequest> {
 val validatePatchList = Validation<ListPatchRequest> {
     ListPatchRequest::id {
         minLength(1) hint "List id is required"
-    }
-}
-
-val validateCreateNote = Validation<NoteCreateRequest> {
-    NoteCreateRequest::name {
-        minLength(1) hint "Name is required"
-        maxLength(500) hint "Name too long"
     }
 }
 
