@@ -45,6 +45,33 @@ The `tday_backend` container runs with:
 - `cap_drop: ALL`
 - No privileged mode
 
+### Network Security
+
+By default the backend port is bound to **`127.0.0.1`** (localhost only). External clients cannot reach it over HTTP — traffic arrives through the Cloudflare Tunnel (`tday.ohmz.cloud`), which provides HTTPS.
+
+```
+Browser / Mobile App
+  └─ HTTPS ─► Cloudflare Tunnel ─► cloudflared on server ─► localhost:2525 ─► tday_backend :8080
+```
+
+The binding is controlled by two variables in the **project-root `.env`** file (not `.env.docker`):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `TDAY_HOST_BIND` | `127.0.0.1` | Interface to bind on the Docker host |
+| `TDAY_HOST_PORT` | `2525` | Host port mapped to the container's `8080` |
+
+To allow direct external access (development / trusted LAN only):
+
+```bash
+# .env (project root)
+TDAY_HOST_BIND=0.0.0.0
+```
+
+When exposing the port externally, set `TDAY_ENV=production` in `.env.docker` so the backend enables secure cookies and HSTS headers.
+
+Mobile apps and web access via the Cloudflare Tunnel are unaffected by this setting — the tunnel daemon connects to `localhost:2525` on the same host.
+
 ### Health Checks
 
 | Service | Check | Interval |
@@ -139,6 +166,15 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 | `AUTH_SESSION_MAX_AGE_SEC` | Session lifetime in seconds (default: 86,400) |
 | `OLLAMA_URL` | Ollama service URL (default: `http://ollama:11434`) |
 | `OLLAMA_MODEL` | AI model for summaries (default: `qwen2.5:0.5b`) |
+
+#### Docker Compose (project-root `.env`)
+
+These variables are read by Docker Compose for port binding. They belong in the **root `.env`** file, not `.env.docker`.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `TDAY_HOST_BIND` | `127.0.0.1` | Network interface for the host port binding (`127.0.0.1` = localhost only, `0.0.0.0` = all interfaces) |
+| `TDAY_HOST_PORT` | `2525` | Host port mapped to the backend container's port `8080` |
 
 #### Optional
 
