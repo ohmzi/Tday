@@ -159,15 +159,17 @@
     <string name="settings_check_updates">Check for updates</string>
 
     <!-- Latest release screen -->
-    <string name="release_title">Latest Release</string>
+    <string name="release_title">App Version</string>
     <string name="release_error">Unable to fetch release information. Please check your connection and try again.</string>
-    <string name="release_update_available">Update available</string>
+    <string name="release_installed_version">Installed Version</string>
+    <string name="release_update_available">Update Available</string>
+    <string name="release_up_to_date">Latest</string>
+    <string name="release_up_to_date_message">You\'re running the latest version</string>
     <string name="release_published">Published %1$s</string>
-    <string name="release_current_version">Installed: v%1$s</string>
-    <string name="release_download_section">Download</string>
+    <string name="release_whats_new_in_version">What\'s new in %1$s</string>
+    <string name="release_no_notes_for_version">No release notes available for this version</string>
     <string name="release_download_apk">Download APK</string>
     <string name="release_download_started">Download started — check notifications</string>
     <string name="release_no_apk">No APK attached to this release.</string>
-    <string name="release_whats_changed">What\'s Changed</string>
     <string name="release_view_on_github">View on GitHub</string>
 </resources>
