@@ -26,14 +26,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -47,13 +50,13 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
-import androidx.core.net.toUri
 
 @Composable
 fun LatestReleaseScreen(
@@ -104,7 +107,7 @@ fun LatestReleaseScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
-                imageVector = Icons.Rounded.NewReleases,
+                imageVector = Icons.Rounded.Info,
                 contentDescription = null,
                 tint = colorScheme.onBackground,
                 modifier = Modifier.size(28.dp),
@@ -157,7 +160,7 @@ fun LatestReleaseScreen(
                 }
             }
 
-            uiState.release != null -> {
+            else -> {
                 ReleaseContent(
                     uiState = uiState,
                     onDownloadApk = { asset ->
@@ -165,8 +168,7 @@ fun LatestReleaseScreen(
                         downloadApk(context, asset)
                     },
                     onOpenInBrowser = { url ->
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        context.startActivity(intent)
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                     },
                 )
             }
@@ -180,9 +182,12 @@ private fun ReleaseContent(
     onDownloadApk: (GitHubAsset) -> Unit,
     onOpenInBrowser: (String) -> Unit,
 ) {
-    val release = uiState.release ?: return
     val colorScheme = MaterialTheme.colorScheme
+    val currentRelease = uiState.currentRelease
+    val latestRelease = uiState.latestRelease
+    val currentChangelog = parseChangelog(currentRelease?.body)
 
+    // ── Installed version ──────────────────────────────────
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -195,21 +200,34 @@ private fun ReleaseContent(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Info,
+                    contentDescription = null,
+                    tint = colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = stringResource(R.string.release_installed_version),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onSurface,
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(
-                    text = release.tagName,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colorScheme.primary.copy(alpha = 0.12f))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.primary,
+                VersionBadge(
+                    text = "v${uiState.currentVersion}",
+                    backgroundColor = colorScheme.primary.copy(alpha = 0.12f),
+                    textColor = colorScheme.primary,
                 )
-                if (uiState.hasUpdate) {
+                if (!uiState.hasUpdate) {
                     Text(
-                        text = stringResource(R.string.release_update_available),
+                        text = stringResource(R.string.release_up_to_date),
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .background(colorScheme.tertiary.copy(alpha = 0.12f))
@@ -221,7 +239,7 @@ private fun ReleaseContent(
                 }
             }
 
-            release.publishedAt?.let { date ->
+            currentRelease?.publishedAt?.let { date ->
                 Text(
                     text = stringResource(R.string.release_published, formatIsoDate(date)),
                     style = MaterialTheme.typography.bodyMedium,
@@ -229,21 +247,35 @@ private fun ReleaseContent(
                 )
             }
 
-            Text(
-                text = stringResource(R.string.release_current_version, uiState.currentVersion),
-                style = MaterialTheme.typography.bodySmall,
-                color = colorScheme.onSurface.copy(alpha = 0.55f),
-            )
+            if (currentChangelog.isNotEmpty()) {
+                HorizontalDivider(color = colorScheme.onSurface.copy(alpha = 0.08f))
+                Text(
+                    text = stringResource(R.string.release_whats_new_in_version, "v${uiState.currentVersion}"),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onSurface,
+                )
+                ChangelogList(items = currentChangelog)
+            } else if (currentRelease == null) {
+                Text(
+                    text = stringResource(R.string.release_no_notes_for_version),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.onSurface.copy(alpha = 0.55f),
+                )
+            }
         }
     }
 
-    val apk = release.apkAsset
-    if (apk != null) {
+    // ── Up to date / Update available ──────────────────────
+    if (uiState.hasUpdate && latestRelease != null) {
+        val latestChangelog = parseChangelog(latestRelease.body)
+
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            border = BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.25f)),
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -254,141 +286,196 @@ private fun ReleaseContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.CloudDownload,
+                        imageVector = Icons.Rounded.NewReleases,
                         contentDescription = null,
-                        tint = colorScheme.onSurface,
+                        tint = colorScheme.primary,
                         modifier = Modifier.size(20.dp),
                     )
                     Text(
-                        text = stringResource(R.string.release_download_section),
+                        text = stringResource(R.string.release_update_available),
                         style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.primary,
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    VersionBadge(
+                        text = latestRelease.tagName,
+                        backgroundColor = colorScheme.primary.copy(alpha = 0.12f),
+                        textColor = colorScheme.primary,
+                    )
+                }
+
+                latestRelease.publishedAt?.let { date ->
+                    Text(
+                        text = stringResource(R.string.release_published, formatIsoDate(date)),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorScheme.onSurface.copy(alpha = 0.7f),
+                    )
+                }
+
+                if (latestChangelog.isNotEmpty()) {
+                    HorizontalDivider(color = colorScheme.onSurface.copy(alpha = 0.08f))
+                    Text(
+                        text = stringResource(R.string.release_whats_new_in_version, latestRelease.tagName),
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = colorScheme.onSurface,
                     )
+                    ChangelogList(items = latestChangelog)
                 }
 
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = colorScheme.surfaceVariant,
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                HorizontalDivider(color = colorScheme.onSurface.copy(alpha = 0.08f))
+
+                val apk = latestRelease.apkAsset
+                if (apk != null) {
+                    Card(
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = apk.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = colorScheme.onSurface,
-                            )
-                            Text(
-                                text = formatBytes(apk.size),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colorScheme.onSurface.copy(alpha = 0.6f),
-                            )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = apk.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = formatBytes(apk.size),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colorScheme.onSurface.copy(alpha = 0.6f),
+                                )
+                            }
                         }
                     }
-                }
 
-                Button(
-                    onClick = { onDownloadApk(apk) },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colorScheme.primary,
-                    ),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CloudDownload,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = { onDownloadApk(apk) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CloudDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.release_download_apk),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                } else {
                     Text(
-                        text = stringResource(R.string.release_download_apk),
-                        fontWeight = FontWeight.SemiBold,
+                        text = stringResource(R.string.release_no_apk),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorScheme.onSurface.copy(alpha = 0.6f),
                     )
                 }
             }
         }
-    } else {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = colorScheme.surfaceVariant.copy(alpha = 0.6f),
-            ),
-        ) {
-            Text(
-                text = stringResource(R.string.release_no_apk),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = colorScheme.onSurface.copy(alpha = 0.6f),
-            )
-        }
-    }
-
-    val items = uiState.changelogItems
-    if (items.isNotEmpty()) {
+    } else if (!uiState.hasUpdate && latestRelease != null) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = colorScheme.tertiary,
+                    modifier = Modifier.size(24.dp),
+                )
                 Text(
-                    text = stringResource(R.string.release_whats_changed),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    text = stringResource(R.string.release_up_to_date_message),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
                     color = colorScheme.onSurface,
                 )
-                items.forEach { item ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Text(
-                            text = "→",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colorScheme.primary,
-                        )
-                        Text(
-                            text = item,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colorScheme.onSurface,
-                        )
-                    }
-                }
             }
         }
     }
 
-    OutlinedButton(
-        onClick = { onOpenInBrowser(release.htmlUrl) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = stringResource(R.string.release_view_on_github))
+    // ── View on GitHub ─────────────────────────────────────
+    val browseUrl = latestRelease?.htmlUrl ?: currentRelease?.htmlUrl
+    if (browseUrl != null) {
+        OutlinedButton(
+            onClick = { onOpenInBrowser(browseUrl) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = stringResource(R.string.release_view_on_github))
+        }
     }
 
     Spacer(modifier = Modifier.height(24.dp))
+}
+
+@Composable
+private fun VersionBadge(
+    text: String,
+    backgroundColor: androidx.compose.ui.graphics.Color,
+    textColor: androidx.compose.ui.graphics.Color,
+) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = textColor,
+    )
+}
+
+@Composable
+private fun ChangelogList(items: List<String>) {
+    val colorScheme = MaterialTheme.colorScheme
+    items.forEach { item ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "→",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.primary,
+            )
+            Text(
+                text = item,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurface,
+            )
+        }
+    }
 }
 
 private fun downloadApk(context: Context, asset: GitHubAsset) {
