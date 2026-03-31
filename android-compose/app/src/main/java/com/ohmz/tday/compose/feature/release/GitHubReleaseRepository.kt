@@ -14,9 +14,18 @@ class GitHubReleaseRepository @Inject constructor(
 ) {
     private val client = OkHttpClient.Builder().build()
 
-    suspend fun fetchLatestRelease(): GitHubRelease = withContext(Dispatchers.IO) {
+    suspend fun fetchLatestRelease(): GitHubRelease = fetchRelease(LATEST_RELEASE_URL)
+
+    suspend fun fetchReleaseByTag(tag: String): GitHubRelease? =
+        try {
+            fetchRelease("$RELEASES_URL/tags/$tag")
+        } catch (_: Exception) {
+            null
+        }
+
+    private suspend fun fetchRelease(url: String): GitHubRelease = withContext(Dispatchers.IO) {
         val request = Request.Builder()
-            .url(LATEST_RELEASE_URL)
+            .url(url)
             .header("Accept", "application/vnd.github+json")
             .get()
             .build()
@@ -31,7 +40,8 @@ class GitHubReleaseRepository @Inject constructor(
     }
 
     companion object {
-        private const val LATEST_RELEASE_URL =
-            "https://api.github.com/repos/ohmzi/Tday/releases/latest"
+        private const val RELEASES_URL =
+            "https://api.github.com/repos/ohmzi/Tday/releases"
+        private const val LATEST_RELEASE_URL = "$RELEASES_URL/latest"
     }
 }
