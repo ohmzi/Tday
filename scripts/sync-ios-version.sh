@@ -22,5 +22,12 @@ if [ -z "$VERSION" ]; then
   exit 1
 fi
 
-plutil -replace CFBundleShortVersionString -string "$VERSION" "$INFO_PLIST"
+if command -v plutil >/dev/null 2>&1; then
+  plutil -replace CFBundleShortVersionString -string "$VERSION" "$INFO_PLIST"
+else
+  perl -0pi -e \
+    's#(<key>CFBundleShortVersionString</key>\s*<string>)[^<]*(</string>)#${1}'"$VERSION"'${2}#' \
+    "$INFO_PLIST"
+fi
+
 echo "iOS Info.plist version synced to $VERSION"

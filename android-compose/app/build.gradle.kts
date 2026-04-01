@@ -25,6 +25,27 @@ val projectVersionCode: Int by lazy {
     major * 10000 + minor * 100 + patch
 }
 
+val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+val releaseKeystoreFile = releaseKeystorePath
+    ?.takeIf(String::isNotBlank)
+    ?.let(::File)
+val hasReleaseSigning = releaseKeystoreFile?.exists() == true &&
+    !System.getenv("RELEASE_KEYSTORE_PASSWORD").isNullOrBlank() &&
+    !System.getenv("RELEASE_KEY_ALIAS").isNullOrBlank() &&
+    !System.getenv("RELEASE_KEY_PASSWORD").isNullOrBlank()
+val allowDebugSignedRelease = providers.gradleProperty("allowDebugSignedRelease").orNull == "true"
+val isReleaseTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.contains("Release", ignoreCase = true)
+}
+
+if (isReleaseTaskRequested && !hasReleaseSigning && !allowDebugSignedRelease) {
+    error(
+        "Release builds require the release keystore so APK signatures stay stable for updates. " +
+            "Set RELEASE_KEYSTORE_PATH, RELEASE_KEYSTORE_PASSWORD, RELEASE_KEY_ALIAS, and " +
+            "RELEASE_KEY_PASSWORD, or rerun with -PallowDebugSignedRelease=true for a local-only build.",
+    )
+}
+
 android {
     namespace = "com.ohmz.tday.compose"
     compileSdk = 35
@@ -44,10 +65,9 @@ android {
     }
 
     signingConfigs {
-        val keystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
-        if (!keystorePath.isNullOrBlank() && File(keystorePath).exists()) {
+        if (hasReleaseSigning) {
             create("release") {
-                storeFile = File(keystorePath)
+                storeFile = releaseKeystoreFile
                 storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("RELEASE_KEY_ALIAS")
                 keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
