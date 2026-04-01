@@ -8,6 +8,7 @@ import androidx.work.Configuration
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.ohmz.tday.compose.core.notification.BootRescheduleReceiver
 import com.ohmz.tday.compose.core.notification.ReminderRescheduleWorker
 import com.ohmz.tday.compose.core.notification.TaskReminderReceiver
 import dagger.hilt.android.HiltAndroidApp
@@ -26,20 +27,30 @@ class TdayApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
+        createNotificationChannels()
         enqueuePeriodicRescheduleWorker()
     }
 
-    private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            TaskReminderReceiver.CHANNEL_ID,
-            "Task Reminders",
-            NotificationManager.IMPORTANCE_HIGH,
-        ).apply {
-            description = "Reminders for upcoming task due dates"
-        }
+    private fun createNotificationChannels() {
         val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        manager.createNotificationChannel(
+            NotificationChannel(
+                TaskReminderReceiver.CHANNEL_ID,
+                getString(R.string.notification_channel_task_reminders_name),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = getString(R.string.notification_channel_task_reminders_description)
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                BootRescheduleReceiver.UPDATE_CHANNEL_ID,
+                getString(R.string.notification_channel_app_updates_name),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = getString(R.string.notification_channel_app_updates_description)
+            },
+        )
     }
 
     private fun enqueuePeriodicRescheduleWorker() {
