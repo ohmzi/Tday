@@ -159,7 +159,16 @@ internal object InAppApkUpdater {
             context,
             sessionId,
             statusIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            buildStatusPendingIntentFlags(),
         )
+    }
+
+    private fun buildStatusPendingIntentFlags(): Int {
+        val mutabilityFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            PendingIntent.FLAG_MUTABLE
+        } else {
+            0
+        }
+        return PendingIntent.FLAG_UPDATE_CURRENT or mutabilityFlag
     }
 }
