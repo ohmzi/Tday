@@ -43,11 +43,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,6 +64,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -77,25 +86,65 @@ fun LatestReleaseScreen(
     val context = LocalContext.current
     val view = LocalView.current
     val installScope = rememberCoroutineScope()
+    val installerEvent by InAppApkUpdater.installEvent.collectAsStateWithLifecycle()
     var installUiState by remember { mutableStateOf<ApkInstallUiState>(ApkInstallUiState.Idle) }
-    var pendingInstallAsset by remember { mutableStateOf<GitHubAsset?>(null) }
+    var pendingInstallAsset by rememberSaveable(stateSaver = gitHubAssetSaver()) {
+        mutableStateOf<GitHubAsset?>(null)
+    }
     val installPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) {
-        val asset = pendingInstallAsset ?: return@rememberLauncherForActivityResult
-        pendingInstallAsset = null
-        if (InAppApkUpdater.canInstallPackages(context)) {
-            startApkInstall(
-                context = context,
-                asset = asset,
-                scope = installScope,
-                onStateChange = { installUiState = it },
-            )
-        } else {
-            installUiState = ApkInstallUiState.Error(
-                context.getString(R.string.release_install_permission_denied),
-            )
+        resumePendingInstallIfPossible(
+            context = context,
+            pendingInstallAsset = pendingInstallAsset,
+            onPendingInstallAssetChange = { pendingInstallAsset = it },
+            installUiState = installUiState,
+            scope = installScope,
+            onStateChange = { installUiState = it },
+        )
+    }
+    val installConfirmationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) { }
+
+    LaunchedEffect(installerEvent) {
+        when (val event = installerEvent) {
+            is InAppApkUpdater.InstallEvent.PendingUserAction -> {
+                installUiState = ApkInstallUiState.Installing
+                runCatching {
+                    installConfirmationLauncher.launch(event.confirmationIntent)
+                }.onSuccess {
+                    InAppApkUpdater.clearPendingUserAction(event.sessionId)
+                }.onFailure {
+                    installUiState = ApkInstallUiState.Error(
+                        context.getString(R.string.release_install_failed),
+                    )
+                }
+            }
+
+            is InAppApkUpdater.InstallEvent.Success -> {
+                installUiState = ApkInstallUiState.Idle
+                pendingInstallAsset = null
+                InAppApkUpdater.clearInstallEvent()
+            }
+
+            is InAppApkUpdater.InstallEvent.Error -> {
+                installUiState = ApkInstallUiState.Error(event.message)
+                InAppApkUpdater.clearInstallEvent()
+            }
+
+            InAppApkUpdater.InstallEvent.Idle -> Unit
         }
+    }
+    OnLatestReleaseScreenResume {
+        resumePendingInstallIfPossible(
+            context = context,
+            pendingInstallAsset = pendingInstallAsset,
+            onPendingInstallAssetChange = { pendingInstallAsset = it },
+            installUiState = installUiState,
+            scope = installScope,
+            onStateChange = { installUiState = it },
+        )
     }
 
     Column(
@@ -198,13 +247,15 @@ fun LatestReleaseScreen(
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
                         if (!InAppApkUpdater.canInstallPackages(context)) {
                             pendingInstallAsset = asset
+                            installUiState = ApkInstallUiState.AwaitingPermission
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.release_install_permission_required),
+                                context.getString(R.string.release_install_permission_return_hint),
                                 Toast.LENGTH_LONG,
                             ).show()
                             installPermissionLauncher.launch(InAppApkUpdater.buildInstallPermissionIntent(context))
                         } else {
+                            pendingInstallAsset = null
                             startApkInstall(
                                 context = context,
                                 asset = asset,
@@ -541,6 +592,7 @@ private fun ApkInstallButton(
 @Composable
 private fun apkInstallButtonLabel(apkInstallUiState: ApkInstallUiState): String {
     return when (apkInstallUiState) {
+        ApkInstallUiState.AwaitingPermission -> stringResource(R.string.release_allow_install_permission)
         is ApkInstallUiState.Downloading -> {
             apkInstallUiState.progress
                 ?.let { progress ->
@@ -563,6 +615,14 @@ private fun ApkInstallStatus(apkInstallUiState: ApkInstallUiState) {
     val colorScheme = MaterialTheme.colorScheme
 
     when (apkInstallUiState) {
+        ApkInstallUiState.AwaitingPermission -> {
+            Text(
+                text = stringResource(R.string.release_install_permission_return_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+        }
+
         is ApkInstallUiState.Downloading -> {
             val progress = apkInstallUiState.progress
             if (progress != null) {
@@ -715,7 +775,6 @@ private fun startApkInstall(
 ) {
     val appContext = context.applicationContext
     scope.launch {
-        var resetToIdle = true
         try {
             onStateChange(ApkInstallUiState.Downloading(progress = 0f))
             InAppApkUpdater.downloadAndInstall(appContext, asset) { progress ->
@@ -723,14 +782,34 @@ private fun startApkInstall(
             }
             onStateChange(ApkInstallUiState.Installing)
         } catch (error: IOException) {
-            resetToIdle = false
             onStateChange(buildApkInstallErrorState(context, error))
-        } finally {
-            if (resetToIdle) {
-                onStateChange(ApkInstallUiState.Idle)
-            }
         }
     }
+}
+
+private fun resumePendingInstallIfPossible(
+    context: Context,
+    pendingInstallAsset: GitHubAsset?,
+    onPendingInstallAssetChange: (GitHubAsset?) -> Unit,
+    installUiState: ApkInstallUiState,
+    scope: kotlinx.coroutines.CoroutineScope,
+    onStateChange: (ApkInstallUiState) -> Unit,
+) {
+    val asset = pendingInstallAsset ?: return
+    if (!InAppApkUpdater.canInstallPackages(context)) {
+        if (installUiState is ApkInstallUiState.AwaitingPermission) {
+            onStateChange(ApkInstallUiState.AwaitingPermission)
+        }
+        return
+    }
+
+    onPendingInstallAssetChange(null)
+    startApkInstall(
+        context = context,
+        asset = asset,
+        scope = scope,
+        onStateChange = onStateChange,
+    )
 }
 
 private fun buildApkInstallErrorState(
@@ -743,8 +822,49 @@ private fun buildApkInstallErrorState(
     )
 }
 
+@Composable
+private fun OnLatestReleaseScreenResume(
+    action: () -> Unit,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentAction by rememberUpdatedState(action)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                currentAction()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+}
+
+private fun gitHubAssetSaver() = listSaver<GitHubAsset?, Any>(
+    save = { asset ->
+        asset?.let {
+            listOf(it.name, it.browserDownloadUrl, it.size, it.downloadCount)
+        } ?: emptyList()
+    },
+    restore = { values ->
+        if (values.isEmpty()) {
+            null
+        } else {
+            GitHubAsset(
+                name = values[0] as String,
+                browserDownloadUrl = values[1] as String,
+                size = values[2] as Long,
+                downloadCount = values[3] as Int,
+            )
+        }
+    },
+)
+
 private sealed interface ApkInstallUiState {
     data object Idle : ApkInstallUiState
+
+    data object AwaitingPermission : ApkInstallUiState
 
     data class Downloading(val progress: Float?) : ApkInstallUiState
 
