@@ -16,6 +16,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -41,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -65,6 +70,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
@@ -102,10 +109,16 @@ private const val SETTINGS_VERTICAL_FRACTION = 0.22f
 fun TdayApp() {
     val navController = rememberNavController()
     val appViewModel: AppViewModel = hiltViewModel()
+    val releaseViewModel: LatestReleaseViewModel = hiltViewModel()
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
+    val releaseUiState by releaseViewModel.uiState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val updateToastMessage = releaseUiState.latestRelease?.tagName?.let { versionLabel ->
+        stringResource(R.string.release_launch_update_toast, versionLabel)
+    }
     var activeToast by remember { mutableStateOf<AppToastMessage?>(null) }
+    var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val activity = LocalContext.current as? MainActivity
@@ -174,6 +187,44 @@ fun TdayApp() {
                 }
                 launchSingleTop = true
             }
+        }
+    }
+
+    LaunchedEffect(
+        appUiState.loading,
+        releaseUiState.isLoading,
+        releaseUiState.hasUpdate,
+        updateToastMessage,
+        currentRoute,
+    ) {
+        if (appUiState.loading || releaseUiState.isLoading) return@LaunchedEffect
+        if (!releaseUiState.hasUpdate) return@LaunchedEffect
+        if (hasShownLaunchUpdateToast) return@LaunchedEffect
+        if (currentRoute == null || currentRoute == AppRoute.Splash.route) return@LaunchedEffect
+        if (currentRoute == AppRoute.LatestRelease.route) return@LaunchedEffect
+        val message = updateToastMessage ?: return@LaunchedEffect
+
+        hasShownLaunchUpdateToast = true
+        activeToast = AppToastMessage(
+            id = System.currentTimeMillis(),
+            message = message,
+            kind = AppToastKind.UpdateAvailable,
+            autoDismissMillis = null,
+            showDismissAction = true,
+            onTap = {
+                activeToast = null
+                navController.navigate(AppRoute.LatestRelease.route) {
+                    launchSingleTop = true
+                }
+            },
+        )
+    }
+
+    LaunchedEffect(currentRoute) {
+        if (currentRoute == AppRoute.LatestRelease.route &&
+            activeToast?.kind == AppToastKind.UpdateAvailable
+        ) {
+            activeToast = null
         }
     }
 
@@ -557,12 +608,10 @@ fun TdayApp() {
                     popEnterTransition = { settingsEnterTransition() },
                     popExitTransition = { settingsExitTransition() },
                 ) {
-                    val viewModel: LatestReleaseViewModel = hiltViewModel()
-                    val releaseUiState by viewModel.uiState.collectAsStateWithLifecycle()
                     LatestReleaseScreen(
                         uiState = releaseUiState,
                         onBack = { navController.popBackStack() },
-                        onRetry = viewModel::load,
+                        onRetry = releaseViewModel::load,
                     )
                 }
             }
@@ -664,7 +713,16 @@ private fun OnRouteResume(
 private data class AppToastMessage(
     val id: Long,
     val message: String,
+    val kind: AppToastKind = AppToastKind.Default,
+    val autoDismissMillis: Long? = 2200L,
+    val onTap: (() -> Unit)? = null,
+    val showDismissAction: Boolean = false,
 )
+
+private enum class AppToastKind {
+    Default,
+    UpdateAvailable,
+}
 
 private fun navigationSlideOffset(fullDistance: Int): Int =
     (fullDistance * NAV_SLIDE_FRACTION).roundToInt()
@@ -714,9 +772,10 @@ private fun TdayBottomToastHost(
         lerp(colorScheme.surfaceVariant, accent, 0.30f)
     }
 
-    LaunchedEffect(toast?.id) {
+    LaunchedEffect(toast?.id, toast?.autoDismissMillis) {
         if (toast == null) return@LaunchedEffect
-        kotlinx.coroutines.delay(2200)
+        val autoDismissMillis = toast.autoDismissMillis ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(autoDismissMillis)
         onDismiss()
     }
 
@@ -743,7 +802,14 @@ private fun TdayBottomToastHost(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 22.dp),
+                    .padding(horizontal = 22.dp)
+                    .then(
+                        if (toast?.onTap != null) {
+                            Modifier.clickable { toast.onTap.invoke() }
+                        } else {
+                            Modifier
+                        },
+                    ),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = toastColor),
                 border = androidx.compose.foundation.BorderStroke(
@@ -752,12 +818,27 @@ private fun TdayBottomToastHost(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 8.dp else 5.dp),
             ) {
-                Text(
-                    text = toast?.message.orEmpty(),
+                androidx.compose.foundation.layout.Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    color = colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = toast?.message.orEmpty(),
+                        modifier = Modifier.weight(1f),
+                        color = colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (toast?.showDismissAction == true) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.action_close),
+                                tint = colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
