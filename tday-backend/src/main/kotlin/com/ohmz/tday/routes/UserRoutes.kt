@@ -5,7 +5,12 @@ import arrow.core.raise.either
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
+import com.ohmz.tday.plugins.authUser
+import com.ohmz.tday.security.JwtService
+import com.ohmz.tday.security.SessionControl
+import com.ohmz.tday.security.issueSessionCookie
 import com.ohmz.tday.services.UserService
+import com.ohmz.tday.config.AppConfig
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import com.ohmz.tday.di.inject
@@ -13,6 +18,9 @@ import com.ohmz.tday.di.inject
 private val BASE64_REGEX = Regex("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$")
 
 fun Route.userRoutes() {
+    val config by inject<AppConfig>()
+    val jwtService by inject<JwtService>()
+    val sessionControl by inject<SessionControl>()
     val userService by inject<UserService>()
 
     route("/user") {
@@ -62,6 +70,13 @@ fun Route.userRoutes() {
 
                         val success = userService.changePassword(user.id, body.currentPassword, body.newPassword).bind()
                         if (!success) raise(AppError.BadRequest("current password is incorrect"))
+
+                        val currentClaims = call.authUser() ?: raise(AppError.Unauthorized())
+                        sessionControl.revokeUserSessions(user.id)
+                        val refreshedClaims = currentClaims.copy(
+                            tokenVersion = (currentClaims.tokenVersion ?: 0) + 1,
+                        )
+                        call.issueSessionCookie(config, jwtService, refreshedClaims)
                         mapOf("message" to "password changed")
                     }
                 }

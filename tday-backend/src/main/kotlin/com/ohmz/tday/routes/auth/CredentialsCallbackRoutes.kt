@@ -2,7 +2,6 @@ package com.ohmz.tday.routes.auth
 
 import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.models.request.CredentialsCallbackRequest
-import com.ohmz.tday.plugins.sessionCookieName
 import com.ohmz.tday.security.*
 import com.ohmz.tday.services.UserService
 import io.ktor.http.*
@@ -135,7 +134,7 @@ fun Route.credentialsCallbackRoutes() {
             authThrottle.clearFailures(call.request, identifier)
             authThrottle.recordSuccessSignal(call.request, identifier)
 
-            val token = jwtService.encode(JwtUserClaims(
+            call.issueSessionCookie(config, jwtService, JwtUserClaims(
                 id = user["id"] as String,
                 name = user["name"] as? String,
                 email = email,
@@ -143,20 +142,6 @@ fun Route.credentialsCallbackRoutes() {
                 approvalStatus = approvalStatus,
                 tokenVersion = user["tokenVersion"] as? Int,
                 timeZone = user["timeZone"] as? String,
-            ))
-
-            val maxAge = config.sessionMaxAgeSec
-            val secure = config.isProduction
-            val cookieName = sessionCookieName(secure)
-
-            call.response.cookies.append(Cookie(
-                name = cookieName,
-                value = token,
-                maxAge = maxAge,
-                path = "/",
-                secure = secure,
-                httpOnly = true,
-                extensions = mapOf("SameSite" to "Lax"),
             ))
 
             call.respond(HttpStatusCode.OK, mapOf("message" to "authenticated"))
