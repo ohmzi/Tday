@@ -5,9 +5,16 @@ import com.ohmz.tday.security.AuthCachedUser
 import com.ohmz.tday.security.AuthUserCache
 import com.ohmz.tday.security.JwtService
 import com.ohmz.tday.security.JwtUserClaims
+import com.ohmz.tday.security.SecurityEventLogger
+import com.ohmz.tday.security.clearSessionCookie
+import com.ohmz.tday.security.isSessionPastAbsoluteLifetime
+import com.ohmz.tday.security.issueSessionCookie
+import com.ohmz.tday.security.sessionCookieNames
+import com.ohmz.tday.security.shouldRenewSession
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.request.path
 import io.ktor.util.*
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -15,16 +22,8 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.koin.ktor.ext.inject
 
-private const val SECURE_SESSION_COOKIE_NAME = "__Secure-authjs.session-token"
-private const val SESSION_COOKIE_NAME = "authjs.session-token"
-
-private val SESSION_COOKIE_NAMES = listOf(
-    SECURE_SESSION_COOKIE_NAME,
-    SESSION_COOKIE_NAME,
-)
-
-fun sessionCookieName(isProduction: Boolean): String =
-    if (isProduction) SECURE_SESSION_COOKIE_NAME else SESSION_COOKIE_NAME
+private const val EVENT_DETAIL_USER_ID = "userId"
+private const val EVENT_DETAIL_PATH = "path"
 
 val AuthUserKey = AttributeKey<JwtUserClaims>("AuthUser")
 
@@ -34,8 +33,10 @@ fun ApplicationCall.requireUser(): JwtUserClaims =
     authUser() ?: throw IllegalStateException("Authentication required")
 
 fun Application.configureSecurity() {
+    val config by inject<com.ohmz.tday.config.AppConfig>()
     val jwtService by inject<JwtService>()
     val authUserCache by inject<AuthUserCache>()
+    val eventLogger by inject<SecurityEventLogger>()
 
     install(Authentication) {
         bearer("jwt") {
@@ -51,6 +52,20 @@ fun Application.configureSecurity() {
         if (token != null) {
             val claims = jwtService.decode(token)
             if (claims != null) {
+                val nowEpochSec = jwtService.currentEpochSeconds()
+
+                if (isSessionPastAbsoluteLifetime(claims, config, nowEpochSec)) {
+                    call.clearSessionCookie(config)
+                    eventLogger.log(
+                        "auth_session_absolute_expired",
+                        mapOf(
+                            EVENT_DETAIL_USER_ID to claims.id,
+                            EVENT_DETAIL_PATH to call.request.path(),
+                        ),
+                    )
+                    return@intercept
+                }
+
                 val cached = authUserCache.get(claims.id)
                 val user = if (cached != null) {
                     cached
@@ -73,16 +88,46 @@ fun Application.configureSecurity() {
 
                 if (user != null) {
                     if (claims.tokenVersion == null || claims.tokenVersion == user.tokenVersion) {
-                        call.attributes.put(
-                            AuthUserKey,
-                            claims.copy(
-                                role = user.role,
-                                approvalStatus = user.approvalStatus,
-                                tokenVersion = user.tokenVersion,
-                                timeZone = user.timeZone,
+                        val hydratedClaims = claims.copy(
+                            role = user.role,
+                            approvalStatus = user.approvalStatus,
+                            tokenVersion = user.tokenVersion,
+                            timeZone = user.timeZone,
+                        )
+                        call.attributes.put(AuthUserKey, hydratedClaims)
+
+                        if (!shouldSkipSessionRenewal(call) && shouldRenewSession(hydratedClaims, config, nowEpochSec)) {
+                            val remainingSeconds = (hydratedClaims.expiresAtEpochSec ?: 0L) - nowEpochSec
+                            call.issueSessionCookie(config, jwtService, hydratedClaims)
+                            eventLogger.log(
+                                "auth_session_renewed",
+                                mapOf(
+                                    EVENT_DETAIL_USER_ID to hydratedClaims.id,
+                                    EVENT_DETAIL_PATH to call.request.path(),
+                                    "remainingSeconds" to remainingSeconds.coerceAtLeast(0),
+                                ),
+                            )
+                        }
+                    } else {
+                        call.clearSessionCookie(config)
+                        authUserCache.invalidate(claims.id)
+                        eventLogger.log(
+                            "auth_session_token_version_mismatch",
+                            mapOf(
+                                EVENT_DETAIL_USER_ID to claims.id,
+                                EVENT_DETAIL_PATH to call.request.path(),
                             ),
                         )
                     }
+                } else {
+                    call.clearSessionCookie(config)
+                    eventLogger.log(
+                        "auth_session_user_missing",
+                        mapOf(
+                            EVENT_DETAIL_USER_ID to claims.id,
+                            EVENT_DETAIL_PATH to call.request.path(),
+                        ),
+                    )
                 }
             }
         }
@@ -95,9 +140,18 @@ private fun resolveSessionToken(call: ApplicationCall): String? {
         return authHeader.removePrefix("Bearer ").removePrefix("bearer ").trim().ifEmpty { null }
     }
 
-    for (cookieName in SESSION_COOKIE_NAMES) {
+    for (cookieName in sessionCookieNames()) {
         val cookie = call.request.cookies[cookieName]
         if (!cookie.isNullOrBlank()) return cookie
     }
     return null
+}
+
+private fun shouldSkipSessionRenewal(call: ApplicationCall): Boolean {
+    return when (call.request.path()) {
+        "/api/auth/callback/credentials",
+        "/api/auth/logout",
+        "/api/user/change-password" -> true
+        else -> false
+    }
 }

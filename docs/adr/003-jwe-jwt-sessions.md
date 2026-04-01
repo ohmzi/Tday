@@ -39,4 +39,4 @@ Options considered:
 
 - **Positive**: Full control over auth, encrypted tokens, server-enforced revocation, mobile-compatible, no external auth service dependency.
 - **Negative**: More code to maintain than using an auth library. JWT tokens cannot be instantly revoked — revocation requires a database check on the next request (acceptable latency).
-- **Mitigation**: Short session lifetime (24h default) limits the window for stale tokens. Comprehensive security tests cover all auth paths.
+- **Mitigation**: Sessions use a 30-day rolling inactivity window with a 90-day absolute cap, which keeps browser relaunches ergonomic while still bounding stale-token exposure. Comprehensive security tests cover all auth paths.
