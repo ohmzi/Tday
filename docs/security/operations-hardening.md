@@ -11,16 +11,20 @@ Use this for self-hosted production deployments.
 
 ## Session And Auth Controls
 
-1. Keep `AUTH_SESSION_MAX_AGE_SEC` between 12h and 24h.
-2. Keep auth throttling + lockout variables enabled.
-3. Configure `AUTH_CAPTCHA_SECRET` so CAPTCHA is enforced after repeated failures.
-4. Monitor security event codes:
+1. Keep `AUTH_SESSION_MAX_AGE_SEC` between 7 and 30 days for browser convenience, and keep `AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC` at or below 90 days.
+2. Keep `AUTH_SESSION_RENEW_THRESHOLD_SEC` between 1 and 7 days so active sessions renew predictably without rewriting the cookie on every request.
+3. Keep auth throttling + lockout variables enabled.
+4. Configure `AUTH_CAPTCHA_SECRET` so CAPTCHA is enforced after repeated failures.
+5. Monitor security event codes:
    - `auth_lockout`
    - `auth_limit_ip`
    - `auth_limit_email`
    - `auth_alert_ip_concentration`
    - `auth_alert_lockout_burst`
    - `auth_signal_anomaly`
+   - `auth_session_absolute_expired`
+   - `auth_session_renewed`
+   - `auth_session_token_version_mismatch`
 
 ## Field Encryption At Rest
 

@@ -166,7 +166,9 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 |----------|---------|
 | `CRONJOB_SECRET` | Auth header for scheduled cron endpoint |
 | `AUTH_PBKDF2_ITERATIONS` | Password hash iterations (default: 310,000) |
-| `AUTH_SESSION_MAX_AGE_SEC` | Session lifetime in seconds (default: 86,400) |
+| `AUTH_SESSION_MAX_AGE_SEC` | Rolling web-session inactivity window in seconds (default: 2,592,000) |
+| `AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC` | Absolute session cap from original login time in seconds (default: 7,776,000) |
+| `AUTH_SESSION_RENEW_THRESHOLD_SEC` | Renewal threshold in seconds before expiry (default: 604,800) |
 | `OLLAMA_URL` | Ollama service URL (default: `http://ollama:11434`) |
 | `OLLAMA_MODEL` | AI model for summaries (default: `qwen2.5:0.5b`) |
 
