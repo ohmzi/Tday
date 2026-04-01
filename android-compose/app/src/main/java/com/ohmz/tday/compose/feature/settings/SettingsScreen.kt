@@ -7,12 +7,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.Notifications
@@ -69,6 +70,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
@@ -168,208 +170,104 @@ fun SettingsScreen(
                 .padding(horizontal = 18.dp, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = user?.name ?: stringResource(R.string.settings_unknown_user),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colorScheme.onSurface,
-                    )
-                    if (!user?.email.isNullOrBlank()) {
-                        Text(
-                            text = user?.email.orEmpty(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colorScheme.onSurface.copy(alpha = 0.7f),
-                        )
-                    }
-                    Text(
-                        modifier = Modifier.padding(top = 2.dp),
-                        text = stringResource(R.string.settings_role_prefix) +
-                            (user?.role ?: stringResource(R.string.settings_role_default)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurface.copy(alpha = 0.55f),
-                    )
-                }
+            SettingsProfileCard(
+                user = user,
+                selectedThemeMode = selectedThemeMode,
+            )
+
+            SettingsSectionCard {
+                SettingsSectionHeader(
+                    icon = when (selectedThemeMode) {
+                        AppThemeMode.SYSTEM -> Icons.Rounded.BrightnessAuto
+                        AppThemeMode.LIGHT -> Icons.Rounded.WbSunny
+                        AppThemeMode.DARK -> Icons.Rounded.DarkMode
+                    },
+                    title = stringResource(R.string.settings_appearance),
+                    tint = colorScheme.primary,
+                )
+                ThemeModeSelector(
+                    selectedThemeMode = selectedThemeMode,
+                    onThemeModeSelected = onThemeModeSelected,
+                )
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_appearance),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colorScheme.onSurface,
-                    )
-                    ThemeModeSelector(
-                        selectedThemeMode = selectedThemeMode,
-                        onThemeModeSelected = onThemeModeSelected,
-                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Notifications,
-                            contentDescription = null,
-                            tint = colorScheme.onSurface,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_reminders),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colorScheme.onSurface,
-                        )
-                    }
-                    ReminderSelector(
-                        selectedReminder = selectedReminder,
-                        onReminderSelected = onReminderSelected,
-                    )
-                }
+            SettingsSectionCard {
+                SettingsSectionHeader(
+                    icon = Icons.Rounded.Notifications,
+                    title = stringResource(R.string.settings_reminders),
+                    tint = colorScheme.secondary,
+                )
+                ReminderSelector(
+                    selectedReminder = selectedReminder,
+                    onReminderSelected = onReminderSelected,
+                )
             }
 
             if (isAdminUser) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                SettingsSectionCard(
+                    borderColor = colorScheme.tertiary.copy(alpha = 0.18f),
                 ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    SettingsSectionHeader(
+                        icon = Icons.Rounded.Settings,
+                        title = stringResource(R.string.settings_feature_toggle),
+                        tint = colorScheme.tertiary,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = stringResource(R.string.settings_feature_toggle),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colorScheme.onSurface,
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(2.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.settings_ai_task_summary),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = colorScheme.onSurface,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                            }
-                            if (isAdminAiSummaryLoading || adminAiSummaryEnabled == null) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                            } else {
-                                Switch(
-                                    checked = adminAiSummaryEnabled,
-                                    onCheckedChange = onToggleAdminAiSummary,
-                                    enabled = !isAdminAiSummarySaving,
-                                )
-                            }
-                        }
-                        if (!adminAiSummaryError.isNullOrBlank()) {
                             Text(
-                                text = adminAiSummaryError,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = colorScheme.error,
+                                text = stringResource(R.string.settings_ai_task_summary),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = colorScheme.onSurface,
+                                fontWeight = FontWeight.SemiBold,
                             )
                         }
+                        if (isAdminAiSummaryLoading || adminAiSummaryEnabled == null) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Switch(
+                                checked = adminAiSummaryEnabled,
+                                onCheckedChange = onToggleAdminAiSummary,
+                                enabled = !isAdminAiSummarySaving,
+                            )
+                        }
+                    }
+                    if (!adminAiSummaryError.isNullOrBlank()) {
+                        SettingsMetaChip(
+                            text = adminAiSummaryError,
+                            tint = colorScheme.error,
+                            backgroundColor = colorScheme.error.copy(alpha = 0.12f),
+                            textColor = colorScheme.error,
+                        )
                     }
                 }
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
+            SettingsActionCard(
+                title = stringResource(R.string.release_title),
+                badge = "v${BuildConfig.VERSION_NAME}",
+                accent = colorScheme.primary,
+                icon = Icons.Rounded.NewReleases,
                 onClick = onOpenLatestRelease,
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_check_updates),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colorScheme.onSurface,
-                    )
-                    Icon(
-                        imageVector = Icons.Rounded.NewReleases,
-                        contentDescription = null,
-                        tint = colorScheme.primary,
-                    )
-                }
-            }
+                trailingIcon = Icons.Rounded.ChevronRight,
+            )
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
+            SettingsActionCard(
+                title = stringResource(R.string.action_sign_out),
+                accent = colorScheme.error,
+                icon = Icons.AutoMirrored.Rounded.Logout,
                 onClick = onLogout,
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.action_sign_out),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colorScheme.error,
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.Logout,
-                        contentDescription = null,
-                        tint = colorScheme.error,
-                    )
-                }
-            }
+                trailingIcon = null,
+            )
         }
     }
 
@@ -392,6 +290,215 @@ fun SettingsScreen(
             },
         )
     }
+}
+
+@Composable
+private fun SettingsProfileCard(
+    user: SessionUser?,
+    selectedThemeMode: AppThemeMode,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    SettingsSectionCard(
+        borderColor = colorScheme.primary.copy(alpha = 0.14f),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(58.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(colorScheme.primary.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Settings,
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = user?.name ?: stringResource(R.string.settings_unknown_user),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onSurface,
+                )
+                if (!user?.email.isNullOrBlank()) {
+                    Text(
+                        text = user?.email.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorScheme.onSurface.copy(alpha = 0.72f),
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.settings_role_prefix) +
+                        (user?.role ?: stringResource(R.string.settings_role_default)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurface.copy(alpha = 0.58f),
+                )
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SettingsMetaChip(text = "v${BuildConfig.VERSION_NAME}", tint = colorScheme.primary)
+            SettingsMetaChip(text = selectedThemeMode.label, tint = colorScheme.tertiary)
+        }
+    }
+}
+
+@Composable
+private fun SettingsSectionCard(
+    modifier: Modifier = Modifier,
+    borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        border = BorderStroke(1.dp, borderColor),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun SettingsSectionHeader(
+    icon: ImageVector,
+    title: String,
+    tint: Color,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(tint.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun SettingsActionCard(
+    title: String,
+    badge: String? = null,
+    accent: Color,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    trailingIcon: ImageVector?,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (accent == colorScheme.error) {
+                colorScheme.error.copy(alpha = 0.08f)
+            } else {
+                colorScheme.surface
+            },
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(accent.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (accent == colorScheme.error) colorScheme.error else colorScheme.onSurface,
+                )
+                badge?.let {
+                    SettingsMetaChip(text = it, tint = accent)
+                }
+            }
+            trailingIcon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    tint = accent.copy(alpha = 0.8f),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsMetaChip(
+    text: String,
+    tint: Color,
+    backgroundColor: Color = tint.copy(alpha = 0.12f),
+    textColor: Color = tint,
+) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(backgroundColor)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = textColor,
+    )
 }
 
 @Composable
@@ -528,18 +635,18 @@ private fun ThemeModeSelector(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = colorScheme.surfaceVariant,
+            containerColor = colorScheme.surfaceVariant.copy(alpha = 0.82f),
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .height(56.dp)
                 .padding(horizontal = 5.dp, vertical = 5.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AppThemeMode.entries.forEach { mode ->
@@ -553,10 +660,10 @@ private fun ThemeModeSelector(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .background(
                             color = if (selected) {
-                                colorScheme.primary.copy(alpha = 0.15f)
+                                colorScheme.primary.copy(alpha = 0.18f)
                             } else {
                                 Color.Transparent
                             },
@@ -574,8 +681,8 @@ private fun ThemeModeSelector(
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = if (selected) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.size(14.dp),
+                            tint = if (selected) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.62f),
+                            modifier = Modifier.size(16.dp),
                         )
                         Text(
                             modifier = Modifier.padding(start = 5.dp),
@@ -607,16 +714,17 @@ private fun ReminderSelector(
                 ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
                 expanded = true
             },
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.06f)),
             colors = CardDefaults.cardColors(
-                containerColor = colorScheme.surfaceVariant,
+                containerColor = colorScheme.surfaceVariant.copy(alpha = 0.82f),
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 15.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -626,11 +734,7 @@ private fun ReminderSelector(
                     fontWeight = FontWeight.Medium,
                     color = colorScheme.onSurface,
                 )
-                Text(
-                    text = selectedReminder.label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colorScheme.primary,
-                )
+                SettingsMetaChip(text = selectedReminder.label, tint = colorScheme.secondary)
             }
         }
 
