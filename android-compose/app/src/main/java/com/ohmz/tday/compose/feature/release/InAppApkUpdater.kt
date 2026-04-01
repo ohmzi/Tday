@@ -7,6 +7,9 @@ import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -18,7 +21,25 @@ import kotlin.coroutines.coroutineContext
 
 internal object InAppApkUpdater {
 
+    sealed interface InstallEvent {
+        data object Idle : InstallEvent
+
+        data class PendingUserAction(
+            val sessionId: Int,
+            val confirmationIntent: Intent,
+        ) : InstallEvent
+
+        data class Success(val sessionId: Int) : InstallEvent
+
+        data class Error(
+            val sessionId: Int,
+            val message: String,
+        ) : InstallEvent
+    }
+
     private val httpClient = OkHttpClient()
+    private val _installEvent = MutableStateFlow<InstallEvent>(InstallEvent.Idle)
+    val installEvent: StateFlow<InstallEvent> = _installEvent.asStateFlow()
 
     fun canInstallPackages(context: Context): Boolean = context.packageManager.canRequestPackageInstalls()
 
@@ -34,6 +55,7 @@ internal object InAppApkUpdater {
         onProgress: suspend (Float?) -> Unit,
     ) {
         withContext(Dispatchers.IO) {
+            clearInstallEvent()
             val packageInstaller = context.packageManager.packageInstaller
             val sessionId = packageInstaller.createSession(buildSessionParams(context))
             var committed = false
@@ -51,6 +73,41 @@ internal object InAppApkUpdater {
                 }
             }
         }
+    }
+
+    fun publishPendingUserAction(
+        sessionId: Int,
+        confirmationIntent: Intent,
+    ) {
+        _installEvent.value = InstallEvent.PendingUserAction(
+            sessionId = sessionId,
+            confirmationIntent = confirmationIntent,
+        )
+    }
+
+    fun publishSuccess(sessionId: Int) {
+        _installEvent.value = InstallEvent.Success(sessionId)
+    }
+
+    fun publishError(
+        sessionId: Int,
+        message: String,
+    ) {
+        _installEvent.value = InstallEvent.Error(
+            sessionId = sessionId,
+            message = message,
+        )
+    }
+
+    fun clearPendingUserAction(sessionId: Int) {
+        val event = _installEvent.value
+        if (event is InstallEvent.PendingUserAction && event.sessionId == sessionId) {
+            _installEvent.value = InstallEvent.Idle
+        }
+    }
+
+    fun clearInstallEvent() {
+        _installEvent.value = InstallEvent.Idle
     }
 
     private fun buildSessionParams(context: Context): PackageInstaller.SessionParams {
