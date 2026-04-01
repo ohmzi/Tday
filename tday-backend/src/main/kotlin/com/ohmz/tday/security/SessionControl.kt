@@ -1,6 +1,5 @@
 package com.ohmz.tday.security
 
-import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.db.tables.Users
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.SqlExpressionBuilder
@@ -9,13 +8,12 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.jetbrains.exposed.sql.update
 
 interface SessionControl {
-    fun sessionMaxAgeSeconds(): Int
     suspend fun revokeUserSessions(userId: String)
 }
 
-class SessionControlImpl(private val config: AppConfig) : SessionControl {
-    override fun sessionMaxAgeSeconds(): Int = config.sessionMaxAgeSec
-
+class SessionControlImpl(
+    private val authUserCache: AuthUserCache,
+) : SessionControl {
     override suspend fun revokeUserSessions(userId: String) {
         if (userId.isBlank()) return
         newSuspendedTransaction(Dispatchers.IO) {
@@ -25,5 +23,6 @@ class SessionControlImpl(private val config: AppConfig) : SessionControl {
                 }
             }
         }
+        authUserCache.invalidate(userId)
     }
 }
