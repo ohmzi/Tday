@@ -145,6 +145,14 @@ The `postversion` hook syncs the iOS `Info.plist` and stages it, so the version-
 
 **Never** set version numbers directly in `build.gradle.kts` or any other file. Edit only `tday-web/package.json`.
 
+### Android Signing
+
+Distributable Android release builds must use the same release keystore every time, or Android will reject updates with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
+
+- CI supplies the release signing credentials through `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`.
+- Local `assembleRelease` or `bundleRelease` builds now fail fast if those variables are missing, instead of silently producing a debug-signed release APK that cannot update an existing release install.
+- For a local-only build that is not meant to update an existing release-signed install, you can opt in explicitly with `-PallowDebugSignedRelease=true`.
+
 ## Configuration
 
 ### Environment Variables
