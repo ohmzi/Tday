@@ -1,52 +1,45 @@
 package com.ohmz.tday.compose.feature.release
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.os.Build
-import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import com.ohmz.tday.compose.R
 
-class UpdateInstallerActivity : ComponentActivity() {
+class UpdateInstallerStatusReceiver : BroadcastReceiver() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        handleStatusIntent(intent)
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        handleStatusIntent(intent)
-    }
-
-    private fun handleStatusIntent(statusIntent: Intent) {
+    override fun onReceive(
+        context: Context,
+        statusIntent: Intent,
+    ) {
         val sessionId = statusIntent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
         when (statusIntent.getIntExtra(PackageInstaller.EXTRA_STATUS, Int.MIN_VALUE)) {
-            Int.MIN_VALUE -> finish()
+            Int.MIN_VALUE -> Unit
             PackageInstaller.STATUS_PENDING_USER_ACTION -> publishPendingUserAction(
+                context = context,
                 statusIntent = statusIntent,
                 sessionId = sessionId,
             )
+
             PackageInstaller.STATUS_SUCCESS -> {
                 InAppApkUpdater.publishSuccess(sessionId)
-                Toast.makeText(this, getString(R.string.release_install_success), Toast.LENGTH_SHORT).show()
-                finish()
+                Toast.makeText(context, context.getString(R.string.release_install_success), Toast.LENGTH_SHORT).show()
             }
 
             else -> {
                 val statusMessage = statusIntent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
                     ?.takeIf { it.isNotBlank() }
-                    ?: getString(R.string.release_install_failed)
+                    ?: context.getString(R.string.release_install_failed)
                 InAppApkUpdater.publishError(sessionId, statusMessage)
-                Toast.makeText(this, statusMessage, Toast.LENGTH_LONG).show()
-                finish()
+                Toast.makeText(context, statusMessage, Toast.LENGTH_LONG).show()
             }
         }
     }
 
     private fun publishPendingUserAction(
+        context: Context,
         statusIntent: Intent,
         sessionId: Int,
     ) {
@@ -58,14 +51,12 @@ class UpdateInstallerActivity : ComponentActivity() {
         }
 
         if (confirmationIntent == null) {
-            val statusMessage = getString(R.string.release_install_failed)
+            val statusMessage = context.getString(R.string.release_install_failed)
             InAppApkUpdater.publishError(sessionId, statusMessage)
-            Toast.makeText(this, statusMessage, Toast.LENGTH_LONG).show()
-            finish()
+            Toast.makeText(context, statusMessage, Toast.LENGTH_LONG).show()
             return
         }
 
         InAppApkUpdater.publishPendingUserAction(sessionId, confirmationIntent)
-        finish()
     }
 }
