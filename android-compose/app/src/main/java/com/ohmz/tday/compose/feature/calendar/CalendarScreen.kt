@@ -97,13 +97,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.geometry.Offset
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.core.model.CompletedItem
@@ -140,6 +146,63 @@ fun CalendarScreen(
     val minNavigableMonth = remember(zoneId) { YearMonth.now(zoneId) }
     val listState = rememberLazyListState()
     val density = LocalDensity.current
+    val maxCollapsePx = with(density) { CALENDAR_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
+    var headerCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
+    val collapseProgressTarget = if (maxCollapsePx > 0f) {
+        (headerCollapsePx / maxCollapsePx).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val nestedScrollConnection = remember(listState, maxCollapsePx) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val deltaY = available.y
+                if (deltaY < 0f) {
+                    val previous = headerCollapsePx
+                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
+                    val consumed = next - previous
+                    if (consumed > 0f) {
+                        headerCollapsePx = next
+                        return Offset(0f, -consumed)
+                    }
+                    return Offset.Zero
+                }
+
+                if (deltaY > 0f) {
+                    val isListAtTop =
+                        listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                    if (!isListAtTop) return Offset.Zero
+                    val previous = headerCollapsePx
+                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
+                    val consumed = previous - next
+                    if (consumed > 0f) {
+                        headerCollapsePx = next
+                        return Offset(0f, consumed)
+                    }
+                }
+
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (available.y < 0f && headerCollapsePx < maxCollapsePx) {
+                    headerCollapsePx = maxCollapsePx
+                    return available
+                }
+                val isListAtTop =
+                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                if (available.y > 0f && isListAtTop && headerCollapsePx > 0f) {
+                    headerCollapsePx = 0f
+                    return available
+                }
+                return Velocity.Zero
+            }
+        }
+    }
+    val collapseProgress by animateFloatAsState(
+        targetValue = collapseProgressTarget,
+        label = "calendarTitleCollapseProgress",
+    )
     val monthTitleSnapThresholdPx = remember(density) { with(density) { 58.dp.roundToPx() } }
     var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
@@ -213,6 +276,7 @@ fun CalendarScreen(
         topBar = {
             CalendarTopBar(
                 onBack = onBack,
+                collapseProgress = collapseProgress,
                 onJumpToday = {
                     selectDate(LocalDate.now(zoneId))
                 },
@@ -228,9 +292,10 @@ fun CalendarScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .nestedScroll(nestedScrollConnection),
                 state = listState,
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 item {
@@ -844,49 +909,98 @@ private fun formatWeekRange(weekStart: LocalDate): String {
 @Composable
 private fun CalendarTopBar(
     onBack: () -> Unit,
+    collapseProgress: Float,
     onJumpToday: () -> Unit,
 ) {
+    val progress = collapseProgress.coerceIn(0f, 1f)
+    val titleHandoffPoint = 0.9f
+    val density = LocalDensity.current
+    val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
+    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
+    val collapsedTitleAlpha =
+        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
+    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
+    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 6.dp),
+            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 2.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CalendarCircleButton(
-                icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = stringResource(R.string.action_back),
-                onClick = onBack,
-            )
-            CalendarCircleButton(
-                icon = Icons.Rounded.CalendarMonth,
-                contentDescription = stringResource(R.string.calendar_jump_to_today),
-                onClick = onJumpToday,
-            )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CalendarCircleButton(
+                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = stringResource(R.string.action_back),
+                    onClick = onBack,
+                )
+                CalendarCircleButton(
+                    icon = Icons.Rounded.CalendarMonth,
+                    contentDescription = stringResource(R.string.calendar_jump_to_today),
+                    onClick = onJumpToday,
+                )
+            }
+            if (collapsedTitleAlpha > 0.001f) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .graphicsLayer {
+                            alpha = collapsedTitleAlpha
+                            translationY = collapsedTitleShiftY
+                        },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CalendarMonth,
+                        contentDescription = null,
+                        tint = Color(0xFF7D67B6),
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.calendar_title),
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF7D67B6),
+                    )
+                }
+            }
         }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(expandedTitleHeight),
+            contentAlignment = Alignment.BottomStart,
         ) {
-            Icon(
-                imageVector = Icons.Rounded.CalendarMonth,
-                contentDescription = null,
-                tint = Color(0xFF7D67B6),
-                modifier = Modifier.size(28.dp),
-            )
-            Text(
-                text = stringResource(R.string.calendar_title),
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF7D67B6),
-            )
+            if (expandedTitleAlpha > 0.001f) {
+                Row(
+                    modifier = Modifier.graphicsLayer {
+                        alpha = expandedTitleAlpha
+                        translationY = expandedTitleShiftY
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CalendarMonth,
+                        contentDescription = null,
+                        tint = Color(0xFF7D67B6),
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.calendar_title),
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF7D67B6),
+                    )
+                }
+            }
         }
     }
 }
@@ -1077,6 +1191,8 @@ private fun CalendarMonthCard(
         }
     }
 }
+
+private const val CALENDAR_TITLE_COLLAPSE_DISTANCE_DP = 180f
 
 @Composable
 private fun MiniCalendarNavButton(
