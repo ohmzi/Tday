@@ -172,6 +172,7 @@
     <string name="release_allow_install_permission">Allow install permission</string>
     <string name="release_downloading_apk">Downloading update…</string>
     <string name="release_downloading_apk_progress">Downloading update… %1$d%%</string>
+    <string name="release_preparing_update">Preparing update…</string>
     <string name="release_opening_installer">Opening Android installer…</string>
     <string name="release_install_permission_required">Allow T\'Day to install updates from this source.</string>
     <string name="release_install_permission_return_hint">Allow T\'Day to install updates, then return here to continue automatically.</string>
