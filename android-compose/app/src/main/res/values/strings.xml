@@ -188,5 +188,6 @@
     <string name="release_install_failed">Could not install the update.</string>
     <string name="release_install_success">Update installed.</string>
     <string name="release_no_apk">No APK attached to this release.</string>
+    <string name="release_launch_update_toast">Update %1$s is available. Tap here to install.</string>
     <string name="release_view_on_github">View on GitHub</string>
 </resources>
