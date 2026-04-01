@@ -47,8 +47,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,9 +101,10 @@ import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.theme.TdayTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 
 private const val NAV_ENTER_DURATION_MS = 440
 private const val NAV_EXIT_DURATION_MS = 320
@@ -869,92 +870,154 @@ private fun TdayToastHost(
                 ),
         ) {
             val visibleToast = toast ?: return@AnimatedVisibility
-            val scope = rememberCoroutineScope()
-            val offsetX = remember(visibleToast.id) { Animatable(0f) }
-            val offsetY = remember(visibleToast.id) { Animatable(0f) }
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 22.dp)
-                    .offset {
-                        IntOffset(
-                            x = offsetX.value.roundToInt(),
-                            y = offsetY.value.roundToInt(),
-                        )
-                    }
-                    .pointerInput(visibleToast.id) {
-                        detectDragGestures(
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                scope.launch {
-                                    offsetX.snapTo(offsetX.value + dragAmount.x)
-                                    offsetY.snapTo(offsetY.value + dragAmount.y)
-                                }
-                            },
-                            onDragCancel = {
-                                scope.launch {
-                                    launch { offsetX.animateTo(0f) }
-                                    launch { offsetY.animateTo(0f) }
-                                }
-                            },
-                            onDragEnd = {
-                                val dismissDirection = when {
-                                    offsetY.value <= -dismissThresholdPx &&
-                                        abs(offsetY.value) >= abs(offsetX.value) -> AppToastDismissDirection.Up
-                                    offsetX.value <= -dismissThresholdPx -> AppToastDismissDirection.Left
-                                    offsetX.value >= dismissThresholdPx -> AppToastDismissDirection.Right
-                                    else -> null
-                                }
-                                scope.launch {
-                                    when (dismissDirection) {
-                                        AppToastDismissDirection.Left -> {
-                                            offsetX.animateTo(-size.width.toFloat())
-                                            onDismiss()
-                                        }
-                                        AppToastDismissDirection.Right -> {
-                                            offsetX.animateTo(size.width.toFloat())
-                                            onDismiss()
-                                        }
-                                        AppToastDismissDirection.Up -> {
-                                            offsetY.animateTo(-size.height.toFloat() * 1.5f)
-                                            onDismiss()
-                                        }
-                                        null -> {
-                                            launch { offsetX.animateTo(0f) }
-                                            launch { offsetY.animateTo(0f) }
-                                        }
-                                    }
-                                }
-                            },
-                        )
-                    }
-                    .then(
-                        if (visibleToast.onTap != null) {
-                            Modifier.clickable { visibleToast.onTap.invoke() }
-                        } else {
-                            Modifier
-                        },
-                    ),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = toastColor),
-                border = androidx.compose.foundation.BorderStroke(
-                    width = 1.dp,
-                    color = accent.copy(alpha = if (isDark) 0.36f else 0.42f),
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 8.dp else 5.dp),
-            ) {
-                androidx.compose.foundation.layout.Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Text(
-                        text = visibleToast.message,
-                        color = colorScheme.onSurface,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
+            SwipeDismissToastCard(
+                toast = visibleToast,
+                toastColor = toastColor,
+                accent = accent,
+                isDark = isDark,
+                dismissThresholdPx = dismissThresholdPx,
+                onDismiss = onDismiss,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SwipeDismissToastCard(
+    toast: AppToastMessage,
+    toastColor: Color,
+    accent: Color,
+    isDark: Boolean,
+    dismissThresholdPx: Float,
+    onDismiss: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val onDismissState by rememberUpdatedState(onDismiss)
+    val offsetX = remember(toast.id) { Animatable(0f) }
+    val offsetY = remember(toast.id) { Animatable(0f) }
+    val tapModifier = toast.onTap?.let { onTap ->
+        Modifier.clickable { onTap() }
+    } ?: Modifier
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp)
+            .offset {
+                IntOffset(
+                    x = offsetX.value.roundToInt(),
+                    y = offsetY.value.roundToInt(),
+                )
             }
+            .pointerInput(toast.id) {
+                detectDragGestures(
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        scope.launch {
+                            offsetX.snapTo(offsetX.value + dragAmount.x)
+                            offsetY.snapTo(offsetY.value + dragAmount.y)
+                        }
+                    },
+                    onDragCancel = {
+                        resetToastOffsets(
+                            scope = scope,
+                            offsetX = offsetX,
+                            offsetY = offsetY,
+                        )
+                    },
+                    onDragEnd = {
+                        scope.launch {
+                            val dismissDirection = resolveToastDismissDirection(
+                                offsetX = offsetX.value,
+                                offsetY = offsetY.value,
+                                dismissThresholdPx = dismissThresholdPx,
+                            )
+                            handleToastDragEnd(
+                                dismissDirection = dismissDirection,
+                                scope = scope,
+                                offsetX = offsetX,
+                                offsetY = offsetY,
+                                width = size.width.toFloat(),
+                                height = size.height.toFloat(),
+                                onDismiss = onDismissState,
+                            )
+                        }
+                    },
+                )
+            }
+            .then(tapModifier),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = toastColor),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = accent.copy(alpha = if (isDark) 0.36f else 0.42f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 8.dp else 5.dp),
+    ) {
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = toast.message,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
+}
+
+private fun resolveToastDismissDirection(
+    offsetX: Float,
+    offsetY: Float,
+    dismissThresholdPx: Float,
+): AppToastDismissDirection? = when {
+    offsetY <= -dismissThresholdPx && abs(offsetY) >= abs(offsetX) -> AppToastDismissDirection.Up
+    offsetX <= -dismissThresholdPx -> AppToastDismissDirection.Left
+    offsetX >= dismissThresholdPx -> AppToastDismissDirection.Right
+    else -> null
+}
+
+private fun resetToastOffsets(
+    scope: CoroutineScope,
+    offsetX: Animatable<Float, *>,
+    offsetY: Animatable<Float, *>,
+) {
+    scope.launch {
+        launch { offsetX.animateTo(0f) }
+        launch { offsetY.animateTo(0f) }
+    }
+}
+
+private suspend fun handleToastDragEnd(
+    dismissDirection: AppToastDismissDirection?,
+    scope: CoroutineScope,
+    offsetX: Animatable<Float, *>,
+    offsetY: Animatable<Float, *>,
+    width: Float,
+    height: Float,
+    onDismiss: () -> Unit,
+) {
+    when (dismissDirection) {
+        AppToastDismissDirection.Left -> {
+            offsetX.animateTo(-width)
+            onDismiss()
+        }
+        AppToastDismissDirection.Right -> {
+            offsetX.animateTo(width)
+            onDismiss()
+        }
+        AppToastDismissDirection.Up -> {
+            offsetY.animateTo(-height * 1.5f)
+            onDismiss()
+        }
+        null -> {
+            resetToastOffsets(
+                scope = scope,
+                offsetX = offsetX,
+                offsetY = offsetY,
+            )
         }
     }
 }
