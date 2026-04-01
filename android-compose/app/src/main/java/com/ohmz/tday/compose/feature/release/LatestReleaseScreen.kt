@@ -29,9 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -312,22 +310,15 @@ private fun ReleaseTopBar(
     onBack: () -> Unit,
     collapseProgress: Float,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     val progress = collapseProgress.coerceIn(0f, 1f)
-    val expandedFadeStart = 0.62f
-    val expandedFadeEnd = 0.86f
-    val collapsedFadeStart = 0.72f
-    val collapsedFadeEnd = 0.96f
+    val titleHandoffPoint = 0.9f
     val density = LocalDensity.current
     val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
-    val expandedTitleAlpha = 1f - (
-        (progress - expandedFadeStart) / (expandedFadeEnd - expandedFadeStart)
-        ).coerceIn(0f, 1f)
-    val collapsedTitleAlpha = (
-        (progress - collapsedFadeStart) / (collapsedFadeEnd - collapsedFadeStart)
-        ).coerceIn(0f, 1f)
-    val collapsedTitleShiftY = with(density) { (10.dp * (1f - collapsedTitleAlpha)).toPx() }
-    val expandedTitleShiftY = with(density) { lerp(0.dp, (-18).dp, progress).toPx() }
+    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
+    val collapsedTitleAlpha =
+        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
+    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
+    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
 
     Column(
         modifier = Modifier
@@ -349,20 +340,12 @@ private fun ReleaseTopBar(
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
                         },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Info,
-                        contentDescription = null,
-                        tint = colorScheme.onBackground,
-                        modifier = Modifier.size(28.dp),
-                    )
                     Text(
                         text = stringResource(R.string.release_title),
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = colorScheme.onBackground,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
             }
@@ -375,25 +358,17 @@ private fun ReleaseTopBar(
             contentAlignment = Alignment.BottomStart,
         ) {
             if (expandedTitleAlpha > 0.001f) {
-                Row(
+                Box(
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
                     },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Info,
-                        contentDescription = null,
-                        tint = colorScheme.onBackground,
-                        modifier = Modifier.size(28.dp),
-                    )
                     Text(
                         text = stringResource(R.string.release_title),
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = colorScheme.onBackground,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
             }
@@ -416,8 +391,8 @@ private fun ReleaseHeaderButton(
             onClick()
         },
         shape = CircleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.15f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
         Box(
@@ -488,11 +463,13 @@ private fun ReleaseOverviewCard(
     hasUpdate: Boolean,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val accent = if (hasUpdate) colorScheme.primary else colorScheme.tertiary
-    val title = if (hasUpdate) {
-        stringResource(R.string.release_update_available)
+    val accent = if (hasUpdate) colorScheme.primary else colorScheme.onSurface
+    val title = if (hasUpdate) stringResource(R.string.release_update_available) else stringResource(R.string.release_up_to_date)
+    val summary = if (hasUpdate) {
+        latestRelease?.tagName?.let { "Version $it is ready to install." }
+            ?: "A newer version is ready to install."
     } else {
-        "Latest"
+        stringResource(R.string.release_up_to_date_message)
     }
 
     ReleaseSurfaceCard(
@@ -502,10 +479,14 @@ private fun ReleaseOverviewCard(
             colorScheme.onSurface.copy(alpha = 0.05f)
         },
     ) {
-        SectionHeading(
-            icon = if (hasUpdate) Icons.Rounded.NewReleases else Icons.Rounded.CheckCircle,
+        ReleaseSectionTitle(
             title = title,
-            tint = accent,
+            color = accent,
+        )
+        Text(
+            text = summary,
+            style = MaterialTheme.typography.bodyMedium,
+            color = colorScheme.onSurface.copy(alpha = 0.62f),
         )
         ReleasePublishedDate(
             publishedAt = latestRelease?.publishedAt ?: currentRelease?.publishedAt,
@@ -557,10 +538,8 @@ private fun InstalledVersionCard(
     val currentChangelog = parseChangelog(currentRelease?.body)
 
     ReleaseSurfaceCard {
-        SectionHeading(
-            icon = Icons.Rounded.Info,
+        ReleaseSectionTitle(
             title = stringResource(R.string.release_installed_version),
-            tint = colorScheme.onSurface,
         )
         InstalledVersionRow(
             currentVersion = currentVersion,
@@ -587,14 +566,13 @@ private fun UpdateAvailableCard(
     val latestChangelog = parseChangelog(latestRelease.body)
 
     ReleaseSurfaceCard(borderColor = colorScheme.primary.copy(alpha = 0.12f)) {
-        SectionHeading(
-            icon = Icons.Rounded.NewReleases,
+        ReleaseSectionTitle(
             title = stringResource(R.string.release_update_available),
-            tint = colorScheme.primary,
+            color = colorScheme.primary,
         )
         VersionBadge(
             text = latestRelease.tagName,
-            backgroundColor = colorScheme.primary.copy(alpha = 0.12f),
+            backgroundColor = colorScheme.primary.copy(alpha = 0.08f),
             textColor = colorScheme.primary,
         )
         ReleasePublishedDate(publishedAt = latestRelease.publishedAt)
@@ -613,36 +591,16 @@ private fun UpdateAvailableCard(
 }
 
 @Composable
-private fun SectionHeading(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun ReleaseSectionTitle(
     title: String,
-    tint: androidx.compose.ui.graphics.Color,
+    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(tint.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = color,
+    )
 }
 
 @Composable
@@ -702,7 +660,7 @@ private fun ReleaseNotesSection(
         )
         Card(
             shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.66f)),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.6f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             Column(
@@ -715,7 +673,7 @@ private fun ReleaseNotesSection(
     } else if (emptyMessage != null) {
         Card(
             shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.66f)),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.6f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             Text(
