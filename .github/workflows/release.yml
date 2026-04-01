@@ -118,10 +118,15 @@ jobs:
           echo "RELEASE_KEYSTORE_PATH=/tmp/release.keystore" >> "$GITHUB_ENV"
 
       - name: Detect Android signing alias
-        if: ${{ secrets.RELEASE_KEY_ALIAS == '' }}
         env:
+          RELEASE_KEY_ALIAS_VALUE: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD || secrets.TWA_STORE_PASSWORD }}
         run: |
+          if [ -n "$RELEASE_KEY_ALIAS_VALUE" ]; then
+            echo "RELEASE_KEY_ALIAS=$RELEASE_KEY_ALIAS_VALUE" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
           if [ -z "$RELEASE_KEYSTORE_PASSWORD" ]; then
             echo "::error::Missing Android keystore password. Configure RELEASE_KEYSTORE_PASSWORD or TWA_STORE_PASSWORD."
             exit 1
@@ -142,7 +147,6 @@ jobs:
       - name: Build Android APK
         env:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD || secrets.TWA_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS || env.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || secrets.TWA_KEY_PASSWORD }}
         run: ./gradlew :android-compose:app:assembleRelease --no-daemon
 
