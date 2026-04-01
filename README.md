@@ -17,7 +17,7 @@ Personal task planner — self-hosted, private, multilingual.
 | Frontend | Vite, React 18, TypeScript 5, React Router, Tailwind CSS 4, i18next |
 | Backend | Ktor (Kotlin), Exposed ORM, Flyway migrations |
 | Database | PostgreSQL 15 |
-| Auth | JWE sessions, PBKDF2 credentials, credential envelope encryption |
+| Auth | Rolling JWE cookie sessions, PBKDF2 credentials, credential envelope encryption |
 | AI | Ollama (local, e.g. qwen2.5:0.5b) |
 | Android | Kotlin, Jetpack Compose, Hilt, Retrofit, Material 3 |
 | iOS | SwiftUI, SwiftData, URLSession, Observation |
