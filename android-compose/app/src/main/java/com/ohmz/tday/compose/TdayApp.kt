@@ -67,6 +67,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavHostController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.compose.ui.platform.LocalContext
@@ -88,7 +89,9 @@ import com.ohmz.tday.compose.feature.home.HomeScreen
 import com.ohmz.tday.compose.feature.home.HomeUiState
 import com.ohmz.tday.compose.feature.home.HomeViewModel
 import com.ohmz.tday.compose.feature.onboarding.OnboardingWizardOverlay
+import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.release.LatestReleaseScreen
+import com.ohmz.tday.compose.feature.release.LatestReleaseUiState
 import com.ohmz.tday.compose.feature.release.LatestReleaseViewModel
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
@@ -130,18 +133,10 @@ fun TdayApp() {
         navController.handleDeepLink(intent)
     }
 
-    LaunchedEffect(Unit) {
-        appViewModel.snackbarManager.events.collect { event ->
-            val result = snackbarHostState.showSnackbar(
-                message = event.message,
-                actionLabel = event.actionLabel,
-                duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                event.onAction?.invoke()
-            }
-        }
-    }
+    CollectAppSnackbars(
+        appViewModel = appViewModel,
+        snackbarHostState = snackbarHostState,
+    )
 
     fun showTaskDeletedToast() {
         activeToast = AppToastMessage(
@@ -150,83 +145,28 @@ fun TdayApp() {
         )
     }
 
-    LaunchedEffect(
-        appUiState.loading,
-        appUiState.authenticated,
-        currentRoute,
-    ) {
-        if (appUiState.loading) return@LaunchedEffect
+    HandleStartupNavigation(
+        appUiState = appUiState,
+        currentRoute = currentRoute,
+        navController = navController,
+    )
 
-        if (appUiState.authenticated) {
-            val unauthenticatedRoutes = setOf(
-                AppRoute.Splash.route,
-                AppRoute.Login.route,
-                AppRoute.ServerSetup.route,
-            )
-            if (currentRoute in unauthenticatedRoutes) {
-                navController.navigate(AppRoute.Home.route) {
-                    when (currentRoute) {
-                        AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
-                        AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
-                        AppRoute.ServerSetup.route -> popUpTo(AppRoute.ServerSetup.route) { inclusive = true }
-                    }
-                    launchSingleTop = true
-                }
-            }
-            return@LaunchedEffect
-        }
-
-        val onboardingRoutes = setOf(AppRoute.Home.route)
-        if (currentRoute !in onboardingRoutes) {
-            navController.navigate(AppRoute.Home.route) {
-                when (currentRoute) {
-                    AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
-                    AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
-                    AppRoute.Home.route -> popUpTo(AppRoute.Home.route) { inclusive = true }
-                    AppRoute.ServerSetup.route -> popUpTo(AppRoute.ServerSetup.route) { inclusive = true }
-                }
+    HandleLaunchUpdateToast(
+        appUiState = appUiState,
+        releaseUiState = releaseUiState,
+        currentRoute = currentRoute,
+        updateToastMessage = updateToastMessage,
+        activeToast = activeToast,
+        hasShownLaunchUpdateToast = hasShownLaunchUpdateToast,
+        onToastShown = { hasShownLaunchUpdateToast = true },
+        onShowToast = { toast -> activeToast = toast },
+        onClearToast = { activeToast = null },
+        onOpenLatestRelease = {
+            navController.navigate(AppRoute.LatestRelease.route) {
                 launchSingleTop = true
             }
-        }
-    }
-
-    LaunchedEffect(
-        appUiState.loading,
-        releaseUiState.isLoading,
-        releaseUiState.hasUpdate,
-        updateToastMessage,
-        currentRoute,
-    ) {
-        if (appUiState.loading || releaseUiState.isLoading) return@LaunchedEffect
-        if (!releaseUiState.hasUpdate) return@LaunchedEffect
-        if (hasShownLaunchUpdateToast) return@LaunchedEffect
-        if (currentRoute == null || currentRoute == AppRoute.Splash.route) return@LaunchedEffect
-        if (currentRoute == AppRoute.LatestRelease.route) return@LaunchedEffect
-        val message = updateToastMessage ?: return@LaunchedEffect
-
-        hasShownLaunchUpdateToast = true
-        activeToast = AppToastMessage(
-            id = System.currentTimeMillis(),
-            message = message,
-            kind = AppToastKind.UpdateAvailable,
-            autoDismissMillis = null,
-            showDismissAction = true,
-            onTap = {
-                activeToast = null
-                navController.navigate(AppRoute.LatestRelease.route) {
-                    launchSingleTop = true
-                }
-            },
-        )
-    }
-
-    LaunchedEffect(currentRoute) {
-        if (currentRoute == AppRoute.LatestRelease.route &&
-            activeToast?.kind == AppToastKind.UpdateAvailable
-        ) {
-            activeToast = null
-        }
-    }
+        },
+    )
 
     TdayTheme(themeMode = appUiState.themeMode) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -646,6 +586,123 @@ fun TdayApp() {
 }
 
 @Composable
+private fun CollectAppSnackbars(
+    appViewModel: AppViewModel,
+    snackbarHostState: SnackbarHostState,
+) {
+    LaunchedEffect(Unit) {
+        appViewModel.snackbarManager.events.collect { event ->
+            val result = snackbarHostState.showSnackbar(
+                message = event.message,
+                actionLabel = event.actionLabel,
+                duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                event.onAction?.invoke()
+            }
+        }
+    }
+}
+
+@Composable
+private fun HandleStartupNavigation(
+    appUiState: AppUiState,
+    currentRoute: String?,
+    navController: NavHostController,
+) {
+    LaunchedEffect(
+        appUiState.loading,
+        appUiState.authenticated,
+        currentRoute,
+    ) {
+        if (appUiState.loading) return@LaunchedEffect
+
+        if (appUiState.authenticated) {
+            val unauthenticatedRoutes = setOf(
+                AppRoute.Splash.route,
+                AppRoute.Login.route,
+                AppRoute.ServerSetup.route,
+            )
+            if (currentRoute in unauthenticatedRoutes) {
+                navigateHome(navController, currentRoute)
+            }
+            return@LaunchedEffect
+        }
+
+        if (currentRoute != AppRoute.Home.route) {
+            navigateHome(navController, currentRoute)
+        }
+    }
+}
+
+private fun navigateHome(
+    navController: NavHostController,
+    currentRoute: String?,
+) {
+    navController.navigate(AppRoute.Home.route) {
+        when (currentRoute) {
+            AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
+            AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
+            AppRoute.Home.route -> popUpTo(AppRoute.Home.route) { inclusive = true }
+            AppRoute.ServerSetup.route -> popUpTo(AppRoute.ServerSetup.route) { inclusive = true }
+        }
+        launchSingleTop = true
+    }
+}
+
+@Composable
+private fun HandleLaunchUpdateToast(
+    appUiState: AppUiState,
+    releaseUiState: LatestReleaseUiState,
+    currentRoute: String?,
+    updateToastMessage: String?,
+    activeToast: AppToastMessage?,
+    hasShownLaunchUpdateToast: Boolean,
+    onToastShown: () -> Unit,
+    onShowToast: (AppToastMessage) -> Unit,
+    onClearToast: () -> Unit,
+    onOpenLatestRelease: () -> Unit,
+) {
+    LaunchedEffect(
+        appUiState.loading,
+        releaseUiState.isLoading,
+        releaseUiState.hasUpdate,
+        updateToastMessage,
+        currentRoute,
+    ) {
+        if (appUiState.loading || releaseUiState.isLoading) return@LaunchedEffect
+        if (!releaseUiState.hasUpdate) return@LaunchedEffect
+        if (hasShownLaunchUpdateToast) return@LaunchedEffect
+        if (currentRoute == null || currentRoute == AppRoute.Splash.route) return@LaunchedEffect
+        if (currentRoute == AppRoute.LatestRelease.route) return@LaunchedEffect
+        val message = updateToastMessage ?: return@LaunchedEffect
+
+        onToastShown()
+        onShowToast(
+            AppToastMessage(
+                id = System.currentTimeMillis(),
+                message = message,
+                kind = AppToastKind.UpdateAvailable,
+                autoDismissMillis = null,
+                showDismissAction = true,
+                onTap = {
+                    onClearToast()
+                    onOpenLatestRelease()
+                },
+            ),
+        )
+    }
+
+    LaunchedEffect(currentRoute, activeToast?.kind) {
+        if (currentRoute == AppRoute.LatestRelease.route &&
+            activeToast?.kind == AppToastKind.UpdateAvailable
+        ) {
+            onClearToast()
+        }
+    }
+}
+
+@Composable
 private fun TodosRoute(
     mode: TodoListMode,
     onBack: () -> Unit,
@@ -799,13 +856,14 @@ private fun TdayBottomToastHost(
                     targetOffsetY = { it / 2 },
                 ),
         ) {
+            val visibleToast = toast ?: return@AnimatedVisibility
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 22.dp)
                     .then(
-                        if (toast?.onTap != null) {
-                            Modifier.clickable { toast.onTap.invoke() }
+                        if (visibleToast.onTap != null) {
+                            Modifier.clickable { visibleToast.onTap.invoke() }
                         } else {
                             Modifier
                         },
@@ -824,12 +882,12 @@ private fun TdayBottomToastHost(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        text = toast?.message.orEmpty(),
+                        text = visibleToast.message,
                         modifier = Modifier.weight(1f),
                         color = colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    if (toast?.showDismissAction == true) {
+                    if (visibleToast.showDismissAction) {
                         IconButton(onClick = onDismiss) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
