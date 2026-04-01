@@ -2,6 +2,7 @@ package com.ohmz.tday.compose
 
 import android.Manifest
 import android.content.Intent
+import android.app.NotificationManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -10,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.ohmz.tday.compose.core.notification.BootRescheduleReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +28,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        dismissUpdateReadyNotification()
         requestNotificationPermissionIfNeeded()
         _deepLinkIntent.value = intent
         setContent {
@@ -36,7 +39,13 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        dismissUpdateReadyNotification()
         _deepLinkIntent.value = intent
+    }
+
+    private fun dismissUpdateReadyNotification() {
+        getSystemService(NotificationManager::class.java)
+            .cancel(BootRescheduleReceiver.UPDATE_NOTIFICATION_ID)
     }
 
     private fun requestNotificationPermissionIfNeeded() {
