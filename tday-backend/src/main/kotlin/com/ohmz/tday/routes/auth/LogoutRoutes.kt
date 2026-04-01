@@ -1,8 +1,8 @@
 package com.ohmz.tday.routes.auth
 
 import com.ohmz.tday.plugins.authUser
-import com.ohmz.tday.plugins.sessionCookieName
 import com.ohmz.tday.security.SessionControl
+import com.ohmz.tday.security.clearSessionCookie
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -20,18 +20,7 @@ fun Route.logoutRoutes() {
                 sessionControl.revokeUserSessions(user.id)
             }
 
-            val secure = config.isProduction
-            val cookieName = sessionCookieName(secure)
-
-            call.response.cookies.append(Cookie(
-                name = cookieName,
-                value = "",
-                maxAge = 0,
-                path = "/",
-                secure = secure,
-                httpOnly = true,
-                extensions = mapOf("SameSite" to "Lax"),
-            ))
+            call.clearSessionCookie(config)
 
             call.respond(HttpStatusCode.OK, mapOf("message" to "Logged out"))
         }

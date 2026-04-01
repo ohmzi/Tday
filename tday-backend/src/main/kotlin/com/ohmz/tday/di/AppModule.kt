@@ -21,8 +21,8 @@ val securityModule = module {
     single<AuthThrottle> { AuthThrottleImpl(get(), get(), get()) }
     single<CaptchaService> { CaptchaServiceImpl(get(), get()) }
     single<CredentialEnvelope> { CredentialEnvelopeImpl(get()) }
-    single<SessionControl> { SessionControlImpl(get()) }
     single { AuthUserCache() }
+    single<SessionControl> { SessionControlImpl(get()) }
 }
 
 val serviceModule = module {
