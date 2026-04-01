@@ -110,7 +110,7 @@ fun LatestReleaseScreen(
     LaunchedEffect(installerEvent) {
         when (val event = installerEvent) {
             is InAppApkUpdater.InstallEvent.PendingUserAction -> {
-                installUiState = ApkInstallUiState.Installing
+                installUiState = ApkInstallUiState.OpeningInstaller
                 runCatching {
                     installConfirmationLauncher.launch(event.confirmationIntent)
                 }.onSuccess {
@@ -283,7 +283,8 @@ private fun ReleaseContent(
     val currentRelease = uiState.currentRelease
     val latestRelease = uiState.latestRelease
     val isInstallerBusy = apkInstallUiState is ApkInstallUiState.Downloading ||
-        apkInstallUiState is ApkInstallUiState.Installing
+        apkInstallUiState is ApkInstallUiState.PreparingInstaller ||
+        apkInstallUiState is ApkInstallUiState.OpeningInstaller
 
     InstalledVersionCard(
         currentVersion = uiState.currentVersion,
@@ -604,7 +605,8 @@ private fun apkInstallButtonLabel(apkInstallUiState: ApkInstallUiState): String 
                 ?: stringResource(R.string.release_downloading_apk)
         }
 
-        ApkInstallUiState.Installing -> stringResource(R.string.release_opening_installer)
+        ApkInstallUiState.PreparingInstaller -> stringResource(R.string.release_preparing_update)
+        ApkInstallUiState.OpeningInstaller -> stringResource(R.string.release_opening_installer)
         ApkInstallUiState.Idle,
         is ApkInstallUiState.Error -> stringResource(R.string.release_download_and_install)
     }
@@ -635,13 +637,11 @@ private fun ApkInstallStatus(apkInstallUiState: ApkInstallUiState) {
             }
         }
 
-        ApkInstallUiState.Installing -> {
-            Text(
-                text = stringResource(R.string.release_opening_installer),
-                style = MaterialTheme.typography.bodySmall,
-                color = colorScheme.onSurface.copy(alpha = 0.65f),
-            )
+        ApkInstallUiState.PreparingInstaller -> {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
+
+        ApkInstallUiState.OpeningInstaller -> Unit
 
         is ApkInstallUiState.Error -> {
             Text(
@@ -780,7 +780,7 @@ private fun startApkInstall(
             InAppApkUpdater.downloadAndInstall(appContext, asset) { progress ->
                 onStateChange(ApkInstallUiState.Downloading(progress = progress))
             }
-            onStateChange(ApkInstallUiState.Installing)
+            onStateChange(ApkInstallUiState.PreparingInstaller)
         } catch (error: IOException) {
             onStateChange(buildApkInstallErrorState(context, error))
         }
@@ -868,7 +868,9 @@ private sealed interface ApkInstallUiState {
 
     data class Downloading(val progress: Float?) : ApkInstallUiState
 
-    data object Installing : ApkInstallUiState
+    data object PreparingInstaller : ApkInstallUiState
+
+    data object OpeningInstaller : ApkInstallUiState
 
     data class Error(val message: String) : ApkInstallUiState
 }
