@@ -22,6 +22,9 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.koin.ktor.ext.inject
 
+private const val EVENT_DETAIL_USER_ID = "userId"
+private const val EVENT_DETAIL_PATH = "path"
+
 val AuthUserKey = AttributeKey<JwtUserClaims>("AuthUser")
 
 fun ApplicationCall.authUser(): JwtUserClaims? = attributes.getOrNull(AuthUserKey)
@@ -56,8 +59,8 @@ fun Application.configureSecurity() {
                     eventLogger.log(
                         "auth_session_absolute_expired",
                         mapOf(
-                            "userId" to claims.id,
-                            "path" to call.request.path(),
+                            EVENT_DETAIL_USER_ID to claims.id,
+                            EVENT_DETAIL_PATH to call.request.path(),
                         ),
                     )
                     return@intercept
@@ -99,8 +102,8 @@ fun Application.configureSecurity() {
                             eventLogger.log(
                                 "auth_session_renewed",
                                 mapOf(
-                                    "userId" to hydratedClaims.id,
-                                    "path" to call.request.path(),
+                                    EVENT_DETAIL_USER_ID to hydratedClaims.id,
+                                    EVENT_DETAIL_PATH to call.request.path(),
                                     "remainingSeconds" to remainingSeconds.coerceAtLeast(0),
                                 ),
                             )
@@ -111,8 +114,8 @@ fun Application.configureSecurity() {
                         eventLogger.log(
                             "auth_session_token_version_mismatch",
                             mapOf(
-                                "userId" to claims.id,
-                                "path" to call.request.path(),
+                                EVENT_DETAIL_USER_ID to claims.id,
+                                EVENT_DETAIL_PATH to call.request.path(),
                             ),
                         )
                     }
@@ -121,8 +124,8 @@ fun Application.configureSecurity() {
                     eventLogger.log(
                         "auth_session_user_missing",
                         mapOf(
-                            "userId" to claims.id,
-                            "path" to call.request.path(),
+                            EVENT_DETAIL_USER_ID to claims.id,
+                            EVENT_DETAIL_PATH to call.request.path(),
                         ),
                     )
                 }

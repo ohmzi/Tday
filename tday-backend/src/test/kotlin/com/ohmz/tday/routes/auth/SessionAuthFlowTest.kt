@@ -59,6 +59,20 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+private const val TEST_USER_ID = "user_123"
+private const val TEST_USER_EMAIL = "user@example.com"
+private const val TEST_ROLE = "USER"
+private const val TEST_APPROVAL_STATUS = "APPROVED"
+private const val TEST_TIME_ZONE = "America/Toronto"
+private const val API_ROUTE_PATH = "/api"
+private const val AUTH_ROUTE_PATH = "/auth"
+private const val AUTH_CALLBACK_PATH = "/api/auth/callback/credentials"
+private const val AUTH_SESSION_PATH = "/api/auth/session"
+private const val AUTH_LOGOUT_PATH = "/api/auth/logout"
+private const val CHANGE_PASSWORD_PATH = "/api/user/change-password"
+private const val UNUSED_ERROR_MESSAGE = "unused"
+private const val SESSION_TEST_ISSUED_AT = "2026-04-01T00:00:00Z"
+
 class SessionAuthFlowTest {
     @Test
     fun `credentials callback sets session cookie with configured max age`() = testApplication {
@@ -66,14 +80,14 @@ class SessionAuthFlowTest {
         val jwtService = JwtServiceImpl(config)
         val userService = FakeUserService(
             loginUser = mapOf(
-                "id" to "user_123",
-                "email" to "user@example.com",
+                "id" to TEST_USER_ID,
+                "email" to TEST_USER_EMAIL,
                 "password" to "stored-hash",
                 "name" to "Test User",
-                "role" to "USER",
-                "approvalStatus" to "APPROVED",
+                "role" to TEST_ROLE,
+                "approvalStatus" to TEST_APPROVAL_STATUS,
                 "tokenVersion" to 4,
-                "timeZone" to "America/Toronto",
+                "timeZone" to TEST_TIME_ZONE,
             ),
         )
 
@@ -85,9 +99,9 @@ class SessionAuthFlowTest {
             )
         }
 
-        val response = client.post("/api/auth/callback/credentials") {
+        val response = client.post(AUTH_CALLBACK_PATH) {
             contentType(ContentType.Application.Json)
-            setBody("""{"email":"user@example.com","password":"Password123!"}""")
+            setBody("""{"email":"$TEST_USER_EMAIL","password":"Password123!"}""")
         }
 
         assertEquals(HttpStatusCode.OK, response.status)
@@ -102,24 +116,24 @@ class SessionAuthFlowTest {
             sessionAbsoluteMaxAgeSec = 5_400,
             sessionRenewThresholdSec = 600,
         )
-        val issuedAt = Instant.parse("2026-04-01T00:00:00Z")
+        val issuedAt = Instant.parse(SESSION_TEST_ISSUED_AT)
         val initialJwtService = JwtServiceImpl(config, fixedClock(issuedAt))
         val initialToken = initialJwtService.encode(
             JwtUserClaims(
-                id = "user_123",
-                email = "user@example.com",
+                id = TEST_USER_ID,
+                email = TEST_USER_EMAIL,
                 tokenVersion = 1,
             ),
         )
 
         val authUserCache = AuthUserCache().apply {
             put(
-                "user_123",
+                TEST_USER_ID,
                 AuthCachedUser(
-                    role = "USER",
-                    approvalStatus = "APPROVED",
+                    role = TEST_ROLE,
+                    approvalStatus = TEST_APPROVAL_STATUS,
                     tokenVersion = 1,
-                    timeZone = "America/Toronto",
+                    timeZone = TEST_TIME_ZONE,
                 ),
             )
         }
@@ -136,7 +150,7 @@ class SessionAuthFlowTest {
             )
         }
 
-        val response = client.get("/api/auth/session") {
+        val response = client.get(AUTH_SESSION_PATH) {
             header(HttpHeaders.Cookie, "${sessionCookieName(config.isProduction)}=$initialToken")
         }
 
@@ -155,24 +169,24 @@ class SessionAuthFlowTest {
             sessionAbsoluteMaxAgeSec = 5_400,
             sessionRenewThresholdSec = 600,
         )
-        val issuedAt = Instant.parse("2026-04-01T00:00:00Z")
+        val issuedAt = Instant.parse(SESSION_TEST_ISSUED_AT)
         val initialJwtService = JwtServiceImpl(config, fixedClock(issuedAt))
         val initialToken = initialJwtService.encode(
             JwtUserClaims(
-                id = "user_123",
-                email = "user@example.com",
+                id = TEST_USER_ID,
+                email = TEST_USER_EMAIL,
                 tokenVersion = 1,
             ),
         )
 
         val authUserCache = AuthUserCache().apply {
             put(
-                "user_123",
+                TEST_USER_ID,
                 AuthCachedUser(
-                    role = "USER",
-                    approvalStatus = "APPROVED",
+                    role = TEST_ROLE,
+                    approvalStatus = TEST_APPROVAL_STATUS,
                     tokenVersion = 1,
-                    timeZone = "America/Toronto",
+                    timeZone = TEST_TIME_ZONE,
                 ),
             )
         }
@@ -189,7 +203,7 @@ class SessionAuthFlowTest {
             )
         }
 
-        val response = client.get("/api/auth/session") {
+        val response = client.get(AUTH_SESSION_PATH) {
             header(HttpHeaders.Cookie, "${sessionCookieName(config.isProduction)}=$initialToken")
         }
 
@@ -204,12 +218,12 @@ class SessionAuthFlowTest {
             sessionAbsoluteMaxAgeSec = 5_400,
             sessionRenewThresholdSec = 600,
         )
-        val issuedAt = Instant.parse("2026-04-01T00:00:00Z")
+        val issuedAt = Instant.parse(SESSION_TEST_ISSUED_AT)
         val initialJwtService = JwtServiceImpl(config, fixedClock(issuedAt))
         val initialToken = initialJwtService.encode(
             JwtUserClaims(
-                id = "user_123",
-                email = "user@example.com",
+                id = TEST_USER_ID,
+                email = TEST_USER_EMAIL,
                 tokenVersion = 1,
             ),
         )
@@ -218,16 +232,17 @@ class SessionAuthFlowTest {
             config,
             fixedClock(issuedAt.plusSeconds(2_000)),
         )
-        val renewedToken = renewalJwtService.encode(initialJwtService.decode(initialToken)!!)
+        val initialClaims = assertNotNull(initialJwtService.decode(initialToken))
+        val renewedToken = renewalJwtService.encode(initialClaims)
 
         val authUserCache = AuthUserCache().apply {
             put(
-                "user_123",
+                TEST_USER_ID,
                 AuthCachedUser(
-                    role = "USER",
-                    approvalStatus = "APPROVED",
+                    role = TEST_ROLE,
+                    approvalStatus = TEST_APPROVAL_STATUS,
                     tokenVersion = 1,
-                    timeZone = "America/Toronto",
+                    timeZone = TEST_TIME_ZONE,
                 ),
             )
         }
@@ -244,7 +259,7 @@ class SessionAuthFlowTest {
             )
         }
 
-        val response = client.get("/api/auth/session") {
+        val response = client.get(AUTH_SESSION_PATH) {
             header(HttpHeaders.Cookie, "${sessionCookieName(config.isProduction)}=$renewedToken")
         }
 
@@ -258,10 +273,10 @@ class SessionAuthFlowTest {
         val config = testAppConfig()
         val sessionControl = RecordingSessionControl()
         val authUser = JwtUserClaims(
-            id = "user_123",
+            id = TEST_USER_ID,
             tokenVersion = 2,
-            role = "USER",
-            approvalStatus = "APPROVED",
+            role = TEST_ROLE,
+            approvalStatus = TEST_APPROVAL_STATUS,
         )
 
         application {
@@ -272,10 +287,10 @@ class SessionAuthFlowTest {
             )
         }
 
-        val response = client.post("/api/auth/logout")
+        val response = client.post(AUTH_LOGOUT_PATH)
 
         assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals(listOf("user_123"), sessionControl.revokedUserIds)
+        assertEquals(listOf(TEST_USER_ID), sessionControl.revokedUserIds)
         val cookieHeader = response.requireCookieHeader(sessionCookieName(config.isProduction))
         assertTrue(cookieHeader.contains("Max-Age=0"))
     }
@@ -286,10 +301,10 @@ class SessionAuthFlowTest {
         val jwtService = JwtServiceImpl(config, fixedClock(Instant.parse("2026-04-01T09:30:00Z")))
         val sessionControl = RecordingSessionControl()
         val authUser = JwtUserClaims(
-            id = "user_123",
-            email = "user@example.com",
-            role = "USER",
-            approvalStatus = "APPROVED",
+            id = TEST_USER_ID,
+            email = TEST_USER_EMAIL,
+            role = TEST_ROLE,
+            approvalStatus = TEST_APPROVAL_STATUS,
             tokenVersion = 4,
             sessionStartedAtEpochSec = Instant.parse("2026-03-20T09:30:00Z").epochSecond,
         )
@@ -305,13 +320,13 @@ class SessionAuthFlowTest {
             )
         }
 
-        val response = client.post("/api/user/change-password") {
+        val response = client.post(CHANGE_PASSWORD_PATH) {
             contentType(ContentType.Application.Json)
             setBody("""{"currentPassword":"Current123!","newPassword":"Updated123!"}""")
         }
 
         assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals(listOf("user_123"), sessionControl.revokedUserIds)
+        assertEquals(listOf(TEST_USER_ID), sessionControl.revokedUserIds)
         val cookieHeader = response.requireCookieHeader(sessionCookieName(config.isProduction))
         val refreshedClaims = jwtService.decode(cookieHeader.cookieValue())
         assertNotNull(refreshedClaims)
@@ -341,8 +356,8 @@ class SessionAuthFlowTest {
         }
         configureSerialization()
         routing {
-            route("/api") {
-                route("/auth") {
+            route(API_ROUTE_PATH) {
+                route(AUTH_ROUTE_PATH) {
                     credentialsCallbackRoutes()
                 }
             }
@@ -368,8 +383,8 @@ class SessionAuthFlowTest {
         configureSerialization()
         configureSecurity()
         routing {
-            route("/api") {
-                route("/auth") {
+            route(API_ROUTE_PATH) {
+                route(AUTH_ROUTE_PATH) {
                     sessionRoutes()
                 }
             }
@@ -396,8 +411,8 @@ class SessionAuthFlowTest {
             }
         }
         routing {
-            route("/api") {
-                route("/auth") {
+            route(API_ROUTE_PATH) {
+                route(AUTH_ROUTE_PATH) {
                     logoutRoutes()
                 }
             }
@@ -428,7 +443,7 @@ class SessionAuthFlowTest {
             }
         }
         routing {
-            route("/api") {
+            route(API_ROUTE_PATH) {
                 userRoutes()
             }
         }
@@ -535,9 +550,8 @@ class SessionAuthFlowTest {
     private class ValidPasswordService : PasswordService {
         override fun hashPassword(plainTextPassword: String): String = "rehash:$plainTextPassword"
 
-        override fun verifyPassword(plainTextPassword: String, storedHash: String): PasswordVerification {
-            return PasswordVerification(valid = true, needsRehash = false)
-        }
+        override fun verifyPassword(plainTextPassword: String, storedHash: String): PasswordVerification =
+            PasswordVerification(valid = true, needsRehash = false)
 
         override fun parsePasswordHash(storedHash: String): PasswordHashMetadata? = null
     }
@@ -555,7 +569,7 @@ class SessionAuthFlowTest {
         private val changePasswordResult: Boolean = true,
     ) : UserService {
         override suspend fun getUser(userId: String): Either<AppError, UserResponse> =
-            AppError.NotFound("unused").left()
+            AppError.NotFound(UNUSED_ERROR_MESSAGE).left()
 
         override suspend fun updateEncryption(userId: String, enable: Boolean): Either<AppError, Unit> =
             Unit.right()
@@ -564,7 +578,7 @@ class SessionAuthFlowTest {
             Unit.right()
 
         override suspend fun getProfile(userId: String): Either<AppError, UserProfileResponse> =
-            AppError.NotFound("unused").left()
+            AppError.NotFound(UNUSED_ERROR_MESSAGE).left()
 
         override suspend fun updateProfile(userId: String, name: String?, image: String?): Either<AppError, Unit> =
             Unit.right()
@@ -580,7 +594,7 @@ class SessionAuthFlowTest {
             lname: String?,
             email: String,
             password: String,
-        ): Either<AppError, RegisterResult> = AppError.BadRequest("unused").left()
+        ): Either<AppError, RegisterResult> = AppError.BadRequest(UNUSED_ERROR_MESSAGE).left()
 
         override suspend fun findByEmail(email: String): Map<String, Any?>? = loginUser
 
