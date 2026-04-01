@@ -16,6 +16,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -41,6 +44,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -62,9 +67,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavHostController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
@@ -81,7 +89,9 @@ import com.ohmz.tday.compose.feature.home.HomeScreen
 import com.ohmz.tday.compose.feature.home.HomeUiState
 import com.ohmz.tday.compose.feature.home.HomeViewModel
 import com.ohmz.tday.compose.feature.onboarding.OnboardingWizardOverlay
+import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.release.LatestReleaseScreen
+import com.ohmz.tday.compose.feature.release.LatestReleaseUiState
 import com.ohmz.tday.compose.feature.release.LatestReleaseViewModel
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
@@ -102,10 +112,16 @@ private const val SETTINGS_VERTICAL_FRACTION = 0.22f
 fun TdayApp() {
     val navController = rememberNavController()
     val appViewModel: AppViewModel = hiltViewModel()
+    val releaseViewModel: LatestReleaseViewModel = hiltViewModel()
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
+    val releaseUiState by releaseViewModel.uiState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val updateToastMessage = releaseUiState.latestRelease?.tagName?.let { versionLabel ->
+        stringResource(R.string.release_launch_update_toast, versionLabel)
+    }
     var activeToast by remember { mutableStateOf<AppToastMessage?>(null) }
+    var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val activity = LocalContext.current as? MainActivity
@@ -117,18 +133,10 @@ fun TdayApp() {
         navController.handleDeepLink(intent)
     }
 
-    LaunchedEffect(Unit) {
-        appViewModel.snackbarManager.events.collect { event ->
-            val result = snackbarHostState.showSnackbar(
-                message = event.message,
-                actionLabel = event.actionLabel,
-                duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                event.onAction?.invoke()
-            }
-        }
-    }
+    CollectAppSnackbars(
+        appViewModel = appViewModel,
+        snackbarHostState = snackbarHostState,
+    )
 
     fun showTaskDeletedToast() {
         activeToast = AppToastMessage(
@@ -137,45 +145,28 @@ fun TdayApp() {
         )
     }
 
-    LaunchedEffect(
-        appUiState.loading,
-        appUiState.authenticated,
-        currentRoute,
-    ) {
-        if (appUiState.loading) return@LaunchedEffect
+    HandleStartupNavigation(
+        appUiState = appUiState,
+        currentRoute = currentRoute,
+        navController = navController,
+    )
 
-        if (appUiState.authenticated) {
-            val unauthenticatedRoutes = setOf(
-                AppRoute.Splash.route,
-                AppRoute.Login.route,
-                AppRoute.ServerSetup.route,
-            )
-            if (currentRoute in unauthenticatedRoutes) {
-                navController.navigate(AppRoute.Home.route) {
-                    when (currentRoute) {
-                        AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
-                        AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
-                        AppRoute.ServerSetup.route -> popUpTo(AppRoute.ServerSetup.route) { inclusive = true }
-                    }
-                    launchSingleTop = true
-                }
-            }
-            return@LaunchedEffect
-        }
-
-        val onboardingRoutes = setOf(AppRoute.Home.route)
-        if (currentRoute !in onboardingRoutes) {
-            navController.navigate(AppRoute.Home.route) {
-                when (currentRoute) {
-                    AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
-                    AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
-                    AppRoute.Home.route -> popUpTo(AppRoute.Home.route) { inclusive = true }
-                    AppRoute.ServerSetup.route -> popUpTo(AppRoute.ServerSetup.route) { inclusive = true }
-                }
+    HandleLaunchUpdateToast(
+        appUiState = appUiState,
+        releaseUiState = releaseUiState,
+        currentRoute = currentRoute,
+        updateToastMessage = updateToastMessage,
+        activeToast = activeToast,
+        hasShownLaunchUpdateToast = hasShownLaunchUpdateToast,
+        onToastShown = { hasShownLaunchUpdateToast = true },
+        onShowToast = { toast -> activeToast = toast },
+        onClearToast = { activeToast = null },
+        onOpenLatestRelease = {
+            navController.navigate(AppRoute.LatestRelease.route) {
                 launchSingleTop = true
             }
-        }
-    }
+        },
+    )
 
     TdayTheme(themeMode = appUiState.themeMode) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -557,12 +548,10 @@ fun TdayApp() {
                     popEnterTransition = { settingsEnterTransition() },
                     popExitTransition = { settingsExitTransition() },
                 ) {
-                    val viewModel: LatestReleaseViewModel = hiltViewModel()
-                    val releaseUiState by viewModel.uiState.collectAsStateWithLifecycle()
                     LatestReleaseScreen(
                         uiState = releaseUiState,
                         onBack = { navController.popBackStack() },
-                        onRetry = viewModel::load,
+                        onRetry = releaseViewModel::load,
                     )
                 }
             }
@@ -592,6 +581,123 @@ fun TdayApp() {
                 toast = activeToast,
                 onDismiss = { activeToast = null },
             )
+        }
+    }
+}
+
+@Composable
+private fun CollectAppSnackbars(
+    appViewModel: AppViewModel,
+    snackbarHostState: SnackbarHostState,
+) {
+    LaunchedEffect(Unit) {
+        appViewModel.snackbarManager.events.collect { event ->
+            val result = snackbarHostState.showSnackbar(
+                message = event.message,
+                actionLabel = event.actionLabel,
+                duration = if (event.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                event.onAction?.invoke()
+            }
+        }
+    }
+}
+
+@Composable
+private fun HandleStartupNavigation(
+    appUiState: AppUiState,
+    currentRoute: String?,
+    navController: NavHostController,
+) {
+    LaunchedEffect(
+        appUiState.loading,
+        appUiState.authenticated,
+        currentRoute,
+    ) {
+        if (appUiState.loading) return@LaunchedEffect
+
+        if (appUiState.authenticated) {
+            val unauthenticatedRoutes = setOf(
+                AppRoute.Splash.route,
+                AppRoute.Login.route,
+                AppRoute.ServerSetup.route,
+            )
+            if (currentRoute in unauthenticatedRoutes) {
+                navigateHome(navController, currentRoute)
+            }
+            return@LaunchedEffect
+        }
+
+        if (currentRoute != AppRoute.Home.route) {
+            navigateHome(navController, currentRoute)
+        }
+    }
+}
+
+private fun navigateHome(
+    navController: NavHostController,
+    currentRoute: String?,
+) {
+    navController.navigate(AppRoute.Home.route) {
+        when (currentRoute) {
+            AppRoute.Splash.route -> popUpTo(AppRoute.Splash.route) { inclusive = true }
+            AppRoute.Login.route -> popUpTo(AppRoute.Login.route) { inclusive = true }
+            AppRoute.Home.route -> popUpTo(AppRoute.Home.route) { inclusive = true }
+            AppRoute.ServerSetup.route -> popUpTo(AppRoute.ServerSetup.route) { inclusive = true }
+        }
+        launchSingleTop = true
+    }
+}
+
+@Composable
+private fun HandleLaunchUpdateToast(
+    appUiState: AppUiState,
+    releaseUiState: LatestReleaseUiState,
+    currentRoute: String?,
+    updateToastMessage: String?,
+    activeToast: AppToastMessage?,
+    hasShownLaunchUpdateToast: Boolean,
+    onToastShown: () -> Unit,
+    onShowToast: (AppToastMessage) -> Unit,
+    onClearToast: () -> Unit,
+    onOpenLatestRelease: () -> Unit,
+) {
+    LaunchedEffect(
+        appUiState.loading,
+        releaseUiState.isLoading,
+        releaseUiState.hasUpdate,
+        updateToastMessage,
+        currentRoute,
+    ) {
+        if (appUiState.loading || releaseUiState.isLoading) return@LaunchedEffect
+        if (!releaseUiState.hasUpdate) return@LaunchedEffect
+        if (hasShownLaunchUpdateToast) return@LaunchedEffect
+        if (currentRoute == null || currentRoute == AppRoute.Splash.route) return@LaunchedEffect
+        if (currentRoute == AppRoute.LatestRelease.route) return@LaunchedEffect
+        val message = updateToastMessage ?: return@LaunchedEffect
+
+        onToastShown()
+        onShowToast(
+            AppToastMessage(
+                id = System.currentTimeMillis(),
+                message = message,
+                kind = AppToastKind.UpdateAvailable,
+                autoDismissMillis = null,
+                showDismissAction = true,
+                onTap = {
+                    onClearToast()
+                    onOpenLatestRelease()
+                },
+            ),
+        )
+    }
+
+    LaunchedEffect(currentRoute, activeToast?.kind) {
+        if (currentRoute == AppRoute.LatestRelease.route &&
+            activeToast?.kind == AppToastKind.UpdateAvailable
+        ) {
+            onClearToast()
         }
     }
 }
@@ -664,7 +770,16 @@ private fun OnRouteResume(
 private data class AppToastMessage(
     val id: Long,
     val message: String,
+    val kind: AppToastKind = AppToastKind.Default,
+    val autoDismissMillis: Long? = 2200L,
+    val onTap: (() -> Unit)? = null,
+    val showDismissAction: Boolean = false,
 )
+
+private enum class AppToastKind {
+    Default,
+    UpdateAvailable,
+}
 
 private fun navigationSlideOffset(fullDistance: Int): Int =
     (fullDistance * NAV_SLIDE_FRACTION).roundToInt()
@@ -714,9 +829,10 @@ private fun TdayBottomToastHost(
         lerp(colorScheme.surfaceVariant, accent, 0.30f)
     }
 
-    LaunchedEffect(toast?.id) {
+    LaunchedEffect(toast?.id, toast?.autoDismissMillis) {
         if (toast == null) return@LaunchedEffect
-        kotlinx.coroutines.delay(2200)
+        val autoDismissMillis = toast.autoDismissMillis ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(autoDismissMillis)
         onDismiss()
     }
 
@@ -740,10 +856,18 @@ private fun TdayBottomToastHost(
                     targetOffsetY = { it / 2 },
                 ),
         ) {
+            val visibleToast = toast ?: return@AnimatedVisibility
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 22.dp),
+                    .padding(horizontal = 22.dp)
+                    .then(
+                        if (visibleToast.onTap != null) {
+                            Modifier.clickable { visibleToast.onTap.invoke() }
+                        } else {
+                            Modifier
+                        },
+                    ),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = toastColor),
                 border = androidx.compose.foundation.BorderStroke(
@@ -752,12 +876,27 @@ private fun TdayBottomToastHost(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 8.dp else 5.dp),
             ) {
-                Text(
-                    text = toast?.message.orEmpty(),
+                androidx.compose.foundation.layout.Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    color = colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = visibleToast.message,
+                        modifier = Modifier.weight(1f),
+                        color = colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (visibleToast.showDismissAction) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.action_close),
+                                tint = colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
