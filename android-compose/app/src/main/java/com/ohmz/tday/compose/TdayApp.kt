@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -14,6 +15,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,11 +28,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -44,8 +46,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,9 +56,12 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -71,8 +77,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
@@ -97,6 +101,9 @@ import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.theme.TdayTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val NAV_ENTER_DURATION_MS = 440
@@ -577,7 +584,7 @@ fun TdayApp() {
                 )
             }
 
-            TdayBottomToastHost(
+            TdayToastHost(
                 toast = activeToast,
                 onDismiss = { activeToast = null },
             )
@@ -684,7 +691,6 @@ private fun HandleLaunchUpdateToast(
                 message = message,
                 kind = AppToastKind.UpdateAvailable,
                 autoDismissMillis = null,
-                showDismissAction = true,
                 onTap = {
                     onClearToast()
                     onOpenLatestRelease()
@@ -773,12 +779,17 @@ private data class AppToastMessage(
     val kind: AppToastKind = AppToastKind.Default,
     val autoDismissMillis: Long? = 2200L,
     val onTap: (() -> Unit)? = null,
-    val showDismissAction: Boolean = false,
 )
 
 private enum class AppToastKind {
     Default,
     UpdateAvailable,
+}
+
+private enum class AppToastDismissDirection {
+    Left,
+    Right,
+    Up,
 }
 
 private fun navigationSlideOffset(fullDistance: Int): Int =
@@ -816,7 +827,7 @@ private fun settingsExitTransition(): ExitTransition =
     )
 
 @Composable
-private fun TdayBottomToastHost(
+private fun TdayToastHost(
     toast: AppToastMessage?,
     onDismiss: () -> Unit,
 ) {
@@ -828,6 +839,8 @@ private fun TdayBottomToastHost(
     } else {
         lerp(colorScheme.surfaceVariant, accent, 0.30f)
     }
+    val density = LocalDensity.current
+    val dismissThresholdPx = with(density) { 72.dp.toPx() }
 
     LaunchedEffect(toast?.id, toast?.autoDismissMillis) {
         if (toast == null) return@LaunchedEffect
@@ -839,65 +852,172 @@ private fun TdayBottomToastHost(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .navigationBarsPadding()
-            .padding(bottom = 20.dp),
-        contentAlignment = Alignment.BottomCenter,
+            .statusBarsPadding()
+            .padding(top = 12.dp),
+        contentAlignment = Alignment.TopCenter,
     ) {
         AnimatedVisibility(
             visible = toast != null,
             enter = fadeIn(animationSpec = tween(durationMillis = 180)) +
                 slideInVertically(
                     animationSpec = tween(durationMillis = 220),
-                    initialOffsetY = { it / 2 },
+                    initialOffsetY = { -it / 2 },
                 ),
             exit = fadeOut(animationSpec = tween(durationMillis = 160)) +
                 slideOutVertically(
                     animationSpec = tween(durationMillis = 200),
-                    targetOffsetY = { it / 2 },
+                    targetOffsetY = { -it / 2 },
                 ),
         ) {
             val visibleToast = toast ?: return@AnimatedVisibility
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 22.dp)
-                    .then(
-                        if (visibleToast.onTap != null) {
-                            Modifier.clickable { visibleToast.onTap.invoke() }
-                        } else {
-                            Modifier
-                        },
-                    ),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = toastColor),
-                border = androidx.compose.foundation.BorderStroke(
-                    width = 1.dp,
-                    color = accent.copy(alpha = if (isDark) 0.36f else 0.42f),
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 8.dp else 5.dp),
-            ) {
-                androidx.compose.foundation.layout.Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        text = visibleToast.message,
-                        modifier = Modifier.weight(1f),
-                        color = colorScheme.onSurface,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    if (visibleToast.showDismissAction) {
-                        IconButton(onClick = onDismiss) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.action_close),
-                                tint = colorScheme.onSurface,
+            SwipeDismissToastCard(
+                toast = visibleToast,
+                toastColor = toastColor,
+                accent = accent,
+                isDark = isDark,
+                dismissThresholdPx = dismissThresholdPx,
+                onDismiss = onDismiss,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SwipeDismissToastCard(
+    toast: AppToastMessage,
+    toastColor: Color,
+    accent: Color,
+    isDark: Boolean,
+    dismissThresholdPx: Float,
+    onDismiss: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val onDismissState by rememberUpdatedState(onDismiss)
+    val offsetX = remember(toast.id) { Animatable(0f) }
+    val offsetY = remember(toast.id) { Animatable(0f) }
+    val tapModifier = toast.onTap?.let { onTap ->
+        Modifier.clickable { onTap() }
+    } ?: Modifier
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp)
+            .offset {
+                IntOffset(
+                    x = offsetX.value.roundToInt(),
+                    y = offsetY.value.roundToInt(),
+                )
+            }
+            .pointerInput(toast.id) {
+                detectDragGestures(
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        scope.launch {
+                            offsetX.snapTo(offsetX.value + dragAmount.x)
+                            offsetY.snapTo(offsetY.value + dragAmount.y)
+                        }
+                    },
+                    onDragCancel = {
+                        resetToastOffsets(
+                            scope = scope,
+                            offsetX = offsetX,
+                            offsetY = offsetY,
+                        )
+                    },
+                    onDragEnd = {
+                        scope.launch {
+                            val dismissDirection = resolveToastDismissDirection(
+                                offsetX = offsetX.value,
+                                offsetY = offsetY.value,
+                                dismissThresholdPx = dismissThresholdPx,
+                            )
+                            handleToastDragEnd(
+                                dismissDirection = dismissDirection,
+                                scope = scope,
+                                offsetX = offsetX,
+                                offsetY = offsetY,
+                                width = size.width.toFloat(),
+                                height = size.height.toFloat(),
+                                onDismiss = onDismissState,
                             )
                         }
-                    }
-                }
+                    },
+                )
             }
+            .then(tapModifier),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = toastColor),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = accent.copy(alpha = if (isDark) 0.36f else 0.42f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 8.dp else 5.dp),
+    ) {
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = toast.message,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+    }
+}
+
+private fun resolveToastDismissDirection(
+    offsetX: Float,
+    offsetY: Float,
+    dismissThresholdPx: Float,
+): AppToastDismissDirection? = when {
+    offsetY <= -dismissThresholdPx && abs(offsetY) >= abs(offsetX) -> AppToastDismissDirection.Up
+    offsetX <= -dismissThresholdPx -> AppToastDismissDirection.Left
+    offsetX >= dismissThresholdPx -> AppToastDismissDirection.Right
+    else -> null
+}
+
+private fun resetToastOffsets(
+    scope: CoroutineScope,
+    offsetX: Animatable<Float, *>,
+    offsetY: Animatable<Float, *>,
+) {
+    scope.launch {
+        launch { offsetX.animateTo(0f) }
+        launch { offsetY.animateTo(0f) }
+    }
+}
+
+private suspend fun handleToastDragEnd(
+    dismissDirection: AppToastDismissDirection?,
+    scope: CoroutineScope,
+    offsetX: Animatable<Float, *>,
+    offsetY: Animatable<Float, *>,
+    width: Float,
+    height: Float,
+    onDismiss: () -> Unit,
+) {
+    when (dismissDirection) {
+        AppToastDismissDirection.Left -> {
+            offsetX.animateTo(-width)
+            onDismiss()
+        }
+        AppToastDismissDirection.Right -> {
+            offsetX.animateTo(width)
+            onDismiss()
+        }
+        AppToastDismissDirection.Up -> {
+            offsetY.animateTo(-height * 1.5f)
+            onDismiss()
+        }
+        null -> {
+            resetToastOffsets(
+                scope = scope,
+                offsetX = offsetX,
+                offsetY = offsetY,
+            )
         }
     }
 }
