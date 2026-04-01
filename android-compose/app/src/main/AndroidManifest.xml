@@ -40,13 +40,9 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".feature.release.UpdateInstallerActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="singleTop"
-            android:noHistory="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <receiver
+            android:name=".feature.release.UpdateInstallerStatusReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".core.notification.TaskReminderReceiver"

@@ -209,10 +209,8 @@ internal object InAppApkUpdater {
         context: Context,
         sessionId: Int,
     ): PendingIntent {
-        val statusIntent = Intent(context, UpdateInstallerActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        }
-        return PendingIntent.getActivity(
+        val statusIntent = Intent(context, UpdateInstallerStatusReceiver::class.java)
+        return PendingIntent.getBroadcast(
             context,
             sessionId,
             statusIntent,
