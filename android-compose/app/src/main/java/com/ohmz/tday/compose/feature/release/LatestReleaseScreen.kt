@@ -6,6 +6,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -41,11 +42,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,11 +59,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.geometry.Offset
 import androidx.core.net.toUri
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
@@ -85,6 +96,61 @@ fun LatestReleaseScreen(
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val view = LocalView.current
+    val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+    val maxCollapsePx = with(density) { RELEASE_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
+    var headerCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
+    val collapseProgressTarget = if (maxCollapsePx > 0f) {
+        (headerCollapsePx / maxCollapsePx).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val nestedScrollConnection = remember(scrollState, maxCollapsePx) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val deltaY = available.y
+                if (deltaY < 0f) {
+                    val previous = headerCollapsePx
+                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
+                    val consumed = next - previous
+                    if (consumed > 0f) {
+                        headerCollapsePx = next
+                        return Offset(0f, -consumed)
+                    }
+                    return Offset.Zero
+                }
+
+                if (deltaY > 0f) {
+                    if (scrollState.value > 0) return Offset.Zero
+                    val previous = headerCollapsePx
+                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
+                    val consumed = previous - next
+                    if (consumed > 0f) {
+                        headerCollapsePx = next
+                        return Offset(0f, consumed)
+                    }
+                }
+
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (available.y < 0f && headerCollapsePx < maxCollapsePx) {
+                    headerCollapsePx = maxCollapsePx
+                    return available
+                }
+                if (available.y > 0f && scrollState.value == 0 && headerCollapsePx > 0f) {
+                    headerCollapsePx = 0f
+                    return available
+                }
+                return Velocity.Zero
+            }
+        }
+    }
+    val collapseProgress by animateFloatAsState(
+        targetValue = collapseProgressTarget,
+        label = "releaseTitleCollapseProgress",
+    )
     val installScope = rememberCoroutineScope()
     val installerEvent by InAppApkUpdater.installEvent.collectAsStateWithLifecycle()
     var installUiState by remember { mutableStateOf<ApkInstallUiState>(ApkInstallUiState.Idle) }
@@ -147,128 +213,217 @@ fun LatestReleaseScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colorScheme.background)
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Card(
-                onClick = {
-                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                    onBack()
-                },
-                shape = CircleShape,
-                border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.15f)),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-            ) {
-                Box(
-                    modifier = Modifier.size(56.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = stringResource(R.string.action_back),
-                        tint = colorScheme.onSurface,
-                        modifier = Modifier.size(28.dp),
-                    )
-                }
-            }
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Scaffold(
+        containerColor = colorScheme.background,
+        topBar = {
+            ReleaseTopBar(
+                onBack = onBack,
+                collapseProgress = collapseProgress,
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(colorScheme.background)
+                .nestedScroll(nestedScrollConnection)
+                .verticalScroll(scrollState)
+                .padding(horizontal = 18.dp, vertical = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Info,
-                contentDescription = null,
-                tint = colorScheme.onBackground,
-                modifier = Modifier.size(28.dp),
-            )
-            Text(
-                text = stringResource(R.string.release_title),
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = colorScheme.onBackground,
-            )
-        }
-
-        when {
-            uiState.isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 48.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp),
-                        strokeWidth = 3.dp,
-                    )
-                }
-            }
-
-            uiState.error != null -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = colorScheme.errorContainer.copy(alpha = 0.5f),
-                    ),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+            when {
+                uiState.isLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 48.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = stringResource(R.string.release_error),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colorScheme.onErrorContainer,
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp,
                         )
-                        OutlinedButton(onClick = onRetry) {
-                            Text(text = stringResource(R.string.action_retry))
+                    }
+                }
+
+                uiState.error != null -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = colorScheme.errorContainer.copy(alpha = 0.5f),
+                        ),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.release_error),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colorScheme.onErrorContainer,
+                            )
+                            OutlinedButton(onClick = onRetry) {
+                                Text(text = stringResource(R.string.action_retry))
+                            }
                         }
                     }
                 }
-            }
 
-            else -> {
-                ReleaseContent(
-                    uiState = uiState,
-                    apkInstallUiState = installUiState,
-                    onDownloadApk = { asset ->
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
-                        if (!InAppApkUpdater.canInstallPackages(context)) {
-                            pendingInstallAsset = asset
-                            installUiState = ApkInstallUiState.AwaitingPermission
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.release_install_permission_return_hint),
-                                Toast.LENGTH_LONG,
-                            ).show()
-                            installPermissionLauncher.launch(InAppApkUpdater.buildInstallPermissionIntent(context))
-                        } else {
-                            pendingInstallAsset = null
-                            startApkInstall(
-                                context = context,
-                                asset = asset,
-                                scope = installScope,
-                                onStateChange = { installUiState = it },
-                            )
-                        }
-                    },
-                    onOpenInBrowser = { url ->
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    },
-                )
+                else -> {
+                    ReleaseContent(
+                        uiState = uiState,
+                        apkInstallUiState = installUiState,
+                        onDownloadApk = { asset ->
+                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+                            if (!InAppApkUpdater.canInstallPackages(context)) {
+                                pendingInstallAsset = asset
+                                installUiState = ApkInstallUiState.AwaitingPermission
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.release_install_permission_return_hint),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                                installPermissionLauncher.launch(InAppApkUpdater.buildInstallPermissionIntent(context))
+                            } else {
+                                pendingInstallAsset = null
+                                startApkInstall(
+                                    context = context,
+                                    asset = asset,
+                                    scope = installScope,
+                                    onStateChange = { installUiState = it },
+                                )
+                            }
+                        },
+                        onOpenInBrowser = { url ->
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        },
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun ReleaseTopBar(
+    onBack: () -> Unit,
+    collapseProgress: Float,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val progress = collapseProgress.coerceIn(0f, 1f)
+    val titleHandoffPoint = 0.9f
+    val density = LocalDensity.current
+    val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
+    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
+    val collapsedTitleAlpha =
+        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
+    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
+    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 2.dp),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            ReleaseHeaderButton(
+                onClick = onBack,
+                icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = stringResource(R.string.action_back),
+            )
+            if (collapsedTitleAlpha > 0.001f) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .graphicsLayer {
+                            alpha = collapsedTitleAlpha
+                            translationY = collapsedTitleShiftY
+                        },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = null,
+                        tint = colorScheme.onBackground,
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.release_title),
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onBackground,
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(expandedTitleHeight),
+            contentAlignment = Alignment.BottomStart,
+        ) {
+            if (expandedTitleAlpha > 0.001f) {
+                Row(
+                    modifier = Modifier.graphicsLayer {
+                        alpha = expandedTitleAlpha
+                        translationY = expandedTitleShiftY
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = null,
+                        tint = colorScheme.onBackground,
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.release_title),
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onBackground,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReleaseHeaderButton(
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+
+    Card(
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        shape = CircleShape,
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.15f)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(56.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = colorScheme.onSurface,
+                modifier = Modifier.size(28.dp),
+            )
         }
     }
 }
@@ -874,3 +1029,5 @@ private sealed interface ApkInstallUiState {
 
     data class Error(val message: String) : ApkInstallUiState
 }
+
+private const val RELEASE_TITLE_COLLAPSE_DISTANCE_DP = 180f
