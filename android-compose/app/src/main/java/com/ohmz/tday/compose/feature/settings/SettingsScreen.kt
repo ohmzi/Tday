@@ -22,15 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.Logout
-import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.NewReleases
-import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -159,7 +152,7 @@ fun SettingsScreen(
                 collapseProgress = collapseProgress,
             )
         },
-    ) { padding ->
+        ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -172,31 +165,16 @@ fun SettingsScreen(
         ) {
             SettingsProfileCard(
                 user = user,
-                selectedThemeMode = selectedThemeMode,
             )
 
             SettingsSectionCard {
-                SettingsSectionHeader(
-                    icon = when (selectedThemeMode) {
-                        AppThemeMode.SYSTEM -> Icons.Rounded.BrightnessAuto
-                        AppThemeMode.LIGHT -> Icons.Rounded.WbSunny
-                        AppThemeMode.DARK -> Icons.Rounded.DarkMode
-                    },
-                    title = stringResource(R.string.settings_appearance),
-                    tint = colorScheme.primary,
-                )
+                SettingsSectionTitle(title = stringResource(R.string.settings_appearance))
                 ThemeModeSelector(
                     selectedThemeMode = selectedThemeMode,
                     onThemeModeSelected = onThemeModeSelected,
                 )
-            }
-
-            SettingsSectionCard {
-                SettingsSectionHeader(
-                    icon = Icons.Rounded.Notifications,
-                    title = stringResource(R.string.settings_reminders),
-                    tint = colorScheme.secondary,
-                )
+                SettingsDivider()
+                SettingsSectionTitle(title = stringResource(R.string.settings_reminders))
                 ReminderSelector(
                     selectedReminder = selectedReminder,
                     onReminderSelected = onReminderSelected,
@@ -205,11 +183,7 @@ fun SettingsScreen(
 
             if (isAdminUser) {
                 SettingsSectionCard {
-                    SettingsSectionHeader(
-                        icon = Icons.Rounded.Settings,
-                        title = stringResource(R.string.settings_feature_toggle),
-                        tint = colorScheme.tertiary,
-                    )
+                    SettingsSectionTitle(title = stringResource(R.string.settings_feature_toggle))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -239,6 +213,13 @@ fun SettingsScreen(
                             )
                         }
                     }
+                    if (isAdminAiSummarySaving) {
+                        Text(
+                            text = stringResource(R.string.settings_saving_admin),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colorScheme.onSurface.copy(alpha = 0.58f),
+                        )
+                    }
                     if (!adminAiSummaryError.isNullOrBlank()) {
                         Text(
                             text = adminAiSummaryError,
@@ -249,22 +230,24 @@ fun SettingsScreen(
                 }
             }
 
-            SettingsActionCard(
-                title = stringResource(R.string.release_title),
-                badge = "v${BuildConfig.VERSION_NAME}",
-                accent = colorScheme.primary,
-                icon = Icons.Rounded.NewReleases,
-                onClick = onOpenLatestRelease,
-                trailingIcon = Icons.Rounded.ChevronRight,
-            )
+            SettingsSectionCard {
+                SettingsListRow(
+                    title = stringResource(R.string.release_title),
+                    value = "v${BuildConfig.VERSION_NAME}",
+                    onClick = onOpenLatestRelease,
+                )
+                SettingsDivider()
+                SettingsListRow(
+                    title = stringResource(R.string.action_sign_out),
+                    value = null,
+                    onClick = onLogout,
+                    titleColor = colorScheme.error,
+                    trailingTint = colorScheme.error.copy(alpha = 0.72f),
+                    showChevron = false,
+                )
+            }
 
-            SettingsActionCard(
-                title = stringResource(R.string.action_sign_out),
-                accent = colorScheme.error,
-                icon = Icons.AutoMirrored.Rounded.Logout,
-                onClick = onLogout,
-                trailingIcon = null,
-            )
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
@@ -292,71 +275,29 @@ fun SettingsScreen(
 @Composable
 private fun SettingsProfileCard(
     user: SessionUser?,
-    selectedThemeMode: AppThemeMode,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
     SettingsSectionCard {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(54.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(colorScheme.primary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Settings,
-                    contentDescription = null,
-                    tint = colorScheme.primary,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Text(
-                    text = user?.name ?: stringResource(R.string.settings_unknown_user),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onSurface,
-                )
-                if (!user?.email.isNullOrBlank()) {
-                    Text(
-                        text = user?.email.orEmpty(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = colorScheme.onSurface.copy(alpha = 0.72f),
-                    )
-                }
-                Text(
-                    text = stringResource(R.string.settings_role_prefix) +
-                        (user?.role ?: stringResource(R.string.settings_role_default)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurface.copy(alpha = 0.56f),
-                )
-            }
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SettingsMetaChip(
-                text = "v${BuildConfig.VERSION_NAME}",
-                tint = colorScheme.primary,
-                backgroundColor = colorScheme.primary.copy(alpha = 0.08f),
-            )
+        Text(
+            text = user?.name ?: stringResource(R.string.settings_unknown_user),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = colorScheme.onSurface,
+        )
+        if (!user?.email.isNullOrBlank()) {
             Text(
-                text = selectedThemeMode.label,
-                style = MaterialTheme.typography.bodySmall,
-                color = colorScheme.onSurface.copy(alpha = 0.6f),
+                text = user?.email.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurface.copy(alpha = 0.72f),
             )
         }
+        Text(
+            text = stringResource(R.string.settings_role_prefix) +
+                (user?.role ?: stringResource(R.string.settings_role_default)),
+            style = MaterialTheme.typography.bodySmall,
+            color = colorScheme.onSurface.copy(alpha = 0.58f),
+        )
     }
 }
 
@@ -384,145 +325,71 @@ private fun SettingsSectionCard(
 }
 
 @Composable
-private fun SettingsSectionHeader(
-    icon: ImageVector,
-    title: String,
-    tint: Color,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(tint.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+private fun SettingsSectionTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
 }
 
 @Composable
-private fun SettingsActionCard(
+private fun SettingsListRow(
     title: String,
-    badge: String? = null,
-    accent: Color,
-    icon: ImageVector,
+    value: String?,
     onClick: () -> Unit,
-    trailingIcon: ImageVector?,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    trailingTint: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.42f),
+    showChevron: Boolean = true,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(
-            1.dp,
-            if (accent == colorScheme.error) {
-                colorScheme.error.copy(alpha = 0.12f)
-            } else {
-                colorScheme.onSurface.copy(alpha = 0.05f)
-            },
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = if (accent == colorScheme.error) {
-                colorScheme.error.copy(alpha = 0.05f)
-            } else {
-                colorScheme.surface
-            },
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = titleColor,
+        )
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(accent.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center,
-            ) {
+            value?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f),
+                )
+            }
+            if (showChevron) {
                 Icon(
-                    imageVector = icon,
+                    imageVector = Icons.Rounded.ChevronRight,
                     contentDescription = null,
-                    tint = accent,
+                    tint = trailingTint,
                     modifier = Modifier.size(18.dp),
                 )
             }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (accent == colorScheme.error) colorScheme.error else colorScheme.onSurface,
-                )
-                badge?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (accent == colorScheme.error) {
-                            colorScheme.error.copy(alpha = 0.85f)
-                        } else {
-                            colorScheme.onSurface.copy(alpha = 0.6f)
-                        },
-                    )
-                }
-            }
-            trailingIcon?.let {
-                Icon(
-                    imageVector = it,
-                    contentDescription = null,
-                    tint = if (accent == colorScheme.error) {
-                        colorScheme.error.copy(alpha = 0.72f)
-                    } else {
-                        colorScheme.onSurface.copy(alpha = 0.4f)
-                    },
-                    modifier = Modifier.size(20.dp),
-                )
-            }
         }
     }
 }
 
 @Composable
-private fun SettingsMetaChip(
-    text: String,
-    tint: Color,
-    backgroundColor: Color = tint.copy(alpha = 0.12f),
-    textColor: Color = tint,
+private fun SettingsDivider(
+    color: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
 ) {
-    Text(
-        text = text,
+    Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(backgroundColor)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = textColor,
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(color),
     )
 }
 
@@ -531,22 +398,15 @@ private fun SettingsTopBar(
     onBack: () -> Unit,
     collapseProgress: Float,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     val progress = collapseProgress.coerceIn(0f, 1f)
-    val expandedFadeStart = 0.62f
-    val expandedFadeEnd = 0.86f
-    val collapsedFadeStart = 0.72f
-    val collapsedFadeEnd = 0.96f
+    val titleHandoffPoint = 0.9f
     val density = LocalDensity.current
     val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
-    val expandedTitleAlpha = 1f - (
-        (progress - expandedFadeStart) / (expandedFadeEnd - expandedFadeStart)
-        ).coerceIn(0f, 1f)
-    val collapsedTitleAlpha = (
-        (progress - collapsedFadeStart) / (collapsedFadeEnd - collapsedFadeStart)
-        ).coerceIn(0f, 1f)
-    val collapsedTitleShiftY = with(density) { (10.dp * (1f - collapsedTitleAlpha)).toPx() }
-    val expandedTitleShiftY = with(density) { lerp(0.dp, (-18).dp, progress).toPx() }
+    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
+    val collapsedTitleAlpha =
+        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
+    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
+    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
 
     Column(
         modifier = Modifier
@@ -568,20 +428,12 @@ private fun SettingsTopBar(
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
                         },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Settings,
-                        contentDescription = null,
-                        tint = colorScheme.onBackground,
-                        modifier = Modifier.size(28.dp),
-                    )
                     Text(
                         text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = colorScheme.onBackground,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
             }
@@ -594,25 +446,17 @@ private fun SettingsTopBar(
             contentAlignment = Alignment.BottomStart,
         ) {
             if (expandedTitleAlpha > 0.001f) {
-                Row(
+                Box(
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
                     },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Settings,
-                        contentDescription = null,
-                        tint = colorScheme.onBackground,
-                        modifier = Modifier.size(28.dp),
-                    )
                     Text(
                         text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = colorScheme.onBackground,
+                        color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
             }
@@ -634,8 +478,8 @@ private fun SettingsHeaderButton(
             onClick()
         },
         shape = CircleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.15f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
         Box(
@@ -682,11 +526,6 @@ private fun ThemeModeSelector(
         ) {
             AppThemeMode.entries.forEach { mode ->
                 val selected = mode == selectedThemeMode
-                val icon = when (mode) {
-                    AppThemeMode.SYSTEM -> Icons.Rounded.BrightnessAuto
-                    AppThemeMode.LIGHT -> Icons.Rounded.WbSunny
-                    AppThemeMode.DARK -> Icons.Rounded.DarkMode
-                }
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -709,14 +548,7 @@ private fun ThemeModeSelector(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = if (selected) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.58f),
-                            modifier = Modifier.size(16.dp),
-                        )
                         Text(
-                            modifier = Modifier.padding(start = 5.dp),
                             text = mode.label,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
@@ -739,49 +571,40 @@ private fun ReminderSelector(
     var expanded by remember { mutableStateOf(false) }
 
     Box {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                expanded = true
-            },
-            shape = RoundedCornerShape(18.dp),
-            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.05f)),
-            colors = CardDefaults.cardColors(
-                containerColor = colorScheme.surfaceVariant.copy(alpha = 0.76f),
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable {
+                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                    expanded = true
+                }
+                .padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            Text(
+                text = "Default reminder",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = colorScheme.onSurface,
+            )
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 15.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
-                    text = "Default reminder",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = selectedReminder.label,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = colorScheme.onSurface,
+                    color = colorScheme.primary,
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = selectedReminder.label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = colorScheme.primary,
-                    )
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = colorScheme.onSurface.copy(alpha = 0.42f),
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = colorScheme.onSurface.copy(alpha = 0.42f),
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
 
