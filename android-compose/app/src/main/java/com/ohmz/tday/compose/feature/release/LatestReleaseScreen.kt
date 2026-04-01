@@ -611,19 +611,9 @@ private fun startApkInstall(
                 onStateChange(ApkInstallUiState.Downloading(progress = progress))
             }
             onStateChange(ApkInstallUiState.Installing)
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: IOException) {
-            resetToIdle = false
-            onStateChange(buildApkInstallErrorState(context, error))
-        } catch (error: SecurityException) {
-            resetToIdle = false
-            onStateChange(buildApkInstallErrorState(context, error))
-        } catch (error: IllegalArgumentException) {
-            resetToIdle = false
-            onStateChange(buildApkInstallErrorState(context, error))
-        } catch (error: IllegalStateException) {
-            if (error is CancellationException) {
-                throw error
-            }
             resetToIdle = false
             onStateChange(buildApkInstallErrorState(context, error))
         } finally {
@@ -636,7 +626,7 @@ private fun startApkInstall(
 
 private fun buildApkInstallErrorState(
     context: Context,
-    error: Exception,
+    error: IOException,
 ): ApkInstallUiState.Error {
     return ApkInstallUiState.Error(
         error.message?.takeIf { it.isNotBlank() }
