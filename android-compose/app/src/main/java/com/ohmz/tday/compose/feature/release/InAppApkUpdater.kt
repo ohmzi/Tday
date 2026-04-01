@@ -109,11 +109,10 @@ internal object InAppApkUpdater {
                     )
                     session.commit(statusPendingIntent.intentSender)
                     committed = true
-                } catch (error: Exception) {
+                } finally {
                     if (!committed) {
                         session.abandon()
                     }
-                    throw error
                 }
             }
         }
