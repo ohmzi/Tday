@@ -62,6 +62,7 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -603,25 +604,44 @@ private fun startApkInstall(
 ) {
     val appContext = context.applicationContext
     scope.launch {
+        var resetToIdle = true
         try {
             onStateChange(ApkInstallUiState.Downloading(progress = 0f))
             InAppApkUpdater.downloadAndInstall(appContext, asset) { progress ->
                 onStateChange(ApkInstallUiState.Downloading(progress = progress))
             }
             onStateChange(ApkInstallUiState.Installing)
-            onStateChange(ApkInstallUiState.Idle)
-        } catch (error: CancellationException) {
-            onStateChange(ApkInstallUiState.Idle)
-            throw error
-        } catch (error: Exception) {
-            onStateChange(
-                ApkInstallUiState.Error(
-                    error.message?.takeIf { it.isNotBlank() }
-                        ?: context.getString(R.string.release_download_failed),
-                ),
-            )
+        } catch (error: IOException) {
+            resetToIdle = false
+            onStateChange(buildApkInstallErrorState(context, error))
+        } catch (error: SecurityException) {
+            resetToIdle = false
+            onStateChange(buildApkInstallErrorState(context, error))
+        } catch (error: IllegalArgumentException) {
+            resetToIdle = false
+            onStateChange(buildApkInstallErrorState(context, error))
+        } catch (error: IllegalStateException) {
+            if (error is CancellationException) {
+                throw error
+            }
+            resetToIdle = false
+            onStateChange(buildApkInstallErrorState(context, error))
+        } finally {
+            if (resetToIdle) {
+                onStateChange(ApkInstallUiState.Idle)
+            }
         }
     }
+}
+
+private fun buildApkInstallErrorState(
+    context: Context,
+    error: Exception,
+): ApkInstallUiState.Error {
+    return ApkInstallUiState.Error(
+        error.message?.takeIf { it.isNotBlank() }
+            ?: context.getString(R.string.release_download_failed),
+    )
 }
 
 private sealed interface ApkInstallUiState {
