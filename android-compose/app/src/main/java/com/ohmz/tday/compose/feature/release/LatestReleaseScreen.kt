@@ -60,7 +60,6 @@ import androidx.core.net.toUri
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -611,8 +610,6 @@ private fun startApkInstall(
                 onStateChange(ApkInstallUiState.Downloading(progress = progress))
             }
             onStateChange(ApkInstallUiState.Installing)
-        } catch (error: CancellationException) {
-            throw error
         } catch (error: IOException) {
             resetToIdle = false
             onStateChange(buildApkInstallErrorState(context, error))
