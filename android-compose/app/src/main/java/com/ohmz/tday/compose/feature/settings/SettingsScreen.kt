@@ -168,7 +168,7 @@ fun SettingsScreen(
                 .nestedScroll(nestedScrollConnection)
                 .verticalScroll(scrollState)
                 .padding(horizontal = 18.dp, vertical = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SettingsProfileCard(
                 user = user,
@@ -204,9 +204,7 @@ fun SettingsScreen(
             }
 
             if (isAdminUser) {
-                SettingsSectionCard(
-                    borderColor = colorScheme.tertiary.copy(alpha = 0.18f),
-                ) {
+                SettingsSectionCard {
                     SettingsSectionHeader(
                         icon = Icons.Rounded.Settings,
                         title = stringResource(R.string.settings_feature_toggle),
@@ -242,11 +240,10 @@ fun SettingsScreen(
                         }
                     }
                     if (!adminAiSummaryError.isNullOrBlank()) {
-                        SettingsMetaChip(
+                        Text(
                             text = adminAiSummaryError,
-                            tint = colorScheme.error,
-                            backgroundColor = colorScheme.error.copy(alpha = 0.12f),
-                            textColor = colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colorScheme.error,
                         )
                     }
                 }
@@ -299,9 +296,7 @@ private fun SettingsProfileCard(
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
-    SettingsSectionCard(
-        borderColor = colorScheme.primary.copy(alpha = 0.14f),
-    ) {
+    SettingsSectionCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -309,21 +304,21 @@ private fun SettingsProfileCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(58.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(colorScheme.primary.copy(alpha = 0.16f)),
+                    .size(54.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(colorScheme.primary.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Settings,
                     contentDescription = null,
                     tint = colorScheme.primary,
-                    modifier = Modifier.size(28.dp),
+                    modifier = Modifier.size(24.dp),
                 )
             }
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
                     text = user?.name ?: stringResource(R.string.settings_unknown_user),
@@ -342,14 +337,25 @@ private fun SettingsProfileCard(
                     text = stringResource(R.string.settings_role_prefix) +
                         (user?.role ?: stringResource(R.string.settings_role_default)),
                     style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurface.copy(alpha = 0.58f),
+                    color = colorScheme.onSurface.copy(alpha = 0.56f),
                 )
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SettingsMetaChip(text = "v${BuildConfig.VERSION_NAME}", tint = colorScheme.primary)
-            SettingsMetaChip(text = selectedThemeMode.label, tint = colorScheme.tertiary)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingsMetaChip(
+                text = "v${BuildConfig.VERSION_NAME}",
+                tint = colorScheme.primary,
+                backgroundColor = colorScheme.primary.copy(alpha = 0.08f),
+            )
+            Text(
+                text = selectedThemeMode.label,
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurface.copy(alpha = 0.6f),
+            )
         }
     }
 }
@@ -357,21 +363,21 @@ private fun SettingsProfileCard(
 @Composable
 private fun SettingsSectionCard(
     modifier: Modifier = Modifier,
-    borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+    borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, borderColor),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             content = content,
         )
     }
@@ -385,20 +391,20 @@ private fun SettingsSectionHeader(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(tint.copy(alpha = 0.14f)),
+                .size(36.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(tint.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
         Text(
@@ -424,11 +430,18 @@ private fun SettingsActionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = onClick,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f)),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(
+            1.dp,
+            if (accent == colorScheme.error) {
+                colorScheme.error.copy(alpha = 0.12f)
+            } else {
+                colorScheme.onSurface.copy(alpha = 0.05f)
+            },
+        ),
         colors = CardDefaults.cardColors(
             containerColor = if (accent == colorScheme.error) {
-                colorScheme.error.copy(alpha = 0.08f)
+                colorScheme.error.copy(alpha = 0.05f)
             } else {
                 colorScheme.surface
             },
@@ -444,21 +457,21 @@ private fun SettingsActionCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(accent.copy(alpha = 0.14f)),
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(accent.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = accent,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(18.dp),
                 )
             }
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
                     text = title,
@@ -467,14 +480,26 @@ private fun SettingsActionCard(
                     color = if (accent == colorScheme.error) colorScheme.error else colorScheme.onSurface,
                 )
                 badge?.let {
-                    SettingsMetaChip(text = it, tint = accent)
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (accent == colorScheme.error) {
+                            colorScheme.error.copy(alpha = 0.85f)
+                        } else {
+                            colorScheme.onSurface.copy(alpha = 0.6f)
+                        },
+                    )
                 }
             }
             trailingIcon?.let {
                 Icon(
                     imageVector = it,
                     contentDescription = null,
-                    tint = accent.copy(alpha = 0.8f),
+                    tint = if (accent == colorScheme.error) {
+                        colorScheme.error.copy(alpha = 0.72f)
+                    } else {
+                        colorScheme.onSurface.copy(alpha = 0.4f)
+                    },
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -492,10 +517,10 @@ private fun SettingsMetaChip(
     Text(
         text = text,
         modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
-            .padding(horizontal = 12.dp, vertical = 7.dp),
-        style = MaterialTheme.typography.labelLarge,
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.SemiBold,
         color = textColor,
     )
@@ -641,18 +666,18 @@ private fun ThemeModeSelector(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = colorScheme.surfaceVariant.copy(alpha = 0.82f),
+            containerColor = colorScheme.surfaceVariant.copy(alpha = 0.76f),
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 5.dp, vertical = 5.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                .height(52.dp)
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AppThemeMode.entries.forEach { mode ->
@@ -666,10 +691,10 @@ private fun ThemeModeSelector(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(
                             color = if (selected) {
-                                colorScheme.primary.copy(alpha = 0.18f)
+                                colorScheme.surface
                             } else {
                                 Color.Transparent
                             },
@@ -687,7 +712,7 @@ private fun ThemeModeSelector(
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = if (selected) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.62f),
+                            tint = if (selected) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.58f),
                             modifier = Modifier.size(16.dp),
                         )
                         Text(
@@ -695,7 +720,7 @@ private fun ThemeModeSelector(
                             text = mode.label,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                            color = if (selected) colorScheme.primary else colorScheme.onSurface.copy(alpha = 0.6f),
+                            color = if (selected) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.58f),
                         )
                     }
                 }
@@ -720,10 +745,10 @@ private fun ReminderSelector(
                 ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
                 expanded = true
             },
-            shape = RoundedCornerShape(20.dp),
-            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.06f)),
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.05f)),
             colors = CardDefaults.cardColors(
-                containerColor = colorScheme.surfaceVariant.copy(alpha = 0.82f),
+                containerColor = colorScheme.surfaceVariant.copy(alpha = 0.76f),
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
@@ -740,7 +765,23 @@ private fun ReminderSelector(
                     fontWeight = FontWeight.Medium,
                     color = colorScheme.onSurface,
                 )
-                SettingsMetaChip(text = selectedReminder.label, tint = colorScheme.secondary)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = selectedReminder.label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = colorScheme.primary,
+                    )
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = colorScheme.onSurface.copy(alpha = 0.42f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
         }
 
