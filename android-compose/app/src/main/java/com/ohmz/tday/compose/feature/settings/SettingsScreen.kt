@@ -508,14 +508,20 @@ private fun SettingsTopBar(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val progress = collapseProgress.coerceIn(0f, 1f)
-    val titleHandoffPoint = 0.9f
+    val expandedFadeStart = 0.62f
+    val expandedFadeEnd = 0.86f
+    val collapsedFadeStart = 0.72f
+    val collapsedFadeEnd = 0.96f
     val density = LocalDensity.current
     val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
-    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
-    val collapsedTitleAlpha =
-        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
-    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
-    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
+    val expandedTitleAlpha = 1f - (
+        (progress - expandedFadeStart) / (expandedFadeEnd - expandedFadeStart)
+        ).coerceIn(0f, 1f)
+    val collapsedTitleAlpha = (
+        (progress - collapsedFadeStart) / (collapsedFadeEnd - collapsedFadeStart)
+        ).coerceIn(0f, 1f)
+    val collapsedTitleShiftY = with(density) { (10.dp * (1f - collapsedTitleAlpha)).toPx() }
+    val expandedTitleShiftY = with(density) { lerp(0.dp, (-18).dp, progress).toPx() }
 
     Column(
         modifier = Modifier
