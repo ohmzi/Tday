@@ -152,6 +152,13 @@
     <string name="error_connectivity">Unable to connect. Please check your network connection and try again.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
 
+    <string name="notification_channel_task_reminders_name">Task Reminders</string>
+    <string name="notification_channel_task_reminders_description">Reminders for upcoming task due dates</string>
+    <string name="notification_channel_app_updates_name">App Updates</string>
+    <string name="notification_channel_app_updates_description">Prompts to reopen T\'Day after an update finishes installing</string>
+    <string name="update_notification_title">Update installed</string>
+    <string name="update_notification_message">Tap to reopen T\'Day.</string>
+
     <string name="widget_today_tasks_description">Shows today\'s tasks at a glance</string>
     <string name="widget_loading">Loading tasks…</string>
 
