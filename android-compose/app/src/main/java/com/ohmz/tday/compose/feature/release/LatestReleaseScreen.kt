@@ -1,11 +1,11 @@
 package com.ohmz.tday.compose.feature.release
 
-import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Environment
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -38,10 +38,16 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,9 +60,12 @@ import androidx.core.net.toUri
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.roundToInt
 
 @Composable
 fun LatestReleaseScreen(
@@ -67,6 +76,27 @@ fun LatestReleaseScreen(
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val view = LocalView.current
+    val installScope = rememberCoroutineScope()
+    var installUiState by remember { mutableStateOf<ApkInstallUiState>(ApkInstallUiState.Idle) }
+    var pendingInstallAsset by remember { mutableStateOf<GitHubAsset?>(null) }
+    val installPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) {
+        val asset = pendingInstallAsset ?: return@rememberLauncherForActivityResult
+        pendingInstallAsset = null
+        if (InAppApkUpdater.canInstallPackages(context)) {
+            startApkInstall(
+                context = context,
+                asset = asset,
+                scope = installScope,
+                onStateChange = { installUiState = it },
+            )
+        } else {
+            installUiState = ApkInstallUiState.Error(
+                context.getString(R.string.release_install_permission_denied),
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -163,9 +193,25 @@ fun LatestReleaseScreen(
             else -> {
                 ReleaseContent(
                     uiState = uiState,
+                    apkInstallUiState = installUiState,
                     onDownloadApk = { asset ->
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
-                        downloadApk(context, asset)
+                        if (!InAppApkUpdater.canInstallPackages(context)) {
+                            pendingInstallAsset = asset
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.release_install_permission_required),
+                                Toast.LENGTH_LONG,
+                            ).show()
+                            installPermissionLauncher.launch(InAppApkUpdater.buildInstallPermissionIntent(context))
+                        } else {
+                            startApkInstall(
+                                context = context,
+                                asset = asset,
+                                scope = installScope,
+                                onStateChange = { installUiState = it },
+                            )
+                        }
                     },
                     onOpenInBrowser = { url ->
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -179,6 +225,7 @@ fun LatestReleaseScreen(
 @Composable
 private fun ReleaseContent(
     uiState: LatestReleaseUiState,
+    apkInstallUiState: ApkInstallUiState,
     onDownloadApk: (GitHubAsset) -> Unit,
     onOpenInBrowser: (String) -> Unit,
 ) {
@@ -186,6 +233,8 @@ private fun ReleaseContent(
     val currentRelease = uiState.currentRelease
     val latestRelease = uiState.latestRelease
     val currentChangelog = parseChangelog(currentRelease?.body)
+    val isInstallerBusy = apkInstallUiState is ApkInstallUiState.Downloading ||
+        apkInstallUiState is ApkInstallUiState.Installing
 
     // ── Installed version ──────────────────────────────────
     Card(
@@ -363,6 +412,7 @@ private fun ReleaseContent(
 
                     Button(
                         onClick = { onDownloadApk(apk) },
+                        enabled = !isInstallerBusy,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
@@ -374,9 +424,57 @@ private fun ReleaseContent(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.release_download_apk),
+                            text = when (val installerState = apkInstallUiState) {
+                                is ApkInstallUiState.Downloading -> {
+                                    installerState.progress
+                                        ?.let { progress ->
+                                            stringResource(
+                                                R.string.release_downloading_apk_progress,
+                                                (progress * 100).roundToInt().coerceIn(0, 100),
+                                            )
+                                        }
+                                        ?: stringResource(R.string.release_downloading_apk)
+                                }
+
+                                ApkInstallUiState.Installing ->
+                                    stringResource(R.string.release_opening_installer)
+
+                                else -> stringResource(R.string.release_download_and_install)
+                            },
                             fontWeight = FontWeight.SemiBold,
                         )
+                    }
+
+                    when (val installerState = apkInstallUiState) {
+                        is ApkInstallUiState.Downloading -> {
+                            val progress = installerState.progress
+                            if (progress != null) {
+                                LinearProgressIndicator(
+                                    progress = { progress.coerceIn(0f, 1f) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            } else {
+                                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                            }
+                        }
+
+                        ApkInstallUiState.Installing -> {
+                            Text(
+                                text = stringResource(R.string.release_opening_installer),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colorScheme.onSurface.copy(alpha = 0.65f),
+                            )
+                        }
+
+                        is ApkInstallUiState.Error -> {
+                            Text(
+                                text = installerState.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colorScheme.error,
+                            )
+                        }
+
+                        ApkInstallUiState.Idle -> Unit
                     }
                 } else {
                     Text(
@@ -478,20 +576,6 @@ private fun ChangelogList(items: List<String>) {
     }
 }
 
-private fun downloadApk(context: Context, asset: GitHubAsset) {
-    val uri = asset.browserDownloadUrl.toUri()
-    val request = DownloadManager.Request(uri).apply {
-        setTitle(asset.name)
-        setDescription("Downloading T'Day update")
-        setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-        setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, asset.name)
-        setMimeType("application/vnd.android.package-archive")
-    }
-    val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-    dm.enqueue(request)
-    Toast.makeText(context, context.getString(R.string.release_download_started), Toast.LENGTH_SHORT).show()
-}
-
 private fun formatBytes(bytes: Long): String {
     if (bytes < 1024) return "$bytes B"
     val kb = bytes / 1024.0
@@ -509,4 +593,43 @@ private fun formatIsoDate(iso: String): String {
     } catch (_: Exception) {
         iso
     }
+}
+
+private fun startApkInstall(
+    context: Context,
+    asset: GitHubAsset,
+    scope: kotlinx.coroutines.CoroutineScope,
+    onStateChange: (ApkInstallUiState) -> Unit,
+) {
+    val appContext = context.applicationContext
+    scope.launch {
+        try {
+            onStateChange(ApkInstallUiState.Downloading(progress = 0f))
+            InAppApkUpdater.downloadAndInstall(appContext, asset) { progress ->
+                onStateChange(ApkInstallUiState.Downloading(progress = progress))
+            }
+            onStateChange(ApkInstallUiState.Installing)
+            onStateChange(ApkInstallUiState.Idle)
+        } catch (error: CancellationException) {
+            onStateChange(ApkInstallUiState.Idle)
+            throw error
+        } catch (error: Exception) {
+            onStateChange(
+                ApkInstallUiState.Error(
+                    error.message?.takeIf { it.isNotBlank() }
+                        ?: context.getString(R.string.release_download_failed),
+                ),
+            )
+        }
+    }
+}
+
+private sealed interface ApkInstallUiState {
+    data object Idle : ApkInstallUiState
+
+    data class Downloading(val progress: Float?) : ApkInstallUiState
+
+    data object Installing : ApkInstallUiState
+
+    data class Error(val message: String) : ApkInstallUiState
 }
