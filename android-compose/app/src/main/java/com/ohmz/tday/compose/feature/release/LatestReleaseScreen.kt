@@ -230,7 +230,7 @@ fun LatestReleaseScreen(
                 .nestedScroll(nestedScrollConnection)
                 .verticalScroll(scrollState)
                 .padding(horizontal = 18.dp, vertical = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             when {
                 uiState.isLoading -> {
@@ -492,35 +492,36 @@ private fun ReleaseOverviewCard(
     val title = if (hasUpdate) {
         stringResource(R.string.release_update_available)
     } else {
-        stringResource(R.string.release_up_to_date)
+        "Latest"
     }
 
-    ReleaseSurfaceCard(borderColor = accent.copy(alpha = 0.22f)) {
+    ReleaseSurfaceCard(
+        borderColor = if (hasUpdate) {
+            accent.copy(alpha = 0.12f)
+        } else {
+            colorScheme.onSurface.copy(alpha = 0.05f)
+        },
+    ) {
         SectionHeading(
             icon = if (hasUpdate) Icons.Rounded.NewReleases else Icons.Rounded.CheckCircle,
             title = title,
             tint = accent,
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            VersionBadge(
-                text = "v$currentVersion",
-                backgroundColor = colorScheme.primary.copy(alpha = 0.12f),
-                textColor = colorScheme.primary,
-            )
-            latestRelease?.takeIf { hasUpdate }?.let {
-                VersionBadge(
-                    text = it.tagName,
-                    backgroundColor = colorScheme.tertiary.copy(alpha = 0.16f),
-                    textColor = colorScheme.tertiary,
-                )
-            }
-        }
         ReleasePublishedDate(
             publishedAt = latestRelease?.publishedAt ?: currentRelease?.publishedAt,
         )
+        ReleaseVersionLine(
+            label = if (hasUpdate) "Installed" else stringResource(R.string.release_installed_version),
+            version = "v$currentVersion",
+            tint = colorScheme.primary,
+        )
+        latestRelease?.takeIf { hasUpdate }?.let {
+            ReleaseVersionLine(
+                label = "Latest",
+                version = it.tagName,
+                tint = colorScheme.tertiary,
+            )
+        }
     }
 }
 
@@ -533,14 +534,14 @@ private fun ReleaseSurfaceCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, borderColor),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             content = content,
         )
     }
@@ -585,7 +586,7 @@ private fun UpdateAvailableCard(
     val colorScheme = MaterialTheme.colorScheme
     val latestChangelog = parseChangelog(latestRelease.body)
 
-    ReleaseSurfaceCard(borderColor = colorScheme.primary.copy(alpha = 0.22f)) {
+    ReleaseSurfaceCard(borderColor = colorScheme.primary.copy(alpha = 0.12f)) {
         SectionHeading(
             icon = Icons.Rounded.NewReleases,
             title = stringResource(R.string.release_update_available),
@@ -619,27 +620,27 @@ private fun SectionHeading(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(tint.copy(alpha = 0.14f)),
+                .size(36.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(tint.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
-            color = tint,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
@@ -657,19 +658,15 @@ private fun InstalledVersionRow(
     ) {
         VersionBadge(
             text = "v$currentVersion",
-            backgroundColor = colorScheme.primary.copy(alpha = 0.12f),
+            backgroundColor = colorScheme.primary.copy(alpha = 0.08f),
             textColor = colorScheme.primary,
         )
         if (!hasUpdate) {
             Text(
                 text = stringResource(R.string.release_up_to_date),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colorScheme.tertiary.copy(alpha = 0.12f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = colorScheme.tertiary,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = colorScheme.onSurface.copy(alpha = 0.6f),
             )
         }
     }
@@ -682,8 +679,8 @@ private fun ReleasePublishedDate(publishedAt: String?) {
     publishedAt?.let { date ->
         Text(
             text = stringResource(R.string.release_published, formatIsoDate(date)),
-            style = MaterialTheme.typography.bodyMedium,
-            color = colorScheme.onSurface.copy(alpha = 0.7f),
+            style = MaterialTheme.typography.bodySmall,
+            color = colorScheme.onSurface.copy(alpha = 0.62f),
         )
     }
 }
@@ -704,9 +701,8 @@ private fun ReleaseNotesSection(
             color = colorScheme.onSurface,
         )
         Card(
-            shape = RoundedCornerShape(20.dp),
-            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.06f)),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.76f)),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.66f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             Column(
@@ -718,8 +714,8 @@ private fun ReleaseNotesSection(
         }
     } else if (emptyMessage != null) {
         Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.72f)),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.66f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
             Text(
@@ -765,9 +761,8 @@ private fun ApkAssetCard(apk: GitHubAsset) {
     val colorScheme = MaterialTheme.colorScheme
 
     Card(
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.06f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.8f)),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.7f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
@@ -777,20 +772,6 @@ private fun ApkAssetCard(apk: GitHubAsset) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(colorScheme.primary.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.CloudDownload,
-                    contentDescription = null,
-                    tint = colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = apk.name,
@@ -798,10 +779,17 @@ private fun ApkAssetCard(apk: GitHubAsset) {
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurface,
                 )
+                Text(
+                    text = formatBytes(apk.size),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurface.copy(alpha = 0.62f),
+                )
             }
-            ReleaseMetaChip(
-                text = formatBytes(apk.size),
-                tint = colorScheme.primary,
+            Icon(
+                imageVector = Icons.Rounded.CloudDownload,
+                contentDescription = null,
+                tint = colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -911,32 +899,24 @@ private fun ReleaseBrowserButton(
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = { onOpenInBrowser(browseUrl) },
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.12f)),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.06f)),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = 18.dp, vertical = 15.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(colorScheme.primary.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
-                    contentDescription = null,
-                    tint = colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                contentDescription = null,
+                tint = colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
             Text(
                 text = stringResource(R.string.release_view_on_github),
                 modifier = Modifier.weight(1f),
@@ -955,23 +935,6 @@ private fun ReleaseBrowserButton(
 }
 
 @Composable
-private fun ReleaseMetaChip(
-    text: String,
-    tint: androidx.compose.ui.graphics.Color,
-) {
-    Text(
-        text = text,
-        modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(tint.copy(alpha = 0.12f))
-            .padding(horizontal = 12.dp, vertical = 7.dp),
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.SemiBold,
-        color = tint,
-    )
-}
-
-@Composable
 private fun VersionBadge(
     text: String,
     backgroundColor: androidx.compose.ui.graphics.Color,
@@ -982,11 +945,36 @@ private fun VersionBadge(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        style = MaterialTheme.typography.titleMedium,
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
         color = textColor,
     )
+}
+
+@Composable
+private fun ReleaseVersionLine(
+    label: String,
+    version: String,
+    tint: androidx.compose.ui.graphics.Color,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = colorScheme.onSurface.copy(alpha = 0.58f),
+        )
+        VersionBadge(
+            text = version,
+            backgroundColor = tint.copy(alpha = 0.08f),
+            textColor = tint,
+        )
+    }
 }
 
 @Composable
@@ -1002,9 +990,9 @@ private fun ChangelogList(items: List<String>) {
                 Box(
                     modifier = Modifier
                         .padding(top = 8.dp)
-                        .size(6.dp)
+                        .size(5.dp)
                         .clip(CircleShape)
-                        .background(colorScheme.primary),
+                        .background(colorScheme.onSurface.copy(alpha = 0.3f)),
                 )
                 Text(
                     text = item,
