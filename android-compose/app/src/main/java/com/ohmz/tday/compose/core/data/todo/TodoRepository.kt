@@ -496,6 +496,9 @@ class TodoRepository @Inject constructor(
     ): TodoSummaryResponse {
         val modeValue = when (mode) {
             TodoListMode.TODAY -> "today"
+            TodoListMode.OVERDUE -> throw IllegalStateException(
+                "Summary is available only for Today, Scheduled, All, and Priority screens",
+            )
             TodoListMode.SCHEDULED -> "scheduled"
             TodoListMode.ALL -> "all"
             TodoListMode.PRIORITY -> "priority"
@@ -584,6 +587,7 @@ class TodoRepository @Inject constructor(
 
         return when (mode) {
             TodoListMode.TODAY -> activeTodos.filter(::isTodayTodo)
+            TodoListMode.OVERDUE -> activeTodos.filter { isOverdueTodo(it, now) }
             TodoListMode.ALL -> activeTodos
             TodoListMode.SCHEDULED -> activeTodos.filter { isScheduledTodo(it, now) }
             TodoListMode.PRIORITY -> activeTodos.filter { isPriorityTodo(it.priority) }
@@ -602,6 +606,10 @@ class TodoRepository @Inject constructor(
 
     private fun isScheduledTodo(todo: TodoItem, now: Instant = Instant.now()): Boolean {
         return !todo.due.isBefore(now)
+    }
+
+    private fun isOverdueTodo(todo: TodoItem, now: Instant = Instant.now()): Boolean {
+        return todo.due.isBefore(now)
     }
 
     private fun isPriorityTodo(priority: String?): Boolean {

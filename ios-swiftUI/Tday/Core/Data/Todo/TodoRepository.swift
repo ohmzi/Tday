@@ -337,6 +337,7 @@ final class TodoRepository {
     private func buildTodos(from state: OfflineSyncState, mode: TodoListMode, listId: String?) -> [TodoItem] {
         let items = state.todos.map(todoFromCache).filter { !$0.completed }
         let calendar = Calendar.current
+        let now = Date()
         let startOfToday = calendar.startOfDay(for: Date())
         let endOfToday = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? Date()
 
@@ -344,6 +345,8 @@ final class TodoRepository {
         switch mode {
         case .today:
             filtered = items.filter { $0.due >= startOfToday && $0.due < endOfToday }
+        case .overdue:
+            filtered = items.filter { $0.due < now }
         case .scheduled:
             filtered = items.filter { $0.due >= endOfToday }
         case .all:
@@ -373,4 +376,3 @@ final class TodoRepository {
         }
     }
 }
-

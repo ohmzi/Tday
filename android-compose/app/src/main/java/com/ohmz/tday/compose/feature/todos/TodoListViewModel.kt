@@ -82,6 +82,7 @@ class TodoListViewModel @Inject constructor(
                 listId = listId,
                 title = when (mode) {
                     TodoListMode.TODAY -> "Today"
+                    TodoListMode.OVERDUE -> "Overdue"
                     TodoListMode.SCHEDULED -> "Scheduled"
                     TodoListMode.ALL -> "All Tasks"
                     TodoListMode.PRIORITY -> "Priority"
@@ -107,7 +108,7 @@ class TodoListViewModel @Inject constructor(
             _uiState.update { it.copy(summaryError = "AI summary is disabled by admin") }
             return
         }
-        if (current.mode == TodoListMode.LIST) {
+        if (current.mode == TodoListMode.LIST || current.mode == TodoListMode.OVERDUE) {
             _uiState.update {
                 it.copy(summaryError = "Summary is available only for Today, Scheduled, All, and Priority")
             }
