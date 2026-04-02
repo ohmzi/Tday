@@ -21,6 +21,7 @@ export type ReleaseInfo = {
   latestUrl: string;
 };
 
+/** Loads the installed release metadata, preferring the bundled copy and falling back to local storage. */
 async function loadCurrentRelease(): Promise<ReleaseMetadata> {
   const cachedRelease = readStoredCurrentRelease(CURRENT_APP_VERSION);
 
@@ -37,6 +38,7 @@ async function loadCurrentRelease(): Promise<ReleaseMetadata> {
   return cachedRelease ?? createFallbackReleaseMetadata(CURRENT_APP_VERSION);
 }
 
+/** Combines installed and latest release metadata into the admin-facing release state. */
 async function getReleaseInfo(): Promise<ReleaseInfo> {
   const currentRelease = await loadCurrentRelease();
 
@@ -65,6 +67,7 @@ async function getReleaseInfo(): Promise<ReleaseInfo> {
   }
 }
 
+/** Queries the release status for the current installed build and GitHub metadata snapshot. */
 export function useReleaseInfo(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["releaseInfo", CURRENT_APP_VERSION],
