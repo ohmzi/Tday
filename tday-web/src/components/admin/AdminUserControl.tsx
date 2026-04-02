@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowUpRight, Check, Info, Loader2, RefreshCcw, Trash2, Users } from "lucide-react";
+import { ArrowUpRight, Check, Info, Loader2, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { Link } from "@/lib/navigation";
@@ -122,14 +122,8 @@ const ApprovedUserRow = ({
   );
 };
 
-/** Renders the shared admin page header with the refresh action. */
-const AdminPageHeader = ({
-  loading,
-  onRefresh,
-}: {
-  loading: boolean;
-  onRefresh: () => void;
-}) => (
+/** Renders the shared admin page header. */
+const AdminPageHeader = () => (
   <header className="mt-8 flex flex-wrap items-center justify-between gap-3 sm:mt-10 lg:mt-0">
     <div className="space-y-1">
       <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
@@ -140,19 +134,6 @@ const AdminPageHeader = ({
         Approve pending registrations and manage user access.
       </p>
     </div>
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={onRefresh}
-      disabled={loading}
-    >
-      {loading ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      ) : (
-        <RefreshCcw className="mr-2 h-4 w-4" />
-      )}
-      Refresh
-    </Button>
   </header>
 );
 
@@ -162,13 +143,10 @@ const VersionLinkRow = () => (
     href="/app/admin/version"
     className="group flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/20 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-muted/30"
   >
-    <div className="min-w-0 space-y-1">
+    <div className="min-w-0">
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
         <Info className="h-4 w-4 text-accent" />
         <span>Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}</span>
-      </div>
-      <div className="text-sm text-muted-foreground">
-        Open the admin-only release page
       </div>
     </div>
     <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -388,12 +366,7 @@ export default function AdminUserControl() {
         <MobileSearchHeader />
       </div>
 
-      <AdminPageHeader
-        loading={loading}
-        onRefresh={() => {
-          fetchUsers();
-        }}
-      />
+      <AdminPageHeader />
 
       <Card className="rounded-2xl border-border/70 bg-card/95">
         <CardHeader>
@@ -436,23 +409,25 @@ export default function AdminUserControl() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-border/70 bg-card/95">
-        <CardHeader>
-          <CardTitle>Pending approvals</CardTitle>
-          <CardDescription>
-            New accounts can sign in only after approval.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <PendingApprovalsContent
-            loading={loading}
-            pendingUsers={pendingUsers}
-            actionUserId={actionUserId}
-            actionType={actionType}
-            onApprove={approveUser}
-          />
-        </CardContent>
-      </Card>
+      {loading || pendingUsers.length > 0 ? (
+        <Card className="rounded-2xl border-border/70 bg-card/95">
+          <CardHeader>
+            <CardTitle>Pending approvals</CardTitle>
+            <CardDescription>
+              New accounts can sign in only after approval.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <PendingApprovalsContent
+              loading={loading}
+              pendingUsers={pendingUsers}
+              actionUserId={actionUserId}
+              actionType={actionType}
+              onApprove={approveUser}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="rounded-2xl border-border/70 bg-card/95">
         <CardHeader>
