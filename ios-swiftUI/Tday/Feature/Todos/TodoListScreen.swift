@@ -49,7 +49,7 @@ struct TodoListScreen: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Back", action: onBack)
             }
-            if viewModel.mode != .list && viewModel.aiSummaryEnabled {
+            if viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         Task {
@@ -261,6 +261,42 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TimelineSe
             guard let values = grouped[key], !values.isEmpty else { return nil }
             return TimelineSection(id: key, title: key, items: values.sorted(by: { $0.due < $1.due }), isCollapsible: false)
         }
+    case .overdue:
+        let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
+        let overdueItems = items.filter { $0.due < now }
+        let grouped = Dictionary(grouping: overdueItems) { item in
+            calendar.startOfDay(for: item.due)
+        }
+
+        var sections: [TimelineSection<TodoItem>] = []
+        if let todaysItems = grouped[startOfToday], !todaysItems.isEmpty {
+            sections.append(
+                TimelineSection(
+                    id: "today",
+                    title: "Today",
+                    items: todaysItems.sorted(by: { $0.due < $1.due }),
+                    isCollapsible: false
+                )
+            )
+        }
+
+        let pastDates = grouped.keys
+            .filter { $0 < startOfToday }
+            .sorted(by: >)
+
+        sections.append(
+            contentsOf: pastDates.map { date in
+                TimelineSection(
+                    id: "overdue-\(date.timeIntervalSince1970)",
+                    title: date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()),
+                    items: grouped[date]?.sorted(by: { $0.due < $1.due }) ?? [],
+                    isCollapsible: false
+                )
+            }
+        )
+
+        return sections
     case .scheduled, .all, .priority, .list:
         let grouped = Dictionary(grouping: items) { item -> String in
             if item.due < calendar.startOfDay(for: Date()) {
