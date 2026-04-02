@@ -3,6 +3,7 @@ import React from "react";
 import { Link } from "@/lib/navigation";
 import { usePathname } from "@/lib/navigation";
 import {
+  Clock3,
   Calendar1Icon,
   CalendarClock,
   CheckCircleIcon,
@@ -113,6 +114,7 @@ const SidebarContainer = () => {
   }, [isDesktop, setShowMenu]);
 
   const isTodayActive = pathname?.includes("/app/tday");
+  const isOverdueActive = pathname?.includes("/app/overdue");
   const isScheduledActive = pathname?.includes("/app/scheduled");
   const isAllTasksActive = pathname?.includes("/app/todo");
   const isCompletedActive = pathname?.includes("/app/completed");
@@ -125,6 +127,10 @@ const SidebarContainer = () => {
   const scheduledCount = React.useMemo(() => {
     const now = new Date();
     return timelineTodos.filter((todo) => todo.due >= now).length;
+  }, [timelineTodos]);
+  const overdueCount = React.useMemo(() => {
+    const now = new Date();
+    return timelineTodos.filter((todo) => todo.due < now).length;
   }, [timelineTodos]);
 
   // Desktop: standard sidebar with collapse/expand
@@ -147,10 +153,12 @@ const SidebarContainer = () => {
             isDesktop={isDesktop}
             todosCount={todos.length}
             scheduledCount={scheduledCount}
+            overdueCount={overdueCount}
             allTasksCount={timelineTodos.length}
             completedCount={completedTodos.length}
             priorityCount={priorityCount}
             isTodayActive={Boolean(isTodayActive)}
+            isOverdueActive={Boolean(isOverdueActive)}
             isScheduledActive={Boolean(isScheduledActive)}
             isAllTasksActive={Boolean(isAllTasksActive)}
             isCompletedActive={Boolean(isCompletedActive)}
@@ -176,10 +184,12 @@ const SidebarContainer = () => {
           isDesktop={isDesktop}
           todosCount={todos.length}
           scheduledCount={scheduledCount}
+          overdueCount={overdueCount}
           allTasksCount={timelineTodos.length}
           completedCount={completedTodos.length}
           priorityCount={priorityCount}
           isTodayActive={Boolean(isTodayActive)}
+          isOverdueActive={Boolean(isOverdueActive)}
           isScheduledActive={Boolean(isScheduledActive)}
           isAllTasksActive={Boolean(isAllTasksActive)}
           isCompletedActive={Boolean(isCompletedActive)}
@@ -198,10 +208,12 @@ function ExpandedSidebarContent({
   isDesktop,
   todosCount,
   scheduledCount,
+  overdueCount,
   allTasksCount,
   completedCount,
   priorityCount,
   isTodayActive,
+  isOverdueActive,
   isScheduledActive,
   isAllTasksActive,
   isCompletedActive,
@@ -212,10 +224,12 @@ function ExpandedSidebarContent({
   isDesktop: boolean;
   todosCount: number;
   scheduledCount: number;
+  overdueCount: number;
   allTasksCount: number;
   completedCount: number;
   priorityCount: number;
   isTodayActive: boolean;
+  isOverdueActive: boolean;
   isScheduledActive: boolean;
   isAllTasksActive: boolean;
   isCompletedActive: boolean;
@@ -319,6 +333,36 @@ function ExpandedSidebarContent({
               )}
             >
               {todosCount}
+            </span>
+          </Link>
+
+          <Link
+            href="/app/overdue"
+            onClick={() => {
+              setActiveMenu({ name: "Overdue" });
+              onNavigate?.();
+            }}
+            className={cn(
+              expandedNavButtonBase,
+              isOverdueActive
+                ? expandedNavButtonActive
+                : expandedNavButtonIdle,
+            )}
+            aria-current={isOverdueActive ? "page" : undefined}
+          >
+            <span className={railIconSlot}>
+              <Clock3 className={railIconClass} />
+            </span>
+            <span className="truncate whitespace-nowrap">Overdue</span>
+            <span
+              className={cn(
+                countBadgeBase,
+                isOverdueActive
+                  ? "text-sidebar-accent-foreground/80"
+                  : "text-sidebar-foreground/40",
+              )}
+            >
+              {overdueCount}
             </span>
           </Link>
 
@@ -480,6 +524,7 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { setActiveMenu, setShowMenu } = useMenu();
   const pathname = usePathname();
   const isTodayActive = pathname?.includes("/app/tday");
+  const isOverdueActive = pathname?.includes("/app/overdue");
   const isScheduledActive = pathname?.includes("/app/scheduled");
   const isAllTasksActive = pathname?.includes("/app/todo");
   const isCompletedActive = pathname?.includes("/app/completed");
@@ -563,6 +608,28 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={10}>
               Today
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href="/app/overdue"
+                onClick={() => {
+                  setActiveMenu({ name: "Overdue" });
+                  onNavigate?.();
+                }}
+                className={cn(
+                  collapsedRailButtonBase,
+                  isOverdueActive && expandedNavButtonActive,
+                )}
+                aria-label="Overdue"
+              >
+                <Clock3 className={railIconClass} />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={10}>
+              Overdue
             </TooltipContent>
           </Tooltip>
 
