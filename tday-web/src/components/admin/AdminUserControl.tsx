@@ -60,7 +60,9 @@ const PendingApprovalRow = ({
     </div>
     <Button
       size="sm"
-      onClick={() => void onApprove(user.id)}
+      onClick={() => {
+        onApprove(user.id);
+      }}
       disabled={actionUserId === user.id}
     >
       {actionUserId === user.id && actionType === "approve" ? (
@@ -104,7 +106,9 @@ const ApprovedUserRow = ({
       <Button
         size="sm"
         variant="destructive"
-        onClick={() => void onDelete(user.id)}
+        onClick={() => {
+          onDelete(user.id);
+        }}
         disabled={actionUserId === user.id || isCurrentUser}
       >
         {actionUserId === user.id && actionType === "delete" ? (
@@ -294,8 +298,8 @@ export default function AdminUserControl() {
   }, []);
 
   useEffect(() => {
-    void fetchUsers();
-    void fetchAdminSettings();
+    fetchUsers();
+    fetchAdminSettings();
   }, [fetchUsers, fetchAdminSettings]);
 
   const pendingUsers = useMemo(
@@ -384,7 +388,12 @@ export default function AdminUserControl() {
         <MobileSearchHeader />
       </div>
 
-      <AdminPageHeader loading={loading} onRefresh={() => void fetchUsers()} />
+      <AdminPageHeader
+        loading={loading}
+        onRefresh={() => {
+          fetchUsers();
+        }}
+      />
 
       <Card className="rounded-2xl border-border/70 bg-card/95">
         <CardHeader>
@@ -401,7 +410,9 @@ export default function AdminUserControl() {
             <Button
               size="sm"
               variant={aiSummaryEnabled ? "default" : "outline"}
-              onClick={() => void toggleAiSummary()}
+              onClick={() => {
+                toggleAiSummary();
+              }}
               disabled={settingsLoading || settingsSaving}
             >
               {settingsSaving ? (
