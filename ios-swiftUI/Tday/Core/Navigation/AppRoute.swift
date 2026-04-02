@@ -3,6 +3,7 @@ import Foundation
 enum AppRoute: Hashable {
     case home
     case todayTodos
+    case overdueTodos
     case scheduledTodos
     case allTodos(highlightTodoId: String?)
     case priorityTodos
@@ -17,6 +18,8 @@ enum AppRoute: Hashable {
             return "home"
         case .todayTodos:
             return "todos/today"
+        case .overdueTodos:
+            return "todos/overdue"
         case .scheduledTodos:
             return "todos/scheduled"
         case let .allTodos(highlightTodoId):
@@ -64,6 +67,8 @@ enum AppRoute: Hashable {
             switch second {
             case "today":
                 return .todayTodos
+            case "overdue":
+                return .overdueTodos
             case "scheduled":
                 return .scheduledTodos
             case "all":

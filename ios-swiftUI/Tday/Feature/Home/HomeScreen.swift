@@ -29,6 +29,13 @@ struct HomeScreen: View {
         .map { $0 }
     }
 
+    private var overdueCount: Int {
+        let now = Date()
+        return viewModel.searchableTodos.filter { todo in
+            todo.due < now
+        }.count
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -167,6 +174,9 @@ struct HomeScreen: View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
             DashboardCard(title: "Today", count: viewModel.summary.todayCount, icon: "sun.max.fill", tint: colors.primary) {
                 onNavigate(.todayTodos)
+            }
+            DashboardCard(title: "Overdue", count: overdueCount, icon: "exclamationmark.circle.fill", tint: colors.error) {
+                onNavigate(.overdueTodos)
             }
             DashboardCard(title: "Scheduled", count: viewModel.summary.scheduledCount, icon: "calendar.badge.clock", tint: colors.tertiary) {
                 onNavigate(.scheduledTodos)
