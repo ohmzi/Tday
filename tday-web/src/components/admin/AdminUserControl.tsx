@@ -409,23 +409,25 @@ export default function AdminUserControl() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-border/70 bg-card/95">
-        <CardHeader>
-          <CardTitle>Pending approvals</CardTitle>
-          <CardDescription>
-            New accounts can sign in only after approval.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <PendingApprovalsContent
-            loading={loading}
-            pendingUsers={pendingUsers}
-            actionUserId={actionUserId}
-            actionType={actionType}
-            onApprove={approveUser}
-          />
-        </CardContent>
-      </Card>
+      {loading || pendingUsers.length > 0 ? (
+        <Card className="rounded-2xl border-border/70 bg-card/95">
+          <CardHeader>
+            <CardTitle>Pending approvals</CardTitle>
+            <CardDescription>
+              New accounts can sign in only after approval.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <PendingApprovalsContent
+              loading={loading}
+              pendingUsers={pendingUsers}
+              actionUserId={actionUserId}
+              actionType={actionType}
+              onApprove={approveUser}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="rounded-2xl border-border/70 bg-card/95">
         <CardHeader>
