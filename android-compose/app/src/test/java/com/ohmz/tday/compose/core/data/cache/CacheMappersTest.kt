@@ -183,6 +183,19 @@ class CacheMappersTest {
         assertEquals(Instant.parse(explicitDate), item.instanceDate)
     }
 
+    @Test
+    fun `mapTodoDto parses backend local datetime strings as UTC`() {
+        val dto = makeTodoDto().copy(
+            dtstart = "2025-06-14T18:00:00",
+            due = "2025-06-14T19:30:00",
+        )
+
+        val item = mapTodoDto(dto)
+
+        assertEquals(Instant.parse("2025-06-14T18:00:00Z"), item.dtstart)
+        assertEquals(Instant.parse("2025-06-14T19:30:00Z"), item.due)
+    }
+
     // --- mapCompletedDto ---
 
     @Test
@@ -267,6 +280,12 @@ class CacheMappersTest {
     }
 
     @Test
+    fun `parseInstant parses backend UTC local datetime string`() {
+        val instant = parseInstant("2025-06-15T10:30:00")
+        assertEquals(fixedInstant, instant)
+    }
+
+    @Test
     fun `parseInstant returns fallback for invalid string`() {
         val before = Instant.now()
         val result = parseInstant("not-a-date")
@@ -294,6 +313,11 @@ class CacheMappersTest {
     @Test
     fun `parseOptionalInstant parses valid string`() {
         assertEquals(fixedInstant, parseOptionalInstant("2025-06-15T10:30:00Z"))
+    }
+
+    @Test
+    fun `parseOptionalInstant parses backend UTC local datetime string`() {
+        assertEquals(fixedInstant, parseOptionalInstant("2025-06-15T10:30:00"))
     }
 
     // --- factory helpers ---
