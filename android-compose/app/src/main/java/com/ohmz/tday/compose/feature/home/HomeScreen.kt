@@ -121,6 +121,7 @@ import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import kotlinx.coroutines.delay
+import java.time.Instant
 import java.time.LocalTime
 import java.util.Locale
 
@@ -130,6 +131,7 @@ fun HomeScreen(
     uiState: HomeUiState,
     onRefresh: () -> Unit,
     onOpenToday: () -> Unit,
+    onOpenOverdue: () -> Unit,
     onOpenScheduled: () -> Unit,
     onOpenAll: () -> Unit,
     onOpenPriority: () -> Unit,
@@ -210,6 +212,10 @@ fun HomeScreen(
     }
     val listById = remember(uiState.summary.lists) { uiState.summary.lists.associateBy { it.id } }
     val normalizedSearchQuery = remember(searchQuery) { searchQuery.trim().lowercase(Locale.getDefault()) }
+    val overdueCount = remember(uiState.searchableTodos) {
+        val now = Instant.now()
+        uiState.searchableTodos.count { todo -> todo.due.isBefore(now) }
+    }
     val dueFormatter = remember {
         java.time.format.DateTimeFormatter.ofPattern("EEE h:mm a")
             .withZone(java.time.ZoneId.systemDefault())
@@ -387,6 +393,7 @@ fun HomeScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             CategoryGrid(
                                 todayCount = uiState.summary.todayCount,
+                                overdueCount = overdueCount,
                                 scheduledCount = uiState.summary.scheduledCount,
                                 allCount = uiState.summary.allCount,
                                 priorityCount = uiState.summary.priorityCount,
@@ -394,6 +401,10 @@ fun HomeScreen(
                                 onOpenToday = {
                                     closeSearch()
                                     onOpenToday()
+                                },
+                                onOpenOverdue = {
+                                    closeSearch()
+                                    onOpenOverdue()
                                 },
                                 onOpenScheduled = {
                                     closeSearch()
@@ -1250,11 +1261,13 @@ private fun PressableIconButton(
 @Composable
 private fun CategoryGrid(
     todayCount: Int,
+    overdueCount: Int,
     scheduledCount: Int,
     allCount: Int,
     priorityCount: Int,
     completedCount: Int,
     onOpenToday: () -> Unit,
+    onOpenOverdue: () -> Unit,
     onOpenScheduled: () -> Unit,
     onOpenAll: () -> Unit,
     onOpenPriority: () -> Unit,
@@ -1276,12 +1289,32 @@ private fun CategoryGrid(
             )
             CategoryCard(
                 modifier = Modifier.weight(1f),
+                color = Color(0xFFDA7661),
+                icon = Icons.Rounded.ErrorOutline,
+                backgroundWatermark = Icons.Rounded.ErrorOutline,
+                title = stringResource(R.string.home_category_overdue),
+                count = overdueCount,
+                onClick = onOpenOverdue,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CategoryCard(
+                modifier = Modifier.weight(1f),
                 color = Color(0xFFDDB37D),
                 icon = Icons.Rounded.Schedule,
                 backgroundWatermark = Icons.Rounded.Schedule,
                 title = stringResource(R.string.home_category_scheduled),
                 count = scheduledCount,
                 onClick = onOpenScheduled,
+            )
+            CategoryCard(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFD48A8C),
+                icon = Icons.Rounded.Flag,
+                backgroundWatermark = Icons.Rounded.Flag,
+                title = stringResource(R.string.home_category_priority),
+                count = priorityCount,
+                onClick = onOpenPriority,
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1296,23 +1329,14 @@ private fun CategoryGrid(
             )
             CategoryCard(
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFD48A8C),
-                icon = Icons.Rounded.Flag,
-                backgroundWatermark = Icons.Rounded.Flag,
-                title = stringResource(R.string.home_category_priority),
-                count = priorityCount,
-                onClick = onOpenPriority,
+                color = completedColor,
+                icon = Icons.Rounded.Check,
+                backgroundWatermark = Icons.Rounded.Check,
+                title = stringResource(R.string.home_category_completed),
+                count = completedCount,
+                onClick = onOpenCompleted,
             )
         }
-        CategoryCard(
-            modifier = Modifier.fillMaxWidth(),
-            color = completedColor,
-            icon = Icons.Rounded.Check,
-            backgroundWatermark = Icons.Rounded.Check,
-            title = stringResource(R.string.home_category_completed),
-            count = completedCount,
-            onClick = onOpenCompleted,
-        )
     }
 }
 

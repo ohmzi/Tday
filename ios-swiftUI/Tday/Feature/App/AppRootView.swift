@@ -72,6 +72,10 @@ struct AppRootView: View {
                     TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil) {
                         appViewModel.goBack()
                     }
+                case .overdueTodos:
+                    TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil) {
+                        appViewModel.goBack()
+                    }
                 case .scheduledTodos:
                     TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil) {
                         appViewModel.goBack()
