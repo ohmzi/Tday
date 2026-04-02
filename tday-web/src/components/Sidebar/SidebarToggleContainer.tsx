@@ -70,8 +70,5 @@ export default function SidebarToggleContainer() {
     return () => document.removeEventListener("keydown", handler, true);
   }, [router]);
 
-  return (<>
-    {mounted && sidebarReady && <SonnerToaster />}
-  </>
-  )
+  return mounted && sidebarReady ? <SonnerToaster /> : null;
 }
