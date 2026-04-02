@@ -14,6 +14,7 @@ export const CURRENT_RELEASE_PATH = "/release/current-release.json";
 export const LATEST_RELEASE_METADATA_URL =
   "https://raw.githubusercontent.com/ohmzi/Tday/master/tday-web/public/release/latest-changes.json";
 
+/** Normalizes a version string by trimming it and removing a leading `v`. */
 export function normalizeVersion(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const value = raw.trim();
@@ -21,6 +22,7 @@ export function normalizeVersion(raw: string | null | undefined): string | null 
   return value.replace(/^[vV]/, "");
 }
 
+/** Splits a normalized version into comparable numeric parts. */
 function parseVersionParts(raw: string | null | undefined): number[] | null {
   const normalized = normalizeVersion(raw);
   if (!normalized) return null;
@@ -39,6 +41,7 @@ function parseVersionParts(raw: string | null | undefined): number[] | null {
   return numericParts;
 }
 
+/** Compares two semantic versions and returns the numeric difference at the first changed part. */
 export function compareVersions(
   left: string | null | undefined,
   right: string | null | undefined,
@@ -58,10 +61,12 @@ export function compareVersions(
   return 0;
 }
 
+/** Formats a version for display without altering its numeric meaning. */
 export function formatDisplayVersion(raw: string | null | undefined): string | null {
   return normalizeVersion(raw);
 }
 
+/** Formats a release date while falling back to the raw string for unknown formats. */
 export function formatReleaseDate(raw: string | null | undefined): string | null {
   if (!raw) return null;
 
@@ -77,10 +82,12 @@ export function formatReleaseDate(raw: string | null | undefined): string | null
   }).format(date);
 }
 
+/** Narrows unknown JSON-like values to plain object records. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+/** Normalizes stored release notes and caps them to the top three highlights. */
 function normalizeNotes(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
 
@@ -90,6 +97,7 @@ function normalizeNotes(raw: unknown): string[] {
     .slice(0, 3);
 }
 
+/** Builds a safe fallback release payload for offline or first-load states. */
 export function createFallbackReleaseMetadata(version = CURRENT_APP_VERSION): ReleaseMetadata {
   const normalizedVersion = normalizeVersion(version) ?? CURRENT_APP_VERSION;
 
@@ -102,6 +110,7 @@ export function createFallbackReleaseMetadata(version = CURRENT_APP_VERSION): Re
   };
 }
 
+/** Parses arbitrary JSON into a validated release metadata object. */
 export function parseReleaseMetadata(raw: unknown): ReleaseMetadata | null {
   if (!isRecord(raw)) return null;
 
@@ -132,6 +141,7 @@ export function parseReleaseMetadata(raw: unknown): ReleaseMetadata | null {
   };
 }
 
+/** Fetches release metadata from a JSON endpoint and validates its shape. */
 export async function fetchReleaseMetadata(url: string): Promise<ReleaseMetadata> {
   const response = await fetch(url, {
     method: "GET",
@@ -154,6 +164,7 @@ export async function fetchReleaseMetadata(url: string): Promise<ReleaseMetadata
   return metadata;
 }
 
+/** Reads the locally stored release snapshot that matches the installed app version. */
 export function readStoredCurrentRelease(version = CURRENT_APP_VERSION): ReleaseMetadata | null {
   if (typeof window === "undefined") return null;
 
@@ -170,6 +181,7 @@ export function readStoredCurrentRelease(version = CURRENT_APP_VERSION): Release
   }
 }
 
+/** Persists the installed release snapshot for offline display on later visits. */
 export function storeCurrentRelease(release: ReleaseMetadata) {
   if (typeof window === "undefined") return;
 
