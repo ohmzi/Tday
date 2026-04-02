@@ -1,12 +1,11 @@
 package com.ohmz.tday.compose
 
 import android.net.Uri
+import android.widget.Toast
 import com.ohmz.tday.compose.R
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -15,10 +14,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,13 +25,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -46,22 +40,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -83,6 +70,8 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.ui.OfflineBanner
 import com.ohmz.tday.compose.core.ui.SnackbarKind
+import com.ohmz.tday.compose.core.ui.TdayToastData
+import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
 import com.ohmz.tday.compose.feature.calendar.CalendarViewModel
@@ -101,9 +90,6 @@ import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.theme.TdayTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val NAV_ENTER_DURATION_MS = 440
@@ -127,9 +113,11 @@ fun TdayApp() {
     val updateToastMessage = releaseUiState.latestRelease?.tagName?.let { versionLabel ->
         stringResource(R.string.release_launch_update_toast, versionLabel)
     }
-    var activeToast by remember { mutableStateOf<AppToastMessage?>(null) }
+    val taskDeletedToastMessage = stringResource(R.string.task_deleted_toast)
+    var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     val activity = LocalContext.current as? MainActivity
     val deepLinkIntent by activity?.deepLinkIntent?.collectAsStateWithLifecycle()
@@ -146,10 +134,7 @@ fun TdayApp() {
     )
 
     fun showTaskDeletedToast() {
-        activeToast = AppToastMessage(
-            id = System.currentTimeMillis(),
-            message = "Task deleted",
-        )
+        showSystemToast(context, taskDeletedToastMessage)
     }
 
     HandleStartupNavigation(
@@ -663,10 +648,10 @@ private fun HandleLaunchUpdateToast(
     releaseUiState: LatestReleaseUiState,
     currentRoute: String?,
     updateToastMessage: String?,
-    activeToast: AppToastMessage?,
+    activeToast: TdayToastData?,
     hasShownLaunchUpdateToast: Boolean,
     onToastShown: () -> Unit,
-    onShowToast: (AppToastMessage) -> Unit,
+    onShowToast: (TdayToastData) -> Unit,
     onClearToast: () -> Unit,
     onOpenLatestRelease: () -> Unit,
 ) {
@@ -686,11 +671,10 @@ private fun HandleLaunchUpdateToast(
 
         onToastShown()
         onShowToast(
-            AppToastMessage(
+            TdayToastData(
                 id = System.currentTimeMillis(),
                 message = message,
-                kind = AppToastKind.UpdateAvailable,
-                autoDismissMillis = null,
+                icon = Icons.Rounded.NewReleases,
                 onTap = {
                     onClearToast()
                     onOpenLatestRelease()
@@ -699,10 +683,8 @@ private fun HandleLaunchUpdateToast(
         )
     }
 
-    LaunchedEffect(currentRoute, activeToast?.kind) {
-        if (currentRoute == AppRoute.LatestRelease.route &&
-            activeToast?.kind == AppToastKind.UpdateAvailable
-        ) {
+    LaunchedEffect(currentRoute, activeToast?.id) {
+        if (currentRoute == AppRoute.LatestRelease.route && activeToast != null) {
             onClearToast()
         }
     }
@@ -773,25 +755,6 @@ private fun OnRouteResume(
     }
 }
 
-private data class AppToastMessage(
-    val id: Long,
-    val message: String,
-    val kind: AppToastKind = AppToastKind.Default,
-    val autoDismissMillis: Long? = 2200L,
-    val onTap: (() -> Unit)? = null,
-)
-
-private enum class AppToastKind {
-    Default,
-    UpdateAvailable,
-}
-
-private enum class AppToastDismissDirection {
-    Left,
-    Right,
-    Up,
-}
-
 private fun navigationSlideOffset(fullDistance: Int): Int =
     (fullDistance * NAV_SLIDE_FRACTION).roundToInt()
 
@@ -826,200 +789,12 @@ private fun settingsExitTransition(): ExitTransition =
         ),
     )
 
-@Composable
-private fun TdayToastHost(
-    toast: AppToastMessage?,
-    onDismiss: () -> Unit,
+private fun showSystemToast(
+    context: android.content.Context,
+    message: String,
+    duration: Int = Toast.LENGTH_SHORT,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    val isDark = colorScheme.background.luminance() < 0.5f
-    val accent = Color(0xFFDDB37D)
-    val toastColor = if (isDark) {
-        lerp(colorScheme.surfaceVariant, accent, 0.22f)
-    } else {
-        lerp(colorScheme.surfaceVariant, accent, 0.30f)
-    }
-    val density = LocalDensity.current
-    val dismissThresholdPx = with(density) { 72.dp.toPx() }
-
-    LaunchedEffect(toast?.id, toast?.autoDismissMillis) {
-        if (toast == null) return@LaunchedEffect
-        val autoDismissMillis = toast.autoDismissMillis ?: return@LaunchedEffect
-        kotlinx.coroutines.delay(autoDismissMillis)
-        onDismiss()
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .padding(top = 12.dp),
-        contentAlignment = Alignment.TopCenter,
-    ) {
-        AnimatedVisibility(
-            visible = toast != null,
-            enter = fadeIn(animationSpec = tween(durationMillis = 180)) +
-                slideInVertically(
-                    animationSpec = tween(durationMillis = 220),
-                    initialOffsetY = { -it / 2 },
-                ),
-            exit = fadeOut(animationSpec = tween(durationMillis = 160)) +
-                slideOutVertically(
-                    animationSpec = tween(durationMillis = 200),
-                    targetOffsetY = { -it / 2 },
-                ),
-        ) {
-            val visibleToast = toast ?: return@AnimatedVisibility
-            SwipeDismissToastCard(
-                toast = visibleToast,
-                toastColor = toastColor,
-                accent = accent,
-                isDark = isDark,
-                dismissThresholdPx = dismissThresholdPx,
-                onDismiss = onDismiss,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SwipeDismissToastCard(
-    toast: AppToastMessage,
-    toastColor: Color,
-    accent: Color,
-    isDark: Boolean,
-    dismissThresholdPx: Float,
-    onDismiss: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    val onDismissState by rememberUpdatedState(onDismiss)
-    val offsetX = remember(toast.id) { Animatable(0f) }
-    val offsetY = remember(toast.id) { Animatable(0f) }
-    val tapModifier = toast.onTap?.let { onTap ->
-        Modifier.clickable { onTap() }
-    } ?: Modifier
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 22.dp)
-            .offset {
-                IntOffset(
-                    x = offsetX.value.roundToInt(),
-                    y = offsetY.value.roundToInt(),
-                )
-            }
-            .pointerInput(toast.id) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        scope.launch {
-                            offsetX.snapTo(offsetX.value + dragAmount.x)
-                            offsetY.snapTo(offsetY.value + dragAmount.y)
-                        }
-                    },
-                    onDragCancel = {
-                        resetToastOffsets(
-                            scope = scope,
-                            offsetX = offsetX,
-                            offsetY = offsetY,
-                        )
-                    },
-                    onDragEnd = {
-                        scope.launch {
-                            val dismissDirection = resolveToastDismissDirection(
-                                offsetX = offsetX.value,
-                                offsetY = offsetY.value,
-                                dismissThresholdPx = dismissThresholdPx,
-                            )
-                            handleToastDragEnd(
-                                dismissDirection = dismissDirection,
-                                scope = scope,
-                                offsetX = offsetX,
-                                offsetY = offsetY,
-                                width = size.width.toFloat(),
-                                height = size.height.toFloat(),
-                                onDismiss = onDismissState,
-                            )
-                        }
-                    },
-                )
-            }
-            .then(tapModifier),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = toastColor),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = accent.copy(alpha = if (isDark) 0.36f else 0.42f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 8.dp else 5.dp),
-    ) {
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = toast.message,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-            )
-        }
-    }
-}
-
-private fun resolveToastDismissDirection(
-    offsetX: Float,
-    offsetY: Float,
-    dismissThresholdPx: Float,
-): AppToastDismissDirection? = when {
-    offsetY <= -dismissThresholdPx && abs(offsetY) >= abs(offsetX) -> AppToastDismissDirection.Up
-    offsetX <= -dismissThresholdPx -> AppToastDismissDirection.Left
-    offsetX >= dismissThresholdPx -> AppToastDismissDirection.Right
-    else -> null
-}
-
-private fun resetToastOffsets(
-    scope: CoroutineScope,
-    offsetX: Animatable<Float, *>,
-    offsetY: Animatable<Float, *>,
-) {
-    scope.launch {
-        launch { offsetX.animateTo(0f) }
-        launch { offsetY.animateTo(0f) }
-    }
-}
-
-private suspend fun handleToastDragEnd(
-    dismissDirection: AppToastDismissDirection?,
-    scope: CoroutineScope,
-    offsetX: Animatable<Float, *>,
-    offsetY: Animatable<Float, *>,
-    width: Float,
-    height: Float,
-    onDismiss: () -> Unit,
-) {
-    when (dismissDirection) {
-        AppToastDismissDirection.Left -> {
-            offsetX.animateTo(-width)
-            onDismiss()
-        }
-        AppToastDismissDirection.Right -> {
-            offsetX.animateTo(width)
-            onDismiss()
-        }
-        AppToastDismissDirection.Up -> {
-            offsetY.animateTo(-height * 1.5f)
-            onDismiss()
-        }
-        null -> {
-            resetToastOffsets(
-                scope = scope,
-                offsetX = offsetX,
-                offsetY = offsetY,
-            )
-        }
-    }
+    Toast.makeText(context.applicationContext, message, duration).show()
 }
 
 private val splashTaglines = listOf(
