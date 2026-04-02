@@ -146,13 +146,14 @@ fun TodoListScreen(
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
     val usesTodayStyle =
-        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
     val titleColor = modeAccentColor(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
     )
     val titleIcon = when (uiState.mode) {
         TodoListMode.TODAY -> Icons.Rounded.WbSunny
+        TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
         TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
         TodoListMode.ALL -> Icons.Rounded.Inbox
         TodoListMode.PRIORITY -> Icons.Rounded.Flag
@@ -163,7 +164,7 @@ fun TodoListScreen(
         listColorKey = selectedListColorKey,
     )
     val showSectionedTimeline =
-        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
     val timelineSections = remember(uiState.mode, uiState.items) {
         buildTimelineSections(
             mode = uiState.mode,
@@ -259,7 +260,10 @@ fun TodoListScreen(
     val editTargetTodo = remember(editTargetTodoId, uiState.items) {
         editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
     }
-    val canSummarizeCurrentMode = uiState.mode != TodoListMode.LIST && uiState.aiSummaryEnabled
+    val canSummarizeCurrentMode =
+        uiState.mode != TodoListMode.LIST &&
+            uiState.mode != TodoListMode.OVERDUE &&
+            uiState.aiSummaryEnabled
     val showTopBarActionButton = canSummarizeCurrentMode || uiState.mode == TodoListMode.LIST
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
@@ -1405,6 +1409,7 @@ private fun TimelineSection(
                     useMinimalStyle &&
                     (
                         mode == TodoListMode.TODAY ||
+                            mode == TodoListMode.OVERDUE ||
                             mode == TodoListMode.SCHEDULED ||
                             mode == TodoListMode.PRIORITY ||
                             mode == TodoListMode.LIST
@@ -1485,6 +1490,7 @@ private fun buildTimelineSections(
     val zoneId = ZoneId.systemDefault()
     return when (mode) {
         TodoListMode.TODAY -> buildTodaySections(items, zoneId)
+        TodoListMode.OVERDUE -> buildOverdueSections(items, zoneId)
         TodoListMode.SCHEDULED -> buildScheduledSections(
             items = items,
             zoneId = zoneId,
@@ -1496,9 +1502,50 @@ private fun buildTimelineSections(
             zoneId = zoneId,
             futureOnly = false,
         )
-
-        else -> emptyList()
     }
+}
+
+private fun buildOverdueSections(
+    items: List<TodoItem>,
+    zoneId: ZoneId,
+): List<TodoSection> {
+    val now = Instant.now()
+    val today = LocalDate.now(zoneId)
+    val overdueByDate = items.asSequence()
+        .filter { todo -> todo.due.isBefore(now) }
+        .groupBy { todo -> LocalDate.ofInstant(todo.due, zoneId) }
+
+    val sections = mutableListOf<TodoSection>()
+
+    overdueByDate[today]
+        ?.sortedBy { it.due }
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { todaysItems ->
+            sections += TodoSection(
+                key = "day-$today",
+                title = "Today",
+                items = todaysItems,
+                quickAddDefaults = quickAddDefaultsForDate(
+                    date = today,
+                    zoneId = zoneId,
+                ),
+            )
+        }
+
+    overdueByDate.keys
+        .asSequence()
+        .filter { date -> date < today }
+        .sortedDescending()
+        .forEach { date ->
+            sections += TodoSection(
+                key = "day-$date",
+                title = date.format(SCHEDULED_DAY_FORMATTER),
+                items = overdueByDate[date].orEmpty().sortedBy { it.due },
+                quickAddDefaults = null,
+            )
+        }
+
+    return sections
 }
 
 private fun buildTodaySections(
@@ -1696,6 +1743,7 @@ private fun localizedSectionTitle(section: TodoSection): String {
 private fun emptyStateMessageForMode(mode: TodoListMode): String {
     return when (mode) {
         TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
+        TodoListMode.OVERDUE -> stringResource(R.string.todos_empty_overdue)
         TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
         TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
         TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
@@ -1916,6 +1964,7 @@ private fun SwipeTaskRow(
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = when (mode) {
         TodoListMode.TODAY,
+        TodoListMode.OVERDUE,
         TodoListMode.SCHEDULED,
         TodoListMode.PRIORITY,
         TodoListMode.ALL,
@@ -1926,6 +1975,7 @@ private fun SwipeTaskRow(
     }
     val showPriorityFlag = when (mode) {
         TodoListMode.TODAY,
+        TodoListMode.OVERDUE,
         TodoListMode.SCHEDULED,
         TodoListMode.PRIORITY,
         TodoListMode.LIST,
@@ -2358,6 +2408,7 @@ private fun modeAccentColor(
 ): Color {
     return when (mode) {
         TodoListMode.TODAY -> Color(0xFF5C9FE7)
+        TodoListMode.OVERDUE -> Color(0xFFDA7661)
         TodoListMode.SCHEDULED -> Color(0xFFF29F38)
         TodoListMode.ALL -> Color(0xFF5E6878)
         TodoListMode.PRIORITY -> Color(0xFFE65E52)

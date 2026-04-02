@@ -53,7 +53,7 @@ final class TodoListViewModel {
             summaryError = "AI summary is disabled by admin"
             return
         }
-        guard mode != .list else {
+        guard mode != .list && mode != .overdue else {
             summaryError = "Summary is available for Today, Scheduled, All, and Priority"
             return
         }

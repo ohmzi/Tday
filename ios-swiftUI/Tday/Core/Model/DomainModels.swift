@@ -3,6 +3,7 @@ import SwiftUI
 
 enum TodoListMode: String, Codable, CaseIterable, Hashable {
     case today = "TODAY"
+    case overdue = "OVERDUE"
     case scheduled = "SCHEDULED"
     case all = "ALL"
     case priority = "PRIORITY"
@@ -12,6 +13,8 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
         switch self {
         case .today:
             return "Today"
+        case .overdue:
+            return "Overdue"
         case .scheduled:
             return "Scheduled"
         case .all:
@@ -27,6 +30,8 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
         switch self {
         case .today:
             return "today"
+        case .overdue:
+            return "overdue"
         case .scheduled:
             return "scheduled"
         case .all:
