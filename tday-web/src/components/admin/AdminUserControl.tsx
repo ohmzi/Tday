@@ -8,9 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Check, Loader2, RefreshCcw, Trash2, Users } from "lucide-react";
+import { ArrowUpRight, Check, Info, Loader2, RefreshCcw, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import { Link } from "@/lib/navigation";
+import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
 
 type AdminUser = {
   id: string;
@@ -25,6 +27,229 @@ type AdminUser = {
 type AdminSettingsResponse = {
   aiSummaryEnabled: boolean;
   updatedAt?: string;
+};
+
+type PendingApprovalRowProps = {
+  user: AdminUser;
+  actionUserId: string | null;
+  actionType: "approve" | "delete" | null;
+  onApprove: (userId: string) => void;
+};
+
+type ApprovedUserRowProps = {
+  user: AdminUser;
+  sessionUserId: string | null | undefined;
+  actionUserId: string | null;
+  actionType: "approve" | "delete" | null;
+  onDelete: (userId: string) => void;
+};
+
+/** Renders a pending-user row with the approve action wired to the current request state. */
+const PendingApprovalRow = ({
+  user,
+  actionUserId,
+  actionType,
+  onApprove,
+}: PendingApprovalRowProps) => (
+  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+    <div className="min-w-0">
+      <p className="truncate text-sm font-medium text-foreground">
+        {user.name?.trim() || user.email}
+      </p>
+      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+    </div>
+    <Button
+      size="sm"
+      onClick={() => {
+        onApprove(user.id);
+      }}
+      disabled={actionUserId === user.id}
+    >
+      {actionUserId === user.id && actionType === "approve" ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Check className="mr-2 h-4 w-4" />
+      )}
+      Approve
+    </Button>
+  </div>
+);
+
+/** Renders an approved-user row and prevents deleting the current signed-in admin. */
+const ApprovedUserRow = ({
+  user,
+  sessionUserId,
+  actionUserId,
+  actionType,
+  onDelete,
+}: ApprovedUserRowProps) => {
+  const isCurrentUser = sessionUserId === user.id;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-foreground">
+          {user.name?.trim() || user.email}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded-full border border-border/70 px-2 py-0.5">
+            {user.role}
+          </span>
+          {isCurrentUser ? (
+            <span className="rounded-full border border-border/70 px-2 py-0.5">
+              You
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <Button
+        size="sm"
+        variant="destructive"
+        onClick={() => {
+          onDelete(user.id);
+        }}
+        disabled={actionUserId === user.id || isCurrentUser}
+      >
+        {actionUserId === user.id && actionType === "delete" ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Trash2 className="mr-2 h-4 w-4" />
+        )}
+        Delete
+      </Button>
+    </div>
+  );
+};
+
+/** Renders the shared admin page header with the refresh action. */
+const AdminPageHeader = ({
+  loading,
+  onRefresh,
+}: {
+  loading: boolean;
+  onRefresh: () => void;
+}) => (
+  <header className="mt-8 flex flex-wrap items-center justify-between gap-3 sm:mt-10 lg:mt-0">
+    <div className="space-y-1">
+      <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <Users className="h-5 w-5 text-accent" />
+        Admin
+      </h1>
+      <p className="text-sm text-muted-foreground">
+        Approve pending registrations and manage user access.
+      </p>
+    </div>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onRefresh}
+      disabled={loading}
+    >
+      {loading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <RefreshCcw className="mr-2 h-4 w-4" />
+      )}
+      Refresh
+    </Button>
+  </header>
+);
+
+/** Links admins into the release details page from the main admin dashboard. */
+const VersionLinkRow = () => (
+  <Link
+    href="/app/admin/version"
+    className="group flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/20 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-muted/30"
+  >
+    <div className="min-w-0 space-y-1">
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <Info className="h-4 w-4 text-accent" />
+        <span>Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}</span>
+      </div>
+      <div className="text-sm text-muted-foreground">
+        Open the admin-only release page
+      </div>
+    </div>
+    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+  </Link>
+);
+
+/** Chooses the correct pending-approval content state for the admin list card. */
+const PendingApprovalsContent = ({
+  loading,
+  pendingUsers,
+  actionUserId,
+  actionType,
+  onApprove,
+}: {
+  loading: boolean;
+  pendingUsers: AdminUser[];
+  actionUserId: string | null;
+  actionType: "approve" | "delete" | null;
+  onApprove: (userId: string) => void;
+}) => {
+  if (loading) {
+    return <p className="text-sm text-muted-foreground">Loading users...</p>;
+  }
+
+  if (pendingUsers.length === 0) {
+    return (
+      <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+        No pending users.
+      </p>
+    );
+  }
+
+  return pendingUsers.map((user) => (
+    <PendingApprovalRow
+      key={user.id}
+      user={user}
+      actionUserId={actionUserId}
+      actionType={actionType}
+      onApprove={onApprove}
+    />
+  ));
+};
+
+/** Chooses the correct approved-users content state for the admin list card. */
+const ApprovedUsersContent = ({
+  loading,
+  approvedUsers,
+  sessionUserId,
+  actionUserId,
+  actionType,
+  onDelete,
+}: {
+  loading: boolean;
+  approvedUsers: AdminUser[];
+  sessionUserId: string | null | undefined;
+  actionUserId: string | null;
+  actionType: "approve" | "delete" | null;
+  onDelete: (userId: string) => void;
+}) => {
+  if (loading) {
+    return <p className="text-sm text-muted-foreground">Loading users...</p>;
+  }
+
+  if (approvedUsers.length === 0) {
+    return (
+      <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+        No approved users.
+      </p>
+    );
+  }
+
+  return approvedUsers.map((user) => (
+    <ApprovedUserRow
+      key={user.id}
+      user={user}
+      sessionUserId={sessionUserId}
+      actionUserId={actionUserId}
+      actionType={actionType}
+      onDelete={onDelete}
+    />
+  ));
 };
 
 export default function AdminUserControl() {
@@ -73,8 +298,8 @@ export default function AdminUserControl() {
   }, []);
 
   useEffect(() => {
-    void fetchUsers();
-    void fetchAdminSettings();
+    fetchUsers();
+    fetchAdminSettings();
   }, [fetchUsers, fetchAdminSettings]);
 
   const pendingUsers = useMemo(
@@ -163,30 +388,12 @@ export default function AdminUserControl() {
         <MobileSearchHeader />
       </div>
 
-      <header className="mt-8 flex flex-wrap items-center justify-between gap-3 sm:mt-10 lg:mt-0">
-        <div className="space-y-1">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <Users className="h-5 w-5 text-accent" />
-            Admin
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Approve pending registrations and manage user access.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void fetchUsers()}
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCcw className="mr-2 h-4 w-4" />
-          )}
-          Refresh
-        </Button>
-      </header>
+      <AdminPageHeader
+        loading={loading}
+        onRefresh={() => {
+          fetchUsers();
+        }}
+      />
 
       <Card className="rounded-2xl border-border/70 bg-card/95">
         <CardHeader>
@@ -203,7 +410,9 @@ export default function AdminUserControl() {
             <Button
               size="sm"
               variant={aiSummaryEnabled ? "default" : "outline"}
-              onClick={() => void toggleAiSummary()}
+              onClick={() => {
+                toggleAiSummary();
+              }}
               disabled={settingsLoading || settingsSaving}
             >
               {settingsSaving ? (
@@ -217,45 +426,31 @@ export default function AdminUserControl() {
 
       <Card className="rounded-2xl border-border/70 bg-card/95">
         <CardHeader>
+          <CardTitle>App version</CardTitle>
+          <CardDescription>
+            Review GitHub release notes and update availability for the current deployment.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <VersionLinkRow />
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-border/70 bg-card/95">
+        <CardHeader>
           <CardTitle>Pending approvals</CardTitle>
           <CardDescription>
             New accounts can sign in only after approval.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading users...</p>
-          ) : pendingUsers.length === 0 ? (
-            <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
-              No pending users.
-            </p>
-          ) : (
-            pendingUsers.map((user) => (
-              <div
-                key={user.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {user.name?.trim() || user.email}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => void approveUser(user.id)}
-                  disabled={actionUserId === user.id}
-                >
-                  {actionUserId === user.id && actionType === "approve" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="mr-2 h-4 w-4" />
-                  )}
-                  Approve
-                </Button>
-              </div>
-            ))
-          )}
+          <PendingApprovalsContent
+            loading={loading}
+            pendingUsers={pendingUsers}
+            actionUserId={actionUserId}
+            actionType={actionType}
+            onApprove={approveUser}
+          />
         </CardContent>
       </Card>
 
@@ -267,55 +462,14 @@ export default function AdminUserControl() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading users...</p>
-          ) : approvedUsers.length === 0 ? (
-            <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
-              No approved users.
-            </p>
-          ) : (
-            approvedUsers.map((user) => {
-              const isCurrentUser = sessionUser?.id === user.id;
-              return (
-                <div
-                  key={user.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {user.name?.trim() || user.email}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {user.email}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="rounded-full border border-border/70 px-2 py-0.5">
-                        {user.role}
-                      </span>
-                      {isCurrentUser ? (
-                        <span className="rounded-full border border-border/70 px-2 py-0.5">
-                          You
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => void deleteUser(user.id)}
-                    disabled={actionUserId === user.id || isCurrentUser}
-                  >
-                    {actionUserId === user.id && actionType === "delete" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="mr-2 h-4 w-4" />
-                    )}
-                    Delete
-                  </Button>
-                </div>
-              );
-            })
-          )}
+          <ApprovedUsersContent
+            loading={loading}
+            approvedUsers={approvedUsers}
+            sessionUserId={sessionUser?.id}
+            actionUserId={actionUserId}
+            actionType={actionType}
+            onDelete={deleteUser}
+          />
         </CardContent>
       </Card>
     </div>

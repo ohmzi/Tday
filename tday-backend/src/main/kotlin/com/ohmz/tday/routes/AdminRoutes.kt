@@ -4,17 +4,16 @@ import arrow.core.raise.either
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.AdminSettingsPatchRequest
+import com.ohmz.tday.shared.model.AdminSettingsResponse
 import com.ohmz.tday.services.AdminService
 import com.ohmz.tday.services.AppConfigService
 import com.ohmz.tday.services.CacheService
-import com.ohmz.tday.services.TodoSummaryService
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import com.ohmz.tday.di.inject
 
 fun Route.adminRoutes() {
     val appConfigService by inject<AppConfigService>()
-    val todoSummaryService by inject<TodoSummaryService>()
     val cacheService by inject<CacheService>()
     val adminService by inject<AdminService>()
 
@@ -22,13 +21,18 @@ fun Route.adminRoutes() {
         route("/settings") {
             get {
                 call.withAuth { user ->
-                    either<AppError, Map<String, Any?>> {
+                    either<AppError, AdminSettingsResponse> {
+                        if (user.approvalStatus != "APPROVED") {
+                            raise(AppError.Forbidden("your account is awaiting admin approval"))
+                        }
+                        if (user.role != "ADMIN") {
+                            raise(AppError.Forbidden("admin access required"))
+                        }
+
                         val config = appConfigService.getGlobalConfig().bind()
-                        val ollamaHealthy = todoSummaryService.isHealthy()
-                        mapOf(
-                            "aiSummaryEnabled" to config.aiSummaryEnabled,
-                            "updatedAt" to config.updatedAt,
-                            "ollamaStatus" to if (ollamaHealthy) "healthy" else "unreachable",
+                        AdminSettingsResponse(
+                            aiSummaryEnabled = config.aiSummaryEnabled,
+                            updatedAt = config.updatedAt,
                         )
                     }
                 }
@@ -36,11 +40,21 @@ fun Route.adminRoutes() {
 
             patch {
                 call.withAuth { user ->
-                    either<AppError, Map<String, Any?>> {
+                    either<AppError, AdminSettingsResponse> {
+                        if (user.approvalStatus != "APPROVED") {
+                            raise(AppError.Forbidden("your account is awaiting admin approval"))
+                        }
+                        if (user.role != "ADMIN") {
+                            raise(AppError.Forbidden("admin access required"))
+                        }
+
                         val body = call.receive<AdminSettingsPatchRequest>()
                         val config = appConfigService.setAiSummaryEnabled(body.aiSummaryEnabled, user.id).bind()
                         cacheService.clear()
-                        mapOf("aiSummaryEnabled" to config.aiSummaryEnabled, "updatedAt" to config.updatedAt)
+                        AdminSettingsResponse(
+                            aiSummaryEnabled = config.aiSummaryEnabled,
+                            updatedAt = config.updatedAt,
+                        )
                     }
                 }
             }

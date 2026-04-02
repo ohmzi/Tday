@@ -1,88 +1,73 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   compareVersions,
+  createFallbackReleaseMetadata,
   CURRENT_APP_VERSION,
+  CURRENT_RELEASE_PATH,
+  fetchReleaseMetadata,
   GITHUB_RELEASES_URL,
-  mapGitHubRelease,
+  LATEST_RELEASE_METADATA_URL,
   normalizeVersion,
-  type GitHubRelease,
+  readStoredCurrentRelease,
+  storeCurrentRelease,
+  type ReleaseMetadata,
 } from "@/features/release/lib/release";
-
-const GITHUB_RELEASES_API_URL = "https://api.github.com/repos/ohmzi/Tday/releases";
 
 export type ReleaseInfo = {
   currentVersion: string;
-  currentRelease: GitHubRelease | null;
-  latestRelease: GitHubRelease | null;
+  currentRelease: ReleaseMetadata;
+  latestRelease: ReleaseMetadata | null;
   hasUpdate: boolean;
-  checkedAt: string;
-  error: string | null;
   latestUrl: string;
 };
 
-async function fetchGitHubRelease(url: string): Promise<GitHubRelease> {
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/vnd.github+json",
-    },
-    cache: "no-store",
-  });
+/** Loads the installed release metadata, preferring the bundled copy and falling back to local storage. */
+async function loadCurrentRelease(): Promise<ReleaseMetadata> {
+  const cachedRelease = readStoredCurrentRelease(CURRENT_APP_VERSION);
 
-  if (!response.ok) {
-    throw new Error(`GitHub release lookup failed (${response.status})`);
-  }
-
-  const json = (await response.json()) as Record<string, unknown>;
-  return mapGitHubRelease(json);
-}
-
-async function fetchReleaseByTag(tag: string): Promise<GitHubRelease | null> {
   try {
-    return await fetchGitHubRelease(`${GITHUB_RELEASES_API_URL}/tags/${tag}`);
+    const currentRelease = await fetchReleaseMetadata(CURRENT_RELEASE_PATH);
+    if (normalizeVersion(currentRelease.version) === CURRENT_APP_VERSION) {
+      storeCurrentRelease(currentRelease);
+      return currentRelease;
+    }
   } catch {
-    return null;
+    // Fall back to the stored copy or a generated placeholder.
   }
+
+  return cachedRelease ?? createFallbackReleaseMetadata(CURRENT_APP_VERSION);
 }
 
+/** Combines installed and latest release metadata into the admin-facing release state. */
 async function getReleaseInfo(): Promise<ReleaseInfo> {
-  const checkedAt = new Date().toISOString();
+  const currentRelease = await loadCurrentRelease();
 
   try {
-    const latestRelease = await fetchGitHubRelease(`${GITHUB_RELEASES_API_URL}/latest`);
-    const currentVersion = CURRENT_APP_VERSION;
-    const normalizedLatestVersion = normalizeVersion(latestRelease.tagName);
-    const comparison = compareVersions(normalizedLatestVersion, currentVersion);
+    const latestRelease = await fetchReleaseMetadata(
+      `${LATEST_RELEASE_METADATA_URL}?t=${Date.now()}`,
+    );
+    const comparison = compareVersions(latestRelease.version, CURRENT_APP_VERSION);
     const hasUpdate = typeof comparison === "number" ? comparison > 0 : false;
 
-    const currentRelease =
-      normalizedLatestVersion === currentVersion
-        ? latestRelease
-        : (await fetchReleaseByTag(`v${currentVersion}`)) ??
-          (await fetchReleaseByTag(currentVersion));
-
-    return {
-      currentVersion,
-      currentRelease,
-      latestRelease,
-      hasUpdate,
-      checkedAt,
-      error: null,
-      latestUrl: latestRelease.htmlUrl || GITHUB_RELEASES_URL,
-    };
-  } catch (error) {
     return {
       currentVersion: CURRENT_APP_VERSION,
-      currentRelease: null,
+      currentRelease,
+      latestRelease: hasUpdate ? latestRelease : null,
+      hasUpdate,
+      latestUrl: hasUpdate ? latestRelease.releaseUrl : currentRelease.releaseUrl,
+    };
+  } catch {
+    return {
+      currentVersion: CURRENT_APP_VERSION,
+      currentRelease,
       latestRelease: null,
       hasUpdate: false,
-      checkedAt,
-      error: error instanceof Error ? error.message : "Could not fetch release information.",
-      latestUrl: GITHUB_RELEASES_URL,
+      latestUrl: currentRelease.releaseUrl || GITHUB_RELEASES_URL,
     };
   }
 }
 
+/** Queries the release status for the current installed build and GitHub metadata snapshot. */
 export function useReleaseInfo(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["releaseInfo", CURRENT_APP_VERSION],
