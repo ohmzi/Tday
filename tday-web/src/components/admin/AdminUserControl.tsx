@@ -44,6 +44,7 @@ type ApprovedUserRowProps = {
   onDelete: (userId: string) => void;
 };
 
+/** Renders a pending-user row with the approve action wired to the current request state. */
 const PendingApprovalRow = ({
   user,
   actionUserId,
@@ -72,6 +73,7 @@ const PendingApprovalRow = ({
   </div>
 );
 
+/** Renders an approved-user row and prevents deleting the current signed-in admin. */
 const ApprovedUserRow = ({
   user,
   sessionUserId,
@@ -116,6 +118,7 @@ const ApprovedUserRow = ({
   );
 };
 
+/** Renders the shared admin page header with the refresh action. */
 const AdminPageHeader = ({
   loading,
   onRefresh,
@@ -149,6 +152,7 @@ const AdminPageHeader = ({
   </header>
 );
 
+/** Links admins into the release details page from the main admin dashboard. */
 const VersionLinkRow = () => (
   <Link
     href="/app/admin/version"
@@ -167,6 +171,7 @@ const VersionLinkRow = () => (
   </Link>
 );
 
+/** Chooses the correct pending-approval content state for the admin list card. */
 const PendingApprovalsContent = ({
   loading,
   pendingUsers,
@@ -203,6 +208,7 @@ const PendingApprovalsContent = ({
   ));
 };
 
+/** Chooses the correct approved-users content state for the admin list card. */
 const ApprovedUsersContent = ({
   loading,
   approvedUsers,

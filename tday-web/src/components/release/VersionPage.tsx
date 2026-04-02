@@ -66,6 +66,7 @@ export default function VersionPage() {
   );
 }
 
+/** Lays out the compact release-status fields in the shared grid. */
 const ReleaseStatusFields = ({
   fields,
   hasUpdate,
@@ -80,6 +81,7 @@ const ReleaseStatusFields = ({
   </div>
 );
 
+/** Shows the version and published date fields for a release card. */
 const ReleaseMetadataFields = ({
   version,
   publishedAt,
@@ -96,6 +98,7 @@ const ReleaseMetadataFields = ({
   </div>
 );
 
+/** Switches between real release notes and the empty fallback copy. */
 const ReleaseNotesSection = ({
   notes,
   fallbackNote,
@@ -115,6 +118,7 @@ const ReleaseNotesSection = ({
   </div>
 );
 
+/** Opens the matching GitHub release in a new tab. */
 const ReleaseLinkButton = ({ releaseUrl }: { releaseUrl: string }) => (
   <Button
     type="button"
