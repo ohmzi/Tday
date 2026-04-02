@@ -1,10 +1,7 @@
 {
-  "version": "1.8.18",
-  "publishedAt": "2026-04-02T06:29:53-04:00",
-  "notes": [
-    "Add structured web release metadata",
-    "Tighten admin version access flow"
-  ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v1.8.18",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v1.8.17..v1.8.18"
+  "version": "1.8.19",
+  "publishedAt": null,
+  "notes": [],
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases",
+  "compareUrl": null
 }
