@@ -293,7 +293,7 @@ function ExpandedSidebarContent({
             onNavigate?.();
           }}
           className={cn(
-            "group relative flex h-12 w-full items-center gap-0 overflow-hidden rounded-2xl border-2 border-dashed border-accent/40 bg-accent/5 pl-0 pr-4 text-base font-medium text-accent transition-colors duration-500 hover:border-solid hover:border-accent hover:bg-accent hover:text-accent-foreground hover:shadow-lg hover:shadow-accent/20 active:scale-[0.98]",
+            "group relative flex h-12 w-full items-center gap-0 overflow-hidden rounded-2xl border-2 border-dashed border-accent/40 bg-accent/5 pl-0 pr-4 text-base font-medium text-accent transition-colors duration-500 hover:border-solid hover:border-accent hover:bg-accent hover:text-accent-foreground hover:shadow-lg hover:shadow-accent/20 active:scale-[0.98] active:border-solid active:border-accent active:bg-accent active:text-accent-foreground active:shadow-lg active:shadow-accent/20",
           )}
           aria-label="Add a task"
         >
@@ -574,7 +574,7 @@ function CollapsedSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 onNavigate?.();
               }}
               className={cn(
-                "group flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-accent/40 bg-accent/5 text-accent transition-colors duration-500 hover:border-solid hover:border-accent hover:bg-accent hover:text-accent-foreground hover:shadow-lg hover:shadow-accent/20 active:scale-95",
+                "group flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-dashed border-accent/40 bg-accent/5 text-accent transition-colors duration-500 hover:border-solid hover:border-accent hover:bg-accent hover:text-accent-foreground hover:shadow-lg hover:shadow-accent/20 active:scale-95 active:border-solid active:border-accent active:bg-accent active:text-accent-foreground active:shadow-lg active:shadow-accent/20",
               )}
               aria-label="Add a task"
             >
