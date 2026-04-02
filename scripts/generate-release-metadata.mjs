@@ -7,6 +7,7 @@ const DEFAULT_CURRENT_OUTPUT = "tday-web/public/release/current-release.json";
 const DEFAULT_LATEST_OUTPUT = "tday-web/public/release/latest-changes.json";
 const DEFAULT_BODY_OUTPUT = "body.md";
 
+/** Parses CLI flags passed in `--key value` form. */
 function parseArgs(argv) {
   const parsed = {};
 
@@ -28,6 +29,7 @@ function parseArgs(argv) {
   return parsed;
 }
 
+/** Normalizes a release version by trimming it and removing a leading `v`. */
 function normalizeVersion(raw) {
   if (!raw) return null;
   const value = String(raw).trim();
@@ -35,10 +37,12 @@ function normalizeVersion(raw) {
   return value.replace(/^[vV]/, "");
 }
 
+/** Runs a git command and returns its trimmed stdout. */
 function runGit(args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
 }
 
+/** Runs a git command and returns an empty string when the command fails. */
 function safeRunGit(args) {
   try {
     return runGit(args);
@@ -47,6 +51,7 @@ function safeRunGit(args) {
   }
 }
 
+/** Counts the files changed by a commit so larger changes rank a little higher. */
 function getChangedFileCount(hash) {
   const files = safeRunGit(["show", "--name-only", "--format=", hash])
     .split("\n")
@@ -56,6 +61,7 @@ function getChangedFileCount(hash) {
   return files.length;
 }
 
+/** Strips release-noise prefixes and suffixes from commit subjects. */
 function cleanSubject(subject) {
   return subject
     .replace(/^[a-z]+(\([^)]+\))?!?:\s*/i, "")
@@ -65,6 +71,7 @@ function cleanSubject(subject) {
     .replace(/\.$/, "");
 }
 
+/** Scores commit subjects so feature-facing changes bubble up into release notes. */
 function scoreCommit(subject, hash) {
   const commitType = subject.match(/^([a-z]+)/i)?.[1]?.toLowerCase() ?? "";
   const typeWeight = {
@@ -79,6 +86,7 @@ function scoreCommit(subject, hash) {
   return typeWeight * 100 + getChangedFileCount(hash);
 }
 
+/** Lists release-note candidates between the previous tag and the current ref. */
 function listCommitCandidates(previousTag, toRef) {
   const range = previousTag ? `${previousTag}..${toRef}` : toRef;
   const raw = safeRunGit(["log", "--no-merges", "--format=%H%x1f%s%x1e", range]);
@@ -106,6 +114,7 @@ function listCommitCandidates(previousTag, toRef) {
     .sort((left, right) => right.score - left.score);
 }
 
+/** Builds the top three release notes for the current release range. */
 function buildTopNotes(previousTag, toRef) {
   const seen = new Set();
   const notes = [];
@@ -125,15 +134,18 @@ function buildTopNotes(previousTag, toRef) {
   return ["Maintenance improvements across the app."];
 }
 
+/** Creates the parent directory for an output file when it does not exist yet. */
 function ensureDirectory(filePath) {
   mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
+/** Writes formatted JSON output to disk. */
 function writeJson(filePath, value) {
   ensureDirectory(filePath);
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
+/** Writes the GitHub release body that accompanies the generated metadata files. */
 function writeReleaseBody(filePath, metadata) {
   const compareLine = metadata.compareUrl
     ? `**Full Changelog**: ${metadata.compareUrl}`
@@ -187,6 +199,7 @@ function writeReleaseBody(filePath, metadata) {
   writeFileSync(filePath, body, "utf8");
 }
 
+/** Generates local release metadata, the latest metadata snapshot, and the release body. */
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const version = normalizeVersion(args.version);

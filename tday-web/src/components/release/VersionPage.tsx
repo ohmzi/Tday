@@ -66,6 +66,7 @@ export default function VersionPage() {
   );
 }
 
+/** Summarizes whether the installed web build matches the latest published release metadata. */
 function ReleaseStatusCard({
   releaseInfo,
 }: {
