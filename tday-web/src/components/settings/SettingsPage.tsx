@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowUpRight,
   Check,
   Eye,
   EyeOff,
@@ -34,8 +35,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
-
-const APP_VERSION = "1.6.0";
+import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
 
 const localeOptions = [
   { code: "en", label: "English" },
@@ -264,12 +264,38 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
+        <CardHeader className="space-y-1">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Info className="h-4 w-4 text-accent" />
+            App Version
+          </CardTitle>
+          <CardDescription>See release notes and check whether a newer GitHub version is available</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            href="/app/version"
+            className="group flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/60 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-background/90"
+          >
+            <div className="space-y-1">
+              <div className="text-sm font-semibold text-foreground">
+                Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Open the full release page
+              </div>
+            </div>
+            <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </Link>
+        </CardContent>
+      </Card>
+
       <KeyboardShortcuts open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       <div className="flex flex-col items-center gap-1.5 text-xs text-muted-foreground pt-2 pb-4">
         <div className="flex items-center gap-2">
           <Info className="h-3.5 w-3.5" />
-          <span>Version {APP_VERSION}</span>
+          <span>Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}</span>
         </div>
       </div>
     </div>
