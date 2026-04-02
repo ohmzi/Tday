@@ -1,38 +1,18 @@
-export type GitHubReleaseAsset = {
-  name: string;
-  browserDownloadUrl: string;
-  size: number;
-  downloadCount: number;
-};
-
-export type GitHubRelease = {
-  tagName: string;
-  name: string | null;
-  body: string | null;
-  publishedAt: string | null;
-  htmlUrl: string;
-  assets: GitHubReleaseAsset[];
+export type ReleaseMetadata = {
   version: string;
+  publishedAt: string | null;
+  notes: string[];
+  releaseUrl: string;
+  compareUrl: string | null;
 };
 
-type RawGitHubReleaseAsset = {
-  name?: string;
-  browser_download_url?: string;
-  size?: number;
-  download_count?: number;
-};
-
-type RawGitHubRelease = {
-  tag_name?: string;
-  name?: string;
-  body?: string;
-  published_at?: string;
-  html_url?: string;
-  assets?: RawGitHubReleaseAsset[];
-};
+const RELEASE_STORAGE_KEY = "tday.release.current.v1";
 
 export const CURRENT_APP_VERSION = normalizeVersion(__APP_VERSION__) ?? "0.0.0";
 export const GITHUB_RELEASES_URL = "https://github.com/ohmzi/Tday/releases";
+export const CURRENT_RELEASE_PATH = "/release/current-release.json";
+export const LATEST_RELEASE_METADATA_URL =
+  "https://raw.githubusercontent.com/ohmzi/Tday/master/tday-web/public/release/latest-changes.json";
 
 export function normalizeVersion(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -97,56 +77,105 @@ export function formatReleaseDate(raw: string | null | undefined): string | null
   }).format(date);
 }
 
-export function formatReleaseFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-
-  const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} KB`;
-
-  const mb = kb / 1024;
-  return `${mb.toFixed(1)} MB`;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
-export function parseReleaseNotes(body: string | null | undefined): string[] {
-  if (!body) return [];
+function normalizeNotes(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
 
-  return body
-    .split(/\r?\n/)
-    .map((line) => line.trim())
+  return raw
+    .map((note) => (typeof note === "string" ? note.trim() : ""))
     .filter(Boolean)
-    .filter((line) => !line.startsWith("#"))
-    .map((line) => line.replace(/^[-*•]\s+/, "").replace(/^\d+\.\s+/, "").trim())
-    .filter(Boolean);
+    .slice(0, 3);
 }
 
-export function mapGitHubRelease(raw: RawGitHubRelease): GitHubRelease {
-  const tagName = typeof raw.tag_name === "string" ? raw.tag_name : "";
-  const htmlUrl =
-    typeof raw.html_url === "string" && raw.html_url.trim()
-      ? raw.html_url
-      : GITHUB_RELEASES_URL;
+export function createFallbackReleaseMetadata(version = CURRENT_APP_VERSION): ReleaseMetadata {
+  const normalizedVersion = normalizeVersion(version) ?? CURRENT_APP_VERSION;
 
   return {
-    tagName,
-    name: typeof raw.name === "string" ? raw.name : null,
-    body: typeof raw.body === "string" ? raw.body : null,
-    publishedAt: typeof raw.published_at === "string" ? raw.published_at : null,
-    htmlUrl,
-    assets: Array.isArray(raw.assets)
-      ? raw.assets
-          .filter(
-            (asset): asset is Required<Pick<RawGitHubReleaseAsset, "name" | "browser_download_url">> &
-              RawGitHubReleaseAsset =>
-              typeof asset?.name === "string" &&
-              typeof asset?.browser_download_url === "string",
-          )
-          .map((asset) => ({
-            name: asset.name,
-            browserDownloadUrl: asset.browser_download_url,
-            size: typeof asset.size === "number" ? asset.size : 0,
-            downloadCount: typeof asset.download_count === "number" ? asset.download_count : 0,
-          }))
-      : [],
-    version: normalizeVersion(tagName) ?? tagName,
+    version: normalizedVersion,
+    publishedAt: null,
+    notes: [],
+    releaseUrl: `${GITHUB_RELEASES_URL}/tag/v${normalizedVersion}`,
+    compareUrl: null,
   };
+}
+
+export function parseReleaseMetadata(raw: unknown): ReleaseMetadata | null {
+  if (!isRecord(raw)) return null;
+
+  const version = normalizeVersion(
+    typeof raw.version === "string" ? raw.version : null,
+  );
+  if (!version) return null;
+
+  const releaseUrl =
+    typeof raw.releaseUrl === "string" && raw.releaseUrl.trim()
+      ? raw.releaseUrl.trim()
+      : `${GITHUB_RELEASES_URL}/tag/v${version}`;
+
+  const compareUrl =
+    typeof raw.compareUrl === "string" && raw.compareUrl.trim()
+      ? raw.compareUrl.trim()
+      : null;
+
+  return {
+    version,
+    publishedAt:
+      typeof raw.publishedAt === "string" && raw.publishedAt.trim()
+        ? raw.publishedAt.trim()
+        : null,
+    notes: normalizeNotes(raw.notes),
+    releaseUrl,
+    compareUrl,
+  };
+}
+
+export async function fetchReleaseMetadata(url: string): Promise<ReleaseMetadata> {
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Release metadata lookup failed (${response.status})`);
+  }
+
+  const json = (await response.json()) as unknown;
+  const metadata = parseReleaseMetadata(json);
+  if (!metadata) {
+    throw new Error("Release metadata is invalid");
+  }
+
+  return metadata;
+}
+
+export function readStoredCurrentRelease(version = CURRENT_APP_VERSION): ReleaseMetadata | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(RELEASE_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = parseReleaseMetadata(JSON.parse(raw));
+    if (!parsed) return null;
+
+    return normalizeVersion(parsed.version) === normalizeVersion(version) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function storeCurrentRelease(release: ReleaseMetadata) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(RELEASE_STORAGE_KEY, JSON.stringify(release));
+  } catch {
+    // Ignore storage write failures in restricted browser contexts.
+  }
 }

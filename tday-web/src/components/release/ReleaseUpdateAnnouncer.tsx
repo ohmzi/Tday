@@ -26,21 +26,22 @@ function setSessionFlag(key: string) {
 }
 
 export default function ReleaseUpdateAnnouncer() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const locale = useLocale();
   const navigate = useNavigate();
   const lastAnnouncedVersionRef = useRef<string | null>(null);
-  const releaseInfoQuery = useReleaseInfo({ enabled: isAuthenticated });
+  const isAdmin = isAuthenticated && user?.role === "ADMIN" && user?.approvalStatus === "APPROVED";
+  const releaseInfoQuery = useReleaseInfo({ enabled: isAdmin });
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAdmin) return;
 
     const releaseInfo = releaseInfoQuery.data;
     const latestVersion = formatDisplayVersion(releaseInfo?.latestRelease?.version);
 
     if (!releaseInfo?.hasUpdate || !latestVersion) return;
     if (lastAnnouncedVersionRef.current === latestVersion) return;
-    if (window.location.pathname.includes("/app/version")) return;
+    if (window.location.pathname.includes("/app/admin/version")) return;
 
     const sessionKey = buildToastSessionKey(latestVersion);
     if (hasSessionFlag(sessionKey)) {
@@ -57,7 +58,7 @@ export default function ReleaseUpdateAnnouncer() {
           type="button"
           onClick={() => {
             toast.dismiss(id);
-            navigate(`/${locale}/app/version`);
+            navigate(`/${locale}/app/admin/version`);
           }}
           className="group flex w-[min(calc(100vw-2rem),26rem)] items-start gap-3 rounded-2xl border border-border/80 bg-card/95 p-4 text-left shadow-[0_20px_45px_-24px_hsl(var(--shadow)/0.45)] backdrop-blur-2xl transition hover:border-accent/35"
         >
@@ -69,7 +70,7 @@ export default function ReleaseUpdateAnnouncer() {
               Version {latestVersion} is available
             </span>
             <span className="mt-1 block text-sm leading-5 text-muted-foreground">
-              Open App Version to see what changed on GitHub.
+              Open App Version to see what changed in this release.
             </span>
           </span>
           <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -79,7 +80,7 @@ export default function ReleaseUpdateAnnouncer() {
         duration: 10000,
       },
     );
-  }, [isAuthenticated, locale, navigate, releaseInfoQuery.data]);
+  }, [isAdmin, locale, navigate, releaseInfoQuery.data]);
 
   return null;
 }
