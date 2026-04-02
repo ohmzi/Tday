@@ -23,6 +23,7 @@ const CompletedPage = lazy(() => import("@/pages/CompletedPage"));
 const AddTaskPage = lazy(() => import("@/pages/AddTaskPage"));
 const AdminPage = lazy(() => import("@/pages/AdminPage"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const VersionPage = lazy(() => import("@/pages/VersionPage"));
 const ListPage = lazy(() => import("@/pages/ListPage"));
 const CalendarPage = lazy(() => import("@/pages/CalendarPage"));
 const AuthLayout = lazy(() => import("@/pages/AuthLayout"));
@@ -82,6 +83,7 @@ export const router = createBrowserRouter([
                   { path: "add-task", element: <AddTaskPage /> },
                   { path: "admin", element: <AdminPage /> },
                   { path: "settings", element: <SettingsPage /> },
+                  { path: "version", element: <VersionPage /> },
                   { path: "list/:id", element: <ListPage /> },
                 ],
               },
