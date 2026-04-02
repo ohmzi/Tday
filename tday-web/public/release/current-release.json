@@ -1,0 +1,11 @@
+{
+  "version": "1.8.17",
+  "publishedAt": "2026-04-01T23:26:42-04:00",
+  "notes": [
+    "Add release toast and version page",
+    "Implement new Toast system",
+    "Smooth collapsing title handoff"
+  ],
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v1.8.17",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v1.8.15..v1.8.17"
+}
