@@ -32,6 +32,7 @@
     <!-- Home screen -->
     <string name="home_title">T\'Day</string>
     <string name="home_category_today">Today</string>
+    <string name="home_category_overdue">Overdue</string>
     <string name="home_category_scheduled">Scheduled</string>
     <string name="home_category_all">All</string>
     <string name="home_category_priority">Priority</string>
@@ -97,6 +98,7 @@
     <!-- Todo list screen -->
     <string name="todos_summarize">Summarize tasks</string>
     <string name="todos_empty_today">No tasks for today</string>
+    <string name="todos_empty_overdue">No overdue tasks</string>
     <string name="todos_empty_priority">No priority tasks</string>
     <string name="todos_empty_scheduled">No scheduled tasks</string>
     <string name="todos_empty_all">No tasks yet</string>

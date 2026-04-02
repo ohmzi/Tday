@@ -16,6 +16,7 @@ const AppLayout = lazy(() => import("@/pages/AppLayout"));
 const GeneralLayout = lazy(() => import("@/pages/GeneralLayout"));
 const CalendarLayout = lazy(() => import("@/pages/CalendarLayout"));
 const TodayPage = lazy(() => import("@/pages/TodayPage"));
+const OverduePage = lazy(() => import("@/pages/OverduePage"));
 const TodoPage = lazy(() => import("@/pages/TodoPage"));
 const PriorityPage = lazy(() => import("@/pages/PriorityPage"));
 const ScheduledPage = lazy(() => import("@/pages/ScheduledPage"));
@@ -78,6 +79,7 @@ export const router = createBrowserRouter([
                 element: <GeneralLayout />,
                 children: [
                   { path: "tday", element: <TodayPage /> },
+                  { path: "overdue", element: <OverduePage /> },
                   { path: "todo", element: <TodoPage /> },
                   { path: "priority", element: <PriorityPage /> },
                   { path: "scheduled", element: <ScheduledPage /> },

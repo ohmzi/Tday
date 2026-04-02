@@ -278,6 +278,7 @@ fun TdayApp() {
                                     uiState = homeUiState,
                                     onRefresh = homeViewModel::refresh,
                                     onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
+                                    onOpenOverdue = { navController.navigate(AppRoute.OverdueTodos.route) },
                                     onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
                                     onOpenAll = { navController.navigate(AppRoute.AllTodos.create()) },
                                     onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
@@ -307,6 +308,7 @@ fun TdayApp() {
                                     uiState = UnauthenticatedHomeUiState,
                                     onRefresh = {},
                                     onOpenToday = {},
+                                    onOpenOverdue = {},
                                     onOpenScheduled = {},
                                     onOpenAll = {},
                                     onOpenPriority = {},
@@ -378,6 +380,17 @@ fun TdayApp() {
                 ) {
                     TodosRoute(
                         mode = TodoListMode.TODAY,
+                        onBack = { navController.popBackStack() },
+                        onTaskDeleted = ::showTaskDeletedToast,
+                    )
+                }
+
+                composable(
+                    route = AppRoute.OverdueTodos.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/overdue" }),
+                ) {
+                    TodosRoute(
+                        mode = TodoListMode.OVERDUE,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                     )
