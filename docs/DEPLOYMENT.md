@@ -120,7 +120,8 @@ This ensures:
    - Runs lint and the full test suite (including guardrails).
    - **Only if tests pass**: builds and pushes Docker image to `ghcr.io/ohmzi/tday:latest` and `:v<version>`.
    - Creates a Git tag.
-   - Generates release notes from merged PRs.
+   - Generates structured release metadata from the commit range since the previous tag.
+   - Writes `tday-web/public/release/current-release.json` into the shipped web build and updates `tday-web/public/release/latest-changes.json` on `master`.
    - Creates a GitHub release.
 
 ### Version Bumping

@@ -124,7 +124,7 @@ The app version is defined **once** in `tday-web/package.json`. Every other syst
 | Consumer | How it reads the version |
 |----------|------------------------|
 | **Web (Vite)** | Bundled automatically by Vite from `package.json` |
-| **CI/CD (release.yml)** | `node -p "require('./tday-web/package.json').version"` → Docker tags, Git tags, GitHub release |
+| **CI/CD (release.yml)** | `node -p "require('./tday-web/package.json').version"` → Docker tags, Git tags, GitHub release, and generated release metadata files |
 | **Android (Gradle)** | `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and `versionCode` |
 | **Android runtime** | `BuildConfig.VERSION_NAME` (sent in `X-Tday-App-Version` header) |
 
