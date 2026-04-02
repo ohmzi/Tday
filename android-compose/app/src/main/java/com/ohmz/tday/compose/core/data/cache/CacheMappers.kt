@@ -10,6 +10,9 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoDto
 import com.ohmz.tday.compose.core.model.TodoItem
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 internal const val LOCAL_TODO_PREFIX = "local-todo-"
 internal const val LOCAL_LIST_PREFIX = "local-list-"
@@ -205,11 +208,17 @@ internal fun todoMergeKey(
     return "$canonicalId::${instanceDateEpochMs ?: Long.MIN_VALUE}"
 }
 
+private fun parseUtcLikeInstant(value: String): Instant? {
+    return runCatching { Instant.parse(value) }.getOrNull()
+        ?: runCatching { OffsetDateTime.parse(value).toInstant() }.getOrNull()
+        ?: runCatching { LocalDateTime.parse(value).toInstant(ZoneOffset.UTC) }.getOrNull()
+}
+
 internal fun parseInstant(value: String): Instant {
-    return runCatching { Instant.parse(value) }.getOrElse { Instant.now() }
+    return parseUtcLikeInstant(value) ?: Instant.now()
 }
 
 internal fun parseOptionalInstant(value: String?): Instant? {
     if (value.isNullOrBlank()) return null
-    return runCatching { Instant.parse(value) }.getOrNull()
+    return parseUtcLikeInstant(value)
 }
