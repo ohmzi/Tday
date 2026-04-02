@@ -4,6 +4,7 @@ import java.time.Instant
 
 enum class TodoListMode {
     TODAY,
+    OVERDUE,
     SCHEDULED,
     ALL,
     PRIORITY,
