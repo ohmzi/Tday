@@ -116,6 +116,132 @@ const ApprovedUserRow = ({
   );
 };
 
+const AdminPageHeader = ({
+  loading,
+  onRefresh,
+}: {
+  loading: boolean;
+  onRefresh: () => void;
+}) => (
+  <header className="mt-8 flex flex-wrap items-center justify-between gap-3 sm:mt-10 lg:mt-0">
+    <div className="space-y-1">
+      <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <Users className="h-5 w-5 text-accent" />
+        Admin
+      </h1>
+      <p className="text-sm text-muted-foreground">
+        Approve pending registrations and manage user access.
+      </p>
+    </div>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onRefresh}
+      disabled={loading}
+    >
+      {loading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <RefreshCcw className="mr-2 h-4 w-4" />
+      )}
+      Refresh
+    </Button>
+  </header>
+);
+
+const VersionLinkRow = () => (
+  <Link
+    href="/app/admin/version"
+    className="group flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/20 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-muted/30"
+  >
+    <div className="min-w-0 space-y-1">
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <Info className="h-4 w-4 text-accent" />
+        <span>Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}</span>
+      </div>
+      <div className="text-sm text-muted-foreground">
+        Open the admin-only release page
+      </div>
+    </div>
+    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+  </Link>
+);
+
+const PendingApprovalsContent = ({
+  loading,
+  pendingUsers,
+  actionUserId,
+  actionType,
+  onApprove,
+}: {
+  loading: boolean;
+  pendingUsers: AdminUser[];
+  actionUserId: string | null;
+  actionType: "approve" | "delete" | null;
+  onApprove: (userId: string) => void;
+}) => {
+  if (loading) {
+    return <p className="text-sm text-muted-foreground">Loading users...</p>;
+  }
+
+  if (pendingUsers.length === 0) {
+    return (
+      <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+        No pending users.
+      </p>
+    );
+  }
+
+  return pendingUsers.map((user) => (
+    <PendingApprovalRow
+      key={user.id}
+      user={user}
+      actionUserId={actionUserId}
+      actionType={actionType}
+      onApprove={onApprove}
+    />
+  ));
+};
+
+const ApprovedUsersContent = ({
+  loading,
+  approvedUsers,
+  sessionUserId,
+  actionUserId,
+  actionType,
+  onDelete,
+}: {
+  loading: boolean;
+  approvedUsers: AdminUser[];
+  sessionUserId: string | null | undefined;
+  actionUserId: string | null;
+  actionType: "approve" | "delete" | null;
+  onDelete: (userId: string) => void;
+}) => {
+  if (loading) {
+    return <p className="text-sm text-muted-foreground">Loading users...</p>;
+  }
+
+  if (approvedUsers.length === 0) {
+    return (
+      <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+        No approved users.
+      </p>
+    );
+  }
+
+  return approvedUsers.map((user) => (
+    <ApprovedUserRow
+      key={user.id}
+      user={user}
+      sessionUserId={sessionUserId}
+      actionUserId={actionUserId}
+      actionType={actionType}
+      onDelete={onDelete}
+    />
+  ));
+};
+
 export default function AdminUserControl() {
   const { user: sessionUser } = useAuth();
   const { toast } = useToast();
@@ -252,30 +378,7 @@ export default function AdminUserControl() {
         <MobileSearchHeader />
       </div>
 
-      <header className="mt-8 flex flex-wrap items-center justify-between gap-3 sm:mt-10 lg:mt-0">
-        <div className="space-y-1">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <Users className="h-5 w-5 text-accent" />
-            Admin
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Approve pending registrations and manage user access.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void fetchUsers()}
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCcw className="mr-2 h-4 w-4" />
-          )}
-          Refresh
-        </Button>
-      </header>
+      <AdminPageHeader loading={loading} onRefresh={() => void fetchUsers()} />
 
       <Card className="rounded-2xl border-border/70 bg-card/95">
         <CardHeader>
@@ -312,21 +415,7 @@ export default function AdminUserControl() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Link
-            href="/app/admin/version"
-            className="group flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/20 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-muted/30"
-          >
-            <div className="min-w-0 space-y-1">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Info className="h-4 w-4 text-accent" />
-                <span>Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}</span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Open the admin-only release page
-              </div>
-            </div>
-            <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </Link>
+          <VersionLinkRow />
         </CardContent>
       </Card>
 
@@ -338,23 +427,13 @@ export default function AdminUserControl() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading users...</p>
-          ) : pendingUsers.length === 0 ? (
-            <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
-              No pending users.
-            </p>
-          ) : (
-            pendingUsers.map((user) => (
-              <PendingApprovalRow
-                key={user.id}
-                user={user}
-                actionUserId={actionUserId}
-                actionType={actionType}
-                onApprove={approveUser}
-              />
-            ))
-          )}
+          <PendingApprovalsContent
+            loading={loading}
+            pendingUsers={pendingUsers}
+            actionUserId={actionUserId}
+            actionType={actionType}
+            onApprove={approveUser}
+          />
         </CardContent>
       </Card>
 
@@ -366,26 +445,14 @@ export default function AdminUserControl() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {loading ? (
-            <p className="text-sm text-muted-foreground">Loading users...</p>
-          ) : approvedUsers.length === 0 ? (
-            <p className="rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
-              No approved users.
-            </p>
-          ) : (
-            approvedUsers.map((user) => {
-              return (
-                <ApprovedUserRow
-                  key={user.id}
-                  user={user}
-                  sessionUserId={sessionUser?.id}
-                  actionUserId={actionUserId}
-                  actionType={actionType}
-                  onDelete={deleteUser}
-                />
-              );
-            })
-          )}
+          <ApprovedUsersContent
+            loading={loading}
+            approvedUsers={approvedUsers}
+            sessionUserId={sessionUser?.id}
+            actionUserId={actionUserId}
+            actionType={actionType}
+            onDelete={deleteUser}
+          />
         </CardContent>
       </Card>
     </div>
