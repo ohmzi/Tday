@@ -66,6 +66,69 @@ export default function VersionPage() {
   );
 }
 
+const ReleaseStatusFields = ({
+  fields,
+  hasUpdate,
+}: {
+  fields: Array<{ label: string; value: string }>;
+  hasUpdate: boolean;
+}) => (
+  <div className={`grid min-w-0 gap-4 ${hasUpdate ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+    {fields.map((field) => (
+      <StatusField key={field.label} label={field.label} value={field.value} />
+    ))}
+  </div>
+);
+
+const ReleaseMetadataFields = ({
+  version,
+  publishedAt,
+}: {
+  version: string;
+  publishedAt: string | null;
+}) => (
+  <div className={`grid min-w-0 gap-4 ${publishedAt ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
+    <StatusField
+      label="Version"
+      value={`v${formatDisplayVersion(version) ?? version}`}
+    />
+    {publishedAt ? <StatusField label="Published" value={publishedAt} /> : null}
+  </div>
+);
+
+const ReleaseNotesSection = ({
+  notes,
+  fallbackNote,
+}: {
+  notes: string[];
+  fallbackNote: string;
+}) => (
+  <div className="space-y-2">
+    <p className="text-sm font-medium text-foreground">Release Notes</p>
+    {notes.length > 0 ? (
+      <ReleaseNotesBlock notes={notes} />
+    ) : (
+      <div className={`${SURFACE_CLASS} px-4 py-4 text-sm text-muted-foreground`}>
+        {fallbackNote}
+      </div>
+    )}
+  </div>
+);
+
+const ReleaseLinkButton = ({ releaseUrl }: { releaseUrl: string }) => (
+  <Button
+    type="button"
+    variant="outline"
+    asChild
+    className="w-full gap-2 sm:w-auto"
+  >
+    <a href={releaseUrl} target="_blank" rel="noreferrer">
+      <Github className="h-4 w-4" />
+      Open Release
+    </a>
+  </Button>
+);
+
 /** Summarizes whether the installed web build matches the latest published release metadata. */
 function ReleaseStatusCard({
   releaseInfo,
@@ -104,17 +167,12 @@ function ReleaseStatusCard({
       description={statusDescription}
       contentClassName={undefined}
     >
-      <div>
-        <div className={`grid min-w-0 gap-4 ${releaseInfo.hasUpdate ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
-          {statusFields.map((field) => (
-            <StatusField key={field.label} label={field.label} value={field.value} />
-          ))}
-        </div>
-      </div>
+      <ReleaseStatusFields fields={statusFields} hasUpdate={releaseInfo.hasUpdate} />
     </WebViewSectionCard>
   );
 }
 
+/** Shows the saved or latest release metadata in the shared section-card layout. */
 function ReleaseDetailCard({
   title,
   description,
@@ -134,45 +192,14 @@ function ReleaseDetailCard({
       description={description}
       contentClassName="space-y-6"
     >
-        <div className={`grid min-w-0 gap-4 ${publishedAt ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
-          <StatusField
-            label="Version"
-            value={`v${formatDisplayVersion(release.version) ?? release.version}`}
-          />
-          {publishedAt ? (
-            <StatusField
-              label="Published"
-              value={publishedAt}
-            />
-          ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-foreground">Release Notes</p>
-          {release.notes.length > 0 ? (
-            <ReleaseNotesBlock notes={release.notes} />
-          ) : (
-            <div className={`${SURFACE_CLASS} px-4 py-4 text-sm text-muted-foreground`}>
-              {fallbackNote}
-            </div>
-          )}
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          asChild
-          className="w-full gap-2 sm:w-auto"
-        >
-          <a href={release.releaseUrl} target="_blank" rel="noreferrer">
-            <Github className="h-4 w-4" />
-            Open Release
-          </a>
-        </Button>
+      <ReleaseMetadataFields version={release.version} publishedAt={publishedAt} />
+      <ReleaseNotesSection notes={release.notes} fallbackNote={fallbackNote} />
+      <ReleaseLinkButton releaseUrl={release.releaseUrl} />
     </WebViewSectionCard>
   );
 }
 
+/** Renders the short release summary bullet list inside the shared surface block. */
 function ReleaseNotesBlock({ notes }: { notes: string[] }) {
   return (
     <div className={`${SURFACE_CLASS} px-4 py-4`}>
@@ -188,6 +215,7 @@ function ReleaseNotesBlock({ notes }: { notes: string[] }) {
   );
 }
 
+/** Renders a single label/value field in the compact admin utility layout. */
 function StatusField({
   label,
   value,
