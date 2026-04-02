@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, ChevronDown, ChevronRight, Command, Flag, Layers, Menu, Search, Sun, X } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronRight, Clock3, Command, Flag, Layers, Menu, Search, Sun, X } from "lucide-react";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
@@ -39,7 +39,7 @@ type TimelineSection = {
   todos: TodoItemType[];
 };
 
-type TimelineScope = "today" | "scheduled" | "all" | "priority";
+type TimelineScope = "today" | "scheduled" | "all" | "priority" | "overdue";
 
 const getTimeZoneDate = (date: Date, timeZone?: string) =>
   new Date(date.toLocaleString("en-US", { timeZone: timeZone || "UTC" }));
@@ -130,6 +130,17 @@ const compareTimelineItems = (a: TimelineItem, b: TimelineItem) => {
   return a.todo.due.getTime() - b.todo.due.getTime();
 };
 
+const compareOverdueTimelineItems = (a: TimelineItem, b: TimelineItem) => {
+  const aIsToday = a.dayDiff === 0;
+  const bIsToday = b.dayDiff === 0;
+
+  if (aIsToday !== bIsToday) {
+    return aIsToday ? -1 : 1;
+  }
+
+  return compareTimelineItems(a, b);
+};
+
 const toSections = (items: TimelineItem[]) => {
   const sections: TimelineSection[] = [];
 
@@ -162,8 +173,11 @@ const isPriorityTask = (priority: string | null | undefined) => {
     normalized === "urgent";
 };
 
+const isOverdueTask = (due: Date) => due < new Date();
+
 const SCOPE_CONFIG: Record<TimelineScope, { icon: React.ElementType; heading: string; emptyMessage: string }> = {
   today: { icon: Sun, heading: "today", emptyMessage: "No tasks for today" },
+  overdue: { icon: Clock3, heading: "Overdue", emptyMessage: "No overdue tasks" },
   scheduled: { icon: CalendarClock, heading: "Scheduled", emptyMessage: "No upcoming tasks" },
   all: { icon: Layers, heading: "All Tasks", emptyMessage: "No tasks" },
   priority: { icon: Flag, heading: "priority", emptyMessage: "No priority tasks" },
@@ -242,6 +256,11 @@ const AllTasksTimelineContainer = ({
   const scopeFilteredItems = useMemo(() => {
     if (scope === "today") {
       return filteredTimelineItems.filter((item) => item.dayDiff === 0);
+    }
+    if (scope === "overdue") {
+      return filteredTimelineItems
+        .filter((item) => isOverdueTask(item.todo.due))
+        .sort(compareOverdueTimelineItems);
     }
     if (scope === "scheduled") {
       const now = new Date();
@@ -493,6 +512,38 @@ const AllTasksTimelineContainer = ({
           </div>
         )}
 
+        {scope === "overdue" &&
+          regularSections.map((section) => (
+            <section
+              key={section.key}
+              className={cn(
+                "mb-8 lg:mb-10",
+                section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
+              )}
+            >
+              <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
+                <h3 className="select-none text-lg font-semibold tracking-tight">
+                  {section.label}
+                </h3>
+                <LineSeparator className="flex-1 border-border/70" />
+              </div>
+              <TodoGroup todos={section.todos} overdue={section.dayDiff < 0} perTaskOverdue={section.dayDiff === 0} />
+            </section>
+          ))}
+
+        {scope === "overdue" &&
+          earlierSections.map((section) => (
+            <section key={section.key} className="mb-8 lg:mb-10">
+              <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
+                <h3 className="select-none text-lg font-semibold tracking-tight">
+                  {section.label}
+                </h3>
+                <LineSeparator className="flex-1 border-border/70" />
+              </div>
+              <TodoGroup todos={section.todos} overdue={true} />
+            </section>
+          ))}
+
         {scope === "all" && earlierSections.length > 0 && (
           <section className="mb-8 lg:mb-10">
             <button
@@ -531,7 +582,7 @@ const AllTasksTimelineContainer = ({
           </section>
         )}
 
-        {regularSections.map((section) => (
+        {scope !== "overdue" && regularSections.map((section) => (
           <section
             key={section.key}
             className={cn(
