@@ -1,7 +1,11 @@
 {
   "version": "1.8.19",
-  "publishedAt": null,
-  "notes": [],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases",
-  "compareUrl": null
+  "publishedAt": "2026-04-02T08:24:47-04:00",
+  "notes": [
+    "Add structured web release metadata",
+    "Tighten admin version access flow",
+    "Clean up release branch warnings"
+  ],
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v1.8.19",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v1.8.17..v1.8.19"
 }
