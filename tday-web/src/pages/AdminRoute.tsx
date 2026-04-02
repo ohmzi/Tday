@@ -3,6 +3,7 @@ import { Navigate, Outlet, useParams } from "react-router-dom";
 import { useAuth } from "@/providers/AuthProvider";
 import { DEFAULT_LOCALE } from "@/i18n";
 
+/** Restricts child routes to approved admins and sends everyone else back to Today. */
 export default function AdminRoute({ children }: { children?: ReactNode }) {
   const { user } = useAuth();
   const { locale } = useParams();
