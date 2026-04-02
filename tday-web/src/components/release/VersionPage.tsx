@@ -50,7 +50,6 @@ export default function VersionPage() {
       {releaseInfo.hasUpdate && releaseInfo.latestRelease ? (
         <ReleaseDetailCard
           title="Latest release"
-          description="Available online for the newest published build."
           release={releaseInfo.latestRelease}
           fallbackNote="No release notes are available for this release yet."
         />
@@ -58,7 +57,6 @@ export default function VersionPage() {
 
       <ReleaseDetailCard
         title="Current release"
-        description="Saved with the installed build so it stays available locally."
         release={releaseInfo.currentRelease}
         fallbackNote="No release notes are bundled with this release yet."
       />
@@ -141,10 +139,6 @@ function ReleaseStatusCard({
 }) {
   const latestVersion = formatDisplayVersion(releaseInfo.latestRelease?.version);
   const statusLabel = releaseInfo.hasUpdate ? "Update available" : "Up to date";
-  const statusDescription =
-    releaseInfo.hasUpdate && latestVersion
-      ? `Version ${latestVersion} is newer than the build currently deployed.`
-      : "The deployed build matches the latest release information available to the app.";
   const statusFields = releaseInfo.hasUpdate
     ? [
         { label: "Status", value: statusLabel },
@@ -168,7 +162,6 @@ function ReleaseStatusCard({
   return (
     <WebViewSectionCard
       title="Release Status"
-      description={statusDescription}
       contentClassName={undefined}
     >
       <ReleaseStatusFields fields={statusFields} hasUpdate={releaseInfo.hasUpdate} />
@@ -179,12 +172,10 @@ function ReleaseStatusCard({
 /** Shows the saved or latest release metadata in the shared section-card layout. */
 function ReleaseDetailCard({
   title,
-  description,
   release,
   fallbackNote,
 }: {
   title: string;
-  description: string;
   release: ReleaseMetadata;
   fallbackNote: string;
 }) {
@@ -193,7 +184,6 @@ function ReleaseDetailCard({
   return (
     <WebViewSectionCard
       title={title}
-      description={description}
       contentClassName="space-y-6"
     >
       <ReleaseMetadataFields version={release.version} publishedAt={publishedAt} />
