@@ -29,6 +29,93 @@ type AdminSettingsResponse = {
   updatedAt?: string;
 };
 
+type PendingApprovalRowProps = {
+  user: AdminUser;
+  actionUserId: string | null;
+  actionType: "approve" | "delete" | null;
+  onApprove: (userId: string) => void;
+};
+
+type ApprovedUserRowProps = {
+  user: AdminUser;
+  sessionUserId: string | null | undefined;
+  actionUserId: string | null;
+  actionType: "approve" | "delete" | null;
+  onDelete: (userId: string) => void;
+};
+
+const PendingApprovalRow = ({
+  user,
+  actionUserId,
+  actionType,
+  onApprove,
+}: PendingApprovalRowProps) => (
+  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+    <div className="min-w-0">
+      <p className="truncate text-sm font-medium text-foreground">
+        {user.name?.trim() || user.email}
+      </p>
+      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+    </div>
+    <Button
+      size="sm"
+      onClick={() => void onApprove(user.id)}
+      disabled={actionUserId === user.id}
+    >
+      {actionUserId === user.id && actionType === "approve" ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Check className="mr-2 h-4 w-4" />
+      )}
+      Approve
+    </Button>
+  </div>
+);
+
+const ApprovedUserRow = ({
+  user,
+  sessionUserId,
+  actionUserId,
+  actionType,
+  onDelete,
+}: ApprovedUserRowProps) => {
+  const isCurrentUser = sessionUserId === user.id;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-foreground">
+          {user.name?.trim() || user.email}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded-full border border-border/70 px-2 py-0.5">
+            {user.role}
+          </span>
+          {isCurrentUser ? (
+            <span className="rounded-full border border-border/70 px-2 py-0.5">
+              You
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <Button
+        size="sm"
+        variant="destructive"
+        onClick={() => void onDelete(user.id)}
+        disabled={actionUserId === user.id || isCurrentUser}
+      >
+        {actionUserId === user.id && actionType === "delete" ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Trash2 className="mr-2 h-4 w-4" />
+        )}
+        Delete
+      </Button>
+    </div>
+  );
+};
+
 export default function AdminUserControl() {
   const { user: sessionUser } = useAuth();
   const { toast } = useToast();
@@ -259,29 +346,13 @@ export default function AdminUserControl() {
             </p>
           ) : (
             pendingUsers.map((user) => (
-              <div
+              <PendingApprovalRow
                 key={user.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {user.name?.trim() || user.email}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => void approveUser(user.id)}
-                  disabled={actionUserId === user.id}
-                >
-                  {actionUserId === user.id && actionType === "approve" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="mr-2 h-4 w-4" />
-                  )}
-                  Approve
-                </Button>
-              </div>
+                user={user}
+                actionUserId={actionUserId}
+                actionType={actionType}
+                onApprove={approveUser}
+              />
             ))
           )}
         </CardContent>
@@ -303,44 +374,15 @@ export default function AdminUserControl() {
             </p>
           ) : (
             approvedUsers.map((user) => {
-              const isCurrentUser = sessionUser?.id === user.id;
               return (
-                <div
+                <ApprovedUserRow
                   key={user.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {user.name?.trim() || user.email}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {user.email}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="rounded-full border border-border/70 px-2 py-0.5">
-                        {user.role}
-                      </span>
-                      {isCurrentUser ? (
-                        <span className="rounded-full border border-border/70 px-2 py-0.5">
-                          You
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => void deleteUser(user.id)}
-                    disabled={actionUserId === user.id || isCurrentUser}
-                  >
-                    {actionUserId === user.id && actionType === "delete" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="mr-2 h-4 w-4" />
-                    )}
-                    Delete
-                  </Button>
-                </div>
+                  user={user}
+                  sessionUserId={sessionUser?.id}
+                  actionUserId={actionUserId}
+                  actionType={actionType}
+                  onDelete={deleteUser}
+                />
               );
             })
           )}
