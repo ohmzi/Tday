@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ArrowUpRight,
   Check,
   Eye,
   EyeOff,
@@ -261,32 +260,6 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <Button type="button" variant="outline" onClick={() => setShortcutsOpen(true)}>Open shortcuts</Button>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
-        <CardHeader className="space-y-1">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Info className="h-4 w-4 text-accent" />
-            App Version
-          </CardTitle>
-          <CardDescription>See release notes and check whether a newer GitHub version is available</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link
-            href="/app/version"
-            className="group flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/60 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-background/90"
-          >
-            <div className="space-y-1">
-              <div className="text-sm font-semibold text-foreground">
-                Version {formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Open the full release page
-              </div>
-            </div>
-            <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </Link>
         </CardContent>
       </Card>
 
