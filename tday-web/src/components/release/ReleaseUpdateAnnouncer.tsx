@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ArrowRight, DownloadCloud } from "lucide-react";
+import { DownloadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useLocale } from "@/lib/navigation";
@@ -60,20 +60,19 @@ export default function ReleaseUpdateAnnouncer() {
             toast.dismiss(id);
             navigate(`/${locale}/app/admin/version`);
           }}
-          className="group flex w-[min(calc(100vw-2rem),26rem)] items-start gap-3 rounded-2xl border border-border/80 bg-card/95 p-4 text-left shadow-[0_20px_45px_-24px_hsl(var(--shadow)/0.45)] backdrop-blur-2xl transition hover:border-accent/35"
+          className="flex w-[min(calc(100vw-2rem),24rem)] items-start gap-3 rounded-2xl border border-border/80 bg-card/95 p-4 text-left shadow-[0_20px_45px_-24px_hsl(var(--shadow)/0.45)] backdrop-blur-2xl transition hover:border-accent/35"
         >
           <span className="mt-0.5 rounded-2xl bg-accent/12 p-2.5 text-accent">
             <DownloadCloud className="h-4 w-4" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-foreground">
-              Version {latestVersion} is available
+              Update available
             </span>
             <span className="mt-1 block text-sm leading-5 text-muted-foreground">
-              Open App Version to see what changed in this release.
+              Version {latestVersion}
             </span>
           </span>
-          <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </button>
       ),
       {
