@@ -6,7 +6,7 @@ import React, { createContext, useContext } from "react";
 
 // hook types
 type UseDeleteTodoType = () => {
-    deleteMutateFn: (variables: { id: string }) => void;
+    deleteMutateFn: (variables: TodoItemType) => void;
     deletePending: boolean;
 }
 type UseCompleteTodoType = () => {

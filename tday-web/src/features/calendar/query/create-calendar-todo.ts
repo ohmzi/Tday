@@ -3,6 +3,7 @@ import { todoSchema } from "@/schema";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
 
 type CreateTodoInput = Pick<
@@ -48,12 +49,13 @@ async function postTodo({ todo }: { todo: CreateTodoInput }) {
 
 export const useCreateCalendarTodo = () => {
   const { toast } = useToast();
+  const { showTodoCreatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: createCalendarTodo, status: createTodoStatus } = useMutation({
     mutationFn: (todo: CreateTodoInput) => postTodo({ todo }),
-    onSuccess: () => {
-      toast({ description: "todo created" });
+    onSuccess: (createdTodo) => {
+      showTodoCreatedToast(createdTodo);
     },
     onError: (error) => {
       toast({ description: error.message, variant: "destructive" });
