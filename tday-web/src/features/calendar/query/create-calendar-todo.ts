@@ -3,6 +3,7 @@ import { todoSchema } from "@/schema";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import parseApiDateTime from "@/lib/date/parseApiDateTime";
 
 type CreateTodoInput = Pick<
   TodoItemType,
@@ -38,9 +39,9 @@ async function postTodo({ todo }: { todo: CreateTodoInput }) {
     body: JSON.stringify(parsedObj.data),
   });
 
-  //convert todo due from string to time
-  res.todo.due = new Date(res.todo.due);
-  res.todo.dtstart = new Date(res.todo.dtstart);
+  // Convert backend UTC-like datetimes into stable JS Dates.
+  res.todo.due = parseApiDateTime(res.todo.due);
+  res.todo.dtstart = parseApiDateTime(res.todo.dtstart);
 
   return res.todo;
 }
@@ -60,6 +61,7 @@ export const useCreateCalendarTodo = () => {
     //if fetch error then revert optimistic updates including form states
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["todo"] });
+      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
       //calendarTodo is invalidated
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
     },
