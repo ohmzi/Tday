@@ -16,6 +16,11 @@ import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import ListDot from "@/components/ListDot";
 import { Flag } from "lucide-react";
 
+const PRESSED_MENU_ITEM_CLASS =
+    "transition-[background-color,color,transform] duration-150 active:bg-accent/30 active:text-accent-foreground active:scale-[0.98]";
+const PRESSED_PRIORITY_BUTTON_CLASS =
+    "rounded-md p-1.5 transition-[background-color,transform] duration-150 hover:bg-accent/10 active:bg-accent/30 active:scale-95";
+
 function TodoItemMeatballMenuContent({
     todo,
     setDisplayForm,
@@ -36,7 +41,10 @@ function TodoItemMeatballMenuContent({
     const { listMetaData } = useListMetaData();
     return (
         <>
-            <DropdownMenuItem className="mx-1 p-1.5 px-2 gap-1.5" onClick={() => pinMutateFn(todo)}>
+            <DropdownMenuItem
+                className={`mx-1 gap-1.5 p-1.5 px-2 ${PRESSED_MENU_ITEM_CLASS}`}
+                onClick={() => pinMutateFn(todo)}
+            >
                 {!todo.pinned ? (
                     <Pin className="m-0" />
                 ) : (
@@ -48,7 +56,7 @@ function TodoItemMeatballMenuContent({
                 </p>
             </DropdownMenuItem>
             <DropdownMenuItem
-                className="m-1.5"
+                className={`m-1.5 ${PRESSED_MENU_ITEM_CLASS}`}
                 onClick={() => {
                     setDisplayForm((prev: boolean) => !prev);
                 }}
@@ -57,7 +65,7 @@ function TodoItemMeatballMenuContent({
                 {todayDict("menu.edit")}
             </DropdownMenuItem>
             <DropdownMenuItem
-                className="m-1.5"
+                className={`m-1.5 ${PRESSED_MENU_ITEM_CLASS}`}
                 onClick={() => {
                     setEditInstanceOnly(true);
                     setDisplayForm((prev: boolean) => !prev);
@@ -70,7 +78,7 @@ function TodoItemMeatballMenuContent({
 
             {/* move to list sub menu */}
             <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="bg-inherit hover:bg-popover mx-1">
+                <DropdownMenuSubTrigger className={`mx-1 bg-inherit hover:bg-popover ${PRESSED_MENU_ITEM_CLASS}`}>
                     <ArrowRightLeft strokeWidth={1.7} className="w-4! h-4!" />
                     {todayDict("menu.Move to")}
                 </DropdownMenuSubTrigger>
@@ -87,14 +95,16 @@ function TodoItemMeatballMenuContent({
                                     dateRangeChecksum,
                                     rruleChecksum
                                 })
-                            }}>
+                            }}
+                            className={PRESSED_MENU_ITEM_CLASS}
+                        >
                             <ListDot id={key} className="text-base pr-0" />{value.name}
                         </DropdownMenuItem>
                     })}
                 </DropdownMenuSubContent>
             </DropdownMenuSub>
             <DropdownMenuItem
-                className="m-1.5"
+                className={`m-1.5 ${PRESSED_MENU_ITEM_CLASS}`}
                 onClick={() => deleteMutateFn(todo)}
             >
                 {deletePending ? (
@@ -115,7 +125,7 @@ function TodoItemMeatballMenuContent({
                     {appDict("priority")}
                 </p>
                 <div className=" flex gap-4 items-center pl-2">
-                    <button className="group cursor-pointer"
+                    <button className={`group cursor-pointer ${PRESSED_PRIORITY_BUTTON_CLASS}`}
                         onClick={() => {
                             prioritizeMutateFn({
                                 id: todo.id,
@@ -128,7 +138,7 @@ function TodoItemMeatballMenuContent({
                         />
                     </button>
 
-                    <button className="group cursor-pointer"
+                    <button className={`group cursor-pointer ${PRESSED_PRIORITY_BUTTON_CLASS}`}
                         onClick={() => {
                             prioritizeMutateFn({
                                 id: todo.id,
@@ -140,7 +150,7 @@ function TodoItemMeatballMenuContent({
                             className="text-orange group-hover:fill-orange"
                         />
                     </button>
-                    <button className="group cursor-pointer"
+                    <button className={`group cursor-pointer ${PRESSED_PRIORITY_BUTTON_CLASS}`}
                         onClick={() => {
                             prioritizeMutateFn({
                                 id: todo.id,
