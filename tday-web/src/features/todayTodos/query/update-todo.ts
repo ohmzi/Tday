@@ -4,6 +4,7 @@ import { api } from "@/lib/api-client";
 import { todoSchema } from "@/schema";
 import { TodoItemType } from "@/types";
 import { endOfDay } from "date-fns";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
 export interface TodoItemTypeWithDateChecksum extends TodoItemType {
   dateRangeChecksum: string;
@@ -50,6 +51,7 @@ async function patchTodo({ todo }: { todo: TodoItemTypeWithDateChecksum }) {
 
 export const useEditTodo = () => {
   const { toast } = useToast();
+  const { showTodoUpdatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: editTodoMutateFn, status: editTodoStatus } = useMutation({
@@ -117,8 +119,8 @@ export const useEditTodo = () => {
       queryClient.setQueryData(["todoTimeline"], context?.oldTimelineTodos);
       toast({ description: error.message, variant: "destructive" });
     },
-    onSuccess: () => {
-      toast({ description: "todo updated" });
+    onSuccess: (_data, updatedTodo) => {
+      showTodoUpdatedToast(updatedTodo);
     },
   });
 

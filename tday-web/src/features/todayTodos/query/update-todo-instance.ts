@@ -5,6 +5,7 @@ import { todoInstanceSchema } from "@/schema";
 import { TodoItemType } from "@/types";
 import React from "react";
 import { endOfDay } from "date-fns";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
 async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
   //validate input for the ghost todo
@@ -36,6 +37,7 @@ export const useEditTodoInstance = (
     | undefined,
 ) => {
   const { toast } = useToast();
+  const { showTodoUpdatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: editTodoInstanceMutateFn, status: editTodoInstanceStatus } =
@@ -97,8 +99,8 @@ export const useEditTodoInstance = (
         queryClient.setQueryData(["todoTimeline"], context?.oldTimelineTodos);
         toast({ description: error.message, variant: "destructive" });
       },
-      onSuccess: () => {
-        toast({ description: "todo updated" });
+      onSuccess: (_data, updatedTodo) => {
+        showTodoUpdatedToast(updatedTodo);
       },
     });
 

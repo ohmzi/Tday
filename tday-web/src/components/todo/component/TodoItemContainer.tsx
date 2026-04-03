@@ -14,6 +14,7 @@ import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import ListDot from "@/components/ListDot";
 import TodoItemMenuContainer from "./TodoItem/TodoMenu/TodoItemMenuContainer";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
+import { getTodoFocusElementId } from "@/lib/todoToastNavigation";
 
 const TodoFormContainer = lazy(() => import("./TodoForm/TodoFormContainer"));
 
@@ -22,17 +23,28 @@ type TodoItemContainerProps = {
   todoItem: TodoItemType,
   overdue?: boolean,
   perTaskOverdue?: boolean,
+  highlighted?: boolean,
 }
 
-export const TodoItemContainer = ({ todoItem, overdue, perTaskOverdue }: TodoItemContainerProps) => {
+export const TodoItemContainer = ({
+  todoItem,
+  overdue,
+  perTaskOverdue,
+  highlighted = false,
+}: TodoItemContainerProps) => {
   const { listMetaData } = useListMetaData();
   const { useCompleteTodo } = useTodoMutation();
   const { completeMutateFn } = useCompleteTodo();
   const locale = useLocale();
   const userTimeZone = useUserTimezone();
+  const [itemElement, setItemElement] = useState<HTMLDivElement | null>(null);
   //dnd kit setups
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: todoItem.id });
+  const setCombinedRef = (node: HTMLDivElement | null) => {
+    setItemElement(node);
+    setNodeRef(node);
+  };
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
@@ -51,6 +63,14 @@ export const TodoItemContainer = ({ todoItem, overdue, perTaskOverdue }: TodoIte
     }
   }, [displayForm]);
 
+  useEffect(() => {
+    if (!highlighted || !itemElement) {
+      return;
+    }
+
+    itemElement.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlighted, itemElement]);
+
 
   if (displayForm)
     return (
@@ -66,7 +86,8 @@ export const TodoItemContainer = ({ todoItem, overdue, perTaskOverdue }: TodoIte
     );
   return (
     <div
-      ref={setNodeRef}
+      id={getTodoFocusElementId(todoItem.id)}
+      ref={setCombinedRef}
       style={style}
       {...attributes}
       {...listeners}
@@ -75,6 +96,7 @@ export const TodoItemContainer = ({ todoItem, overdue, perTaskOverdue }: TodoIte
       onMouseOut={() => setShowHandle(false)}
       className={clsx(
         "group relative flex max-w-full cursor-grab items-start justify-between gap-3 rounded-2xl border border-border/65 bg-card/95 px-3 py-3 shadow-[0_1px_2px_hsl(var(--shadow)/0.08)] transition-all duration-200 active:cursor-grabbing hover:border-border hover:shadow-[0_10px_24px_hsl(var(--shadow)/0.11)]",
+        highlighted && "border-accent/55 ring-2 ring-accent/20 shadow-[0_14px_30px_-20px_hsl(var(--accent)/0.65)]",
         isDragging
           ? "z-30 border-border/70 bg-card/95 shadow-2xl opacity-85 touch-manipulation"
           : "shadow-[0_1px_2px_hsl(var(--shadow)/0.08)]",
