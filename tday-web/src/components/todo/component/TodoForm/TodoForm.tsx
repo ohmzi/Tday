@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import adjustHeight from "@/components/todo/lib/adjustTextareaHeight";
 import { useToast } from "@/hooks/use-toast";
 import LineSeparator from "@/components/ui/lineSeparator";
@@ -57,9 +57,15 @@ const TodoForm = ({
   const { useEditTodo, useEditTodoInstance } = useTodoMutation();
   const { editTodoMutateFn } = useEditTodo();
   const { editTodoInstanceMutateFn } = useEditTodoInstance(setEditInstanceOnly);
-  const { createMutateFn } = useCreateTodo();
+  const { createMutateFn, createStatus } = useCreateTodo();
   const { t: appDict } = useTranslation("app");
   const { t: todayDict } = useTranslation("today")
+
+  useEffect(() => {
+    if (!persistent && createStatus === "success") {
+      setDisplayForm(false);
+    }
+  }, [createStatus, persistent, setDisplayForm]);
 
   return (
     <div
