@@ -32,6 +32,20 @@ fun Route.registerRoutes() {
             }
 
             if (authThrottle.requiresCaptcha(ThrottleAction.register, call.request, body.email)) {
+                if (!captchaService.isConfigured()) {
+                    eventLogger.log(
+                        "auth_captcha_misconfigured",
+                        mapOf("action" to "register", "reason" to "captcha_secret_missing"),
+                    )
+                    call.respond(
+                        HttpStatusCode.ServiceUnavailable,
+                        mapOf(
+                            "message" to "Additional verification is temporarily unavailable.",
+                            "reason" to "captcha_unavailable",
+                        ),
+                    )
+                    return@post
+                }
                 val captchaResult = captchaService.verify(body.captchaToken, call.request, "register")
                 if (!captchaResult.ok) {
                     eventLogger.log("register_captcha_failed", mapOf("reason" to captchaResult.reason))

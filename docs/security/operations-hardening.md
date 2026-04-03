@@ -4,7 +4,7 @@ Use this for self-hosted production deployments.
 
 ## Secrets Management
 
-1. Store `AUTH_SECRET`, `CRONJOB_SECRET`, and `DATABASE_URL` in a secret manager.
+1. Store `AUTH_SECRET`, `DATABASE_URL`, `AUTH_CAPTCHA_SECRET`, and `AUTH_CREDENTIALS_PRIVATE_KEY` in a secret manager.
 2. Inject secrets via environment variables or mounted files (`*_FILE` vars).
 3. Never commit real secrets in `.env` files.
 4. Rotate secrets on a fixed schedule (recommended: every 60-90 days).
@@ -22,9 +22,11 @@ Use this for self-hosted production deployments.
    - `auth_alert_ip_concentration`
    - `auth_alert_lockout_burst`
    - `auth_signal_anomaly`
+   - `auth_captcha_misconfigured`
    - `auth_session_absolute_expired`
    - `auth_session_renewed`
    - `auth_session_token_version_mismatch`
+   - `request_rate_limit_triggered`
 
 ## Field Encryption At Rest
 
