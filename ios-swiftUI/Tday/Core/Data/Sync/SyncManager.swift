@@ -307,23 +307,43 @@ final class SyncManager {
             let remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetID] ?? 0
             guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
             let resolvedListID = mutation.listId.flatMap { resolvedListIDs[$0] ?? $0 }
-            _ = try await api.patchTodoByBody(
-                payload: UpdateTodoRequest(
-                    id: targetID,
-                    title: mutation.title,
-                    description: mutation.description,
-                    pinned: mutation.pinned,
-                    priority: mutation.priority,
-                    completed: mutation.completed,
-                    dtstart: mutation.dtstartEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
-                    due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
-                    rrule: mutation.rrule,
-                    listID: resolvedListID,
-                    dateChanged: true,
-                    rruleChanged: true,
-                    instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+            if let instanceDateEpochMs = mutation.instanceDateEpochMs {
+                let durationMinutes = max(
+                    1,
+                    Int(((mutation.dueEpochMs ?? 0) - (mutation.dtstartEpochMs ?? 0)) / (60 * 1_000))
                 )
-            )
+                _ = try await api.patchTodoInstanceByBody(
+                    payload: TodoInstanceUpdateRequest(
+                        todoId: targetID,
+                        title: mutation.title,
+                        description: mutation.description,
+                        priority: mutation.priority,
+                        dtstart: mutation.dtstartEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
+                        due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
+                        rrule: mutation.rrule,
+                        instanceDate: Date(epochMilliseconds: instanceDateEpochMs).ISO8601Format(),
+                        durationMinutes: durationMinutes
+                    )
+                )
+            } else {
+                _ = try await api.patchTodoByBody(
+                    payload: UpdateTodoRequest(
+                        id: targetID,
+                        title: mutation.title,
+                        description: mutation.description,
+                        pinned: mutation.pinned,
+                        priority: mutation.priority,
+                        completed: mutation.completed,
+                        dtstart: mutation.dtstartEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
+                        due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
+                        rrule: mutation.rrule,
+                        listID: resolvedListID,
+                        dateChanged: true,
+                        rruleChanged: true,
+                        instanceDate: nil
+                    )
+                )
+            }
 
         case .deleteTodo:
             guard let targetID else { return }

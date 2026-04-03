@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarClock, ChevronDown, ChevronRight, Clock3, Command, Flag, Layers, Menu, Search, Sun, X } from "lucide-react";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
+import { TodoItemCard } from "@/components/todo/component/TodoItemContainer";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import { TodoItemType } from "@/types";
 import { useTodoTimeline } from "../query/get-todo-timeline";
@@ -22,6 +23,11 @@ import { Button } from "@/components/ui/button";
 import { useMenu } from "@/providers/MenuProvider";
 import { useLocale } from "@/lib/navigation";
 import { useSearchParams } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useUserPreferences } from "@/providers/UserPreferencesProvider";
+import { moveTodoToDay } from "@/lib/moveTodoToDay";
+import { useTodoMutation } from "@/providers/TodoMutationProvider";
+import { TodoItemTypeWithDateChecksum } from "../query/update-todo";
 import {
   TODO_FOCUS_DATE_QUERY_PARAM,
   TODO_FOCUS_MODE_DELETED,
@@ -184,6 +190,165 @@ const SCOPE_CONFIG: Record<TimelineScope, { icon: React.ElementType; heading: st
   scheduled: { icon: CalendarClock, heading: "Scheduled", emptyMessage: "No upcoming tasks" },
   all: { icon: Layers, heading: "All Tasks", emptyMessage: "No tasks" },
   priority: { icon: Flag, heading: "priority", emptyMessage: "No priority tasks" },
+};
+
+const DRAG_DISABLED_MESSAGE = "Drag disabled; a global filter is active";
+
+const ScheduledTimelineSections = ({
+  sections,
+  focusedTaskId,
+  focusedDateKey,
+  timeZone,
+}: {
+  sections: TimelineSection[];
+  focusedTaskId: string | null;
+  focusedDateKey: string | null;
+  timeZone?: string;
+}) => {
+  const { toast } = useToast();
+  const { preferences } = useUserPreferences();
+  const { useEditTodo, useEditTodoInstance } = useTodoMutation();
+  const { editTodoMutateFn } = useEditTodo();
+  const { editTodoInstanceMutateFn } = useEditTodoInstance(undefined);
+  const [draggedTodoId, setDraggedTodoId] = useState<string | null>(null);
+  const [dropSectionKey, setDropSectionKey] = useState<string | null>(null);
+
+  const todosById = useMemo(
+    () =>
+      new Map(
+        sections.flatMap((section) =>
+          section.todos.map((todo) => [todo.id, todo] as const),
+        ),
+      ),
+    [sections],
+  );
+
+  const clearDragState = useCallback(() => {
+    setDraggedTodoId(null);
+    setDropSectionKey(null);
+  }, []);
+
+  const handleMove = useCallback((todo: TodoItemType, targetSectionKey: string) => {
+    if (getTodoDayKey(todo.due, timeZone) === targetSectionKey) {
+      clearDragState();
+      return;
+    }
+
+    const nextRange = moveTodoToDay(todo, targetSectionKey, timeZone);
+
+    if (todo.rrule && todo.instanceDate) {
+      editTodoInstanceMutateFn({
+        ...todo,
+        instanceDate: todo.instanceDate ?? todo.dtstart,
+        ...nextRange,
+      });
+      clearDragState();
+      return;
+    }
+
+    editTodoMutateFn({
+      ...(todo as TodoItemTypeWithDateChecksum),
+      ...nextRange,
+      dateRangeChecksum: todo.dtstart.toISOString() + todo.due.toISOString(),
+      rruleChecksum: todo.rrule,
+    });
+    clearDragState();
+  }, [clearDragState, editTodoInstanceMutateFn, editTodoMutateFn, timeZone]);
+
+  const handleDragStart = useCallback((
+    event: React.DragEvent<HTMLDivElement>,
+    todo: TodoItemType,
+    sectionKey: string,
+  ) => {
+    if (preferences?.sortBy) {
+      event.preventDefault();
+      toast({ title: DRAG_DISABLED_MESSAGE });
+      return;
+    }
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", todo.id);
+    setDraggedTodoId(todo.id);
+    setDropSectionKey(sectionKey);
+  }, [preferences?.sortBy, toast]);
+
+  return (
+    <>
+      {sections.map((section) => {
+        const isDropTarget = draggedTodoId !== null && dropSectionKey === section.key;
+
+        return (
+          <section
+            id={getTodoDateSectionId(section.key)}
+            key={section.key}
+            className={cn(
+              "mb-8 scroll-mt-24 rounded-3xl transition-colors lg:mb-10",
+              section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
+              isDropTarget && "bg-accent/5 ring-1 ring-accent/25",
+            )}
+            onDragEnter={() => {
+              if (draggedTodoId) {
+                setDropSectionKey(section.key);
+              }
+            }}
+            onDragOver={(event) => {
+              if (!draggedTodoId || preferences?.sortBy) {
+                return;
+              }
+
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              if (dropSectionKey !== section.key) {
+                setDropSectionKey(section.key);
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const todoId = event.dataTransfer.getData("text/plain") || draggedTodoId;
+              const todo = todoId ? todosById.get(todoId) : null;
+              if (todo) {
+                handleMove(todo, section.key);
+              } else {
+                clearDragState();
+              }
+            }}
+          >
+            <div className="px-3 py-2 sm:px-4">
+              <div className="mb-3 mt-4 flex items-center gap-2 sm:mt-5 lg:mb-4 lg:mt-6">
+                <h3
+                  className={cn(
+                    "select-none text-lg font-semibold tracking-tight",
+                    focusedDateKey === section.key && "text-accent",
+                  )}
+                >
+                  {section.label}
+                </h3>
+                <LineSeparator className="flex-1 border-border/70" />
+              </div>
+              <div className="space-y-2">
+                {section.todos.map((todo) => (
+                  <div
+                    key={todo.id}
+                    draggable={true}
+                    onDragStart={(event) => handleDragStart(event, todo, section.key)}
+                    onDragEnd={clearDragState}
+                  >
+                    <TodoItemCard
+                      todoItem={todo}
+                      overdue={false}
+                      perTaskOverdue={section.dayDiff === 0}
+                      highlighted={focusedTaskId === todo.id}
+                      dragging={draggedTodoId === todo.id}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      })}
+    </>
+  );
 };
 
 const AllTasksTimelineContainer = ({
@@ -736,7 +901,16 @@ const AllTasksTimelineContainer = ({
           </section>
         )}
 
-        {scope !== "overdue" && regularSections.map((section) => (
+        {scope === "scheduled" && (
+          <ScheduledTimelineSections
+            sections={regularSections}
+            focusedTaskId={focusedTaskId}
+            focusedDateKey={focusedDateKey}
+            timeZone={userTZ?.timeZone}
+          />
+        )}
+
+        {scope !== "overdue" && scope !== "scheduled" && regularSections.map((section) => (
           <section
             id={getTodoDateSectionId(section.key)}
             key={section.key}
@@ -745,7 +919,7 @@ const AllTasksTimelineContainer = ({
               section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
             )}
           >
-            {(section.dayDiff !== 0 || scope === "all" || scope === "scheduled") && (
+            {(section.dayDiff !== 0 || scope === "all") && (
               <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
                 <h3
                   className={cn(
