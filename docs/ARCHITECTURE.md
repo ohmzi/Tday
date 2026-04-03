@@ -397,7 +397,6 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 ## Background Jobs
 
-- **Cron job**: Scheduled GitHub Actions workflow calls `GET /api/cron/rescheduleTodo` with a secret header for periodic task maintenance.
 - **Android reminders**: `AlarmManager` for exact-time reminders, `WorkManager` for periodic reminder rescheduling, `BootRescheduleReceiver` for device restart recovery.
 
 ## Production Deployment
