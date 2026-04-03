@@ -3,10 +3,10 @@ package com.ohmz.tday.routes.auth
 import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.respondError
+import com.ohmz.tday.domain.respondRateLimit
 import com.ohmz.tday.plugins.authUser
 import com.ohmz.tday.security.AuthThrottle
 import com.ohmz.tday.security.ThrottleAction
-import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
@@ -15,13 +15,13 @@ fun Route.sessionRoutes() {
 
     route("/session") {
         get {
-            val throttle = authThrottle.enforceRateLimit(ThrottleAction.session, call.request)
+            val throttle = authThrottle.enforceRateLimit(ThrottleAction.sessionGet, call.request)
             if (!throttle.allowed) {
-                call.respond(HttpStatusCode.TooManyRequests, mapOf(
-                    "message" to "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
-                    "reason" to (throttle.reasonCode ?: "auth_limit"),
-                    "retryAfterSeconds" to throttle.retryAfterSeconds,
-                ))
+                call.respondRateLimit(
+                    message = "Too many requests. Try again in ${authThrottle.formatRetryWait(throttle.retryAfterSeconds)}.",
+                    reason = throttle.reasonCode ?: "auth_limit",
+                    retryAfterSeconds = throttle.retryAfterSeconds,
+                )
                 return@get
             }
 
@@ -30,7 +30,7 @@ fun Route.sessionRoutes() {
                 call.respondError(AppError.Unauthorized("Not authenticated"))
                 return@get
             }
-            call.respond(HttpStatusCode.OK, mapOf(
+            call.respond(io.ktor.http.HttpStatusCode.OK, mapOf(
                 "user" to mapOf(
                     "id" to user.id,
                     "name" to user.name,
