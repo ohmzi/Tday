@@ -29,7 +29,7 @@ We aim to acknowledge reports within 48 hours and provide a fix or mitigation pl
 - Sessions are delivered in HTTP-only authjs cookies: `__Secure-authjs.session-token` in production and `authjs.session-token` elsewhere. Bearer tokens are also accepted for API clients.
 - Sessions persist across browser/app restarts (no session-only cookies).
 - Server-enforced **token versioning** (`tokenVersion` on User model) revokes all sessions on password change or sign-out.
-- The Ktor pipeline intercept validates tokens on every request by checking `tokenVersion`, expiry, role, and approval status against the database.
+- The Ktor pipeline intercept validates tokens on every request by checking `tokenVersion`, expiry, role, and approval status against the database before route handlers read the session.
 - Mobile sessions use encrypted cookie storage with session restoration on app launch.
 
 ### Account Approval
@@ -41,24 +41,26 @@ We aim to acknowledge reports within 48 hours and provide a fix or mitigation pl
 ### Rate Limiting and Lockout
 
 - Auth endpoints are rate-limited per IP and per email (configurable windows and thresholds).
+- App-layer request throttling protects `/api/**`, `/health`, `/api/mobile/probe`, `POST /api/todo/summary`, `POST /api/user/change-password`, and `/ws`.
 - Exponential lockout activates after repeated credential failures (`AUTH_LOCKOUT_*` settings).
-- **Adaptive CAPTCHA** (Cloudflare Turnstile) triggers after configurable failure count.
+- **Adaptive CAPTCHA** (Cloudflare Turnstile) triggers after configurable failure count and now fails closed if required but `AUTH_CAPTCHA_SECRET` is missing.
 - Rate limit and lockout state is stored in the database (`AuthThrottle` model).
 
 ### Admin Access
 
 - Admin routes require both `APPROVED` status and `ADMIN` role.
-- Admin checks are centralized in `requireAdminEither` in the backend security layer.
+- Admin checks are centralized in the shared auth context helper used by routes and services.
 
 ## API Security
 
 ### Ktor Pipeline Enforcement
 
-All API requests pass through a Ktor call pipeline intercept (`Security.kt`) that enforces:
+All API requests pass through Ktor plugins that enforce:
 
-- **Authentication**: JWE token validation (from Bearer header or session cookies) required for all routes except `/api/auth/*`, `/api/mobile/probe`, and `/health`.
-- **Approval gate**: Unapproved users receive 403 on private routes.
+- **Authentication**: `Security.kt` reads a JWE token from the `Authorization` header or session cookies and attaches validated claims to the call.
+- **Approval gate**: `call.withAuth { }` rejects unapproved users from private REST routes, and `/ws` rejects pending users during the handshake.
 - **Token refresh**: Claims are verified against the database on every request (role, approval, `tokenVersion`).
+- **Request throttling**: `RateLimiting.kt` applies route-specific 429 responses before protected handlers run.
 
 ### Security Headers
 
@@ -100,7 +102,7 @@ Every response includes (via `SecurityHeaders.kt`):
 
 - Production secrets should come from a secrets manager or mounted files.
 - The Ktor backend (`AppConfig.kt`) supports `_FILE` suffix for all sensitive variables:
-  `AUTH_SECRET`, `CRONJOB_SECRET`, `DATABASE_URL`, `AUTH_CAPTCHA_SECRET`, `DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEYS`, `DATA_ENCRYPTION_AAD`.
+  `AUTH_SECRET`, `DATABASE_URL`, `AUTH_CAPTCHA_SECRET`, `DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEYS`, `DATA_ENCRYPTION_AAD`.
 - Never commit real secrets. `.env.example` and `.env.docker` contain placeholder values only.
 - Rotate secrets on a fixed schedule (recommended: 60-90 days).
 
@@ -125,5 +127,7 @@ Structured security event codes are emitted to the `eventLog` database table:
 | `auth_alert_ip_concentration` | Suspicious IP concentration detected |
 | `auth_alert_lockout_burst` | Burst of lockouts in a short window |
 | `auth_signal_anomaly` | Behavioral anomaly detected |
+| `auth_captcha_misconfigured` | CAPTCHA should have been enforced but the server secret was missing |
+| `request_rate_limit_triggered` | App-layer request throttle triggered |
 
-Alert when `auth_lockout` grows rapidly or `auth_limit_ip` spikes from a narrow IP range.
+Alert when `auth_lockout` grows rapidly, `auth_limit_ip` spikes from a narrow IP range, or `request_rate_limit_triggered` starts clustering on one path.

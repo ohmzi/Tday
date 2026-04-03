@@ -40,7 +40,7 @@ class AuthRoutesTest {
         assertEquals(HttpStatusCode.Unauthorized, response.status)
         val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
         assertEquals("Not authenticated", payload.getValue("message").jsonPrimitive.content)
-        assertEquals(listOf(ThrottleAction.session), throttle.actions)
+        assertEquals(listOf(ThrottleAction.sessionGet), throttle.actions)
     }
 
     @Test
@@ -71,7 +71,7 @@ class AuthRoutesTest {
         assertEquals("ADMIN", user.getValue("role").jsonPrimitive.content)
         assertEquals("APPROVED", user.getValue("approvalStatus").jsonPrimitive.content)
         assertEquals("America/Toronto", user.getValue("timeZone").jsonPrimitive.content)
-        assertEquals(listOf(ThrottleAction.session), throttle.actions)
+        assertEquals(listOf(ThrottleAction.sessionGet), throttle.actions)
     }
 
     @Test
@@ -99,7 +99,55 @@ class AuthRoutesTest {
         assertEquals("RSA-OAEP-256+A256GCM", payload.algorithm)
         assertEquals("key_123", payload.keyId)
         assertEquals("pub_key_value", payload.publicKey)
-        assertEquals(listOf(ThrottleAction.session), throttle.actions)
+        assertEquals(listOf(ThrottleAction.credentialsKey), throttle.actions)
+    }
+
+    @Test
+    fun `session returns rate limit response when auth throttle blocks request`() = testApplication {
+        val throttle = RecordingAuthThrottle(
+            result = ThrottleResult(
+                allowed = false,
+                reasonCode = "auth_limit",
+                retryAfterSeconds = 7,
+            ),
+        )
+
+        application {
+            configureAuthRoutesTestApp(authThrottle = throttle)
+        }
+
+        val response = client.get("/api/auth/session")
+
+        assertEquals(HttpStatusCode.TooManyRequests, response.status)
+        assertEquals("7", response.headers["Retry-After"])
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("auth_limit", payload.getValue("reason").jsonPrimitive.content)
+        assertEquals("7", payload.getValue("retryAfterSeconds").jsonPrimitive.content)
+        assertEquals(listOf(ThrottleAction.sessionGet), throttle.actions)
+    }
+
+    @Test
+    fun `credentials key returns rate limit response when auth throttle blocks request`() = testApplication {
+        val throttle = RecordingAuthThrottle(
+            result = ThrottleResult(
+                allowed = false,
+                reasonCode = "auth_limit",
+                retryAfterSeconds = 9,
+            ),
+        )
+
+        application {
+            configureAuthRoutesTestApp(authThrottle = throttle)
+        }
+
+        val response = client.get("/api/auth/credentials-key")
+
+        assertEquals(HttpStatusCode.TooManyRequests, response.status)
+        assertEquals("9", response.headers["Retry-After"])
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("auth_limit", payload.getValue("reason").jsonPrimitive.content)
+        assertEquals("9", payload.getValue("retryAfterSeconds").jsonPrimitive.content)
+        assertEquals(listOf(ThrottleAction.credentialsKey), throttle.actions)
     }
 
     private fun Application.configureAuthRoutesTestApp(
