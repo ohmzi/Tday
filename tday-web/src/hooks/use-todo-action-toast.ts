@@ -27,7 +27,7 @@ export function useTodoActionToast() {
 
   const showTodoCreatedToast = useCallback((todo: TodoToastTarget) => {
     toast({
-      description: "todo created",
+      description: "Task Created",
       duration: 5000,
       onClick: () => openTodo(todo),
     });
@@ -35,7 +35,7 @@ export function useTodoActionToast() {
 
   const showTodoUpdatedToast = useCallback((todo: TodoToastTarget) => {
     toast({
-      description: "todo updated",
+      description: "Task Modified",
       duration: 5000,
       onClick: () => openTodo(todo),
     });
@@ -43,7 +43,7 @@ export function useTodoActionToast() {
 
   const showTodoDeletedToast = useCallback((todo: TodoDateTarget) => {
     toast({
-      description: "todo deleted",
+      description: "Task Deleted",
       duration: 5000,
       onClick: () => openScheduledDate(todo),
     });
