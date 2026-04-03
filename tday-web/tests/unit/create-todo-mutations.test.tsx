@@ -134,8 +134,8 @@ describe("todo create mutations", () => {
     ]);
     expect(toastMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "todo created",
-        description: "Tap to open task",
+        description: "todo created",
+        onClick: expect.any(Function),
       }),
     );
   });

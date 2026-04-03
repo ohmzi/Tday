@@ -1,4 +1,3 @@
-import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ClickableToastProps = {
@@ -14,38 +13,41 @@ export default function ClickableToast({
   onClick,
   variant = "default",
 }: ClickableToastProps) {
+  const hasDescription = Boolean(description);
+
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-[min(calc(100vw-2rem),24rem)] items-center gap-3 rounded-2xl border p-4 text-left shadow-[0_20px_45px_-24px_hsl(var(--shadow)/0.45)] backdrop-blur-2xl transition",
+        "w-full rounded-xl border px-4 py-3 text-left text-[13px] shadow-[0_4px_12px_rgba(0,0,0,0.1)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20",
         variant === "destructive"
-          ? "border-red/30 bg-red/95 text-white hover:border-red/45"
-          : "border-border/80 bg-card/95 text-foreground hover:border-accent/35",
+          ? "border-red/25 bg-red/95 text-white hover:bg-red/90"
+          : "border-form-button-accent bg-accent text-accent-foreground hover:bg-accent/95",
       )}
     >
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold">{title}</span>
+      <span className="block min-w-0">
+        <span
+          className={cn(
+            "block leading-[1.5]",
+            hasDescription ? "font-medium" : "font-normal",
+          )}
+        >
+          {title}
+        </span>
         {description && (
           <span
             className={cn(
-              "mt-1 block text-sm leading-5",
+              "mt-0.5 block leading-[1.4]",
               variant === "destructive"
-                ? "text-white/80"
-                : "text-muted-foreground",
+                ? "text-white/85"
+                : "text-accent-foreground/90",
             )}
           >
             {description}
           </span>
         )}
       </span>
-      <ChevronRight
-        className={cn(
-          "h-4 w-4 shrink-0",
-          variant === "destructive" ? "text-white/80" : "text-muted-foreground",
-        )}
-      />
     </button>
   );
 }
