@@ -2,8 +2,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 export const useDeleteCalendarInstanceTodo = () => {
   const { toast } = useToast();
+  const { showTodoDeletedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
   const { mutate: deleteInstanceMutate, isPending: deleteInstancePending } =
     useMutation({
@@ -52,9 +54,12 @@ export const useDeleteCalendarInstanceTodo = () => {
         queryClient.invalidateQueries({
           queryKey: ["calendarTodo"],
         });
+        queryClient.invalidateQueries({
+          queryKey: ["todoTimeline"],
+        });
       },
-      onSuccess: () => {
-        toast({ description: "todo deleted" });
+      onSuccess: (_data, deletedTodo) => {
+        showTodoDeletedToast(deletedTodo);
       },
     });
   return { deleteInstanceMutate, deleteInstancePending };
