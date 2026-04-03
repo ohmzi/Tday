@@ -19,7 +19,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 
-enum class ThrottleAction { credentials, register, csrf, session }
+enum class ThrottleAction { credentials, register, csrf, sessionGet, credentialsKey }
 
 enum class ThrottleDimension { ip, email, device }
 
@@ -53,7 +53,8 @@ class AuthThrottleImpl(
             ThrottleAction.credentials to Policy(config.limitCredentialsWindowSec * 1000L, config.limitCredentialsMax),
             ThrottleAction.register to Policy(config.limitRegisterWindowSec * 1000L, config.limitRegisterMax),
             ThrottleAction.csrf to Policy(config.limitCsrfWindowSec * 1000L, config.limitCsrfMax),
-            ThrottleAction.session to Policy(config.limitSessionWindowSec * 1000L, config.limitSessionMax),
+            ThrottleAction.sessionGet to Policy(config.limitSessionGetWindowSec * 1000L, config.limitSessionGetMax),
+            ThrottleAction.credentialsKey to Policy(config.limitCredentialsKeyWindowSec * 1000L, config.limitCredentialsKeyMax),
         )
     }
 
