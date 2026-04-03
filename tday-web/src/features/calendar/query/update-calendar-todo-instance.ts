@@ -4,6 +4,7 @@ import { api } from "@/lib/api-client";
 import { todoSchema } from "@/schema";
 import { TodoItemType } from "@/types";
 import z from "zod";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
 async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
   if (!ghostTodo.id) {
@@ -37,6 +38,7 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
 
 export const useEditCalendarTodoInstance = () => {
   const { toast } = useToast();
+  const { showTodoUpdatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
   const { mutate: editCalendarTodoInstance, status: editTodoInstanceStatus } =
     useMutation({
@@ -69,12 +71,15 @@ export const useEditCalendarTodoInstance = () => {
         );
         return { oldTodosBackup };
       },
-      onSuccess: () => {
+      onSuccess: (_data, updatedTodo) => {
         queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
         queryClient.invalidateQueries({
           queryKey: ["todo"],
         });
-        toast({ description: "todo updated" });
+        queryClient.invalidateQueries({
+          queryKey: ["todoTimeline"],
+        });
+        showTodoUpdatedToast(updatedTodo);
       },
 
       onError: (error, _newTodo, context) => {

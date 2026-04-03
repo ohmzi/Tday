@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TodoItemType } from "@/types";
 
@@ -40,7 +41,9 @@ function createWrapper(queryClient?: QueryClient) {
     queryClient: client,
     Wrapper({ children }: { children: ReactNode }) {
       return (
-        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        <MemoryRouter initialEntries={["/en/app/todo"]}>
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        </MemoryRouter>
       );
     },
   };
@@ -129,7 +132,12 @@ describe("todo create mutations", () => {
         title: "Ship web fix",
       }),
     ]);
-    expect(toastMock).toHaveBeenCalledWith({ description: "todo created" });
+    expect(toastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "todo created",
+        description: "Tap to open task",
+      }),
+    );
   });
 
   it("invalidates the Today timeline after calendar task creation", async () => {

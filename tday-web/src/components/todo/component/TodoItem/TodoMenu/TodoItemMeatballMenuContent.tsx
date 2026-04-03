@@ -95,7 +95,7 @@ function TodoItemMeatballMenuContent({
             </DropdownMenuSub>
             <DropdownMenuItem
                 className="m-1.5"
-                onClick={() => deleteMutateFn({ id: todo.id })}
+                onClick={() => deleteMutateFn(todo)}
             >
                 {deletePending ? (
                     <Spinner className="w-4! h-4!" />

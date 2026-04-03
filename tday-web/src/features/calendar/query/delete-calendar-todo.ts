@@ -2,18 +2,20 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 export const useDeleteCalendarTodo = () => {
   const { toast } = useToast();
+  const { showTodoDeletedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
   const { mutate: deleteMutate, isPending: deletePending } = useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
+    mutationFn: async (todo: TodoItemType) => {
       await api.DELETE({
         url: "/api/todo",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: id.split(":")[0] }),
+        body: JSON.stringify({ id: todo.id.split(":")[0] }),
       });
     },
-    onMutate: async ({ id }: { id: string }) => {
+    onMutate: async (todo: TodoItemType) => {
       await queryClient.cancelQueries({
         queryKey: ["calendarTodo"],
       });
@@ -23,7 +25,7 @@ export const useDeleteCalendarTodo = () => {
 
       queryClient.setQueriesData<TodoItemType[]>(
         { queryKey: ["calendarTodo"] },
-        (old) => old?.filter((todo) => todo.id !== id),
+        (old) => old?.filter((oldTodo) => oldTodo.id !== todo.id),
       );
       return { oldTodos };
     },
@@ -45,9 +47,12 @@ export const useDeleteCalendarTodo = () => {
       queryClient.invalidateQueries({
         queryKey: ["calendarTodo"],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["todoTimeline"],
+      });
     },
-    onSuccess: () => {
-      toast({ description: "todo deleted" });
+    onSuccess: (_data, deletedTodo) => {
+      showTodoDeletedToast(deletedTodo);
     },
   });
   return { deleteMutate, deletePending };
