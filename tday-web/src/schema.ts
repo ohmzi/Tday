@@ -48,6 +48,7 @@ export const todoInstanceSchema = z.object({
   due: z.date({ message: "end date is not identified" }),
   instanceDate: z.date({ message: "instance date is not identified" }),
   rrule: z.string().nullable(),
+  durationMinutes: z.number().int().nonnegative().optional(),
 });
 
 const listColorValues = [
