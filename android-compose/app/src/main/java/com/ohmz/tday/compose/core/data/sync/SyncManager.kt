@@ -29,6 +29,7 @@ import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
@@ -278,28 +279,54 @@ class SyncManager @Inject constructor(
                             ?: if (!remoteTodo?.rrule.isNullOrBlank()) "" else null
                         val listIdForApi = resolvedListId
                             ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null
-
-                        requireApiBody(
-                            api.patchTodoByBody(
-                                UpdateTodoRequest(
-                                    id = targetId,
-                                    title = mutation.title,
-                                    description = descriptionForApi,
-                                    pinned = mutation.pinned,
-                                    priority = mutation.priority,
-                                    dtstart = mutation.dtstartEpochMs?.let { Instant.ofEpochMilli(it).toString() },
-                                    due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
-                                    rrule = rruleForApi,
-                                    listID = listIdForApi,
-                                    dateChanged = true,
-                                    rruleChanged = true,
-                                    instanceDate = mutation.instanceDateEpochMs?.let {
-                                        Instant.ofEpochMilli(it).toString()
-                                    },
-                                ),
-                            ),
-                            "Could not update task",
+                        val durationMinutes = maxOf(
+                            1,
+                            (((mutation.dueEpochMs ?: 0L) - (mutation.dtstartEpochMs ?: 0L)) / (60 * 1000)).toInt(),
                         )
+
+                        if (mutation.instanceDateEpochMs != null) {
+                            requireApiBody(
+                                api.patchTodoInstanceByBody(
+                                    TodoInstanceUpdateRequest(
+                                        todoId = targetId,
+                                        instanceDate = Instant.ofEpochMilli(
+                                            mutation.instanceDateEpochMs,
+                                        ).toString(),
+                                        title = mutation.title,
+                                        description = descriptionForApi,
+                                        priority = mutation.priority,
+                                        dtstart = mutation.dtstartEpochMs?.let {
+                                            Instant.ofEpochMilli(it).toString()
+                                        },
+                                        due = mutation.dueEpochMs?.let {
+                                            Instant.ofEpochMilli(it).toString()
+                                        },
+                                        durationMinutes = durationMinutes,
+                                    ),
+                                ),
+                                "Could not update recurring task instance",
+                            )
+                        } else {
+                            requireApiBody(
+                                api.patchTodoByBody(
+                                    UpdateTodoRequest(
+                                        id = targetId,
+                                        title = mutation.title,
+                                        description = descriptionForApi,
+                                        pinned = mutation.pinned,
+                                        priority = mutation.priority,
+                                        dtstart = mutation.dtstartEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+                                        due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+                                        rrule = rruleForApi,
+                                        listID = listIdForApi,
+                                        dateChanged = true,
+                                        rruleChanged = true,
+                                        instanceDate = null,
+                                    ),
+                                ),
+                                "Could not update task",
+                            )
+                        }
                         true
                     }
 
