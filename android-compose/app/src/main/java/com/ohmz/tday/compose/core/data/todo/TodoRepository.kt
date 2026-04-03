@@ -19,6 +19,7 @@ import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest
+import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoSummaryRequest
@@ -300,26 +301,48 @@ class TodoRepository @Inject constructor(
         val descriptionForApi = normalizedDescription ?: if (todo.description != null) "" else null
         val rruleForApi = normalizedRrule ?: if (!todo.rrule.isNullOrBlank()) "" else null
         val listIdForApi = normalizedListId ?: if (!todo.listId.isNullOrBlank()) "" else null
+        val durationMinutes = maxOf(
+            1,
+            ((normalizedDue.toEpochMilli() - normalizedStart.toEpochMilli()) / (60 * 1000)).toInt(),
+        )
 
         val immediateError = runCatching {
-            requireApiBody(
-                api.patchTodoByBody(
-                    UpdateTodoRequest(
-                        id = canonicalId,
-                        title = trimmedTitle,
-                        description = descriptionForApi,
-                        priority = normalizedPriority,
-                        dtstart = normalizedStart.toString(),
-                        due = normalizedDue.toString(),
-                        rrule = rruleForApi,
-                        listID = listIdForApi,
-                        dateChanged = true,
-                        rruleChanged = true,
-                        instanceDate = instanceDateEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+            if (instanceDateEpochMs != null) {
+                requireApiBody(
+                    api.patchTodoInstanceByBody(
+                        TodoInstanceUpdateRequest(
+                            todoId = canonicalId,
+                            instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
+                            title = trimmedTitle,
+                            description = descriptionForApi,
+                            priority = normalizedPriority,
+                            dtstart = normalizedStart.toString(),
+                            due = normalizedDue.toString(),
+                            durationMinutes = durationMinutes,
+                        ),
                     ),
-                ),
-                "Could not update task",
-            )
+                    "Could not update recurring task instance",
+                )
+            } else {
+                requireApiBody(
+                    api.patchTodoByBody(
+                        UpdateTodoRequest(
+                            id = canonicalId,
+                            title = trimmedTitle,
+                            description = descriptionForApi,
+                            priority = normalizedPriority,
+                            dtstart = normalizedStart.toString(),
+                            due = normalizedDue.toString(),
+                            rrule = rruleForApi,
+                            listID = listIdForApi,
+                            dateChanged = true,
+                            rruleChanged = true,
+                            instanceDate = null,
+                        ),
+                    ),
+                    "Could not update task",
+                )
+            }
         }.exceptionOrNull()
 
         if (immediateError != null && isLikelyUnrecoverableMutationError(immediateError, pendingMutation)) {
