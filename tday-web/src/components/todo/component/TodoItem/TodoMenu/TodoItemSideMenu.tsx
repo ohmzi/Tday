@@ -43,7 +43,7 @@ const TodoItemSideMenu = ({
         size={"icon"}
         className="h-8 w-8 rounded-xl border-border/55 bg-card/70 hover:bg-red/20 hover:text-red"
         onClick={() => {
-          deleteMutateFn({ id: todo.id });
+          deleteMutateFn(todo);
         }}
       >
         {deletePending ? (

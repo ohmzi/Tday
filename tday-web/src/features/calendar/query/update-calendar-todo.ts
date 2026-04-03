@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { todoSchema } from "@/schema";
 import { TodoItemType } from "@/types";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
 interface TodoItemTypeWithChecksum extends TodoItemType {
   dateRangeChecksum?: string;
@@ -54,6 +55,7 @@ async function patchCalendarTodo({
 
 export const useEditCalendarTodo = () => {
   const { toast } = useToast();
+  const { showTodoUpdatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: editCalendarTodo, status: editTodoStatus } = useMutation({
@@ -100,13 +102,16 @@ export const useEditCalendarTodo = () => {
       queryClient.invalidateQueries({
         queryKey: ["todo"],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["todoTimeline"],
+      });
     },
     onError: (error, _newTodo, context) => {
       queryClient.setQueryData(["calendarTodo"], context?.oldTodos);
       toast({ description: error.message, variant: "destructive" });
     },
-    onSuccess: () => {
-      toast({ description: "todo updated" });
+    onSuccess: (_data, updatedTodo) => {
+      showTodoUpdatedToast(updatedTodo);
     },
   });
 

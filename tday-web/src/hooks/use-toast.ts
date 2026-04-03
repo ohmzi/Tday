@@ -1,4 +1,6 @@
-import { toast as sonnerToast } from "sonner"
+import React from "react";
+import { toast as sonnerToast } from "sonner";
+import ClickableToast from "@/hooks/ClickableToast";
 
 type ToastVariant = "default" | "destructive";
 
@@ -7,11 +9,31 @@ interface ToastOptions {
   description?: string;
   variant?: ToastVariant;
   duration?: number;
+  onClick?: () => void;
 }
 
 function toast(options: ToastOptions) {
-  const { title, description, variant, duration } = options;
+  const { title, description, variant, duration, onClick } = options;
   const message = title || description || "";
+
+  if (onClick) {
+    return sonnerToast.custom(
+      (id) =>
+        React.createElement(ClickableToast, {
+          title: message,
+          description: title ? description : undefined,
+          variant,
+          onClick: () => {
+            sonnerToast.dismiss(id);
+            onClick();
+          },
+        }),
+      {
+        duration: duration ?? 5000,
+      },
+    );
+  }
+
   const opts: Parameters<typeof sonnerToast>[1] = {
     description: title ? description : undefined,
     duration: duration ?? 3000,
