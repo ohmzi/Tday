@@ -17,6 +17,7 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
     due: ghostTodo.due,
     rrule: ghostTodo.rrule,
     instanceDate: ghostTodo.instanceDate,
+    durationMinutes: ghostTodo.durationMinutes,
   });
   if (!parsedObj.success) {
     console.error(parsedObj.error.errors[0]);
@@ -27,7 +28,7 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
   await api.PATCH({
     url: "/api/todo/instance",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...parsedObj.data, id: todoId }),
+    body: JSON.stringify({ ...parsedObj.data, todoId }),
   });
 }
 

@@ -150,7 +150,7 @@ struct DeleteTodoRequest: Codable {
 }
 
 struct TodoInstanceUpdateRequest: Codable {
-    let id: String
+    let todoId: String
     let title: String?
     let description: String?
     let priority: String?
@@ -158,6 +158,7 @@ struct TodoInstanceUpdateRequest: Codable {
     let due: String?
     let rrule: String?
     let instanceDate: String
+    let durationMinutes: Int?
 }
 
 struct TodoCompleteRequest: Codable {
