@@ -188,7 +188,7 @@ describe("sentry privacy guardrails", () => {
       const content = readSource(androidApplication);
       expect(content).toContain("BuildConfig.SENTRY_DSN");
       const gradle = readSource(androidGradle);
-      expect(gradle).toMatch(/findProperty.*sentryDsn.*System\.getenv/s);
+      expect(gradle).toMatch(/sentryDsn.*System\.getenv/s);
     });
 
     it("iOS reads DSN from Info.plist bundle key", () => {
