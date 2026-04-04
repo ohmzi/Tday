@@ -33,11 +33,12 @@ const CreateTodoBtn = ({ listID }: { listID?: string }) => {
     <div className="sticky -top-20 mt-6 mb-8 sm:mt-8 sm:mb-10 lg:mt-10 ml-[2px]">
       {/* add more icon */}
       <button
+        type="button"
         onClick={() => setDisplayForm(!displayForm)}
-        className="group flex w-fit items-center gap-3 rounded-2xl border-2 border-dashed border-accent/40 bg-accent/5 px-4 py-2.5 text-accent transition-all duration-200 hover:cursor-pointer hover:border-accent hover:bg-accent hover:text-accent-foreground"
+        className="group flex w-fit cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed border-accent/40 bg-accent/5 px-4 py-2.5 text-accent transition-all duration-200 hover:border-accent hover:bg-accent hover:text-accent-foreground active:border-accent active:bg-accent active:text-accent-foreground"
       >
-        <Plus className="h-5 w-5 transition-colors duration-200 group-hover:stroke-accent-foreground" />
-        <p className="text-[0.95rem] font-medium text-accent transition-colors group-hover:text-accent-foreground">
+        <Plus className="h-5 w-5 transition-colors duration-200 group-hover:stroke-accent-foreground group-active:stroke-accent-foreground" />
+        <p className="text-[0.95rem] font-medium text-accent transition-colors group-hover:text-accent-foreground group-active:text-accent-foreground">
           {todayDict("addATask")}
         </p>
       </button>

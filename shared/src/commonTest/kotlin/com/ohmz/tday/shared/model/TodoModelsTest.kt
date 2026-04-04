@@ -14,7 +14,6 @@ class TodoModelsTest {
             title = "Review sprint",
             description = "Focus on Kotlin migration",
             priority = "High",
-            dtstart = "2026-03-26T10:00:00Z",
             due = "2026-03-26T11:00:00Z",
             rrule = null,
             listID = "list_1",
@@ -34,9 +33,7 @@ class TodoModelsTest {
               "id": "todo_1",
               "title": "Ship shared models",
               "priority": "Medium",
-              "dtstart": "2026-03-26T10:00:00Z",
               "due": "2026-03-26T11:00:00Z",
-              "durationMinutes": 60,
               "timeZone": "UTC",
               "completed": false,
               "pinned": true,
@@ -49,7 +46,6 @@ class TodoModelsTest {
         val decoded = json.decodeFromString<TodoDto>(raw)
 
         assertEquals("todo_1", decoded.id)
-        assertEquals(60, decoded.durationMinutes)
         assertEquals("UTC", decoded.timeZone)
         assertNotNull(decoded.order)
     }

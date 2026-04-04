@@ -12,7 +12,6 @@ class ContractValidatorsTest {
         val errors = ContractValidators.validateTodoCreate(
             CreateTodoRequest(
                 title = "",
-                dtstart = "",
                 due = "",
             ),
         )
@@ -20,7 +19,6 @@ class ContractValidatorsTest {
         assertEquals(
             listOf(
                 "title cannot be blank",
-                "dtstart is required",
                 "due is required",
             ),
             errors,
@@ -33,7 +31,6 @@ class ContractValidatorsTest {
             CreateTodoRequest(
                 title = "Ship tests",
                 description = "Add shared validator coverage",
-                dtstart = "2026-03-27T09:00:00Z",
                 due = "2026-03-27T10:00:00Z",
                 listID = "list_123",
             ),

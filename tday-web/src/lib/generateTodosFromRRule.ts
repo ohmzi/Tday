@@ -5,7 +5,6 @@ type bounds = {
   dateRangeStart: Date;
   dateRangeEnd: Date;
 };
-import { addMilliseconds } from "date-fns";
 
 /**
  * generates in-memory instances of todo based on the RRule field in todo.
@@ -23,19 +22,14 @@ export default function generateTodosFromRRule(
 ): TodoItemType[] {
   return recurringParents.flatMap((parent) => {
     try {
-      const durationMs = parent.due.getTime() - parent.dtstart.getTime();
-
       const ruleSet = genRule(
         parent.rrule,
-        parent.dtstart,
+        parent.due,
         timeZone,
         parent.exdates,
       );
-      const searchStart = new Date(
-        bounds.dateRangeStart.getTime() - durationMs,
-      );
       const occurrences = ruleSet.between(
-        searchStart,
+        bounds.dateRangeStart,
         bounds.dateRangeEnd,
         true,
       );
@@ -44,17 +38,14 @@ export default function generateTodosFromRRule(
         .map((occ) => {
           return {
             ...parent,
-            dtstart: occ,
-            durationMinutes: durationMs / 60000,
-            due: addMilliseconds(occ, durationMs),
+            due: occ,
             instanceDate: occ,
           };
         })
         .filter((instance) => {
-          // Keep only occurrences that overlap the requested range.
           return (
             instance.due.getTime() > bounds.dateRangeStart.getTime() &&
-            instance.dtstart.getTime() <= bounds.dateRangeEnd.getTime()
+            instance.due.getTime() <= bounds.dateRangeEnd.getTime()
           );
         });
     } catch (e) {
@@ -67,7 +58,7 @@ export default function generateTodosFromRRule(
 /**
  * generates a rule object that is timeZone aware
  * @param rrule string with the rrule
- * @param dtStart the start time of user's todo in UTC time
+ * @param dtStart anchor instant for the recurrence (UTC)
  * @param timeZone user's time zone
  * @returns RRule object
  */

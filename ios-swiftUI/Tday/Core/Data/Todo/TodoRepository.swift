@@ -44,8 +44,7 @@ final class TodoRepository {
             title: normalizedTitle,
             description: payload.description?.nilIfBlank,
             priority: normalizedPriority(payload.priority),
-            dtstartEpochMs: payload.dtstart.epochMilliseconds,
-            dueEpochMs: max(payload.due.epochMilliseconds, payload.dtstart.epochMilliseconds + 3 * 60 * 60 * 1_000),
+            dueEpochMs: payload.due.epochMilliseconds,
             rrule: payload.rrule,
             listId: payload.listId?.nilIfBlank,
             pinned: false,
@@ -65,8 +64,7 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: payload.description?.nilIfBlank,
                     priority: normalizedPriority(payload.priority),
-                    dtstartEpochMs: payload.dtstart.epochMilliseconds,
-                    dueEpochMs: max(payload.due.epochMilliseconds, payload.dtstart.epochMilliseconds + 3 * 60 * 60 * 1_000),
+                    dueEpochMs: payload.due.epochMilliseconds,
                     rrule: payload.rrule,
                     instanceDateEpochMs: nil,
                     pinned: false,
@@ -104,8 +102,7 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: payload.description?.nilIfBlank,
                     priority: normalizedPriority(payload.priority),
-                    dtstartEpochMs: payload.dtstart.epochMilliseconds,
-                    dueEpochMs: max(payload.due.epochMilliseconds, payload.dtstart.epochMilliseconds + 60 * 60 * 1_000),
+                    dueEpochMs: payload.due.epochMilliseconds,
                     rrule: payload.rrule,
                     instanceDateEpochMs: current.instanceDateEpochMs,
                     pinned: current.pinned,
@@ -124,8 +121,7 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: payload.description?.nilIfBlank,
                     priority: normalizedPriority(payload.priority),
-                    dtstartEpochMs: payload.dtstart.epochMilliseconds,
-                    dueEpochMs: max(payload.due.epochMilliseconds, payload.dtstart.epochMilliseconds + 60 * 60 * 1_000),
+                    dueEpochMs: payload.due.epochMilliseconds,
                     rrule: payload.rrule,
                     listId: normalizedListID,
                     pinned: todo.pinned,
@@ -160,7 +156,6 @@ final class TodoRepository {
                         title: nil,
                         description: nil,
                         priority: nil,
-                        dtstartEpochMs: nil,
                         dueEpochMs: nil,
                         rrule: nil,
                         listId: nil,
@@ -193,7 +188,6 @@ final class TodoRepository {
                     title: todo.title,
                     description: todo.description,
                     priority: todo.priority,
-                    dtstartEpochMs: todo.dtstart.epochMilliseconds,
                     dueEpochMs: todo.due.epochMilliseconds,
                     completedAtEpochMs: now,
                     rrule: todo.rrule,
@@ -214,7 +208,6 @@ final class TodoRepository {
                         title: nil,
                         description: nil,
                         priority: nil,
-                        dtstartEpochMs: nil,
                         dueEpochMs: nil,
                         rrule: nil,
                         listId: nil,
@@ -247,15 +240,15 @@ final class TodoRepository {
         try await api.summarizeTodos(payload: TodoSummaryRequest(mode: mode.rawValue, listId: listId))
     }
 
-    func parseTodoTitleNlp(text: String, referenceStartEpochMs: Int64, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
+    func parseTodoTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
         let timezoneOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
         return try? await api.parseTodoTitleNlp(
             payload: TodoTitleNlpRequest(
                 text: text,
                 locale: Locale.current.identifier,
-                referenceEpochMs: referenceStartEpochMs,
+                referenceEpochMs: referenceDueEpochMs,
                 timezoneOffsetMinutes: timezoneOffsetMinutes,
-                defaultDurationMinutes: max(30, Int((referenceDueEpochMs - referenceStartEpochMs) / (60 * 1_000)))
+                defaultDurationMinutes: 60
             )
         )
     }
@@ -274,7 +267,6 @@ final class TodoRepository {
                     title: current.title,
                     description: current.description,
                     priority: priority ?? current.priority,
-                    dtstartEpochMs: current.dtstartEpochMs,
                     dueEpochMs: current.dueEpochMs,
                     rrule: current.rrule,
                     instanceDateEpochMs: current.instanceDateEpochMs,
@@ -294,7 +286,6 @@ final class TodoRepository {
                     title: nil,
                     description: nil,
                     priority: priority,
-                    dtstartEpochMs: nil,
                     dueEpochMs: nil,
                     rrule: nil,
                     listId: nil,

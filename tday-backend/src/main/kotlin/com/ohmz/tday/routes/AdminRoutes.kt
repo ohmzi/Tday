@@ -2,6 +2,7 @@ package com.ohmz.tday.routes
 
 import arrow.core.raise.either
 import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.requireAdminAccess
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.AdminSettingsPatchRequest
 import com.ohmz.tday.shared.model.AdminSettingsResponse
@@ -22,13 +23,7 @@ fun Route.adminRoutes() {
             get {
                 call.withAuth { user ->
                     either<AppError, AdminSettingsResponse> {
-                        if (user.approvalStatus != "APPROVED") {
-                            raise(AppError.Forbidden("your account is awaiting admin approval"))
-                        }
-                        if (user.role != "ADMIN") {
-                            raise(AppError.Forbidden("admin access required"))
-                        }
-
+                        user.requireAdminAccess().bind()
                         val config = appConfigService.getGlobalConfig().bind()
                         AdminSettingsResponse(
                             aiSummaryEnabled = config.aiSummaryEnabled,
@@ -41,13 +36,7 @@ fun Route.adminRoutes() {
             patch {
                 call.withAuth { user ->
                     either<AppError, AdminSettingsResponse> {
-                        if (user.approvalStatus != "APPROVED") {
-                            raise(AppError.Forbidden("your account is awaiting admin approval"))
-                        }
-                        if (user.role != "ADMIN") {
-                            raise(AppError.Forbidden("admin access required"))
-                        }
-
+                        user.requireAdminAccess().bind()
                         val body = call.receive<AdminSettingsPatchRequest>()
                         val config = appConfigService.setAiSummaryEnabled(body.aiSummaryEnabled, user.id).bind()
                         cacheService.clear()

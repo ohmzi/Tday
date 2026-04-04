@@ -1,6 +1,7 @@
 import { CompletedTodoItemType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
+import parseApiDateTime from "@/lib/date/parseApiDateTime";
 
 export const useCompletedTodo = () => {
   const {
@@ -22,7 +23,7 @@ export const useCompletedTodo = () => {
 
       const completedTodoWithFormattedDates = completedTodos.map((todo) => {
         const todoInstanceDate = todo.instanceDate
-          ? new Date(todo.instanceDate)
+          ? parseApiDateTime(todo.instanceDate)
           : null;
 
         const todoInstanceDateTime = todoInstanceDate?.getTime();
@@ -31,10 +32,9 @@ export const useCompletedTodo = () => {
           ...todo,
           id: todoId,
           instanceDate: todoInstanceDate,
-          dtstart: new Date(todo.dtstart),
-          createdAt: new Date(todo.createdAt),
-          due: new Date(todo.due),
-          completedAt: new Date(todo.completedAt),
+          createdAt: parseApiDateTime(todo.createdAt),
+          due: parseApiDateTime(todo.due),
+          completedAt: parseApiDateTime(todo.completedAt),
         };
       });
 

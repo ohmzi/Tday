@@ -22,7 +22,7 @@ const CustomAgendaEvent = ({ event }: EventProps<TodoItemType>) => {
     <div>
       <span>{event.title}</span>
       <span>
-        ({format(event.dtstart, "HH:mm")} - {format(event.due, "HH:mm")})
+        ({format(event.due, "HH:mm")})
       </span>
     </div>
   );

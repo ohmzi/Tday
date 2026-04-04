@@ -101,6 +101,37 @@ final class TodoListViewModel {
         }
     }
 
+    func moveTask(_ todo: TodoItem, toDay targetDay: Date) async {
+        let calendar = Calendar.current
+        guard !calendar.isDate(todo.due, inSameDayAs: targetDay) else {
+            return
+        }
+
+        let dueTimeComponents = calendar.dateComponents([.hour, .minute, .second, .nanosecond], from: todo.due)
+        var targetComponents = calendar.dateComponents([.year, .month, .day], from: targetDay)
+        targetComponents.timeZone = calendar.timeZone
+        targetComponents.hour = dueTimeComponents.hour
+        targetComponents.minute = dueTimeComponents.minute
+        targetComponents.second = dueTimeComponents.second
+        targetComponents.nanosecond = dueTimeComponents.nanosecond
+
+        guard let movedDue = calendar.date(from: targetComponents) else {
+            return
+        }
+
+        await updateTask(
+            todo,
+            payload: CreateTaskPayload(
+                title: todo.title,
+                description: todo.description,
+                priority: todo.priority,
+                due: movedDue,
+                rrule: todo.rrule,
+                listId: todo.listId
+            )
+        )
+    }
+
     func complete(_ todo: TodoItem) async {
         do {
             try await container.completeTodo(todo)
@@ -130,8 +161,8 @@ final class TodoListViewModel {
         }
     }
 
-    func parseTaskTitleNlp(text: String, referenceStartEpochMs: Int64, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
-        await container.todoRepository.parseTodoTitleNlp(text: text, referenceStartEpochMs: referenceStartEpochMs, referenceDueEpochMs: referenceDueEpochMs)
+    func parseTaskTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
+        await container.todoRepository.parseTodoTitleNlp(text: text, referenceDueEpochMs: referenceDueEpochMs)
     }
 
     private func hydrateFromCache() {

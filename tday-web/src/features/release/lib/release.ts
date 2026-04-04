@@ -10,6 +10,7 @@ const RELEASE_STORAGE_KEY = "tday.release.current.v1";
 
 export const CURRENT_APP_VERSION = normalizeVersion(__APP_VERSION__) ?? "0.0.0";
 export const GITHUB_RELEASES_URL = "https://github.com/ohmzi/Tday/releases";
+export const GITHUB_RELEASES_API_URL = "https://api.github.com/repos/ohmzi/Tday/releases";
 export const CURRENT_RELEASE_PATH = "/release/current-release.json";
 export const LATEST_RELEASE_METADATA_URL =
   "https://raw.githubusercontent.com/ohmzi/Tday/master/tday-web/public/release/latest-changes.json";
@@ -97,6 +98,19 @@ function normalizeNotes(raw: unknown): string[] {
     .slice(0, 3);
 }
 
+/** Extracts the top changelog bullets from a GitHub release body. */
+export function parseGitHubReleaseNotes(body: string | null | undefined): string[] {
+  if (!body) return [];
+
+  return body
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("* ") || line.startsWith("- "))
+    .map((line) => line.replace(/^[*-]\s+/, "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
 /** Builds a safe fallback release payload for offline or first-load states. */
 export function createFallbackReleaseMetadata(version = CURRENT_APP_VERSION): ReleaseMetadata {
   const normalizedVersion = normalizeVersion(version) ?? CURRENT_APP_VERSION;
@@ -106,6 +120,34 @@ export function createFallbackReleaseMetadata(version = CURRENT_APP_VERSION): Re
     publishedAt: null,
     notes: [],
     releaseUrl: `${GITHUB_RELEASES_URL}/tag/v${normalizedVersion}`,
+    compareUrl: null,
+  };
+}
+
+/** Parses a GitHub release API payload into the shared release metadata shape. */
+export function parseGitHubReleaseMetadata(raw: unknown): ReleaseMetadata | null {
+  if (!isRecord(raw)) return null;
+
+  const version = normalizeVersion(
+    typeof raw.tag_name === "string" ? raw.tag_name : null,
+  );
+  if (!version) return null;
+
+  const releaseUrl =
+    typeof raw.html_url === "string" && raw.html_url.trim()
+      ? raw.html_url.trim()
+      : `${GITHUB_RELEASES_URL}/tag/v${version}`;
+
+  return {
+    version,
+    publishedAt:
+      typeof raw.published_at === "string" && raw.published_at.trim()
+        ? raw.published_at.trim()
+        : null,
+    notes: parseGitHubReleaseNotes(
+      typeof raw.body === "string" ? raw.body : null,
+    ),
+    releaseUrl,
     compareUrl: null,
   };
 }
@@ -159,6 +201,39 @@ export async function fetchReleaseMetadata(url: string): Promise<ReleaseMetadata
   const metadata = parseReleaseMetadata(json);
   if (!metadata) {
     throw new Error("Release metadata is invalid");
+  }
+
+  return metadata;
+}
+
+/** Fetches a GitHub release by tag and normalizes it into the shared metadata shape. */
+export async function fetchGitHubReleaseMetadataByTag(
+  version: string,
+): Promise<ReleaseMetadata> {
+  const normalizedVersion = normalizeVersion(version);
+  if (!normalizedVersion) {
+    throw new Error("Release version is invalid");
+  }
+
+  const response = await fetch(
+    `${GITHUB_RELEASES_API_URL}/tags/v${normalizedVersion}`,
+    {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`GitHub release lookup failed (${response.status})`);
+  }
+
+  const json = (await response.json()) as unknown;
+  const metadata = parseGitHubReleaseMetadata(json);
+  if (!metadata) {
+    throw new Error("GitHub release metadata is invalid");
   }
 
   return metadata;

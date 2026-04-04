@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
+import parseApiDateTime from "@/lib/date/parseApiDateTime";
 
 export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
   const {
@@ -28,26 +29,22 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
       const todoWithFormattedDates = todos.map((todo) => {
         // id needs to be todo id + instance date, so that ghost todos of the same parent can have unique ids
         const todoInstanceDate = todo.instanceDate
-          ? new Date(todo.instanceDate)
+          ? parseApiDateTime(todo.instanceDate)
           : null;
         const todoInstanceDateTime = todoInstanceDate?.getTime();
         const todoId = `${todo.id}:${todoInstanceDateTime}`;
         return {
           ...todo,
           id: todoId,
-          dtstart: new Date(todo.dtstart),
-          due: new Date(todo.due),
+          due: parseApiDateTime(todo.due),
           instanceDate: todoInstanceDate,
           listID: todo.listID ?? null,
           instances:
             todo.instances?.map((instance) => ({
               ...instance,
-              instanceDate: new Date(instance.instanceDate),
-              overriddenDtstart: instance.overriddenDtstart
-                ? new Date(instance.overriddenDtstart)
-                : null,
+              instanceDate: parseApiDateTime(instance.instanceDate),
               overriddenDue: instance.overriddenDue
-                ? new Date(instance.overriddenDue)
+                ? parseApiDateTime(instance.overriddenDue)
                 : null,
             })) || null,
         };

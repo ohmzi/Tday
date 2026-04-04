@@ -12,8 +12,6 @@ object TodoInstances : Table("todo_instances") {
     val overriddenTitle = text("overriddenTitle").nullable()
     val overriddenDescription = text("overriddenDescription").nullable()
     val overriddenPriority = pgEnum<Priority>("overriddenPriority", "\"Priority\"").nullable()
-    val overriddenDtstart = datetime("overriddenDtstart").nullable()
-    val overriddenDurationMinutes = integer("overriddenDurationMinutes").nullable()
     val overriddenDue = datetime("overriddenDue").nullable()
     val completedAt = datetime("completedAt").nullable()
 

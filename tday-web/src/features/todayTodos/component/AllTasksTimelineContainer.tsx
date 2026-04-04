@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarClock, ChevronDown, ChevronRight, Clock3, Command, Flag, Layers, Menu, Search, Sun, X } from "lucide-react";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
+import { TodoItemCard } from "@/components/todo/component/TodoItemContainer";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import { TodoItemType } from "@/types";
 import { useTodoTimeline } from "../query/get-todo-timeline";
@@ -21,6 +22,22 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useMenu } from "@/providers/MenuProvider";
 import { useLocale } from "@/lib/navigation";
+import { useSearchParams } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { useUserPreferences } from "@/providers/UserPreferencesProvider";
+import { moveTodoToDay } from "@/lib/moveTodoToDay";
+import { useTodoMutation } from "@/providers/TodoMutationProvider";
+import { TodoItemTypeWithDateChecksum } from "../query/update-todo";
+import {
+  TODO_FOCUS_DATE_QUERY_PARAM,
+  TODO_FOCUS_MODE_DELETED,
+  TODO_FOCUS_MODE_QUERY_PARAM,
+  TODO_FOCUS_TASK_QUERY_PARAM,
+  formatTodoFocusDateLabel,
+  getTodoDateSectionId,
+  getTodoDayKey,
+  isTodoFocusDateKey,
+} from "@/lib/todoToastNavigation";
 
 const PAGE_SIZE = 10;
 const MS_IN_DAY = 1000 * 60 * 60 * 24;
@@ -60,14 +77,6 @@ const getDayDiff = (date: Date, timeZone?: string) => {
   );
 
   return Math.round((dateMidnight.getTime() - todayMidnight.getTime()) / MS_IN_DAY);
-};
-
-const getDayKey = (date: Date, timeZone?: string) => {
-  const dateInTimezone = getTimeZoneDate(date, timeZone);
-  const y = dateInTimezone.getFullYear();
-  const m = String(dateInTimezone.getMonth() + 1).padStart(2, "0");
-  const d = String(dateInTimezone.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
 };
 
 const getDayLabel = ({
@@ -183,12 +192,172 @@ const SCOPE_CONFIG: Record<TimelineScope, { icon: React.ElementType; heading: st
   priority: { icon: Flag, heading: "priority", emptyMessage: "No priority tasks" },
 };
 
+const DRAG_DISABLED_MESSAGE = "Drag disabled; a global filter is active";
+
+const ScheduledTimelineSections = ({
+  sections,
+  focusedTaskId,
+  focusedDateKey,
+  timeZone,
+}: {
+  sections: TimelineSection[];
+  focusedTaskId: string | null;
+  focusedDateKey: string | null;
+  timeZone?: string;
+}) => {
+  const { toast } = useToast();
+  const { preferences } = useUserPreferences();
+  const { useEditTodo, useEditTodoInstance } = useTodoMutation();
+  const { editTodoMutateFn } = useEditTodo();
+  const { editTodoInstanceMutateFn } = useEditTodoInstance(undefined);
+  const [draggedTodoId, setDraggedTodoId] = useState<string | null>(null);
+  const [dropSectionKey, setDropSectionKey] = useState<string | null>(null);
+
+  const todosById = useMemo(
+    () =>
+      new Map(
+        sections.flatMap((section) =>
+          section.todos.map((todo) => [todo.id, todo] as const),
+        ),
+      ),
+    [sections],
+  );
+
+  const clearDragState = useCallback(() => {
+    setDraggedTodoId(null);
+    setDropSectionKey(null);
+  }, []);
+
+  const handleMove = useCallback((todo: TodoItemType, targetSectionKey: string) => {
+    if (getTodoDayKey(todo.due, timeZone) === targetSectionKey) {
+      clearDragState();
+      return;
+    }
+
+    const nextRange = moveTodoToDay(todo, targetSectionKey, timeZone);
+
+    if (todo.rrule && todo.instanceDate) {
+      editTodoInstanceMutateFn({
+        ...todo,
+        instanceDate: todo.instanceDate ?? todo.due,
+        ...nextRange,
+      });
+      clearDragState();
+      return;
+    }
+
+    editTodoMutateFn({
+      ...(todo as TodoItemTypeWithDateChecksum),
+      ...nextRange,
+      dateRangeChecksum: todo.due.toISOString(),
+      rruleChecksum: todo.rrule,
+    });
+    clearDragState();
+  }, [clearDragState, editTodoInstanceMutateFn, editTodoMutateFn, timeZone]);
+
+  const handleDragStart = useCallback((
+    event: React.DragEvent<HTMLDivElement>,
+    todo: TodoItemType,
+    sectionKey: string,
+  ) => {
+    if (preferences?.sortBy) {
+      event.preventDefault();
+      toast({ title: DRAG_DISABLED_MESSAGE });
+      return;
+    }
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", todo.id);
+    setDraggedTodoId(todo.id);
+    setDropSectionKey(sectionKey);
+  }, [preferences?.sortBy, toast]);
+
+  return (
+    <>
+      {sections.map((section) => {
+        const isDropTarget = draggedTodoId !== null && dropSectionKey === section.key;
+
+        return (
+          <section
+            id={getTodoDateSectionId(section.key)}
+            key={section.key}
+            className={cn(
+              "mb-8 scroll-mt-24 rounded-3xl transition-colors lg:mb-10",
+              section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
+              isDropTarget && "bg-accent/5 ring-1 ring-accent/25",
+            )}
+            onDragEnter={() => {
+              if (draggedTodoId) {
+                setDropSectionKey(section.key);
+              }
+            }}
+            onDragOver={(event) => {
+              if (!draggedTodoId || preferences?.sortBy) {
+                return;
+              }
+
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              if (dropSectionKey !== section.key) {
+                setDropSectionKey(section.key);
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const todoId = event.dataTransfer.getData("text/plain") || draggedTodoId;
+              const todo = todoId ? todosById.get(todoId) : null;
+              if (todo) {
+                handleMove(todo, section.key);
+              } else {
+                clearDragState();
+              }
+            }}
+          >
+            <div className="px-3 py-2 sm:px-4">
+              <div className="mb-3 mt-4 flex items-center gap-2 sm:mt-5 lg:mb-4 lg:mt-6">
+                <h3
+                  className={cn(
+                    "select-none text-lg font-semibold tracking-tight",
+                    focusedDateKey === section.key && "text-accent",
+                  )}
+                >
+                  {section.label}
+                </h3>
+                <LineSeparator className="flex-1 border-border/70" />
+              </div>
+              <div className="space-y-2">
+                {section.todos.map((todo) => (
+                  <div
+                    key={todo.id}
+                    draggable={true}
+                    onDragStart={(event) => handleDragStart(event, todo, section.key)}
+                    onDragEnd={clearDragState}
+                  >
+                    <TodoItemCard
+                      todoItem={todo}
+                      overdue={false}
+                      perTaskOverdue={section.dayDiff === 0}
+                      highlighted={focusedTaskId === todo.id}
+                      dragging={draggedTodoId === todo.id}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      })}
+    </>
+  );
+};
+
 const AllTasksTimelineContainer = ({
   scope = "today",
 }: {
   scope?: TimelineScope;
 }) => {
   const locale = useLocale();
+  const [searchParams] = useSearchParams();
   const { t: appDict } = useTranslation("app");
   const userTZ = useUserTimezone();
   const { setShowMenu } = useMenu();
@@ -206,6 +375,13 @@ const AllTasksTimelineContainer = ({
   const isMac =
     typeof window !== "undefined" &&
     navigator.userAgent.toLowerCase().includes("mac");
+  const focusedTaskId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
+  const focusedDateKey = useMemo(() => {
+    const value = searchParams.get(TODO_FOCUS_DATE_QUERY_PARAM);
+    return isTodoFocusDateKey(value) ? value : null;
+  }, [searchParams]);
+  const isDeletedFocus =
+    searchParams.get(TODO_FOCUS_MODE_QUERY_PARAM) === TODO_FOCUS_MODE_DELETED;
 
   const scopedTodos = useMemo(() => {
     if (scope === "priority") return todos.filter((todo) => isPriorityTask(todo.priority));
@@ -219,7 +395,7 @@ const AllTasksTimelineContainer = ({
         return {
           todo,
           dayDiff,
-          dayKey: getDayKey(todo.due, userTZ?.timeZone),
+          dayKey: getTodoDayKey(todo.due, userTZ?.timeZone),
           label: getDayLabel({
             date: todo.due,
             dayDiff,
@@ -268,6 +444,31 @@ const AllTasksTimelineContainer = ({
     }
     return filteredTimelineItems;
   }, [filteredTimelineItems, scope]);
+  const focusedTaskIndex = useMemo(
+    () =>
+      focusedTaskId
+        ? scopeFilteredItems.findIndex((item) => item.todo.id === focusedTaskId)
+        : -1,
+    [focusedTaskId, scopeFilteredItems],
+  );
+  const focusedTaskItem = focusedTaskIndex >= 0
+    ? scopeFilteredItems[focusedTaskIndex]
+    : null;
+  const focusedDateIndex = useMemo(
+    () =>
+      focusedDateKey
+        ? scopeFilteredItems.findIndex((item) => item.dayKey === focusedDateKey)
+        : -1,
+    [focusedDateKey, scopeFilteredItems],
+  );
+  const showScheduledFocusEmptyState = scope === "scheduled" &&
+    Boolean(focusedDateKey) &&
+    focusedDateIndex === -1 &&
+    !searchQuery.trim();
+  const focusedDateLabel = useMemo(
+    () => (focusedDateKey ? formatTodoFocusDateLabel(focusedDateKey, locale) : null),
+    [focusedDateKey, locale],
+  );
 
   const visibleTimelineItems = useMemo(
     () => scopeFilteredItems.slice(0, visibleCount),
@@ -301,6 +502,24 @@ const AllTasksTimelineContainer = ({
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [scopeFilteredItems.length]);
+
+  useEffect(() => {
+    const targetIndex = focusedTaskIndex >= 0 ? focusedTaskIndex : focusedDateIndex;
+    if (targetIndex < 0 || targetIndex < visibleCount) {
+      return;
+    }
+
+    setVisibleCount((prev) => {
+      const nextCount = Math.ceil((targetIndex + 1) / PAGE_SIZE) * PAGE_SIZE;
+      return Math.min(Math.max(prev, nextCount), scopeFilteredItems.length);
+    });
+  }, [focusedDateIndex, focusedTaskIndex, scopeFilteredItems.length, visibleCount]);
+
+  useEffect(() => {
+    if (scope === "all" && focusedTaskItem?.dayDiff != null && focusedTaskItem.dayDiff < 0) {
+      setEarlierExpanded(true);
+    }
+  }, [focusedTaskItem?.dayDiff, scope]);
 
   useEffect(() => {
     if (!hasMore || !sentinelRef.current) {
@@ -346,6 +565,50 @@ const AllTasksTimelineContainer = ({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isSearchFocused, searchQuery]);
+
+  useEffect(() => {
+    if (!focusedTaskId || focusedTaskIndex < 0) {
+      return;
+    }
+    if (focusedTaskIndex >= visibleCount) {
+      return;
+    }
+    if (scope === "all" && focusedTaskItem?.dayDiff != null && focusedTaskItem.dayDiff < 0 && !earlierExpanded) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(`todo-focus-${encodeURIComponent(focusedTaskId)}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    earlierExpanded,
+    focusedTaskId,
+    focusedTaskIndex,
+    focusedTaskItem?.dayDiff,
+    scope,
+    visibleCount,
+  ]);
+
+  useEffect(() => {
+    if (scope !== "scheduled" || !focusedDateKey || focusedTaskId) {
+      return;
+    }
+    if (focusedDateIndex >= visibleCount && focusedDateIndex >= 0) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById(getTodoDateSectionId(focusedDateKey))
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusedDateIndex, focusedDateKey, focusedTaskId, scope, visibleCount]);
 
   return (
     <TodoMutationProvider
@@ -487,6 +750,25 @@ const AllTasksTimelineContainer = ({
           </div>
         )}
 
+        {showScheduledFocusEmptyState && focusedDateKey && focusedDateLabel && (
+          <section
+            id={getTodoDateSectionId(focusedDateKey)}
+            className="mb-8 scroll-mt-24 lg:mb-10"
+          >
+            <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
+              <h3 className="select-none text-lg font-semibold tracking-tight text-accent">
+                {focusedDateLabel}
+              </h3>
+              <LineSeparator className="flex-1 border-border/70" />
+            </div>
+            <div className="rounded-2xl border border-accent/20 bg-accent/10 px-4 py-5 text-sm text-muted-foreground">
+              {isDeletedFocus
+                ? "The task is gone. No tasks remain scheduled for this date."
+                : "No tasks are scheduled for this date."}
+            </div>
+          </section>
+        )}
+
         {!todoLoading && searchQuery.trim() && scopeFilteredItems.length === 0 && (
           <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
             <div className="relative mb-6">
@@ -515,32 +797,56 @@ const AllTasksTimelineContainer = ({
         {scope === "overdue" &&
           regularSections.map((section) => (
             <section
+              id={getTodoDateSectionId(section.key)}
               key={section.key}
               className={cn(
-                "mb-8 lg:mb-10",
+                "mb-8 scroll-mt-24 lg:mb-10",
                 section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
               )}
             >
               <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
-                <h3 className="select-none text-lg font-semibold tracking-tight">
+                <h3
+                  className={cn(
+                    "select-none text-lg font-semibold tracking-tight",
+                    focusedDateKey === section.key && "text-accent",
+                  )}
+                >
                   {section.label}
                 </h3>
                 <LineSeparator className="flex-1 border-border/70" />
               </div>
-              <TodoGroup todos={section.todos} overdue={section.dayDiff < 0} perTaskOverdue={section.dayDiff === 0} />
+              <TodoGroup
+                todos={section.todos}
+                overdue={section.dayDiff < 0}
+                perTaskOverdue={section.dayDiff === 0}
+                highlightedTodoId={focusedTaskId}
+              />
             </section>
           ))}
 
         {scope === "overdue" &&
           earlierSections.map((section) => (
-            <section key={section.key} className="mb-8 lg:mb-10">
+            <section
+              id={getTodoDateSectionId(section.key)}
+              key={section.key}
+              className="mb-8 scroll-mt-24 lg:mb-10"
+            >
               <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
-                <h3 className="select-none text-lg font-semibold tracking-tight">
+                <h3
+                  className={cn(
+                    "select-none text-lg font-semibold tracking-tight",
+                    focusedDateKey === section.key && "text-accent",
+                  )}
+                >
                   {section.label}
                 </h3>
                 <LineSeparator className="flex-1 border-border/70" />
               </div>
-              <TodoGroup todos={section.todos} overdue={true} />
+              <TodoGroup
+                todos={section.todos}
+                overdue={true}
+                highlightedTodoId={focusedTaskId}
+              />
             </section>
           ))}
 
@@ -567,38 +873,71 @@ const AllTasksTimelineContainer = ({
 
             {earlierExpanded &&
               earlierSections.map((section) => (
-                <div key={section.key}>
+                  <div
+                    id={getTodoDateSectionId(section.key)}
+                    key={section.key}
+                    className="scroll-mt-24"
+                  >
                   <div className="mb-3 flex items-center gap-2 lg:mb-4">
-                    <h4 className="select-none text-base font-medium tracking-tight text-muted-foreground">
+                    <h4
+                      className={cn(
+                        "select-none text-base font-medium tracking-tight text-muted-foreground",
+                        focusedDateKey === section.key && "text-accent",
+                      )}
+                    >
                       {section.label}
                     </h4>
                     <LineSeparator className="flex-1 border-border/70" />
                   </div>
                   <div className="mb-4">
-                    <TodoGroup todos={section.todos} overdue={true} />
+                    <TodoGroup
+                      todos={section.todos}
+                      overdue={true}
+                      highlightedTodoId={focusedTaskId}
+                    />
                   </div>
                 </div>
               ))}
           </section>
         )}
 
-        {scope !== "overdue" && regularSections.map((section) => (
+        {scope === "scheduled" && (
+          <ScheduledTimelineSections
+            sections={regularSections}
+            focusedTaskId={focusedTaskId}
+            focusedDateKey={focusedDateKey}
+            timeZone={userTZ?.timeZone}
+          />
+        )}
+
+        {scope !== "overdue" && scope !== "scheduled" && regularSections.map((section) => (
           <section
+            id={getTodoDateSectionId(section.key)}
             key={section.key}
             className={cn(
-              "mb-8 lg:mb-10",
+              "mb-8 scroll-mt-24 lg:mb-10",
               section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
             )}
           >
-            {(section.dayDiff !== 0 || scope === "all" || scope === "scheduled") && (
+            {(section.dayDiff !== 0 || scope === "all") && (
               <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
-                <h3 className="select-none text-lg font-semibold tracking-tight">
+                <h3
+                  className={cn(
+                    "select-none text-lg font-semibold tracking-tight",
+                    focusedDateKey === section.key && "text-accent",
+                  )}
+                >
                   {section.label}
                 </h3>
                 <LineSeparator className="flex-1 border-border/70" />
               </div>
             )}
-            <TodoGroup todos={section.todos} overdue={false} perTaskOverdue={section.dayDiff === 0} />
+            <TodoGroup
+              todos={section.todos}
+              overdue={false}
+              perTaskOverdue={section.dayDiff === 0}
+              highlightedTodoId={focusedTaskId}
+            />
           </section>
         ))}
 

@@ -2,17 +2,18 @@ import { getCaretOffset } from "@/components/todo/lib/getCaretOffset";
 import { setCaretOffset } from "@/components/todo/lib/setCaretOffset";
 import { useLocale } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
-import { NonNullableDateRange } from "@/types";
 import * as chrono from "chrono-node";
 import { addHours } from "date-fns";
 import React, { SetStateAction, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
+type FormDateRange = { from: Date; to: Date };
+
 type NLPTitleInputProps = {
   titleRef: React.RefObject<HTMLDivElement | null>;
   title: string;
   setTitle: React.Dispatch<SetStateAction<string>>;
-  setDateRange: React.Dispatch<SetStateAction<NonNullableDateRange>>;
+  setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
   setListID?: React.Dispatch<SetStateAction<string | null>>;
   onSubmit?: () => void;
   className?: string;
@@ -75,8 +76,8 @@ export default function NLPTitleInput({
     const matched = parsed.text as string;
 
     const from = parsed.start.date();
-    const to = parsed.end?.date() ?? addHours(from, 3);
-    setDateRange({ from, to });
+    const due = parsed.end?.date() ?? addHours(from, 3);
+    setDateRange({ from: due, to: due });
 
     const before = text.slice(0, idx);
     const after = text.slice(idx + matched.length);

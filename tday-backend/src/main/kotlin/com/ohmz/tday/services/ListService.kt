@@ -51,7 +51,6 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
                     id = row[Todos.id],
                     title = row[Todos.title],
                     priority = row[Todos.priority].name,
-                    dtstart = row[Todos.dtstart].toString(),
                     due = row[Todos.due].toString(),
                     completed = row[Todos.completed],
                     order = row[Todos.order],
