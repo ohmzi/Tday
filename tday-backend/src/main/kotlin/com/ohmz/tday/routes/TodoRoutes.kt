@@ -19,6 +19,7 @@ import com.ohmz.tday.shared.model.CreateTodoResponse
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.io.File
 
 fun Route.todoRoutes() {
     val todoService by inject<TodoService>()
@@ -28,13 +29,31 @@ fun Route.todoRoutes() {
 
     route("/todo") {
         post {
+            // #region agent log
+            val dbgLog = File("/home/ohmz/StudioProjects/Tday/.cursor/debug-feebaa.log")
+            fun dbg(msg: String, data: Map<String, Any?> = emptyMap()) = runCatching {
+                val payload = mapOf("sessionId" to "feebaa", "location" to "TodoRoutes.kt:post", "message" to msg, "data" to data, "timestamp" to System.currentTimeMillis())
+                dbgLog.appendText(kotlinx.serialization.json.Json.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), kotlinx.serialization.json.buildJsonObject {
+                    payload.forEach { (k, v) -> put(k, when(v) { is String -> kotlinx.serialization.json.JsonPrimitive(v); is Number -> kotlinx.serialization.json.JsonPrimitive(v); is Boolean -> kotlinx.serialization.json.JsonPrimitive(v); is Map<*,*> -> kotlinx.serialization.json.buildJsonObject { (v as Map<String, Any?>).forEach { (ik, iv) -> put(ik, kotlinx.serialization.json.JsonPrimitive(iv?.toString())) } }; null -> kotlinx.serialization.json.JsonNull; else -> kotlinx.serialization.json.JsonPrimitive(v.toString()) }) }
+                }) + "\n")
+            }
+            // #endregion
             call.withAuth { user ->
                 either {
                     val body = call.receive<TodoCreateRequest>()
+                    // #region agent log
+                    dbg("POST /api/todo received", mapOf("userId" to user.id, "title" to body.title, "due" to body.due, "priority" to body.priority, "listID" to body.listID, "rrule" to body.rrule, "client" to call.request.header("X-Tday-Client")))
+                    // #endregion
                     validateCreateTodo.validateOrFail(body).bind()
                     val due = parseTodoDateTime(body.due)
                         ?: raise(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
+                    // #region agent log
+                    dbg("parseTodoDateTime result", mapOf("rawDue" to body.due, "parsedDue" to due.toString(), "parseOk" to "true"))
+                    // #endregion
                     val todo = todoService.create(user.id, body.title, body.description, body.priority, due, body.rrule, body.listID).bind()
+                    // #region agent log
+                    dbg("todo created successfully", mapOf("todoId" to todo.id, "title" to todo.title))
+                    // #endregion
                     CreateTodoResponse(message = "todo created", todo = todo)
                 }
             }
