@@ -153,7 +153,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
-                        errorMessage = error.message ?: "Failed to load calendar",
+                        errorMessage = error.userFacingMessage("Failed to load calendar."),
                     )
                 }
             }
@@ -170,7 +170,7 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
-                    current.copy(errorMessage = error.message ?: "Could not create task")
+                    current.copy(errorMessage = error.userFacingMessage("Could not create task."))
                 }
             }
         }
@@ -194,7 +194,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         items = previousItems,
-                        errorMessage = error.message ?: "Could not complete task",
+                        errorMessage = error.userFacingMessage("Could not complete task."),
                     )
                 }
             }
@@ -219,7 +219,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         completedItems = previousCompletedItems,
-                        errorMessage = error.message ?: "Could not restore task",
+                        errorMessage = error.userFacingMessage("Could not restore task."),
                     )
                 }
             }
@@ -276,7 +276,7 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.message ?: "Could not update task",
+                    errorMessage = error.userFacingMessage("Could not update task."),
                 )
             }
         }
@@ -301,7 +301,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         items = previousItems,
-                        errorMessage = error.message ?: "Could not delete task",
+                        errorMessage = error.userFacingMessage("Could not delete task."),
                     )
                 }
             }
