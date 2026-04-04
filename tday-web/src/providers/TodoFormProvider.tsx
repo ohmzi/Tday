@@ -3,12 +3,13 @@ import React, {
   createContext,
   SetStateAction,
   useContext,
-  useMemo,
   useState,
 } from "react";
-import { NonNullableDateRange } from "@/types";
 import { Options, RRule } from "rrule";
 import deriveRepeatType from "@/lib/deriveRepeatType";
+
+type FormDateRange = { from: Date; to: Date };
+
 // Types for context values
 interface TodoFormContextType {
   todoItem?: TodoItemType;
@@ -20,20 +21,19 @@ interface TodoFormContextType {
   listID: string | null;
   setListID: React.Dispatch<SetStateAction<string | null>>;
   setPriority: React.Dispatch<SetStateAction<"Low" | "Medium" | "High">>;
-  dateRange: NonNullableDateRange;
-  setDateRange: React.Dispatch<SetStateAction<NonNullableDateRange>>;
+  dateRange: FormDateRange;
+  setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
   rruleOptions: Partial<Options> | null;
   setRruleOptions: React.Dispatch<SetStateAction<Partial<Options> | null>>;
   timeZone: string;
-  durationMinutes: number;
   derivedRepeatType:
-  | "Daily"
-  | "Weekly"
-  | "Monthly"
-  | "Yearly"
-  | "Weekday"
-  | "Custom"
-  | null;
+    | "Daily"
+    | "Weekly"
+    | "Monthly"
+    | "Yearly"
+    | "Weekday"
+    | "Custom"
+    | null;
   instanceDate?: Date;
   dateRangeChecksum: string;
   rruleChecksum: string | null; //send what was changed to the backend, to either delete override instances or overwrite them
@@ -64,16 +64,17 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
   const now = new Date();
   now.setHours(now.getHours() + 3);
 
-  const [dateRange, setDateRange] = useState<NonNullableDateRange>({
-    from: todoItem?.dtstart ?? new Date(),
-    to: todoItem?.due ?? now,
+  const due = todoItem?.due ?? now;
+  const [dateRange, setDateRange] = useState<FormDateRange>({
+    from: due,
+    to: due,
   });
   const [rruleOptions, setRruleOptions] = useState(
     todoItem?.rrule ? RRule.parseString(todoItem.rrule) : null,
   );
   const dateRangeChecksum = todoItem
-    ? todoItem?.dtstart.toISOString() + todoItem?.due.toISOString()
-    : dateRange.from.toISOString() + dateRange.to.toISOString();
+    ? todoItem.due.toISOString()
+    : dateRange.to.toISOString();
 
   const rruleChecksum = todoItem?.rrule || null;
 
@@ -82,10 +83,7 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
     todoItem?.timeZone ||
     "UTC";
 
-  const durationMinutes = useMemo(() => (dateRange.to.getTime() - dateRange.from.getTime()) / (60 * 1000), [dateRange])
-  const derivedRepeatType = deriveRepeatType({ rruleOptions })
-
-  //eslint-disable-next-line react-hooks/exhaustive-deps
+  const derivedRepeatType = deriveRepeatType({ rruleOptions });
 
   const contextValue: TodoFormContextType = {
     todoItem,
@@ -102,7 +100,6 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
     rruleOptions,
     setRruleOptions,
     timeZone,
-    durationMinutes,
     derivedRepeatType,
     dateRangeChecksum,
     rruleChecksum,

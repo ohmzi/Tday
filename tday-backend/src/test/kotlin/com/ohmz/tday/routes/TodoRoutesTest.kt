@@ -53,7 +53,6 @@ class TodoRoutesTest {
                         title = "description",
                         description = "details",
                         priority = "Low",
-                        dtstart = "2026-03-27T14:42:00Z",
                         due = "2026-03-27T15:42:00Z",
                     ),
                 ),
@@ -61,7 +60,6 @@ class TodoRoutesTest {
         }
 
         assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals(LocalDateTime.of(2026, 3, 27, 14, 42, 0), todoService.lastCreateDtstart)
         assertEquals(LocalDateTime.of(2026, 3, 27, 15, 42, 0), todoService.lastCreateDue)
     }
 
@@ -81,8 +79,7 @@ class TodoRoutesTest {
                         title = "description",
                         description = null,
                         priority = "Low",
-                        dtstart = "not-a-date",
-                        due = "2026-03-27T15:42:00Z",
+                        due = "not-a-date",
                     ),
                 ),
             )
@@ -91,10 +88,9 @@ class TodoRoutesTest {
         assertEquals(HttpStatusCode.BadRequest, response.status)
         val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
         assertEquals(
-            "dtstart must be a valid ISO-8601 datetime",
+            "due must be a valid ISO-8601 datetime",
             payload.getValue("message").jsonPrimitive.content,
         )
-        assertNull(todoService.lastCreateDtstart)
         assertNull(todoService.lastCreateDue)
     }
 
@@ -135,7 +131,6 @@ class TodoRoutesTest {
     }
 
     private class RecordingTodoService : TodoService {
-        var lastCreateDtstart: LocalDateTime? = null
         var lastCreateDue: LocalDateTime? = null
 
         override suspend fun create(
@@ -143,19 +138,16 @@ class TodoRoutesTest {
             title: String,
             description: String?,
             priority: String,
-            dtstart: LocalDateTime,
             due: LocalDateTime,
             rrule: String?,
             listID: String?,
         ): Either<com.ohmz.tday.domain.AppError, TodoResponse> {
-            lastCreateDtstart = dtstart
             lastCreateDue = due
             return TodoResponse(
                 id = "todo_123",
                 title = title,
                 description = description,
                 priority = priority,
-                dtstart = dtstart.toString(),
                 due = due.toString(),
                 listID = listID,
                 completed = false,
@@ -223,7 +215,6 @@ class TodoRoutesTest {
             cleanTitle = text,
             matchedText = null,
             matchStart = null,
-            startEpochMs = null,
             dueEpochMs = null,
         )
     }

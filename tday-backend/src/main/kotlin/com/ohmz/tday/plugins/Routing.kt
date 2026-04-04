@@ -1,6 +1,7 @@
 package com.ohmz.tday.plugins
 
 import com.ohmz.tday.config.AppConfig
+import com.ohmz.tday.domain.requireApprovedAuthUser
 import com.ohmz.tday.routes.*
 import com.ohmz.tday.routes.auth.*
 import com.ohmz.tday.services.RealtimeService
@@ -49,7 +50,17 @@ fun Application.configureRouting() {
         }
 
         webSocket("/ws") {
-            val user = call.authUser() ?: return@webSocket close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
+            val user = when (val authResult = call.requireApprovedAuthUser()) {
+                is arrow.core.Either.Left -> {
+                    val reasonText = if (authResult.value is com.ohmz.tday.domain.AppError.Unauthorized) {
+                        "Unauthorized"
+                    } else {
+                        "Pending approval"
+                    }
+                    return@webSocket close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, reasonText))
+                }
+                is arrow.core.Either.Right -> authResult.value
+            }
             realtimeService.channelFor(user.id).collect { event ->
                 val json = Json.encodeToString(com.ohmz.tday.domain.DomainEvent.serializer(), event)
                 send(io.ktor.websocket.Frame.Text(json))

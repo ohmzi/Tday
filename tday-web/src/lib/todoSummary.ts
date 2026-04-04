@@ -52,7 +52,7 @@ export function filterTodosForSummaryMode({
       return activeTodos.filter((todo) => isPriorityTodo(todo.priority));
     }
 
-    return activeTodos.filter((todo) => todo.due >= start && todo.dtstart <= end);
+    return activeTodos.filter((todo) => todo.due >= start && todo.due <= end);
   })();
 
   return filtered.sort((a, b) => a.due.getTime() - b.due.getTime());
