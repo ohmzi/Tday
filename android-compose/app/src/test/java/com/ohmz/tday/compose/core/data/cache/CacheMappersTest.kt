@@ -36,7 +36,6 @@ class CacheMappersTest {
         assertEquals(todo.title, cached.title)
         assertEquals(todo.description, cached.description)
         assertEquals(todo.priority, cached.priority)
-        assertEquals(todo.dtstart.toEpochMilli(), cached.dtstartEpochMs)
         assertEquals(todo.due.toEpochMilli(), cached.dueEpochMs)
         assertEquals(todo.rrule, cached.rrule)
         assertEquals(todo.instanceDateEpochMillis, cached.instanceDateEpochMs)
@@ -56,7 +55,6 @@ class CacheMappersTest {
         assertEquals(cached.title, todo.title)
         assertEquals(cached.description, todo.description)
         assertEquals(cached.priority, todo.priority)
-        assertEquals(Instant.ofEpochMilli(cached.dtstartEpochMs), todo.dtstart)
         assertEquals(Instant.ofEpochMilli(cached.dueEpochMs), todo.due)
         assertEquals(cached.rrule, todo.rrule)
         assertNotNull(todo.instanceDate)
@@ -145,14 +143,6 @@ class CacheMappersTest {
         assertNull(item.completedAt)
     }
 
-    @Test
-    fun `completedFromCache falls back dtstart to due when dtstart is zero`() {
-        val cached = makeCachedCompleted().copy(dtstartEpochMs = 0L)
-        val item = completedFromCache(cached)
-
-        assertEquals(Instant.ofEpochMilli(cached.dueEpochMs), item.dtstart)
-    }
-
     // --- mapTodoDto ---
 
     @Test
@@ -186,13 +176,11 @@ class CacheMappersTest {
     @Test
     fun `mapTodoDto parses backend local datetime strings as UTC`() {
         val dto = makeTodoDto().copy(
-            dtstart = "2025-06-14T18:00:00",
             due = "2025-06-14T19:30:00",
         )
 
         val item = mapTodoDto(dto)
 
-        assertEquals(Instant.parse("2025-06-14T18:00:00Z"), item.dtstart)
         assertEquals(Instant.parse("2025-06-14T19:30:00Z"), item.due)
     }
 
@@ -328,7 +316,6 @@ class CacheMappersTest {
         title = "Buy groceries",
         description = "Milk, eggs, bread",
         priority = "High",
-        dtstart = fixedInstant,
         due = dueInstant,
         rrule = "FREQ=WEEKLY",
         instanceDate = fixedInstant,
@@ -344,7 +331,6 @@ class CacheMappersTest {
         title = "Buy groceries",
         description = "Milk, eggs, bread",
         priority = "High",
-        dtstartEpochMs = fixedInstant.toEpochMilli(),
         dueEpochMs = dueInstant.toEpochMilli(),
         rrule = "FREQ=WEEKLY",
         instanceDateEpochMs = fixedInstant.toEpochMilli(),
@@ -378,7 +364,6 @@ class CacheMappersTest {
         title = "Completed task",
         description = "desc",
         priority = "Low",
-        dtstart = fixedInstant,
         due = dueInstant,
         completedAt = completedInstant,
         rrule = null,
@@ -393,7 +378,6 @@ class CacheMappersTest {
         title = "Completed task",
         description = "desc",
         priority = "Low",
-        dtstartEpochMs = fixedInstant.toEpochMilli(),
         dueEpochMs = dueInstant.toEpochMilli(),
         completedAtEpochMs = completedInstant.toEpochMilli(),
         rrule = null,
@@ -406,7 +390,6 @@ class CacheMappersTest {
         id = id,
         title = "Test todo",
         priority = "Medium",
-        dtstart = fixedInstant.toString(),
         due = dueInstant.toString(),
         updatedAt = updatedInstant.toString(),
     )
@@ -416,7 +399,6 @@ class CacheMappersTest {
         originalTodoID = "t1",
         title = "Done task",
         priority = "High",
-        dtstart = fixedInstant.toString(),
         due = dueInstant.toString(),
         completedAt = completedInstant.toString(),
     )

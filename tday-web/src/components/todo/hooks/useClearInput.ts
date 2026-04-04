@@ -23,7 +23,7 @@ export function useClearInput(
       setDesc("");
       setTitle("");
       setDateRange({
-        from: todoItem?.dtstart ? todoItem.dtstart : new Date(),
+        from: todoItem?.due ? todoItem.due : now,
         to: todoItem?.due ? todoItem.due : now,
       });
       setPriority("Low");
@@ -34,7 +34,7 @@ export function useClearInput(
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [todoItem?.due, todoItem?.dtstart],
+    [todoItem?.due],
   );
   return clearInput;
 }

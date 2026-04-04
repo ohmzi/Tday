@@ -50,7 +50,6 @@ data class ListTodoDto(
     val id: String,
     val title: String,
     val priority: String,
-    val dtstart: String,
     val due: String,
     val completed: Boolean,
     val order: Int,

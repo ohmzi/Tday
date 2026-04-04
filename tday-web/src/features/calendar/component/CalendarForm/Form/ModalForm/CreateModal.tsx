@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Options, RRule } from "rrule";
 import { AlignLeft, Clock, Flag, Repeat, Circle } from "lucide-react";
-import { TodoItemType, NonNullableDateRange } from "@/types";
+import { TodoItemType } from "@/types";
+
+type ModalDateRange = { from: Date; to: Date };
 import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
 import DateDropdownMenu from "../../FormFields/Dropdowns/DateDropdown/DateDropdownMenu";
 import PriorityDropdownMenu from "../../FormFields/Dropdowns/PriorityDropdown/PriorityDropdown";
@@ -31,14 +33,15 @@ const CreateCalendarForm = ({
   displayForm,
   setDisplayForm,
 }: CreateCalendarFormProps) => {
+  void start;
   const { t: appDict } = useTranslation("app");
 
   const [cancelEditDialogOpen, setCancelEditDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TodoItemType["priority"]>("Low");
-  const [dateRange, setDateRange] = useState<NonNullableDateRange>({
-    from: start,
+  const [dateRange, setDateRange] = useState<ModalDateRange>({
+    from: end,
     to: end,
   });
   const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(null);
@@ -55,11 +58,10 @@ const CreateCalendarForm = ({
       title !== "" ||
       description !== "" ||
       priority !== "Low" ||
-      dateRange.from?.getTime() !== start.getTime() ||
       dateRange.to?.getTime() !== end.getTime() ||
       rruleString !== null
     );
-  }, [rruleOptions, title, description, priority, dateRange, start, end]);
+  }, [rruleOptions, title, description, priority, dateRange, end]);
 
   useEffect(() => {
     if (createTodoStatus === "success") {
@@ -96,7 +98,6 @@ const CreateCalendarForm = ({
                   title,
                   description,
                   priority,
-                  dtstart: dateRange.from || start,
                   due: dateRange.to || end,
                   rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
                   listID,

@@ -39,7 +39,6 @@ data class TodoTitleNlpResponse(
     val cleanTitle: String,
     val matchedText: String? = null,
     val matchStart: Int? = null,
-    val startEpochMs: Long? = null,
     val dueEpochMs: Long? = null,
 )
 
@@ -48,7 +47,6 @@ data class CreateTodoRequest(
     val title: String,
     val description: String? = null,
     val priority: String = "Low",
-    val dtstart: String,
     val due: String,
     val rrule: String? = null,
     val listID: String? = null,
@@ -61,9 +59,7 @@ data class TodoDto(
     val description: String? = null,
     val pinned: Boolean = false,
     val priority: String = "Low",
-    val dtstart: String,
     val due: String,
-    val durationMinutes: Int? = null,
     val rrule: String? = null,
     val timeZone: String? = null,
     val instanceDate: String? = null,
@@ -89,7 +85,6 @@ data class UpdateTodoRequest(
     val pinned: Boolean? = null,
     val priority: String? = null,
     val completed: Boolean? = null,
-    val dtstart: String? = null,
     val due: String? = null,
     val rrule: String? = null,
     val listID: String? = null,
@@ -135,9 +130,7 @@ data class TodoInstancePatchRequest(
     val title: String? = null,
     val description: String? = null,
     val priority: String? = null,
-    val dtstart: String? = null,
     val due: String? = null,
-    val durationMinutes: Int? = null,
 )
 
 @Serializable

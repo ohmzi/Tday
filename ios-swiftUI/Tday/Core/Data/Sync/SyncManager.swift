@@ -173,7 +173,6 @@ final class SyncManager {
                 title: todo.title,
                 description: todo.description,
                 priority: todo.priority,
-                dtstartEpochMs: todo.dtstartEpochMs,
                 dueEpochMs: todo.dueEpochMs,
                 rrule: todo.rrule,
                 listId: todo.listId,
@@ -201,7 +200,6 @@ final class SyncManager {
                 title: nil,
                 description: nil,
                 priority: nil,
-                dtstartEpochMs: nil,
                 dueEpochMs: nil,
                 rrule: nil,
                 listId: nil,
@@ -292,7 +290,6 @@ final class SyncManager {
                     title: mutation.title ?? "Untitled",
                     description: mutation.description,
                     priority: mutation.priority ?? "Low",
-                    dtstart: Date(epochMilliseconds: mutation.dtstartEpochMs ?? Date().epochMilliseconds).ISO8601Format(),
                     due: Date(epochMilliseconds: mutation.dueEpochMs ?? Date().epochMilliseconds).ISO8601Format(),
                     rrule: mutation.rrule,
                     listID: resolvedListID
@@ -307,30 +304,47 @@ final class SyncManager {
             let remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetID] ?? 0
             guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
             let resolvedListID = mutation.listId.flatMap { resolvedListIDs[$0] ?? $0 }
-            _ = try await api.patchTodoByBody(
-                payload: UpdateTodoRequest(
-                    id: targetID,
-                    title: mutation.title,
-                    description: mutation.description,
-                    pinned: mutation.pinned,
-                    priority: mutation.priority,
-                    completed: mutation.completed,
-                    dtstart: mutation.dtstartEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
-                    due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
-                    rrule: mutation.rrule,
-                    listID: resolvedListID,
-                    dateChanged: true,
-                    rruleChanged: true,
-                    instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+            if let instanceDateEpochMs = mutation.instanceDateEpochMs {
+                _ = try await api.patchTodoInstanceByBody(
+                    payload: TodoInstancePatchRequest(
+                        todoId: targetID,
+                        instanceDate: Date(epochMilliseconds: instanceDateEpochMs).ISO8601Format(),
+                        title: mutation.title,
+                        description: mutation.description,
+                        priority: mutation.priority,
+                        due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                    )
                 )
-            )
+            } else {
+                _ = try await api.patchTodoByBody(
+                    payload: UpdateTodoRequest(
+                        id: targetID,
+                        title: mutation.title,
+                        description: mutation.description,
+                        pinned: mutation.pinned,
+                        priority: mutation.priority,
+                        completed: mutation.completed,
+                        due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
+                        rrule: mutation.rrule,
+                        listID: resolvedListID,
+                        dateChanged: true,
+                        rruleChanged: true,
+                        instanceDate: nil
+                    )
+                )
+            }
 
         case .deleteTodo:
             guard let targetID else { return }
             if let instanceDateEpochMs = mutation.instanceDateEpochMs {
-                _ = try await api.deleteTodoInstanceByBody(payload: DeleteTodoRequest(id: targetID, instanceDate: instanceDateEpochMs))
+                _ = try await api.deleteTodoInstanceByBody(
+                    payload: TodoInstanceDeleteRequest(
+                        todoId: targetID,
+                        instanceDate: Date(epochMilliseconds: instanceDateEpochMs).ISO8601Format()
+                    )
+                )
             } else {
-                _ = try await api.deleteTodoByBody(payload: DeleteTodoRequest(id: targetID, instanceDate: nil))
+                _ = try await api.deleteTodoByBody(payload: DeleteTodoRequest(id: targetID))
             }
 
         case .setPinned:
@@ -343,7 +357,6 @@ final class SyncManager {
                     pinned: mutation.pinned,
                     priority: nil,
                     completed: nil,
-                    dtstart: nil,
                     due: nil,
                     rrule: nil,
                     listID: nil,
@@ -388,7 +401,6 @@ final class SyncManager {
                         title: todo.title,
                         description: todo.description,
                         priority: todo.priority,
-                        dtstartEpochMs: todo.dtstartEpochMs,
                         dueEpochMs: todo.dueEpochMs,
                         rrule: todo.rrule,
                         instanceDateEpochMs: todo.instanceDateEpochMs,
@@ -408,7 +420,6 @@ final class SyncManager {
                         title: item.title,
                         description: item.description,
                         priority: item.priority,
-                        dtstartEpochMs: item.dtstartEpochMs,
                         dueEpochMs: item.dueEpochMs,
                         completedAtEpochMs: item.completedAtEpochMs,
                         rrule: item.rrule,
@@ -429,7 +440,6 @@ final class SyncManager {
                     title: mutation.title,
                     description: mutation.description,
                     priority: mutation.priority,
-                    dtstartEpochMs: mutation.dtstartEpochMs,
                     dueEpochMs: mutation.dueEpochMs,
                     rrule: mutation.rrule,
                     listId: mutation.listId,
@@ -457,7 +467,6 @@ final class SyncManager {
                         title: todo.title,
                         description: todo.description,
                         priority: todo.priority,
-                        dtstartEpochMs: todo.dtstartEpochMs,
                         dueEpochMs: todo.dueEpochMs,
                         rrule: todo.rrule,
                         instanceDateEpochMs: todo.instanceDateEpochMs,
@@ -485,7 +494,6 @@ final class SyncManager {
                     title: mutation.title,
                     description: mutation.description,
                     priority: mutation.priority,
-                    dtstartEpochMs: mutation.dtstartEpochMs,
                     dueEpochMs: mutation.dueEpochMs,
                     rrule: mutation.rrule,
                     listId: mutation.listId == localListID ? serverListID : mutation.listId,

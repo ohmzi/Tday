@@ -88,7 +88,6 @@ For detailed instructions on all supported remote access methods — including C
 |----------|---------|---------|
 | `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
 | `release.yml` | Push to `master` | Runs lint + tests, then builds Docker image, pushes to GHCR, creates release |
-| `cronjob.yml` | Schedule + manual | Calls production cron endpoint for task maintenance |
 
 ### Test-Before-Build Policy
 
@@ -176,11 +175,12 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 
 | Variable | Purpose |
 |----------|---------|
-| `CRONJOB_SECRET` | Auth header for scheduled cron endpoint |
 | `AUTH_PBKDF2_ITERATIONS` | Password hash iterations (default: 310,000) |
 | `AUTH_SESSION_MAX_AGE_SEC` | Rolling web-session inactivity window in seconds (default: 2,592,000) |
 | `AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC` | Absolute session cap from original login time in seconds (default: 7,776,000) |
 | `AUTH_SESSION_RENEW_THRESHOLD_SEC` | Renewal threshold in seconds before expiry (default: 604,800) |
+| `AUTH_CREDENTIALS_PRIVATE_KEY` | RSA key for credential envelope encryption; recommended in production to avoid ephemeral startup keys |
+| `AUTH_CAPTCHA_SECRET` | Cloudflare Turnstile secret; recommended in production so adaptive CAPTCHA does not fail closed when triggered |
 | `OLLAMA_URL` | Ollama service URL (default: `http://ollama:11434`) |
 | `OLLAMA_MODEL` | AI model for summaries (default: `qwen2.5:0.5b`) |
 
@@ -199,9 +199,14 @@ These variables are read by Docker Compose for port binding. They belong in the 
 |----------|---------|
 | `TDAY_ENV` | Runtime mode (`production` enables production-only behavior such as HSTS and secure session cookies; `NODE_ENV` is still accepted as a fallback) |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed cross-origin web origins (same-origin requests work without it) |
-| `AUTH_CREDENTIALS_PRIVATE_KEY` | RSA key for credential envelope encryption |
-| `AUTH_CAPTCHA_SECRET` | Cloudflare Turnstile secret for adaptive CAPTCHA |
 | `DATA_ENCRYPTION_KEY` / `DATA_ENCRYPTION_KEY_ID` | Field-level encryption at rest |
+| `API_RATE_LIMIT_MAX` / `API_RATE_LIMIT_WINDOW_SEC` | Global `/api/**` request budget |
+| `INFRA_RATE_LIMIT_MAX` / `INFRA_RATE_LIMIT_WINDOW_SEC` | `/health` and `/api/mobile/probe` request budget |
+| `SUMMARY_RATE_LIMIT_MAX` / `SUMMARY_RATE_LIMIT_WINDOW_SEC` | `POST /api/todo/summary` request budget |
+| `CHANGE_PASSWORD_RATE_LIMIT_MAX` / `CHANGE_PASSWORD_RATE_LIMIT_WINDOW_SEC` | `POST /api/user/change-password` request budget |
+| `WS_RATE_LIMIT_MAX` / `WS_RATE_LIMIT_WINDOW_SEC` | `/ws` connect-attempt budget |
+| `AUTH_LIMIT_SESSION_GET_MAX` / `AUTH_LIMIT_SESSION_GET_WINDOW_SEC` | `GET /api/auth/session` budget |
+| `AUTH_LIMIT_CREDENTIALS_KEY_MAX` / `AUTH_LIMIT_CREDENTIALS_KEY_WINDOW_SEC` | `GET /api/auth/credentials-key` budget |
 | `AWS_*` | S3 storage for files |
 
 ### Secrets via Files
@@ -211,7 +216,7 @@ For Docker/Kubernetes secret mounts, append `_FILE` to any sensitive variable:
 ```bash
 AUTH_SECRET_FILE=/run/secrets/auth_secret
 DATABASE_URL_FILE=/run/secrets/database_url
-CRONJOB_SECRET_FILE=/run/secrets/cronjob_secret
+AUTH_CAPTCHA_SECRET_FILE=/run/secrets/auth_captcha_secret
 ```
 
 The Ktor backend's `AppConfig` reads file contents into the corresponding variable at startup when `_FILE` variants are present.

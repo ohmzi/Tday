@@ -4,6 +4,7 @@ import {
   createFallbackReleaseMetadata,
   CURRENT_APP_VERSION,
   CURRENT_RELEASE_PATH,
+  fetchGitHubReleaseMetadataByTag,
   fetchReleaseMetadata,
   GITHUB_RELEASES_URL,
   LATEST_RELEASE_METADATA_URL,
@@ -21,21 +22,41 @@ export type ReleaseInfo = {
   latestUrl: string;
 };
 
+function hasNotes(release: ReleaseMetadata | null | undefined) {
+  return (release?.notes.length ?? 0) > 0;
+}
+
 /** Loads the installed release metadata, preferring the bundled copy and falling back to local storage. */
-async function loadCurrentRelease(): Promise<ReleaseMetadata> {
+export async function loadCurrentRelease(): Promise<ReleaseMetadata> {
   const cachedRelease = readStoredCurrentRelease(CURRENT_APP_VERSION);
+  let bundledRelease: ReleaseMetadata | null = null;
 
   try {
     const currentRelease = await fetchReleaseMetadata(CURRENT_RELEASE_PATH);
     if (normalizeVersion(currentRelease.version) === CURRENT_APP_VERSION) {
-      storeCurrentRelease(currentRelease);
-      return currentRelease;
+      bundledRelease = currentRelease;
+      if (hasNotes(currentRelease)) {
+        storeCurrentRelease(currentRelease);
+        return currentRelease;
+      }
     }
   } catch {
-    // Fall back to the stored copy or a generated placeholder.
+    // Fall back to local storage, GitHub release data, or a generated placeholder.
   }
 
-  return cachedRelease ?? createFallbackReleaseMetadata(CURRENT_APP_VERSION);
+  if (cachedRelease && hasNotes(cachedRelease)) {
+    return cachedRelease;
+  }
+
+  try {
+    const currentRelease = await fetchGitHubReleaseMetadataByTag(CURRENT_APP_VERSION);
+    storeCurrentRelease(currentRelease);
+    return currentRelease;
+  } catch {
+    // Fall back to the best local copy when GitHub is unavailable.
+  }
+
+  return bundledRelease ?? cachedRelease ?? createFallbackReleaseMetadata(CURRENT_APP_VERSION);
 }
 
 /** Combines installed and latest release metadata into the admin-facing release state. */

@@ -344,7 +344,7 @@ export default function CalendarClient() {
           }}
           localizer={localizer}
           events={filteredCalendarTodos}
-          startAccessor="dtstart"
+          startAccessor="due"
           endAccessor="due"
           draggableAccessor={() => !isTouch}
           resizable={!isTouch}
@@ -371,14 +371,12 @@ export default function CalendarClient() {
             if (!todo.rrule) {
               editCalendarTodo({
                 ...todo,
-                dtstart: new Date(resizeEvent.start),
                 due: new Date(resizeEvent.end),
               });
             } else {
               editCalendarTodoInstance({
                 ...todo,
-                instanceDate: todo.instanceDate || todo.dtstart,
-                dtstart: new Date(resizeEvent.start),
+                instanceDate: todo.instanceDate || todo.due,
                 due: new Date(resizeEvent.end),
               });
             }
@@ -387,14 +385,12 @@ export default function CalendarClient() {
             if (!todo.rrule) {
               editCalendarTodo({
                 ...todo,
-                dtstart: new Date(dropEvent.start),
                 due: new Date(dropEvent.end),
               });
             } else {
               editCalendarTodoInstance({
                 ...todo,
-                instanceDate: todo.instanceDate || todo.dtstart,
-                dtstart: new Date(dropEvent.start),
+                instanceDate: todo.instanceDate || todo.due,
                 due: new Date(dropEvent.end),
               });
             }

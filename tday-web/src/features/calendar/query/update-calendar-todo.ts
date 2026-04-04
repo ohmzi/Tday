@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { todoSchema } from "@/schema";
 import { TodoItemType } from "@/types";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
 interface TodoItemTypeWithChecksum extends TodoItemType {
   dateRangeChecksum?: string;
@@ -23,7 +24,6 @@ async function patchCalendarTodo({
     title: todo.title,
     description: todo.description,
     priority: todo.priority,
-    dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
     listID: todo.listID ?? null,
@@ -35,8 +35,7 @@ async function patchCalendarTodo({
 
   const rruleChanged = rruleChecksum !== todo.rrule;
   const dateChanged =
-    dateRangeChecksum !==
-    todo.dtstart.toISOString() + "" + todo.due.toISOString();
+    dateRangeChecksum !== todo.due.toISOString();
 
   const todoId = todo.id.split(":")[0];
   await api.PATCH({
@@ -54,6 +53,7 @@ async function patchCalendarTodo({
 
 export const useEditCalendarTodo = () => {
   const { toast } = useToast();
+  const { showTodoUpdatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: editCalendarTodo, status: editTodoStatus } = useMutation({
@@ -83,7 +83,6 @@ export const useEditCalendarTodo = () => {
                 description: newTodo.description,
                 priority: newTodo.priority,
                 due: newTodo.due,
-                dtstart: newTodo.dtstart,
                 rrule: newTodo.rrule,
                 createdAt: new Date(),
               };
@@ -100,13 +99,16 @@ export const useEditCalendarTodo = () => {
       queryClient.invalidateQueries({
         queryKey: ["todo"],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["todoTimeline"],
+      });
     },
     onError: (error, _newTodo, context) => {
       queryClient.setQueryData(["calendarTodo"], context?.oldTodos);
       toast({ description: error.message, variant: "destructive" });
     },
-    onSuccess: () => {
-      toast({ description: "todo updated" });
+    onSuccess: (_data, updatedTodo) => {
+      showTodoUpdatedToast(updatedTodo);
     },
   });
 

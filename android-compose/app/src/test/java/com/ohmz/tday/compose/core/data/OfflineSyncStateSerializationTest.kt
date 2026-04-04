@@ -30,7 +30,6 @@ class OfflineSyncStateSerializationTest {
                     id = "t1",
                     canonicalId = "t1",
                     title = "Test",
-                    dtstartEpochMs = 1700000000000L,
                     dueEpochMs = 1700003600000L,
                     priority = "High",
                     listId = "list-1",
@@ -55,7 +54,6 @@ class OfflineSyncStateSerializationTest {
                     id = "t1",
                     canonicalId = "t1",
                     title = "Todo",
-                    dtstartEpochMs = 1700000000000L,
                     dueEpochMs = 1700003600000L,
                 ),
             ),
@@ -110,7 +108,7 @@ class OfflineSyncStateSerializationTest {
 
     @Test
     fun `CachedTodoRecord default values are stable`() {
-        val minimalJson = """{"id":"x","canonicalId":"x","title":"T","dtstartEpochMs":0,"dueEpochMs":0}"""
+        val minimalJson = """{"id":"x","canonicalId":"x","title":"T","dueEpochMs":0}"""
         val record = json.decodeFromString(CachedTodoRecord.serializer(), minimalJson)
 
         assertEquals("Low", record.priority)

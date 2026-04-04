@@ -50,6 +50,20 @@ fun Route.credentialsCallbackRoutes() {
             val identifier = email
 
             if (authThrottle.requiresCaptcha(ThrottleAction.credentials, call.request, identifier)) {
+                if (!captchaService.isConfigured()) {
+                    eventLogger.log(
+                        "auth_captcha_misconfigured",
+                        mapOf("action" to "credentials", "reason" to "captcha_secret_missing"),
+                    )
+                    call.respond(
+                        HttpStatusCode.ServiceUnavailable,
+                        mapOf(
+                            "message" to "Additional verification is temporarily unavailable.",
+                            "reason" to "captcha_unavailable",
+                        ),
+                    )
+                    return@post
+                }
                 val captchaResult = captchaService.verify(body.captchaToken, call.request, "credentials")
                 if (!captchaResult.ok) {
                     eventLogger.log("auth_captcha_failed", mapOf("action" to "credentials", "reason" to captchaResult.reason))

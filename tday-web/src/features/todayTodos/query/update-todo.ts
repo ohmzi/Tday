@@ -4,6 +4,7 @@ import { api } from "@/lib/api-client";
 import { todoSchema } from "@/schema";
 import { TodoItemType } from "@/types";
 import { endOfDay } from "date-fns";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
 export interface TodoItemTypeWithDateChecksum extends TodoItemType {
   dateRangeChecksum: string;
@@ -18,7 +19,6 @@ async function patchTodo({ todo }: { todo: TodoItemTypeWithDateChecksum }) {
     title: todo.title,
     description: todo.description,
     priority: todo.priority,
-    dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
     listID: todo.listID ?? null,
@@ -28,8 +28,7 @@ async function patchTodo({ todo }: { todo: TodoItemTypeWithDateChecksum }) {
     return;
   }
   const dateChanged =
-    todo.dateRangeChecksum !==
-    todo.dtstart.toISOString() + todo.due.toISOString();
+    todo.dateRangeChecksum !== todo.due.toISOString();
 
   const rruleChanged = todo.rruleChecksum !== todo.rrule;
 
@@ -50,6 +49,7 @@ async function patchTodo({ todo }: { todo: TodoItemTypeWithDateChecksum }) {
 
 export const useEditTodo = () => {
   const { toast } = useToast();
+  const { showTodoUpdatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: editTodoMutateFn, status: editTodoStatus } = useMutation({
@@ -66,7 +66,7 @@ export const useEditTodo = () => {
       queryClient.setQueryData(["todo"], (oldTodos: TodoItemType[]) =>
         oldTodos.flatMap((oldTodo) => {
           if (oldTodo.id === newTodo.id) {
-            if (newTodo.dtstart > endOfDay(new Date())) {
+            if (newTodo.due > endOfDay(new Date())) {
               return [];
             }
             return {
@@ -77,10 +77,8 @@ export const useEditTodo = () => {
               description: newTodo.description,
               priority: newTodo.priority,
               due: newTodo.due,
-              dtstart: newTodo.dtstart,
               rrule: newTodo.rrule,
               listID: newTodo.listID ?? null,
-              durationMinutes: newTodo.durationMinutes,
             };
           }
           return oldTodo;
@@ -97,10 +95,8 @@ export const useEditTodo = () => {
               description: newTodo.description,
               priority: newTodo.priority,
               due: newTodo.due,
-              dtstart: newTodo.dtstart,
               rrule: newTodo.rrule,
               listID: newTodo.listID ?? null,
-              durationMinutes: newTodo.durationMinutes,
             };
           }
           return oldTodo;
@@ -117,8 +113,8 @@ export const useEditTodo = () => {
       queryClient.setQueryData(["todoTimeline"], context?.oldTimelineTodos);
       toast({ description: error.message, variant: "destructive" });
     },
-    onSuccess: () => {
-      toast({ description: "todo updated" });
+    onSuccess: (_data, updatedTodo) => {
+      showTodoUpdatedToast(updatedTodo);
     },
   });
 

@@ -25,7 +25,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 
 interface TodoService {
-    suspend fun create(userId: String, title: String, description: String?, priority: String, dtstart: LocalDateTime, due: LocalDateTime, rrule: String?, listID: String?): Either<AppError, TodoResponse>
+    suspend fun create(userId: String, title: String, description: String?, priority: String, due: LocalDateTime, rrule: String?, listID: String?): Either<AppError, TodoResponse>
     suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String): Either<AppError, List<TodoResponse>>
     suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int): Either<AppError, List<TodoResponse>>
     suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit>
@@ -46,10 +46,9 @@ class TodoServiceImpl(
 
     override suspend fun create(
         userId: String, title: String, description: String?,
-        priority: String, dtstart: LocalDateTime, due: LocalDateTime,
+        priority: String, due: LocalDateTime,
         rrule: String?, listID: String?,
     ): Either<AppError, TodoResponse> {
-        val durationMinutes = Duration.between(dtstart, due).toMinutes().toInt()
         val id = CuidGenerator.newCuid()
         val now = LocalDateTime.now()
 
@@ -59,9 +58,7 @@ class TodoServiceImpl(
                 it[Todos.title] = title
                 it[Todos.description] = fieldEncryption.encryptIfSensitive("description", description)
                 it[Todos.priority] = Priority.valueOf(priority)
-                it[Todos.dtstart] = dtstart
                 it[Todos.due] = due
-                it[Todos.durationMinutes] = durationMinutes
                 it[Todos.rrule] = rrule
                 it[Todos.listID] = listID
                 it[Todos.userID] = userId
@@ -73,8 +70,8 @@ class TodoServiceImpl(
         cache.invalidateTodoCaches(userId)
         return TodoResponse(
             id = id, title = title, description = description,
-            priority = priority, dtstart = dtstart.toString(), due = due.toString(),
-            durationMinutes = durationMinutes, rrule = rrule, timeZone = "UTC",
+            priority = priority, due = due.toString(),
+            rrule = rrule, timeZone = "UTC",
             completed = false, pinned = false, order = 0, listID = listID,
             userID = userId, createdAt = now.toString(), updatedAt = now.toString(),
         ).right()
@@ -89,13 +86,13 @@ class TodoServiceImpl(
             val oneOff = Todos.selectAll().where {
                 (Todos.userID eq userId) and Todos.rrule.isNull() and
                     (Todos.completed eq false) and (Todos.due greaterEq dateRangeStart) and
-                    (Todos.dtstart lessEq dateRangeEnd)
+                    (Todos.due lessEq dateRangeEnd)
             }.orderBy(Todos.createdAt, SortOrder.DESC).map { it.toTodoResponse() }
 
             val recurring = Todos.join(TodoInstances, JoinType.LEFT, Todos.id, TodoInstances.todoId)
                 .selectAll().where {
                     (Todos.userID eq userId) and Todos.rrule.isNotNull() and
-                        (Todos.dtstart lessEq dateRangeEnd) and (Todos.completed eq false)
+                        (Todos.completed eq false)
                 }.map { it.toTodoResponse() }
 
             oneOff + recurring
@@ -130,17 +127,10 @@ class TodoServiceImpl(
                 fields["priority"]?.let { stmt[Todos.priority] = Priority.valueOf(it as String) }
                 fields["pinned"]?.let { stmt[Todos.pinned] = it as Boolean }
                 fields["completed"]?.let { stmt[Todos.completed] = it as Boolean }
-                fields["dtstart"]?.let { stmt[Todos.dtstart] = it as LocalDateTime }
                 fields["due"]?.let { stmt[Todos.due] = it as LocalDateTime }
                 fields["rrule"]?.let { stmt[Todos.rrule] = it as? String }
                 fields["listID"]?.let { stmt[Todos.listID] = it as? String }
                 stmt[Todos.updatedAt] = LocalDateTime.now()
-
-                val ds = fields["dtstart"] as? LocalDateTime
-                val d = fields["due"] as? LocalDateTime
-                if (ds != null && d != null) {
-                    stmt[Todos.durationMinutes] = Duration.between(ds, d).toMinutes().toInt()
-                }
             }
         }
         cache.invalidateTodoCaches(userId)
@@ -162,9 +152,8 @@ class TodoServiceImpl(
             }.firstOrNull() ?: return@newSuspendedTransaction
 
             val now = LocalDateTime.now()
-            val todoDtstart = todo[Todos.dtstart]
             val todoDue = todo[Todos.due]
-            val daysToComplete = Duration.between(todoDtstart, now).toDays().toDouble()
+            val daysToComplete = Duration.between(todo[Todos.createdAt], now).toDays().toDouble()
 
             CompletedTodos.insert {
                 it[CompletedTodos.id] = CuidGenerator.newCuid()
@@ -173,7 +162,6 @@ class TodoServiceImpl(
                 it[CompletedTodos.description] = todo[Todos.description]
                 it[CompletedTodos.priority] = todo[Todos.priority]
                 it[CompletedTodos.completedAt] = now
-                it[CompletedTodos.dtstart] = todoDtstart
                 it[CompletedTodos.due] = todoDue
                 it[CompletedTodos.completedOnTime] = !now.isAfter(todoDue)
                 it[CompletedTodos.daysToComplete] = BigDecimal.valueOf(daysToComplete).setScale(2, RoundingMode.HALF_UP)
@@ -283,9 +271,7 @@ class TodoServiceImpl(
                     fields["priority"]?.let { p ->
                         stmt[TodoInstances.overriddenPriority] = Priority.valueOf(p as String)
                     }
-                    fields["dtstart"]?.let { stmt[TodoInstances.overriddenDtstart] = it as? LocalDateTime }
                     fields["due"]?.let { stmt[TodoInstances.overriddenDue] = it as? LocalDateTime }
-                    fields["durationMinutes"]?.let { stmt[TodoInstances.overriddenDurationMinutes] = it as? Int }
                 }
             } else {
                 TodoInstances.insert { stmt ->
@@ -301,9 +287,7 @@ class TodoServiceImpl(
                     fields["priority"]?.let { p ->
                         stmt[TodoInstances.overriddenPriority] = Priority.valueOf(p as String)
                     }
-                    fields["dtstart"]?.let { stmt[TodoInstances.overriddenDtstart] = it as? LocalDateTime }
                     fields["due"]?.let { stmt[TodoInstances.overriddenDue] = it as? LocalDateTime }
-                    fields["durationMinutes"]?.let { stmt[TodoInstances.overriddenDurationMinutes] = it as? Int }
                 }
             }
         }
@@ -341,9 +325,7 @@ class TodoServiceImpl(
         pinned = this[Todos.pinned],
         order = this[Todos.order],
         priority = this[Todos.priority].name,
-        dtstart = this[Todos.dtstart].toString(),
         due = this[Todos.due].toString(),
-        durationMinutes = this[Todos.durationMinutes],
         rrule = this[Todos.rrule],
         timeZone = this[Todos.timeZone],
         completed = this[Todos.completed],

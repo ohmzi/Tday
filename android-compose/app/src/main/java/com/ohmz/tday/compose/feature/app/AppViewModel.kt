@@ -14,6 +14,7 @@ import com.ohmz.tday.compose.core.network.RealtimeClient
 import com.ohmz.tday.compose.core.network.RealtimeEvent
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
@@ -325,7 +326,7 @@ class AppViewModel @Inject constructor(
                 }
                 onSuccess()
             }.onFailure { error ->
-                val message = error.message ?: "Could not reset trusted server"
+                val message = error.userFacingMessage("Could not reset trusted server.")
                 _uiState.update {
                     it.copy(
                         error = message,
@@ -453,15 +454,8 @@ class AppViewModel @Inject constructor(
 
     private fun classifyAndShowError(error: Throwable) {
         if (isLikelyConnectivityIssue(error)) return
-        when {
-            error is ApiCallException && error.statusCode == 401 ->
-                snackbarManager.showError("Session expired. Please sign in again.")
-            error is ApiCallException && error.statusCode in 500..599 ->
-                snackbarManager.showError("Server error. Please try again later.") { syncNow() }
-            else ->
-                snackbarManager.showError(
-                    error.message ?: "Something went wrong.",
-                ) { syncNow() }
+        snackbarManager.showError(error.userFacingMessage()) {
+            if (error !is ApiCallException || error.statusCode != 401) syncNow()
         }
     }
 
@@ -501,24 +495,19 @@ class AppViewModel @Inject constructor(
     }
 
     private fun friendlyAdminError(error: Throwable, fallback: String): String {
-        if (error is kotlinx.serialization.SerializationException) {
-            return "$fallback — server returned an invalid response"
-        }
-        val msg = error.message
-        if (msg.isNullOrBlank() || msg.length > 120) return fallback
-        return msg
+        return error.userFacingMessage(fallback)
     }
 
     private fun toServerSetupMessage(error: Throwable): String {
         return when (error) {
             is TimeoutCancellationException -> "Server probe timed out. Check URL and network, then try again."
-            is ServerProbeException.InvalidUrl -> "Invalid server URL"
-            is ServerProbeException.InsecureTransport -> error.message ?: "Use HTTPS for remote server URLs."
+            is ServerProbeException.InvalidUrl -> "Invalid server URL."
+            is ServerProbeException.InsecureTransport -> "Use HTTPS for remote server URLs."
             is ServerProbeException.NotTdayServer ->
-                "Server is reachable but does not expose a valid T'Day auth probe."
+                "Server is reachable but does not appear to be a T'Day server."
             is ServerProbeException.CertificateChanged ->
-                error.message ?: "Server certificate changed. Reset trusted server to continue."
-            else -> error.message ?: "Could not connect to server"
+                "Server certificate changed. Reset trusted server to continue."
+            else -> error.userFacingMessage("Could not connect to server.")
         }
     }
 

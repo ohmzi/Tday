@@ -8,7 +8,6 @@ final class CachedTodoEntity {
     var title: String
     var itemDescription: String?
     var priority: String
-    var dtstartEpochMs: Int64
     var dueEpochMs: Int64
     var rrule: String?
     var instanceDateEpochMs: Int64?
@@ -23,7 +22,6 @@ final class CachedTodoEntity {
         title = record.title
         itemDescription = record.description
         priority = record.priority
-        dtstartEpochMs = record.dtstartEpochMs
         dueEpochMs = record.dueEpochMs
         rrule = record.rrule
         instanceDateEpochMs = record.instanceDateEpochMs
@@ -60,7 +58,6 @@ final class CachedCompletedEntity {
     var title: String
     var itemDescription: String?
     var priority: String
-    var dtstartEpochMs: Int64
     var dueEpochMs: Int64
     var completedAtEpochMs: Int64
     var rrule: String?
@@ -74,7 +71,6 @@ final class CachedCompletedEntity {
         title = record.title
         itemDescription = record.description
         priority = record.priority
-        dtstartEpochMs = record.dtstartEpochMs
         dueEpochMs = record.dueEpochMs
         completedAtEpochMs = record.completedAtEpochMs
         rrule = record.rrule
@@ -93,7 +89,6 @@ final class PendingMutationEntity {
     var title: String?
     var itemDescription: String?
     var priority: String?
-    var dtstartEpochMs: Int64?
     var dueEpochMs: Int64?
     var rrule: String?
     var listId: String?
@@ -112,7 +107,6 @@ final class PendingMutationEntity {
         title = record.title
         itemDescription = record.description
         priority = record.priority
-        dtstartEpochMs = record.dtstartEpochMs
         dueEpochMs = record.dueEpochMs
         rrule = record.rrule
         listId = record.listId
