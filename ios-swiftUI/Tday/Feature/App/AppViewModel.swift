@@ -132,9 +132,10 @@ final class AppViewModel {
             canResetServerTrust = true
             return .success(())
         } catch {
-            error = error.localizedDescription
+            let msg = userFacingMessage(for: error, fallback: "Could not connect to server.")
+            self.error = msg
             canResetServerTrust = true
-            return .failure(error.localizedDescription)
+            return .failure(msg)
         }
     }
 
@@ -147,8 +148,9 @@ final class AppViewModel {
             error = nil
             return .success(())
         } catch {
-            error = error.localizedDescription
-            return .failure(error.localizedDescription)
+            let msg = userFacingMessage(for: error, fallback: "Could not reset trusted server.")
+            self.error = msg
+            return .failure(msg)
         }
     }
 
@@ -172,7 +174,7 @@ final class AppViewModel {
             adminAiSummaryEnabled = try await container.settingsRepository.fetchAdminAiSummaryEnabled()
             adminAiSummaryError = nil
         } catch {
-            adminAiSummaryError = error.localizedDescription
+            adminAiSummaryError = userFacingMessage(for: error, fallback: "Could not load admin settings.")
         }
         isAdminAiSummaryLoading = false
     }
@@ -189,7 +191,7 @@ final class AppViewModel {
             adminAiSummaryEnabled = response.aiSummaryEnabled
             aiSummaryValidationError = response.validationError
         } catch {
-            adminAiSummaryError = error.localizedDescription
+            adminAiSummaryError = userFacingMessage(for: error, fallback: "Could not update admin settings.")
             await refreshAdminAiSummarySetting()
         }
         isAdminAiSummarySaving = false
@@ -320,7 +322,7 @@ final class AppViewModel {
         case let .failure(error):
             isOffline = isLikelyConnectivityIssue(error)
             if !isOffline {
-                container.snackbarManager.show(message: error.localizedDescription)
+                container.snackbarManager.show(message: userFacingMessage(for: error))
             }
             refreshPendingMutationCount()
         }
