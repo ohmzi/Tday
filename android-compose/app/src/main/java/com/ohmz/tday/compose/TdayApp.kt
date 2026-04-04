@@ -64,6 +64,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import androidx.compose.ui.platform.LocalContext
+import io.sentry.android.navigation.SentryNavigationListener
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
@@ -104,6 +105,13 @@ private const val SETTINGS_VERTICAL_FRACTION = 0.22f
 @Composable
 fun TdayApp() {
     val navController = rememberNavController()
+
+    DisposableEffect(navController) {
+        val listener = SentryNavigationListener()
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
+
     val appViewModel: AppViewModel = hiltViewModel()
     val releaseViewModel: LatestReleaseViewModel = hiltViewModel()
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()

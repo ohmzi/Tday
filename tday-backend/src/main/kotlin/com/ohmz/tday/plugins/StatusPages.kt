@@ -6,6 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
+import io.sentry.Sentry
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("com.ohmz.tday.plugins.StatusPages")
@@ -57,6 +58,7 @@ fun Application.configureStatusPages() {
             call.respondApiError(cause.status, cause.message.ifBlank { cause.status.description })
         }
         exception<Throwable> { call, cause ->
+            Sentry.captureException(cause)
             logger.error("api_error", cause)
             call.respondApiError(HttpStatusCode.InternalServerError, "An unexpected error occurred")
         }

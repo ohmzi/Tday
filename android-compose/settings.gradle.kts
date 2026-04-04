@@ -13,6 +13,7 @@ pluginManagement {
         id("org.jetbrains.kotlin.plugin.compose") version "2.1.0"
         id("com.google.devtools.ksp") version "2.1.0-1.0.29"
         id("com.google.dagger.hilt.android") version "2.57.2"
+        id("io.sentry.android.gradle") version "5.7.0"
     }
 }
 plugins {
