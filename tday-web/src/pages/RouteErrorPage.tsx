@@ -27,6 +27,7 @@ interface ErrorMeta {
 
 const iconClass = "h-7 w-7";
 
+/** Maps a route error to a UI variant based on status code or message pattern. */
 function classify(error: unknown): ErrorVariant {
   if (isRouteErrorResponse(error)) {
     if (error.status === 404) return "notFound";
@@ -57,6 +58,7 @@ function classify(error: unknown): ErrorVariant {
   return "generic";
 }
 
+/** Returns display copy and icon for a given error variant. */
 function getMeta(variant: ErrorVariant): ErrorMeta {
   switch (variant) {
     case "chunk":
@@ -108,6 +110,7 @@ function getMeta(variant: ErrorVariant): ErrorMeta {
   }
 }
 
+/** Route-level error boundary page used as `errorElement` in the router. */
 export default function RouteErrorPage() {
   const error = useRouteError();
   const params = useParams<{ locale?: string }>();
