@@ -46,10 +46,10 @@ fun Route.todoRoutes() {
                     // #endregion
                     validateCreateTodo.validateOrFail(body).bind()
                     val due = parseTodoDateTime(body.due)
-                    // #region agent log
-                    dbg("parseTodoDateTime result", mapOf("rawDue" to body.due, "parsedDue" to due?.toString(), "parseOk" to (due != null).toString()))
-                    // #endregion
                         ?: raise(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
+                    // #region agent log
+                    dbg("parseTodoDateTime result", mapOf("rawDue" to body.due, "parsedDue" to due.toString(), "parseOk" to "true"))
+                    // #endregion
                     val todo = todoService.create(user.id, body.title, body.description, body.priority, due, body.rrule, body.listID).bind()
                     // #region agent log
                     dbg("todo created successfully", mapOf("todoId" to todo.id, "title" to todo.title))
