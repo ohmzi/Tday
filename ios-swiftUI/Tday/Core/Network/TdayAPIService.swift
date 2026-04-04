@@ -174,7 +174,7 @@ final class TdayAPIService {
         try await prioritizeTodoByBody(payload: payload)
     }
 
-    func deleteTodoInstance(payload: DeleteTodoRequest) async throws -> MessageResponse {
+    func deleteTodoInstance(payload: TodoInstanceDeleteRequest) async throws -> MessageResponse {
         try await deleteTodoInstanceByBody(payload: payload)
     }
 
@@ -214,11 +214,11 @@ final class TdayAPIService {
         )
     }
 
-    func patchTodoInstanceByBody(payload: TodoInstanceUpdateRequest) async throws -> MessageResponse {
+    func patchTodoInstanceByBody(payload: TodoInstancePatchRequest) async throws -> MessageResponse {
         try await request(path: "/api/todo/instance", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
 
-    func deleteTodoInstanceByBody(payload: DeleteTodoRequest) async throws -> MessageResponse {
+    func deleteTodoInstanceByBody(payload: TodoInstanceDeleteRequest) async throws -> MessageResponse {
         try await request(path: "/api/todo/instance", method: "DELETE", body: payload, responseType: MessageResponse.self)
     }
 

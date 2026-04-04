@@ -20,7 +20,6 @@ struct CachedTodoRecord: Identifiable, Equatable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let dtstartEpochMs: Int64
     let dueEpochMs: Int64
     let rrule: String?
     let instanceDateEpochMs: Int64?
@@ -45,7 +44,6 @@ struct CachedCompletedRecord: Identifiable, Equatable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let dtstartEpochMs: Int64
     let dueEpochMs: Int64
     let completedAtEpochMs: Int64
     let rrule: String?
@@ -75,7 +73,6 @@ struct PendingMutationRecord: Identifiable, Equatable, Codable {
     let title: String?
     let description: String?
     let priority: String?
-    let dtstartEpochMs: Int64?
     let dueEpochMs: Int64?
     let rrule: String?
     let listId: String?

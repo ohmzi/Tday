@@ -501,9 +501,6 @@ private fun CompletedSwipeRow(
     val completedAtText = DateTimeFormatter.ofPattern("EEE, MMM d · h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(item.completedAt ?: item.due)
-    val createdAtText = DateTimeFormatter.ofPattern("EEE, MMM d · h:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(item.dtstart)
     val listMeta = item.resolveListSummary(lists)
     val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
         ?: item.listColor?.let(::listAccentColor)
@@ -642,12 +639,6 @@ private fun CompletedSwipeRow(
                                 } else {
                                     TextDecoration.None
                                 },
-                            )
-                            Text(
-                                text = stringResource(R.string.completed_created_prefix) + createdAtText,
-                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
                             )
                             Text(
                                 text = stringResource(R.string.completed_at_prefix) + completedAtText,
@@ -824,7 +815,6 @@ private fun CompletedItem.toEditableTodo(lists: List<ListSummary>): TodoItem {
         title = title,
         description = description,
         priority = priority,
-        dtstart = dtstart,
         due = due,
         rrule = rrule,
         instanceDate = instanceDate,

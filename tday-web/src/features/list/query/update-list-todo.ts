@@ -20,7 +20,6 @@ async function patchTodo({ todo }: { todo: TodoItemTypeWithDateChecksum }) {
     title: todo.title,
     description: todo.description,
     priority: todo.priority,
-    dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
     listID: todo.listID,
@@ -32,8 +31,7 @@ async function patchTodo({ todo }: { todo: TodoItemTypeWithDateChecksum }) {
   }
 
   const dateChanged =
-    todo.dateRangeChecksum !==
-    todo.dtstart.toISOString() + todo.due.toISOString();
+    todo.dateRangeChecksum !== todo.due.toISOString();
 
   const rruleChanged = todo.rruleChecksum !== todo.rrule;
 
@@ -73,7 +71,7 @@ export const useEditListTodo = () => {
       queryClient.setQueryData<TodoItemType[]>(["todo"], (oldTodos) =>
         oldTodos?.flatMap((oldTodo) => {
           if (oldTodo.id === newTodo.id) {
-            if (newTodo.dtstart > endOfDay(new Date())) {
+            if (newTodo.due > endOfDay(new Date())) {
               return [];
             }
             return {
@@ -87,7 +85,6 @@ export const useEditListTodo = () => {
               description: newTodo.description,
               priority: newTodo.priority,
               due: newTodo.due,
-              dtstart: newTodo.dtstart,
               rrule: newTodo.rrule,
               listID: newTodo.listID,
               createdAt: new Date(),
