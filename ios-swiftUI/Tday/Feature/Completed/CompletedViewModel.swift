@@ -27,7 +27,7 @@ final class CompletedViewModel {
         isLoading = true
         let result = await container.syncAndRefresh(force: true, replayPendingMutations: false)
         if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Failed to load.")
         }
         hydrateFromCache()
         isLoading = false
@@ -38,7 +38,7 @@ final class CompletedViewModel {
             try await container.completedRepository.uncomplete(item)
             hydrateFromCache()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not restore task.")
         }
     }
 
@@ -47,7 +47,7 @@ final class CompletedViewModel {
             try await container.completedRepository.deleteCompletedTodo(item)
             hydrateFromCache()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not delete task.")
         }
     }
 
@@ -56,7 +56,7 @@ final class CompletedViewModel {
             try await container.completedRepository.updateCompletedTodo(item, payload: payload)
             hydrateFromCache()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
         }
     }
 
