@@ -2,7 +2,7 @@ import { TodoItemType } from "@/types";
 import { mergeInstanceAndTodo } from "./mergeInstanceAndTodo";
 
 // /**
-//  * @description generate "orphaned todos" by finding instances that had their dtstart overriden to another time
+//  * @description generate "orphaned todos" by finding instances that had their due overriden to another time
 //  * @param mergedTodos a list of todos that are used to check for duplicates
 //  * @param recurringParents a list of todos that has all the instances
 //  * @param bounds a { dateRangeStart: Date; dateRangeEnd: Date } object
@@ -13,26 +13,24 @@ export function getMovedInstances(
   recurringParents: TodoItemType[],
   bounds: { dateRangeStart: Date; dateRangeEnd: Date },
 ): TodoItemType[] {
-  const mergedDtstarts = mergedTodos.map(
-    (merged) => merged.dtstart.getTime() + " " + merged.instanceDate?.getTime(),
+  const mergedKeys = mergedTodos.map(
+    (merged) => merged.due.getTime() + " " + merged.instanceDate?.getTime(),
   );
   const orphanedInstances = recurringParents.flatMap((todo: TodoItemType) => {
     if (!todo.instances) return [];
 
     return todo.instances.filter(
-      ({ overriddenDtstart, overriddenDue, instanceDate }) => {
+      ({ overriddenDue, instanceDate }) => {
         const exDateList = todo.exdates.map((exdate) => {
           return exdate.getTime();
         });
         return (
-          overriddenDtstart &&
           overriddenDue &&
           !exDateList.includes(instanceDate.getTime()) &&
-          //need to have started and crosses in to the current range
-          overriddenDtstart <= bounds.dateRangeEnd &&
+          overriddenDue <= bounds.dateRangeEnd &&
           overriddenDue >= bounds.dateRangeStart &&
-          !mergedDtstarts.includes(
-            overriddenDtstart.getTime() + " " + instanceDate.getTime(),
+          !mergedKeys.includes(
+            overriddenDue.getTime() + " " + instanceDate.getTime(),
           )
         );
       },

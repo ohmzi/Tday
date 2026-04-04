@@ -2,7 +2,6 @@ import { TodoItemType } from "@/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import PriorityDropdownMenu from "../../FormFields/Dropdowns/PriorityDropdown/PriorityDropdown";
 import DateDropdownMenu from "../../FormFields/Dropdowns/DateDropdown/DateDropdownMenu";
-import { NonNullableDateRange } from "@/types";
 import { RRule } from "rrule";
 import RepeatDropdownMenu from "../../FormFields/Dropdowns/RepeatDropdown/RepeatDropdownMenu";
 import { AlignLeft, Clock, Flag, Circle, Repeat } from "lucide-react";
@@ -21,6 +20,8 @@ import ListDropdownMenu from "@/components/todo/component/TodoForm/ListDropdownM
 import NLPTitleInput from "@/components/todo/component/TodoForm/NLPTitleInput";
 import deriveRepeatType from "@/lib/deriveRepeatType";
 
+type ModalDateRange = { from: Date; to: Date };
+
 type CalendarFormProps = {
   todo: TodoItemType;
   displayForm: boolean;
@@ -36,8 +37,8 @@ const CalendarForm = ({
   const titleRef = useRef(null);
 
   const dateRangeChecksum = useMemo(
-    () => todo.dtstart.toISOString() + todo.due.toISOString(),
-    [todo.dtstart, todo.due],
+    () => todo.due.toISOString(),
+    [todo.due],
   );
   const rruleChecksum = useMemo(() => todo.rrule, [todo.rrule]);
 
@@ -47,8 +48,8 @@ const CalendarForm = ({
   const [title, setTitle] = useState(todo.title);
   const [description, setDescription] = useState(todo.description ?? "");
   const [priority, setPriority] = useState(todo.priority);
-  const [dateRange, setDateRange] = useState<NonNullableDateRange>({
-    from: todo.dtstart,
+  const [dateRange, setDateRange] = useState<ModalDateRange>({
+    from: todo.due,
     to: todo.due,
   });
   const [rruleOptions, setRruleOptions] = useState(
@@ -68,7 +69,6 @@ const CalendarForm = ({
       title !== todo.title ||
       description !== (todo.description ?? "") ||
       priority !== todo.priority ||
-      dateRange.from?.getTime() !== todo.dtstart?.getTime() ||
       dateRange.to?.getTime() !== todo.due?.getTime() ||
       rruleString !== (todo.rrule ?? null)
     );
@@ -104,7 +104,6 @@ const CalendarForm = ({
           title,
           description,
           priority,
-          dtstart: dateRange.from,
           due: dateRange.to,
           rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
           listID,
@@ -134,7 +133,6 @@ const CalendarForm = ({
                     title,
                     description,
                     priority,
-                    dtstart: dateRange.from,
                     due: dateRange.to,
                     listID,
                   });

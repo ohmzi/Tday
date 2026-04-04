@@ -49,7 +49,7 @@ export const TodoItemCard = ({
   const locale = useLocale();
   const userTimeZone = useUserTimezone();
   const [itemElement, setItemElement] = useState<HTMLDivElement | null>(null);
-  const { title, description, completed, priority, rrule, dtstart } = todoItem;
+  const { title, description, completed, priority, rrule } = todoItem;
   const isOverdue = overdue || (perTaskOverdue && !completed && todoItem.due < new Date());
   const itemListID = todoItem.listID;
   const [displayForm, setDisplayForm] = useState(false);
@@ -134,7 +134,7 @@ export const TodoItemCard = ({
           </pre>
           <div className="flex flex-wrap items-center justify-start gap-2 text-xs sm:text-sm">
             <p className={clsx(isOverdue ? "text-red" : "text-lime")}>
-              {getDisplayDate(dtstart, true, locale, userTimeZone?.timeZone)}
+              {getDisplayDate(todoItem.due, true, locale, userTimeZone?.timeZone)}
             </p>
             {itemListID &&
               <p className='flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80'>

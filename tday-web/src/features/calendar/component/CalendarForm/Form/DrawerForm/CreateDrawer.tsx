@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Options, RRule } from "rrule";
 import { Clock, Flag, Repeat, Check, Circle } from "lucide-react";
 import NestedDrawerItem from "@/components/mobile/NestedDrawerItem";
-import { TodoItemType, NonNullableDateRange } from "@/types";
+import { TodoItemType } from "@/types";
+
+type DrawerDateRange = { from: Date; to: Date };
 import { getDisplayDate } from "@/lib/date/displayDate";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import {
@@ -41,6 +43,7 @@ export default function CreateCalendarDrawer({
     displayForm,
     setDisplayForm,
 }: CreateCalendarFormProps) {
+    void start;
     const { t: appDict } = useTranslation("app");
     const priorityMap = { "Low": "normal", "Medium": "important", "High": "urgent" }
     const repeatMap = { "Daily": "everyDay", "Weekly": "everyWeek", "Monthly": "everyMonth", "Yearly": "everyYear", "Weekday": "weekdaysOnly", "Custom": "custom" }
@@ -53,8 +56,8 @@ export default function CreateCalendarDrawer({
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [priority, setPriority] = useState<TodoItemType["priority"]>("Low");
-    const [dateRange, setDateRange] = useState<NonNullableDateRange>({
-        from: start,
+    const [dateRange, setDateRange] = useState<DrawerDateRange>({
+        from: end,
         to: end,
     });
     const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(null);
@@ -78,7 +81,6 @@ export default function CreateCalendarDrawer({
             title,
             description,
             priority,
-            dtstart: dateRange.from,
             due: dateRange.to,
             rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
             listID,
@@ -134,7 +136,7 @@ export default function CreateCalendarDrawer({
                                 <NestedDrawerItem
                                     title={appDict("date")}
                                     icon={<Clock className="w-4 h-4" />}
-                                    label={getDisplayDate(dateRange.from, false, locale, userTZ?.timeZone)}
+                                    label={getDisplayDate(dateRange.to, false, locale, userTZ?.timeZone)}
                                 >
                                     <div className="space-y-4 w-full max-w-lg m-auto">
                                         <DateDrawerMenu

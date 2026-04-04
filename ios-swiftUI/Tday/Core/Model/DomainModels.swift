@@ -48,7 +48,6 @@ struct CreateTaskPayload: Equatable, Hashable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let dtstart: Date
     let due: Date
     let rrule: String?
     let listId: String?
@@ -60,7 +59,6 @@ struct TodoItem: Identifiable, Equatable, Hashable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let dtstart: Date
     let due: Date
     let rrule: String?
     let instanceDate: Date?
@@ -106,7 +104,6 @@ struct CompletedItem: Identifiable, Equatable, Hashable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let dtstart: Date
     let due: Date
     let completedAt: Date?
     let rrule: String?

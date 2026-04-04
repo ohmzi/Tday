@@ -239,7 +239,7 @@ const ScheduledTimelineSections = ({
     if (todo.rrule && todo.instanceDate) {
       editTodoInstanceMutateFn({
         ...todo,
-        instanceDate: todo.instanceDate ?? todo.dtstart,
+        instanceDate: todo.instanceDate ?? todo.due,
         ...nextRange,
       });
       clearDragState();
@@ -249,7 +249,7 @@ const ScheduledTimelineSections = ({
     editTodoMutateFn({
       ...(todo as TodoItemTypeWithDateChecksum),
       ...nextRange,
-      dateRangeChecksum: todo.dtstart.toISOString() + todo.due.toISOString(),
+      dateRangeChecksum: todo.due.toISOString(),
       rruleChecksum: todo.rrule,
     });
     clearDragState();

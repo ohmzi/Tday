@@ -17,7 +17,6 @@ export type ParseTodoTitleOutput = {
   cleanTitle: string;
   matchedText: string | null;
   matchStart: number | null;
-  startEpochMs: number | null;
   dueEpochMs: number | null;
 };
 
@@ -92,7 +91,6 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
       cleanTitle: "",
       matchedText: null,
       matchStart: null,
-      startEpochMs: null,
       dueEpochMs: null,
     };
   }
@@ -115,7 +113,6 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
       cleanTitle: trimmedText,
       matchedText: null,
       matchStart: null,
-      startEpochMs: null,
       dueEpochMs: null,
     };
   }
@@ -135,7 +132,6 @@ export function parseTodoTitle(input: ParseTodoTitleInput): ParseTodoTitleOutput
     cleanTitle,
     matchedText: matchedText || null,
     matchStart,
-    startEpochMs: startDate.getTime(),
     dueEpochMs: dueDate.getTime(),
   };
 }

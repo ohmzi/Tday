@@ -4,7 +4,9 @@ import { useTranslation } from "react-i18next";
 import { RRule } from "rrule";
 import { Clock, Flag, Repeat, Check, Circle } from "lucide-react";
 import NestedDrawerItem from "@/components/mobile/NestedDrawerItem";
-import { TodoItemType, NonNullableDateRange } from "@/types";
+import { TodoItemType } from "@/types";
+
+type DrawerDateRange = { from: Date; to: Date };
 import { getDisplayDate } from "@/lib/date/displayDate";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import {
@@ -49,8 +51,8 @@ export default function CreateCalendarDrawer({
     const { listMetaData } = useListMetaData();
 
     const dateRangeChecksum = useMemo(
-        () => todo.dtstart.toISOString() + todo.due.toISOString(),
-        [todo.dtstart, todo.due],
+        () => todo.due.toISOString(),
+        [todo.due],
     );
     const rruleChecksum = useMemo(() => todo.rrule, [todo.rrule]);
 
@@ -60,8 +62,8 @@ export default function CreateCalendarDrawer({
     const [title, setTitle] = useState(todo.title);
     const [description, setDescription] = useState(todo.description ?? "");
     const [priority, setPriority] = useState(todo.priority);
-    const [dateRange, setDateRange] = useState<NonNullableDateRange>({
-        from: todo.dtstart,
+    const [dateRange, setDateRange] = useState<DrawerDateRange>({
+        from: todo.due,
         to: todo.due,
     });
     const [rruleOptions, setRruleOptions] = useState(
@@ -81,7 +83,6 @@ export default function CreateCalendarDrawer({
             title !== todo.title ||
             description !== (todo.description ?? "") ||
             priority !== todo.priority ||
-            dateRange.from?.getTime() !== todo.dtstart?.getTime() ||
             dateRange.to?.getTime() !== todo.due?.getTime() ||
             rruleString !== (todo.rrule ?? null)
         );
@@ -118,7 +119,6 @@ export default function CreateCalendarDrawer({
                     title,
                     description,
                     priority,
-                    dtstart: dateRange.from,
                     due: dateRange.to,
                     rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
                     listID,
@@ -158,7 +158,6 @@ export default function CreateCalendarDrawer({
                                         title,
                                         description,
                                         priority,
-                                        dtstart: dateRange.from,
                                         due: dateRange.to,
                                         listID,
                                     });
@@ -180,7 +179,7 @@ export default function CreateCalendarDrawer({
                                 <NestedDrawerItem
                                     title={appDict("date")}
                                     icon={<Clock className="w-4 h-4" />}
-                                    label={getDisplayDate(dateRange.from, false, locale, userTZ?.timeZone)}
+                                    label={getDisplayDate(dateRange.to, false, locale, userTZ?.timeZone)}
                                 >
                                     <div className="space-y-4 w-full max-w-lg m-auto">
                                         <DateDrawerMenu
@@ -295,7 +294,6 @@ export default function CreateCalendarDrawer({
                                                 title,
                                                 description,
                                                 priority,
-                                                dtstart: dateRange.from,
                                                 due: dateRange.to,
                                                 listID,
                                             });

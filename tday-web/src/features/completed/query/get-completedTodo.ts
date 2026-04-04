@@ -32,7 +32,6 @@ export const useCompletedTodo = () => {
           ...todo,
           id: todoId,
           instanceDate: todoInstanceDate,
-          dtstart: parseApiDateTime(todo.dtstart),
           createdAt: parseApiDateTime(todo.createdAt),
           due: parseApiDateTime(todo.due),
           completedAt: parseApiDateTime(todo.completedAt),

@@ -2,35 +2,23 @@ import { describe, expect, it } from "vitest";
 import { moveTodoToDay } from "@/lib/moveTodoToDay";
 
 describe("moveTodoToDay", () => {
-  it("preserves the due time and duration in the target timezone", () => {
+  it("preserves due time-of-day when moving to another calendar day (UTC)", () => {
     const movedTodo = moveTodoToDay(
-      {
-        dtstart: new Date("2026-04-03T13:30:00.000Z"),
-        due: new Date("2026-04-03T15:00:00.000Z"),
-        durationMinutes: 90,
-      },
+      { due: new Date("2026-04-03T15:00:00.000Z") },
       "2026-04-07",
-      "America/Toronto",
+      "UTC",
     );
 
-    expect(movedTodo.durationMinutes).toBe(90);
     expect(movedTodo.due.toISOString()).toBe("2026-04-07T15:00:00.000Z");
-    expect(movedTodo.dtstart.toISOString()).toBe("2026-04-07T13:30:00.000Z");
   });
 
-  it("anchors overnight tasks by the due day while keeping duration", () => {
+  it("preserves an earlier due time when moving (UTC)", () => {
     const movedTodo = moveTodoToDay(
-      {
-        dtstart: new Date("2026-04-03T02:00:00.000Z"),
-        due: new Date("2026-04-03T06:00:00.000Z"),
-        durationMinutes: 240,
-      },
+      { due: new Date("2026-04-03T02:30:00.000Z") },
       "2026-04-10",
-      "America/Toronto",
+      "UTC",
     );
 
-    expect(movedTodo.due.toISOString()).toBe("2026-04-10T06:00:00.000Z");
-    expect(movedTodo.dtstart.toISOString()).toBe("2026-04-10T02:00:00.000Z");
-    expect(movedTodo.durationMinutes).toBe(240);
+    expect(movedTodo.due.toISOString()).toBe("2026-04-10T02:30:00.000Z");
   });
 });

@@ -187,12 +187,10 @@ class HomeViewModel @Inject constructor(
 
     suspend fun parseTaskTitleNlp(
         text: String,
-        referenceStartEpochMs: Long,
         referenceDueEpochMs: Long,
     ): TodoTitleNlpResponse? {
         return todoRepository.parseTodoTitleNlp(
             text = text,
-            referenceStartEpochMs = referenceStartEpochMs,
             referenceDueEpochMs = referenceDueEpochMs,
         )
     }

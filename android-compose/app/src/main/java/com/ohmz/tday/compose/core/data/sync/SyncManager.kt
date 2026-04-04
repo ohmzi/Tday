@@ -243,9 +243,6 @@ class SyncManager @Inject constructor(
                                     title = mutation.title?.trim().orEmpty(),
                                     description = mutation.description,
                                     priority = mutation.priority ?: "Low",
-                                    dtstart = Instant.ofEpochMilli(
-                                        mutation.dtstartEpochMs ?: System.currentTimeMillis(),
-                                    ).toString(),
                                     due = Instant.ofEpochMilli(
                                         mutation.dueEpochMs ?: System.currentTimeMillis(),
                                     ).toString(),
@@ -279,10 +276,6 @@ class SyncManager @Inject constructor(
                             ?: if (!remoteTodo?.rrule.isNullOrBlank()) "" else null
                         val listIdForApi = resolvedListId
                             ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null
-                        val durationMinutes = maxOf(
-                            1,
-                            (((mutation.dueEpochMs ?: 0L) - (mutation.dtstartEpochMs ?: 0L)) / (60 * 1000)).toInt(),
-                        )
 
                         if (mutation.instanceDateEpochMs != null) {
                             requireApiBody(
@@ -295,13 +288,9 @@ class SyncManager @Inject constructor(
                                         title = mutation.title,
                                         description = descriptionForApi,
                                         priority = mutation.priority,
-                                        dtstart = mutation.dtstartEpochMs?.let {
-                                            Instant.ofEpochMilli(it).toString()
-                                        },
                                         due = mutation.dueEpochMs?.let {
                                             Instant.ofEpochMilli(it).toString()
                                         },
-                                        durationMinutes = durationMinutes,
                                     ),
                                 ),
                                 "Could not update recurring task instance",
@@ -315,7 +304,6 @@ class SyncManager @Inject constructor(
                                         description = descriptionForApi,
                                         pinned = mutation.pinned,
                                         priority = mutation.priority,
-                                        dtstart = mutation.dtstartEpochMs?.let { Instant.ofEpochMilli(it).toString() },
                                         due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
                                         rrule = rruleForApi,
                                         listID = listIdForApi,
@@ -689,7 +677,6 @@ class SyncManager @Inject constructor(
                     description = localTodo.description,
                     priority = localTodo.priority,
                     pinned = localTodo.pinned,
-                    dtstartEpochMs = localTodo.dtstartEpochMs,
                     dueEpochMs = localTodo.dueEpochMs,
                     rrule = localTodo.rrule,
                     listId = localTodo.listId,
@@ -741,7 +728,6 @@ class SyncManager @Inject constructor(
         return local.title != remote.title ||
             local.description != remote.description ||
             local.priority != remote.priority ||
-            local.dtstartEpochMs != remote.dtstartEpochMs ||
             local.dueEpochMs != remote.dueEpochMs ||
             local.rrule != remote.rrule ||
             local.instanceDateEpochMs != remote.instanceDateEpochMs ||
