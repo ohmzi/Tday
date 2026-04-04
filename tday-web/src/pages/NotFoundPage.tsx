@@ -7,15 +7,6 @@ export default function NotFoundPage() {
   const { locale } = useParams();
   const loc = locale || DEFAULT_LOCALE;
 
-  const goHomeAction = (
-    <Button asChild>
-      <Link to={`/${loc}/app/tday`}>
-        <Home className="h-4 w-4" />
-        Go home
-      </Link>
-    </Button>
-  );
-
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background px-6">
       <span
@@ -40,7 +31,14 @@ export default function NotFoundPage() {
           Check the URL or head back home.
         </p>
 
-        <div className="mt-8">{goHomeAction}</div>
+        <div className="mt-8">
+          <Button asChild>
+            <Link to={`/${loc}/app/tday`}>
+              <Home className="h-4 w-4" />
+              Go home
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
