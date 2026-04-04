@@ -41,6 +41,7 @@ struct MobileProbeResponse: Codable, Equatable {
     let probe: String?
     let version: String
     let serverTime: String
+    let encryptedCompatibility: String?
 }
 
 struct CredentialKeyResponse: Codable {

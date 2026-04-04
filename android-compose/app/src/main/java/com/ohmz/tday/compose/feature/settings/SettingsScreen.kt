@@ -65,6 +65,7 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 
@@ -80,6 +81,8 @@ fun SettingsScreen(
     aiSummaryValidationError: String?,
     hasUpdate: Boolean = false,
     latestVersionName: String? = null,
+    backendVersion: String? = null,
+    versionCheckResult: VersionCheckResult? = null,
     onThemeModeSelected: (AppThemeMode) -> Unit,
     onReminderSelected: (ReminderOption) -> Unit,
     onToggleAdminAiSummary: (Boolean) -> Unit,
@@ -245,6 +248,42 @@ fun SettingsScreen(
                         color = colorScheme.primary,
                         fontWeight = FontWeight.Medium,
                     )
+                }
+                if (backendVersion != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Server",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colorScheme.onSurface,
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "v$backendVersion",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colorScheme.onSurface.copy(alpha = 0.58f),
+                            )
+                            val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
+                                versionCheckResult == null
+                            Text(
+                                text = if (isCompatible) "Compatible" else "Incompatible",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isCompatible) {
+                                    Color(0xFF4CAF50)
+                                } else {
+                                    colorScheme.error
+                                },
+                            )
+                        }
+                    }
                 }
                 SettingsDivider()
                 SettingsListRow(
