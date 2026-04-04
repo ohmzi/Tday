@@ -25,6 +25,7 @@ FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S tday && adduser -S tday -G tday
 WORKDIR /app
 COPY --from=backend /project/tday-backend/build/libs/tday-backend-all.jar app.jar
+COPY --from=backend /project/tday-backend/src/main/resources/db/migration /app/migrations
 COPY --from=frontend /web/dist /app/static
 USER tday
 EXPOSE 8080
