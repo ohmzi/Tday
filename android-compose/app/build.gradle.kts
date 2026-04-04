@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -6,6 +8,11 @@ plugins {
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
     id("io.sentry.android.gradle")
+}
+
+val localProps: Properties = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.reader().use { load(it) }
 }
 
 val projectVersion: String by lazy {
@@ -62,12 +69,12 @@ android {
         buildConfigField(
             "String",
             "PROBE_ENCRYPTION_KEY",
-            "\"${findProperty("probeEncryptionKey") ?: System.getenv("TDAY_PROBE_ENCRYPTION_KEY") ?: ""}\"",
+            "\"${localProps.getProperty("probeEncryptionKey") ?: System.getenv("TDAY_PROBE_ENCRYPTION_KEY") ?: ""}\"",
         )
         buildConfigField(
             "String",
             "SENTRY_DSN",
-            "\"${findProperty("sentryDsn") ?: System.getenv("SENTRY_DSN") ?: ""}\"",
+            "\"${localProps.getProperty("sentryDsn") ?: System.getenv("SENTRY_DSN") ?: ""}\"",
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
