@@ -54,6 +54,7 @@ data class AppConfig(
     val probeAppVersion: String?,
     val probeUpdateRequired: Boolean,
     val probeEncryptionKey: String?,
+    val sentryDsn: String?,
 ) {
     companion object {
         fun load(): AppConfig {
@@ -120,6 +121,7 @@ data class AppConfig(
                 probeUpdateRequired = env("TDAY_UPDATE_REQUIRED", "false")
                     .equals("true", ignoreCase = true),
                 probeEncryptionKey = secret("TDAY_PROBE_ENCRYPTION_KEY", "TDAY_PROBE_ENCRYPTION_KEY_FILE"),
+                sentryDsn = env("SENTRY_DSN"),
             )
         }
 

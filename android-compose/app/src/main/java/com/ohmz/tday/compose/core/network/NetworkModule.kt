@@ -20,6 +20,7 @@ import java.security.cert.X509Certificate
 import java.util.TimeZone
 import javax.inject.Singleton
 import okhttp3.JavaNetCookieJar
+import io.sentry.android.okhttp.SentryOkHttpInterceptor
 import javax.net.ssl.SSLPeerUnverifiedException
 
 @Module
@@ -110,6 +111,7 @@ object NetworkModule {
 
                 response
             }
+            .addInterceptor(SentryOkHttpInterceptor())
             .addInterceptor(logging)
             .build()
     }

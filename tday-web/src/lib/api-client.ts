@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/react";
+
 type fetchOptions = {
   method: string;
   headers?: object;
@@ -38,6 +40,12 @@ const fetchApi = async (url: string, options: fetchOptions) => {
     const payload = isJson ? ((await res.json()) as ApiErrorPayload) : null;
     const message =
       payload?.message || `a ${res.statusText || "request"} error occurred`;
+    Sentry.addBreadcrumb({
+      category: "api",
+      message: `${options.method} ${url} — ${res.status}`,
+      level: "error",
+      data: { status: res.status, code: payload?.code },
+    });
     throw new ApiError(message, res.status, payload?.code ?? payload?.reason);
   }
 

@@ -1,4 +1,5 @@
 import Foundation
+import Sentry
 
 struct APIError: Error, LocalizedError, Equatable {
     let message: String
@@ -387,12 +388,17 @@ final class TdayAPIService {
             let bodyString = String(data: data, encoding: .utf8) ?? ""
             guard (200 ..< 300).contains(httpResponse.statusCode) else {
                 let serverMessage = decodeServerErrorMessage(from: bodyString) ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+                let breadcrumb = Breadcrumb(level: .error, category: "api")
+                breadcrumb.message = "\(method) \(url.path) — \(httpResponse.statusCode)"
+                breadcrumb.data = ["status": httpResponse.statusCode, "url": url.absoluteString]
+                SentrySDK.addBreadcrumb(breadcrumb)
                 throw APIError(message: serverMessage, statusCode: httpResponse.statusCode)
             }
             return (bodyString, httpResponse)
         } catch let error as APIError {
             throw error
         } catch {
+            SentrySDK.capture(error: error)
             throw APIError(message: error.localizedDescription, statusCode: nil)
         }
     }
