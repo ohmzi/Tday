@@ -7,6 +7,7 @@ import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.extractApiErrorMessage
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.network.TdayApiService
+import com.ohmz.tday.compose.core.security.ProbeDecryptor
 import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -25,7 +26,16 @@ class ServerConfigRepository @Inject constructor(
 
     fun getServerUrl(): String? = secureConfigStore.getServerUrl()
 
-    suspend fun saveServerUrl(rawUrl: String): Result<String> = runCatching {
+    data class ProbeResult(
+        val serverUrl: String,
+        val versionCheck: VersionCheckResult,
+        val backendVersion: String?,
+    )
+
+    suspend fun saveServerUrl(rawUrl: String): Result<String> =
+        probeAndSave(rawUrl).map { it.serverUrl }
+
+    suspend fun probeAndSave(rawUrl: String): Result<ProbeResult> = runCatching {
         val normalizedServerUrl = secureConfigStore.normalizeServerUrl(rawUrl)
             ?: throw ServerProbeException.InvalidUrl()
         val parsedServerUrl = normalizedServerUrl.toHttpUrlOrNull()
@@ -64,7 +74,34 @@ class ServerConfigRepository @Inject constructor(
             persist = false,
         ).getOrThrow()
         secureConfigStore.clearOfflineSyncState()
-        saved
+
+        val compatibility = probeBody.encryptedCompatibility?.let { ProbeDecryptor.decrypt(it) }
+        val versionCheck = checkVersionCompatibility(compatibility)
+
+        ProbeResult(
+            serverUrl = saved,
+            versionCheck = versionCheck,
+            backendVersion = compatibility?.appVersion,
+        )
+    }
+
+    suspend fun recheckVersion(): VersionCheckResult {
+        val serverUrl = getServerUrl() ?: return VersionCheckResult.Compatible
+        val parsedServerUrl = serverUrl.toHttpUrlOrNull() ?: return VersionCheckResult.Compatible
+        val probeUrl = parsedServerUrl.newBuilder()
+            .encodedPath(PROBE_PATH)
+            .query(null)
+            .fragment(null)
+            .build()
+            .toString()
+
+        val probeResponse = runCatching {
+            withTimeout(PROBE_TIMEOUT_MS) { api.probeServer(probeUrl = probeUrl) }
+        }.getOrNull() ?: return VersionCheckResult.Compatible
+
+        val body = probeResponse.body() ?: return VersionCheckResult.Compatible
+        val compatibility = body.encryptedCompatibility?.let { ProbeDecryptor.decrypt(it) }
+        return checkVersionCompatibility(compatibility)
     }
 
     fun resetTrustedServer(rawUrl: String): Result<Unit> {
