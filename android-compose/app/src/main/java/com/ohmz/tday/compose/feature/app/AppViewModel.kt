@@ -11,6 +11,7 @@ import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
+import com.ohmz.tday.compose.core.network.ConnectivityObserver
 import com.ohmz.tday.compose.core.network.RealtimeClient
 import com.ohmz.tday.compose.core.network.RealtimeEvent
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
@@ -30,6 +31,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.Job
@@ -71,12 +73,14 @@ class AppViewModel @Inject constructor(
     private val reminderPreferenceStore: ReminderPreferenceStore,
     val snackbarManager: SnackbarManager,
     private val realtimeClient: RealtimeClient,
+    private val connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
     private var resyncJob: Job? = null
     private var realtimeJob: Job? = null
+    private var connectivityJob: Job? = null
 
     init {
         _uiState.update {
@@ -408,8 +412,17 @@ class AppViewModel @Inject constructor(
                 force = true,
                 replayPendingMutations = true,
             )
-            _uiState.update { it.copy(isManualSyncing = false) }
-            result.exceptionOrNull()?.let(::classifyAndShowError)
+            val syncError = result.exceptionOrNull()
+            _uiState.update {
+                it.copy(
+                    isManualSyncing = false,
+                    isOffline = syncError != null && isLikelyConnectivityIssue(syncError),
+                    pendingMutationCount = runCatching {
+                        cacheManager.loadOfflineState().pendingMutations.size
+                    }.getOrDefault(it.pendingMutationCount),
+                )
+            }
+            syncError?.let(::classifyAndShowError)
             launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
         }
     }
@@ -443,11 +456,14 @@ class AppViewModel @Inject constructor(
             resyncJob = null
             realtimeJob?.cancel()
             realtimeJob = null
+            connectivityJob?.cancel()
+            connectivityJob = null
             realtimeClient.disconnect()
             return
         }
 
         startRealtimeListener()
+        startConnectivityListener()
 
         if (resyncJob?.isActive == true) return
 
@@ -462,27 +478,29 @@ class AppViewModel @Inject constructor(
                 val delayMs = if (hasPending) PENDING_RESYNC_INTERVAL_MS else RESYNC_INTERVAL_MS
                 delay(delayMs)
 
-                val result = syncManager.syncCachedData(
-                    force = true,
-                    replayPendingMutations = hasPending,
-                )
-                val syncError = result.exceptionOrNull()
-                _uiState.update {
-                    it.copy(
-                        isOffline = syncError != null && isLikelyConnectivityIssue(syncError),
-                        pendingMutationCount = runCatching {
-                            cacheManager.loadOfflineState().pendingMutations.size
-                        }.getOrDefault(it.pendingMutationCount),
-                    )
-                }
-                if (syncError != null) {
-                    classifyAndShowError(syncError)
-                } else {
-                    _uiState.update { it.copy(isOffline = false) }
-                }
-                launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
+                syncAndUpdateOfflineState(replayPending = hasPending)
             }
         }
+    }
+
+    private suspend fun syncAndUpdateOfflineState(replayPending: Boolean) {
+        val result = syncManager.syncCachedData(
+            force = true,
+            replayPendingMutations = replayPending,
+        )
+        val syncError = result.exceptionOrNull()
+        _uiState.update {
+            it.copy(
+                isOffline = syncError != null && isLikelyConnectivityIssue(syncError),
+                pendingMutationCount = runCatching {
+                    cacheManager.loadOfflineState().pendingMutations.size
+                }.getOrDefault(it.pendingMutationCount),
+            )
+        }
+        if (syncError != null) {
+            classifyAndShowError(syncError)
+        }
+        viewModelScope.launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
     }
 
     private fun classifyAndShowError(error: Throwable) {
@@ -499,20 +517,41 @@ class AppViewModel @Inject constructor(
         realtimeJob = viewModelScope.launch {
             realtimeClient.events.collect { event ->
                 when (event) {
+                    is RealtimeEvent.Connected -> {
+                        if (_uiState.value.isOffline) {
+                            syncAndUpdateOfflineState(replayPending = true)
+                        }
+                    }
                     is RealtimeEvent.TodoChanged,
                     is RealtimeEvent.ListChanged,
                     is RealtimeEvent.CompletedChanged,
                     -> {
-                        syncManager.syncCachedData(
-                            force = true,
-                            replayPendingMutations = false,
-                        )
+                        syncAndUpdateOfflineState(replayPending = false)
                     }
                     is RealtimeEvent.Disconnected -> {
                         delay(REALTIME_RECONNECT_DELAY_MS)
                         if (_uiState.value.authenticated) realtimeClient.connect()
                     }
                     else -> {}
+                }
+            }
+        }
+    }
+
+    private fun startConnectivityListener() {
+        if (connectivityJob?.isActive == true) return
+
+        connectivityJob = viewModelScope.launch {
+            connectivityObserver.connectivityChanges.collectLatest { isConnected ->
+                if (isConnected && _uiState.value.isOffline && _uiState.value.authenticated) {
+                    delay(CONNECTIVITY_RESTORED_DEBOUNCE_MS)
+                    syncAndUpdateOfflineState(replayPending = true)
+                    if (!realtimeClient.isConnected) {
+                        realtimeClient.connect()
+                    }
+                }
+                if (!isConnected && _uiState.value.authenticated) {
+                    _uiState.update { it.copy(isOffline = true) }
                 }
             }
         }
@@ -548,5 +587,6 @@ class AppViewModel @Inject constructor(
         const val PENDING_RESYNC_INTERVAL_MS = 20 * 1000L
         const val RESYNC_INTERVAL_MS = 5 * 60 * 1000L
         const val REALTIME_RECONNECT_DELAY_MS = 5_000L
+        const val CONNECTIVITY_RESTORED_DEBOUNCE_MS = 1_500L
     }
 }
