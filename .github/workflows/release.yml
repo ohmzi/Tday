@@ -211,5 +211,6 @@ jobs:
 
       - name: Publish release metadata to master
         if: ${{ steps.release_metadata.outputs.committed == 'true' }}
+        continue-on-error: true
         run: |
           git push origin HEAD:master
