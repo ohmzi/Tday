@@ -140,7 +140,8 @@ fun OnboardingWizardOverlay(
                 onClearAuthStatus()
             }.onFailure { error ->
                 step = WizardStep.SERVER
-                serverError = error.message ?: "Could not connect to server"
+                serverError = error.message?.takeIf { it.length < 80 && !it.contains("serial") }
+                    ?: "Could not connect to server."
             }
         }
     }
@@ -386,12 +387,14 @@ fun OnboardingWizardOverlay(
                                                                 }.onFailure { error ->
                                                                     step = WizardStep.SERVER
                                                                     serverError = error.message
-                                                                        ?: "Could not connect to server"
+                                                                        ?.takeIf { it.length < 80 && !it.contains("serial") }
+                                                                        ?: "Could not connect to server."
                                                                 }
                                                             }
                                                         }.onFailure { error ->
                                                             serverError = error.message
-                                                                ?: "Could not reset trusted server"
+                                                                ?.takeIf { it.length < 80 && !it.contains("serial") }
+                                                                ?: "Could not reset trusted server."
                                                         }
                                                     }
                                                 },
