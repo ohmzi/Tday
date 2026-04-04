@@ -19,6 +19,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Tday"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
+
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
