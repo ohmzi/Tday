@@ -340,6 +340,8 @@ fun TdayApp() {
                             if (isVersionBlocking && versionResult != null) {
                                 com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
                                     versionCheckResult = versionResult,
+                                    requiredUpdateRelease = appUiState.requiredUpdateRelease,
+                                    isCheckingRelease = appUiState.isCheckingUpdateRelease,
                                     onRetry = { appViewModel.recheckVersion() },
                                 )
                             } else {
@@ -398,6 +400,8 @@ fun TdayApp() {
                         ) {
                             com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
                                 versionCheckResult = authenticatedVersionCheck,
+                                requiredUpdateRelease = appUiState.requiredUpdateRelease,
+                                isCheckingRelease = appUiState.isCheckingUpdateRelease,
                                 onRetry = { appViewModel.recheckVersion() },
                             )
                         }
