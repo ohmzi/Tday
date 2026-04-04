@@ -8,9 +8,11 @@ plugins {
     id("io.sentry.android.gradle")
 }
 
-val localProps = java.util.Properties().apply {
-    val f = rootProject.file("local.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
+val localProps: java.util.Properties by lazy {
+    java.util.Properties().also { props ->
+        val f = rootProject.file("local.properties")
+        if (f.exists()) f.reader().use { props.load(it) }
+    }
 }
 
 val projectVersion: String by lazy {
