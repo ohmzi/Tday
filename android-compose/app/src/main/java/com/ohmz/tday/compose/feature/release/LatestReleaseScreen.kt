@@ -443,11 +443,13 @@ private fun ReleaseContent(
         )
     }
 
-    InstalledVersionCard(
-        currentVersion = uiState.currentVersion,
-        hasUpdate = uiState.hasUpdate,
-        currentRelease = currentRelease,
-    )
+    if (!uiState.hasUpdate) {
+        InstalledVersionCard(
+            currentVersion = uiState.currentVersion,
+            hasUpdate = uiState.hasUpdate,
+            currentRelease = currentRelease,
+        )
+    }
 
     val browseUrl = latestRelease?.htmlUrl ?: currentRelease?.htmlUrl
     if (browseUrl != null) {
