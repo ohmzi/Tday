@@ -122,7 +122,7 @@ class CompletedViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
-                        errorMessage = error.message ?: "Failed to load",
+                        errorMessage = error.userFacingMessage("Failed to load."),
                     )
                 }
             }
@@ -137,7 +137,7 @@ class CompletedViewModel @Inject constructor(
                     loadInternal(forceSync = false, showLoading = false)
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not restore task") }
+                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not restore task.")) }
                 }
         }
     }
@@ -150,7 +150,7 @@ class CompletedViewModel @Inject constructor(
                     loadInternal(forceSync = false, showLoading = false)
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not delete task") }
+                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not delete task.")) }
                 }
         }
     }
@@ -160,7 +160,7 @@ class CompletedViewModel @Inject constructor(
             runCatching { completedRepository.updateCompletedTodo(item, payload) }
                 .onSuccess { loadInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not update task") }
+                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not update task.")) }
                 }
         }
     }
