@@ -6,6 +6,7 @@ import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
+import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.ApiCallException
@@ -54,6 +55,8 @@ data class AppUiState(
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
     val isOffline: Boolean = false,
     val pendingMutationCount: Int = 0,
+    val versionCheckResult: VersionCheckResult? = null,
+    val backendVersion: String? = null,
 )
 
 @HiltViewModel
@@ -114,6 +117,8 @@ class AppViewModel @Inject constructor(
 
             val sessionUser = restoreSessionAndPrimeData()
             if (sessionUser != null) {
+                val versionResult = runCatching { serverConfigRepository.recheckVersion() }
+                    .getOrDefault(VersionCheckResult.Compatible)
                 val adminUser = isAdmin(sessionUser)
                 _uiState.update {
                     it.copy(
@@ -135,6 +140,12 @@ class AppViewModel @Inject constructor(
                         isAdminAiSummaryLoading = adminUser,
                         isAdminAiSummarySaving = false,
                         adminAiSummaryError = null,
+                        versionCheckResult = versionResult,
+                        backendVersion = when (versionResult) {
+                            is VersionCheckResult.AppUpdateRequired -> versionResult.requiredVersion
+                            is VersionCheckResult.ServerUpdateRequired -> versionResult.serverVersion
+                            is VersionCheckResult.Compatible -> null
+                        },
                     )
                 }
                 ensureResyncLoop(authenticated = true)
@@ -282,16 +293,21 @@ class AppViewModel @Inject constructor(
         onFailure: (String) -> Unit = {},
     ) {
         viewModelScope.launch {
-            val result = serverConfigRepository.saveServerUrl(rawUrl)
-            result.onSuccess { normalized ->
+            val result = serverConfigRepository.probeAndSave(rawUrl)
+            result.onSuccess { probeResult ->
+                val versionResult = probeResult.versionCheck
+                val isBlocking = versionResult is VersionCheckResult.AppUpdateRequired ||
+                    versionResult is VersionCheckResult.ServerUpdateRequired
                 _uiState.update {
                     it.copy(
                         requiresServerSetup = false,
-                        requiresLogin = true,
-                        serverUrl = normalized,
+                        requiresLogin = !isBlocking,
+                        serverUrl = probeResult.serverUrl,
                         error = null,
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
+                        versionCheckResult = versionResult,
+                        backendVersion = probeResult.backendVersion,
                     )
                 }
                 onSuccess()
@@ -305,6 +321,23 @@ class AppViewModel @Inject constructor(
                     )
                 }
                 onFailure(message)
+            }
+        }
+    }
+
+    fun recheckVersion() {
+        viewModelScope.launch {
+            val result = runCatching { serverConfigRepository.recheckVersion() }
+                .getOrDefault(VersionCheckResult.Compatible)
+            _uiState.update {
+                it.copy(
+                    versionCheckResult = result,
+                    backendVersion = when (result) {
+                        is VersionCheckResult.AppUpdateRequired -> result.requiredVersion
+                        is VersionCheckResult.ServerUpdateRequired -> result.serverVersion
+                        is VersionCheckResult.Compatible -> it.backendVersion
+                    },
+                )
             }
         }
     }

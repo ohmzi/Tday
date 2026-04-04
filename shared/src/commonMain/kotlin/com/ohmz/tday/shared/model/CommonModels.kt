@@ -13,6 +13,7 @@ data class MobileProbeResponse(
     val probe: String? = null,
     val version: String,
     val serverTime: String,
+    val encryptedCompatibility: String? = null,
 )
 
 @Serializable
