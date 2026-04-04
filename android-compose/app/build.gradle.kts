@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -8,11 +10,9 @@ plugins {
     id("io.sentry.android.gradle")
 }
 
-val localProps: java.util.Properties by lazy {
-    java.util.Properties().also { props ->
-        val f = rootProject.file("local.properties")
-        if (f.exists()) f.reader().use { props.load(it) }
-    }
+val localProps: Properties = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.reader().use { load(it) }
 }
 
 val projectVersion: String by lazy {
