@@ -12,6 +12,7 @@ interface State {
   isChunkError: boolean;
 }
 
+/** Detects dynamic-import / chunk-loading failures caused by stale bundles. */
 function isChunkLoadError(error: unknown): boolean {
   if (error instanceof Error) {
     return /dynamically imported module|loading chunk|loading css chunk/i.test(
@@ -38,17 +39,17 @@ class ErrorBoundary extends Component<Props, State> {
     console.error("Error caught by ErrorBoundary:", error, errorInfo);
   }
 
-  handleReload = () => {
+  static handleReload() {
     window.location.reload();
-  };
+  }
 
   handleReset = () => {
     this.setState({ hasError: false, isChunkError: false });
   };
 
-  handleGoHome = () => {
+  static handleGoHome() {
     window.location.href = "/";
-  };
+  }
 
   render() {
     if (this.state.hasError) {
@@ -91,7 +92,7 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
-                onClick={this.handleReload}
+                onClick={ErrorBoundary.handleReload}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
               >
                 <RefreshCw className="h-4 w-4" />
@@ -101,7 +102,7 @@ class ErrorBoundary extends Component<Props, State> {
               {!isChunkError && (
                 <button
                   type="button"
-                  onClick={this.handleGoHome}
+                  onClick={ErrorBoundary.handleGoHome}
                   className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <Home className="h-4 w-4" />
