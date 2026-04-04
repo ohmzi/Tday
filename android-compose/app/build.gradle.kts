@@ -58,6 +58,12 @@ android {
         versionName = projectVersion
         manifestPlaceholders["usesCleartextTraffic"] = "false"
 
+        buildConfigField(
+            "String",
+            "PROBE_ENCRYPTION_KEY",
+            "\"${findProperty("probeEncryptionKey") ?: System.getenv("TDAY_PROBE_ENCRYPTION_KEY") ?: ""}\"",
+        )
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true

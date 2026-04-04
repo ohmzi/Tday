@@ -63,4 +63,7 @@ fun testAppConfig(
     signalAnomalyWindowSec = 86400,
     passwordProofChallengeTtlSec = passwordProofChallengeTtlSec,
     passwordProofMaxActive = passwordProofMaxActive,
+    probeAppVersion = null,
+    probeUpdateRequired = false,
+    probeEncryptionKey = null,
 )

@@ -70,6 +70,20 @@ struct SettingsScreen: View {
                         .font(.footnote)
                         .foregroundStyle(colors.primary)
                 }
+                if let backendVersion = viewModel.backendVersion {
+                    HStack {
+                        Text("Server")
+                        Spacer()
+                        HStack(spacing: 8) {
+                            Text("v\(backendVersion)")
+                                .foregroundStyle(colors.onSurfaceVariant)
+                            let isCompatible = viewModel.versionCheckResult == .compatible
+                            Text(isCompatible ? "Compatible" : "Incompatible")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(isCompatible ? Color.green : colors.error)
+                        }
+                    }
+                }
             }
 
             Section {
