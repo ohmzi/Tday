@@ -74,31 +74,18 @@ class AppVersionManager @Inject constructor(
 
     suspend fun refreshGitHubReleases() {
         _state.update { it.copy(isLoadingReleases = true, releaseError = null) }
-        try {
-            val currentTag = "v${BuildConfig.VERSION_NAME}"
-            coroutineScope {
-                val latestDeferred = async { gitHubReleaseRepository.fetchLatestRelease() }
-                val currentDeferred = async { gitHubReleaseRepository.fetchReleaseByTag(currentTag) }
-                _state.update {
-                    it.copy(
-                        isLoadingReleases = false,
-                        latestRelease = latestDeferred.await(),
-                        currentRelease = currentDeferred.await(),
-                    )
-                }
-            }
-        } catch (e: java.io.IOException) {
+        val currentTag = "v${BuildConfig.VERSION_NAME}"
+        coroutineScope {
+            val latestResult = async { runCatching { gitHubReleaseRepository.fetchLatestRelease() } }
+            val currentResult = async { runCatching { gitHubReleaseRepository.fetchReleaseByTag(currentTag) } }
+            val latest = latestResult.await()
+            val current = currentResult.await()
             _state.update {
                 it.copy(
                     isLoadingReleases = false,
-                    releaseError = e.message ?: "Network error fetching release",
-                )
-            }
-        } catch (e: RuntimeException) {
-            _state.update {
-                it.copy(
-                    isLoadingReleases = false,
-                    releaseError = e.message ?: "Failed to fetch release",
+                    latestRelease = latest.getOrNull(),
+                    currentRelease = current.getOrNull(),
+                    releaseError = latest.exceptionOrNull()?.message,
                 )
             }
         }
