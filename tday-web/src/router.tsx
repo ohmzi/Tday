@@ -1,4 +1,5 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import * as Sentry from "@sentry/react";
 import { DEFAULT_LOCALE } from "@/i18n";
 import ProtectedRoute from "@/pages/ProtectedRoute";
 import { lazy, Suspense } from "react";
@@ -47,7 +48,10 @@ function SuspenseOutlet() {
   );
 }
 
-export const router = createBrowserRouter([
+const sentryCreateBrowserRouter =
+  Sentry.wrapCreateBrowserRouterV7(createBrowserRouter);
+
+export const router = sentryCreateBrowserRouter([
   {
     path: "/",
     element: <Navigate to={`/${DEFAULT_LOCALE}`} replace />,
