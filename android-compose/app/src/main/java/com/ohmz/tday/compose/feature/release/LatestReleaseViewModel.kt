@@ -3,8 +3,8 @@ package com.ohmz.tday.compose.feature.release
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.BuildConfig
+import com.ohmz.tday.compose.core.data.server.AppVersionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,39 +48,31 @@ internal fun compareVersions(a: String, b: String): Int {
 
 @HiltViewModel
 class LatestReleaseViewModel @Inject constructor(
-    private val repository: GitHubReleaseRepository,
+    private val appVersionManager: AppVersionManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LatestReleaseUiState())
     val uiState: StateFlow<LatestReleaseUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            appVersionManager.state.collect { vs ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = vs.isLoadingReleases,
+                        currentRelease = vs.currentRelease,
+                        latestRelease = vs.latestRelease,
+                        error = vs.releaseError,
+                    )
+                }
+            }
+        }
         load()
     }
 
     fun load() {
-        _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
-            try {
-                val currentTag = "v${BuildConfig.VERSION_NAME}"
-                val latestDeferred = async { repository.fetchLatestRelease() }
-                val currentDeferred = async { repository.fetchReleaseByTag(currentTag) }
-
-                val latest = latestDeferred.await()
-                val current = currentDeferred.await()
-
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        latestRelease = latest,
-                        currentRelease = current,
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to fetch release")
-                }
-            }
+            appVersionManager.refreshGitHubReleases()
         }
     }
 }
