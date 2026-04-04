@@ -169,7 +169,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    implementation("io.sentry:sentry-android-okhttp:8.13.0")
+    implementation("io.sentry:sentry-okhttp:8.13.0")
     implementation("io.sentry:sentry-android-navigation:8.13.0")
 
     implementation("androidx.security:security-crypto:1.1.0")
