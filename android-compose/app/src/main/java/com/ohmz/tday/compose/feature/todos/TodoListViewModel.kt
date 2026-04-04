@@ -16,6 +16,7 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -146,7 +147,7 @@ class TodoListViewModel @Inject constructor(
                     } else {
                         it.copy(
                             isSummarizing = false,
-                            summaryError = error.message ?: "Could not summarize tasks",
+                            summaryError = error.userFacingMessage("Could not summarize tasks."),
                         )
                     }
                 }
@@ -227,7 +228,7 @@ class TodoListViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
-                        errorMessage = error.message ?: "Failed to load tasks",
+                        errorMessage = error.userFacingMessage("Failed to load tasks."),
                     )
                 }
             }
@@ -269,7 +270,7 @@ class TodoListViewModel @Inject constructor(
                     }
                 }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
             }.onFailure { error ->
-                _uiState.update { it.copy(errorMessage = error.message ?: "Could not create task") }
+                _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not create task.")) }
             }
         }
     }
@@ -341,7 +342,7 @@ class TodoListViewModel @Inject constructor(
                 }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.message ?: "Could not update task",
+                    errorMessage = error.userFacingMessage("Could not update task."),
                 )
             }
         }
@@ -365,7 +366,7 @@ class TodoListViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         items = previousItems,
-                        errorMessage = error.message ?: "Could not complete task",
+                        errorMessage = error.userFacingMessage("Could not complete task."),
                     )
                 }
             }
@@ -405,7 +406,7 @@ class TodoListViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         items = previousItems,
-                        errorMessage = error.message ?: "Could not delete task",
+                        errorMessage = error.userFacingMessage("Could not delete task."),
                     )
                 }
             }
@@ -466,7 +467,7 @@ class TodoListViewModel @Inject constructor(
             }.onFailure { error ->
                 Log.e(TAG, "updateListSettings failed listId=$resolvedListId", error)
                 _uiState.value = previousState.copy(
-                    errorMessage = error.message ?: "Could not update list",
+                    errorMessage = error.userFacingMessage("Could not update list."),
                 )
             }
         }
