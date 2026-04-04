@@ -35,6 +35,8 @@ internal object InAppApkUpdater {
             val sessionId: Int,
             val message: String,
         ) : InstallEvent
+
+        data class SignatureConflict(val sessionId: Int) : InstallEvent
     }
 
     private val httpClient = OkHttpClient()
@@ -98,6 +100,16 @@ internal object InAppApkUpdater {
             message = message,
         )
     }
+
+    fun publishSignatureConflict(sessionId: Int) {
+        _installEvent.value = InstallEvent.SignatureConflict(sessionId)
+    }
+
+    fun buildUninstallIntent(context: Context): Intent =
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${context.packageName}")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
 
     fun clearPendingUserAction(sessionId: Int) {
         val event = _installEvent.value
