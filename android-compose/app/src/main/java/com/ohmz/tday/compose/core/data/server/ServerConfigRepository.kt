@@ -85,9 +85,16 @@ class ServerConfigRepository @Inject constructor(
         )
     }
 
-    suspend fun recheckVersion(): VersionCheckResult {
-        val serverUrl = getServerUrl() ?: return VersionCheckResult.Compatible
-        val parsedServerUrl = serverUrl.toHttpUrlOrNull() ?: return VersionCheckResult.Compatible
+    data class VersionRecheckResult(
+        val versionCheck: VersionCheckResult,
+        val serverAppVersion: String?,
+    )
+
+    suspend fun recheckVersion(): VersionRecheckResult {
+        val serverUrl = getServerUrl()
+            ?: return VersionRecheckResult(VersionCheckResult.Compatible, null)
+        val parsedServerUrl = serverUrl.toHttpUrlOrNull()
+            ?: return VersionRecheckResult(VersionCheckResult.Compatible, null)
         val probeUrl = parsedServerUrl.newBuilder()
             .encodedPath(PROBE_PATH)
             .query(null)
@@ -97,11 +104,16 @@ class ServerConfigRepository @Inject constructor(
 
         val probeResponse = runCatching {
             withTimeout(PROBE_TIMEOUT_MS) { api.probeServer(probeUrl = probeUrl) }
-        }.getOrNull() ?: return VersionCheckResult.Compatible
+        }.getOrNull()
+            ?: return VersionRecheckResult(VersionCheckResult.Compatible, null)
 
-        val body = probeResponse.body() ?: return VersionCheckResult.Compatible
+        val body = probeResponse.body()
+            ?: return VersionRecheckResult(VersionCheckResult.Compatible, null)
         val compatibility = body.encryptedCompatibility?.let { ProbeDecryptor.decrypt(it) }
-        return checkVersionCompatibility(compatibility)
+        return VersionRecheckResult(
+            versionCheck = checkVersionCompatibility(compatibility),
+            serverAppVersion = compatibility?.appVersion,
+        )
     }
 
     fun resetTrustedServer(rawUrl: String): Result<Unit> {
