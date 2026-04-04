@@ -5,11 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.server.AppVersionManager
 import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.feature.release.GitHubRelease
-import com.ohmz.tday.compose.feature.release.GitHubReleaseRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
@@ -78,7 +78,7 @@ class AppViewModel @Inject constructor(
     val snackbarManager: SnackbarManager,
     private val realtimeClient: RealtimeClient,
     private val connectivityObserver: ConnectivityObserver,
-    private val gitHubReleaseRepository: GitHubReleaseRepository,
+    private val appVersionManager: AppVersionManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -93,6 +93,18 @@ class AppViewModel @Inject constructor(
                 themeMode = themePreferenceStore.getThemeMode(),
                 selectedReminder = reminderPreferenceStore.getDefaultReminder(),
             )
+        }
+        viewModelScope.launch {
+            appVersionManager.state.collect { vs ->
+                _uiState.update {
+                    it.copy(
+                        versionCheckResult = vs.versionCheckResult,
+                        backendVersion = vs.backendVersion,
+                        requiredUpdateRelease = vs.requiredUpdateRelease,
+                        isCheckingUpdateRelease = vs.isCheckingUpdateRelease,
+                    )
+                }
+            }
         }
         bootstrap()
     }
@@ -125,8 +137,9 @@ class AppViewModel @Inject constructor(
             }
 
             val sessionUser = restoreSessionAndPrimeData()
-            val versionResult = runCatching { serverConfigRepository.recheckVersion() }
-                .getOrDefault(VersionCheckResult.Compatible)
+            appVersionManager.refreshServerCompatibility()
+            val vs = appVersionManager.state.value
+            val versionResult = vs.versionCheckResult
             val isBlocking = versionResult is VersionCheckResult.AppUpdateRequired ||
                 versionResult is VersionCheckResult.ServerUpdateRequired
 
@@ -152,20 +165,15 @@ class AppViewModel @Inject constructor(
                         isAdminAiSummaryLoading = adminUser,
                         isAdminAiSummarySaving = false,
                         adminAiSummaryError = null,
-                        versionCheckResult = versionResult,
-                        backendVersion = when (versionResult) {
-                            is VersionCheckResult.AppUpdateRequired -> versionResult.requiredVersion
-                            is VersionCheckResult.ServerUpdateRequired -> versionResult.serverVersion
-                            is VersionCheckResult.Compatible -> null
-                        },
+                        versionCheckResult = vs.versionCheckResult,
+                        backendVersion = vs.backendVersion,
+                        requiredUpdateRelease = vs.requiredUpdateRelease,
+                        isCheckingUpdateRelease = vs.isCheckingUpdateRelease,
                     )
                 }
                 ensureResyncLoop(authenticated = true)
                 if (adminUser) {
                     refreshAdminAiSummarySetting()
-                }
-                if (versionResult is VersionCheckResult.AppUpdateRequired) {
-                    checkReleaseAvailability(versionResult.requiredVersion)
                 }
                 return@launch
             }
@@ -187,16 +195,11 @@ class AppViewModel @Inject constructor(
                         isAdminAiSummaryLoading = false,
                         isAdminAiSummarySaving = false,
                         adminAiSummaryError = null,
-                        versionCheckResult = versionResult,
-                        backendVersion = when (versionResult) {
-                            is VersionCheckResult.AppUpdateRequired -> versionResult.requiredVersion
-                            is VersionCheckResult.ServerUpdateRequired -> versionResult.serverVersion
-                            is VersionCheckResult.Compatible -> null
-                        },
+                        versionCheckResult = vs.versionCheckResult,
+                        backendVersion = vs.backendVersion,
+                        requiredUpdateRelease = vs.requiredUpdateRelease,
+                        isCheckingUpdateRelease = vs.isCheckingUpdateRelease,
                     )
-                }
-                if (versionResult is VersionCheckResult.AppUpdateRequired) {
-                    checkReleaseAvailability(versionResult.requiredVersion)
                 }
                 return@launch
             }
@@ -357,9 +360,6 @@ class AppViewModel @Inject constructor(
                     )
                 }
                 onSuccess()
-                if (versionResult is VersionCheckResult.AppUpdateRequired) {
-                    checkReleaseAvailability(versionResult.requiredVersion)
-                }
             }.onFailure { error ->
                 val message = toServerSetupMessage(error)
                 _uiState.update {
@@ -371,48 +371,28 @@ class AppViewModel @Inject constructor(
                 }
                 onFailure(message)
             }
+            val probeResult = result.getOrNull() ?: return@launch
+            appVersionManager.applyServerCompatibility(
+                probeResult.versionCheck,
+                probeResult.backendVersion,
+            )
         }
     }
 
     fun recheckVersion() {
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(isCheckingUpdateRelease = false, requiredUpdateRelease = null)
-            }
-            val result = runCatching { serverConfigRepository.recheckVersion() }
-                .getOrDefault(VersionCheckResult.Compatible)
-            _uiState.update {
-                it.copy(
-                    versionCheckResult = result,
-                    backendVersion = when (result) {
-                        is VersionCheckResult.AppUpdateRequired -> result.requiredVersion
-                        is VersionCheckResult.ServerUpdateRequired -> result.serverVersion
-                        is VersionCheckResult.Compatible -> it.backendVersion
-                    },
-                )
-            }
-            if (result is VersionCheckResult.AppUpdateRequired) {
-                checkReleaseAvailability(result.requiredVersion)
-            } else if (result is VersionCheckResult.Compatible && !_uiState.value.authenticated) {
+            appVersionManager.refreshServerCompatibility()
+            if (appVersionManager.state.value.versionCheckResult is VersionCheckResult.Compatible &&
+                !_uiState.value.authenticated
+            ) {
                 bootstrap()
             }
         }
     }
 
-    private fun checkReleaseAvailability(version: String) {
+    fun refreshVersionInfo() {
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(isCheckingUpdateRelease = true, requiredUpdateRelease = null)
-            }
-            val release = runCatching {
-                gitHubReleaseRepository.fetchReleaseByTag("v$version")
-            }.getOrNull()
-            _uiState.update {
-                it.copy(
-                    isCheckingUpdateRelease = false,
-                    requiredUpdateRelease = release,
-                )
-            }
+            appVersionManager.refreshAll()
         }
     }
 
