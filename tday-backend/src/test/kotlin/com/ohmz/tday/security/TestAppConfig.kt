@@ -66,4 +66,5 @@ fun testAppConfig(
     probeAppVersion = null,
     probeUpdateRequired = false,
     probeEncryptionKey = null,
+    sentryDsn = null,
 )
