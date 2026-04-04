@@ -59,6 +59,20 @@ struct SettingsScreen: View {
             }
 
             Section {
+                HStack {
+                    Text("Version")
+                    Spacer()
+                    Text("v\(viewModel.currentVersionName)")
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
+                if viewModel.hasUpdate, let latest = viewModel.latestVersionName {
+                    Text("v\(latest) available")
+                        .font(.footnote)
+                        .foregroundStyle(colors.primary)
+                }
+            }
+
+            Section {
                 Button(role: .destructive) {
                     Task { await viewModel.logout() }
                 } label: {

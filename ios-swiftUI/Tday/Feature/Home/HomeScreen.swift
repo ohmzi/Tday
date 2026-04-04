@@ -87,8 +87,8 @@ struct HomeScreen: View {
                 titleText: "Create Task",
                 submitText: "Create",
                 initialPayload: nil,
-                onParseTaskTitleNlp: { title, start, due in
-                    await viewModel.parseTaskTitleNlp(text: title, referenceStartEpochMs: start, referenceDueEpochMs: due)
+                onParseTaskTitleNlp: { title, dueRef in
+                    await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },
                 onDismiss: { showingCreateTask = false },
                 onSubmit: { payload in

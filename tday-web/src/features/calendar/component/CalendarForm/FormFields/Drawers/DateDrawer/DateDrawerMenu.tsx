@@ -1,6 +1,5 @@
 import NestedDrawerItem from "@/components/mobile/NestedDrawerItem";
-import { NonNullableDateRange } from "@/types";
-import { startOfDay, nextMonday, addDays, endOfDay, differenceInDays } from "date-fns";
+import { startOfDay, nextMonday, addDays, endOfDay } from "date-fns";
 import { Sun, Sunrise, CalendarIcon, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SetStateAction, useState, useEffect } from "react";
@@ -10,7 +9,9 @@ import { Calendar } from "@/components/ui/calendar";
 import LineSeparator from "@/components/ui/lineSeparator";
 import type { DateRange } from "react-day-picker";
 
-export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: NonNullableDateRange, setDateRange: React.Dispatch<SetStateAction<NonNullableDateRange>> }) {
+type DrawerDateRange = { from: Date; to: Date };
+
+export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: DrawerDateRange, setDateRange: React.Dispatch<SetStateAction<DrawerDateRange>> }) {
     const nextWeek = startOfDay(nextMonday(dateRange?.from || new Date()));
     const tomorrow = startOfDay(addDays(dateRange?.from || new Date(), 1));
     const { t: appDict } = useTranslation("app");
@@ -32,20 +33,8 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: NonNull
                 <div
                     className="flex w-full cursor-pointer items-center justify-between rounded-md p-2 hover:bg-accent/50"
                     onClick={() => {
-                        setDateRange((prev) => ({
-                            from: startOfDay(new Date()),
-                            to:
-                                prev.to && prev.from
-                                    ? new Date(
-                                        endOfDay(
-                                            addDays(
-                                                new Date(),
-                                                differenceInDays(prev.to, prev.from)
-                                            )
-                                        )
-                                    )
-                                    : endOfDay(new Date()),
-                        }));
+                        const d = endOfDay(new Date());
+                        setDateRange({ from: d, to: d });
                     }}
                     data-close-on-click
                 >
@@ -61,15 +50,8 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: NonNull
                 <div
                     className="flex w-full cursor-pointer items-center justify-between rounded-md p-2 hover:bg-accent/50"
                     onClick={() => {
-                        setDateRange((prev) => ({
-                            from: tomorrow,
-                            to:
-                                prev.to && prev.from
-                                    ? endOfDay(
-                                        addDays(tomorrow, differenceInDays(prev.to, prev.from))
-                                    )
-                                    : endOfDay(tomorrow),
-                        }));
+                        const d = endOfDay(tomorrow);
+                        setDateRange({ from: d, to: d });
                     }}
                     data-close-on-click
                 >
@@ -85,17 +67,8 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: NonNull
                 <div
                     className="flex w-full cursor-pointer items-center justify-between rounded-md p-2 hover:bg-accent/50"
                     onClick={() => {
-                        setDateRange((prev) => ({
-                            from: nextWeek,
-                            to:
-                                prev.to && prev.from
-                                    ? endOfDay(
-                                        new Date(
-                                            addDays(nextWeek, differenceInDays(prev.to, prev.from))
-                                        )
-                                    )
-                                    : endOfDay(nextWeek),
-                        }));
+                        const d = endOfDay(nextWeek);
+                        setDateRange({ from: d, to: d });
                     }}
                     data-close-on-click
                 >
@@ -139,10 +112,8 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: NonNull
                     setCalendarRange(newRange);
                     // Only commit to parent when both dates are selected
                     if (newRange?.from && newRange?.to) {
-                        setDateRange({
-                            from: startOfDay(newRange.from),
-                            to: endOfDay(newRange.to),
-                        });
+                        const d = endOfDay(newRange.to);
+                        setDateRange({ from: d, to: d });
                     }
                 }}
             />
@@ -150,4 +121,3 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: NonNull
 
     )
 }
-

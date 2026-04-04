@@ -59,16 +59,14 @@ const ListContainer = ({ id }: { id: string }) => {
     const groupedTodos = useMemo(() => {
         return Object.groupBy((unpinnedTodos), (todo) => {
             switch (preferences?.groupBy) {
-                case "dtstart":
-                    return getDisplayDate(todo.dtstart, false, locale, userTZ?.timeZone);
                 case "due":
                     return getDisplayDate(todo.due, false, locale, userTZ?.timeZone);
-                case "duration":
-                    return Number((Math.round(todo.durationMinutes / 60 * 10) / 10).toFixed(1)).toString() + " hr";
                 case "priority":
                     return String(todo.priority);
                 case "rrule":
                     return todo.rrule ? new RRule(RRule.parseString(todo.rrule)).toText() : "Non repeating"
+                case "list":
+                    return todo.listID ?? "-1";
                 default:
                     return "-1"
             }
@@ -80,12 +78,8 @@ const ListContainer = ({ id }: { id: string }) => {
         for (const [key, todos] of Object.entries(groupedTodos)) {
             sorted[key] = [...todos].sort((a, b) => {
                 switch (preferences?.sortBy) {
-                    case "dtstart":
-                        return preferences.direction == "Descending" ? a.dtstart.getTime() - b.dtstart.getTime() : b.dtstart.getTime() - a.dtstart.getTime();
                     case "due":
                         return preferences.direction == "Descending" ? a.due.getTime() - b.due.getTime() : b.due.getTime() - a.due.getTime();
-                    case "duration":
-                        return preferences.direction == "Descending" ? a.durationMinutes - b.durationMinutes : b.durationMinutes - a.durationMinutes;
                     case "priority":
                         return preferences.direction == "Descending" ? priorityMap[a.priority] - priorityMap[b.priority] : priorityMap[b.priority] - priorityMap[a.priority];
                     default:

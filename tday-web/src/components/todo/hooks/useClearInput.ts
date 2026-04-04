@@ -19,7 +19,6 @@ export function useClearInput(
     function clearInput() {
       const now = new Date();
       now.setHours(now.getHours() + 3);
-      now.setSeconds(0, 0);
       if (setEditInstanceOnly) setEditInstanceOnly(false);
       setDesc("");
       setTitle("");
@@ -29,6 +28,7 @@ export function useClearInput(
       });
       setPriority("Low");
       setRruleOptions(null);
+      titleRef.current?.focus();
       if (titleRef.current) {
         titleRef.current.textContent = "";
       }

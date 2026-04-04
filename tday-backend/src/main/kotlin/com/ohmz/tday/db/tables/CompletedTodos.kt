@@ -12,7 +12,6 @@ object CompletedTodos : Table("CompletedTodo") {
     val description = text("description").nullable()
     val priority = pgEnum<Priority>("priority", "\"Priority\"")
     val completedAt = datetime("completedAt")
-    val dtstart = datetime("dtstart")
     val due = datetime("due")
     val completedOnTime = bool("completedOnTime")
     val daysToComplete = decimal("daysToComplete", 10, 2)

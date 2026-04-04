@@ -14,8 +14,9 @@ All API routes live under `/api/`. The web SPA consumes them via same-origin req
   1. Reads a JWE token from `Authorization: Bearer` header or session cookies.
   2. Decodes and validates claims (expiry, `tokenVersion`, role, approval status).
   3. Attaches `AuthUser` to the call attributes.
-- Route handlers use `call.withAuth { }` to require an authenticated user.
-- Admin routes additionally require `role == ADMIN` and `approvalStatus == APPROVED` via `requireAdminEither`.
+- Route handlers use `call.withAuth { }` to require an authenticated, approved user.
+- Admin routes additionally require `role == ADMIN` and `approvalStatus == APPROVED` via `requireAdminAccess()`.
+- App-layer request throttling runs before handlers and may return `429` on `/api/**`, `/health`, `/api/mobile/probe`, `POST /api/todo/summary`, `POST /api/user/change-password`, and `/ws`.
 
 ## Request Format
 
@@ -152,7 +153,7 @@ Services return `Either<AppError, T>` (Arrow) for typed error handling. Routes f
 
 - **Every** data query must filter by `userID` from the authenticated session.
 - Never return data belonging to other users.
-- Admin endpoints that access other users' data must be behind `requireAdminEither`.
+- Admin endpoints that access other users' data must be behind `requireAdminAccess()`.
 
 ## Existing API Surface
 
@@ -254,12 +255,6 @@ Services return `Either<AppError, T>` (Arrow) for typed error handling. Routes f
 | Method | Path | Purpose | Auth |
 |--------|------|---------|------|
 | GET | `/api/mobile/probe` | Server discovery | Public |
-
-### Cron
-
-| Method | Path | Purpose | Auth |
-|--------|------|---------|------|
-| GET | `/api/cron/rescheduleTodo` | Reschedule overdue recurring tasks | `X-CronSecret` header |
 
 ## Cache Headers
 
