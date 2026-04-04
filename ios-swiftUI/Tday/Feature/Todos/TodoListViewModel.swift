@@ -42,7 +42,7 @@ final class TodoListViewModel {
         isLoading = true
         let result = await container.syncAndRefresh(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Failed to load tasks.")
         }
         hydrateFromCache()
         isLoading = false
@@ -73,7 +73,7 @@ final class TodoListViewModel {
             if isLikelyConnectivityIssue(error) {
                 summaryConnectivityError = true
             } else {
-                summaryError = error.localizedDescription
+                summaryError = userFacingMessage(for: error, fallback: "Could not summarize tasks.")
             }
         }
         isSummarizing = false
@@ -88,7 +88,7 @@ final class TodoListViewModel {
             try await container.createTodo(payload)
             hydrateFromCache()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not create task.")
         }
     }
 
@@ -97,7 +97,7 @@ final class TodoListViewModel {
             try await container.todoRepository.updateTodo(todo, payload: payload)
             hydrateFromCache()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
         }
     }
 
@@ -137,7 +137,7 @@ final class TodoListViewModel {
             try await container.completeTodo(todo)
             hydrateFromCache()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not complete task.")
         }
     }
 
@@ -146,7 +146,7 @@ final class TodoListViewModel {
             try await container.todoRepository.deleteTodo(todo)
             hydrateFromCache()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not delete task.")
         }
     }
 
@@ -157,7 +157,7 @@ final class TodoListViewModel {
             hydrateFromCache()
             title = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? (listName ?? mode.title) : name
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not update list.")
         }
     }
 
