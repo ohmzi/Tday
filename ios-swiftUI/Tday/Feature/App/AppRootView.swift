@@ -129,35 +129,55 @@ struct AppRootView: View {
             }
             .overlay {
                 if !appViewModel.authenticated {
-                    OnboardingWizardOverlay(
-                        initialServerURL: appViewModel.serverURL,
-                        serverErrorMessage: appViewModel.error,
-                        serverCanResetTrust: appViewModel.canResetServerTrust,
-                        pendingApprovalMessage: appViewModel.pendingApprovalMessage,
-                        authViewModel: authViewModel,
-                        onConnectServer: { rawURL in
-                            await appViewModel.connectServer(rawURL: rawURL)
-                        },
-                        onResetServerTrust: { rawURL in
-                            await appViewModel.resetTrustedServer(rawURL: rawURL)
-                        },
-                        onLogin: { email, password in
-                            let success = await authViewModel.login(email: email, password: password)
-                            if success {
-                                await appViewModel.refreshSession()
+                    let isVersionBlocking = appViewModel.versionCheckResult != .compatible
+
+                    if isVersionBlocking {
+                        UpdateRequiredView(
+                            versionCheckResult: appViewModel.versionCheckResult,
+                            onRetry: {
+                                Task { await appViewModel.recheckVersion() }
                             }
-                            return success
-                        },
-                        onRegister: { firstName, email, password in
-                            let success = await authViewModel.register(firstName: firstName, lastName: "", email: email, password: password)
-                            if success {
-                                await appViewModel.refreshSession()
+                        )
+                    } else {
+                        OnboardingWizardOverlay(
+                            initialServerURL: appViewModel.serverURL,
+                            serverErrorMessage: appViewModel.error,
+                            serverCanResetTrust: appViewModel.canResetServerTrust,
+                            pendingApprovalMessage: appViewModel.pendingApprovalMessage,
+                            authViewModel: authViewModel,
+                            onConnectServer: { rawURL in
+                                await appViewModel.connectServer(rawURL: rawURL)
+                            },
+                            onResetServerTrust: { rawURL in
+                                await appViewModel.resetTrustedServer(rawURL: rawURL)
+                            },
+                            onLogin: { email, password in
+                                let success = await authViewModel.login(email: email, password: password)
+                                if success {
+                                    await appViewModel.refreshSession()
+                                }
+                                return success
+                            },
+                            onRegister: { firstName, email, password in
+                                let success = await authViewModel.register(firstName: firstName, lastName: "", email: email, password: password)
+                                if success {
+                                    await appViewModel.refreshSession()
+                                }
+                                return success
+                            },
+                            onClearAuthStatus: {
+                                authViewModel.clearStatus()
+                                appViewModel.clearPendingApprovalNotice()
                             }
-                            return success
-                        },
-                        onClearAuthStatus: {
-                            authViewModel.clearStatus()
-                            appViewModel.clearPendingApprovalNotice()
+                        )
+                    }
+                }
+
+                if appViewModel.authenticated && appViewModel.versionCheckResult != .compatible {
+                    UpdateRequiredView(
+                        versionCheckResult: appViewModel.versionCheckResult,
+                        onRetry: {
+                            Task { await appViewModel.recheckVersion() }
                         }
                     )
                 }
