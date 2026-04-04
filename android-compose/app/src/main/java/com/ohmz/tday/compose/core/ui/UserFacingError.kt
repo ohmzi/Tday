@@ -28,5 +28,9 @@ fun Throwable.userFacingMessage(fallback: String = "Something went wrong. Please
         return "Connection error. Check your internet and try again."
     }
 
+    if (msg.contains("serial name") || msg.contains("required for type")) {
+        return "This version of the app is out of date. Please update to continue."
+    }
+
     return fallback
 }

@@ -27,7 +27,7 @@ final class HomeViewModel {
         isLoading = true
         let result = await container.syncAndRefresh(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Failed to load dashboard.")
         }
         refreshFromCache()
     }
@@ -44,7 +44,7 @@ final class HomeViewModel {
             try await container.listRepository.createList(name: name, color: color, iconKey: iconKey)
             refreshFromCache()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not create list.")
         }
     }
 
@@ -53,7 +53,7 @@ final class HomeViewModel {
             try await container.createTodo(payload)
             refreshFromCache()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingMessage(for: error, fallback: "Could not create task.")
         }
     }
 

@@ -99,7 +99,7 @@ class AuthViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             pendingApproval = false,
-                            errorMessage = result.message,
+                            errorMessage = toFriendlyMessage(result.message),
                         )
                     }
                 }
@@ -139,7 +139,7 @@ class AuthViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    errorMessage = if (outcome.success) null else outcome.message,
+                    errorMessage = if (outcome.success) null else toFriendlyMessage(outcome.message),
                     infoMessage = if (outcome.success) outcome.message else null,
                     pendingApproval = outcome.requiresApproval,
                     savedEmail = if (outcome.success) email.trim() else it.savedEmail,
@@ -156,9 +156,14 @@ class AuthViewModel @Inject constructor(
         val raw = message.orEmpty()
         return when {
             raw.contains("127.0.0.1") || raw.contains("localhost") || raw.contains("ECONNREFUSED") ->
-                "Cannot reach backend. Check Server URL (for local Docker emulator use http://10.0.2.2:2525)."
-            raw.isNotBlank() -> raw
-            else -> "Network error. Please try again."
+                "Cannot reach server. Check your server URL and try again."
+            raw.contains("serial name") || raw.contains("SerializationException") ||
+                raw.contains("required for type") ->
+                "This version of the app is out of date. Please update to continue."
+            raw.contains("failed to connect") || raw.contains("unable to resolve host") ||
+                raw.contains("timed out") || raw.contains("network is unreachable") ->
+                "Connection error. Check your internet and try again."
+            else -> "Something went wrong. Please try again."
         }
     }
 }
