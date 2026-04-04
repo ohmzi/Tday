@@ -87,7 +87,7 @@ describe("Ktor API route conventions", () => {
       expect(routingFile).toContain("todoRoutes()");
       expect(routingFile).toContain("listRoutes()");
       expect(routingFile).toContain("userRoutes()");
-      expect(routingFile).toContain("mobileProbeRoutes()");
+      expect(routingFile).toContain("mobileProbeRoutes(config)");
       expect(routingFile).toContain("csrfRoutes()");
       expect(routingFile).toContain("registerRoutes()");
       expect(routingFile).toContain("credentialsCallbackRoutes()");
