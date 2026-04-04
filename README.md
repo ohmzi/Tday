@@ -122,6 +122,7 @@ Tday/
 | [`docs/TESTING.md`](docs/TESTING.md) | Testing strategy and expectations |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Docker, CI/CD, secrets, releases |
 | [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md) | Remote access methods (Cloudflare Tunnel, Tailscale, WireGuard, etc.) |
+| [`docs/TELEMETRY.md`](docs/TELEMETRY.md) | What crash reporting collects (and doesn't) — no PII, no analytics |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records |
 
 ## License
