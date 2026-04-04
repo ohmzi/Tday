@@ -23,7 +23,7 @@ fun main() {
     val config = AppConfig.load()
 
     Sentry.init { options ->
-        options.dsn = config.sentryDsn ?: ""
+        options.dsn = config.sentryDsn.orEmpty()
         options.environment = if (config.isProduction) "production" else "development"
         options.release = "tday-backend@${System.getenv("TDAY_BACKEND_VERSION") ?: "0.0.1"}"
         options.isSendDefaultPii = false
