@@ -281,6 +281,7 @@ fun TdayApp() {
                                 val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
                                 OnRouteResume {
                                     homeViewModel.refreshFromCache()
+                                    appViewModel.refreshVersionInfo()
                                 }
                                 HomeScreen(
                                     uiState = homeUiState,
@@ -333,63 +334,63 @@ fun TdayApp() {
                         }
 
                         if (showOnboardingWizard) {
-                            val versionResult = appUiState.versionCheckResult
-                            val isVersionBlocking = versionResult is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired ||
-                                versionResult is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired
-
-                            if (isVersionBlocking && versionResult != null) {
-                                com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
-                                    versionCheckResult = versionResult,
-                                    requiredUpdateRelease = appUiState.requiredUpdateRelease,
-                                    isCheckingRelease = appUiState.isCheckingUpdateRelease,
-                                    onRetry = { appViewModel.recheckVersion() },
-                                )
-                            } else {
-                                OnboardingWizardOverlay(
-                                    initialServerUrl = appUiState.serverUrl,
-                                    serverErrorMessage = appUiState.error,
-                                    serverCanResetTrust = appUiState.canResetServerTrust,
-                                    pendingApprovalMessage = appUiState.pendingApprovalMessage,
-                                    authUiState = authUiState,
-                                    onConnectServer = { rawUrl, onResult ->
-                                        appViewModel.saveServerUrl(
-                                            rawUrl = rawUrl,
-                                            onSuccess = { onResult(Result.success(Unit)) },
-                                            onFailure = { message ->
-                                                onResult(Result.failure(IllegalStateException(message)))
-                                            },
-                                        )
-                                    },
-                                    onResetServerTrust = { rawUrl, onResult ->
-                                        appViewModel.resetTrustedServer(
-                                            rawUrl = rawUrl,
-                                            onSuccess = { onResult(Result.success(Unit)) },
-                                            onFailure = { message ->
-                                                onResult(Result.failure(IllegalStateException(message)))
-                                            },
-                                        )
-                                    },
-                                    onLogin = { email, password ->
-                                        authViewModel.login(email, password) {
-                                            appViewModel.refreshSession()
-                                        }
-                                    },
-                                    onRegister = { firstName, email, password, onSuccess ->
-                                        authViewModel.register(
-                                            firstName = firstName,
-                                            lastName = "",
-                                            email = email,
-                                            password = password,
-                                        ) {
-                                            onSuccess()
-                                            appViewModel.refreshSession()
-                                        }
-                                    },
-                                    onClearAuthStatus = {
-                                        authViewModel.clearStatus()
-                                        appViewModel.clearPendingApprovalNotice()
-                                    },
-                                )
+                            when (val versionResult = appUiState.versionCheckResult) {
+                                is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired,
+                                is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired -> {
+                                    com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
+                                        versionCheckResult = versionResult,
+                                        requiredUpdateRelease = appUiState.requiredUpdateRelease,
+                                        isCheckingRelease = appUiState.isCheckingUpdateRelease,
+                                        onRetry = { appViewModel.recheckVersion() },
+                                    )
+                                }
+                                else -> {
+                                    OnboardingWizardOverlay(
+                                        initialServerUrl = appUiState.serverUrl,
+                                        serverErrorMessage = appUiState.error,
+                                        serverCanResetTrust = appUiState.canResetServerTrust,
+                                        pendingApprovalMessage = appUiState.pendingApprovalMessage,
+                                        authUiState = authUiState,
+                                        onConnectServer = { rawUrl, onResult ->
+                                            appViewModel.saveServerUrl(
+                                                rawUrl = rawUrl,
+                                                onSuccess = { onResult(Result.success(Unit)) },
+                                                onFailure = { message ->
+                                                    onResult(Result.failure(IllegalStateException(message)))
+                                                },
+                                            )
+                                        },
+                                        onResetServerTrust = { rawUrl, onResult ->
+                                            appViewModel.resetTrustedServer(
+                                                rawUrl = rawUrl,
+                                                onSuccess = { onResult(Result.success(Unit)) },
+                                                onFailure = { message ->
+                                                    onResult(Result.failure(IllegalStateException(message)))
+                                                },
+                                            )
+                                        },
+                                        onLogin = { email, password ->
+                                            authViewModel.login(email, password) {
+                                                appViewModel.refreshSession()
+                                            }
+                                        },
+                                        onRegister = { firstName, email, password, onSuccess ->
+                                            authViewModel.register(
+                                                firstName = firstName,
+                                                lastName = "",
+                                                email = email,
+                                                password = password,
+                                            ) {
+                                                onSuccess()
+                                                appViewModel.refreshSession()
+                                            }
+                                        },
+                                        onClearAuthStatus = {
+                                            authViewModel.clearStatus()
+                                            appViewModel.clearPendingApprovalNotice()
+                                        },
+                                    )
+                                }
                             }
                         }
 
@@ -560,6 +561,7 @@ fun TdayApp() {
                 ) {
                     OnRouteResume {
                         appViewModel.refreshAdminAiSummarySetting()
+                        appViewModel.refreshVersionInfo()
                     }
                     SettingsScreen(
                         user = appUiState.user,
@@ -591,6 +593,9 @@ fun TdayApp() {
                     popEnterTransition = { settingsEnterTransition() },
                     popExitTransition = { settingsExitTransition() },
                 ) {
+                    OnRouteResume {
+                        appViewModel.refreshVersionInfo()
+                    }
                     LatestReleaseScreen(
                         uiState = releaseUiState,
                         onBack = { navController.popBackStack() },
