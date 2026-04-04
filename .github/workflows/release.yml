@@ -176,6 +176,7 @@ jobs:
         env:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD || secrets.TWA_STORE_PASSWORD }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || secrets.TWA_KEY_PASSWORD }}
+          TDAY_PROBE_ENCRYPTION_KEY: ${{ secrets.TDAY_PROBE_ENCRYPTION_KEY }}
         run: ./gradlew :android-compose:app:assembleRelease --no-daemon
 
       - name: Prepare APK for release
