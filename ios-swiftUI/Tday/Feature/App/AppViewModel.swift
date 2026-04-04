@@ -27,6 +27,8 @@ final class AppViewModel {
     var pendingMutationCount = 0
     var navigationPath: [AppRoute] = []
     var latestVersionName: String?
+    var versionCheckResult: VersionCheckResult = .compatible
+    var backendVersion: String?
 
     var currentVersionName: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
@@ -82,6 +84,16 @@ final class AppViewModel {
         serverURL = container.serverConfigRepository.getServerURL()?.absoluteString
         let session = await container.bootstrapSession()
         if let session, session.id != nil {
+            let versionResult = await container.serverConfigRepository.recheckVersion()
+            versionCheckResult = versionResult
+            switch versionResult {
+            case .appUpdateRequired(let version):
+                backendVersion = version
+            case .serverUpdateRequired(let version):
+                backendVersion = version
+            case .compatible:
+                break
+            }
             authenticated = true
             requiresServerSetup = false
             requiresLogin = false
@@ -125,9 +137,13 @@ final class AppViewModel {
 
     func connectServer(rawURL: String) async -> Result<Void, String> {
         do {
-            serverURL = try await container.serverConfigRepository.saveServerURL(rawURL)
+            let probeResult = try await container.serverConfigRepository.probeAndSave(rawURL)
+            serverURL = probeResult.serverURL
+            versionCheckResult = probeResult.versionCheck
+            backendVersion = probeResult.backendVersion
+            let isBlocking = probeResult.versionCheck != .compatible
             requiresServerSetup = false
-            requiresLogin = true
+            requiresLogin = !isBlocking
             error = nil
             canResetServerTrust = true
             return .success(())
@@ -136,6 +152,19 @@ final class AppViewModel {
             self.error = msg
             canResetServerTrust = true
             return .failure(msg)
+        }
+    }
+
+    func recheckVersion() async {
+        let result = await container.serverConfigRepository.recheckVersion()
+        versionCheckResult = result
+        switch result {
+        case .appUpdateRequired(let version):
+            backendVersion = version
+        case .serverUpdateRequired(let version):
+            backendVersion = version
+        case .compatible:
+            break
         }
     }
 
