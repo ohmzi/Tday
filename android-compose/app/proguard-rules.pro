@@ -49,6 +49,10 @@
 # ── Compose ─────────────────────────────────────────────────────────
 -dontwarn androidx.compose.**
 
+# ── Sentry ──────────────────────────────────────────────────────────
+-keep class io.sentry.** { *; }
+-dontwarn io.sentry.**
+
 # ── General ─────────────────────────────────────────────────────────
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile

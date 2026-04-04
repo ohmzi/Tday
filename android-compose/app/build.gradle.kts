@@ -5,6 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
+    id("io.sentry.android.gradle")
 }
 
 val projectVersion: String by lazy {
@@ -62,6 +63,11 @@ android {
             "String",
             "PROBE_ENCRYPTION_KEY",
             "\"${findProperty("probeEncryptionKey") ?: System.getenv("TDAY_PROBE_ENCRYPTION_KEY") ?: ""}\"",
+        )
+        buildConfigField(
+            "String",
+            "SENTRY_DSN",
+            "\"${findProperty("sentryDsn") ?: System.getenv("SENTRY_DSN") ?: ""}\"",
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -163,6 +169,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
+    implementation("io.sentry:sentry-android-okhttp:8.13.0")
+    implementation("io.sentry:sentry-android-navigation:8.13.0")
+
     implementation("androidx.security:security-crypto:1.1.0")
 
     testImplementation("junit:junit:4.13.2")
@@ -175,4 +184,20 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.6")
     debugImplementation("androidx.compose.ui:ui-tooling:1.7.6")
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.6")
+}
+
+sentry {
+    includeSourceContext = true
+    includeProguardMapping = true
+    autoUploadProguardMapping = true
+    org = "tday-kb"
+    projectName = "tday-android"
+    authToken = System.getenv("SENTRY_AUTH_TOKEN")
+    tracingInstrumentation {
+        enabled = true
+    }
+    autoInstallation {
+        enabled = true
+        sentryVersion = "8.13.0"
+    }
 }

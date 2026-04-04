@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
     id("io.ktor.plugin")
+    id("io.sentry.jvm.gradle") version "5.7.0"
     application
 }
 
@@ -44,6 +45,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("ch.qos.logback:logback-classic:1.5.12")
 
+    implementation("io.sentry:sentry:8.13.0")
+    implementation("io.sentry:sentry-logback:8.13.0")
+
     implementation("io.insert-koin:koin-ktor:4.0.4")
     implementation("io.insert-koin:koin-logger-slf4j:4.0.4")
 
@@ -74,4 +78,11 @@ ktor {
 
 tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
     mergeServiceFiles()
+}
+
+sentry {
+    includeSourceContext = true
+    org = "tday-kb"
+    projectName = "tday-backend"
+    authToken = System.getenv("SENTRY_AUTH_TOKEN")
 }
