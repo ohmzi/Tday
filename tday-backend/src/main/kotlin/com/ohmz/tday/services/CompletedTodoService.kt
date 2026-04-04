@@ -57,7 +57,6 @@ class CompletedTodoServiceImpl(
         description = fieldEncryption.decryptIfEncrypted(this[CompletedTodos.description]),
         priority = this[CompletedTodos.priority].name,
         completedAt = this[CompletedTodos.completedAt].toString(),
-        dtstart = this[CompletedTodos.dtstart].toString(),
         due = this[CompletedTodos.due].toString(),
         completedOnTime = this[CompletedTodos.completedOnTime],
         daysToComplete = this[CompletedTodos.daysToComplete].toDouble(),

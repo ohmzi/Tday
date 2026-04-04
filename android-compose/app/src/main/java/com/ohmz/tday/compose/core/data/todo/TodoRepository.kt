@@ -19,6 +19,7 @@ import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest
+import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoSummaryRequest
@@ -91,12 +92,7 @@ class TodoRepository @Inject constructor(
             "High" -> "High"
             else -> "Low"
         }
-        val normalizedStart = payload.dtstart
-        val normalizedDue = if (payload.due > normalizedStart) {
-            payload.due
-        } else {
-            normalizedStart.plusSeconds(3 * 60 * 60)
-        }
+        val normalizedDue = payload.due
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
 
@@ -111,7 +107,6 @@ class TodoRepository @Inject constructor(
                 title = trimmedTitle,
                 description = normalizedDescription,
                 priority = normalizedPriority,
-                dtstartEpochMs = normalizedStart.toEpochMilli(),
                 dueEpochMs = normalizedDue.toEpochMilli(),
                 rrule = payload.rrule,
                 instanceDateEpochMs = null,
@@ -130,7 +125,6 @@ class TodoRepository @Inject constructor(
                     title = trimmedTitle,
                     description = normalizedDescription,
                     priority = normalizedPriority,
-                    dtstartEpochMs = normalizedStart.toEpochMilli(),
                     dueEpochMs = normalizedDue.toEpochMilli(),
                     rrule = payload.rrule,
                     listId = normalizedListId,
@@ -150,7 +144,6 @@ class TodoRepository @Inject constructor(
                         title = trimmedTitle,
                         description = normalizedDescription,
                         priority = normalizedPriority,
-                        dtstart = normalizedStart.toString(),
                         due = normalizedDue.toString(),
                         rrule = payload.rrule,
                         listID = normalizedListId,
@@ -193,12 +186,7 @@ class TodoRepository @Inject constructor(
             "High" -> "High"
             else -> "Low"
         }
-        val normalizedStart = payload.dtstart
-        val normalizedDue = if (payload.due > normalizedStart) {
-            payload.due
-        } else {
-            normalizedStart.plusSeconds(60L * 60L)
-        }
+        val normalizedDue = payload.due
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedRrule = payload.rrule?.takeIf { it.isNotBlank() }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
@@ -213,7 +201,6 @@ class TodoRepository @Inject constructor(
             title = trimmedTitle,
             description = normalizedDescription,
             priority = normalizedPriority,
-            dtstartEpochMs = normalizedStart.toEpochMilli(),
             dueEpochMs = normalizedDue.toEpochMilli(),
             rrule = normalizedRrule,
             listId = normalizedListId,
@@ -231,7 +218,6 @@ class TodoRepository @Inject constructor(
                                 title = trimmedTitle,
                                 description = normalizedDescription,
                                 priority = normalizedPriority,
-                                dtstartEpochMs = normalizedStart.toEpochMilli(),
                                 dueEpochMs = normalizedDue.toEpochMilli(),
                                 rrule = normalizedRrule,
                                 listId = normalizedListId,
@@ -247,7 +233,6 @@ class TodoRepository @Inject constructor(
                                 title = trimmedTitle,
                                 description = normalizedDescription,
                                 priority = normalizedPriority,
-                                dtstartEpochMs = normalizedStart.toEpochMilli(),
                                 dueEpochMs = normalizedDue.toEpochMilli(),
                                 rrule = normalizedRrule,
                                 listId = normalizedListId,
@@ -273,7 +258,6 @@ class TodoRepository @Inject constructor(
                             title = trimmedTitle,
                             description = normalizedDescription,
                             priority = normalizedPriority,
-                            dtstartEpochMs = normalizedStart.toEpochMilli(),
                             dueEpochMs = normalizedDue.toEpochMilli(),
                             rrule = normalizedRrule,
                             listId = normalizedListId,
@@ -302,24 +286,39 @@ class TodoRepository @Inject constructor(
         val listIdForApi = normalizedListId ?: if (!todo.listId.isNullOrBlank()) "" else null
 
         val immediateError = runCatching {
-            requireApiBody(
-                api.patchTodoByBody(
-                    UpdateTodoRequest(
-                        id = canonicalId,
-                        title = trimmedTitle,
-                        description = descriptionForApi,
-                        priority = normalizedPriority,
-                        dtstart = normalizedStart.toString(),
-                        due = normalizedDue.toString(),
-                        rrule = rruleForApi,
-                        listID = listIdForApi,
-                        dateChanged = true,
-                        rruleChanged = true,
-                        instanceDate = instanceDateEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+            if (instanceDateEpochMs != null) {
+                requireApiBody(
+                    api.patchTodoInstanceByBody(
+                        TodoInstanceUpdateRequest(
+                            todoId = canonicalId,
+                            instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
+                            title = trimmedTitle,
+                            description = descriptionForApi,
+                            priority = normalizedPriority,
+                            due = normalizedDue.toString(),
+                        ),
                     ),
-                ),
-                "Could not update task",
-            )
+                    "Could not update recurring task instance",
+                )
+            } else {
+                requireApiBody(
+                    api.patchTodoByBody(
+                        UpdateTodoRequest(
+                            id = canonicalId,
+                            title = trimmedTitle,
+                            description = descriptionForApi,
+                            priority = normalizedPriority,
+                            due = normalizedDue.toString(),
+                            rrule = rruleForApi,
+                            listID = listIdForApi,
+                            dateChanged = true,
+                            rruleChanged = true,
+                            instanceDate = null,
+                        ),
+                    ),
+                    "Could not update task",
+                )
+            }
         }.exceptionOrNull()
 
         if (immediateError != null && isLikelyUnrecoverableMutationError(immediateError, pendingMutation)) {
@@ -432,7 +431,6 @@ class TodoRepository @Inject constructor(
                 title = todo.title,
                 description = todo.description,
                 priority = todo.priority,
-                dtstartEpochMs = todo.dtstart.toEpochMilli(),
                 dueEpochMs = todo.due.toEpochMilli(),
                 completedAtEpochMs = timestampMs,
                 rrule = todo.rrule,
@@ -514,19 +512,14 @@ class TodoRepository @Inject constructor(
 
     suspend fun parseTodoTitleNlp(
         text: String,
-        referenceStartEpochMs: Long,
         referenceDueEpochMs: Long,
     ): TodoTitleNlpResponse? {
         val trimmedText = text.trim()
         if (trimmedText.isBlank()) return null
 
-        val durationMinutes = ((referenceDueEpochMs - referenceStartEpochMs) / 60_000L)
-            .coerceAtLeast(1L)
-            .coerceAtMost(24L * 60L)
-            .toInt()
         val timezoneOffsetMinutes = ZoneId.systemDefault()
             .rules
-            .getOffset(Instant.ofEpochMilli(referenceStartEpochMs))
+            .getOffset(Instant.ofEpochMilli(referenceDueEpochMs))
             .totalSeconds / 60
 
         return runCatching {
@@ -535,9 +528,9 @@ class TodoRepository @Inject constructor(
                     TodoTitleNlpRequest(
                         text = trimmedText,
                         locale = Locale.getDefault().toLanguageTag(),
-                        referenceEpochMs = referenceStartEpochMs,
+                        referenceEpochMs = referenceDueEpochMs,
                         timezoneOffsetMinutes = timezoneOffsetMinutes,
-                        defaultDurationMinutes = durationMinutes,
+                        defaultDurationMinutes = 60,
                     ),
                 ),
                 "Could not parse task title",
@@ -601,7 +594,7 @@ class TodoRepository @Inject constructor(
     private fun isTodayTodo(todo: TodoItem): Boolean {
         val start = Instant.ofEpochMilli(startOfTodayMillis())
         val end = Instant.ofEpochMilli(endOfTodayMillis())
-        return todo.due >= start && todo.dtstart <= end
+        return todo.due >= start && todo.due <= end
     }
 
     private fun isScheduledTodo(todo: TodoItem, now: Instant = Instant.now()): Boolean {

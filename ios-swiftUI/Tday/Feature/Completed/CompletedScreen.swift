@@ -82,7 +82,7 @@ struct CompletedScreen: View {
                 lists: viewModel.lists,
                 titleText: "Edit Completed Task",
                 submitText: "Save",
-                initialPayload: CreateTaskPayload(title: item.title, description: item.description, priority: item.priority, dtstart: item.dtstart, due: item.due, rrule: item.rrule, listId: nil),
+                initialPayload: CreateTaskPayload(title: item.title, description: item.description, priority: item.priority, due: item.due, rrule: item.rrule, listId: nil),
                 onParseTaskTitleNlp: nil,
                 onDismiss: { editingItem = nil },
                 onSubmit: { payload in

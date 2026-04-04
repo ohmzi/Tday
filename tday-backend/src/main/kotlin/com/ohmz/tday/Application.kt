@@ -48,6 +48,20 @@ fun Application.module(config: AppConfig = AppConfig.load()) {
     configureSecurityHeaders()
     configureStatusPages()
     configureSecurity()
+    logStartupSecurityWarnings(config)
+    configureRateLimiting()
     configureRouting()
     logger.info("Tday backend started successfully")
+}
+
+private fun logStartupSecurityWarnings(config: AppConfig) {
+    if (!config.isProduction) return
+
+    if (config.captchaSecret.isNullOrBlank()) {
+        logger.warn("AUTH_CAPTCHA_SECRET is unset in production; adaptive CAPTCHA will fail closed once triggered")
+    }
+
+    if (config.credentialsPrivateKeyPem.isNullOrBlank()) {
+        logger.warn("AUTH_CREDENTIALS_PRIVATE_KEY is unset in production; credential envelope encryption will use an ephemeral key")
+    }
 }

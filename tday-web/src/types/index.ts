@@ -15,11 +15,6 @@ export type ListItemMetaMapType = {
   [id: string]: Omit<ListItemMetaType, "id">;
 };
 
-export type NonNullableDateRange = {
-  from: Date;
-  to: Date;
-};
-
 export interface TodoItemType {
   id: string;
   title: string;
@@ -28,8 +23,6 @@ export interface TodoItemType {
   createdAt: Date;
   order: number;
   priority: "Low" | "Medium" | "High";
-  dtstart: Date;
-  durationMinutes: number;
   due: Date;
   rrule: string | null;
   timeZone: string;
@@ -49,9 +42,7 @@ export interface overridingInstance {
   instanceDate: Date;
   overriddenTitle: string | null;
   overriddenDescription: string | null;
-  overriddenDtstart: Date | null;
   overriddenDue: Date | null;
-  overriddenDurationMinutes: number | null;
   overriddenPriority: "Low" | "Medium" | "High" | null;
 }
 
@@ -68,7 +59,6 @@ export interface CompletedTodoItemType {
   createdAt: Date;
   completedAt: Date;
   priority: "Low" | "Medium" | "High";
-  dtstart: Date;
   due: Date;
   userID: string;
   rrule: string | null;

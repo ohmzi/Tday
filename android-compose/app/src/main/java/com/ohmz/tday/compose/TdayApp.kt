@@ -318,7 +318,7 @@ fun TdayApp() {
                                     onOpenTaskFromSearch = {},
                                     onOpenList = { _, _ -> },
                                     onCreateTask = { _ -> },
-                                    onParseTaskTitleNlp = { _, _, _ -> null },
+                                    onParseTaskTitleNlp = { _, _ -> null },
                                     onCreateList = { _, _, _ -> },
                                 )
                             }
@@ -536,6 +536,8 @@ fun TdayApp() {
                         isAdminAiSummarySaving = appUiState.isAdminAiSummarySaving,
                         adminAiSummaryError = appUiState.adminAiSummaryError,
                         aiSummaryValidationError = appUiState.aiSummaryValidationError,
+                        hasUpdate = releaseUiState.hasUpdate,
+                        latestVersionName = releaseUiState.latestRelease?.version,
                         onThemeModeSelected = appViewModel::setThemeMode,
                         onReminderSelected = appViewModel::setDefaultReminder,
                         onToggleAdminAiSummary = appViewModel::setAdminAiSummaryEnabled,

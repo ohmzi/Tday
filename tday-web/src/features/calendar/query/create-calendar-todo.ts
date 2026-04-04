@@ -3,17 +3,12 @@ import { todoSchema } from "@/schema";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
+import parseApiDateTime from "@/lib/date/parseApiDateTime";
 
 type CreateTodoInput = Pick<
   TodoItemType,
-  | "title"
-  | "description"
-  | "rrule"
-  | "dtstart"
-  | "due"
-  | "priority"
-  | "listID"
-  | "listID"
+  "title" | "description" | "rrule" | "due" | "priority" | "listID"
 >;
 
 async function postTodo({ todo }: { todo: CreateTodoInput }) {
@@ -22,7 +17,6 @@ async function postTodo({ todo }: { todo: CreateTodoInput }) {
     title: todo.title,
     description: todo.description,
     priority: todo.priority,
-    dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
     listID: todo.listID ?? null,
@@ -38,21 +32,21 @@ async function postTodo({ todo }: { todo: CreateTodoInput }) {
     body: JSON.stringify(parsedObj.data),
   });
 
-  //convert todo due from string to time
-  res.todo.due = new Date(res.todo.due);
-  res.todo.dtstart = new Date(res.todo.dtstart);
+  // Convert backend UTC-like datetimes into stable JS Dates.
+  res.todo.due = parseApiDateTime(res.todo.due);
 
   return res.todo;
 }
 
 export const useCreateCalendarTodo = () => {
   const { toast } = useToast();
+  const { showTodoCreatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
 
   const { mutate: createCalendarTodo, status: createTodoStatus } = useMutation({
     mutationFn: (todo: CreateTodoInput) => postTodo({ todo }),
-    onSuccess: () => {
-      toast({ description: "todo created" });
+    onSuccess: (createdTodo) => {
+      showTodoCreatedToast(createdTodo);
     },
     onError: (error) => {
       toast({ description: error.message, variant: "destructive" });
@@ -60,6 +54,7 @@ export const useCreateCalendarTodo = () => {
     //if fetch error then revert optimistic updates including form states
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["todo"] });
+      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
       //calendarTodo is invalidated
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
     },
