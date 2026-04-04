@@ -325,50 +325,72 @@ fun TdayApp() {
                         }
 
                         if (showOnboardingWizard) {
-                            OnboardingWizardOverlay(
-                                initialServerUrl = appUiState.serverUrl,
-                                serverErrorMessage = appUiState.error,
-                                serverCanResetTrust = appUiState.canResetServerTrust,
-                                pendingApprovalMessage = appUiState.pendingApprovalMessage,
-                                authUiState = authUiState,
-                                onConnectServer = { rawUrl, onResult ->
-                                    appViewModel.saveServerUrl(
-                                        rawUrl = rawUrl,
-                                        onSuccess = { onResult(Result.success(Unit)) },
-                                        onFailure = { message ->
-                                            onResult(Result.failure(IllegalStateException(message)))
-                                        },
-                                    )
-                                },
-                                onResetServerTrust = { rawUrl, onResult ->
-                                    appViewModel.resetTrustedServer(
-                                        rawUrl = rawUrl,
-                                        onSuccess = { onResult(Result.success(Unit)) },
-                                        onFailure = { message ->
-                                            onResult(Result.failure(IllegalStateException(message)))
-                                        },
-                                    )
-                                },
-                                onLogin = { email, password ->
-                                    authViewModel.login(email, password) {
-                                        appViewModel.refreshSession()
-                                    }
-                                },
-                                onRegister = { firstName, email, password, onSuccess ->
-                                    authViewModel.register(
-                                        firstName = firstName,
-                                        lastName = "",
-                                        email = email,
-                                        password = password,
-                                    ) {
-                                        onSuccess()
-                                        appViewModel.refreshSession()
-                                    }
-                                },
-                                onClearAuthStatus = {
-                                    authViewModel.clearStatus()
-                                    appViewModel.clearPendingApprovalNotice()
-                                },
+                            val versionResult = appUiState.versionCheckResult
+                            val isVersionBlocking = versionResult is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired ||
+                                versionResult is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired
+
+                            if (isVersionBlocking && versionResult != null) {
+                                com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
+                                    versionCheckResult = versionResult,
+                                    onRetry = { appViewModel.recheckVersion() },
+                                )
+                            } else {
+                                OnboardingWizardOverlay(
+                                    initialServerUrl = appUiState.serverUrl,
+                                    serverErrorMessage = appUiState.error,
+                                    serverCanResetTrust = appUiState.canResetServerTrust,
+                                    pendingApprovalMessage = appUiState.pendingApprovalMessage,
+                                    authUiState = authUiState,
+                                    onConnectServer = { rawUrl, onResult ->
+                                        appViewModel.saveServerUrl(
+                                            rawUrl = rawUrl,
+                                            onSuccess = { onResult(Result.success(Unit)) },
+                                            onFailure = { message ->
+                                                onResult(Result.failure(IllegalStateException(message)))
+                                            },
+                                        )
+                                    },
+                                    onResetServerTrust = { rawUrl, onResult ->
+                                        appViewModel.resetTrustedServer(
+                                            rawUrl = rawUrl,
+                                            onSuccess = { onResult(Result.success(Unit)) },
+                                            onFailure = { message ->
+                                                onResult(Result.failure(IllegalStateException(message)))
+                                            },
+                                        )
+                                    },
+                                    onLogin = { email, password ->
+                                        authViewModel.login(email, password) {
+                                            appViewModel.refreshSession()
+                                        }
+                                    },
+                                    onRegister = { firstName, email, password, onSuccess ->
+                                        authViewModel.register(
+                                            firstName = firstName,
+                                            lastName = "",
+                                            email = email,
+                                            password = password,
+                                        ) {
+                                            onSuccess()
+                                            appViewModel.refreshSession()
+                                        }
+                                    },
+                                    onClearAuthStatus = {
+                                        authViewModel.clearStatus()
+                                        appViewModel.clearPendingApprovalNotice()
+                                    },
+                                )
+                            }
+                        }
+
+                        val authenticatedVersionCheck = appUiState.versionCheckResult
+                        if (appUiState.authenticated &&
+                            (authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired ||
+                                authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired)
+                        ) {
+                            com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
+                                versionCheckResult = authenticatedVersionCheck,
+                                onRetry = { appViewModel.recheckVersion() },
                             )
                         }
                     }
@@ -538,6 +560,8 @@ fun TdayApp() {
                         aiSummaryValidationError = appUiState.aiSummaryValidationError,
                         hasUpdate = releaseUiState.hasUpdate,
                         latestVersionName = releaseUiState.latestRelease?.version,
+                        backendVersion = appUiState.backendVersion,
+                        versionCheckResult = appUiState.versionCheckResult,
                         onThemeModeSelected = appViewModel::setThemeMode,
                         onReminderSelected = appViewModel::setDefaultReminder,
                         onToggleAdminAiSummary = appViewModel::setAdminAiSummaryEnabled,
