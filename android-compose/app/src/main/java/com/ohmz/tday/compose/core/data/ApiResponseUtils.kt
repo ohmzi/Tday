@@ -38,12 +38,26 @@ internal fun extractApiErrorMessage(response: Response<*>, fallback: String): St
 }
 
 internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
-    val message = error.message.orEmpty().lowercase()
-    return message.contains("failed to connect") ||
-        message.contains("econnrefused") ||
-        message.contains("timed out") ||
-        message.contains("unable to resolve host") ||
-        message.contains("network is unreachable")
+    var current: Throwable? = error
+    while (current != null) {
+        val message = current.message.orEmpty().lowercase()
+        if (
+            message.contains("failed to connect") ||
+            message.contains("econnrefused") ||
+            message.contains("timed out") ||
+            message.contains("unable to resolve host") ||
+            message.contains("network is unreachable") ||
+            message.contains("connection reset") ||
+            message.contains("broken pipe") ||
+            message.contains("software caused connection abort") ||
+            message.contains("no route to host") ||
+            message.contains("connection refused")
+        ) {
+            return true
+        }
+        current = current.cause?.takeIf { it !== current }
+    }
+    return false
 }
 
 internal fun isLikelyUnrecoverableMutationError(

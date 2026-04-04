@@ -188,6 +188,9 @@
     <string name="release_install_permission_denied">Install permission is still disabled for T\'Day.</string>
     <string name="release_download_failed">Could not download the update. Please try again.</string>
     <string name="release_install_failed">Could not install the update.</string>
+    <string name="release_signature_conflict">The installed version was signed with a different key and cannot be updated directly.</string>
+    <string name="release_signature_conflict_hint">Uninstall the current version first, then return here to install the update. App data will be lost.</string>
+    <string name="release_uninstall">Uninstall current version</string>
     <string name="release_install_success">Update installed.</string>
     <string name="release_no_apk">No APK attached to this release.</string>
     <string name="release_launch_update_toast">Update %1$s is available.</string>

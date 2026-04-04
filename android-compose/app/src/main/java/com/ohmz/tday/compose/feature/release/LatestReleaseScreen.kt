@@ -197,6 +197,11 @@ fun LatestReleaseScreen(
                 InAppApkUpdater.clearInstallEvent()
             }
 
+            is InAppApkUpdater.InstallEvent.SignatureConflict -> {
+                installUiState = ApkInstallUiState.SignatureConflict
+                InAppApkUpdater.clearInstallEvent()
+            }
+
             InAppApkUpdater.InstallEvent.Idle -> Unit
         }
     }
@@ -800,7 +805,8 @@ private fun apkInstallButtonLabel(apkInstallUiState: ApkInstallUiState): String 
         ApkInstallUiState.PreparingInstaller -> stringResource(R.string.release_preparing_update)
         ApkInstallUiState.OpeningInstaller -> stringResource(R.string.release_opening_installer)
         ApkInstallUiState.Idle,
-        is ApkInstallUiState.Error -> stringResource(R.string.release_download_and_install)
+        is ApkInstallUiState.Error,
+        ApkInstallUiState.SignatureConflict -> stringResource(R.string.release_download_and_install)
     }
 }
 
@@ -843,7 +849,56 @@ private fun ApkInstallStatus(apkInstallUiState: ApkInstallUiState) {
             )
         }
 
+        ApkInstallUiState.SignatureConflict -> {
+            SignatureConflictCard()
+        }
+
         ApkInstallUiState.Idle -> Unit
+    }
+}
+
+@Composable
+private fun SignatureConflictCard() {
+    val context = LocalContext.current
+    val colorScheme = MaterialTheme.colorScheme
+
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = colorScheme.errorContainer.copy(alpha = 0.5f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.release_signature_conflict),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = colorScheme.onErrorContainer,
+            )
+            Text(
+                text = stringResource(R.string.release_signature_conflict_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onErrorContainer.copy(alpha = 0.8f),
+            )
+            OutlinedButton(
+                onClick = {
+                    context.startActivity(InAppApkUpdater.buildUninstallIntent(context))
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, colorScheme.error.copy(alpha = 0.5f)),
+            ) {
+                Text(
+                    text = stringResource(R.string.release_uninstall),
+                    color = colorScheme.error,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
     }
 }
 
@@ -1087,6 +1142,8 @@ private sealed interface ApkInstallUiState {
     data object OpeningInstaller : ApkInstallUiState
 
     data class Error(val message: String) : ApkInstallUiState
+
+    data object SignatureConflict : ApkInstallUiState
 }
 
 private const val RELEASE_TITLE_COLLAPSE_DISTANCE_DP = 180f
