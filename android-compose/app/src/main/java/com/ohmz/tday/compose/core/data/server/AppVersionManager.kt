@@ -87,7 +87,14 @@ class AppVersionManager @Inject constructor(
                     )
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: java.io.IOException) {
+            _state.update {
+                it.copy(
+                    isLoadingReleases = false,
+                    releaseError = e.message ?: "Network error fetching release",
+                )
+            }
+        } catch (e: RuntimeException) {
             _state.update {
                 it.copy(
                     isLoadingReleases = false,
