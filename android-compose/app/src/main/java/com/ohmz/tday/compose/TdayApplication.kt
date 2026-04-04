@@ -12,6 +12,7 @@ import com.ohmz.tday.compose.core.notification.BootRescheduleReceiver
 import com.ohmz.tday.compose.core.notification.ReminderRescheduleWorker
 import com.ohmz.tday.compose.core.notification.TaskReminderReceiver
 import dagger.hilt.android.HiltAndroidApp
+import io.sentry.android.core.SentryAndroid
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -27,6 +28,21 @@ class TdayApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+
+        SentryAndroid.init(this) { options ->
+            options.dsn = BuildConfig.SENTRY_DSN
+            options.environment = if (BuildConfig.DEBUG) "development" else "production"
+            options.release = "tday-android@${BuildConfig.VERSION_NAME}"
+            options.dist = BuildConfig.VERSION_CODE.toString()
+            options.isSendDefaultPii = false
+            options.isEnableAutoSessionTracking = true
+            options.tracesSampleRate = 1.0
+            options.setBeforeSend { event, _ ->
+                event.user?.ipAddress = null
+                event
+            }
+        }
+
         createNotificationChannels()
         enqueuePeriodicRescheduleWorker()
     }
