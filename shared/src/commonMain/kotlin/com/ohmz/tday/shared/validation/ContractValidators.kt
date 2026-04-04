@@ -9,9 +9,6 @@ object ContractValidators {
         if (request.title.isBlank()) {
             errors += "title cannot be blank"
         }
-        if (request.dtstart.isBlank()) {
-            errors += "dtstart is required"
-        }
         if (request.due.isBlank()) {
             errors += "due is required"
         }

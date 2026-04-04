@@ -1,6 +1,7 @@
 import { TodoItemType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
+import parseApiDateTime from "@/lib/date/parseApiDateTime";
 
 const getTodoTimeline = async () => {
   const data = await api.GET({
@@ -13,16 +14,17 @@ const getTodoTimeline = async () => {
   }
 
   return todos.map((todo) => {
-    const todoInstanceDate = todo.instanceDate ? new Date(todo.instanceDate) : null;
+    const todoInstanceDate = todo.instanceDate
+      ? parseApiDateTime(todo.instanceDate)
+      : null;
     const todoInstanceDateTime = todoInstanceDate?.getTime();
     const todoId = `${todo.id}:${todoInstanceDateTime}`;
 
     return {
       ...todo,
       id: todoId,
-      createdAt: new Date(todo.createdAt),
-      dtstart: new Date(todo.dtstart),
-      due: new Date(todo.due),
+      createdAt: parseApiDateTime(todo.createdAt),
+      due: parseApiDateTime(todo.due),
       instanceDate: todoInstanceDate,
     };
   });

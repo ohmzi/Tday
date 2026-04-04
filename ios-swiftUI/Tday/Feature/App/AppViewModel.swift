@@ -26,6 +26,16 @@ final class AppViewModel {
     var isOffline = false
     var pendingMutationCount = 0
     var navigationPath: [AppRoute] = []
+    var latestVersionName: String?
+
+    var currentVersionName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
+    }
+
+    var hasUpdate: Bool {
+        guard let remote = latestVersionName else { return false }
+        return Self.compareVersions(remote, currentVersionName) > 0
+    }
 
     private var cacheObservationTask: Task<Void, Never>?
     private var syncLoopTask: Task<Void, Never>?
@@ -87,6 +97,7 @@ final class AppViewModel {
             startSyncLoop()
             await container.reminderScheduler.requestAuthorization()
             await rescheduleReminders()
+            await checkForUpdate()
             return
         }
 
@@ -322,5 +333,30 @@ final class AppViewModel {
     private func rescheduleReminders() async {
         let tasks = container.todoRepository.fetchTodosSnapshot(mode: .all)
         await container.reminderScheduler.reschedule(tasks: tasks, defaultReminder: selectedReminder)
+    }
+
+    func checkForUpdate() async {
+        guard let url = URL(string: "https://api.github.com/repos/ohmzi/Tday/releases/latest") else { return }
+        var request = URLRequest(url: url)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let tagName = json["tag_name"] as? String {
+                latestVersionName = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+            }
+        } catch {}
+    }
+
+    static func compareVersions(_ a: String, _ b: String) -> Int {
+        let aParts = a.split(separator: ".").map { Int($0) ?? 0 }
+        let bParts = b.split(separator: ".").map { Int($0) ?? 0 }
+        let maxLen = max(aParts.count, bParts.count)
+        for i in 0..<maxLen {
+            let av = i < aParts.count ? aParts[i] : 0
+            let bv = i < bParts.count ? bParts[i] : 0
+            if av != bv { return av < bv ? -1 : 1 }
+        }
+        return 0
     }
 }

@@ -25,7 +25,6 @@ internal fun todoToCache(todo: TodoItem): CachedTodoRecord {
         title = todo.title,
         description = todo.description,
         priority = todo.priority,
-        dtstartEpochMs = todo.dtstart.toEpochMilli(),
         dueEpochMs = todo.due.toEpochMilli(),
         rrule = todo.rrule,
         instanceDateEpochMs = todo.instanceDateEpochMillis,
@@ -43,7 +42,6 @@ internal fun todoFromCache(cache: CachedTodoRecord): TodoItem {
         title = cache.title,
         description = cache.description,
         priority = cache.priority,
-        dtstart = Instant.ofEpochMilli(cache.dtstartEpochMs),
         due = Instant.ofEpochMilli(cache.dueEpochMs),
         rrule = cache.rrule,
         instanceDate = cache.instanceDateEpochMs?.let(Instant::ofEpochMilli),
@@ -94,7 +92,6 @@ internal fun completedToCache(item: CompletedItem): CachedCompletedRecord {
         title = item.title,
         description = item.description,
         priority = item.priority,
-        dtstartEpochMs = item.dtstart.toEpochMilli(),
         dueEpochMs = item.due.toEpochMilli(),
         completedAtEpochMs = item.completedAt?.toEpochMilli() ?: 0L,
         rrule = item.rrule,
@@ -111,11 +108,6 @@ internal fun completedFromCache(cache: CachedCompletedRecord): CompletedItem {
         title = cache.title,
         description = cache.description,
         priority = cache.priority,
-        dtstart = if (cache.dtstartEpochMs > 0L) {
-            Instant.ofEpochMilli(cache.dtstartEpochMs)
-        } else {
-            Instant.ofEpochMilli(cache.dueEpochMs)
-        },
         due = Instant.ofEpochMilli(cache.dueEpochMs),
         completedAt = if (cache.completedAtEpochMs > 0L) {
             Instant.ofEpochMilli(cache.completedAtEpochMs)
@@ -142,7 +134,6 @@ internal fun mapTodoDto(dto: TodoDto): TodoItem {
         title = dto.title,
         description = dto.description,
         priority = dto.priority,
-        dtstart = parseInstant(dto.dtstart),
         due = parseInstant(dto.due),
         rrule = dto.rrule,
         instanceDate = explicitInstance ?: suffixInstance,
@@ -160,7 +151,6 @@ internal fun mapCompletedDto(dto: CompletedTodoDto): CompletedItem {
         title = dto.title,
         description = dto.description,
         priority = dto.priority,
-        dtstart = parseInstant(dto.dtstart),
         due = parseInstant(dto.due),
         completedAt = parseOptionalInstant(dto.completedAt),
         rrule = dto.rrule,

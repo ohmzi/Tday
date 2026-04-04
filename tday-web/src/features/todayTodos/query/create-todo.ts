@@ -1,8 +1,26 @@
 import { useToast } from "@/hooks/use-toast";
+import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { todoSchema } from "@/schema";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
+import parseApiDateTime from "@/lib/date/parseApiDateTime";
+
+const normalizeTodo = (todo: TodoItemType) => {
+  const instanceDate = todo.instanceDate
+    ? parseApiDateTime(todo.instanceDate)
+    : null;
+  const instanceDateTime = instanceDate?.getTime();
+
+  return {
+    ...todo,
+    id: `${todo.id}:${instanceDateTime}`,
+    createdAt: parseApiDateTime(todo.createdAt),
+    due: parseApiDateTime(todo.due),
+    instanceDate,
+    listID: todo.listID ?? null,
+  };
+};
 
 async function postTodo({ todo }: { todo: TodoItemType }) {
   //validate input
@@ -10,7 +28,6 @@ async function postTodo({ todo }: { todo: TodoItemType }) {
     title: todo.title,
     description: todo.description,
     priority: todo.priority,
-    dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
     listID: todo.listID ?? null,
@@ -25,16 +42,12 @@ async function postTodo({ todo }: { todo: TodoItemType }) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(parsedObj.data),
   });
-
-  //convert todo due from string to time
-  res.todo.due = new Date(res.todo.due);
-  res.todo.dtstart = new Date(res.todo.dtstart);
-
-  return res.todo;
+  return normalizeTodo(res.todo);
 }
 
 export const useCreateTodo = () => {
   const { toast } = useToast();
+  const { showTodoCreatedToast } = useTodoActionToast();
   const queryClient = useQueryClient();
   const { mutate: createMutateFn, status: createStatus } = useMutation({
     mutationFn: (todo: TodoItemType) => postTodo({ todo }),
@@ -49,7 +62,7 @@ export const useCreateTodo = () => {
         newTodo.listID,
       ]);
 
-      queryClient.setQueryData(["todo"], (old: TodoItemType[]) => [
+      queryClient.setQueryData(["todo"], (old: TodoItemType[] = []) => [
         ...old,
         newTodo,
       ]);
@@ -62,7 +75,7 @@ export const useCreateTodo = () => {
       if (targetListID) {
         queryClient.setQueriesData(
           { queryKey: ["list", targetListID] },
-          (old: TodoItemType[]) => {
+          (old: TodoItemType[] = []) => {
             return [...old, newTodo];
           },
         );
@@ -74,7 +87,9 @@ export const useCreateTodo = () => {
     onError: (error, _newTodo, context) => {
       queryClient.setQueryData(["todo"], context?.oldTodos);
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
-      queryClient.setQueryData(["list"], context?.oldListTodos);
+      if (_newTodo.listID) {
+        queryClient.setQueryData(["list", _newTodo.listID], context?.oldListTodos);
+      }
       toast({ description: error.message, variant: "destructive" });
     },
     onSettled: (_, _error, newTodo) => {
@@ -100,7 +115,7 @@ export const useCreateTodo = () => {
             old.map((t) => (t.id === newTodo.id ? createdTodo : t)),
         );
       }
-      toast({ description: "todo created" });
+      showTodoCreatedToast(createdTodo);
     },
   });
   return { createMutateFn, createStatus };

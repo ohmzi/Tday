@@ -29,6 +29,7 @@ import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
@@ -242,9 +243,6 @@ class SyncManager @Inject constructor(
                                     title = mutation.title?.trim().orEmpty(),
                                     description = mutation.description,
                                     priority = mutation.priority ?: "Low",
-                                    dtstart = Instant.ofEpochMilli(
-                                        mutation.dtstartEpochMs ?: System.currentTimeMillis(),
-                                    ).toString(),
                                     due = Instant.ofEpochMilli(
                                         mutation.dueEpochMs ?: System.currentTimeMillis(),
                                     ).toString(),
@@ -279,27 +277,44 @@ class SyncManager @Inject constructor(
                         val listIdForApi = resolvedListId
                             ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null
 
-                        requireApiBody(
-                            api.patchTodoByBody(
-                                UpdateTodoRequest(
-                                    id = targetId,
-                                    title = mutation.title,
-                                    description = descriptionForApi,
-                                    pinned = mutation.pinned,
-                                    priority = mutation.priority,
-                                    dtstart = mutation.dtstartEpochMs?.let { Instant.ofEpochMilli(it).toString() },
-                                    due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
-                                    rrule = rruleForApi,
-                                    listID = listIdForApi,
-                                    dateChanged = true,
-                                    rruleChanged = true,
-                                    instanceDate = mutation.instanceDateEpochMs?.let {
-                                        Instant.ofEpochMilli(it).toString()
-                                    },
+                        if (mutation.instanceDateEpochMs != null) {
+                            requireApiBody(
+                                api.patchTodoInstanceByBody(
+                                    TodoInstanceUpdateRequest(
+                                        todoId = targetId,
+                                        instanceDate = Instant.ofEpochMilli(
+                                            mutation.instanceDateEpochMs,
+                                        ).toString(),
+                                        title = mutation.title,
+                                        description = descriptionForApi,
+                                        priority = mutation.priority,
+                                        due = mutation.dueEpochMs?.let {
+                                            Instant.ofEpochMilli(it).toString()
+                                        },
+                                    ),
                                 ),
-                            ),
-                            "Could not update task",
-                        )
+                                "Could not update recurring task instance",
+                            )
+                        } else {
+                            requireApiBody(
+                                api.patchTodoByBody(
+                                    UpdateTodoRequest(
+                                        id = targetId,
+                                        title = mutation.title,
+                                        description = descriptionForApi,
+                                        pinned = mutation.pinned,
+                                        priority = mutation.priority,
+                                        due = mutation.dueEpochMs?.let { Instant.ofEpochMilli(it).toString() },
+                                        rrule = rruleForApi,
+                                        listID = listIdForApi,
+                                        dateChanged = true,
+                                        rruleChanged = true,
+                                        instanceDate = null,
+                                    ),
+                                ),
+                                "Could not update task",
+                            )
+                        }
                         true
                     }
 
@@ -662,7 +677,6 @@ class SyncManager @Inject constructor(
                     description = localTodo.description,
                     priority = localTodo.priority,
                     pinned = localTodo.pinned,
-                    dtstartEpochMs = localTodo.dtstartEpochMs,
                     dueEpochMs = localTodo.dueEpochMs,
                     rrule = localTodo.rrule,
                     listId = localTodo.listId,
@@ -714,7 +728,6 @@ class SyncManager @Inject constructor(
         return local.title != remote.title ||
             local.description != remote.description ||
             local.priority != remote.priority ||
-            local.dtstartEpochMs != remote.dtstartEpochMs ||
             local.dueEpochMs != remote.dueEpochMs ||
             local.rrule != remote.rrule ||
             local.instanceDateEpochMs != remote.instanceDateEpochMs ||

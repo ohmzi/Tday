@@ -67,8 +67,8 @@ class DatabaseConfig(private val config: AppConfig) {
             val pgEnums = listOf(
                 "\"UserRole\"" to listOf("ADMIN", "USER"),
                 "\"ApprovalStatus\"" to listOf("APPROVED", "PENDING"),
-                "\"SortBy\"" to listOf("dtstart", "due", "duration", "priority"),
-                "\"GroupBy\"" to listOf("dtstart", "due", "duration", "priority", "rrule", "project"),
+                "\"SortBy\"" to listOf("due", "priority"),
+                "\"GroupBy\"" to listOf("due", "priority", "rrule", "project"),
                 "\"Direction\"" to listOf("Ascending", "Descending"),
                 "\"Priority\"" to listOf("Low", "Medium", "High"),
                 "\"ProjectColor\"" to listOf(

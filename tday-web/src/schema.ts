@@ -29,7 +29,6 @@ export const todoSchema = z.object({
   priority: z.enum(["Low", "Medium", "High"], {
     errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
   }),
-  dtstart: z.date({ message: "start date is not identified" }),
   due: z.date({ message: "end date is not identified" }),
   rrule: z.string().nullable(),
   listID: z.string().nullable().optional(),
@@ -44,7 +43,6 @@ export const todoInstanceSchema = z.object({
   priority: z.enum(["Low", "Medium", "High"], {
     errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
   }),
-  dtstart: z.date({ message: "start date is not identified" }),
   due: z.date({ message: "end date is not identified" }),
   instanceDate: z.date({ message: "instance date is not identified" }),
   rrule: z.string().nullable(),
@@ -97,13 +95,7 @@ export const listPatchSchema = listBaseSchema.partial().extend({
 });
 
 export const userPreferencesSchema = z.object({
-  sortBy: z
-    .enum(["dtstart", "due", "duration", "priority"])
-    .nullable()
-    .optional(),
-  groupBy: z
-    .enum(["dtstart", "due", "duration", "priority", "rrule", "list"])
-    .nullable()
-    .optional(),
+  sortBy: z.enum(["due", "priority"]).nullable().optional(),
+  groupBy: z.enum(["due", "priority", "rrule", "list"]).nullable().optional(),
   direction: z.enum(["Ascending", "Descending"]).nullable().optional(),
 });

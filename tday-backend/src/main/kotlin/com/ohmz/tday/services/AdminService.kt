@@ -8,6 +8,7 @@ import com.ohmz.tday.db.enums.UserRole
 import com.ohmz.tday.db.tables.*
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.AuthenticatedUser
+import com.ohmz.tday.domain.requireAdminAccess
 import com.ohmz.tday.models.response.AdminUserResponse
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.*
@@ -24,7 +25,7 @@ interface AdminService {
 class AdminServiceImpl : AdminService {
 
     override suspend fun listUsers(admin: AuthenticatedUser): Either<AppError, List<AdminUserResponse>> = either {
-        requireAdmin(admin).bind()
+        admin.requireAdminAccess().bind()
         newSuspendedTransaction(Dispatchers.IO) {
             Users.selectAll()
                 .orderBy(Users.approvalStatus to SortOrder.DESC, Users.createdAt to SortOrder.DESC)
@@ -43,7 +44,7 @@ class AdminServiceImpl : AdminService {
     }
 
     override suspend fun approveUser(targetId: String, admin: AuthenticatedUser): Either<AppError, String> = either {
-        requireAdmin(admin).bind()
+        admin.requireAdminAccess().bind()
 
         val target = newSuspendedTransaction(Dispatchers.IO) {
             Users.selectAll().where { Users.id eq targetId }.firstOrNull()
@@ -65,7 +66,7 @@ class AdminServiceImpl : AdminService {
     }
 
     override suspend fun deleteUser(targetId: String, admin: AuthenticatedUser): Either<AppError, String> = either {
-        requireAdmin(admin).bind()
+        admin.requireAdminAccess().bind()
 
         if (targetId == admin.id) raise(AppError.BadRequest("you cannot delete your own account"))
 
@@ -95,11 +96,5 @@ class AdminServiceImpl : AdminService {
             Users.deleteWhere { Users.id eq targetId }
         }
         "user deleted"
-    }
-
-    private fun requireAdmin(user: AuthenticatedUser): Either<AppError, AuthenticatedUser> {
-        if (user.approvalStatus != "APPROVED") return Either.Left(AppError.Forbidden("your account is awaiting admin approval"))
-        if (user.role != "ADMIN") return Either.Left(AppError.Forbidden("admin access required"))
-        return user.right()
     }
 }
