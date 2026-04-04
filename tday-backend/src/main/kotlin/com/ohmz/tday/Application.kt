@@ -10,6 +10,7 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.websocket.*
+import io.sentry.Sentry
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
@@ -20,6 +21,20 @@ private val logger = LoggerFactory.getLogger("com.ohmz.tday.Application")
 
 fun main() {
     val config = AppConfig.load()
+
+    Sentry.init { options ->
+        options.dsn = config.sentryDsn ?: ""
+        options.environment = if (config.isProduction) "production" else "development"
+        options.release = "tday-backend@${System.getenv("TDAY_BACKEND_VERSION") ?: "0.0.1"}"
+        options.isSendDefaultPii = false
+        options.serverName = "tday-backend"
+        options.tracesSampleRate = 1.0
+        options.setBeforeSend { event, _ ->
+            event.user?.ipAddress = null
+            event
+        }
+    }
+
     logger.info("Starting Tday backend on port ${config.port}")
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") {
         module(config)
@@ -41,6 +56,8 @@ fun Application.module(config: AppConfig = AppConfig.load()) {
         maxFrameSize = 64 * 1024L
         masking = false
     }
+
+    install(SentryRequestPlugin)
 
     configureCallLogging()
     configureSerialization()
