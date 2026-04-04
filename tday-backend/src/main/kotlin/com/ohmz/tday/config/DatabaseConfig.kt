@@ -53,9 +53,11 @@ class DatabaseConfig(private val config: AppConfig) {
         }
         val dataSource = HikariDataSource(hikariConfig)
 
+        val migrationsDir = java.io.File("/app/migrations")
+        val flywayLocation = if (migrationsDir.isDirectory) "filesystem:/app/migrations" else "classpath:db/migration"
         Flyway.configure()
             .dataSource(dataSource)
-            .locations("classpath:db/migration")
+            .locations(flywayLocation)
             .baselineOnMigrate(true)
             .baselineVersion(MigrationVersion.fromVersion("2"))
             .load()
