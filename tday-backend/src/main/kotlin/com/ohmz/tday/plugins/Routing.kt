@@ -36,7 +36,7 @@ fun Application.configureRouting() {
             timezoneRoutes()
             appSettingsRoutes()
             adminRoutes()
-            mobileProbeRoutes()
+            mobileProbeRoutes(config)
 
             route("/auth") {
                 csrfRoutes()
