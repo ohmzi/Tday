@@ -93,7 +93,6 @@ struct TodoTitleNlpResponse: Codable, Equatable {
     let cleanTitle: String
     let matchedText: String?
     let matchStart: Int?
-    let startEpochMs: Int64?
     let dueEpochMs: Int64?
 }
 
@@ -101,7 +100,6 @@ struct CreateTodoRequest: Codable {
     let title: String
     let description: String?
     let priority: String
-    let dtstart: String
     let due: String
     let rrule: String?
     let listID: String?
@@ -113,7 +111,6 @@ struct TodoDTO: Codable, Equatable {
     let description: String?
     let pinned: Bool
     let priority: String
-    let dtstart: String
     let due: String
     let rrule: String?
     let instanceDate: String?
@@ -135,7 +132,6 @@ struct UpdateTodoRequest: Codable {
     let pinned: Bool?
     let priority: String?
     let completed: Bool?
-    let dtstart: String?
     let due: String?
     let rrule: String?
     let listID: String?
@@ -146,19 +142,20 @@ struct UpdateTodoRequest: Codable {
 
 struct DeleteTodoRequest: Codable {
     let id: String
-    let instanceDate: Int64?
 }
 
-struct TodoInstanceUpdateRequest: Codable {
+struct TodoInstancePatchRequest: Codable {
     let todoId: String
+    let instanceDate: String
     let title: String?
     let description: String?
     let priority: String?
-    let dtstart: String?
     let due: String?
-    let rrule: String?
+}
+
+struct TodoInstanceDeleteRequest: Codable {
+    let todoId: String
     let instanceDate: String
-    let durationMinutes: Int?
 }
 
 struct TodoCompleteRequest: Codable {
@@ -228,7 +225,6 @@ struct CompletedTodoDTO: Codable, Equatable {
     let title: String
     let description: String?
     let priority: String
-    let dtstart: String
     let due: String
     let completedAt: String?
     let rrule: String?
@@ -242,7 +238,6 @@ struct UpdateCompletedTodoRequest: Codable {
     let title: String?
     let description: String?
     let priority: String?
-    let dtstart: String?
     let due: String?
     let rrule: String?
     let listID: String?

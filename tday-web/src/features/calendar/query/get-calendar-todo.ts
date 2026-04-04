@@ -36,7 +36,6 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
         return {
           ...todo,
           id: todoId,
-          dtstart: parseApiDateTime(todo.dtstart),
           due: parseApiDateTime(todo.due),
           instanceDate: todoInstanceDate,
           listID: todo.listID ?? null,
@@ -44,9 +43,6 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
             todo.instances?.map((instance) => ({
               ...instance,
               instanceDate: parseApiDateTime(instance.instanceDate),
-              overriddenDtstart: instance.overriddenDtstart
-                ? parseApiDateTime(instance.overriddenDtstart)
-                : null,
               overriddenDue: instance.overriddenDue
                 ? parseApiDateTime(instance.overriddenDue)
                 : null,

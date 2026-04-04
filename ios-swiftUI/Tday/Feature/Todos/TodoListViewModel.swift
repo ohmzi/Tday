@@ -107,7 +107,6 @@ final class TodoListViewModel {
             return
         }
 
-        let duration = max(todo.due.timeIntervalSince(todo.dtstart), 60)
         let dueTimeComponents = calendar.dateComponents([.hour, .minute, .second, .nanosecond], from: todo.due)
         var targetComponents = calendar.dateComponents([.year, .month, .day], from: targetDay)
         targetComponents.timeZone = calendar.timeZone
@@ -120,14 +119,12 @@ final class TodoListViewModel {
             return
         }
 
-        let movedStart = movedDue.addingTimeInterval(-duration)
         await updateTask(
             todo,
             payload: CreateTaskPayload(
                 title: todo.title,
                 description: todo.description,
                 priority: todo.priority,
-                dtstart: movedStart,
                 due: movedDue,
                 rrule: todo.rrule,
                 listId: todo.listId
@@ -164,8 +161,8 @@ final class TodoListViewModel {
         }
     }
 
-    func parseTaskTitleNlp(text: String, referenceStartEpochMs: Int64, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
-        await container.todoRepository.parseTodoTitleNlp(text: text, referenceStartEpochMs: referenceStartEpochMs, referenceDueEpochMs: referenceDueEpochMs)
+    func parseTaskTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
+        await container.todoRepository.parseTodoTitleNlp(text: text, referenceDueEpochMs: referenceDueEpochMs)
     }
 
     private func hydrateFromCache() {

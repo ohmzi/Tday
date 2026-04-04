@@ -13,11 +13,9 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
     title: ghostTodo.title,
     description: ghostTodo.description,
     priority: ghostTodo.priority,
-    dtstart: ghostTodo.dtstart,
     due: ghostTodo.due,
     rrule: ghostTodo.rrule,
     instanceDate: ghostTodo.instanceDate,
-    durationMinutes: ghostTodo.durationMinutes,
   });
   if (!parsedObj.success) {
     console.error(parsedObj.error.errors[0]);
@@ -55,7 +53,7 @@ export const useEditTodoInstance = (
         queryClient.setQueryData(["todo"], (oldTodos: TodoItemType[]) =>
           oldTodos.flatMap((oldTodo) => {
             if (oldTodo.id === newTodo.id) {
-              if (newTodo.dtstart > endOfDay(new Date())) {
+              if (newTodo.due > endOfDay(new Date())) {
                 return [];
               }
               return {
@@ -64,8 +62,6 @@ export const useEditTodoInstance = (
                 description: newTodo.description,
                 priority: newTodo.priority,
                 due: newTodo.due,
-                dtstart: newTodo.dtstart,
-                durationMinutes: newTodo.durationMinutes,
               };
             }
             return oldTodo;
@@ -80,8 +76,6 @@ export const useEditTodoInstance = (
                 description: newTodo.description,
                 priority: newTodo.priority,
                 due: newTodo.due,
-                dtstart: newTodo.dtstart,
-                durationMinutes: newTodo.durationMinutes,
               };
             }
             return oldTodo;

@@ -60,8 +60,6 @@ describe("useTodoTimeline", () => {
           createdAt: "2026-03-01T00:00:00",
           order: 1,
           priority: "Medium",
-          dtstart: "2026-03-02T23:30:00",
-          durationMinutes: 30,
           due: "2026-03-03T00:15:00",
           rrule: null,
           timeZone: "UTC",
@@ -83,9 +81,6 @@ describe("useTodoTimeline", () => {
     });
 
     expect(result.current.todos).toHaveLength(1);
-    expect(result.current.todos[0]?.dtstart.toISOString()).toBe(
-      "2026-03-02T23:30:00.000Z",
-    );
     expect(result.current.todos[0]?.due.toISOString()).toBe(
       "2026-03-03T00:15:00.000Z",
     );

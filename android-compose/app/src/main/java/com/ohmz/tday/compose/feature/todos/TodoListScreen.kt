@@ -124,7 +124,6 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -147,7 +146,7 @@ fun TodoListScreen(
     onSummarize: () -> Unit,
     onDismissSummaryConnectivityError: () -> Unit,
     onAddTask: (payload: CreateTaskPayload) -> Unit,
-    onParseTaskTitleNlp: suspend (title: String, referenceStartEpochMs: Long, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
+    onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
@@ -256,7 +255,6 @@ fun TodoListScreen(
         )
     }
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
-    var quickAddStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     var draggedScheduledTodoId by rememberSaveable(uiState.mode) { mutableStateOf<String?>(null) }
@@ -403,7 +401,6 @@ fun TodoListScreen(
                 interactionSource = fabInteractionSource,
                 backgroundColor = fabColor,
                 onClick = {
-                    quickAddStartEpochMs = null
                     quickAddDueEpochMs = null
                     showCreateTaskSheet = true
                 },
@@ -480,10 +477,9 @@ fun TodoListScreen(
                         onTapForQuickAdd = if (sectionCanCollapse) {
                             null
                         } else {
-                            section.quickAddDefaults?.let { quickAdd ->
+                            section.quickAddDefaults?.let { dueEpochMs ->
                                 {
-                                    quickAddStartEpochMs = quickAdd.first
-                                    quickAddDueEpochMs = quickAdd.second
+                                    quickAddDueEpochMs = dueEpochMs
                                     showCreateTaskSheet = true
                                 }
                             }
@@ -562,18 +558,15 @@ fun TodoListScreen(
             lists = uiState.lists,
             defaultListId = if (uiState.mode == TodoListMode.LIST) uiState.listId else null,
             defaultPriority = if (uiState.mode == TodoListMode.PRIORITY) "Medium" else null,
-            initialStartEpochMs = quickAddStartEpochMs,
             initialDueEpochMs = quickAddDueEpochMs,
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = {
                 showCreateTaskSheet = false
-                quickAddStartEpochMs = null
                 quickAddDueEpochMs = null
             },
             onCreateTask = { payload ->
                 onAddTask(payload)
                 showCreateTaskSheet = false
-                quickAddStartEpochMs = null
                 quickAddDueEpochMs = null
             },
         )
@@ -1571,7 +1564,7 @@ private data class TodoSection(
     val key: String,
     val title: String,
     val items: List<TodoItem>,
-    val quickAddDefaults: Pair<Long, Long>? = null,
+    val quickAddDefaults: Long? = null,
     val targetDate: LocalDate? = null,
 )
 
@@ -1867,29 +1860,22 @@ private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPat
 private fun quickAddDefaultsForDate(
     date: LocalDate,
     zoneId: ZoneId = ZoneId.systemDefault(),
-): Pair<Long, Long> {
-    val startTime = LocalTime.of(6, 0)
+): Long {
     val dueTime = LocalTime.of(23, 59)
-    val due = ZonedDateTime.of(date, dueTime, zoneId)
-    val start = ZonedDateTime.of(date, startTime, zoneId)
-    return start.toInstant().toEpochMilli() to due.toInstant().toEpochMilli()
+    return ZonedDateTime.of(date, dueTime, zoneId).toInstant().toEpochMilli()
 }
 
 private fun quickAddDefaultsForTodaySection(
     slot: TodaySectionSlot,
     zoneId: ZoneId = ZoneId.systemDefault(),
-): Pair<Long, Long> {
-    when (slot) {
-        TodaySectionSlot.MORNING,
-        TodaySectionSlot.AFTERNOON,
-        TodaySectionSlot.TONIGHT,
-            -> Unit
-    }
+): Long {
     val today = LocalDate.now(zoneId)
-    return quickAddDefaultsForDate(
-        date = today,
-        zoneId = zoneId,
-    )
+    val time = when (slot) {
+        TodaySectionSlot.MORNING -> LocalTime.NOON
+        TodaySectionSlot.AFTERNOON -> LocalTime.of(18, 0)
+        TodaySectionSlot.TONIGHT -> LocalTime.of(22, 0)
+    }
+    return ZonedDateTime.of(today, time, zoneId).toInstant().toEpochMilli()
 }
 
 private fun createMovedTaskPayload(
@@ -1897,19 +1883,13 @@ private fun createMovedTaskPayload(
     targetDate: LocalDate,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): CreateTaskPayload {
-    val durationMinutes = maxOf(
-        1L,
-        Duration.between(todo.dtstart, todo.due).toMinutes(),
-    )
     val dueTime = todo.due.atZone(zoneId).toLocalTime()
     val movedDue = ZonedDateTime.of(targetDate, dueTime, zoneId).toInstant()
-    val movedStart = movedDue.minusSeconds(durationMinutes * 60)
 
     return CreateTaskPayload(
         title = todo.title,
         description = todo.description,
         priority = todo.priority,
-        dtstart = movedStart,
         due = movedDue,
         rrule = todo.rrule,
         listId = todo.listId,

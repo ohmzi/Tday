@@ -146,9 +146,9 @@ struct CalendarScreen: View {
                 lists: viewModel.lists,
                 titleText: "Create Task",
                 submitText: "Create",
-                initialPayload: CreateTaskPayload(title: "", description: nil, priority: "Low", dtstart: selectedDate, due: selectedDate.addingTimeInterval(60 * 60), rrule: nil, listId: nil),
-                onParseTaskTitleNlp: { title, start, due in
-                    await viewModel.parseTaskTitleNlp(text: title, referenceStartEpochMs: start, referenceDueEpochMs: due)
+                initialPayload: CreateTaskPayload(title: "", description: nil, priority: "Low", due: selectedDate, rrule: nil, listId: nil),
+                onParseTaskTitleNlp: { title, dueRef in
+                    await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },
                 onDismiss: { showingCreateTask = false },
                 onSubmit: { payload in
@@ -161,9 +161,9 @@ struct CalendarScreen: View {
                 lists: viewModel.lists,
                 titleText: "Edit Task",
                 submitText: "Save",
-                initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, dtstart: todo.dtstart, due: todo.due, rrule: todo.rrule, listId: todo.listId),
-                onParseTaskTitleNlp: { title, start, due in
-                    await viewModel.parseTaskTitleNlp(text: title, referenceStartEpochMs: start, referenceDueEpochMs: due)
+                initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
+                onParseTaskTitleNlp: { title, dueRef in
+                    await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },
                 onDismiss: { editingTodo = nil },
                 onSubmit: { payload in

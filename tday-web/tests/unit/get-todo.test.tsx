@@ -60,8 +60,6 @@ describe("useTodo", () => {
           createdAt: "2026-03-01T00:00:00.000Z",
           order: 1,
           priority: "Medium",
-          dtstart: "2026-03-02T09:00:00.000Z",
-          durationMinutes: 30,
           due: "2026-03-02T09:30:00.000Z",
           rrule: null,
           timeZone: "UTC",
@@ -84,7 +82,6 @@ describe("useTodo", () => {
 
     expect(result.current.todos).toHaveLength(1);
     expect(result.current.todos[0]?.createdAt).toBeInstanceOf(Date);
-    expect(result.current.todos[0]?.dtstart).toBeInstanceOf(Date);
     expect(result.current.todos[0]?.due).toBeInstanceOf(Date);
     expect(result.current.todos[0]?.instanceDate).toBeInstanceOf(Date);
     expect(result.current.todos[0]?.id).toBe("todo-1:1772442000000");

@@ -5,7 +5,7 @@ struct CreateTaskSheet: View {
     let titleText: String
     let submitText: String
     let initialPayload: CreateTaskPayload?
-    let onParseTaskTitleNlp: ((String, Int64, Int64) async -> TodoTitleNlpResponse?)?
+    let onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?
     let onDismiss: () -> Void
     let onSubmit: (CreateTaskPayload) async -> Void
 
@@ -16,7 +16,6 @@ struct CreateTaskSheet: View {
     @State private var notes = ""
     @State private var priority = "Low"
     @State private var selectedListID: String?
-    @State private var startDate = Date()
     @State private var dueDate = Date().addingTimeInterval(60 * 60)
     @State private var repeatRule: String?
     @State private var isSubmitting = false
@@ -37,7 +36,7 @@ struct CreateTaskSheet: View {
         titleText: String,
         submitText: String,
         initialPayload: CreateTaskPayload?,
-        onParseTaskTitleNlp: ((String, Int64, Int64) async -> TodoTitleNlpResponse?)?,
+        onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?,
         onDismiss: @escaping () -> Void,
         onSubmit: @escaping (CreateTaskPayload) async -> Void
     ) {
@@ -55,7 +54,7 @@ struct CreateTaskSheet: View {
         lists: [ListSummary],
         initialPayload: CreateTaskPayload?,
         onSave: @escaping (CreateTaskPayload) -> Void,
-        onParseTaskTitleNlp: ((String, Int64, Int64) async -> TodoTitleNlpResponse?)?
+        onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?
     ) {
         self.init(
             lists: lists,
@@ -81,7 +80,6 @@ struct CreateTaskSheet: View {
                 }
 
                 Section("Schedule") {
-                    DatePicker("Start", selection: $startDate)
                     DatePicker("Due", selection: $dueDate)
                 }
 
@@ -144,7 +142,6 @@ struct CreateTaskSheet: View {
         notes = initialPayload.description ?? ""
         priority = initialPayload.priority
         selectedListID = initialPayload.listId
-        startDate = initialPayload.dtstart
         dueDate = initialPayload.due
         repeatRule = initialPayload.rrule
     }
@@ -159,14 +156,11 @@ struct CreateTaskSheet: View {
             guard !Task.isCancelled else {
                 return
             }
-            guard let parsed = await onParseTaskTitleNlp(title, startDate.epochMilliseconds, dueDate.epochMilliseconds) else {
+            guard let parsed = await onParseTaskTitleNlp(title, dueDate.epochMilliseconds) else {
                 return
             }
             await MainActor.run {
                 title = parsed.cleanTitle
-                if let startEpochMs = parsed.startEpochMs {
-                    startDate = Date(epochMilliseconds: startEpochMs)
-                }
                 if let dueEpochMs = parsed.dueEpochMs {
                     dueDate = Date(epochMilliseconds: dueEpochMs)
                 }
@@ -176,13 +170,11 @@ struct CreateTaskSheet: View {
 
     private func submit() async {
         isSubmitting = true
-        let normalizedDue = max(dueDate.epochMilliseconds, startDate.epochMilliseconds + 60 * 60 * 1_000)
         let payload = CreateTaskPayload(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines),
             priority: priority,
-            dtstart: startDate,
-            due: Date(epochMilliseconds: normalizedDue),
+            due: dueDate,
             rrule: repeatRule,
             listId: selectedListID
         )
