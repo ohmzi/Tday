@@ -186,10 +186,12 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.6")
 }
 
+val hasSentryAuth = !System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank()
+
 sentry {
-    includeSourceContext = true
+    includeSourceContext = hasSentryAuth
     includeProguardMapping = true
-    autoUploadProguardMapping = true
+    autoUploadProguardMapping = hasSentryAuth
     org = "tday-kb"
     projectName = "tday-android"
     authToken = System.getenv("SENTRY_AUTH_TOKEN")
