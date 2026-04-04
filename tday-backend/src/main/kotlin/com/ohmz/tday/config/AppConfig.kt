@@ -51,6 +51,9 @@ data class AppConfig(
     val signalAnomalyWindowSec: Int,
     val passwordProofChallengeTtlSec: Int,
     val passwordProofMaxActive: Int,
+    val probeAppVersion: String?,
+    val probeUpdateRequired: Boolean,
+    val probeEncryptionKey: String?,
 ) {
     companion object {
         fun load(): AppConfig {
@@ -113,6 +116,10 @@ data class AppConfig(
                 signalAnomalyWindowSec = envInt("AUTH_SIGNAL_ANOMALY_WINDOW_SEC", 86400),
                 passwordProofChallengeTtlSec = envInt("AUTH_PASSWORD_PROOF_CHALLENGE_TTL_SEC", 120),
                 passwordProofMaxActive = envInt("AUTH_PASSWORD_PROOF_MAX_ACTIVE", 5000),
+                probeAppVersion = env("TDAY_APP_VERSION"),
+                probeUpdateRequired = env("TDAY_UPDATE_REQUIRED", "false")
+                    .equals("true", ignoreCase = true),
+                probeEncryptionKey = secret("TDAY_PROBE_ENCRYPTION_KEY", "TDAY_PROBE_ENCRYPTION_KEY_FILE"),
             )
         }
 

@@ -193,7 +193,7 @@ class RateLimitingTest {
                         mapOf("ok" to true).right()
                     }
                 }
-                mobileProbeRoutes()
+                mobileProbeRoutes(config)
                 todoRoutes()
                 userRoutes()
             }
