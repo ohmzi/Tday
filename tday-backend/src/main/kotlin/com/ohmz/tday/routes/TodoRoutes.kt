@@ -21,6 +21,10 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 private const val MSG = "message"
+private const val TODOS = "todos"
+private const val SUMMARY = "summary"
+private const val ERR_INVALID_DUE = "due must be a valid ISO-8601 datetime"
+private const val ERR_INVALID_INSTANCE_DATE = "instanceDate must be a valid ISO-8601 datetime"
 
 fun Route.todoRoutes() {
     val todoService by inject<TodoService>()
@@ -29,27 +33,32 @@ fun Route.todoRoutes() {
     val todoSummaryService by inject<TodoSummaryService>()
 
     route("/todo") {
-        todoCrudRoutes(todoService)
+        todoCreateRoute(todoService)
+        todoGetRoute(todoService)
+        todoPatchRoute(todoService)
+        todoDeleteRoute(todoService)
         todoCompleteRoutes(todoService)
         todoInstanceRoutes(todoService)
         todoUtilityRoutes(todoService, todoNlpService, appConfigService, todoSummaryService)
     }
 }
 
-private fun Route.todoCrudRoutes(todoService: TodoService) {
+private fun Route.todoCreateRoute(todoService: TodoService) {
     post {
         call.withAuth { user ->
             either {
                 val body = call.receive<TodoCreateRequest>()
                 validateCreateTodo.validateOrFail(body).bind()
                 val due = parseTodoDateTime(body.due)
-                    ?: raise(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
+                    ?: raise(AppError.BadRequest(ERR_INVALID_DUE))
                 val todo = todoService.create(user.id, body.title, body.description, body.priority, due, body.rrule, body.listID).bind()
                 CreateTodoResponse(message = "todo created", todo = todo)
             }
         }
     }
+}
 
+private fun Route.todoGetRoute(todoService: TodoService) {
     get {
         call.withAuth { user ->
             val timeZone = user.timeZone ?: "UTC"
@@ -58,18 +67,20 @@ private fun Route.todoCrudRoutes(todoService: TodoService) {
             if (timeline) {
                 val days = call.request.queryParameters["recurringFutureDays"]?.toIntOrNull() ?: 365
                 todoService.getTimeline(user.id, timeZone, days.coerceIn(1, 3650))
-                    .map { mapOf("todos" to it) }
+                    .map { mapOf(TODOS to it) }
             } else {
                 val start = call.request.queryParameters["start"]?.toLongOrNull()
                     ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("date range start not specified"))
                 val end = call.request.queryParameters["end"]?.toLongOrNull()
                     ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("date range end not specified"))
                 todoService.getByDateRange(user.id, start, end, timeZone)
-                    .map { mapOf("todos" to it) }
+                    .map { mapOf(TODOS to it) }
             }
         }
     }
+}
 
+private fun Route.todoPatchRoute(todoService: TodoService) {
     patch {
         call.withAuth { user ->
             either {
@@ -83,7 +94,7 @@ private fun Route.todoCrudRoutes(todoService: TodoService) {
                 body.completed?.let { fields["completed"] = it }
                 body.due?.let {
                     val parsed = parseTodoDateTime(it)
-                        ?: raise(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
+                        ?: raise(AppError.BadRequest(ERR_INVALID_DUE))
                     fields["due"] = parsed
                 }
                 body.rrule?.let { fields["rrule"] = it }
@@ -93,7 +104,9 @@ private fun Route.todoCrudRoutes(todoService: TodoService) {
             }
         }
     }
+}
 
+private fun Route.todoDeleteRoute(todoService: TodoService) {
     delete {
         call.withAuth { user ->
             val body = call.receive<TodoDeleteRequest>()
@@ -111,7 +124,7 @@ private fun Route.todoCompleteRoutes(todoService: TodoService) {
                 val body = call.receive<TodoCompleteRequest>()
                 val instanceDate = body.instanceDate?.let {
                     parseTodoDateTime(it)
-                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("instanceDate must be a valid ISO-8601 datetime"))
+                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 }
                 todoService.completeTodo(user.id, body.id, instanceDate)
                     .map { mapOf(MSG to "todo completed") }
@@ -125,7 +138,7 @@ private fun Route.todoCompleteRoutes(todoService: TodoService) {
                 val body = call.receive<TodoCompleteRequest>()
                 val instanceDate = body.instanceDate?.let {
                     parseTodoDateTime(it)
-                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("instanceDate must be a valid ISO-8601 datetime"))
+                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 }
                 todoService.uncompleteTodo(user.id, body.id, instanceDate)
                     .map { mapOf(MSG to "todo uncompleted") }
@@ -160,14 +173,14 @@ private fun Route.todoInstanceRoutes(todoService: TodoService) {
             call.withAuth { user ->
                 val body = call.receive<TodoInstancePatchRequest>()
                 val instanceDate = parseTodoDateTime(body.instanceDate)
-                    ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("instanceDate must be a valid ISO-8601 datetime"))
+                    ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 val fields = mutableMapOf<String, Any?>()
                 body.title?.let { fields["title"] = it }
                 body.description?.let { fields["description"] = it }
                 body.priority?.let { fields["priority"] = it }
                 body.due?.let {
                     val parsed = parseTodoDateTime(it)
-                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
+                        ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_DUE))
                     fields["due"] = parsed
                 }
                 todoService.patchInstance(user.id, body.todoId, instanceDate, fields)
@@ -179,7 +192,7 @@ private fun Route.todoInstanceRoutes(todoService: TodoService) {
             call.withAuth { user ->
                 val body = call.receive<TodoInstanceDeleteRequest>()
                 val instanceDate = parseTodoDateTime(body.instanceDate)
-                    ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("instanceDate must be a valid ISO-8601 datetime"))
+                    ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest(ERR_INVALID_INSTANCE_DATE))
                 todoService.deleteInstance(user.id, body.todoId, instanceDate)
                     .map { mapOf(MSG to "instance deleted") }
             }
@@ -198,7 +211,7 @@ private fun Route.todoUtilityRoutes(
             call.withAuth { user ->
                 val timeZone = user.timeZone ?: "UTC"
                 todoService.getOverdue(user.id, timeZone)
-                    .map { mapOf("todos" to it) }
+                    .map { mapOf(TODOS to it) }
             }
         }
     }
@@ -232,17 +245,17 @@ private fun Route.todoUtilityRoutes(
 
                 val config = appConfigService.getGlobalConfig().getOrNull()
                 if (config != null && !config.aiSummaryEnabled) {
-                    return@withAuth mapOf("summary" to null, "reason" to "disabled").right()
+                    return@withAuth mapOf(SUMMARY to null, "reason" to "disabled").right()
                 }
 
                 val todos = todoService.getTimeline(user.id, timeZone, 365).getOrNull() ?: emptyList()
                 if (todos.isEmpty()) {
-                    return@withAuth mapOf("summary" to "You're clear for now. No tasks need attention in this view.").right()
+                    return@withAuth mapOf(SUMMARY to "You're clear for now. No tasks need attention in this view.").right()
                 }
 
                 val prompt = "Summarize these ${todos.size} tasks briefly for the user."
-                val summary = todoSummaryService.generateSummary(prompt)
-                mapOf("summary" to summary).right()
+                val summaryText = todoSummaryService.generateSummary(prompt)
+                mapOf(SUMMARY to summaryText).right()
             }
         }
     }
