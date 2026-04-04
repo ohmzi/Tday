@@ -373,7 +373,7 @@ class AppViewModel @Inject constructor(
             _uiState.update { it.copy(isManualSyncing = true) }
             val result = syncManager.syncCachedData(
                 force = true,
-                replayPendingMutations = false,
+                replayPendingMutations = true,
             )
             _uiState.update { it.copy(isManualSyncing = false) }
             result.exceptionOrNull()?.let(::classifyAndShowError)
@@ -431,7 +431,7 @@ class AppViewModel @Inject constructor(
 
                 val result = syncManager.syncCachedData(
                     force = true,
-                    replayPendingMutations = false,
+                    replayPendingMutations = hasPending,
                 )
                 val syncError = result.exceptionOrNull()
                 _uiState.update {
