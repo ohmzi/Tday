@@ -29,7 +29,6 @@ export const useList = ({ id }: { id: string }) => {
           ...todo,
           id: todoId,
           createdAt: parseApiDateTime(todo.createdAt),
-          dtstart: parseApiDateTime(todo.dtstart),
           due: parseApiDateTime(todo.due),
           instanceDate: todoInstanceDate,
           listID: todo.listID ?? null,

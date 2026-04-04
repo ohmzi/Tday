@@ -72,14 +72,8 @@ export default function TodoFilterBar({ containerHovered }: TodoFilterBarProps) 
 
                                         }}
                                     >
-                                        <DropdownMenuRadioItem value="dtstart" className="hover:bg-popover-accent">
-                                            {filterDict("start Date")}
-                                        </DropdownMenuRadioItem>
                                         <DropdownMenuRadioItem value="due">
                                             {filterDict("deadline")}
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="duration">
-                                            {filterDict("duration")}
                                         </DropdownMenuRadioItem>
                                         <DropdownMenuRadioItem value="priority">
                                             {appDict("priority")}
@@ -126,20 +120,17 @@ export default function TodoFilterBar({ containerHovered }: TodoFilterBarProps) 
                                             updatePreferences({ groupBy: value as GroupBy });
                                         }}
                                     >
-                                        <DropdownMenuRadioItem value="dtstart" className="hover:bg-popover-accent">
-                                            {filterDict("start Date")}
-                                        </DropdownMenuRadioItem>
                                         <DropdownMenuRadioItem value="due">
                                             {filterDict("deadline")}
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem value="duration">
-                                            {filterDict("duration")}
                                         </DropdownMenuRadioItem>
                                         <DropdownMenuRadioItem value="priority">
                                             {appDict("priority")}
                                         </DropdownMenuRadioItem>
                                         <DropdownMenuRadioItem value="rrule">
                                             {filterDict("recurrence")}
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="list">
+                                            {appDict("list")}
                                         </DropdownMenuRadioItem>
                                     </DropdownMenuRadioGroup>
                                 </DropdownMenuSubContent>

@@ -318,7 +318,7 @@ fun TdayApp() {
                                     onOpenTaskFromSearch = {},
                                     onOpenList = { _, _ -> },
                                     onCreateTask = { _ -> },
-                                    onParseTaskTitleNlp = { _, _, _ -> null },
+                                    onParseTaskTitleNlp = { _, _ -> null },
                                     onCreateList = { _, _, _ -> },
                                 )
                             }

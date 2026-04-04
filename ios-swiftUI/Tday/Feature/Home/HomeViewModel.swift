@@ -57,8 +57,8 @@ final class HomeViewModel {
         }
     }
 
-    func parseTaskTitleNlp(text: String, referenceStartEpochMs: Int64, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
-        await container.todoRepository.parseTodoTitleNlp(text: text, referenceStartEpochMs: referenceStartEpochMs, referenceDueEpochMs: referenceDueEpochMs)
+    func parseTaskTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
+        await container.todoRepository.parseTodoTitleNlp(text: text, referenceDueEpochMs: referenceDueEpochMs)
     }
 
     private func observeCacheChanges() {

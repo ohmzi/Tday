@@ -32,11 +32,9 @@ fun Route.todoRoutes() {
                 either {
                     val body = call.receive<TodoCreateRequest>()
                     validateCreateTodo.validateOrFail(body).bind()
-                    val dtstart = parseTodoDateTime(body.dtstart)
-                        ?: raise(AppError.BadRequest("dtstart must be a valid ISO-8601 datetime"))
                     val due = parseTodoDateTime(body.due)
                         ?: raise(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
-                    val todo = todoService.create(user.id, body.title, body.description, body.priority, dtstart, due, body.rrule, body.listID).bind()
+                    val todo = todoService.create(user.id, body.title, body.description, body.priority, due, body.rrule, body.listID).bind()
                     CreateTodoResponse(message = "todo created", todo = todo)
                 }
             }
@@ -73,11 +71,6 @@ fun Route.todoRoutes() {
                     body.priority?.let { fields["priority"] = it }
                     body.pinned?.let { fields["pinned"] = it }
                     body.completed?.let { fields["completed"] = it }
-                    body.dtstart?.let {
-                        val parsed = parseTodoDateTime(it)
-                            ?: raise(AppError.BadRequest("dtstart must be a valid ISO-8601 datetime"))
-                        fields["dtstart"] = parsed
-                    }
                     body.due?.let {
                         val parsed = parseTodoDateTime(it)
                             ?: raise(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
@@ -158,17 +151,11 @@ fun Route.todoRoutes() {
                     body.title?.let { fields["title"] = it }
                     body.description?.let { fields["description"] = it }
                     body.priority?.let { fields["priority"] = it }
-                    body.dtstart?.let {
-                        val parsed = parseTodoDateTime(it)
-                            ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("dtstart must be a valid ISO-8601 datetime"))
-                        fields["dtstart"] = parsed
-                    }
                     body.due?.let {
                         val parsed = parseTodoDateTime(it)
                             ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("due must be a valid ISO-8601 datetime"))
                         fields["due"] = parsed
                     }
-                    body.durationMinutes?.let { fields["durationMinutes"] = it }
                     todoService.patchInstance(user.id, body.todoId, instanceDate, fields)
                         .map { mapOf("message" to "instance updated") }
                 }
@@ -210,7 +197,6 @@ fun Route.todoRoutes() {
                         "cleanTitle" to result.cleanTitle,
                         "matchedText" to result.matchedText,
                         "matchStart" to result.matchStart,
-                        "startEpochMs" to result.startEpochMs,
                         "dueEpochMs" to result.dueEpochMs,
                     ).right()
                 }
