@@ -14,6 +14,7 @@ import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -88,7 +89,7 @@ class HomeViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     isLoading = false,
-                    errorMessage = error.message ?: "Failed to load dashboard",
+                    errorMessage = error.userFacingMessage("Failed to load dashboard."),
                 )
             }
         }
@@ -129,7 +130,7 @@ class HomeViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
-                        errorMessage = error.message ?: "Failed to load dashboard",
+                        errorMessage = error.userFacingMessage("Failed to load dashboard."),
                     )
                 }
             }
@@ -143,7 +144,7 @@ class HomeViewModel @Inject constructor(
             runCatching { listRepository.createList(normalizedName, color = color, iconKey = iconKey) }
                 .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not create list") }
+                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not create list.")) }
                 }
         }
     }
@@ -174,7 +175,7 @@ class HomeViewModel @Inject constructor(
                         .onFailure { refreshInternal(forceSync = false, showLoading = false) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.message ?: "Could not create task") }
+                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not create task.")) }
                 }
         }
     }
