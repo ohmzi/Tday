@@ -2,7 +2,7 @@ plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
     id("io.ktor.plugin")
-    id("io.sentry.jvm.gradle")
+    id("io.sentry.jvm.gradle") version "5.7.0"
     application
 }
 
