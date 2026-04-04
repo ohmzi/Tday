@@ -24,7 +24,6 @@ async function patchCalendarTodo({
     title: todo.title,
     description: todo.description,
     priority: todo.priority,
-    dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
     listID: todo.listID ?? null,
@@ -36,8 +35,7 @@ async function patchCalendarTodo({
 
   const rruleChanged = rruleChecksum !== todo.rrule;
   const dateChanged =
-    dateRangeChecksum !==
-    todo.dtstart.toISOString() + "" + todo.due.toISOString();
+    dateRangeChecksum !== todo.due.toISOString();
 
   const todoId = todo.id.split(":")[0];
   await api.PATCH({
@@ -85,7 +83,6 @@ export const useEditCalendarTodo = () => {
                 description: newTodo.description,
                 priority: newTodo.priority,
                 due: newTodo.due,
-                dtstart: newTodo.dtstart,
                 rrule: newTodo.rrule,
                 createdAt: new Date(),
               };

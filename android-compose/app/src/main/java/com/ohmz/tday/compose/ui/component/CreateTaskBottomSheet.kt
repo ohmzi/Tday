@@ -99,16 +99,6 @@ private enum class TaskSheetPage {
     REPEAT,
 }
 
-private enum class DatePickerTarget {
-    START,
-    DUE,
-}
-
-private enum class TimePickerTarget {
-    START,
-    DUE,
-}
-
 private enum class RepeatPreset(
     val label: String,
     val rrule: String?,
@@ -138,11 +128,9 @@ fun CreateTaskBottomSheet(
     editingTask: TodoItem? = null,
     defaultListId: String? = null,
     defaultPriority: String? = null,
-    initialStartEpochMs: Long? = null,
     initialDueEpochMs: Long? = null,
     onParseTaskTitleNlp: (suspend (
         title: String,
-        referenceStartEpochMs: Long,
         referenceDueEpochMs: Long,
     ) -> TodoTitleNlpResponse?)? = null,
     onDismiss: () -> Unit,
@@ -179,20 +167,10 @@ fun CreateTaskBottomSheet(
         )
     }
     val nowEpochMs = remember { System.currentTimeMillis() }
-    val resolvedStartEpochMs = editingTask?.dtstart?.toEpochMilli() ?: (initialStartEpochMs ?: nowEpochMs)
-    val resolvedDueEpochMs = editingTask?.due?.toEpochMilli() ?: (initialDueEpochMs
-        ?: (resolvedStartEpochMs + DEFAULT_TASK_DURATION_MS))
-    var startEpochMs by rememberSaveable(editingTask?.id, initialStartEpochMs, initialDueEpochMs) {
-        mutableStateOf(resolvedStartEpochMs)
-    }
-    var dueEpochMs by rememberSaveable(editingTask?.id, initialStartEpochMs, initialDueEpochMs) {
-        mutableStateOf(
-            if (resolvedDueEpochMs > resolvedStartEpochMs) {
-                resolvedDueEpochMs
-            } else {
-                resolvedStartEpochMs + DEFAULT_TASK_DURATION_MS
-            },
-        )
+    val resolvedDueEpochMs = editingTask?.due?.toEpochMilli()
+        ?: (initialDueEpochMs ?: (nowEpochMs + DEFAULT_TASK_DURATION_MS))
+    var dueEpochMs by rememberSaveable(editingTask?.id, initialDueEpochMs) {
+        mutableStateOf(resolvedDueEpochMs)
     }
     LaunchedEffect(title, onParseTaskTitleNlp) {
         val nlpParser = onParseTaskTitleNlp ?: return@LaunchedEffect
@@ -203,21 +181,17 @@ fun CreateTaskBottomSheet(
         val parseResult = runCatching {
             nlpParser(
                 inputTitle,
-                startEpochMs,
                 dueEpochMs,
             )
         }.getOrNull() ?: return@LaunchedEffect
 
-        val parsedStartEpochMs = parseResult.startEpochMs ?: return@LaunchedEffect
         val parsedDueEpochMs = parseResult.dueEpochMs ?: return@LaunchedEffect
-        if (parsedDueEpochMs <= parsedStartEpochMs) return@LaunchedEffect
 
         val cleanTitle = parseResult.cleanTitle
         if (cleanTitle != title) {
             title = cleanTitle
         }
-        if (parsedStartEpochMs != startEpochMs || parsedDueEpochMs != dueEpochMs) {
-            startEpochMs = parsedStartEpochMs
+        if (parsedDueEpochMs != dueEpochMs) {
             dueEpochMs = parsedDueEpochMs
         }
     }
@@ -227,8 +201,8 @@ fun CreateTaskBottomSheet(
     var listReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN.name) }
     var priorityReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
     var repeatReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
-    var datePickerTarget by rememberSaveable { mutableStateOf<DatePickerTarget?>(null) }
-    var timePickerTarget by rememberSaveable { mutableStateOf<TimePickerTarget?>(null) }
+    var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
+    var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
 
     val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
     val repeatPreset = RepeatPreset.valueOf(selectedRepeat)
@@ -247,18 +221,12 @@ fun CreateTaskBottomSheet(
     }
 
     fun submitTask() {
-        val start = Instant.ofEpochMilli(startEpochMs)
-        val due = if (dueEpochMs > startEpochMs) {
-            Instant.ofEpochMilli(dueEpochMs)
-        } else {
-            start.plusSeconds(DEFAULT_TASK_DURATION_MS / 1000L)
-        }
+        val due = Instant.ofEpochMilli(dueEpochMs)
 
         val payload = CreateTaskPayload(
             title = title.trim(),
             description = notes.trim().ifBlank { null },
             priority = selectedPriority,
-            dtstart = start,
             due = due,
             rrule = repeatPreset.rrule,
             listId = selectedListId,
@@ -338,21 +306,12 @@ fun CreateTaskBottomSheet(
                         SectionHeading("Date & Time")
                         GroupCard {
                             SplitDateTimeRow(
-                                icon = Icons.Rounded.Schedule,
-                                title = "Start",
-                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
-                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
-                                onDateClick = { datePickerTarget = DatePickerTarget.START },
-                                onTimeClick = { timePickerTarget = TimePickerTarget.START },
-                            )
-                            RowDivider()
-                            SplitDateTimeRow(
                                 icon = Icons.Rounded.CalendarMonth,
                                 title = "Due",
                                 dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
                                 timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onDateClick = { datePickerTarget = DatePickerTarget.DUE },
-                                onTimeClick = { timePickerTarget = TimePickerTarget.DUE },
+                                onDateClick = { dueDatePickerOpen = true },
+                                onTimeClick = { dueTimePickerOpen = true },
                             )
                         }
 
@@ -394,21 +353,12 @@ fun CreateTaskBottomSheet(
                         SectionHeading("Scheduling")
                         GroupCard {
                             SplitDateTimeRow(
-                                icon = Icons.Rounded.Schedule,
-                                title = "Start",
-                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
-                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(startEpochMs)),
-                                onDateClick = { datePickerTarget = DatePickerTarget.START },
-                                onTimeClick = { timePickerTarget = TimePickerTarget.START },
-                            )
-                            RowDivider()
-                            SplitDateTimeRow(
                                 icon = Icons.Rounded.CalendarMonth,
                                 title = "Due",
                                 dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
                                 timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onDateClick = { datePickerTarget = DatePickerTarget.DUE },
-                                onTimeClick = { timePickerTarget = TimePickerTarget.DUE },
+                                onDateClick = { dueDatePickerOpen = true },
+                                onTimeClick = { dueTimePickerOpen = true },
                             )
                             RowDivider()
                             SheetRow(
@@ -525,56 +475,30 @@ fun CreateTaskBottomSheet(
         }
     }
 
-    datePickerTarget?.let { target ->
+    if (dueDatePickerOpen) {
         ThemedDatePickerDialog(
-            initialEpochMs = if (target == DatePickerTarget.START) startEpochMs else dueEpochMs,
-            onDismiss = { datePickerTarget = null },
+            initialEpochMs = dueEpochMs,
+            onDismiss = { dueDatePickerOpen = false },
             onConfirm = { pickedDateEpochMs ->
-                when (target) {
-                    DatePickerTarget.START -> {
-                        startEpochMs = mergeDateKeepingTime(
-                            baseEpochMs = startEpochMs,
-                            selectedDateEpochMs = pickedDateEpochMs,
-                        )
-                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
-                    }
-
-                    DatePickerTarget.DUE -> {
-                        dueEpochMs = mergeDateKeepingTime(
-                            baseEpochMs = dueEpochMs,
-                            selectedDateEpochMs = pickedDateEpochMs,
-                        )
-                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
-                    }
-                }
-                datePickerTarget = null
+                dueEpochMs = mergeDateKeepingTime(
+                    baseEpochMs = dueEpochMs,
+                    selectedDateEpochMs = pickedDateEpochMs,
+                )
+                dueDatePickerOpen = false
             },
         )
     }
 
-    timePickerTarget?.let { target ->
+    if (dueTimePickerOpen) {
         ThemedTimePickerDialog(
-            initialEpochMs = if (target == TimePickerTarget.START) startEpochMs else dueEpochMs,
-            onDismiss = { timePickerTarget = null },
+            initialEpochMs = dueEpochMs,
+            onDismiss = { dueTimePickerOpen = false },
             onConfirm = { pickedTimeEpochMs ->
-                when (target) {
-                    TimePickerTarget.START -> {
-                        startEpochMs = mergeTimeKeepingDate(
-                            baseEpochMs = startEpochMs,
-                            selectedTimeEpochMs = pickedTimeEpochMs,
-                        )
-                        dueEpochMs = startEpochMs + DEFAULT_TASK_DURATION_MS
-                    }
-
-                    TimePickerTarget.DUE -> {
-                        dueEpochMs = mergeTimeKeepingDate(
-                            baseEpochMs = dueEpochMs,
-                            selectedTimeEpochMs = pickedTimeEpochMs,
-                        )
-                        startEpochMs = dueEpochMs - DEFAULT_TASK_DURATION_MS
-                    }
-                }
-                timePickerTarget = null
+                dueEpochMs = mergeTimeKeepingDate(
+                    baseEpochMs = dueEpochMs,
+                    selectedTimeEpochMs = pickedTimeEpochMs,
+                )
+                dueTimePickerOpen = false
             },
         )
     }

@@ -44,7 +44,6 @@ const TodoForm = ({
     rruleOptions,
     dateRangeChecksum,
     rruleChecksum,
-    durationMinutes
   } = useTodoForm();
 
   //adjust height of the todo description based on content size
@@ -148,7 +147,6 @@ const TodoForm = ({
 
   async function handleForm(e?: React.FormEvent) {
     if (e) e.preventDefault();
-    const dtstart = dateRange.from;
     const due = dateRange.to;
     try {
       const rrule = rruleOptions ? new RRule(rruleOptions).toString() : null;
@@ -162,9 +160,7 @@ const TodoForm = ({
             title,
             description: desc,
             priority,
-            dtstart,
             due,
-            durationMinutes,
             rrule,
           });
         } else {
@@ -175,9 +171,7 @@ const TodoForm = ({
             title,
             description: desc,
             priority,
-            dtstart,
             due,
-            durationMinutes,
             rrule,
             listID,
           });
@@ -189,9 +183,7 @@ const TodoForm = ({
           title,
           description: desc,
           priority,
-          dtstart,
           due,
-          durationMinutes,
           rrule,
           order: Number.MAX_VALUE,
           createdAt: new Date(),
@@ -200,7 +192,7 @@ const TodoForm = ({
           timeZone: "",
           userID: "",
           exdates: [],
-          instanceDate: rrule ? dtstart : null,
+          instanceDate: rrule ? due : null,
           instances: [],
           listID: listID ?? null,
         });

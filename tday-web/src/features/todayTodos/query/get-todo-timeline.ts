@@ -24,7 +24,6 @@ const getTodoTimeline = async () => {
       ...todo,
       id: todoId,
       createdAt: parseApiDateTime(todo.createdAt),
-      dtstart: parseApiDateTime(todo.dtstart),
       due: parseApiDateTime(todo.due),
       instanceDate: todoInstanceDate,
     };

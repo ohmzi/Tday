@@ -119,7 +119,6 @@ class CompletedRepository @Inject constructor(
                             title = normalizedTitle,
                             description = payload.description,
                             priority = normalizedPriority,
-                            dtstartEpochMs = payload.dtstart.toEpochMilli(),
                             dueEpochMs = payload.due.toEpochMilli(),
                             rrule = payload.rrule,
                             listId = normalizedListId,
@@ -144,7 +143,6 @@ class CompletedRepository @Inject constructor(
                             title = normalizedTitle,
                             description = payload.description,
                             priority = normalizedPriority,
-                            dtstartEpochMs = payload.dtstart.toEpochMilli(),
                             dueEpochMs = payload.due.toEpochMilli(),
                             completedAtEpochMs = completed.completedAtEpochMs.takeIf { it > 0L }
                                 ?: timestampMs,
@@ -166,7 +164,6 @@ class CompletedRepository @Inject constructor(
                     title = normalizedTitle,
                     description = payload.description,
                     priority = normalizedPriority,
-                    dtstart = payload.dtstart.toString(),
                     due = payload.due.toString(),
                     rrule = payload.rrule,
                     listID = normalizedListId,

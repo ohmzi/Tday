@@ -21,10 +21,7 @@ export function mergeInstanceAndTodo(
   if (instance.overriddenTitle) merged.title = instance.overriddenTitle;
   if (instance.overriddenDescription)
     merged.description = instance.overriddenDescription;
-  if (instance.overriddenDtstart) merged.dtstart = instance.overriddenDtstart;
   if (instance.overriddenDue) merged.due = instance.overriddenDue;
-  if (instance.overriddenDurationMinutes)
-    merged.durationMinutes = instance.overriddenDurationMinutes;
   if (instance.overriddenPriority)
     merged.priority = instance.overriddenPriority;
   merged.instanceDate = instance.instanceDate;

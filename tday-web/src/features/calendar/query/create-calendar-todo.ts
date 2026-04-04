@@ -8,14 +8,7 @@ import parseApiDateTime from "@/lib/date/parseApiDateTime";
 
 type CreateTodoInput = Pick<
   TodoItemType,
-  | "title"
-  | "description"
-  | "rrule"
-  | "dtstart"
-  | "due"
-  | "priority"
-  | "listID"
-  | "listID"
+  "title" | "description" | "rrule" | "due" | "priority" | "listID"
 >;
 
 async function postTodo({ todo }: { todo: CreateTodoInput }) {
@@ -24,7 +17,6 @@ async function postTodo({ todo }: { todo: CreateTodoInput }) {
     title: todo.title,
     description: todo.description,
     priority: todo.priority,
-    dtstart: todo.dtstart,
     due: todo.due,
     rrule: todo.rrule,
     listID: todo.listID ?? null,
@@ -42,7 +34,6 @@ async function postTodo({ todo }: { todo: CreateTodoInput }) {
 
   // Convert backend UTC-like datetimes into stable JS Dates.
   res.todo.due = parseApiDateTime(res.todo.due);
-  res.todo.dtstart = parseApiDateTime(res.todo.dtstart);
 
   return res.todo;
 }

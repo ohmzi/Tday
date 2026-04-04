@@ -16,17 +16,13 @@ enum class ApprovalStatus {
 
 @Serializable
 enum class SortBy {
-    dtstart,
     due,
-    duration,
     priority,
 }
 
 @Serializable
 enum class GroupBy {
-    dtstart,
     due,
-    duration,
     priority,
     rrule,
     project;

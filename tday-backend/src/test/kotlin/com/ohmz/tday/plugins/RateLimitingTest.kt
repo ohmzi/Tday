@@ -261,7 +261,6 @@ class RateLimitingTest {
             title: String,
             description: String?,
             priority: String,
-            dtstart: LocalDateTime,
             due: LocalDateTime,
             rrule: String?,
             listID: String?,
@@ -286,7 +285,6 @@ class RateLimitingTest {
                     title = "Task",
                     description = null,
                     priority = "Low",
-                    dtstart = "2026-04-02T09:00:00",
                     due = "2026-04-02T10:00:00",
                     listID = null,
                     completed = false,
@@ -400,7 +398,7 @@ class RateLimitingTest {
             referenceEpochMs: Long?,
             timezoneOffsetMinutes: Int?,
             defaultDurationMinutes: Int?,
-        ): NlpParseResult = NlpParseResult(text, null, null, null, null)
+        ): NlpParseResult = NlpParseResult(text, null, null, null)
     }
 
     private class NoOpSessionControl : SessionControl {
