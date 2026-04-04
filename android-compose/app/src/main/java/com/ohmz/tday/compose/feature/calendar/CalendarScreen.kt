@@ -135,7 +135,7 @@ fun CalendarScreen(
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onCreateTask: (CreateTaskPayload) -> Unit,
-    onParseTaskTitleNlp: suspend (title: String, referenceStartEpochMs: Long, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
+    onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCompleteTask: (TodoItem) -> Unit,
     onUncompleteTask: (CompletedItem) -> Unit,
     onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
@@ -234,7 +234,6 @@ fun CalendarScreen(
 
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
-    var createStartEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var createDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     val editTarget = remember(editTargetId, uiState.items) {
         editTargetId?.let { targetId ->
@@ -243,16 +242,12 @@ fun CalendarScreen(
     }
     fun openCreateTaskSheetForSelectedDate() {
         val currentDate = LocalDate.now(zoneId)
-        val (prefillStart, prefillDue) = if (selectedDate == currentDate) {
+        val prefillDue = if (selectedDate == currentDate) {
             val nowTime = java.time.LocalTime.now(zoneId)
-            val start = selectedDate.atTime(nowTime).atZone(zoneId)
-            start to start.plusHours(1)
+            selectedDate.atTime(nowTime).atZone(zoneId).plusHours(1)
         } else {
-            val start = selectedDate.atTime(6, 0).atZone(zoneId)
-            val due = selectedDate.atTime(21, 0).atZone(zoneId)
-            start to due
+            selectedDate.atTime(21, 0).atZone(zoneId)
         }
-        createStartEpochMs = prefillStart.toInstant().toEpochMilli()
         createDueEpochMs = prefillDue.toInstant().toEpochMilli()
         showCreateTaskSheet = true
     }
@@ -440,18 +435,15 @@ fun CalendarScreen(
     if (showCreateTaskSheet) {
         CreateTaskBottomSheet(
             lists = uiState.lists,
-            initialStartEpochMs = createStartEpochMs,
             initialDueEpochMs = createDueEpochMs,
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = {
                 showCreateTaskSheet = false
-                createStartEpochMs = null
                 createDueEpochMs = null
             },
             onCreateTask = { payload ->
                 onCreateTask(payload)
                 showCreateTaskSheet = false
-                createStartEpochMs = null
                 createDueEpochMs = null
             },
         )

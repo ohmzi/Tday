@@ -9,7 +9,6 @@ data class NlpParseResult(
     val cleanTitle: String,
     val matchedText: String?,
     val matchStart: Int?,
-    val startEpochMs: Long?,
     val dueEpochMs: Long?,
 )
 
@@ -18,8 +17,6 @@ interface TodoNlpService {
 }
 
 class TodoNlpServiceImpl : TodoNlpService {
-    private val defaultDuration = 180
-
     @Suppress("UNUSED_PARAMETER")
     override fun parse(
         text: String,
@@ -29,7 +26,7 @@ class TodoNlpServiceImpl : TodoNlpService {
         defaultDurationMinutes: Int?,
     ): NlpParseResult {
         val trimmed = text.trim()
-        if (trimmed.isEmpty()) return NlpParseResult("", null, null, null, null)
+        if (trimmed.isEmpty()) return NlpParseResult("", null, null, null)
 
         val refDate = if (referenceEpochMs != null) Date(referenceEpochMs) else Date()
         val tz = if (timezoneOffsetMinutes != null) {
@@ -40,17 +37,16 @@ class TodoNlpServiceImpl : TodoNlpService {
 
         val parser = Parser(tz)
         val groups = parser.parse(text, refDate)
-        if (groups.isEmpty()) return NlpParseResult(trimmed, null, null, null, null)
+        if (groups.isEmpty()) return NlpParseResult(trimmed, null, null, null)
 
         val group = groups[0]
         val dates = group.dates
-        if (dates.isEmpty()) return NlpParseResult(trimmed, null, null, null, null)
+        if (dates.isEmpty()) return NlpParseResult(trimmed, null, null, null)
 
         val matchedText = group.text ?: ""
         val matchStart = text.indexOf(matchedText).coerceAtLeast(0)
         val startDate = dates[0]
-        val duration = sanitizeDuration(defaultDurationMinutes)
-        val dueDate = if (dates.size > 1) dates[1] else Date(startDate.time + duration * 60_000L)
+        val dueDate = if (dates.size > 1) dates[1] else startDate
 
         val before = text.substring(0, matchStart)
         val after = text.substring((matchStart + matchedText.length).coerceAtMost(text.length))
@@ -60,13 +56,7 @@ class TodoNlpServiceImpl : TodoNlpService {
             cleanTitle = cleanTitle,
             matchedText = matchedText.ifEmpty { null },
             matchStart = matchStart,
-            startEpochMs = startDate.time,
             dueEpochMs = dueDate.time,
         )
-    }
-
-    private fun sanitizeDuration(raw: Int?): Int {
-        if (raw == null || raw <= 0) return defaultDuration
-        return raw.coerceIn(1, 24 * 60)
     }
 }

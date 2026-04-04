@@ -18,8 +18,7 @@ import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
 const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
 const ConfirmDeleteAll = lazy(() => import("./ConfirmationModals/ConfirmDeleteAll"));
 
-const formatDateRange = (start: Date, end: Date) =>
-  `${format(start, "MMM dd hh:mm")} - ${format(end, "MMM dd hh:mm")}`;
+const formatDueTime = (due: Date) => format(due, "MMM dd hh:mm");
 
 const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
   const [open, setOpen] = useState(false);
@@ -117,7 +116,7 @@ const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
                   {todo.title}
                 </p>
                 <p className="text-[0.6rem] sm:text-xs md:text-sm text-foreground">
-                  {formatDateRange(todo.dtstart, todo.due)}
+                  {formatDueTime(todo.due)}
                 </p>
               </div>
             </div>

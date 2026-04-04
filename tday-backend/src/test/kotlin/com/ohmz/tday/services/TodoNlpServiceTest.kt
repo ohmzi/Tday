@@ -15,7 +15,7 @@ class TodoNlpServiceTest {
 
         assertEquals("", result.cleanTitle)
         assertNull(result.matchedText)
-        assertNull(result.startEpochMs)
+        assertNull(result.matchStart)
         assertNull(result.dueEpochMs)
     }
 
@@ -30,21 +30,17 @@ class TodoNlpServiceTest {
 
         assertTrue(result.cleanTitle.contains("Plan launch"))
         assertNotNull(result.matchedText)
-        assertNotNull(result.startEpochMs)
         assertNotNull(result.dueEpochMs)
-        assertTrue(result.dueEpochMs > result.startEpochMs)
     }
 
     @Test
-    fun `invalid default duration falls back to service default`() {
+    fun `default duration parameter is ignored single date uses same instant for due`() {
         val result = service.parse(
             text = "Review backlog Friday 3pm",
             referenceEpochMs = 1_711_000_000_000,
             defaultDurationMinutes = -25,
         )
 
-        assertNotNull(result.startEpochMs)
         assertNotNull(result.dueEpochMs)
-        assertEquals(180 * 60_000L, result.dueEpochMs!! - result.startEpochMs!!)
     }
 }

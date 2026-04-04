@@ -30,7 +30,6 @@ vi.mock("@/providers/TodoFormProvider", () => ({
     rruleOptions: null,
     dateRangeChecksum: "",
     rruleChecksum: null,
-    durationMinutes: 30,
   }),
 }));
 

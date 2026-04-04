@@ -164,12 +164,10 @@ class TodoListViewModel @Inject constructor(
 
     suspend fun parseTaskTitleNlp(
         text: String,
-        referenceStartEpochMs: Long,
         referenceDueEpochMs: Long,
     ): TodoTitleNlpResponse? {
         return todoRepository.parseTodoTitleNlp(
             text = text,
-            referenceStartEpochMs = referenceStartEpochMs,
             referenceDueEpochMs = referenceDueEpochMs,
         )
     }
@@ -285,12 +283,7 @@ class TodoListViewModel @Inject constructor(
             "High" -> "High"
             else -> "Low"
         }
-        val normalizedStart = payload.dtstart
-        val normalizedDue = if (payload.due > normalizedStart) {
-            payload.due
-        } else {
-            normalizedStart.plusSeconds(60L * 60L)
-        }
+        val normalizedDue = payload.due
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
 
@@ -301,7 +294,6 @@ class TodoListViewModel @Inject constructor(
             title = normalizedTitle,
             description = normalizedDescription,
             priority = normalizedPriority,
-            dtstart = normalizedStart,
             due = normalizedDue,
             rrule = payload.rrule,
             listId = normalizedListId,
@@ -327,7 +319,6 @@ class TodoListViewModel @Inject constructor(
                         title = normalizedTitle,
                         description = normalizedDescription,
                         priority = normalizedPriority,
-                        dtstart = normalizedStart,
                         due = normalizedDue,
                         rrule = payload.rrule,
                         listId = normalizedListId,

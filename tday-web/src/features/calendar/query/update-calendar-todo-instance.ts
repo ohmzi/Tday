@@ -15,7 +15,6 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
     title: ghostTodo.title,
     description: ghostTodo.description,
     priority: ghostTodo.priority,
-    dtstart: ghostTodo.dtstart,
     due: ghostTodo.due,
     rrule: ghostTodo.rrule,
     instanceDate: ghostTodo.instanceDate,
@@ -61,7 +60,6 @@ export const useEditCalendarTodoInstance = () => {
                   title: newTodo.title,
                   description: newTodo.description,
                   priority: newTodo.priority,
-                  dtstart: newTodo.dtstart,
                   due: newTodo.due,
                 };
               }
