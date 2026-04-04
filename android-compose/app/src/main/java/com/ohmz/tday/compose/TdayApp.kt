@@ -536,6 +536,8 @@ fun TdayApp() {
                         isAdminAiSummarySaving = appUiState.isAdminAiSummarySaving,
                         adminAiSummaryError = appUiState.adminAiSummaryError,
                         aiSummaryValidationError = appUiState.aiSummaryValidationError,
+                        hasUpdate = releaseUiState.hasUpdate,
+                        latestVersionName = releaseUiState.latestRelease?.version,
                         onThemeModeSelected = appViewModel::setThemeMode,
                         onReminderSelected = appViewModel::setDefaultReminder,
                         onToggleAdminAiSummary = appViewModel::setAdminAiSummaryEnabled,

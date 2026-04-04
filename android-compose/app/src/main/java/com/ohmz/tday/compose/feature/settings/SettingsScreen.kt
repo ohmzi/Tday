@@ -78,6 +78,8 @@ fun SettingsScreen(
     isAdminAiSummarySaving: Boolean,
     adminAiSummaryError: String?,
     aiSummaryValidationError: String?,
+    hasUpdate: Boolean = false,
+    latestVersionName: String? = null,
     onThemeModeSelected: (AppThemeMode) -> Unit,
     onReminderSelected: (ReminderOption) -> Unit,
     onToggleAdminAiSummary: (Boolean) -> Unit,
@@ -236,6 +238,14 @@ fun SettingsScreen(
                     value = "v${BuildConfig.VERSION_NAME}",
                     onClick = onOpenLatestRelease,
                 )
+                if (hasUpdate && latestVersionName != null) {
+                    Text(
+                        text = "v$latestVersionName available",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colorScheme.primary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
                 SettingsDivider()
                 SettingsListRow(
                     title = stringResource(R.string.action_sign_out),
