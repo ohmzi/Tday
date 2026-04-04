@@ -132,11 +132,21 @@ class TodoRepository @Inject constructor(
             )
         }
 
+        // #region agent log
+        Log.d("DBG_feebaa", "[A] createTodo localId=$localTodoId title=$trimmedTitle due=${normalizedDue} listId=$normalizedListId priority=$normalizedPriority rrule=${payload.rrule}")
+        // #endregion
+
         if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(LOCAL_LIST_PREFIX)) {
+            // #region agent log
+            Log.w("DBG_feebaa", "[D] createTodo SKIPPED direct API: localList=$normalizedListId, delegating to syncCachedData")
+            // #endregion
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
         }
 
+        // #region agent log
+        Log.d("DBG_feebaa", "[A] createTodo calling api.createTodo now, dueString=${normalizedDue.toString()}")
+        // #endregion
         runCatching {
             requireApiBody(
                 api.createTodo(
@@ -152,6 +162,9 @@ class TodoRepository @Inject constructor(
                 "Could not create task",
             ).todo
         }.onSuccess { createdDto ->
+            // #region agent log
+            Log.d("DBG_feebaa", "[E] createTodo API success, createdDto=${if (createdDto != null) "id=${createdDto.id}" else "NULL"}")
+            // #endregion
             if (createdDto == null) return@onSuccess
             val createdTodo = mapTodoDto(createdDto)
             cacheManager.updateOfflineState { state ->
@@ -171,6 +184,13 @@ class TodoRepository @Inject constructor(
                     pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
                 )
             }
+        }.onFailure { error ->
+            // #region agent log
+            Log.e("DBG_feebaa", "[B] createTodo API FAILED: ${error::class.simpleName} message=${error.message}", error)
+            if (error is com.ohmz.tday.compose.core.data.ApiCallException) {
+                Log.e("DBG_feebaa", "[B] createTodo statusCode=${error.statusCode}")
+            }
+            // #endregion
         }
     }
 
