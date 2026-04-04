@@ -28,6 +28,15 @@ class UpdateInstallerStatusReceiver : BroadcastReceiver() {
                 Toast.makeText(context, context.getString(R.string.release_install_success), Toast.LENGTH_SHORT).show()
             }
 
+            PackageInstaller.STATUS_FAILURE_CONFLICT -> {
+                InAppApkUpdater.publishSignatureConflict(sessionId)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.release_signature_conflict),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+
             else -> {
                 val statusMessage = statusIntent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
                     ?.takeIf { it.isNotBlank() }
