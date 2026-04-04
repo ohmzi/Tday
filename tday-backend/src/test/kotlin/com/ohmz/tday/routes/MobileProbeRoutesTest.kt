@@ -1,6 +1,7 @@
 package com.ohmz.tday.routes
 
 import com.ohmz.tday.plugins.configureSerialization
+import com.ohmz.tday.security.testAppConfig
 import com.ohmz.tday.shared.model.MobileProbeResponse
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
@@ -11,6 +12,7 @@ import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MobileProbeRoutesTest {
@@ -23,7 +25,7 @@ class MobileProbeRoutesTest {
 
             routing {
                 route("/api") {
-                    mobileProbeRoutes()
+                    mobileProbeRoutes(testAppConfig())
                 }
             }
         }
@@ -37,5 +39,6 @@ class MobileProbeRoutesTest {
         assertEquals("ok", payload.probe)
         assertEquals("1", payload.version)
         assertTrue(payload.serverTime.isNotBlank())
+        assertNull(payload.encryptedCompatibility)
     }
 }
