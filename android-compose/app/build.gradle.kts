@@ -8,6 +8,11 @@ plugins {
     id("io.sentry.android.gradle")
 }
 
+val localProps = java.util.Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 val projectVersion: String by lazy {
     val packageJsonCandidates = listOf(
         File(rootProject.projectDir, "tday-web/package.json"),
@@ -62,12 +67,12 @@ android {
         buildConfigField(
             "String",
             "PROBE_ENCRYPTION_KEY",
-            "\"${findProperty("probeEncryptionKey") ?: System.getenv("TDAY_PROBE_ENCRYPTION_KEY") ?: ""}\"",
+            "\"${localProps.getProperty("probeEncryptionKey") ?: System.getenv("TDAY_PROBE_ENCRYPTION_KEY") ?: ""}\"",
         )
         buildConfigField(
             "String",
             "SENTRY_DSN",
-            "\"${findProperty("sentryDsn") ?: System.getenv("SENTRY_DSN") ?: ""}\"",
+            "\"${localProps.getProperty("sentryDsn") ?: System.getenv("SENTRY_DSN") ?: ""}\"",
         )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
