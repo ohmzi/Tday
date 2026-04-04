@@ -81,7 +81,7 @@ tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
 }
 
 sentry {
-    includeSourceContext = true
+    includeSourceContext = !System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank()
     org = "tday-kb"
     projectName = "tday-backend"
     authToken = System.getenv("SENTRY_AUTH_TOKEN")
