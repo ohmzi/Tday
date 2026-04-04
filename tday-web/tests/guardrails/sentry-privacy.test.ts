@@ -17,10 +17,6 @@ function readSource(filePath: string): string {
   return readFileSync(filePath, "utf-8");
 }
 
-function relPath(filePath: string): string {
-  return path.relative(MONO, filePath);
-}
-
 // ─── Backend Sentry paths ───────────────────────────────────────────
 const backendApp = path.join(BACKEND_SRC, "Application.kt");
 const backendStatusPages = path.join(BACKEND_SRC, "plugins", "StatusPages.kt");
