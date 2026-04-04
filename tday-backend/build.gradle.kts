@@ -71,3 +71,7 @@ ktor {
         archiveFileName.set("tday-backend-all.jar")
     }
 }
+
+tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
+    mergeServiceFiles()
+}
