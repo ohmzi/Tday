@@ -4,6 +4,7 @@ import { DEFAULT_LOCALE } from "@/i18n";
 import ProtectedRoute from "@/pages/ProtectedRoute";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import RouteErrorPage from "@/pages/RouteErrorPage";
 
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -55,10 +56,12 @@ export const router = sentryCreateBrowserRouter([
   {
     path: "/",
     element: <Navigate to={`/${DEFAULT_LOCALE}`} replace />,
+    errorElement: <RouteErrorPage />,
   },
   {
     path: `/:locale`,
     element: <SuspenseOutlet />,
+    errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <LandingPage /> },
       {
@@ -75,6 +78,7 @@ export const router = sentryCreateBrowserRouter([
       {
         path: "app",
         element: <ProtectedRoute />,
+        errorElement: <RouteErrorPage />,
         children: [
           {
             element: <AppLayout />,
