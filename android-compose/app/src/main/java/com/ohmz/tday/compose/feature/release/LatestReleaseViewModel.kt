@@ -18,6 +18,8 @@ data class LatestReleaseUiState(
     val latestRelease: GitHubRelease? = null,
     val error: String? = null,
     val currentVersion: String = BuildConfig.VERSION_NAME,
+    val backendVersion: String? = null,
+    val versionCheckResult: com.ohmz.tday.compose.core.data.server.VersionCheckResult? = null,
 ) {
     val hasUpdate: Boolean
         get() {
@@ -63,6 +65,8 @@ class LatestReleaseViewModel @Inject constructor(
                         currentRelease = vs.currentRelease,
                         latestRelease = vs.latestRelease,
                         error = vs.releaseError,
+                        backendVersion = vs.backendVersion,
+                        versionCheckResult = vs.versionCheckResult,
                     )
                 }
             }
