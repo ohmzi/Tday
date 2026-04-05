@@ -102,13 +102,12 @@ class ServerConfigRepository @Inject constructor(
             .build()
             .toString()
 
-        val probeResponse = runCatching {
-            withTimeout(PROBE_TIMEOUT_MS) { api.probeServer(probeUrl = probeUrl) }
-        }.getOrNull()
-            ?: return VersionRecheckResult(VersionCheckResult.Compatible, null)
+        val probeResponse = withTimeout(PROBE_TIMEOUT_MS) {
+            api.probeServer(probeUrl = probeUrl)
+        }
 
         val body = probeResponse.body()
-            ?: return VersionRecheckResult(VersionCheckResult.Compatible, null)
+            ?: throw IllegalStateException("Empty probe response during version recheck")
         val compatibility = body.encryptedCompatibility?.let { ProbeDecryptor.decrypt(it) }
         return VersionRecheckResult(
             versionCheck = checkVersionCompatibility(compatibility),
