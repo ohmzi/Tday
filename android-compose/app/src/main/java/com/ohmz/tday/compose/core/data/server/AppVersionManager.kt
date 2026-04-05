@@ -37,9 +37,9 @@ class AppVersionManager @Inject constructor(
      * for the required release APK when an app update is needed.
      */
     suspend fun refreshServerCompatibility() {
-        val recheckResult = runCatching { serverConfigRepository.recheckVersion() }.getOrNull()
-        val versionResult = recheckResult?.versionCheck ?: VersionCheckResult.Compatible
-        applyServerCompatibility(versionResult, recheckResult?.serverAppVersion)
+        val recheckResult = runCatching { serverConfigRepository.recheckVersion() }
+            .getOrNull() ?: return
+        applyServerCompatibility(recheckResult.versionCheck, recheckResult.serverAppVersion)
     }
 
     /**
