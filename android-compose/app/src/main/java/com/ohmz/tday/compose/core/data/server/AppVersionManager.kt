@@ -58,7 +58,15 @@ class AppVersionManager @Inject constructor(
             )
         }
         if (versionCheck is VersionCheckResult.AppUpdateRequired) {
-            _state.update { it.copy(isCheckingUpdateRelease = true, requiredUpdateRelease = null) }
+            val previousRequired = (_state.value.versionCheckResult
+                as? VersionCheckResult.AppUpdateRequired)?.requiredVersion
+            val versionChanged = previousRequired != versionCheck.requiredVersion
+            _state.update {
+                it.copy(
+                    isCheckingUpdateRelease = true,
+                    requiredUpdateRelease = if (versionChanged) null else it.requiredUpdateRelease,
+                )
+            }
             val release = runCatching {
                 gitHubReleaseRepository.fetchReleaseByTag("v${versionCheck.requiredVersion}")
             }.getOrNull()
