@@ -25,7 +25,7 @@ fun main() {
     Sentry.init { options ->
         options.dsn = config.sentryDsn.orEmpty()
         options.environment = if (config.isProduction) "production" else "development"
-        options.release = "tday-backend@${System.getenv("TDAY_BACKEND_VERSION") ?: "0.0.1"}"
+        options.release = "tday-backend@${System.getenv("TDAY_BACKEND_VERSION") ?: "1.23.0"}"
         options.isSendDefaultPii = false
         options.serverName = "tday-backend"
         options.tracesSampleRate = 1.0
