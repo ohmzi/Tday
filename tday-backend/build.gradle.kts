@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.ohmz"
-version = "0.0.1"
+version = "1.23.0"
 
 application {
     mainClass.set("com.ohmz.tday.ApplicationKt")
