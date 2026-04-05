@@ -205,7 +205,7 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.SemiBold,
                             )
                         }
-                        if (isAdminAiSummaryLoading || adminAiSummaryEnabled == null) {
+                        if (adminAiSummaryEnabled == null) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
                                 strokeWidth = 2.dp,
