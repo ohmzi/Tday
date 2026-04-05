@@ -1,11 +1,11 @@
 {
-  "version": "1.8.19",
-  "publishedAt": "2026-04-02T08:21:06-04:00",
+  "version": "1.21.0",
+  "publishedAt": "2026-04-05T02:46:19-04:00",
   "notes": [
-    "Keep overdue tasks out of today",
-    "Simplify UI and remove redundant descriptions in Admin and Release components",
-    "Bump app version to 1.8.19"
+    "Remove dtstart, adopt due-date-only task model",
+    "Add Sentry telemetry across all platforms (v1.14.0)",
+    "Add app-backend version synchronization (v1.13.0)"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v1.8.19",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v1.8.18..v1.8.19"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v1.21.0",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v1.8.22..v1.21.0"
 }
