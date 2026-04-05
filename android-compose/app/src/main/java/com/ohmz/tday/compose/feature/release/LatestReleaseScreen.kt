@@ -57,6 +57,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -78,6 +79,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -235,22 +237,20 @@ fun LatestReleaseScreen(
                 .padding(horizontal = 18.dp, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            when {
-                uiState.isLoading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            strokeWidth = 3.dp,
-                        )
-                    }
+            if (uiState.isLoading && uiState.currentRelease == null && uiState.latestRelease == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 48.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        strokeWidth = 3.dp,
+                    )
                 }
-
-                uiState.error != null -> {
+            } else {
+                if (uiState.error != null && uiState.currentRelease == null && uiState.latestRelease == null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(24.dp),
@@ -275,36 +275,34 @@ fun LatestReleaseScreen(
                     }
                 }
 
-                else -> {
-                    ReleaseContent(
-                        uiState = uiState,
-                        apkInstallUiState = installUiState,
-                        onDownloadApk = { asset ->
-                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
-                            if (!InAppApkUpdater.canInstallPackages(context)) {
-                                pendingInstallAsset = asset
-                                installUiState = ApkInstallUiState.AwaitingPermission
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.release_install_permission_return_hint),
-                                    Toast.LENGTH_LONG,
-                                ).show()
-                                installPermissionLauncher.launch(InAppApkUpdater.buildInstallPermissionIntent(context))
-                            } else {
-                                pendingInstallAsset = null
-                                startApkInstall(
-                                    context = context,
-                                    asset = asset,
-                                    scope = installScope,
-                                    onStateChange = { installUiState = it },
-                                )
-                            }
-                        },
-                        onOpenInBrowser = { url ->
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                        },
-                    )
-                }
+                ReleaseContent(
+                    uiState = uiState,
+                    apkInstallUiState = installUiState,
+                    onDownloadApk = { asset ->
+                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+                        if (!InAppApkUpdater.canInstallPackages(context)) {
+                            pendingInstallAsset = asset
+                            installUiState = ApkInstallUiState.AwaitingPermission
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.release_install_permission_return_hint),
+                                Toast.LENGTH_LONG,
+                            ).show()
+                            installPermissionLauncher.launch(InAppApkUpdater.buildInstallPermissionIntent(context))
+                        } else {
+                            pendingInstallAsset = null
+                            startApkInstall(
+                                context = context,
+                                asset = asset,
+                                scope = installScope,
+                                onStateChange = { installUiState = it },
+                            )
+                        }
+                    },
+                    onOpenInBrowser = { url ->
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    },
+                )
             }
         }
     }
@@ -432,6 +430,8 @@ private fun ReleaseContent(
         currentRelease = currentRelease,
         latestRelease = latestRelease,
         hasUpdate = uiState.hasUpdate,
+        backendVersion = uiState.backendVersion,
+        versionCheckResult = uiState.versionCheckResult,
     )
 
     if (uiState.hasUpdate && latestRelease != null) {
@@ -468,22 +468,40 @@ private fun ReleaseOverviewCard(
     currentRelease: GitHubRelease?,
     latestRelease: GitHubRelease?,
     hasUpdate: Boolean,
+    backendVersion: String? = null,
+    versionCheckResult: VersionCheckResult? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val accent = if (hasUpdate) colorScheme.primary else colorScheme.onSurface
-    val title = if (hasUpdate) stringResource(R.string.release_update_available) else stringResource(R.string.release_up_to_date)
-    val summary = if (hasUpdate) {
-        latestRelease?.tagName?.let { "Version $it is ready to install." }
-            ?: "A newer version is ready to install."
-    } else {
-        stringResource(R.string.release_up_to_date_message)
+    val isIncompatible = versionCheckResult is VersionCheckResult.AppUpdateRequired ||
+        versionCheckResult is VersionCheckResult.ServerUpdateRequired
+    val accent = when {
+        isIncompatible -> colorScheme.error
+        hasUpdate -> colorScheme.primary
+        else -> colorScheme.onSurface
+    }
+    val title = when {
+        isIncompatible -> "Version Mismatch"
+        hasUpdate -> stringResource(R.string.release_update_available)
+        else -> stringResource(R.string.release_up_to_date)
+    }
+    val summary = when (versionCheckResult) {
+        is VersionCheckResult.AppUpdateRequired ->
+            "The server requires v${versionCheckResult.requiredVersion}. Update the app to continue."
+        is VersionCheckResult.ServerUpdateRequired ->
+            "This app requires the server to be on v$currentVersion, but the server is on v${versionCheckResult.serverVersion}."
+        else -> if (hasUpdate) {
+            latestRelease?.tagName?.let { "Version $it is ready to install." }
+                ?: "A newer version is ready to install."
+        } else {
+            stringResource(R.string.release_up_to_date_message)
+        }
     }
 
     ReleaseSurfaceCard(
-        borderColor = if (hasUpdate) {
-            accent.copy(alpha = 0.12f)
-        } else {
-            colorScheme.onSurface.copy(alpha = 0.05f)
+        borderColor = when {
+            isIncompatible -> accent.copy(alpha = 0.12f)
+            hasUpdate -> accent.copy(alpha = 0.12f)
+            else -> colorScheme.onSurface.copy(alpha = 0.05f)
         },
     ) {
         ReleaseSectionTitle(
@@ -503,6 +521,15 @@ private fun ReleaseOverviewCard(
             version = "v$currentVersion",
             tint = colorScheme.primary,
         )
+        if (backendVersion != null) {
+            val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
+                versionCheckResult == null
+            ReleaseVersionLine(
+                label = "Server",
+                version = "v$backendVersion",
+                tint = if (isCompatible) Color(0xFF4CAF50) else colorScheme.error,
+            )
+        }
         latestRelease?.takeIf { hasUpdate }?.let {
             ReleaseVersionLine(
                 label = "Latest",
