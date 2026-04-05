@@ -30,11 +30,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +45,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.feature.release.GitHubAsset
@@ -82,6 +87,13 @@ fun UpdateRequiredOverlay(
     val installConfirmationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
     ) { }
+
+    OnOverlayResume {
+        val asset = pendingAsset ?: return@OnOverlayResume
+        if (!InAppApkUpdater.canInstallPackages(context)) return@OnOverlayResume
+        pendingAsset = null
+        startOverlayInstall(context, asset, scope) { installState = it }
+    }
 
     LaunchedEffect(installerEvent) {
         when (val event = installerEvent) {
@@ -354,4 +366,19 @@ private sealed interface OverlayInstallState {
     data class Downloading(val progress: Float?) : OverlayInstallState
     data object Installing : OverlayInstallState
     data class Error(val message: String) : OverlayInstallState
+}
+
+@Composable
+private fun OnOverlayResume(action: () -> Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentAction by rememberUpdatedState(action)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                currentAction()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 }
