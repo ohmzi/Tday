@@ -225,7 +225,7 @@ fun SettingsScreen(
                             color = colorScheme.onSurface.copy(alpha = 0.58f),
                         )
                     }
-                    if (!adminAiSummaryError.isNullOrBlank()) {
+                    if (!adminAiSummaryError.isNullOrBlank() && adminAiSummaryEnabled == true) {
                         Text(
                             text = adminAiSummaryError,
                             style = MaterialTheme.typography.bodySmall,

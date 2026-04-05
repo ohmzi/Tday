@@ -145,6 +145,59 @@ The `postversion` hook syncs the iOS `Info.plist` and stages it, so the version-
 
 **Never** set version numbers directly in `build.gradle.kts` or any other file. Edit only `tday-web/package.json`.
 
+### Version Reference
+
+Every file that contains or controls a version number, grouped by platform.
+
+#### Web App (source of truth)
+
+| File | What | Notes |
+|------|------|-------|
+| `tday-web/package.json` (`"version"`) | App semver (e.g. `1.21.0`) | **Edit only this file** — all other app versions derive from it. |
+| `tday-web/vite.config.ts` (`__APP_VERSION__`) | Build-time define from `npm_package_version` | Injected into the SPA at build; fallback `"0.0.0"`. |
+| `tday-web/src/main.tsx` | Sentry release (`tday-web@<version>`) | Derived at build time. |
+
+#### Android
+
+| File | What | Notes |
+|------|------|-------|
+| `android-compose/app/build.gradle.kts` | `versionName` / `versionCode` | Parsed from `tday-web/package.json` at build time. `versionCode` = `major*10000 + minor*100 + patch`. |
+| `android-compose/.../TdayApplication.kt` | Sentry release (`tday-android@<version>`) | Uses `BuildConfig.VERSION_NAME`. |
+| `android-compose/.../NetworkModule.kt` | `X-Tday-App-Version` HTTP header | Uses `BuildConfig.VERSION_NAME`. |
+
+#### iOS
+
+| File | What | Notes |
+|------|------|-------|
+| `ios-swiftUI/Tday/Info.plist` (`CFBundleShortVersionString`) | Marketing version (e.g. `1.21.0`) | Auto-synced by `scripts/sync-ios-version.sh` on `npm version`. |
+| `ios-swiftUI/Tday/Info.plist` (`CFBundleVersion`) | Build number | Incremented manually for App Store submissions. |
+| `ios-swiftUI/.../SentryConfiguration.swift` | Sentry release (`tday-ios@<version>`) | Uses `CFBundleShortVersionString`. |
+
+#### Backend
+
+| File | What | Notes |
+|------|------|-------|
+| `tday-backend/build.gradle.kts` (`version`) | Gradle artifact version | Used for JAR metadata; not displayed to users. |
+| `tday-backend/.../Application.kt` | Sentry release (`tday-backend@<version>`) | Reads `TDAY_BACKEND_VERSION` env var with a hardcoded fallback. |
+
+#### Server Compatibility (`TDAY_APP_VERSION`)
+
+The `TDAY_APP_VERSION` environment variable tells the backend which app version it is compatible with. When `TDAY_UPDATE_REQUIRED=true`, clients that connect with a different version are shown an "Update Required" or "Server Update Needed" screen.
+
+| File | Purpose | Notes |
+|------|---------|-------|
+| `.env.docker` | **Live value** used by the running Docker container | This is the file that actually controls what the server reports. Update here and recreate the container to take effect. |
+| `.env.example` | Template for new deployments (project root) | Keep in sync with `.env.docker` when bumping. |
+| `tday-backend/.env.example` | Template for local backend development | Keep in sync with `.env.docker` when bumping. |
+| `tday-backend/.../AppConfig.kt` (`probeAppVersion`) | Reads `TDAY_APP_VERSION` at startup | No hardcoded version; purely env-driven. |
+
+**Updating `TDAY_APP_VERSION`:** After releasing a new app version, update the value in `.env.docker` (and the two `.env.example` files) to match the newly released version, then recreate the backend container:
+
+```bash
+# After editing .env.docker
+docker compose up -d tday-backend
+```
+
 ### Android Signing
 
 Distributable Android release builds must use the same release keystore every time, or Android will reject updates with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`.
