@@ -38,13 +38,25 @@ class UpdateInstallerStatusReceiver : BroadcastReceiver() {
             }
 
             else -> {
-                val statusMessage = statusIntent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
-                    ?.takeIf { it.isNotBlank() }
-                    ?: context.getString(R.string.release_install_failed)
-                InAppApkUpdater.publishError(sessionId, statusMessage)
-                Toast.makeText(context, statusMessage, Toast.LENGTH_LONG).show()
+                val status = statusIntent.getIntExtra(PackageInstaller.EXTRA_STATUS, Int.MIN_VALUE)
+                val friendlyMessage = friendlyInstallerMessage(context, status)
+                InAppApkUpdater.publishError(sessionId, friendlyMessage)
+                Toast.makeText(context, friendlyMessage, Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun friendlyInstallerMessage(context: Context, status: Int): String = when (status) {
+        PackageInstaller.STATUS_FAILURE_ABORTED ->
+            context.getString(R.string.release_install_cancelled)
+        PackageInstaller.STATUS_FAILURE_BLOCKED ->
+            context.getString(R.string.release_install_blocked)
+        PackageInstaller.STATUS_FAILURE_STORAGE ->
+            context.getString(R.string.release_install_storage)
+        PackageInstaller.STATUS_FAILURE_INCOMPATIBLE ->
+            context.getString(R.string.release_install_incompatible)
+        else ->
+            context.getString(R.string.release_install_failed)
     }
 
     private fun publishPendingUserAction(
