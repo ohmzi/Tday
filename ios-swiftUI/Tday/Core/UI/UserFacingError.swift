@@ -1,5 +1,13 @@
 import Foundation
 
+struct MessageError: LocalizedError, Equatable {
+    let message: String
+
+    var errorDescription: String? {
+        message
+    }
+}
+
 func userFacingMessage(for error: Error, fallback: String = "Something went wrong. Please try again.") -> String {
     if error is DecodingError || "\(error)".contains("DecodingError") {
         return "This version of the app is out of date. Please update to continue."

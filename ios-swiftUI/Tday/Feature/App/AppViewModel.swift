@@ -39,8 +39,8 @@ final class AppViewModel {
         return Self.compareVersions(remote, currentVersionName) > 0
     }
 
-    private var cacheObservationTask: Task<Void, Never>?
-    private var syncLoopTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var cacheObservationTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var syncLoopTask: Task<Void, Never>?
 
     init(container: AppContainer) {
         self.container = container
@@ -135,7 +135,7 @@ final class AppViewModel {
         await bootstrap()
     }
 
-    func connectServer(rawURL: String) async -> Result<Void, String> {
+    func connectServer(rawURL: String) async -> Result<Void, MessageError> {
         do {
             let probeResult = try await container.serverConfigRepository.probeAndSave(rawURL)
             serverURL = probeResult.serverURL
@@ -151,7 +151,7 @@ final class AppViewModel {
             let msg = userFacingMessage(for: error, fallback: "Could not connect to server.")
             self.error = msg
             canResetServerTrust = true
-            return .failure(msg)
+            return .failure(MessageError(message: msg))
         }
     }
 
@@ -168,7 +168,7 @@ final class AppViewModel {
         }
     }
 
-    func resetTrustedServer(rawURL: String) async -> Result<Void, String> {
+    func resetTrustedServer(rawURL: String) async -> Result<Void, MessageError> {
         do {
             _ = try await container.serverConfigRepository.resetTrustedServer(rawURL: rawURL)
             serverURL = container.serverConfigRepository.getServerURL()?.absoluteString
@@ -179,7 +179,7 @@ final class AppViewModel {
         } catch {
             let msg = userFacingMessage(for: error, fallback: "Could not reset trusted server.")
             self.error = msg
-            return .failure(msg)
+            return .failure(MessageError(message: msg))
         }
     }
 
@@ -379,7 +379,7 @@ final class AppViewModel {
         } catch {}
     }
 
-    static func compareVersions(_ a: String, _ b: String) -> Int {
+    nonisolated static func compareVersions(_ a: String, _ b: String) -> Int {
         let aParts = a.split(separator: ".").map { Int($0) ?? 0 }
         let bParts = b.split(separator: ".").map { Int($0) ?? 0 }
         let maxLen = max(aParts.count, bParts.count)
