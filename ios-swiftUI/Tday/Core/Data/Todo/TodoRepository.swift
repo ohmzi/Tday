@@ -36,17 +36,20 @@ final class TodoRepository {
 
         let now = Date().epochMilliseconds
         let localTodoID = LOCAL_TODO_PREFIX + UUID().uuidString.lowercased()
+        let normalizedDescription = payload.description.nilIfBlank
+        let normalizedListID = payload.listId.nilIfBlank
+        let normalizedPriorityValue = normalizedPriority(payload.priority)
         let mutation = PendingMutationRecord(
             mutationId: UUID().uuidString,
             kind: .createTodo,
             targetId: localTodoID,
             timestampEpochMs: now,
             title: normalizedTitle,
-            description: payload.description?.nilIfBlank,
-            priority: normalizedPriority(payload.priority),
+            description: normalizedDescription,
+            priority: normalizedPriorityValue,
             dueEpochMs: payload.due.epochMilliseconds,
             rrule: payload.rrule,
-            listId: payload.listId?.nilIfBlank,
+            listId: normalizedListID,
             pinned: false,
             completed: false,
             instanceDateEpochMs: nil,
@@ -55,21 +58,21 @@ final class TodoRepository {
             iconKey: nil
         )
 
-        cacheManager.updateOfflineState { state in
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.todos.append(
                 CachedTodoRecord(
                     id: localTodoID,
                     canonicalId: localTodoID,
                     title: normalizedTitle,
-                    description: payload.description?.nilIfBlank,
-                    priority: normalizedPriority(payload.priority),
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
                     dueEpochMs: payload.due.epochMilliseconds,
                     rrule: payload.rrule,
                     instanceDateEpochMs: nil,
                     pinned: false,
                     completed: false,
-                    listId: payload.listId?.nilIfBlank,
+                    listId: normalizedListID,
                     updatedAtEpochMs: now
                 )
             )
@@ -90,8 +93,10 @@ final class TodoRepository {
         }
 
         let now = Date().epochMilliseconds
-        let normalizedListID = payload.listId?.nilIfBlank
-        cacheManager.updateOfflineState { state in
+        let normalizedDescription = payload.description.nilIfBlank
+        let normalizedListID = payload.listId.nilIfBlank
+        let normalizedPriorityValue = normalizedPriority(payload.priority)
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.todos = state.todos.map { current in
                 let sameTodo = current.canonicalId == todo.canonicalId && current.instanceDateEpochMs == todo.instanceDateEpochMilliseconds
@@ -100,8 +105,8 @@ final class TodoRepository {
                     id: current.id,
                     canonicalId: current.canonicalId,
                     title: normalizedTitle,
-                    description: payload.description?.nilIfBlank,
-                    priority: normalizedPriority(payload.priority),
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
                     dueEpochMs: payload.due.epochMilliseconds,
                     rrule: payload.rrule,
                     instanceDateEpochMs: current.instanceDateEpochMs,
@@ -119,8 +124,8 @@ final class TodoRepository {
                     targetId: todo.canonicalId,
                     timestampEpochMs: now,
                     title: normalizedTitle,
-                    description: payload.description?.nilIfBlank,
-                    priority: normalizedPriority(payload.priority),
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
                     dueEpochMs: payload.due.epochMilliseconds,
                     rrule: payload.rrule,
                     listId: normalizedListID,
@@ -142,7 +147,7 @@ final class TodoRepository {
 
     func deleteTodo(_ todo: TodoItem) async throws {
         let now = Date().epochMilliseconds
-        cacheManager.updateOfflineState { state in
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.todos.removeAll { $0.canonicalId == todo.canonicalId && $0.instanceDateEpochMs == todo.instanceDateEpochMilliseconds }
             nextState.pendingMutations.removeAll { $0.targetId == todo.canonicalId && ($0.kind == .createTodo || $0.kind == .updateTodo) }
@@ -178,7 +183,7 @@ final class TodoRepository {
 
     func completeTodo(_ todo: TodoItem) async throws {
         let now = Date().epochMilliseconds
-        cacheManager.updateOfflineState { state in
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.todos.removeAll { $0.canonicalId == todo.canonicalId && $0.instanceDateEpochMs == todo.instanceDateEpochMilliseconds }
             nextState.completedItems.insert(
@@ -255,7 +260,7 @@ final class TodoRepository {
 
     private func updateSimpleTodoMutation(_ todo: TodoItem, kind: MutationKind, pinned: Bool?, priority: String?) async throws {
         let now = Date().epochMilliseconds
-        cacheManager.updateOfflineState { state in
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.todos = state.todos.map { current in
                 guard current.canonicalId == todo.canonicalId && current.instanceDateEpochMs == todo.instanceDateEpochMilliseconds else {

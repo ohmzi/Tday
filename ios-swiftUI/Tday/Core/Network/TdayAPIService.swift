@@ -68,21 +68,28 @@ final class TdayAPIService {
         try await request(path: "/api/auth/credentials-key", method: "GET", responseType: CredentialKeyResponse.self)
     }
 
-    func signInWithCredentials(payload: [String: String]) async throws -> AuthRedirectResponse {
-        var response = try await requestRaw(
+    func signInWithCredentials(payload: CredentialsCallbackRequest) async throws -> (response: AuthRedirectResponse, statusCode: Int) {
+        let encodedBody = try encoder.encode(payload)
+        let response = try await requestRawAllowingStatus(
             path: "/api/auth/callback/credentials",
             method: "POST",
-            body: formBody(from: payload),
-            contentType: "application/x-www-form-urlencoded; charset=utf-8",
-            extraHeaders: ["X-Auth-Return-Redirect": "1"]
+            body: encodedBody,
+            contentType: "application/json"
         )
         let locationHeader = response.httpResponse.value(forHTTPHeaderField: "Location")
-        if response.data.trimmingCharacters(in: .whitespacesAndNewlines) == "null" {
-            return AuthRedirectResponse(url: locationHeader)
-        }
+        let trimmedBody = response.data.trimmingCharacters(in: .whitespacesAndNewlines)
+        let decoded = trimmedBody.isEmpty || trimmedBody == "null"
+            ? nil
+            : try? decode(response.data, as: AuthRedirectResponse.self)
 
-        let decoded = try decode(response.data, as: AuthRedirectResponse.self)
-        return AuthRedirectResponse(url: decoded.url ?? locationHeader)
+        return (
+            response: AuthRedirectResponse(
+                url: decoded?.url ?? locationHeader,
+                message: decoded?.message,
+                code: decoded?.code
+            ),
+            statusCode: response.httpResponse.statusCode
+        )
     }
 
     func getSession() async throws -> AuthSession? {
@@ -94,20 +101,12 @@ final class TdayAPIService {
         return try decode(response.data, as: AuthSession.self)
     }
 
-    func signOut(payload: [String: String]) async throws -> AuthRedirectResponse {
-        let response = try await requestRaw(
-            path: "/api/auth/signout",
-            method: "POST",
-            body: formBody(from: payload),
-            contentType: "application/x-www-form-urlencoded; charset=utf-8",
-            extraHeaders: ["X-Auth-Return-Redirect": "1"]
-        )
-        let locationHeader = response.httpResponse.value(forHTTPHeaderField: "Location")
+    func signOut() async throws -> MessageResponse {
+        let response = try await requestRaw(path: "/api/auth/logout", method: "POST")
         if response.data.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return AuthRedirectResponse(url: locationHeader)
+            return MessageResponse(message: "Logged out")
         }
-        let decoded = try decode(response.data, as: AuthRedirectResponse.self)
-        return AuthRedirectResponse(url: decoded.url ?? locationHeader)
+        return try decode(response.data, as: MessageResponse.self)
     }
 
     func register(payload: RegisterRequest) async throws -> RegisterResponse {
@@ -357,6 +356,49 @@ final class TdayAPIService {
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
+        try await performRequestRaw(
+            path: path,
+            method: method,
+            queryItems: queryItems,
+            body: body,
+            contentType: contentType,
+            extraHeaders: extraHeaders,
+            allowRewrite: allowRewrite,
+            validateStatus: true
+        )
+    }
+
+    private func requestRawAllowingStatus(
+        path: String,
+        method: String,
+        queryItems: [URLQueryItem] = [],
+        body: Data? = nil,
+        contentType: String? = nil,
+        extraHeaders: [String: String] = [:],
+        allowRewrite: Bool = true
+    ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
+        try await performRequestRaw(
+            path: path,
+            method: method,
+            queryItems: queryItems,
+            body: body,
+            contentType: contentType,
+            extraHeaders: extraHeaders,
+            allowRewrite: allowRewrite,
+            validateStatus: false
+        )
+    }
+
+    private func performRequestRaw(
+        path: String,
+        method: String,
+        queryItems: [URLQueryItem] = [],
+        body: Data? = nil,
+        contentType: String? = nil,
+        extraHeaders: [String: String] = [:],
+        allowRewrite: Bool = true,
+        validateStatus: Bool
+    ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         var url = try configuration.makeURL(path: path, allowRewrite: allowRewrite)
         if !queryItems.isEmpty {
             var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -386,7 +428,7 @@ final class TdayAPIService {
                 throw APIError(message: "Unexpected server response", statusCode: nil)
             }
             let bodyString = String(data: data, encoding: .utf8) ?? ""
-            guard (200 ..< 300).contains(httpResponse.statusCode) else {
+            guard !validateStatus || (200 ..< 300).contains(httpResponse.statusCode) else {
                 let serverMessage = decodeServerErrorMessage(from: bodyString) ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
                 let breadcrumb = Breadcrumb(level: .error, category: "api")
                 breadcrumb.message = "\(method) \(url.path) — \(httpResponse.statusCode)"
@@ -401,17 +443,6 @@ final class TdayAPIService {
             SentrySDK.capture(error: error)
             throw APIError(message: error.localizedDescription, statusCode: nil)
         }
-    }
-
-    private func formBody(from payload: [String: String]) -> Data {
-        payload
-            .map { key, value in
-                let encodedKey = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
-                let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
-                return "\(encodedKey)=\(encodedValue)"
-            }
-            .joined(separator: "&")
-            .data(using: .utf8) ?? Data()
     }
 
     private func decode<Response: Decodable>(_ data: String, as type: Response.Type) throws -> Response {
