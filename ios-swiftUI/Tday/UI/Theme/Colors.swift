@@ -11,9 +11,9 @@ extension Color {
     static let tdayDarkMuted = Color(red: 0.63, green: 0.66, blue: 0.74)
     static let tdayDarkError = Color(red: 0.89, green: 0.49, blue: 0.49)
 
-    static let tdayLightBackground = Color(red: 0.96, green: 0.97, blue: 0.98)
+    static let tdayLightBackground = Color(red: 244.0 / 255.0, green: 246.0 / 255.0, blue: 251.0 / 255.0)
     static let tdayLightSurface = Color.white
-    static let tdayLightSurfaceVariant = Color(red: 0.90, green: 0.92, blue: 0.95)
+    static let tdayLightSurfaceVariant = Color(red: 230.0 / 255.0, green: 234.0 / 255.0, blue: 243.0 / 255.0)
     static let tdayLightAccent = Color(red: 0.16, green: 0.43, blue: 0.76)
     static let tdayLightSecondary = Color(red: 0.29, green: 0.53, blue: 0.86)
     static let tdayLightWarm = Color(red: 0.72, green: 0.53, blue: 0.27)
