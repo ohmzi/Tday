@@ -125,16 +125,14 @@ struct CalendarScreen: View {
                     Text("Today")
                 }
             }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showingCreateTask = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
         }
         .refreshable {
             await viewModel.refresh()
+        }
+        .safeAreaInset(edge: .bottom) {
+            TaskFloatingActionButtonDock {
+                showingCreateTask = true
+            }
         }
         .sheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
