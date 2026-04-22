@@ -41,27 +41,34 @@ final class AuthRepository {
         }
 
         do {
+            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             let key = try await api.getCredentialKey()
-            let envelope = try CredentialEnvelopeBuilder.build(email: email, password: password, credentialKey: key)
+            let envelope = try CredentialEnvelopeBuilder.build(email: normalizedEmail, password: password, credentialKey: key)
             let csrf = try await api.getCsrfToken().csrfToken
             let callbackURL = serverConfigRepository.buildAbsoluteAppURL("app/tday")?.absoluteString
                 ?? "/app/tday"
-            let callbackResponse = try await api.signInWithCredentials(
-                payload: [
-                    "csrfToken": csrf,
-                    "encryptedPayload": envelope.encryptedPayload,
-                    "encryptedKey": envelope.encryptedKey,
-                    "encryptedIv": envelope.encryptedIv,
-                    "credentialKeyId": envelope.keyId,
-                    "credentialEnvelopeVersion": envelope.version,
-                    "redirect": "false",
-                    "callbackUrl": callbackURL,
-                ]
+            let callback = try await api.signInWithCredentials(
+                payload: CredentialsCallbackRequest(
+                    email: nil,
+                    password: nil,
+                    encryptedPayload: envelope.encryptedPayload,
+                    encryptedKey: envelope.encryptedKey,
+                    encryptedIv: envelope.encryptedIv,
+                    credentialKeyId: envelope.keyId,
+                    credentialEnvelopeVersion: envelope.version,
+                    passwordProof: nil,
+                    passwordProofChallengeId: nil,
+                    passwordProofVersion: nil,
+                    captchaToken: nil,
+                    csrfToken: csrf,
+                    redirect: "false",
+                    callbackUrl: callbackURL
+                )
             )
 
-            let components = URLComponents(string: callbackResponse.url ?? "")
-            let code = components?.queryItems?.first(where: { $0.name == "code" })?.value
-            let errorCode = components?.queryItems?.first(where: { $0.name == "error" })?.value
+            let queryItems = URLComponents(string: callback.response.url ?? "")?.queryItems ?? []
+            let code = callback.response.code ?? queryItems.first(where: { $0.name == "code" })?.value
+            let errorCode = queryItems.first(where: { $0.name == "error" })?.value
 
             if code == "pending_approval" {
                 return .pendingApproval
@@ -69,9 +76,16 @@ final class AuthRepository {
             if let errorCode, !errorCode.isEmpty {
                 return .error(mapAuthError(errorCode))
             }
+            if !(200 ..< 300).contains(callback.statusCode) && !(300 ..< 400).contains(callback.statusCode) {
+                let responseMessage = callback.response.message?.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let responseMessage, !responseMessage.isEmpty {
+                    return .error(mapAuthError(responseMessage))
+                }
+                return .error("Unable to sign in")
+            }
 
             if let user = await restoreSession(), user.id != nil {
-                secureStore.saveLastEmail(email.trimmingCharacters(in: .whitespacesAndNewlines))
+                secureStore.saveLastEmail(normalizedEmail)
                 serverConfigRepository.persistRuntimeServerURL()
                 await syncTimezone()
                 return .success
@@ -104,24 +118,24 @@ final class AuthRepository {
 
     func logout() async {
         do {
-            let csrf = try await api.getCsrfToken().csrfToken
-            let callbackURL = serverConfigRepository.buildAbsoluteAppURL("login")?.absoluteString ?? "/login"
-            _ = try? await api.signOut(payload: ["csrfToken": csrf, "callbackUrl": callbackURL])
+            _ = try? await api.signOut()
         } catch {
             // Best effort sign-out before local cleanup.
         }
-        clearAllLocalUserDataForUnauthenticatedState()
+        await clearAllLocalUserDataForUnauthenticatedState()
     }
 
     func syncTimezone() async {
         _ = try? await api.syncTimezone(TimeZone.current.identifier)
     }
 
+    @MainActor
     func clearSessionOnly() {
         cacheManager.clearSessionOnly()
         cookieStore.clearAll()
     }
 
+    @MainActor
     func clearAllLocalUserDataForUnauthenticatedState() {
         cacheManager.clearAllLocalData()
         cookieStore.clearAll()
@@ -143,10 +157,14 @@ final class AuthRepository {
         switch value {
         case "CredentialsSignin":
             return "Incorrect email or password"
+        case "Invalid credentials":
+            return "Incorrect email or password"
         case "AccessDenied":
             return "Your account does not have access"
         case "SessionRequired":
             return "Please sign in again"
+        case "Account approval required":
+            return "Account pending admin approval."
         default:
             return value
         }
