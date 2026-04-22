@@ -3,17 +3,22 @@ import UserNotifications
 
 final class TaskReminderScheduler {
     private let reminderPreferenceStore: ReminderPreferenceStore
-    private let notificationCenter = UNUserNotificationCenter.current()
 
     init(reminderPreferenceStore: ReminderPreferenceStore) {
         self.reminderPreferenceStore = reminderPreferenceStore
     }
 
     func requestAuthorization() async {
+        guard let notificationCenter else {
+            return
+        }
         _ = try? await notificationCenter.requestAuthorization(options: [.alert, .sound, .badge])
     }
 
     func reschedule(tasks: [TodoItem], defaultReminder: ReminderOption) async {
+        guard let notificationCenter else {
+            return
+        }
         let identifiers = tasks.map { notificationIdentifier(for: $0) }
         notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
 
@@ -42,5 +47,12 @@ final class TaskReminderScheduler {
 
     private func notificationIdentifier(for task: TodoItem) -> String {
         "tday.todo.\(task.id)"
+    }
+
+    private var notificationCenter: UNUserNotificationCenter? {
+        guard Bundle.main.bundleURL.pathExtension == "app" else {
+            return nil
+        }
+        return UNUserNotificationCenter.current()
     }
 }

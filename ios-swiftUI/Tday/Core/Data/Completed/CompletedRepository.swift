@@ -25,7 +25,7 @@ final class CompletedRepository {
             throw APIError(message: "Completed todo is missing original todo id", statusCode: nil)
         }
         let now = Date().epochMilliseconds
-        cacheManager.updateOfflineState { state in
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.completedItems.removeAll { $0.id == item.id }
             nextState.todos.append(
@@ -75,13 +75,16 @@ final class CompletedRepository {
     }
 
     func updateCompletedTodo(_ item: CompletedItem, payload: CreateTaskPayload) async throws {
-        let previousState = cacheManager.loadOfflineState()
+        let previousState = try await cacheManager.loadOfflineState()
         let normalizedTitle = payload.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedTitle.isEmpty else {
             return
         }
 
-        cacheManager.updateOfflineState { state in
+        let normalizedDescription = payload.description.nilIfBlank
+        let normalizedListID = payload.listId.nilIfBlank
+        let normalizedPriorityValue = normalizedPriority(payload.priority)
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.completedItems = state.completedItems.map { current in
                 guard current.id == item.id else { return current }
@@ -89,8 +92,8 @@ final class CompletedRepository {
                     id: current.id,
                     originalTodoId: current.originalTodoId,
                     title: normalizedTitle,
-                    description: payload.description?.nilIfBlank,
-                    priority: normalizedPriority(payload.priority),
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
                     dueEpochMs: payload.due.epochMilliseconds,
                     completedAtEpochMs: current.completedAtEpochMs,
                     rrule: payload.rrule,
@@ -107,22 +110,22 @@ final class CompletedRepository {
                 payload: UpdateCompletedTodoRequest(
                     id: item.id,
                     title: normalizedTitle,
-                    description: payload.description?.nilIfBlank,
-                    priority: normalizedPriority(payload.priority),
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
                     due: payload.due.ISO8601Format(),
                     rrule: payload.rrule,
-                    listID: payload.listId?.nilIfBlank
+                    listID: normalizedListID
                 )
             )
         } catch {
-            cacheManager.saveOfflineState(previousState)
+            try await cacheManager.saveOfflineState(previousState)
             throw error
         }
     }
 
     func deleteCompletedTodo(_ item: CompletedItem) async throws {
-        let previousState = cacheManager.loadOfflineState()
-        cacheManager.updateOfflineState { state in
+        let previousState = try await cacheManager.loadOfflineState()
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.completedItems.removeAll { $0.id == item.id }
             return nextState
@@ -135,7 +138,7 @@ final class CompletedRepository {
         do {
             _ = try await api.deleteCompletedTodoByBody(payload: DeleteCompletedTodoRequest(id: item.id))
         } catch {
-            cacheManager.saveOfflineState(previousState)
+            try await cacheManager.saveOfflineState(previousState)
             throw error
         }
     }
