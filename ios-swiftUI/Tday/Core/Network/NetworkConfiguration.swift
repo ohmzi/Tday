@@ -99,6 +99,10 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         cookieStore.clearAll()
     }
 
+    func syncPersistedAuthCookie() {
+        cookieStore.syncPersistedAuthCookie()
+    }
+
     func isSecureTransportRequired(for url: URL) -> Bool {
         guard let host = url.host?.lowercased() else {
             return true
