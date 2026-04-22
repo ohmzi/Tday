@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SettingsScreen: View {
     let viewModel: AppViewModel
-    let onBack: () -> Void
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
@@ -97,13 +96,7 @@ struct SettingsScreen: View {
         .scrollContentBackground(.hidden)
         .background(colors.background)
         .navigationTitle("Settings")
-        .navigationBarBackButtonHidden()
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back", action: onBack)
-            }
-        }
         .task {
             await viewModel.refreshAdminAiSummarySetting()
         }

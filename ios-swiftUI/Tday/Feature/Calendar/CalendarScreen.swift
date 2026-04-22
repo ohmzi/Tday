@@ -7,7 +7,6 @@ private enum CalendarScope: String, CaseIterable {
 }
 
 struct CalendarScreen: View {
-    let onBack: () -> Void
     @State private var viewModel: CalendarViewModel
     @Environment(\.tdayColors) private var colors
 
@@ -16,8 +15,7 @@ struct CalendarScreen: View {
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
 
-    init(container: AppContainer, onBack: @escaping () -> Void) {
-        self.onBack = onBack
+    init(container: AppContainer) {
         _viewModel = State(initialValue: CalendarViewModel(container: container))
     }
 
@@ -119,11 +117,7 @@ struct CalendarScreen: View {
         .scrollContentBackground(.hidden)
         .background(colors.background)
         .navigationTitle("Calendar")
-        .navigationBarBackButtonHidden()
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back", action: onBack)
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     selectedDate = Date()

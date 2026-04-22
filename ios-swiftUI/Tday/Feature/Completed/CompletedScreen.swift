@@ -1,13 +1,11 @@
 import SwiftUI
 
 struct CompletedScreen: View {
-    let onBack: () -> Void
     @State private var viewModel: CompletedViewModel
     @Environment(\.tdayColors) private var colors
     @State private var editingItem: CompletedItem?
 
-    init(container: AppContainer, onBack: @escaping () -> Void) {
-        self.onBack = onBack
+    init(container: AppContainer) {
         _viewModel = State(initialValue: CompletedViewModel(container: container))
     }
 
@@ -69,12 +67,6 @@ struct CompletedScreen: View {
         .scrollContentBackground(.hidden)
         .background(colors.background)
         .navigationTitle("Completed")
-        .navigationBarBackButtonHidden()
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back", action: onBack)
-            }
-        }
         .refreshable {
             await viewModel.refresh()
         }
