@@ -91,13 +91,6 @@ struct TodoListScreen: View {
                     }
                 }
             }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showingCreateTask = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
         }
         .refreshable {
             await viewModel.refresh()
@@ -105,6 +98,11 @@ struct TodoListScreen: View {
         .onChange(of: viewModel.items) { _ in
             activeDropSectionId = nil
             draggedTodo = nil
+        }
+        .safeAreaInset(edge: .bottom) {
+            TaskFloatingActionButtonDock {
+                showingCreateTask = true
+            }
         }
         .sheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
