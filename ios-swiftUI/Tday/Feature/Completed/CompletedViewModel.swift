@@ -11,7 +11,7 @@ final class CompletedViewModel {
     var lists: [ListSummary] = []
     var errorMessage: String?
 
-    private var observationTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
 
     init(container: AppContainer) {
         self.container = container
