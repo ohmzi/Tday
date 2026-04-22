@@ -7,6 +7,7 @@ final class AppViewModel {
     let container: AppContainer
 
     var loading = true
+    var hasCompletedInitialBootstrap = false
     var authenticated = false
     var requiresServerSetup = false
     var requiresLogin = false
@@ -75,7 +76,7 @@ final class AppViewModel {
             adminAiSummaryError = nil
             pendingMutationCount = 0
             isOffline = false
-            loading = false
+            finishBootstrap()
             stopRealtime()
             stopSyncLoop()
             return
@@ -102,7 +103,7 @@ final class AppViewModel {
             pendingApprovalMessage = nil
             canResetServerTrust = true
             isOffline = false
-            loading = false
+            finishBootstrap()
             await refreshAdminAiSummarySetting()
             refreshPendingMutationCount()
             startRealtime()
@@ -126,7 +127,7 @@ final class AppViewModel {
         isAdminAiSummarySaving = false
         adminAiSummaryError = nil
         refreshPendingMutationCount()
-        loading = false
+        finishBootstrap()
         stopRealtime()
         stopSyncLoop()
     }
@@ -359,6 +360,11 @@ final class AppViewModel {
 
     private func isAdmin(_ user: SessionUser?) -> Bool {
         user?.role?.uppercased() == "ADMIN"
+    }
+
+    private func finishBootstrap() {
+        loading = false
+        hasCompletedInitialBootstrap = true
     }
 
     private func rescheduleReminders() async {
