@@ -427,6 +427,7 @@ final class TdayAPIService {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError(message: "Unexpected server response", statusCode: nil)
             }
+            configuration.syncPersistedAuthCookie()
             let bodyString = String(data: data, encoding: .utf8) ?? ""
             guard !validateStatus || (200 ..< 300).contains(httpResponse.statusCode) else {
                 let serverMessage = decodeServerErrorMessage(from: bodyString) ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
