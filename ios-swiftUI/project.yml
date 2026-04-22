@@ -1,0 +1,46 @@
+name: TdayApp
+
+options:
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "17.0"
+
+packages:
+  sentry-cocoa:
+    url: https://github.com/getsentry/sentry-cocoa
+    from: 8.45.0
+
+targets:
+  Tday:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tday
+        excludes:
+          - Info.plist
+    dependencies:
+      - package: sentry-cocoa
+        product: Sentry
+    settings:
+      base:
+        PRODUCT_NAME: Tday
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios
+        INFOPLIST_FILE: Tday/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 1.23.0
+        TARGETED_DEVICE_FAMILY: 1
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+
+schemes:
+  Tday:
+    build:
+      targets:
+        Tday: all
+    run:
+      config: Debug
+    archive:
+      config: Release

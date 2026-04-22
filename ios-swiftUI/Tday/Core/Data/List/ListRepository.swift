@@ -25,7 +25,7 @@ final class ListRepository {
         }
         let now = Date().epochMilliseconds
         let localListID = LOCAL_LIST_PREFIX + UUID().uuidString.lowercased()
-        cacheManager.updateOfflineState { state in
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.lists.append(
                 CachedListRecord(
@@ -71,7 +71,7 @@ final class ListRepository {
             return
         }
         let now = Date().epochMilliseconds
-        cacheManager.updateOfflineState { state in
+        _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.lists = state.lists.map { list in
                 guard list.id == listId else { return list }
