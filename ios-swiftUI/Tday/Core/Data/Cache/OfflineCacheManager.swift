@@ -161,28 +161,34 @@ final class OfflineCacheManager {
     }
 
     func loadOfflineState() async throws -> OfflineSyncState {
-        loadOfflineState()
+        let load: @MainActor () -> OfflineSyncState = self.loadOfflineState
+        return load()
     }
 
     func saveOfflineState(_ state: OfflineSyncState) async throws {
-        saveOfflineState(state)
+        let save: @MainActor (OfflineSyncState) -> Void = self.saveOfflineState
+        save(state)
     }
 
     @discardableResult
     func updateOfflineState(_ transform: @escaping (OfflineSyncState) -> OfflineSyncState) async throws -> OfflineSyncState {
-        updateOfflineState(transform)
+        let update: @MainActor ((OfflineSyncState) -> OfflineSyncState) -> OfflineSyncState = self.updateOfflineState
+        return update(transform)
     }
 
     func hasCachedData() async throws -> Bool {
-        hasCachedData()
+        let hasData: @MainActor () -> Bool = self.hasCachedData
+        return hasData()
     }
 
     func clearAllLocalData() async throws {
-        clearAllLocalData()
+        let clear: @MainActor () -> Void = self.clearAllLocalData
+        clear()
     }
 
     func clearSessionOnly() async throws {
-        clearSessionOnly()
+        let clear: @MainActor () -> Void = self.clearSessionOnly
+        clear()
     }
 
     private func replaceAll<T: PersistentModel>(_ modelType: T.Type) {

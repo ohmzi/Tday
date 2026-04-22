@@ -5,7 +5,7 @@ extension Optional where Wrapped == String {
         guard let self else {
             return nil
         }
-        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = self.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 }
