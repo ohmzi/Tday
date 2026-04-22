@@ -3,29 +3,30 @@
 import PackageDescription
 
 let package = Package(
-    name: "TdayIOS",
+    name: "TdayIOSSupport",
     defaultLocalization: "en",
     platforms: [
         .iOS(.v17),
     ],
     products: [
-        .executable(
-            name: "Tday",
-            targets: ["Tday"]
+        .library(
+            name: "TdayCore",
+            targets: ["TdayCore"]
         ),
     ],
     dependencies: [
         .package(url: "https://github.com/getsentry/sentry-cocoa", from: "8.45.0"),
     ],
     targets: [
-        .executableTarget(
-            name: "Tday",
+        .target(
+            name: "TdayCore",
             dependencies: [
                 .product(name: "Sentry", package: "sentry-cocoa"),
             ],
             path: "Tday",
             exclude: [
                 "Info.plist",
+                "TdayApp.swift",
             ]
         ),
     ]
