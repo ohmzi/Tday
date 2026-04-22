@@ -61,16 +61,24 @@ final class AuthViewModel {
 
     private func friendlyMessage(_ rawValue: String) -> String {
         let lower = rawValue.lowercased()
+        if lower.contains("invalid credentials") || lower.contains("incorrect email or password") {
+            return "Incorrect email or password"
+        }
+        if lower.contains("pending admin approval") || lower.contains("approval required") || lower.contains("pending_approval") {
+            return "Account pending admin approval."
+        }
         if lower.contains("127.0.0.1") || lower.contains("localhost") || lower.contains("econnrefused") {
             return "Cannot reach server. Check your server URL and try again."
         }
         if lower.contains("serial name") || lower.contains("codingkeys") ||
-           lower.contains("decodingerror") || lower.contains("no value associated with key") {
+           lower.contains("decodingerror") || lower.contains("no value associated with key") ||
+           lower.contains("unsupported secure sign-in version") {
             return "This version of the app is out of date. Please update to continue."
         }
         if lower.contains("timed out") || lower.contains("network") || lower.contains("cannot connect") {
             return "Connection error. Check your internet and try again."
         }
-        return "Something went wrong. Please try again."
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Something went wrong. Please try again." : trimmed
     }
 }
