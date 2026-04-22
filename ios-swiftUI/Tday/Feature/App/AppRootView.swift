@@ -1,18 +1,10 @@
 import SwiftUI
 
-private enum RootTab: Hashable {
-    case home
-    case calendar
-    case completed
-    case settings
-}
-
 struct AppRootView: View {
     private let container: AppContainer
 
     @State private var appViewModel: AppViewModel
     @State private var authViewModel: AuthViewModel
-    @State private var selectedTab: RootTab = .home
 
     init(container: AppContainer) {
         self.container = container
@@ -21,6 +13,8 @@ struct AppRootView: View {
     }
 
     var body: some View {
+        let showOnboardingOverlay = !appViewModel.authenticated && appViewModel.versionCheckResult == .compatible
+
         NavigationStack(
             path: Binding(
                 get: { appViewModel.navigationPath },
@@ -28,40 +22,13 @@ struct AppRootView: View {
             )
         ) {
             TdayBackground {
-                TabView(selection: $selectedTab) {
-                    HomeScreen(container: container) { route in
-                        handleRoute(route)
-                    }
-                        .tabItem {
-                            Label("Home", systemImage: "house.fill")
-                        }
-                        .tag(RootTab.home)
-
-                    CalendarScreen(container: container) {
-                        selectedTab = .home
-                    }
-                    .tabItem {
-                        Label("Calendar", systemImage: "calendar")
-                    }
-                    .tag(RootTab.calendar)
-
-                    CompletedScreen(container: container) {
-                        selectedTab = .home
-                    }
-                    .tabItem {
-                        Label("Completed", systemImage: "checkmark.circle.fill")
-                    }
-                    .tag(RootTab.completed)
-
-                    SettingsScreen(viewModel: appViewModel) {
-                        selectedTab = .home
-                    }
-                    .tabItem {
-                        Label("Settings", systemImage: "gearshape.fill")
-                    }
-                    .tag(RootTab.settings)
+                HomeScreen(container: container) { route in
+                    handleRoute(route)
                 }
             }
+            .blur(radius: showOnboardingOverlay ? 6 : 0)
+            .scaleEffect(showOnboardingOverlay ? 0.992 : 1)
+            .animation(.easeInOut(duration: 0.22), value: showOnboardingOverlay)
             .navigationDestination(for: AppRoute.self) { route in
                 switch route {
                 case .home:
@@ -193,17 +160,7 @@ struct AppRootView: View {
     }
 
     private func handleRoute(_ route: AppRoute) {
-        switch route {
-        case .calendar:
-            selectedTab = .calendar
-        case .completed:
-            selectedTab = .completed
-        case .settings:
-            selectedTab = .settings
-        default:
-            selectedTab = .home
-            appViewModel.navigate(to: route)
-        }
+        appViewModel.navigate(to: route)
     }
 
     private func handleDeepLink(_ url: URL) {
