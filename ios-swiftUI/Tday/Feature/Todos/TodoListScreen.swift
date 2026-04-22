@@ -70,6 +70,7 @@ struct TodoListScreen: View {
         .scrollContentBackground(.hidden)
         .background(colors.background)
         .navigationTitle(viewModel.title)
+        .navigationBarBackButtonHidden()
         .navigationBarTitleDisplayMode(viewModel.mode == .today ? .large : .inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
