@@ -9,7 +9,6 @@ private enum HomeMetrics {
     static let tileCornerRadius: CGFloat = 26
     static let tileHeight: CGFloat = 102
     static let listRowHeight: CGFloat = 70
-    static let fabSize: CGFloat = 56
     static let contentBottomSpacer: CGFloat = 80
     static let tileWatermarkSize: CGFloat = 124
     static let tileWatermarkTrailingInset: CGFloat = 22
@@ -21,6 +20,14 @@ private func isHomeDaytime(_ date: Date) -> Bool {
 }
 
 private struct HomeSearchBarFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
+
+private struct HomeSearchResultsFrameKey: PreferenceKey {
     static var defaultValue: CGRect = .zero
 
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
@@ -48,6 +55,7 @@ struct HomeScreen: View {
     @State private var searchExpanded = false
     @State private var searchQuery = ""
     @State private var searchBarFrame: CGRect = .zero
+    @State private var searchResultsFrame: CGRect = .zero
     @State private var showingCreateTask = false
     @State private var showingCreateList = false
 
@@ -180,16 +188,8 @@ struct HomeScreen: View {
                     .padding(.top, HomeMetrics.screenPadding)
                     .padding(.bottom, 100)
                 }
-                .coordinateSpace(name: "home-root")
                 .refreshable {
                     await viewModel.refresh()
-                }
-
-                if searchExpanded, searchBarFrame != .zero {
-                    HomeSearchDismissOverlay(topInset: searchBarFrame.maxY) {
-                        closeSearch()
-                    }
-                    .zIndex(1)
                 }
 
                 if showSearchResultsOverlay, searchBarFrame != .zero {
@@ -203,13 +203,34 @@ struct HomeScreen: View {
                     )
                     .frame(width: searchBarFrame.width)
                     .offset(x: searchBarFrame.minX, y: searchBarFrame.maxY + 8)
+                    .background(
+                        GeometryReader { resultsProxy in
+                            Color.clear
+                                .preference(
+                                    key: HomeSearchResultsFrameKey.self,
+                                    value: resultsProxy.frame(in: .named("home-root"))
+                                )
+                        }
+                    )
                     .zIndex(5)
                 }
             }
+            .coordinateSpace(name: "home-root")
             .background(colors.background)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .named("home-root"))
+                    .onEnded { value in
+                        let isTap = abs(value.translation.width) < 8 && abs(value.translation.height) < 8
+                        guard isTap else { return }
+                        handleSearchTap(at: value.startLocation)
+                    }
+            )
         }
         .onPreferenceChange(HomeSearchBarFrameKey.self) { frame in
             searchBarFrame = frame
+        }
+        .onPreferenceChange(HomeSearchResultsFrameKey.self) { frame in
+            searchResultsFrame = frame
         }
         .onChange(of: searchExpanded) { _, expanded in
             if expanded {
@@ -218,29 +239,13 @@ struct HomeScreen: View {
                 }
             } else {
                 searchFieldFocused = false
+                searchResultsFrame = .zero
             }
         }
         .safeAreaInset(edge: .bottom) {
-            HStack {
-                Spacer()
-                Button {
-                    closeSearch()
-                    showingCreateTask = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 28, weight: .medium))
-                        .foregroundStyle(.white)
-                        .frame(width: HomeMetrics.fabSize, height: HomeMetrics.fabSize)
-                        .background(Color(hex: 0x6EA8E1))
-                        .overlay(
-                            Circle()
-                                .stroke(Color(hex: 0x3D7FEA).opacity(0.58), lineWidth: 1)
-                        )
-                        .clipShape(Circle())
-                }
-                .buttonStyle(HomeFloatingButtonStyle())
-                .padding(.trailing, HomeMetrics.screenPadding)
-                .padding(.vertical, 8)
+            TaskFloatingActionButtonDock {
+                closeSearch()
+                showingCreateTask = true
             }
         }
         .sheet(isPresented: $showingCreateTask) {
@@ -274,28 +279,19 @@ struct HomeScreen: View {
         searchQuery = ""
     }
 
+    private func handleSearchTap(at location: CGPoint) {
+        guard searchExpanded else { return }
+        guard !searchBarFrame.contains(location) else { return }
+        guard !showSearchResultsOverlay || !searchResultsFrame.contains(location) else { return }
+        closeSearch()
+    }
+
     private func displayName(for value: String) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let first = trimmed.first else {
             return value
         }
         return first.uppercased() + String(trimmed.dropFirst())
-    }
-}
-
-private struct HomeSearchDismissOverlay: View {
-    let topInset: CGFloat
-    let onDismiss: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-                .frame(height: max(0, topInset))
-
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onDismiss)
-        }
     }
 }
 
@@ -353,6 +349,19 @@ private struct HomeTopBar: View {
                                 .font(.system(size: 18, weight: .medium))
                                 .foregroundStyle(colors.onSurface)
                                 .tint(colors.primary)
+
+                            Button {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                                    searchExpanded = false
+                                }
+                                searchQuery = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Close search")
                         }
                         .padding(.horizontal, 14)
                         .frame(width: searchWidth, height: buttonSize)
@@ -844,21 +853,6 @@ private struct HomeIconButtonStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.93 : 1)
             .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
-    }
-}
-
-private struct HomeFloatingButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.93 : 1)
-            .offset(y: configuration.isPressed ? 2 : 0)
-            .shadow(
-                color: Color(hex: 0x6EA8E1).opacity(configuration.isPressed ? 0.18 : 0.28),
-                radius: configuration.isPressed ? 8 : 16,
-                x: 0,
-                y: configuration.isPressed ? 4 : 10
-            )
             .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
     }
 }
