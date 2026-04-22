@@ -36,7 +36,7 @@ final class AppContainer {
         themeStore = ThemeStore()
         reminderPreferenceStore = ReminderPreferenceStore()
         serverURLState = ServerURLState(currentURL: secureStore.loadPersistedServerURL())
-        cookieStore = CookieStore()
+        cookieStore = CookieStore(secureStore: secureStore)
         networkConfiguration = NetworkConfiguration(
             secureStore: secureStore,
             serverURLState: serverURLState,
