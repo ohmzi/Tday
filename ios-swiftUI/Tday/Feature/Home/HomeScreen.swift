@@ -185,6 +185,13 @@ struct HomeScreen: View {
                     await viewModel.refresh()
                 }
 
+                if searchExpanded, searchBarFrame != .zero {
+                    HomeSearchDismissOverlay(topInset: searchBarFrame.maxY) {
+                        closeSearch()
+                    }
+                    .zIndex(1)
+                }
+
                 if showSearchResultsOverlay, searchBarFrame != .zero {
                     HomeSearchResultsOverlay(
                         todos: filteredTodos,
@@ -217,6 +224,7 @@ struct HomeScreen: View {
             HStack {
                 Spacer()
                 Button {
+                    closeSearch()
                     showingCreateTask = true
                 } label: {
                     Image(systemName: "plus")
@@ -272,6 +280,22 @@ struct HomeScreen: View {
             return value
         }
         return first.uppercased() + String(trimmed.dropFirst())
+    }
+}
+
+private struct HomeSearchDismissOverlay: View {
+    let topInset: CGFloat
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+                .frame(height: max(0, topInset))
+
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onDismiss)
+        }
     }
 }
 
