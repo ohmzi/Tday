@@ -3,7 +3,6 @@ import UniformTypeIdentifiers
 
 struct TodoListScreen: View {
     let highlightedTodoId: String?
-    let onBack: () -> Void
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
 
@@ -14,9 +13,8 @@ struct TodoListScreen: View {
     @State private var draggedTodo: TodoItem?
     @State private var activeDropSectionId: String?
 
-    init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?, highlightedTodoId: String?, onBack: @escaping () -> Void) {
+    init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?, highlightedTodoId: String?) {
         self.highlightedTodoId = highlightedTodoId
-        self.onBack = onBack
         _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
     }
 
@@ -70,12 +68,8 @@ struct TodoListScreen: View {
         .scrollContentBackground(.hidden)
         .background(colors.background)
         .navigationTitle(viewModel.title)
-        .navigationBarBackButtonHidden()
         .navigationBarTitleDisplayMode(viewModel.mode == .today ? .large : .inline)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back", action: onBack)
-            }
             if viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
