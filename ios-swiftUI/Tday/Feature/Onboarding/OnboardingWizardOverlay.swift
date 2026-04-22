@@ -11,8 +11,8 @@ struct OnboardingWizardOverlay: View {
     let serverCanResetTrust: Bool
     let pendingApprovalMessage: String?
     let authViewModel: AuthViewModel
-    let onConnectServer: (String) async -> Result<Void, String>
-    let onResetServerTrust: (String) async -> Result<Void, String>
+    let onConnectServer: (String) async -> Result<Void, MessageError>
+    let onResetServerTrust: (String) async -> Result<Void, MessageError>
     let onLogin: (String, String) async -> Bool
     let onRegister: (String, String, String) async -> Bool
     let onClearAuthStatus: () -> Void
@@ -153,8 +153,8 @@ struct OnboardingWizardOverlay: View {
         switch result {
         case .success:
             step = .login
-        case let .failure(message):
-            localError = message
+        case let .failure(error):
+            localError = error.message
         }
     }
 
@@ -167,8 +167,8 @@ struct OnboardingWizardOverlay: View {
         switch result {
         case .success:
             step = .login
-        case let .failure(message):
-            localError = message
+        case let .failure(error):
+            localError = error.message
         }
     }
 
