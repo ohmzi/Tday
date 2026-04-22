@@ -22,7 +22,7 @@ final class TodoListViewModel {
     var isSummarizing = false
 
     private let listName: String?
-    private var observationTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
 
     init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?) {
         self.container = container

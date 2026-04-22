@@ -44,7 +44,7 @@ final class SyncManager {
     }
 
     private func syncLocalCache(force: Bool, replayPendingMutations: Bool) async throws {
-        var state = cacheManager.loadOfflineState()
+        var state = try await cacheManager.loadOfflineState()
         let now = Date().epochMilliseconds
         if force && (now - state.lastSyncAttemptEpochMs) < minForceSyncIntervalMs {
             return
@@ -60,19 +60,19 @@ final class SyncManager {
         }
 
         state.lastSyncAttemptEpochMs = now
-        cacheManager.saveOfflineState(state)
+        try await cacheManager.saveOfflineState(state)
 
         let initialRemote = try await fetchRemoteSnapshot()
         if shouldReplay {
             state = try await applyPendingMutations(initialState: state, remoteSnapshot: initialRemote)
-            cacheManager.saveOfflineState(state)
+            try await cacheManager.saveOfflineState(state)
         }
 
         let latestRemote = try await fetchRemoteSnapshot()
         var merged = mergeRemoteWithLocal(localState: state, remote: latestRemote)
         merged.lastSyncAttemptEpochMs = now
         merged.lastSuccessfulSyncEpochMs = now
-        cacheManager.saveOfflineState(merged)
+        try await cacheManager.saveOfflineState(merged)
     }
 
     private func fetchRemoteSnapshot() async throws -> RemoteSnapshot {
@@ -87,7 +87,7 @@ final class SyncManager {
         let appSettingsResponse = try await appSettingsTask
         let todos = todosResponse.todos.map(mapTodoDTO)
         let completedItems = completedResponse.completedTodos.map(mapCompletedDTO)
-        let lists = listsResponse.lists.map(mapListDTO)
+        let lists = listsResponse.lists.map { mapListDTO($0) }
         let aiSummaryEnabled = appSettingsResponse.aiSummaryEnabled
         return RemoteSnapshot(todos: todos, completedItems: completedItems, lists: lists, aiSummaryEnabled: aiSummaryEnabled)
     }

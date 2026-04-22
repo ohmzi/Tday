@@ -51,6 +51,23 @@ struct CredentialKeyResponse: Codable {
     let publicKey: String
 }
 
+struct CredentialsCallbackRequest: Codable {
+    let email: String?
+    let password: String?
+    let encryptedPayload: String?
+    let encryptedKey: String?
+    let encryptedIv: String?
+    let credentialKeyId: String?
+    let credentialEnvelopeVersion: String?
+    let passwordProof: String?
+    let passwordProofChallengeId: String?
+    let passwordProofVersion: String?
+    let captchaToken: String?
+    let csrfToken: String?
+    let redirect: String?
+    let callbackUrl: String?
+}
+
 struct AppSettingsResponse: Codable, Equatable {
     let aiSummaryEnabled: Bool
 }
@@ -278,6 +295,8 @@ struct ChangePasswordRequest: Codable {
 
 struct AuthRedirectResponse: Codable {
     let url: String?
+    let message: String?
+    let code: String?
 }
 
 typealias TodoDto = TodoDTO
