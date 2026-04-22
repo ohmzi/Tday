@@ -40,41 +40,23 @@ struct AppRootView: View {
                                 handleRoute(nextRoute)
                             }
                         case .todayTodos:
-                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil) {
-                                appViewModel.goBack()
-                            }
+                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil)
                         case .overdueTodos:
-                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil) {
-                                appViewModel.goBack()
-                            }
+                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil)
                         case .scheduledTodos:
-                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil) {
-                                appViewModel.goBack()
-                            }
+                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil)
                         case let .allTodos(highlightTodoId):
-                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId) {
-                                appViewModel.goBack()
-                            }
+                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId)
                         case .priorityTodos:
-                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil) {
-                                appViewModel.goBack()
-                            }
+                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil)
                         case let .listTodos(listId, listName):
-                            TodoListScreen(container: container, mode: .list, listId: listId, listName: listName, highlightedTodoId: nil) {
-                                appViewModel.goBack()
-                            }
+                            TodoListScreen(container: container, mode: .list, listId: listId, listName: listName, highlightedTodoId: nil)
                         case .completed:
-                            CompletedScreen(container: container) {
-                                appViewModel.goBack()
-                            }
+                            CompletedScreen(container: container)
                         case .calendar:
-                            CalendarScreen(container: container) {
-                                appViewModel.goBack()
-                            }
+                            CalendarScreen(container: container)
                         case .settings:
-                            SettingsScreen(viewModel: appViewModel) {
-                                appViewModel.goBack()
-                            }
+                            SettingsScreen(viewModel: appViewModel)
                         }
                     }
                     .overlay(alignment: .top) {
