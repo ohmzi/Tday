@@ -41,8 +41,8 @@ struct TdayTheme {
     static let backgroundGradient = LinearGradient(
         colors: [
             Color.tdayLightBackground,
-            Color.tdayLightBackground.opacity(0.8),
-            Color.tdayLightSurfaceVariant.opacity(0.45)
+            Color.tdayLightBackground,
+            Color.tdayLightBackground
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
