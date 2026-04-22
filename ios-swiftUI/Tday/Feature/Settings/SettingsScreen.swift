@@ -97,6 +97,7 @@ struct SettingsScreen: View {
         .scrollContentBackground(.hidden)
         .background(colors.background)
         .navigationTitle("Settings")
+        .navigationBarBackButtonHidden()
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {

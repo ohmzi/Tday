@@ -69,6 +69,7 @@ struct CompletedScreen: View {
         .scrollContentBackground(.hidden)
         .background(colors.background)
         .navigationTitle("Completed")
+        .navigationBarBackButtonHidden()
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Back", action: onBack)
