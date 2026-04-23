@@ -941,47 +941,154 @@ private struct CreateListSheet: View {
     let onSubmit: (String, String?, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.tdayColors) private var colors
+    @FocusState private var nameFieldFocused: Bool
 
     @State private var name = ""
     @State private var color = "BLUE"
     @State private var iconKey = "inbox"
 
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canCreate: Bool {
+        !trimmedName.isEmpty
+    }
+
+    private var accentColor: Color {
+        homeListAccentColor(for: color)
+    }
+
+    private var selectedSymbolName: String {
+        homeListSymbolName(for: iconKey)
+    }
+
     var body: some View {
-        NavigationStack {
-            Form {
-                TextField("Name", text: $name)
-
-                Picker("Color", selection: $color) {
-                    ForEach(homeListColorOptions, id: \.key) { option in
-                        HStack(spacing: 10) {
-                            Circle()
-                                .fill(option.color)
-                                .frame(width: 12, height: 12)
-                            Text(formattedOptionName(option.key))
-                        }
-                        .tag(option.key)
-                    }
-                }
-
-                Picker("Icon", selection: $iconKey) {
-                    ForEach(homeListIconOptions, id: \.key) { option in
-                        Label(formattedOptionName(option.key), systemImage: option.symbolName)
-                            .tag(option.key)
-                    }
-                }
-            }
-            .navigationTitle("Create List")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Create") {
-                        onSubmit(name.trimmingCharacters(in: .whitespacesAndNewlines), color, iconKey)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 14) {
+                CreateListSheetHeader(
+                    canCreate: canCreate,
+                    onClose: { dismiss() },
+                    onConfirm: {
+                        onSubmit(trimmedName, color, iconKey)
                         dismiss()
                     }
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                )
+
+                CreateListSheetSectionTitle(text: "List")
+                CreateListSheetCard {
+                    VStack(spacing: 18) {
+                        ZStack {
+                            Circle()
+                                .fill(accentColor)
+                                .frame(width: 86, height: 86)
+
+                            Image(systemName: selectedSymbolName)
+                                .font(.system(size: 38, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
+
+                        TextField(
+                            "",
+                            text: $name,
+                            prompt: Text("List name")
+                                .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                        )
+                        .focused($nameFieldFocused)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(accentColor)
+                        .padding(.horizontal, 14)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 74)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(colors.surfaceVariant)
+                        )
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 18)
                 }
+
+                CreateListSheetSectionTitle(text: "Color")
+                CreateListSheetCard {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(homeListColorOptions, id: \.key) { option in
+                                let isSelected = option.key == color
+                                Button {
+                                    color = option.key
+                                } label: {
+                                    Circle()
+                                        .fill(option.color)
+                                        .frame(width: 48, height: 48)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(
+                                                    isSelected ? colors.onSurface.opacity(0.3) : .clear,
+                                                    lineWidth: 3
+                                                )
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                    }
+                }
+
+                CreateListSheetSectionTitle(text: "Icon")
+                CreateListSheetCard {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(homeListIconOptions, id: \.key) { option in
+                                let isSelected = option.key == iconKey
+                                Button {
+                                    iconKey = option.key
+                                } label: {
+                                    Circle()
+                                        .fill(isSelected ? accentColor.opacity(0.2) : colors.surfaceVariant)
+                                        .frame(width: 48, height: 48)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(
+                                                    isSelected ? accentColor.opacity(0.55) : .clear,
+                                                    lineWidth: 2
+                                                )
+                                        )
+                                        .overlay {
+                                            Image(systemName: option.symbolName)
+                                                .font(.system(size: 22, weight: .semibold))
+                                                .foregroundStyle(isSelected ? accentColor : colors.onSurfaceVariant)
+                                        }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(formattedOptionName(option.key))
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                    }
+                }
+
+                Spacer(minLength: 8)
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 14)
+            .padding(.bottom, 20)
+        }
+        .background(colors.background.ignoresSafeArea())
+        .presentationDetents([.fraction(0.78)])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(34)
+        .presentationBackground(colors.background)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                nameFieldFocused = true
             }
         }
     }
@@ -993,6 +1100,110 @@ private struct CreateListSheet: View {
             .split(separator: " ")
             .map { $0.capitalized }
             .joined(separator: " ")
+    }
+}
+
+private struct CreateListSheetHeader: View {
+    let canCreate: Bool
+    let onClose: () -> Void
+    let onConfirm: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack {
+            CreateListSheetActionButton(
+                icon: "xmark",
+                accentColor: Color(hex: 0xE79A9A),
+                enabled: true,
+                action: onClose
+            )
+
+            Spacer()
+
+            Text("New list")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(colors.onSurface)
+
+            Spacer()
+
+            CreateListSheetActionButton(
+                icon: "checkmark",
+                accentColor: Color(hex: 0xA6D4B3),
+                enabled: canCreate,
+                action: onConfirm
+            )
+        }
+    }
+}
+
+private struct CreateListSheetActionButton: View {
+    let icon: String
+    let accentColor: Color
+    let enabled: Bool
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.4))
+                .frame(width: 54, height: 54)
+                .background(colors.surfaceVariant)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(accentColor.opacity(enabled ? 0.8 : 0.42), lineWidth: 1.5)
+                )
+        }
+        .buttonStyle(CreateListSheetActionButtonStyle())
+        .disabled(!enabled)
+    }
+}
+
+private struct CreateListSheetActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.93 : 1)
+            .offset(y: configuration.isPressed ? 1 : 0)
+            .shadow(
+                color: Color.black.opacity(configuration.isPressed ? 0.06 : 0.12),
+                radius: configuration.isPressed ? 4 : 10,
+                x: 0,
+                y: configuration.isPressed ? 2 : 7
+            )
+            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+    }
+}
+
+private struct CreateListSheetSectionTitle: View {
+    let text: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 30, weight: .bold))
+            .foregroundStyle(colors.onSurfaceVariant)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+    }
+}
+
+private struct CreateListSheetCard<Content: View>: View {
+    @Environment(\.tdayColors) private var colors
+
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(colors.surface)
+            )
     }
 }
 

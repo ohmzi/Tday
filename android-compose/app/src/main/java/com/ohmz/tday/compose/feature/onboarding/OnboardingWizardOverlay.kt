@@ -140,8 +140,10 @@ fun OnboardingWizardOverlay(
                 onClearAuthStatus()
             }.onFailure { error ->
                 step = WizardStep.SERVER
-                serverError = error.message?.takeIf { it.length < 80 && !it.contains("serial") }
-                    ?: "Could not connect to server."
+                serverError = onboardingServerErrorMessage(
+                    error = error,
+                    fallback = "Could not connect to server.",
+                )
             }
         }
     }
@@ -386,15 +388,17 @@ fun OnboardingWizardOverlay(
                                                                     onClearAuthStatus()
                                                                 }.onFailure { error ->
                                                                     step = WizardStep.SERVER
-                                                                    serverError = error.message
-                                                                        ?.takeIf { it.length < 80 && !it.contains("serial") }
-                                                                        ?: "Could not connect to server."
+                                                                    serverError = onboardingServerErrorMessage(
+                                                                        error = error,
+                                                                        fallback = "Could not connect to server.",
+                                                                    )
                                                                 }
                                                             }
                                                         }.onFailure { error ->
-                                                            serverError = error.message
-                                                                ?.takeIf { it.length < 80 && !it.contains("serial") }
-                                                                ?: "Could not reset trusted server."
+                                                            serverError = onboardingServerErrorMessage(
+                                                                error = error,
+                                                                fallback = "Could not reset trusted server.",
+                                                            )
                                                         }
                                                     }
                                                 },
@@ -726,6 +730,18 @@ fun OnboardingWizardOverlay(
             }
         }
     }
+}
+
+private fun onboardingServerErrorMessage(
+    error: Throwable,
+    fallback: String,
+): String {
+    val message = error.message?.trim().orEmpty()
+    if (message.isBlank()) return fallback
+    if (message.contains("serial", ignoreCase = true)) {
+        return "This version of the app is out of date. Please update to continue."
+    }
+    return message
 }
 
 @Composable
