@@ -719,7 +719,7 @@ private struct TimelineTopBar: View {
     }
 
     private var expandedTitleHeight: CGFloat {
-        56 * (1 - progress)
+        44 * (1 - progress)
     }
 
     private var expandedTitleAlpha: CGFloat {
@@ -736,10 +736,6 @@ private struct TimelineTopBar: View {
 
     private var expandedTitleShiftY: CGFloat {
         -10 * (1 - expandedTitleAlpha)
-    }
-
-    private var topSpacing: CGFloat {
-        14 * (1 - progress)
     }
 
     @ViewBuilder
@@ -775,10 +771,7 @@ private struct TimelineTopBar: View {
             }
             .frame(maxWidth: .infinity)
 
-            Spacer()
-                .frame(height: topSpacing)
-
-            ZStack(alignment: .bottomLeading) {
+            ZStack(alignment: .topLeading) {
                 Color.clear
                     .frame(height: expandedTitleHeight)
 
@@ -790,7 +783,7 @@ private struct TimelineTopBar: View {
             }
         }
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
-        .padding(.top, 6)
+        .padding(.top, 2)
         .padding(.bottom, 2)
         .background(colors.background)
     }
