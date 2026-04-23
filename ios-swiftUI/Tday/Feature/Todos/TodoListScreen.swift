@@ -97,7 +97,7 @@ struct TodoListScreen: View {
     var body: some View {
         modeContent
         .background(colors.background)
-        .navigationBackHistoryTitle(viewModel.title)
+        .navigationBackButtonBehavior()
         .navigationTitle(usesHeroTimelineMode ? "" : viewModel.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

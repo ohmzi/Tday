@@ -2,25 +2,22 @@ import SwiftUI
 import UIKit
 
 extension View {
-    func navigationBackHistoryTitle(_ title: String) -> some View {
-        background(NavigationBackHistoryTitleConfigurator(title: title))
+    func navigationBackButtonBehavior() -> some View {
+        background(NavigationBackButtonConfigurator())
     }
 }
 
-private struct NavigationBackHistoryTitleConfigurator: UIViewControllerRepresentable {
-    let title: String
-
+private struct NavigationBackButtonConfigurator: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> Controller {
         Controller()
     }
 
     func updateUIViewController(_ controller: Controller, context: Context) {
-        controller.backHistoryTitle = title
         controller.scheduleNavigationItemUpdate()
     }
 
     final class Controller: UIViewController {
-        var backHistoryTitle = ""
+        private let backButtonItem = NoMenuBackBarButtonItem(title: "", style: .plain, target: nil, action: nil)
 
         override func loadView() {
             let view = UIView(frame: .zero)
@@ -50,10 +47,11 @@ private struct NavigationBackHistoryTitleConfigurator: UIViewControllerRepresent
                 return
             }
 
-            let normalizedTitle = backHistoryTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-            owner.navigationItem.backBarButtonItem = nil
-            owner.navigationItem.backButtonTitle = normalizedTitle.isEmpty ? nil : normalizedTitle
-            owner.navigationItem.backButtonDisplayMode = .default
+            if owner.navigationItem.backBarButtonItem !== backButtonItem {
+                owner.navigationItem.backBarButtonItem = backButtonItem
+            }
+            owner.navigationItem.backButtonTitle = nil
+            owner.navigationItem.backButtonDisplayMode = .minimal
         }
 
         private var owningViewController: UIViewController? {
@@ -70,5 +68,12 @@ private struct NavigationBackHistoryTitleConfigurator: UIViewControllerRepresent
 
             return owner
         }
+    }
+}
+
+private final class NoMenuBackBarButtonItem: UIBarButtonItem {
+    override var menu: UIMenu? {
+        get { nil }
+        set {}
     }
 }
