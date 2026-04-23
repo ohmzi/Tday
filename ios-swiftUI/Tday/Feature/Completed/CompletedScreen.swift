@@ -68,9 +68,6 @@ struct CompletedScreen: View {
         .background(colors.background)
         .navigationBackButtonBehavior()
         .navigationTitle("Completed")
-        .refreshable {
-            await viewModel.refresh()
-        }
         .sheet(item: $editingItem) { item in
             CreateTaskSheet(
                 lists: viewModel.lists,

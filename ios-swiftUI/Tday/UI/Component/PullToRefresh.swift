@@ -13,6 +13,17 @@ struct PullToRefreshContainer<Content: View>: View {
     }
 }
 
+struct ScrollBounceDisablerRow: View {
+    var body: some View {
+        VerticalScrollBounceDisabler()
+            .frame(height: 0)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .allowsHitTesting(false)
+    }
+}
+
 extension View {
     func disableVerticalScrollBounce() -> some View {
         background(VerticalScrollBounceDisabler())
@@ -28,6 +39,10 @@ extension View {
 }
 
 private struct VerticalScrollBounceDisabler: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
         view.isUserInteractionEnabled = false
@@ -36,11 +51,42 @@ private struct VerticalScrollBounceDisabler: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {
         DispatchQueue.main.async {
-            guard let scrollView = uiView.enclosingScrollView() else {
-                return
-            }
-            scrollView.alwaysBounceVertical = false
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        private weak var observedScrollView: UIScrollView?
+        private var offsetObservation: NSKeyValueObservation?
+        private var isClamping = false
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.enclosingScrollView() else { return }
+            guard observedScrollView !== scrollView else { return }
+            observedScrollView = scrollView
             scrollView.bounces = false
+            scrollView.alwaysBounceVertical = false
+
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
+
+            offsetObservation = scrollView.observe(\.contentOffset, options: .new) { [weak self] sv, _ in
+                self?.clampTopOverscroll(sv)
+            }
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let sv = observedScrollView else { return }
+            clampTopOverscroll(sv)
+        }
+
+        private func clampTopOverscroll(_ scrollView: UIScrollView) {
+            guard !isClamping else { return }
+            let minY = -scrollView.adjustedContentInset.top
+            if scrollView.contentOffset.y < minY {
+                isClamping = true
+                scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: minY)
+                isClamping = false
+            }
         }
     }
 }
