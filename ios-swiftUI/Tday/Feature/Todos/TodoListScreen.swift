@@ -22,12 +22,20 @@ private enum TodoTimelineMetrics {
     static let collapsedTitleStart: CGFloat = 0.08
     static let collapsedTitleEnd: CGFloat = 0.52
     static let expandedTitleFadeEnd: CGFloat = 0.82
+    static let topBarButtonSize: CGFloat = 44
+    static let topBarButtonIconSize: CGFloat = 20
+}
+
+struct TimelineTopBarAction {
+    let systemName: String
+    let action: () -> Void
 }
 
 struct TodoListScreen: View {
     let highlightedTodoId: String?
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
     @State private var showingSummary = false
@@ -80,8 +88,33 @@ struct TodoListScreen: View {
         }
     }
 
+    private var titleCollapseDistance: CGFloat {
+        TodoTimelineMetrics.titleCollapseDistance
+    }
+
     private var titleCollapseProgress: CGFloat {
-        min(max(timelineScrollOffset / 110, 0), 1)
+        guard titleCollapseDistance > 0 else { return 0 }
+        return min(max(timelineScrollOffset / titleCollapseDistance, 0), 1)
+    }
+
+    private var canSummarizeCurrentMode: Bool {
+        viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled
+    }
+
+    private var heroTopBarAction: TimelineTopBarAction? {
+        if canSummarizeCurrentMode {
+            return TimelineTopBarAction(
+                systemName: "sparkles",
+                action: presentSummary
+            )
+        }
+        if viewModel.mode == .list {
+            return TimelineTopBarAction(
+                systemName: "slider.horizontal.3",
+                action: { showingListSettings = true }
+            )
+        }
+        return nil
     }
 
     private var modeContent: AnyView {
@@ -100,6 +133,7 @@ struct TodoListScreen: View {
         .navigationBackButtonBehavior()
         .navigationTitle(usesHeroTimelineMode ? "" : viewModel.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(usesHeroTimelineMode ? .hidden : .visible, for: .navigationBar)
         .toolbar {
             navigationToolbarContent
         }
@@ -128,19 +162,21 @@ struct TodoListScreen: View {
 
     @ToolbarContentBuilder
     private var navigationToolbarContent: some ToolbarContent {
-        if viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: presentSummary) {
-                    Image(systemName: "sparkles")
+        if !usesHeroTimelineMode {
+            if viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: presentSummary) {
+                        Image(systemName: "sparkles")
+                    }
                 }
             }
-        }
-        if viewModel.mode == .list {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingListSettings = true
-                } label: {
-                    Image(systemName: "slider.horizontal.3")
+            if viewModel.mode == .list {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingListSettings = true
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
                 }
             }
         }
@@ -153,7 +189,9 @@ struct TodoListScreen: View {
                 title: viewModel.title,
                 symbolName: modeSymbolName,
                 accentColor: modeAccentColor,
-                collapseProgress: titleCollapseProgress
+                collapseProgress: titleCollapseProgress,
+                onBack: { dismiss() },
+                action: heroTopBarAction
             )
         }
     }
@@ -314,6 +352,14 @@ struct TodoListScreen: View {
 
                 ForEach(groupedSections) { section in
                     Section {
+                        TimelineSectionHeader(
+                            title: section.title,
+                            isActiveDropTarget: activeDropSectionId == section.id
+                        )
+                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+
                         if section.items.isEmpty {
                             Color.clear
                                 .frame(height: 42)
@@ -329,11 +375,6 @@ struct TodoListScreen: View {
                                     .listRowSeparator(.hidden)
                             }
                         }
-                    } header: {
-                        TimelineSectionHeader(
-                            title: section.title,
-                            isActiveDropTarget: activeDropSectionId == section.id
-                        )
                     }
                 }
 
@@ -347,6 +388,7 @@ struct TodoListScreen: View {
             .scrollContentBackground(.hidden)
             .coordinateSpace(name: "todo-timeline-scroll")
             .onVerticalScrollOffsetChange { timelineScrollOffset = $0 }
+            .onVerticalScrollSnap(collapseDistance: titleCollapseDistance)
             .disableVerticalScrollBounce()
 
             if viewModel.items.isEmpty {
@@ -384,6 +426,7 @@ struct TodoListScreen: View {
             .scrollContentBackground(.hidden)
             .coordinateSpace(name: "todo-timeline-scroll")
             .onVerticalScrollOffsetChange { timelineScrollOffset = $0 }
+            .onVerticalScrollSnap(collapseDistance: titleCollapseDistance)
             .disableVerticalScrollBounce()
 
             if viewModel.items.isEmpty {
@@ -600,15 +643,6 @@ struct TodoListScreen: View {
         let isCollapsed = canCollapseSection && collapsedSectionIDs.contains(section.id)
 
         Section {
-            if !isCollapsed {
-                ForEach(section.items) { todo in
-                    minimalTimelineRow(todo, in: section)
-                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-            }
-        } header: {
             TimelineSectionHeader(
                 title: section.title,
                 isActiveDropTarget: activeDropSectionId == section.id,
@@ -622,6 +656,18 @@ struct TodoListScreen: View {
                     }
                 } : nil
             )
+            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 0))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+
+            if !isCollapsed {
+                ForEach(section.items) { todo in
+                    minimalTimelineRow(todo, in: section)
+                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
         }
     }
 
@@ -659,6 +705,8 @@ private struct TimelineTopBar: View {
     let symbolName: String
     let accentColor: Color
     let collapseProgress: CGFloat
+    let onBack: () -> Void
+    let action: TimelineTopBarAction?
 
     @Environment(\.tdayColors) private var colors
 
@@ -667,7 +715,7 @@ private struct TimelineTopBar: View {
     }
 
     private var titleHandoffPoint: CGFloat {
-        0.88
+        0.9
     }
 
     private var expandedTitleHeight: CGFloat {
@@ -694,22 +742,35 @@ private struct TimelineTopBar: View {
         14 * (1 - progress)
     }
 
+    @ViewBuilder
+    private func titleContent() -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbolName)
+                .font(.system(size: TodoTimelineMetrics.heroIconSize, weight: .semibold))
+            Text(title)
+                .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
+                .tracking(-0.9)
+                .lineLimit(1)
+        }
+        .foregroundStyle(accentColor)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                if collapsedTitleAlpha > 0.001 {
-                    HStack(spacing: 12) {
-                        Image(systemName: symbolName)
-                            .font(.system(size: TodoTimelineMetrics.heroIconSize, weight: .semibold))
-                        Text(title)
-                            .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
-                            .tracking(-0.9)
-                            .lineLimit(1)
+                HStack(spacing: 0) {
+                    TimelineTopBarButton(systemName: "chevron.left", action: onBack)
+                    Spacer()
+                    if let action {
+                        TimelineTopBarButton(systemName: action.systemName, action: action.action)
                     }
-                    .foregroundStyle(accentColor)
-                    .opacity(collapsedTitleAlpha)
-                    .offset(y: collapsedTitleShiftY)
-                    .allowsHitTesting(false)
+                }
+
+                if collapsedTitleAlpha > 0.001 {
+                    titleContent()
+                        .opacity(collapsedTitleAlpha)
+                        .offset(y: collapsedTitleShiftY)
+                        .allowsHitTesting(false)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -722,17 +783,9 @@ private struct TimelineTopBar: View {
                     .frame(height: expandedTitleHeight)
 
                 if expandedTitleAlpha > 0.001 {
-                    HStack(spacing: 12) {
-                        Image(systemName: symbolName)
-                            .font(.system(size: TodoTimelineMetrics.heroIconSize, weight: .semibold))
-                        Text(title)
-                            .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
-                            .tracking(-0.9)
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(accentColor)
-                    .opacity(expandedTitleAlpha)
-                    .offset(y: expandedTitleShiftY)
+                    titleContent()
+                        .opacity(expandedTitleAlpha)
+                        .offset(y: expandedTitleShiftY)
                 }
             }
         }
@@ -740,6 +793,24 @@ private struct TimelineTopBar: View {
         .padding(.top, 6)
         .padding(.bottom, 2)
         .background(colors.background)
+    }
+}
+
+private struct TimelineTopBarButton: View {
+    let systemName: String
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: TodoTimelineMetrics.topBarButtonIconSize, weight: .semibold))
+                .foregroundStyle(colors.onSurface)
+                .frame(width: TodoTimelineMetrics.topBarButtonSize, height: TodoTimelineMetrics.topBarButtonSize)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -782,10 +853,6 @@ private struct TimelineSectionHeader: View {
                         .animation(.easeInOut(duration: 0.18), value: isCollapsed)
                 }
             }
-
-            Rectangle()
-                .fill((isActiveDropTarget ? colors.primary : colors.onSurfaceVariant).opacity(isActiveDropTarget ? 0.28 : 0.18))
-                .frame(height: 1)
         }
         .padding(.top, 2)
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
