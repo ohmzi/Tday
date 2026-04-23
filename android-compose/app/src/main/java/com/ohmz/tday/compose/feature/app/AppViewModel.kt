@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import javax.net.ssl.SSLPeerUnverifiedException
 
 data class AppUiState(
     val loading: Boolean = true,
@@ -342,7 +343,7 @@ class AppViewModel @Inject constructor(
         onFailure: (String) -> Unit = {},
     ) {
         viewModelScope.launch {
-            val result = serverConfigRepository.probeAndSave(rawUrl)
+            val result = probeAndSaveWithAutomaticTrustRecovery(rawUrl)
             result.onSuccess { probeResult ->
                 val versionResult = probeResult.versionCheck
                 val isBlocking = versionResult is VersionCheckResult.AppUpdateRequired ||
@@ -365,7 +366,7 @@ class AppViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         error = message,
-                        canResetServerTrust = error is ServerProbeException.CertificateChanged,
+                        canResetServerTrust = false,
                         pendingApprovalMessage = null,
                     )
                 }
@@ -620,6 +621,27 @@ class AppViewModel @Inject constructor(
         return error.userFacingMessage(fallback)
     }
 
+    private suspend fun probeAndSaveWithAutomaticTrustRecovery(
+        rawUrl: String,
+    ): Result<ServerConfigRepository.ProbeResult> {
+        val firstAttempt = serverConfigRepository.probeAndSave(rawUrl)
+        val firstError = firstAttempt.exceptionOrNull() ?: return firstAttempt
+        if (!isServerTrustMismatch(firstError)) return firstAttempt
+
+        val resetAttempt = serverConfigRepository.resetTrustedServer(rawUrl)
+        if (resetAttempt.isFailure) {
+            return Result.failure(AutomaticTrustRefreshFailedException(resetAttempt.exceptionOrNull()))
+        }
+
+        val secondAttempt = serverConfigRepository.probeAndSave(rawUrl)
+        val secondError = secondAttempt.exceptionOrNull() ?: return secondAttempt
+        return if (isServerTrustMismatch(secondError)) {
+            Result.failure(AutomaticTrustRefreshFailedException(secondError))
+        } else {
+            secondAttempt
+        }
+    }
+
     private fun toServerSetupMessage(error: Throwable): String {
         return when (error) {
             is TimeoutCancellationException -> "Server probe timed out. Check URL and network, then try again."
@@ -627,11 +649,39 @@ class AppViewModel @Inject constructor(
             is ServerProbeException.InsecureTransport -> "Use HTTPS for remote server URLs."
             is ServerProbeException.NotTdayServer ->
                 "Server is reachable but does not appear to be a T'Day server."
+            is AutomaticTrustRefreshFailedException ->
+                staleServerTrustMessage()
             is ServerProbeException.CertificateChanged ->
-                "Server certificate changed. Reset trusted server to continue."
+                automaticTrustRefreshMessage()
+            is SSLPeerUnverifiedException ->
+                if (isServerTrustMismatch(error)) {
+                    automaticTrustRefreshMessage()
+                } else {
+                    error.userFacingMessage("Could not connect to server.")
+                }
             else -> error.userFacingMessage("Could not connect to server.")
         }
     }
+
+    private fun isServerTrustMismatch(error: Throwable): Boolean {
+        return error is ServerProbeException.CertificateChanged || isPinnedCertificateMismatch(error)
+    }
+
+    private fun isPinnedCertificateMismatch(error: Throwable): Boolean {
+        return error.message?.contains("Pinned certificate mismatch", ignoreCase = true) == true
+    }
+
+    private fun automaticTrustRefreshMessage(): String {
+        return "Saved server trust changed. Trying again with a refreshed certificate."
+    }
+
+    private fun staleServerTrustMessage(): String {
+        return "The app could not recover from a saved server trust mismatch automatically. Clear app storage or reinstall the app, then try again."
+    }
+
+    private class AutomaticTrustRefreshFailedException(
+        cause: Throwable?,
+    ) : IllegalStateException("Automatic server trust refresh failed.", cause)
 
     private companion object {
         const val PENDING_RESYNC_INTERVAL_MS = 20 * 1000L
