@@ -95,7 +95,7 @@ struct SettingsScreen: View {
         }
         .scrollContentBackground(.hidden)
         .background(colors.background)
-        .navigationBackHistoryTitle("Settings")
+        .navigationBackButtonBehavior()
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .task {

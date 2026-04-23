@@ -116,7 +116,7 @@ struct CalendarScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(colors.background)
-        .navigationBackHistoryTitle("Calendar")
+        .navigationBackButtonBehavior()
         .navigationTitle("Calendar")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
