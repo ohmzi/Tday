@@ -755,10 +755,10 @@ private struct TimelineTopBar: View {
         VStack(spacing: 0) {
             ZStack {
                 HStack(spacing: 0) {
-                    TimelineTopBarButton(systemName: "chevron.left", action: onBack)
+                    TimelineTopBarButton(systemName: "chevron.left", style: .back, action: onBack)
                     Spacer()
                     if let action {
-                        TimelineTopBarButton(systemName: action.systemName, action: action.action)
+                        TimelineTopBarButton(systemName: action.systemName, style: .action, action: action.action)
                     }
                 }
 
@@ -791,19 +791,96 @@ private struct TimelineTopBar: View {
 
 private struct TimelineTopBarButton: View {
     let systemName: String
+    let style: Style
     let action: () -> Void
+
+    enum Style {
+        case back
+        case action
+    }
 
     @Environment(\.tdayColors) private var colors
 
+    init(systemName: String, style: Style = .back, action: @escaping () -> Void) {
+        self.systemName = systemName
+        self.style = style
+        self.action = action
+    }
+
+    private var fillColor: Color {
+        switch style {
+        case .back:
+            return colors.surface
+        case .action:
+            return colors.background
+        }
+    }
+
+    private var borderColor: Color {
+        switch style {
+        case .back:
+            return colors.onSurface.opacity(0.08)
+        case .action:
+            return colors.onSurface.opacity(0.38)
+        }
+    }
+
+    private var borderWidth: CGFloat {
+        style == .back ? 0.5 : 1
+    }
+
+    private var shadowOpacity: Double {
+        style == .back ? 0.12 : 0
+    }
+
     var body: some View {
-        Button(action: action) {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
             Image(systemName: systemName)
                 .font(.system(size: TodoTimelineMetrics.topBarButtonIconSize, weight: .semibold))
                 .foregroundStyle(colors.onSurface)
                 .frame(width: TodoTimelineMetrics.topBarButtonSize, height: TodoTimelineMetrics.topBarButtonSize)
-                .contentShape(Rectangle())
+                .contentShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(
+            TimelineTopBarButtonStyle(
+                fillColor: fillColor,
+                borderColor: borderColor,
+                borderWidth: borderWidth,
+                shadowOpacity: shadowOpacity
+            )
+        )
+    }
+}
+
+private struct TimelineTopBarButtonStyle: ButtonStyle {
+    let fillColor: Color
+    let borderColor: Color
+    let borderWidth: CGFloat
+    let shadowOpacity: Double
+
+    func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed
+        return configuration.label
+            .background(
+                ZStack {
+                    Circle()
+                        .fill(fillColor)
+                    Circle()
+                        .stroke(borderColor, lineWidth: borderWidth)
+                }
+                .shadow(
+                    color: Color.black.opacity(pressed ? max(shadowOpacity - 0.06, 0) : shadowOpacity),
+                    radius: pressed ? 3 : 6,
+                    x: 0,
+                    y: pressed ? 1 : 2
+                )
+            )
+            .scaleEffect(pressed ? 0.93 : 1)
+            .offset(y: pressed ? 1 : 0)
+            .animation(.easeOut(duration: 0.12), value: pressed)
     }
 }
 
