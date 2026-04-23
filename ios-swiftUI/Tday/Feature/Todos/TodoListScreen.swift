@@ -22,16 +22,12 @@ private enum TodoTimelineMetrics {
     static let collapsedTitleStart: CGFloat = 0.08
     static let collapsedTitleEnd: CGFloat = 0.52
     static let expandedTitleFadeEnd: CGFloat = 0.82
-    static let headerButtonSize: CGFloat = 56
-    static let headerIconSize: CGFloat = 30
 }
 
 struct TodoListScreen: View {
     let highlightedTodoId: String?
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
-    @Environment(\.dismiss) private var dismiss
-
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
     @State private var showingSummary = false
@@ -61,10 +57,6 @@ struct TodoListScreen: View {
 
     private var usesHeroTimelineMode: Bool {
         isTodayMode || isMinimalTimelineMode
-    }
-
-    private var showsTopBarSummaryAction: Bool {
-        usesHeroTimelineMode && viewModel.mode != .overdue && viewModel.aiSummaryEnabled
     }
 
     private var modeAccentColor: Color {
@@ -105,6 +97,7 @@ struct TodoListScreen: View {
     var body: some View {
         modeContent
         .background(colors.background)
+        .navigationBackHistoryTitle(viewModel.title)
         .navigationTitle(usesHeroTimelineMode ? "" : viewModel.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -116,8 +109,6 @@ struct TodoListScreen: View {
         .onChange(of: viewModel.items) {
             handleItemsChanged()
         }
-        .navigationBarBackButtonHidden(usesHeroTimelineMode)
-        .toolbar(usesHeroTimelineMode ? .hidden : .visible, for: .navigationBar)
         .safeAreaInset(edge: .bottom) {
             floatingActionButtonDock
         }
@@ -137,14 +128,14 @@ struct TodoListScreen: View {
 
     @ToolbarContentBuilder
     private var navigationToolbarContent: some ToolbarContent {
-        if !usesHeroTimelineMode && viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled {
+        if viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: presentSummary) {
                     Image(systemName: "sparkles")
                 }
             }
         }
-        if !usesHeroTimelineMode && viewModel.mode == .list {
+        if viewModel.mode == .list {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showingListSettings = true
@@ -159,13 +150,10 @@ struct TodoListScreen: View {
     private var timelineTopInset: some View {
         if usesHeroTimelineMode {
             TimelineTopBar(
-                onBack: { dismiss() },
                 title: viewModel.title,
                 symbolName: modeSymbolName,
                 accentColor: modeAccentColor,
-                collapseProgress: titleCollapseProgress,
-                actionSymbolName: showsTopBarSummaryAction ? "sparkles" : nil,
-                onAction: showsTopBarSummaryAction ? presentSummary : nil
+                collapseProgress: titleCollapseProgress
             )
         }
     }
@@ -667,13 +655,10 @@ struct TodoListScreen: View {
 }
 
 private struct TimelineTopBar: View {
-    let onBack: () -> Void
     let title: String
     let symbolName: String
     let accentColor: Color
     let collapseProgress: CGFloat
-    let actionSymbolName: String?
-    let onAction: (() -> Void)?
 
     @Environment(\.tdayColors) private var colors
 
@@ -712,22 +697,6 @@ private struct TimelineTopBar: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                HStack {
-                    Button(action: onBack) {
-                        TimelineHeaderCircleButton(symbolName: "chevron.left")
-                    }
-                    .buttonStyle(.plain)
-
-                    Spacer()
-
-                    if let actionSymbolName, let onAction {
-                        Button(action: onAction) {
-                            TimelineHeaderCircleButton(symbolName: actionSymbolName)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
                 if collapsedTitleAlpha > 0.001 {
                     HStack(spacing: 12) {
                         Image(systemName: symbolName)
@@ -743,6 +712,7 @@ private struct TimelineTopBar: View {
                     .allowsHitTesting(false)
                 }
             }
+            .frame(maxWidth: .infinity)
 
             Spacer()
                 .frame(height: topSpacing)
@@ -767,34 +737,9 @@ private struct TimelineTopBar: View {
             }
         }
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
-        .padding(.top, 6 + safeAreaTopInset())
+        .padding(.top, 6)
         .padding(.bottom, 2)
         .background(colors.background)
-    }
-}
-
-private func safeAreaTopInset() -> CGFloat {
-    UIApplication.shared.connectedScenes
-        .compactMap { $0 as? UIWindowScene }
-        .flatMap(\.windows)
-        .first(where: \.isKeyWindow)?
-        .safeAreaInsets.top ?? 0
-}
-
-private struct TimelineHeaderCircleButton: View {
-    let symbolName: String
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Circle()
-            .stroke(colors.onSurface.opacity(0.32), lineWidth: 1.5)
-            .frame(width: TodoTimelineMetrics.headerButtonSize, height: TodoTimelineMetrics.headerButtonSize)
-            .overlay {
-                Image(systemName: symbolName)
-                    .font(.system(size: symbolName == "sparkles" ? 24 : TodoTimelineMetrics.headerIconSize, weight: .semibold))
-                    .foregroundStyle(colors.onSurface)
-            }
     }
 }
 

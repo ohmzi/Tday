@@ -66,6 +66,7 @@ struct CompletedScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(colors.background)
+        .navigationBackHistoryTitle("Completed")
         .navigationTitle("Completed")
         .refreshable {
             await viewModel.refresh()
