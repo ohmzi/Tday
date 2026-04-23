@@ -127,9 +127,6 @@ struct CalendarScreen: View {
                 }
             }
         }
-        .refreshable {
-            await viewModel.refresh()
-        }
         .safeAreaInset(edge: .bottom) {
             TaskFloatingActionButtonDock {
                 showingCreateTask = true
