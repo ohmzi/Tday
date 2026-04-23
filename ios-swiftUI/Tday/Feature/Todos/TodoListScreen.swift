@@ -383,13 +383,15 @@ struct TodoListScreen: View {
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .disableVerticalScrollBounce()
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .contentMargins(.top, 0, for: .scrollContent)
+            .listSectionSpacing(0)
             .coordinateSpace(name: "todo-timeline-scroll")
             .onVerticalScrollOffsetChange { timelineScrollOffset = $0 }
             .onVerticalScrollSnap(collapseDistance: titleCollapseDistance)
-            .disableVerticalScrollBounce()
 
             if viewModel.items.isEmpty {
                 TimelineEmptyState(message: "No tasks for today")
@@ -421,13 +423,15 @@ struct TodoListScreen: View {
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .disableVerticalScrollBounce()
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .contentMargins(.top, 0, for: .scrollContent)
+            .listSectionSpacing(0)
             .coordinateSpace(name: "todo-timeline-scroll")
             .onVerticalScrollOffsetChange { timelineScrollOffset = $0 }
             .onVerticalScrollSnap(collapseDistance: titleCollapseDistance)
-            .disableVerticalScrollBounce()
 
             if viewModel.items.isEmpty {
                 TimelineEmptyState(message: emptyTimelineMessage(for: viewModel.mode))
@@ -719,7 +723,7 @@ private struct TimelineTopBar: View {
     }
 
     private var expandedTitleHeight: CGFloat {
-        44 * (1 - progress)
+        4 * (1 - progress)
     }
 
     private var expandedTitleAlpha: CGFloat {
@@ -784,7 +788,6 @@ private struct TimelineTopBar: View {
         }
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
         .padding(.top, 2)
-        .padding(.bottom, 2)
         .background(colors.background)
     }
 }
