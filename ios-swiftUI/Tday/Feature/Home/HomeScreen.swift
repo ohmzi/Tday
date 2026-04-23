@@ -270,6 +270,7 @@ struct HomeScreen: View {
                 }
             }
         }
+        .navigationBackHistoryTitle("Home")
     }
 
     private func closeSearch() {
