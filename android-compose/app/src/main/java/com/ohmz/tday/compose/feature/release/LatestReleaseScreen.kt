@@ -6,9 +6,12 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -27,8 +31,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material3.Button
@@ -58,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -332,8 +337,9 @@ private fun ReleaseTopBar(
         Box(modifier = Modifier.fillMaxWidth()) {
             ReleaseHeaderButton(
                 onClick = onBack,
-                icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                icon = Icons.Rounded.ChevronLeft,
                 contentDescription = stringResource(R.string.action_back),
+                isBackButton = true,
             )
             if (collapsedTitleAlpha > 0.001f) {
                 Row(
@@ -384,29 +390,59 @@ private fun ReleaseHeaderButton(
     onClick: () -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
+    isBackButton: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
+    val containerColor = if (isBackButton) {
+        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
+    } else {
+        colorScheme.background
+    }
+    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
+    val buttonSize = if (isBackButton) 52.dp else 56.dp
+    val iconSize = if (isBackButton) 36.dp else 28.dp
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        label = "releaseHeaderButtonScale",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "releaseHeaderButtonOffsetY",
+    )
 
     Card(
+        modifier = Modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
         onClick = {
             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
             onClick()
         },
+        interactionSource = interactionSource,
         shape = CircleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        border = buttonBorder,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isBackButton) 10.dp else 0.dp,
+            pressedElevation = if (isBackButton) 6.dp else 0.dp,
+        ),
     ) {
         Box(
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(buttonSize),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = colorScheme.onSurface,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(iconSize),
             )
         }
     }
