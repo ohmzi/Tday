@@ -52,7 +52,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
@@ -382,7 +381,7 @@ fun TodoListScreen(
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(
-                                Icons.AutoMirrored.Rounded.ArrowBack,
+                                Icons.Rounded.ChevronLeft,
                                 contentDescription = stringResource(R.string.action_back),
                             )
                         }
@@ -700,8 +699,9 @@ private fun TodayTopBar(
             ) {
                 TodayHeaderButton(
                     onClick = onBack,
-                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                    icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.action_back),
+                    isBackButton = true,
                 )
                 if (showActionButton) {
                     TodayHeaderButton(
@@ -776,28 +776,59 @@ private fun TodayHeaderButton(
     onClick: () -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
+    isBackButton: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
+    val containerColor = if (isBackButton) {
+        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
+    } else {
+        colorScheme.background
+    }
+    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
+    val buttonSize = if (isBackButton) 52.dp else 56.dp
+    val iconSize = if (isBackButton) 36.dp else 30.dp
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        label = "todayHeaderButtonScale",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "todayHeaderButtonOffsetY",
+    )
+
     Card(
+        modifier = Modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
         onClick = {
             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
             onClick()
         },
+        interactionSource = interactionSource,
         shape = CircleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        border = buttonBorder,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isBackButton) 10.dp else 0.dp,
+            pressedElevation = if (isBackButton) 6.dp else 0.dp,
+        ),
     ) {
         Box(
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(buttonSize),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = colorScheme.onSurface,
-                modifier = Modifier.size(30.dp),
+                modifier = Modifier.size(iconSize),
             )
         }
     }

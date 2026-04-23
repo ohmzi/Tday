@@ -15,6 +15,7 @@
 		0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */; };
 		0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */; };
 		0BA0A83365B9CF5E63B5A9AA /* SnackbarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133161412A6BD2A0C04F745A /* SnackbarManager.swift */; };
+		1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */; };
 		17A2E96F8BEA64247551A742 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22BFAB0C2FA0BB186AEBFC5F /* AppViewModel.swift */; };
 		1AC138341BE3A2841CF05908 /* StringHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */; };
 		1FE50ED779CB252C73B0A496 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = A8BC3C28FBC8E4D5C38307DB /* Sentry */; };
@@ -78,6 +79,7 @@
 		055D0F0501B287B70456AF4B /* TodoRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRepository.swift; sourceTree = "<group>"; };
 		0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFloatingActionButton.swift; sourceTree = "<group>"; };
 		133161412A6BD2A0C04F745A /* SnackbarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnackbarManager.swift; sourceTree = "<group>"; };
+		15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBackHistoryTitle.swift; sourceTree = "<group>"; };
 		1DABE0225668571D48D55B96 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		22BFAB0C2FA0BB186AEBFC5F /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
 		25A90A443440754855071C9D /* CalendarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarScreen.swift; sourceTree = "<group>"; };
@@ -461,6 +463,7 @@
 			isa = PBXGroup;
 			children = (
 				AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */,
+				15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */,
 				AC35A6A50C3BFA68468FEDF9 /* OfflineBanner.swift */,
 				133161412A6BD2A0C04F745A /* SnackbarManager.swift */,
 				0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */,
@@ -584,6 +587,7 @@
 				C0768A60B1B807FCA7A6D37F /* HomeScreen.swift in Sources */,
 				9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */,
 				DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */,
+				1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */,
 				C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */,
 				3667E1D45490DE558553F39F /* OfflineBanner.swift in Sources */,
 				DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */,
