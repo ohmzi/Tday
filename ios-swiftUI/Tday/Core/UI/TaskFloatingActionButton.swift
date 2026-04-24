@@ -69,6 +69,18 @@ extension View {
             )
         )
     }
+
+    func tdayRippleEffect(
+        isPressed: Bool,
+        rippleColor: Color? = nil
+    ) -> some View {
+        modifier(
+            TdayRippleEffectModifier(
+                isPressed: isPressed,
+                rippleColor: rippleColor
+            )
+        )
+    }
 }
 
 private struct TdayPressEffectModifier: ViewModifier {
@@ -79,6 +91,7 @@ private struct TdayPressEffectModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .tdayRippleEffect(isPressed: isPressed)
             .scaleEffect(isPressed ? 0.93 : 1)
             .offset(y: isPressed ? 2 : 0)
             .shadow(
@@ -88,5 +101,66 @@ private struct TdayPressEffectModifier: ViewModifier {
                 y: isPressed ? 4 : 10
             )
             .animation(.easeOut(duration: 0.14), value: isPressed)
+    }
+}
+
+private struct TdayRippleEffectModifier: ViewModifier {
+    let isPressed: Bool
+    let rippleColor: Color?
+
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var rippleScale: CGFloat = 0.08
+    @State private var rippleOpacity: Double = 0
+
+    private var defaultRippleColor: Color {
+        colorScheme == .dark ? .white : .black
+    }
+
+    private var startingRippleOpacity: Double {
+        colorScheme == .dark ? 0.18 : 0.12
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                GeometryReader { proxy in
+                    let diameter = max(proxy.size.width, proxy.size.height) * 2.2
+
+                    Circle()
+                        .fill((rippleColor ?? defaultRippleColor).opacity(rippleOpacity))
+                        .frame(width: diameter, height: diameter)
+                        .scaleEffect(rippleScale)
+                        .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+                        .allowsHitTesting(false)
+                }
+                .mask(content)
+            }
+            .onAppear {
+                if isPressed {
+                    triggerRipple()
+                }
+            }
+            .onChange(of: isPressed) { _, newValue in
+                if newValue {
+                    triggerRipple()
+                }
+            }
+    }
+
+    private func triggerRipple() {
+        var resetTransaction = Transaction()
+        resetTransaction.disablesAnimations = true
+
+        withTransaction(resetTransaction) {
+            rippleScale = 0.08
+            rippleOpacity = startingRippleOpacity
+        }
+
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.38)) {
+                rippleScale = 1
+                rippleOpacity = 0
+            }
+        }
     }
 }
