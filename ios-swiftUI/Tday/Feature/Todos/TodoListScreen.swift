@@ -206,6 +206,7 @@ struct TodoListScreen: View {
             TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
                 .frame(width: 0, height: 0)
         }
+        .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
