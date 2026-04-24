@@ -370,14 +370,6 @@ struct TodoListScreen: View {
 
                 ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
                     Section {
-                        TimelineSectionHeader(
-                            title: section.title,
-                            isActiveDropTarget: activeDropSectionId == section.id
-                        )
-                        .listRowInsets(EdgeInsets(top: index == 0 ? 0 : 8, leading: 0, bottom: 0, trailing: 0))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-
                         if section.items.isEmpty {
                             Color.clear
                                 .frame(height: 42)
@@ -393,6 +385,14 @@ struct TodoListScreen: View {
                                     .listRowSeparator(.hidden)
                             }
                         }
+                    } header: {
+                        TimelineSectionHeader(
+                            title: section.title,
+                            isActiveDropTarget: activeDropSectionId == section.id
+                        )
+                        .listRowInsets(EdgeInsets(top: index == 0 ? 0 : 8, leading: 0, bottom: 0, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                 }
 
@@ -667,6 +667,15 @@ struct TodoListScreen: View {
         let isCollapsed = canCollapseSection && collapsedSectionIDs.contains(section.id)
 
         Section {
+            if !isCollapsed {
+                ForEach(section.items) { todo in
+                    minimalTimelineRow(todo, in: section)
+                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
+        } header: {
             TimelineSectionHeader(
                 title: section.title,
                 isActiveDropTarget: activeDropSectionId == section.id,
@@ -683,15 +692,6 @@ struct TodoListScreen: View {
             .listRowInsets(EdgeInsets(top: isFirstSection ? 0 : 8, leading: 0, bottom: 0, trailing: 0))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-
-            if !isCollapsed {
-                ForEach(section.items) { todo in
-                    minimalTimelineRow(todo, in: section)
-                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-            }
         }
     }
 
