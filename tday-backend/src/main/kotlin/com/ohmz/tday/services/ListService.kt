@@ -2,6 +2,7 @@ package com.ohmz.tday.services
 
 import arrow.core.Either
 import arrow.core.right
+import arrow.core.raise.either
 import com.ohmz.tday.db.enums.ListColor
 import com.ohmz.tday.db.tables.Lists
 import com.ohmz.tday.db.tables.Todos
@@ -22,6 +23,12 @@ interface ListService {
     suspend fun create(userId: String, name: String, color: String?, iconKey: String?): Either<AppError, ListResponse>
     suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?): Either<AppError, Unit>
     suspend fun delete(userId: String, id: String): Either<AppError, Int>
+    suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> = either {
+        ids.distinct().filter { it.isNotBlank() }.mapNotNull { id ->
+            val deletedCount = delete(userId, id).bind()
+            id.takeIf { deletedCount > 0 }
+        }
+    }
 }
 
 class ListServiceImpl(private val cache: CacheService) : ListService {
@@ -94,15 +101,41 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
         return Unit.right()
     }
 
-    override suspend fun delete(userId: String, id: String): Either<AppError, Int> {
-        val count = newSuspendedTransaction(Dispatchers.IO) {
-            Todos.update({ (Todos.listID eq id) and (Todos.userID eq userId) }) {
+    override suspend fun delete(userId: String, id: String): Either<AppError, Int> =
+        deleteMany(userId, listOf(id)).map { it.size }
+
+    override suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> {
+        val normalizedIds = ids.map(String::trim).filter(String::isNotEmpty).distinct()
+        if (normalizedIds.isEmpty()) {
+            return emptyList<String>().right()
+        }
+
+        val deletedIds = newSuspendedTransaction(Dispatchers.IO) {
+            val existingIds = Lists
+                .select(Lists.id)
+                .where { (Lists.userID eq userId) and (Lists.id inList normalizedIds) }
+                .map { it[Lists.id] }
+
+            if (existingIds.isEmpty()) {
+                return@newSuspendedTransaction emptyList()
+            }
+
+            Todos.update({ (Todos.userID eq userId) and (Todos.listID inList existingIds) }) {
                 it[Todos.listID] = null
             }
-            Lists.deleteWhere { (Lists.id eq id) and (Lists.userID eq userId) }
+            Lists.deleteWhere {
+                SqlExpressionBuilder.run {
+                    (Lists.userID eq userId) and (Lists.id inList existingIds)
+                }
+            }
+            existingIds
         }
-        cache.invalidateListCaches(userId)
-        return count.right()
+
+        if (deletedIds.isNotEmpty()) {
+            cache.invalidateListCaches(userId)
+        }
+
+        return deletedIds.right()
     }
 
     private fun ResultRow.toListResponse(): ListResponse = ListResponse(
