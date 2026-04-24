@@ -78,6 +78,7 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -363,7 +364,7 @@ private fun CompletedHeaderButton(
         colorScheme.background
     }
     val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
-    val buttonSize = if (isBackButton) 52.dp else 56.dp
+    val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
     val iconSize = if (isBackButton) 36.dp else 30.dp
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.93f else 1f,

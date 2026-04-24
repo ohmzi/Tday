@@ -85,6 +85,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -403,7 +404,7 @@ private fun ReleaseHeaderButton(
         colorScheme.background
     }
     val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
-    val buttonSize = if (isBackButton) 52.dp else 56.dp
+    val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
     val iconSize = if (isBackButton) 36.dp else 28.dp
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.93f else 1f,

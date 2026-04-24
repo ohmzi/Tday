@@ -120,6 +120,7 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalTime
@@ -994,12 +995,12 @@ private fun CreateTaskButton(
         border = BorderStroke(1.dp, fabBlueBorder),
         colors = CardDefaults.cardColors(containerColor = fabBlue),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
+            defaultElevation = TdayDimens.FabElevation,
+            pressedElevation = TdayDimens.FabPressedElevation,
         ),
     ) {
         Box(
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(TdayDimens.FabSize),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

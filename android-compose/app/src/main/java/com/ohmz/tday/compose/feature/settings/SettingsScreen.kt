@@ -73,6 +73,7 @@ import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 
 @Composable
 fun SettingsScreen(
@@ -537,7 +538,7 @@ private fun SettingsHeaderButton(
         colorScheme.background
     }
     val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
-    val buttonSize = if (isBackButton) 52.dp else 56.dp
+    val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
     val iconSize = if (isBackButton) 36.dp else 28.dp
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.93f else 1f,
