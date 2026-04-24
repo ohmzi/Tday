@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 private enum TodoTimelineMetrics {
     static let horizontalPadding: CGFloat = 18
+    static let heroTitleSize: CGFloat = 32
     static let sectionTitleSize: CGFloat = 22
     static let sectionChevronSize: CGFloat = 14
     static let sectionSpacing: CGFloat = 10
@@ -16,12 +17,31 @@ private enum TodoTimelineMetrics {
     static let todayCardCornerRadius: CGFloat = 20
     static let emptyStateSize: CGFloat = 28
     static let emptyStateOffset: CGFloat = 78
+    static let titleCollapseDistance: CGFloat = 64
+    static let topBarRowHeight: CGFloat = 48
+    static let topBarButtonFrame: CGFloat = 44
+    static let topBarButtonIconSize: CGFloat = 20
+    static let expandedTitleHeight: CGFloat = 44
+    static let titleTravelDistance: CGFloat = 18
+    static let titleFadeOutEnd: CGFloat = 0.42
+    static let titleFadeInStart: CGFloat = 0.58
+
+    static func smoothstep(_ value: CGFloat) -> CGFloat {
+        let clamped = min(max(value, 0), 1)
+        return clamped * clamped * (3 - (2 * clamped))
+    }
+}
+
+private struct TimelineTopBarAction {
+    let systemName: String
+    let action: () -> Void
 }
 
 struct TodoListScreen: View {
     let highlightedTodoId: String?
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
+    @Environment(\.dismiss) private var dismiss
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
     @State private var showingSummary = false
@@ -29,6 +49,7 @@ struct TodoListScreen: View {
     @State private var draggedTodo: TodoItem?
     @State private var activeDropSectionId: String?
     @State private var collapsedSectionIDs: Set<String>
+    @State private var timelineScrollOffset: CGFloat = 0
 
     init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?, highlightedTodoId: String?) {
         self.highlightedTodoId = highlightedTodoId
@@ -56,12 +77,30 @@ struct TodoListScreen: View {
         todoModeAccentColor(viewModel.mode, listColorKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.color)
     }
 
-    private var navigationInlineTitleColor: Color {
-        usesHeroTimelineMode ? modeAccentColor : colors.onSurface
+    private var titleCollapseProgress: CGFloat {
+        let distance = TodoTimelineMetrics.titleCollapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(timelineScrollOffset / distance, 0), 1)
     }
 
     private var canSummarizeCurrentMode: Bool {
         viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled
+    }
+
+    private var heroTopBarAction: TimelineTopBarAction? {
+        if canSummarizeCurrentMode {
+            return TimelineTopBarAction(
+                systemName: "sparkles",
+                action: presentSummary
+            )
+        }
+        if viewModel.mode == .list {
+            return TimelineTopBarAction(
+                systemName: "slider.horizontal.3",
+                action: { showingListSettings = true }
+            )
+        }
+        return nil
     }
 
     private var modeContent: AnyView {
@@ -80,13 +119,17 @@ struct TodoListScreen: View {
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: modeAccentColor,
-            inlineTitleColor: navigationInlineTitleColor,
+            inlineTitleColor: colors.onSurface,
             backgroundColor: colors.background
         )
-        .navigationTitle(viewModel.title)
-        .navigationBarTitleDisplayMode(usesHeroTimelineMode ? .large : .inline)
+        .navigationTitle(usesHeroTimelineMode ? "" : viewModel.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(usesHeroTimelineMode ? .hidden : .visible, for: .navigationBar)
         .toolbar {
             navigationToolbarContent
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            timelineTopInset
         }
         .onChange(of: viewModel.items) {
             handleItemsChanged()
@@ -110,22 +153,48 @@ struct TodoListScreen: View {
 
     @ToolbarContentBuilder
     private var navigationToolbarContent: some ToolbarContent {
-        if viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: presentSummary) {
-                    Image(systemName: "sparkles")
+        if !usesHeroTimelineMode {
+            if viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: presentSummary) {
+                        Image(systemName: "sparkles")
+                    }
+                }
+            }
+            if viewModel.mode == .list {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingListSettings = true
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
                 }
             }
         }
-        if viewModel.mode == .list {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingListSettings = true
-                } label: {
-                    Image(systemName: "slider.horizontal.3")
-                }
-            }
+    }
+
+    @ViewBuilder
+    private var timelineTopInset: some View {
+        if usesHeroTimelineMode {
+            TimelineTopBar(
+                title: viewModel.title,
+                accentColor: modeAccentColor,
+                collapseProgress: titleCollapseProgress,
+                onBack: { dismiss() },
+                action: heroTopBarAction
+            )
         }
+    }
+
+    private var timelineHeroTitleRow: some View {
+        TimelineExpandedTitleRow(
+            title: viewModel.title,
+            accentColor: modeAccentColor,
+            collapseProgress: titleCollapseProgress
+        )
+        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     private var floatingActionButtonDock: some View {
@@ -271,6 +340,9 @@ struct TodoListScreen: View {
     private var todayModeContent: some View {
         ZStack {
             List {
+                TimelineScrollOffsetTrackingRow { timelineScrollOffset = $0 }
+                timelineHeroTitleRow
+
                 if let errorMessage = viewModel.errorMessage {
                     Section {
                         ErrorRetryView(message: errorMessage) {
@@ -332,6 +404,9 @@ struct TodoListScreen: View {
     private var minimalTimelineModeContent: some View {
         ZStack {
             List {
+                TimelineScrollOffsetTrackingRow { timelineScrollOffset = $0 }
+                timelineHeroTitleRow
+
                 if let errorMessage = viewModel.errorMessage {
                     Section {
                         ErrorRetryView(message: errorMessage) {
@@ -627,6 +702,189 @@ struct TodoListScreen: View {
         default:
             return dueBodyText
         }
+    }
+}
+
+private struct TimelineTopBar: View {
+    let title: String
+    let accentColor: Color
+    let collapseProgress: CGFloat
+    let onBack: () -> Void
+    let action: TimelineTopBarAction?
+
+    @Environment(\.tdayColors) private var colors
+
+    private var progress: CGFloat {
+        min(max(collapseProgress, 0), 1)
+    }
+
+    private var titleOpacity: CGFloat {
+        let fadeProgress = (progress - TodoTimelineMetrics.titleFadeInStart) / (1 - TodoTimelineMetrics.titleFadeInStart)
+        return TodoTimelineMetrics.smoothstep(fadeProgress)
+    }
+
+    private var titleOffsetY: CGFloat {
+        TodoTimelineMetrics.titleTravelDistance * (1 - progress)
+    }
+
+    private var titleContent: some View {
+        Text(title)
+            .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
+            .tracking(-0.9)
+            .foregroundStyle(accentColor)
+            .lineLimit(1)
+    }
+
+    var body: some View {
+        ZStack {
+            HStack(spacing: 0) {
+                TimelineTopBarButton(systemName: "chevron.left", alignment: .leading, action: onBack)
+                Spacer(minLength: 0)
+                if let action {
+                    TimelineTopBarButton(systemName: action.systemName, alignment: .trailing, action: action.action)
+                } else {
+                    Color.clear
+                        .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                }
+            }
+
+            titleContent
+                .opacity(titleOpacity)
+                .offset(y: titleOffsetY)
+                .padding(.horizontal, TodoTimelineMetrics.topBarButtonFrame + 12)
+                .frame(maxWidth: .infinity)
+                .allowsHitTesting(false)
+        }
+        .frame(height: TodoTimelineMetrics.topBarRowHeight)
+        .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
+        .background(colors.background)
+    }
+}
+
+private struct TimelineExpandedTitleRow: View {
+    let title: String
+    let accentColor: Color
+    let collapseProgress: CGFloat
+
+    private var progress: CGFloat {
+        min(max(collapseProgress, 0), 1)
+    }
+
+    private var titleOpacity: CGFloat {
+        let fadeProgress = progress / TodoTimelineMetrics.titleFadeOutEnd
+        return 1 - TodoTimelineMetrics.smoothstep(fadeProgress)
+    }
+
+    private var titleOffsetY: CGFloat {
+        -TodoTimelineMetrics.titleTravelDistance * progress
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
+            .tracking(-0.9)
+            .foregroundStyle(accentColor)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, minHeight: TodoTimelineMetrics.expandedTitleHeight, alignment: .leading)
+            .opacity(titleOpacity)
+            .offset(y: titleOffsetY)
+            .allowsHitTesting(false)
+    }
+}
+
+private struct TimelineTopBarButton: View {
+    let systemName: String
+    let alignment: Alignment
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: TodoTimelineMetrics.topBarButtonIconSize, weight: .semibold))
+                .frame(
+                    width: TodoTimelineMetrics.topBarButtonFrame,
+                    height: TodoTimelineMetrics.topBarButtonFrame,
+                    alignment: alignment
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.accentColor)
+    }
+}
+
+private struct TimelineScrollOffsetTrackingRow: View {
+    let onChange: (CGFloat) -> Void
+
+    var body: some View {
+        TimelineScrollOffsetObserver(onChange: onChange)
+            .frame(height: 0)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .allowsHitTesting(false)
+    }
+}
+
+private struct TimelineScrollOffsetObserver: UIViewRepresentable {
+    let onChange: (CGFloat) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onChange: onChange)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onChange = onChange
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator {
+        var onChange: (CGFloat) -> Void
+        private weak var observedScrollView: UIScrollView?
+        private var observation: NSKeyValueObservation?
+
+        init(onChange: @escaping (CGFloat) -> Void) {
+            self.onChange = onChange
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.enclosingScrollView() else {
+                return
+            }
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
+                let offset = max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+                self?.onChange(offset)
+            }
+        }
+    }
+}
+
+private extension UIView {
+    func enclosingScrollView() -> UIScrollView? {
+        var current: UIView? = self
+        while let view = current {
+            if let scrollView = view as? UIScrollView {
+                return scrollView
+            }
+            current = view.superview
+        }
+        return nil
     }
 }
 
