@@ -358,7 +358,13 @@ private struct HomeTopBar: View {
                                     .font(.system(size: 18, weight: .semibold))
                                     .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(
+                                TdayPressButtonStyle(
+                                    shadowColor: Color.black,
+                                    pressedShadowOpacity: 0,
+                                    normalShadowOpacity: 0
+                                )
+                            )
                             .accessibilityLabel("Close search")
                         }
                         .padding(.horizontal, 14)
@@ -794,7 +800,13 @@ private struct HomeSearchResultsOverlay: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 9)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(
+                        TdayPressButtonStyle(
+                            shadowColor: Color.black,
+                            pressedShadowOpacity: 0.04,
+                            normalShadowOpacity: 0.08
+                        )
+                    )
 
                     if index < todos.count - 1 {
                         Rectangle()
@@ -817,30 +829,24 @@ private struct HomeSearchResultsOverlay: View {
 private struct HomeTileButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .offset(y: configuration.isPressed ? 2 : 0)
-            .shadow(
-                color: Color.black.opacity(configuration.isPressed ? 0.08 : 0.14),
-                radius: configuration.isPressed ? 4 : 12,
-                x: 0,
-                y: configuration.isPressed ? 2 : 8
+            .tdayPressEffect(
+                isPressed: configuration.isPressed,
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.08,
+                normalShadowOpacity: 0.14
             )
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
 private struct HomeListButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .offset(y: configuration.isPressed ? 2 : 0)
-            .shadow(
-                color: Color.black.opacity(configuration.isPressed ? 0.08 : 0.13),
-                radius: configuration.isPressed ? 4 : 10,
-                x: 0,
-                y: configuration.isPressed ? 2 : 8
+            .tdayPressEffect(
+                isPressed: configuration.isPressed,
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.08,
+                normalShadowOpacity: 0.13
             )
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
@@ -849,9 +855,12 @@ private struct HomeIconButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.93 : 1)
-            .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+            .tdayPressEffect(
+                isPressed: configuration.isPressed,
+                shadowColor: Color.black,
+                pressedShadowOpacity: compact ? 0 : 0.08,
+                normalShadowOpacity: compact ? 0 : 0.14
+            )
     }
 }
 
@@ -1031,7 +1040,13 @@ private struct CreateListSheet: View {
                                                 )
                                         )
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(
+                                    TdayPressButtonStyle(
+                                        shadowColor: Color.black,
+                                        pressedShadowOpacity: 0.04,
+                                        normalShadowOpacity: 0.08
+                                    )
+                                )
                             }
                         }
                         .padding(.horizontal, 14)
@@ -1064,7 +1079,13 @@ private struct CreateListSheet: View {
                                                 .foregroundStyle(isSelected ? accentColor : colors.onSurfaceVariant)
                                         }
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(
+                                    TdayPressButtonStyle(
+                                        shadowColor: Color.black,
+                                        pressedShadowOpacity: 0.04,
+                                        normalShadowOpacity: 0.08
+                                    )
+                                )
                                 .accessibilityLabel(formattedOptionName(option.key))
                             }
                         }
@@ -1164,15 +1185,12 @@ private struct CreateListSheetActionButton: View {
 private struct CreateListSheetActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.93 : 1)
-            .offset(y: configuration.isPressed ? 1 : 0)
-            .shadow(
-                color: Color.black.opacity(configuration.isPressed ? 0.06 : 0.12),
-                radius: configuration.isPressed ? 4 : 10,
-                x: 0,
-                y: configuration.isPressed ? 2 : 7
+            .tdayPressEffect(
+                isPressed: configuration.isPressed,
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.06,
+                normalShadowOpacity: 0.12
             )
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
     }
 }
 
