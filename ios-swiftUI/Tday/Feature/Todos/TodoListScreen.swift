@@ -18,10 +18,10 @@ private enum TodoTimelineMetrics {
     static let emptyStateSize: CGFloat = 28
     static let emptyStateOffset: CGFloat = 78
     static let titleCollapseDistance: CGFloat = 64
-    static let topBarRowHeight: CGFloat = 48
+    static let topBarRowHeight: CGFloat = 44
     static let topBarButtonFrame: CGFloat = 44
     static let topBarButtonIconSize: CGFloat = 20
-    static let expandedTitleHeight: CGFloat = 44
+    static let expandedTitleHeight: CGFloat = 40
     static let titleTravelDistance: CGFloat = 18
     static let titleFadeOutEnd: CGFloat = 0.42
     static let titleFadeInStart: CGFloat = 0.58
@@ -192,6 +192,10 @@ struct TodoListScreen: View {
             accentColor: modeAccentColor,
             collapseProgress: titleCollapseProgress
         )
+        .background {
+            TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
+                .frame(width: 0, height: 0)
+        }
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -340,7 +344,6 @@ struct TodoListScreen: View {
     private var todayModeContent: some View {
         ZStack {
             List {
-                TimelineScrollOffsetTrackingRow { timelineScrollOffset = $0 }
                 timelineHeroTitleRow
 
                 if let errorMessage = viewModel.errorMessage {
@@ -354,13 +357,13 @@ struct TodoListScreen: View {
                     }
                 }
 
-                ForEach(groupedSections) { section in
+                ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
                     Section {
                         TimelineSectionHeader(
                             title: section.title,
                             isActiveDropTarget: activeDropSectionId == section.id
                         )
-                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 0))
+                        .listRowInsets(EdgeInsets(top: index == 0 ? 0 : 8, leading: 0, bottom: 0, trailing: 0))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
 
@@ -404,7 +407,6 @@ struct TodoListScreen: View {
     private var minimalTimelineModeContent: some View {
         ZStack {
             List {
-                TimelineScrollOffsetTrackingRow { timelineScrollOffset = $0 }
                 timelineHeroTitleRow
 
                 if let errorMessage = viewModel.errorMessage {
@@ -418,8 +420,8 @@ struct TodoListScreen: View {
                     }
                 }
 
-                ForEach(groupedSections) { section in
-                    minimalTimelineSection(section)
+                ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
+                    minimalTimelineSection(section, isFirstSection: index == 0)
                 }
 
                 Color.clear
@@ -639,7 +641,7 @@ struct TodoListScreen: View {
     }
 
     @ViewBuilder
-    private func minimalTimelineSection(_ section: TodoTimelineSection) -> some View {
+    private func minimalTimelineSection(_ section: TodoTimelineSection, isFirstSection: Bool) -> some View {
         let canCollapseSection = if viewModel.mode == .all {
             true
         } else {
@@ -661,7 +663,7 @@ struct TodoListScreen: View {
                     }
                 } : nil
             )
-            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 0))
+            .listRowInsets(EdgeInsets(top: isFirstSection ? 0 : 8, leading: 0, bottom: 0, trailing: 0))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
 
@@ -738,10 +740,10 @@ private struct TimelineTopBar: View {
     var body: some View {
         ZStack {
             HStack(spacing: 0) {
-                TimelineTopBarButton(systemName: "chevron.left", alignment: .leading, action: onBack)
+                TimelineTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
                 Spacer(minLength: 0)
                 if let action {
-                    TimelineTopBarButton(systemName: action.systemName, alignment: .trailing, action: action.action)
+                    TimelineTopBarButton(systemName: action.systemName, chrome: .plain, action: action.action)
                 } else {
                     Color.clear
                         .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
@@ -757,8 +759,8 @@ private struct TimelineTopBar: View {
         }
         .frame(height: TodoTimelineMetrics.topBarRowHeight)
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
-        .padding(.top, 4)
-        .padding(.bottom, 8)
+        .padding(.top, 2)
+        .padding(.bottom, 4)
         .background(colors.background)
     }
 }
@@ -781,37 +783,52 @@ private struct TimelineExpandedTitleRow: View {
         -TodoTimelineMetrics.titleTravelDistance * progress
     }
 
+    private var rowHeight: CGFloat {
+        TodoTimelineMetrics.expandedTitleHeight * titleOpacity
+    }
+
     var body: some View {
         Text(title)
             .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
             .tracking(-0.9)
             .foregroundStyle(accentColor)
             .lineLimit(1)
-            .frame(maxWidth: .infinity, minHeight: TodoTimelineMetrics.expandedTitleHeight, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight, alignment: .topLeading)
             .opacity(titleOpacity)
             .offset(y: titleOffsetY)
+            .clipped()
             .allowsHitTesting(false)
     }
 }
 
 private struct TimelineTopBarButton: View {
+    enum Chrome {
+        case plain
+        case filled
+    }
+
     let systemName: String
-    let alignment: Alignment
+    let chrome: Chrome
     let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: TodoTimelineMetrics.topBarButtonIconSize, weight: .semibold))
-                .frame(
-                    width: TodoTimelineMetrics.topBarButtonFrame,
-                    height: TodoTimelineMetrics.topBarButtonFrame,
-                    alignment: alignment
-                )
-                .contentShape(Rectangle())
+                .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                .background {
+                    if chrome == .filled {
+                        Circle()
+                            .fill(colors.surface)
+                            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
+                    }
+                }
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.accentColor)
+        .foregroundStyle(chrome == .filled ? colors.onSurface : Color.accentColor)
     }
 }
 
