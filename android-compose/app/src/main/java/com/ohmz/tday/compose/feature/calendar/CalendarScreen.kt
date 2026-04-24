@@ -74,6 +74,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -120,6 +121,7 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -478,6 +480,12 @@ private fun CalendarCreateTaskFab(
         },
         containerColor = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary,
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = TdayDimens.FabElevation,
+            pressedElevation = TdayDimens.FabPressedElevation,
+            focusedElevation = TdayDimens.FabElevation,
+            hoveredElevation = TdayDimens.FabElevation,
+        ),
     ) {
         Icon(
             imageVector = Icons.Rounded.Add,
@@ -1023,7 +1031,7 @@ private fun CalendarCircleButton(
         colorScheme.background
     }
     val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f))
-    val buttonSize = if (isBackButton) 52.dp else 54.dp
+    val buttonSize = if (isBackButton) TdayDimens.FabSize else 54.dp
     val iconSize = if (isBackButton) 36.dp else 28.dp
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.93f else 1f,
