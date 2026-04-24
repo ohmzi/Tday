@@ -30,6 +30,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { listColorMap } from "@/lib/listColorMap";
 import type { ListColor } from "@/types";
+import { useToast } from "@/hooks/use-toast";
 
 type ListSidebarSectionProps = {
   mode: "expanded" | "collapsed";
@@ -104,6 +105,7 @@ export default function ListSidebarSection({
   const { listMetaData } = useListMetaData();
   const { activeMenu, setActiveMenu } = useMenu();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -157,6 +159,9 @@ export default function ListSidebarSection({
 
   const deleteListMutation = useMutation({
     mutationFn: deleteList,
+    onMutate: async (deletedListId) => {
+      await queryClient.cancelQueries({ queryKey: ["list", deletedListId] });
+    },
     onSuccess: (_, deletedListId) => {
       queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
       queryClient.invalidateQueries({ queryKey: ["todo"] });
@@ -165,11 +170,19 @@ export default function ListSidebarSection({
       queryClient.invalidateQueries({ queryKey: ["completedTodo"] });
 
       if (activeListIdFromPath === deletedListId) {
+        setActiveMenu({ name: "Todo" });
         router.push("/app/tday");
       }
 
       setDeleteDialogOpen(false);
       setSelectedList(null);
+    },
+    onError: (error) => {
+      toast({
+        description:
+          error instanceof Error ? error.message : "Failed to delete list",
+        variant: "destructive",
+      });
     },
   });
 
