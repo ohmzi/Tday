@@ -554,6 +554,13 @@ class SyncManager @Inject constructor(
         allListIds.forEach { listId ->
             val localList = localListById[listId]
             val remoteList = remoteListById[listId]
+
+            if (remoteList == null && localList != null) {
+                val hasPendingLocalMutation = pendingListIds.contains(localList.id)
+                val isUnsyncedLocalList = localList.id.startsWith(LOCAL_LIST_PREFIX)
+                if (!hasPendingLocalMutation && !isUnsyncedLocalList) return@forEach
+            }
+
             val merged = when {
                 localList != null && remoteList != null -> {
                     if (
