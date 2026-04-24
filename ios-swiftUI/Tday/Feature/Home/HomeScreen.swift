@@ -9,7 +9,6 @@ private enum HomeMetrics {
     static let tileCornerRadius: CGFloat = 26
     static let tileHeight: CGFloat = 102
     static let listRowHeight: CGFloat = 70
-    static let contentBottomSpacer: CGFloat = 80
     static let tileWatermarkSize: CGFloat = 124
     static let tileWatermarkTrailingInset: CGFloat = 22
 }
@@ -181,15 +180,19 @@ struct HomeScreen: View {
                                 .padding(.top, 10)
                         }
 
-                        Color.clear
-                            .frame(height: HomeMetrics.contentBottomSpacer)
                     }
                     .padding(.horizontal, HomeMetrics.screenPadding)
                     .padding(.top, HomeMetrics.screenPadding)
-                    .padding(.bottom, 100)
                 }
                 .refreshable {
                     await viewModel.refresh()
+                }
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                .safeAreaInset(edge: .bottom) {
+                    TaskFloatingActionButtonDock {
+                        closeSearch()
+                        showingCreateTask = true
+                    }
                 }
 
                 if showSearchResultsOverlay, searchBarFrame != .zero {
@@ -240,12 +243,6 @@ struct HomeScreen: View {
             } else {
                 searchFieldFocused = false
                 searchResultsFrame = .zero
-            }
-        }
-        .safeAreaInset(edge: .bottom) {
-            TaskFloatingActionButtonDock {
-                closeSearch()
-                showingCreateTask = true
             }
         }
         .sheet(isPresented: $showingCreateTask) {
