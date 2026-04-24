@@ -21,14 +21,24 @@ private enum TodoTimelineMetrics {
     static let topBarRowHeight: CGFloat = 44
     static let topBarButtonFrame: CGFloat = 44
     static let topBarButtonIconSize: CGFloat = 20
-    static let expandedTitleHeight: CGFloat = 40
-    static let titleTravelDistance: CGFloat = 18
-    static let titleFadeOutEnd: CGFloat = 0.42
-    static let titleFadeInStart: CGFloat = 0.58
+    static let expandedTitleHeight: CGFloat = 42
+    static let expandedTitleLiftDistance: CGFloat = 14
+    static let expandedTitleFadeStart: CGFloat = 0.08
+    static let expandedTitleFadeEnd: CGFloat = 0.44
+    static let expandedTitleCollapseStart: CGFloat = 0.18
+    static let expandedTitleCollapseEnd: CGFloat = 0.82
+    static let collapsedTitleRevealDistance: CGFloat = 10
+    static let collapsedTitleRevealStart: CGFloat = 0.68
+    static let collapsedTitleRevealEnd: CGFloat = 1
 
     static func smoothstep(_ value: CGFloat) -> CGFloat {
         let clamped = min(max(value, 0), 1)
         return clamped * clamped * (3 - (2 * clamped))
+    }
+
+    static func progress(_ value: CGFloat, from start: CGFloat, to end: CGFloat) -> CGFloat {
+        guard end > start else { return value >= end ? 1 : 0 }
+        return smoothstep((value - start) / (end - start))
     }
 }
 
@@ -720,19 +730,21 @@ private struct TimelineTopBar: View {
         min(max(collapseProgress, 0), 1)
     }
 
-    private var titleOpacity: CGFloat {
-        let fadeProgress = (progress - TodoTimelineMetrics.titleFadeInStart) / (1 - TodoTimelineMetrics.titleFadeInStart)
-        return TodoTimelineMetrics.smoothstep(fadeProgress)
+    private var revealProgress: CGFloat {
+        TodoTimelineMetrics.progress(
+            progress,
+            from: TodoTimelineMetrics.collapsedTitleRevealStart,
+            to: TodoTimelineMetrics.collapsedTitleRevealEnd
+        )
     }
 
     private var titleOffsetY: CGFloat {
-        TodoTimelineMetrics.titleTravelDistance * (1 - progress)
+        TodoTimelineMetrics.collapsedTitleRevealDistance * (1 - revealProgress)
     }
 
     private var titleContent: some View {
         Text(title)
             .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
-            .tracking(-0.9)
             .foregroundStyle(accentColor)
             .lineLimit(1)
     }
@@ -751,8 +763,9 @@ private struct TimelineTopBar: View {
             }
 
             titleContent
-                .opacity(titleOpacity)
+                .opacity(revealProgress)
                 .offset(y: titleOffsetY)
+                .scaleEffect(0.985 + (0.015 * revealProgress))
                 .padding(.horizontal, TodoTimelineMetrics.topBarButtonFrame + 12)
                 .frame(maxWidth: .infinity)
                 .allowsHitTesting(false)
@@ -774,30 +787,52 @@ private struct TimelineExpandedTitleRow: View {
         min(max(collapseProgress, 0), 1)
     }
 
-    private var titleOpacity: CGFloat {
-        let fadeProgress = progress / TodoTimelineMetrics.titleFadeOutEnd
-        return 1 - TodoTimelineMetrics.smoothstep(fadeProgress)
+    private var fadeProgress: CGFloat {
+        TodoTimelineMetrics.progress(
+            progress,
+            from: TodoTimelineMetrics.expandedTitleFadeStart,
+            to: TodoTimelineMetrics.expandedTitleFadeEnd
+        )
+    }
+
+    private var rowCollapseProgress: CGFloat {
+        TodoTimelineMetrics.progress(
+            progress,
+            from: TodoTimelineMetrics.expandedTitleCollapseStart,
+            to: TodoTimelineMetrics.expandedTitleCollapseEnd
+        )
     }
 
     private var titleOffsetY: CGFloat {
-        -TodoTimelineMetrics.titleTravelDistance * progress
+        -TodoTimelineMetrics.expandedTitleLiftDistance * fadeProgress
     }
 
     private var rowHeight: CGFloat {
-        TodoTimelineMetrics.expandedTitleHeight * titleOpacity
+        TodoTimelineMetrics.expandedTitleHeight * (1 - rowCollapseProgress)
+    }
+
+    private var titleOpacity: Double {
+        Double(1 - fadeProgress)
     }
 
     var body: some View {
-        Text(title)
-            .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
-            .tracking(-0.9)
-            .foregroundStyle(accentColor)
-            .lineLimit(1)
-            .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight, alignment: .topLeading)
-            .opacity(titleOpacity)
-            .offset(y: titleOffsetY)
-            .clipped()
-            .allowsHitTesting(false)
+        ZStack(alignment: .topLeading) {
+            Text(title)
+                .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
+                .foregroundStyle(accentColor)
+                .lineLimit(1)
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: TodoTimelineMetrics.expandedTitleHeight,
+                    maxHeight: TodoTimelineMetrics.expandedTitleHeight,
+                    alignment: .topLeading
+                )
+                .opacity(titleOpacity)
+                .offset(y: titleOffsetY)
+        }
+        .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight, alignment: .topLeading)
+        .clipped()
+        .allowsHitTesting(false)
     }
 }
 
