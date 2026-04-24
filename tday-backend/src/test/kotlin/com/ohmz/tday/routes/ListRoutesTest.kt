@@ -9,7 +9,9 @@ import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.security.JwtUserClaims
 import com.ohmz.tday.services.ListService
 import com.ohmz.tday.shared.model.CreateListRequest
+import com.ohmz.tday.shared.model.DeleteListRequest
 import io.ktor.client.request.get
+import io.ktor.client.request.delete
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -79,6 +81,33 @@ class ListRoutesTest {
             "todo_123",
             payload.getValue("todos").jsonArray.first().jsonObject.getValue("id").jsonPrimitive.content,
         )
+    }
+
+    @Test
+    fun `delete list accepts multiple ids and returns deleted ids`() = testApplication {
+        val listService = RecordingListService()
+
+        application {
+            configureListRoutesTestApp(listService)
+        }
+
+        val response = client.delete("/api/list") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    DeleteListRequest(
+                        ids = listOf("list_123", "list_456"),
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("2 lists deleted", payload.getValue("message").jsonPrimitive.content)
+        assertEquals(2, payload.getValue("deletedIds").jsonArray.size)
+        assertEquals("list_123", payload.getValue("deletedIds").jsonArray[0].jsonPrimitive.content)
+        assertEquals("list_456", payload.getValue("deletedIds").jsonArray[1].jsonPrimitive.content)
     }
 
     private fun Application.configureListRoutesTestApp(
@@ -172,5 +201,10 @@ class ListRoutesTest {
             userId: String,
             id: String,
         ): Either<com.ohmz.tday.domain.AppError, Int> = 1.right()
+
+        override suspend fun deleteMany(
+            userId: String,
+            ids: List<String>,
+        ): Either<com.ohmz.tday.domain.AppError, List<String>> = ids.right()
     }
 }
