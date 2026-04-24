@@ -391,8 +391,8 @@ private fun CompletedHeaderButton(
         border = buttonBorder,
         colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = containerColor),
         elevation = androidx.compose.material3.CardDefaults.cardElevation(
-            defaultElevation = if (isBackButton) 10.dp else 0.dp,
-            pressedElevation = if (isBackButton) 6.dp else 0.dp,
+            defaultElevation = if (isBackButton) TdayDimens.FabElevation else 0.dp,
+            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else 0.dp,
         ),
     ) {
         Box(
