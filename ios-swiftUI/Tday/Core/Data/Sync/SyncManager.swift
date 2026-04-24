@@ -94,6 +94,16 @@ final class SyncManager {
 
     private func mergeRemoteWithLocal(localState: OfflineSyncState, remote: RemoteSnapshot) -> OfflineSyncState {
         let pendingTargets = Set(localState.pendingMutations.compactMap(\.targetId))
+        let pendingListTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .createList, .updateList:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
+            }
+        )
         var remoteTodosByKey = Dictionary(uniqueKeysWithValues: remote.todos.map { (todoMergeKey(item: $0), todoToCache($0)) })
         var mergedTodos: [CachedTodoRecord] = []
 
@@ -114,8 +124,13 @@ final class SyncManager {
         var mergedLists: [CachedListRecord] = []
         for localList in localState.lists {
             let remoteList = remoteListsByID[localList.id]
+            if remoteList == nil,
+               !localList.id.hasPrefix(LOCAL_LIST_PREFIX),
+               !pendingListTargets.contains(localList.id) {
+                continue
+            }
             let localWins = localList.id.hasPrefix(LOCAL_LIST_PREFIX) ||
-                pendingTargets.contains(localList.id) ||
+                pendingListTargets.contains(localList.id) ||
                 localList.updatedAtEpochMs > (remoteList?.updatedAtEpochMs ?? 0)
             if localWins {
                 mergedLists.append(localList)
