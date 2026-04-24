@@ -553,6 +553,7 @@ private struct WizardPrimaryButton: View {
 private struct WizardPressButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .tdayRippleEffect(isPressed: configuration.isPressed)
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .opacity(configuration.isPressed ? 0.92 : 1)
             .brightness(configuration.isPressed ? -0.02 : 0)
@@ -563,6 +564,7 @@ private struct WizardPressButtonStyle: ButtonStyle {
 private struct WizardTextButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .tdayRippleEffect(isPressed: configuration.isPressed)
             .opacity(configuration.isPressed ? 0.62 : 1)
             .scaleEffect(configuration.isPressed ? 0.985 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
