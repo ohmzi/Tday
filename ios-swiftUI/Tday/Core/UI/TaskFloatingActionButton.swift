@@ -38,9 +38,9 @@ struct TaskFloatingActionButtonDock: View {
 }
 
 struct TdayPressButtonStyle: ButtonStyle {
-    var shadowColor = Color(red: 110.0 / 255.0, green: 168.0 / 255.0, blue: 225.0 / 255.0)
-    var pressedShadowOpacity = 0.18
-    var normalShadowOpacity = 0.28
+    var shadowColor = Color.black
+    var pressedShadowOpacity = 0.14
+    var normalShadowOpacity = 0.24
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -56,9 +56,9 @@ struct TdayPressButtonStyle: ButtonStyle {
 extension View {
     func tdayPressEffect(
         isPressed: Bool,
-        shadowColor: Color = Color(red: 110.0 / 255.0, green: 168.0 / 255.0, blue: 225.0 / 255.0),
-        pressedShadowOpacity: Double = 0.18,
-        normalShadowOpacity: Double = 0.28
+        shadowColor: Color = Color.black,
+        pressedShadowOpacity: Double = 0.14,
+        normalShadowOpacity: Double = 0.24
     ) -> some View {
         modifier(
             TdayPressEffectModifier(
