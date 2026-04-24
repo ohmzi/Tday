@@ -18,9 +18,9 @@ private enum TodoTimelineMetrics {
     static let emptyStateSize: CGFloat = 28
     static let emptyStateOffset: CGFloat = 78
     static let titleCollapseDistance: CGFloat = 64
-    static let topBarRowHeight: CGFloat = 44
-    static let topBarButtonFrame: CGFloat = 44
-    static let topBarButtonIconSize: CGFloat = 20
+    static let topBarRowHeight: CGFloat = 56
+    static let topBarButtonFrame: CGFloat = 56
+    static let topBarButtonIconSize: CGFloat = 24
     static let expandedTitleHeight: CGFloat = 42
     static let expandedTitleLiftDistance: CGFloat = 14
     static let expandedTitleFadeStart: CGFloat = 0.08
