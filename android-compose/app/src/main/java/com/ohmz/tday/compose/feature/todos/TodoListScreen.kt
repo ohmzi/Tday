@@ -380,16 +380,12 @@ fun TodoListScreen(
                         }
                     },
                     navigationIcon = {
-                        IconButton(
+                        TodayHeaderButton(
                             onClick = onBack,
-                            modifier = Modifier.size(TdayDimens.FabSize),
-                        ) {
-                            Icon(
-                                Icons.Rounded.ChevronLeft,
-                                contentDescription = stringResource(R.string.action_back),
-                                modifier = Modifier.size(28.dp),
-                            )
-                        }
+                            icon = Icons.Rounded.ChevronLeft,
+                            contentDescription = stringResource(R.string.action_back),
+                            isBackButton = true,
+                        )
                     },
                 )
             }
@@ -821,8 +817,8 @@ private fun TodayHeaderButton(
         border = buttonBorder,
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isBackButton) 10.dp else 0.dp,
-            pressedElevation = if (isBackButton) 6.dp else 0.dp,
+            defaultElevation = if (isBackButton) TdayDimens.FabElevation else 0.dp,
+            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else 0.dp,
         ),
     ) {
         Box(
