@@ -161,14 +161,15 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
     final class Coordinator: NSObject {
         var collapseDistance: CGFloat
         private weak var observedScrollView: UIScrollView?
-        private var snapTimer: Timer?
+        private var dragStartOffset: CGFloat = 0
+        private var lastObservedOffset: CGFloat = 0
+        private var lastDragDelta: CGFloat = 0
+        private var releaseVelocityY: CGFloat = 0
+        private var settledTargetOffset: CGFloat = 0
+        private var isSnapping = false
 
         init(collapseDistance: CGFloat) {
             self.collapseDistance = collapseDistance
-        }
-
-        deinit {
-            snapTimer?.invalidate()
         }
 
         func attach(to view: UIView) {
@@ -185,41 +186,102 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
         }
 
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            switch gesture.state {
-            case .ended, .cancelled, .failed:
-                scheduleSnapCheck()
-            default:
-                break
-            }
-        }
+            guard let scrollView = observedScrollView else { return }
+            let offset = normalizedOffset(for: scrollView)
 
-        private func scheduleSnapCheck() {
-            snapTimer?.invalidate()
-            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
-                guard let self else {
-                    timer.invalidate()
-                    return
+            switch gesture.state {
+            case .began:
+                isSnapping = false
+                releaseVelocityY = 0
+                lastDragDelta = 0
+                dragStartOffset = offset
+                lastObservedOffset = offset
+            case .changed:
+                let delta = offset - lastObservedOffset
+                if abs(delta) > 0.05 {
+                    lastDragDelta = delta
                 }
-                guard let scrollView = self.observedScrollView else {
-                    timer.invalidate()
-                    return
-                }
-                if !scrollView.isDragging && !scrollView.isDecelerating {
-                    timer.invalidate()
+                lastObservedOffset = offset
+            case .ended, .cancelled, .failed:
+                releaseVelocityY = gesture.velocity(in: scrollView).y
+                DispatchQueue.main.async { [weak self, weak scrollView] in
+                    guard let self, let scrollView else { return }
                     self.maybeSnap(scrollView: scrollView)
                 }
+            default:
+                break
             }
         }
 
         private func maybeSnap(scrollView: UIScrollView) {
             let distance = collapseDistance
             guard distance > 0 else { return }
-            let currentOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
-            guard currentOffset > 0.5 && currentOffset < distance - 0.5 else { return }
-            let target: CGFloat = currentOffset < distance / 2 ? 0 : distance
+            let currentOffset = normalizedOffset(for: scrollView)
+            guard currentOffset > 0.5 else {
+                settledTargetOffset = 0
+                return
+            }
+            guard currentOffset < distance - 0.5 else {
+                settledTargetOffset = distance
+                return
+            }
+
+            let target = targetOffset(for: currentOffset, distance: distance)
             let newContentY = target - scrollView.adjustedContentInset.top
-            let newOffset = CGPoint(x: scrollView.contentOffset.x, y: newContentY)
-            scrollView.setContentOffset(newOffset, animated: true)
+            animate(scrollView: scrollView, to: CGPoint(x: scrollView.contentOffset.x, y: newContentY), target: target)
+        }
+
+        private func normalizedOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+        }
+
+        private func targetOffset(for currentOffset: CGFloat, distance: CGFloat) -> CGFloat {
+            let velocityThreshold: CGFloat = 20
+            if releaseVelocityY < -velocityThreshold {
+                return distance
+            }
+            if releaseVelocityY > velocityThreshold {
+                return 0
+            }
+
+            let dragDelta = currentOffset - dragStartOffset
+            if dragDelta > 0.5 || lastDragDelta > 0.05 {
+                return distance
+            }
+            if dragDelta < -0.5 || lastDragDelta < -0.05 {
+                return 0
+            }
+
+            return settledTargetOffset
+        }
+
+        private func animate(scrollView: UIScrollView, to offset: CGPoint, target: CGFloat) {
+            guard !isSnapping else { return }
+            let boundedY = min(
+                max(offset.y, -scrollView.adjustedContentInset.top),
+                max(-scrollView.adjustedContentInset.top, scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom)
+            )
+            let targetOffset = CGPoint(x: offset.x, y: boundedY)
+            guard abs(scrollView.contentOffset.y - targetOffset.y) > 0.5 else {
+                settledTargetOffset = target
+                return
+            }
+
+            isSnapping = true
+            scrollView.layer.removeAllAnimations()
+            let initialVelocity = min(abs(releaseVelocityY) / max(collapseDistance, 1), 3)
+            UIView.animate(
+                withDuration: 0.34,
+                delay: 0,
+                usingSpringWithDamping: 0.88,
+                initialSpringVelocity: initialVelocity,
+                options: [.allowUserInteraction, .beginFromCurrentState]
+            ) {
+                scrollView.setContentOffset(targetOffset, animated: false)
+            } completion: { [weak self] _ in
+                self?.settledTargetOffset = target
+                self?.isSnapping = false
+            }
         }
     }
 }
