@@ -891,16 +891,8 @@ private fun ListSheetActionButton(
         targetValue = if (pressed && enabled) 0.93f else 1f,
         label = "listSheetHeaderButtonScale",
     )
-    val elevation by animateDpAsState(
-        targetValue = when {
-            pressed && enabled -> 2.dp
-            enabled -> 8.dp
-            else -> 5.dp
-        },
-        label = "listSheetHeaderButtonElevation",
-    )
     val offsetY by animateDpAsState(
-        targetValue = if (pressed && enabled) 1.dp else 0.dp,
+        targetValue = if (pressed && enabled) 2.dp else 0.dp,
         label = "listSheetHeaderButtonOffsetY",
     )
     val containerColor = colorScheme.surfaceVariant
@@ -913,7 +905,7 @@ private fun ListSheetActionButton(
 
     Card(
         modifier = Modifier
-            .size(54.dp)
+            .size(TdayDimens.FabSize)
             .offset(y = offsetY)
             .graphicsLayer {
                 scaleX = scale
@@ -933,8 +925,8 @@ private fun ListSheetActionButton(
         shape = RoundedCornerShape(999.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = elevation,
-            pressedElevation = elevation,
+            defaultElevation = if (enabled) TdayDimens.FabElevation else 0.dp,
+            pressedElevation = if (enabled) TdayDimens.FabPressedElevation else 0.dp,
         ),
     ) {
         Box(
@@ -1043,7 +1035,7 @@ private fun TopSearchBar(
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val buttonSize = 54.dp
+        val buttonSize = TdayDimens.FabSize
         val buttonGap = 8.dp
         val fixedActionWidth = (buttonSize * 2) + buttonGap
         val collapsedSearchWidth = buttonSize
@@ -1227,10 +1219,18 @@ private fun PressableIconButton(
         targetValue = if (pressed) 0.93f else 1f,
         label = "homeIconButtonScale",
     )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "homeIconButtonOffsetY",
+    )
+    val buttonSize = if (compact) 30.dp else TdayDimens.FabSize
+    val defaultElevation = if (compact) 0.dp else TdayDimens.FabElevation
+    val pressedElevation = if (compact) 0.dp else TdayDimens.FabPressedElevation
 
     Card(
         modifier = Modifier
-            .size(if (compact) 30.dp else 54.dp)
+            .size(buttonSize)
+            .offset(y = offsetY)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
@@ -1243,7 +1243,10 @@ private fun PressableIconButton(
         shape = if (compact) RoundedCornerShape(999.dp) else CircleShape,
         border = if (compact) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
         colors = CardDefaults.cardColors(containerColor = if (compact) Color.Transparent else colorScheme.background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = defaultElevation,
+            pressedElevation = pressedElevation,
+        ),
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -1703,10 +1706,6 @@ private fun ListRow(
     }
 }
 
-private fun performGentleHaptic(view: android.view.View) {
-    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-}
-
 private data class ListColorOption(
     val key: String,
     val color: Color,
@@ -1719,6 +1718,10 @@ private data class ListIconOption(
 
 private const val DEFAULT_LIST_COLOR = "BLUE"
 private const val DEFAULT_LIST_ICON_KEY = "inbox"
+
+private fun performGentleHaptic(view: android.view.View) {
+    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+}
 
 private val LIST_COLOR_OPTIONS = listOf(
     ListColorOption("RED", Color(0xFFE65E52)),
