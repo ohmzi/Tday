@@ -123,6 +123,7 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -379,10 +380,14 @@ fun TodoListScreen(
                         }
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.size(TdayDimens.FabSize),
+                        ) {
                             Icon(
                                 Icons.Rounded.ChevronLeft,
                                 contentDescription = stringResource(R.string.action_back),
+                                modifier = Modifier.size(28.dp),
                             )
                         }
                     },
@@ -789,7 +794,7 @@ private fun TodayHeaderButton(
         colorScheme.background
     }
     val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
-    val buttonSize = if (isBackButton) 52.dp else 56.dp
+    val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
     val iconSize = if (isBackButton) 36.dp else 30.dp
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.93f else 1f,
@@ -953,12 +958,12 @@ private fun CreateTaskButton(
         border = BorderStroke(1.dp, backgroundColor.copy(alpha = 0.72f)),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
+            defaultElevation = TdayDimens.FabElevation,
+            pressedElevation = TdayDimens.FabPressedElevation,
         ),
     ) {
         Box(
-            modifier = Modifier.size(56.dp),
+            modifier = Modifier.size(TdayDimens.FabSize),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

@@ -36,6 +36,8 @@ object TdayDimens {
 
     // Component sizes
     val FabSize: Dp = 56.dp
+    val FabElevation: Dp = 16.dp
+    val FabPressedElevation: Dp = 8.dp
     val BottomSheetTonalElevationDark: Dp = 10.dp
     val CardElevationDefault: Dp = 0.dp
     val PullRefreshIndicator: Dp = 26.dp
