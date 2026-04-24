@@ -36,6 +36,10 @@ extension View {
     func onVerticalScrollSnap(collapseDistance: CGFloat) -> some View {
         background(VerticalScrollSnapObserver(collapseDistance: collapseDistance))
     }
+
+    func onTopPartialScrollSnap(anchorDistance: CGFloat, isDisabled: Bool = false) -> some View {
+        background(TopPartialScrollSnapObserver(anchorDistance: anchorDistance, isDisabled: isDisabled))
+    }
 }
 
 private struct VerticalScrollBounceDisabler: UIViewRepresentable {
@@ -280,6 +284,124 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
                 scrollView.setContentOffset(targetOffset, animated: false)
             } completion: { [weak self] _ in
                 self?.settledTargetOffset = target
+                self?.isSnapping = false
+            }
+        }
+    }
+}
+
+private struct TopPartialScrollSnapObserver: UIViewRepresentable {
+    let anchorDistance: CGFloat
+    let isDisabled: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(anchorDistance: anchorDistance, isDisabled: isDisabled)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.anchorDistance = anchorDistance
+        context.coordinator.isDisabled = isDisabled
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        var anchorDistance: CGFloat
+        var isDisabled: Bool
+        private weak var observedScrollView: UIScrollView?
+        private var snapTimer: Timer?
+        private var isSnapping = false
+
+        init(anchorDistance: CGFloat, isDisabled: Bool) {
+            self.anchorDistance = anchorDistance
+            self.isDisabled = isDisabled
+        }
+
+        deinit {
+            snapTimer?.invalidate()
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.enclosingScrollView() else {
+                return
+            }
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            switch gesture.state {
+            case .ended, .cancelled, .failed:
+                scheduleSnapCheck()
+            default:
+                break
+            }
+        }
+
+        private func scheduleSnapCheck() {
+            guard !isDisabled else { return }
+            snapTimer?.invalidate()
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard let scrollView = self.observedScrollView else {
+                    timer.invalidate()
+                    return
+                }
+                if !scrollView.isTracking && !scrollView.isDragging && !scrollView.isDecelerating {
+                    timer.invalidate()
+                    self.maybeSnap(scrollView: scrollView)
+                }
+            }
+        }
+
+        private func maybeSnap(scrollView: UIScrollView) {
+            guard !isDisabled, !isSnapping, anchorDistance > 0 else { return }
+            guard maxScrollableOffset(for: scrollView) > 0.5 else { return }
+
+            let currentOffset = normalizedOffset(for: scrollView)
+            guard currentOffset > 0.5 && currentOffset < anchorDistance - 0.5 else {
+                return
+            }
+
+            animate(scrollView: scrollView, toNormalizedOffset: 0)
+        }
+
+        private func normalizedOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+        }
+
+        private func maxScrollableOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(scrollView.contentSize.height + scrollView.adjustedContentInset.bottom - scrollView.bounds.height, 0)
+        }
+
+        private func animate(scrollView: UIScrollView, toNormalizedOffset normalizedOffset: CGFloat) {
+            let targetY = normalizedOffset - scrollView.adjustedContentInset.top
+            guard abs(scrollView.contentOffset.y - targetY) > 0.5 else { return }
+
+            isSnapping = true
+            scrollView.layer.removeAllAnimations()
+            UIView.animate(
+                withDuration: 0.26,
+                delay: 0,
+                options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut]
+            ) {
+                scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: targetY), animated: false)
+            } completion: { [weak self] _ in
                 self?.isSnapping = false
             }
         }
