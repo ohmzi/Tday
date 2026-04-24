@@ -6,6 +6,7 @@ private enum HomeMetrics {
     static let tileGap: CGFloat = 10
     static let topBarButtonSize: CGFloat = 56
     static let compactButtonSize: CGFloat = 30
+    static let titleAnchorDistance: CGFloat = screenPadding + topBarButtonSize
     static let tileCornerRadius: CGFloat = 26
     static let tileHeight: CGFloat = 102
     static let listRowHeight: CGFloat = 70
@@ -113,6 +114,10 @@ struct HomeScreen: View {
                                 closeSearch()
                                 onNavigate(.settings)
                             }
+                        )
+                        .onTopPartialScrollSnap(
+                            anchorDistance: HomeMetrics.titleAnchorDistance,
+                            isDisabled: searchExpanded
                         )
 
                         HomeCategoryBoard(
