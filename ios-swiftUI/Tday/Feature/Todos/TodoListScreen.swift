@@ -573,7 +573,13 @@ struct TodoListScreen: View {
                         .foregroundStyle(todo.completed ? Color.green : colors.onSurfaceVariant.opacity(0.78))
                         .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(
+                    TdayPressButtonStyle(
+                        shadowColor: Color.black,
+                        pressedShadowOpacity: 0,
+                        normalShadowOpacity: 0
+                    )
+                )
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(todo.title)
@@ -870,9 +876,12 @@ private struct TimelineTopBarButton: View {
 private struct TimelineTopBarButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.9 : 1)
-            .opacity(configuration.isPressed ? 0.78 : 1)
-            .animation(.spring(response: 0.2, dampingFraction: 0.72), value: configuration.isPressed)
+            .tdayPressEffect(
+                isPressed: configuration.isPressed,
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: 0.08
+            )
     }
 }
 
@@ -999,7 +1008,13 @@ private struct TimelineSectionHeader: View {
             Button(action: onTap) {
                 content
             }
-            .buttonStyle(.plain)
+            .buttonStyle(
+                TdayPressButtonStyle(
+                    shadowColor: Color.black,
+                    pressedShadowOpacity: 0,
+                    normalShadowOpacity: 0
+                )
+            )
         } else {
             content
         }
