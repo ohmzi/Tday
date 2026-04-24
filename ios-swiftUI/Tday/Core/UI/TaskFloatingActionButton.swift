@@ -19,7 +19,7 @@ struct TaskFloatingActionButton: View {
                 )
                 .clipShape(Circle())
         }
-        .buttonStyle(TaskFloatingActionButtonStyle())
+        .buttonStyle(TdayPressButtonStyle())
         .accessibilityLabel("Create Task")
     }
 }
@@ -37,17 +37,56 @@ struct TaskFloatingActionButtonDock: View {
     }
 }
 
-private struct TaskFloatingActionButtonStyle: ButtonStyle {
+struct TdayPressButtonStyle: ButtonStyle {
+    var shadowColor = Color(red: 110.0 / 255.0, green: 168.0 / 255.0, blue: 225.0 / 255.0)
+    var pressedShadowOpacity = 0.18
+    var normalShadowOpacity = 0.28
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.93 : 1)
-            .offset(y: configuration.isPressed ? 2 : 0)
-            .shadow(
-                color: taskFabFillColor.opacity(configuration.isPressed ? 0.18 : 0.28),
-                radius: configuration.isPressed ? 8 : 16,
-                x: 0,
-                y: configuration.isPressed ? 4 : 10
+            .tdayPressEffect(
+                isPressed: configuration.isPressed,
+                shadowColor: shadowColor,
+                pressedShadowOpacity: pressedShadowOpacity,
+                normalShadowOpacity: normalShadowOpacity
             )
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+    }
+}
+
+extension View {
+    func tdayPressEffect(
+        isPressed: Bool,
+        shadowColor: Color = Color(red: 110.0 / 255.0, green: 168.0 / 255.0, blue: 225.0 / 255.0),
+        pressedShadowOpacity: Double = 0.18,
+        normalShadowOpacity: Double = 0.28
+    ) -> some View {
+        modifier(
+            TdayPressEffectModifier(
+                isPressed: isPressed,
+                shadowColor: shadowColor,
+                pressedShadowOpacity: pressedShadowOpacity,
+                normalShadowOpacity: normalShadowOpacity
+            )
+        )
+    }
+}
+
+private struct TdayPressEffectModifier: ViewModifier {
+    let isPressed: Bool
+    let shadowColor: Color
+    let pressedShadowOpacity: Double
+    let normalShadowOpacity: Double
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(isPressed ? 0.93 : 1)
+            .offset(y: isPressed ? 2 : 0)
+            .shadow(
+                color: shadowColor.opacity(isPressed ? pressedShadowOpacity : normalShadowOpacity),
+                radius: isPressed ? 8 : 16,
+                x: 0,
+                y: isPressed ? 4 : 10
+            )
+            .animation(.easeOut(duration: 0.14), value: isPressed)
     }
 }
