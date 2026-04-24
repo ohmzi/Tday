@@ -14,9 +14,12 @@ export const useList = ({ id }: { id: string }) => {
     queryKey: ["list", id],
     retry: 2,
     staleTime: 5 * 60 * 1000,
-    queryFn: async ({ queryKey }) => {
+    queryFn: async ({ queryKey, signal }) => {
       const [, id] = queryKey;
-      const { todos } = await api.GET({ url: `/api/list/${id}?start=${startOfToday().getTime()}&end=${endOfToday().getTime()}` });
+      const { todos } = await api.GET({
+        url: `/api/list/${id}?start=${startOfToday().getTime()}&end=${endOfToday().getTime()}`,
+        signal,
+      });
 
       const todoWithFormattedDates = todos.map((todo: TodoItemType) => {
         // id needs to be todo id + instance date, so that ghost todos of the same parent can have unique ids

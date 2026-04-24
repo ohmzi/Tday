@@ -8,6 +8,8 @@ import com.ohmz.tday.domain.validateOrFail
 import com.ohmz.tday.domain.validatePatchList
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
+import com.ohmz.tday.models.response.CreateListResponse
+import com.ohmz.tday.models.response.ListDetailResponse
 import com.ohmz.tday.services.ListService
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
@@ -29,7 +31,7 @@ fun Route.listRoutes() {
                     val body = call.receive<ListCreateRequest>()
                     validateCreateList.validateOrFail(body).bind()
                     val list = listService.create(user.id, body.name, body.color, body.iconKey).bind()
-                    mapOf("message" to "list created", "list" to list)
+                    CreateListResponse(message = "list created", list = list)
                 }
             }
         }
@@ -58,10 +60,10 @@ fun Route.listRoutes() {
             call.withAuth { user ->
                 val listId = call.parameters["id"]
                     ?: return@withAuth Either.Left(AppError.BadRequest("list id is required"))
-                either<AppError, Map<String, Any?>> {
+                either<AppError, ListDetailResponse> {
                     val list = listService.getById(user.id, listId).bind()
                     val todos = listService.getTodosForList(user.id, listId).bind()
-                    mapOf("list" to list, "todos" to todos)
+                    ListDetailResponse(list = list, todos = todos)
                 }
             }
         }
