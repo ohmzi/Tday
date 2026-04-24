@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { AlertTriangle, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -59,6 +60,11 @@ type SidebarListItem = {
   todoCount: number;
 };
 
+type DeleteListsResponse = {
+  message?: string | null;
+  deletedIds?: string[];
+};
+
 async function updateList({
   id,
   name,
@@ -84,16 +90,20 @@ async function updateList({
   });
 }
 
-async function deleteList(id: string) {
-  if (!id) {
-    throw new Error("List id is missing");
+async function deleteLists(ids: string[]) {
+  const normalizedIds = ids.map(normalizeListName).filter(Boolean);
+  if (normalizedIds.length === 0) {
+    throw new Error("Select at least one list to delete");
   }
 
-  await api.DELETE({
+  return (await api.DELETE({
     url: "/api/list",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id }),
-  });
+    body: JSON.stringify({
+      id: normalizedIds.length === 1 ? normalizedIds[0] : undefined,
+      ids: normalizedIds,
+    }),
+  })) as DeleteListsResponse | null;
 }
 
 export default function ListSidebarSection({
@@ -109,10 +119,12 @@ export default function ListSidebarSection({
 
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<SidebarListItem | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renameColor, setRenameColor] = useState<ListColor>("BLUE");
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [bulkDeleteSelection, setBulkDeleteSelection] = useState<string[]>([]);
 
   const lists = useMemo(() => {
     return Object.entries(listMetaData)
@@ -136,14 +148,62 @@ export default function ListSidebarSection({
     return null;
   }, [pathname]);
 
+  const selectedBulkLists = useMemo(() => {
+    const selectedIds = new Set(bulkDeleteSelection);
+    return lists.filter((list) => selectedIds.has(list.id));
+  }, [bulkDeleteSelection, lists]);
+
+  const bulkDeleteIncludesActiveList = Boolean(
+    activeListIdFromPath && bulkDeleteSelection.includes(activeListIdFromPath),
+  );
+
+  React.useEffect(() => {
+    const validIds = new Set(lists.map((list) => list.id));
+    setBulkDeleteSelection((current) =>
+      current.filter((listId) => validIds.has(listId)),
+    );
+  }, [lists]);
+
+  const invalidateListQueries = React.useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["listMetaData"] }),
+      queryClient.invalidateQueries({ queryKey: ["todo"] }),
+      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] }),
+      queryClient.invalidateQueries({ queryKey: ["overdueTodo"] }),
+      queryClient.invalidateQueries({ queryKey: ["completedTodo"] }),
+    ]);
+  }, [queryClient]);
+
+  const cancelListQueries = React.useCallback(
+    async (listIds: string[]) => {
+      await Promise.all(
+        listIds.map((listId) =>
+          queryClient.cancelQueries({ queryKey: ["list", listId] })
+        ),
+      );
+    },
+    [queryClient],
+  );
+
+  const handleDeletedListsSuccess = React.useCallback(
+    async (deletedListIds: string[]) => {
+      await invalidateListQueries();
+
+      if (
+        activeListIdFromPath &&
+        deletedListIds.includes(activeListIdFromPath)
+      ) {
+        setActiveMenu({ name: "Todo" });
+        router.push("/app/tday");
+      }
+    },
+    [activeListIdFromPath, invalidateListQueries, router, setActiveMenu],
+  );
+
   const updateListMutation = useMutation({
     mutationFn: updateList,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
-      queryClient.invalidateQueries({ queryKey: ["todo"] });
-      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
-      queryClient.invalidateQueries({ queryKey: ["overdueTodo"] });
-      queryClient.invalidateQueries({ queryKey: ["completedTodo"] });
+      invalidateListQueries();
       setRenameDialogOpen(false);
       setSelectedList(null);
       setRenameValue("");
@@ -158,22 +218,20 @@ export default function ListSidebarSection({
   });
 
   const deleteListMutation = useMutation({
-    mutationFn: deleteList,
-    onMutate: async (deletedListId) => {
-      await queryClient.cancelQueries({ queryKey: ["list", deletedListId] });
+    mutationFn: async (deletedListId: string) => {
+      const response = await deleteLists([deletedListId]);
+      return {
+        requestedIds: [deletedListId],
+        deletedIds: response?.deletedIds ?? [],
+      };
     },
-    onSuccess: (_, deletedListId) => {
-      queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
-      queryClient.invalidateQueries({ queryKey: ["todo"] });
-      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
-      queryClient.invalidateQueries({ queryKey: ["overdueTodo"] });
-      queryClient.invalidateQueries({ queryKey: ["completedTodo"] });
-
-      if (activeListIdFromPath === deletedListId) {
-        setActiveMenu({ name: "Todo" });
-        router.push("/app/tday");
-      }
-
+    onMutate: async (deletedListId) => {
+      await cancelListQueries([deletedListId]);
+    },
+    onSuccess: async ({ requestedIds, deletedIds }) => {
+      const resolvedDeletedIds =
+        deletedIds.length > 0 ? deletedIds : requestedIds;
+      await handleDeletedListsSuccess(resolvedDeletedIds);
       setDeleteDialogOpen(false);
       setSelectedList(null);
     },
@@ -181,6 +239,41 @@ export default function ListSidebarSection({
       toast({
         description:
           error instanceof Error ? error.message : "Failed to delete list",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkDeleteListsMutation = useMutation({
+    mutationFn: async (listIds: string[]) => {
+      const response = await deleteLists(listIds);
+      return {
+        requestedIds: listIds,
+        deletedIds: response?.deletedIds ?? [],
+        message: response?.message,
+      };
+    },
+    onMutate: async (listIds) => {
+      await cancelListQueries(listIds);
+    },
+    onSuccess: async ({ requestedIds, deletedIds, message }) => {
+      const resolvedDeletedIds =
+        deletedIds.length > 0 ? deletedIds : requestedIds;
+      await handleDeletedListsSuccess(resolvedDeletedIds);
+      setBulkDeleteDialogOpen(false);
+      setBulkDeleteSelection([]);
+      toast({
+        description:
+          message ??
+          (resolvedDeletedIds.length === 1
+            ? "List deleted"
+            : `${resolvedDeletedIds.length} lists deleted`),
+      });
+    },
+    onError: (error) => {
+      toast({
+        description:
+          error instanceof Error ? error.message : "Failed to delete lists",
         variant: "destructive",
       });
     },
@@ -199,6 +292,24 @@ export default function ListSidebarSection({
     setDeleteDialogOpen(true);
   };
 
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setSelectedList(null);
+  };
+
+  const closeBulkDeleteDialog = () => {
+    setBulkDeleteDialogOpen(false);
+    setBulkDeleteSelection([]);
+  };
+
+  const toggleBulkDeleteSelection = (listId: string) => {
+    setBulkDeleteSelection((current) =>
+      current.includes(listId)
+        ? current.filter((id) => id !== listId)
+        : [...current, listId],
+    );
+  };
+
   const closeRenameDialog = () => {
     setRenameDialogOpen(false);
     setSelectedList(null);
@@ -206,6 +317,11 @@ export default function ListSidebarSection({
     setRenameColor("BLUE");
     setRenameError(null);
   };
+
+  const bulkDeleteSummary =
+    selectedBulkLists.length === 1
+      ? formatListName(selectedBulkLists[0]?.name ?? "")
+      : `${selectedBulkLists.length} lists`;
 
   const handleRenameSubmit = () => {
     if (!selectedList) {
@@ -284,9 +400,34 @@ export default function ListSidebarSection({
 
   return (
     <>
-      <div className="space-y-1 overflow-x-hidden px-3 py-2">
+      <div className="px-3 pb-1 pt-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-sidebar-foreground/40">
+              Lists
+            </span>
+            <span className="rounded-full bg-sidebar-accent/45 px-2 py-0.5 text-[11px] font-medium text-sidebar-foreground/50">
+              {lists.length}
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 rounded-lg px-2 text-xs text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+            onClick={() => {
+              setBulkDeleteSelection([]);
+              setBulkDeleteDialogOpen(true);
+            }}
+          >
+            Manage
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-1 overflow-x-hidden px-3 pb-2 pt-1">
         {lists.map((list) => {
-        const listName = formatListName(list.name);
+          const listName = formatListName(list.name);
           const active =
             activeListIdFromPath === list.id ||
             (activeMenu.name === "List" && activeMenu.children?.name === list.id);
@@ -449,8 +590,7 @@ export default function ListSidebarSection({
         open={deleteDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setDeleteDialogOpen(false);
-            setSelectedList(null);
+            closeDeleteDialog();
             return;
           }
           setDeleteDialogOpen(true);
@@ -462,20 +602,20 @@ export default function ListSidebarSection({
               <div className="rounded-full bg-destructive/10 p-2">
                 <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
-              <DialogTitle>Delete list</DialogTitle>
+            <DialogTitle>Delete list</DialogTitle>
             </div>
             <DialogDescription>
-              Delete <span className="font-semibold">{selectedList?.name}</span>? This
-              will remove it from all tasks and cannot be undone.
+              Delete{" "}
+              <span className="font-semibold">
+                {formatListName(selectedList?.name ?? "")}
+              </span>
+              ? This will remove it from all tasks and cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setSelectedList(null);
-              }}
+              onClick={closeDeleteDialog}
             >
               Cancel
             </Button>
@@ -490,6 +630,171 @@ export default function ListSidebarSection({
               disabled={deleteListMutation.isPending || !selectedList}
             >
               {deleteListMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={bulkDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeBulkDeleteDialog();
+            return;
+          }
+          setBulkDeleteDialogOpen(true);
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Manage lists</DialogTitle>
+            <DialogDescription>
+              Select one or more lists to delete. Tasks will stay in T&apos;Day
+              and simply lose their list assignment.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                {selectedBulkLists.length === 0
+                  ? "No lists selected"
+                  : `${selectedBulkLists.length} selected`}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 rounded-lg px-2 text-xs"
+                onClick={() => {
+                  setBulkDeleteSelection(lists.map((list) => list.id));
+                }}
+                disabled={
+                  lists.length === 0 ||
+                  selectedBulkLists.length === lists.length
+                }
+              >
+                Select all
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 rounded-lg px-2 text-xs"
+                onClick={() => {
+                  setBulkDeleteSelection([]);
+                }}
+                disabled={selectedBulkLists.length === 0}
+              >
+                Clear
+              </Button>
+            </div>
+
+            <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+              {lists.map((list) => {
+                const listName = formatListName(list.name);
+                const isSelected = bulkDeleteSelection.includes(list.id);
+                const isActive = activeListIdFromPath === list.id;
+
+                return (
+                  <div
+                    key={list.id}
+                    className={cn(
+                      "flex items-center gap-3 rounded-2xl border px-3 py-3 transition-colors",
+                      isSelected
+                        ? "border-destructive/35 bg-destructive/5"
+                        : "border-border/60 bg-background/80 hover:bg-accent/40",
+                    )}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => {
+                        toggleBulkDeleteSelection(list.id);
+                      }}
+                      aria-label={`Select ${listName}`}
+                      className={cn(
+                        isSelected &&
+                          "border-destructive data-[state=checked]:border-destructive data-[state=checked]:bg-destructive data-[state=checked]:text-white",
+                      )}
+                    />
+
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      onClick={() => {
+                        toggleBulkDeleteSelection(list.id);
+                      }}
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sidebar-accent/35 text-sidebar-foreground/80">
+                        <ListDot id={list.id} className="text-base leading-none" />
+                      </span>
+
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-foreground">
+                          {listName}
+                        </span>
+                        <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span>
+                            {list.todoCount} {list.todoCount === 1 ? "task" : "tasks"}
+                          </span>
+                          {isActive && (
+                            <span className="rounded-full bg-sidebar-accent px-2 py-0.5 font-medium text-sidebar-accent-foreground">
+                              Open now
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {selectedBulkLists.length > 0 && (
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-destructive/10 p-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Delete{" "}
+                      <span className="font-semibold">{bulkDeleteSummary}</span>
+                      ?
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      The selected lists will disappear from your sidebar. Tasks
+                      inside them will remain and lose their list assignment.
+                      {bulkDeleteIncludesActiveList &&
+                        " If one of them is open right now, you’ll be sent back to Today."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeBulkDeleteDialog}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                bulkDeleteListsMutation.mutate(bulkDeleteSelection);
+              }}
+              disabled={
+                bulkDeleteListsMutation.isPending ||
+                selectedBulkLists.length === 0
+              }
+            >
+              {bulkDeleteListsMutation.isPending
+                ? selectedBulkLists.length === 1
+                  ? "Deleting list..."
+                  : "Deleting lists..."
+                : selectedBulkLists.length <= 1
+                  ? "Delete selected"
+                  : `Delete ${selectedBulkLists.length} lists`}
             </Button>
           </DialogFooter>
         </DialogContent>
