@@ -863,25 +863,20 @@ private struct TimelineTopBarButton: View {
                     if chrome == .filled {
                         Circle()
                             .fill(colors.surface)
-                            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
                     }
                 }
                 .contentShape(Circle())
         }
-        .buttonStyle(TimelineTopBarButtonStyle())
+        .buttonStyle(
+            chrome == .filled
+                ? TdayPressButtonStyle()
+                : TdayPressButtonStyle(
+                    shadowColor: Color.black,
+                    pressedShadowOpacity: 0,
+                    normalShadowOpacity: 0
+                )
+        )
         .foregroundStyle(chrome == .filled ? colors.onSurface : Color.accentColor)
-    }
-}
-
-private struct TimelineTopBarButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .tdayPressEffect(
-                isPressed: configuration.isPressed,
-                shadowColor: Color.black,
-                pressedShadowOpacity: 0.04,
-                normalShadowOpacity: 0.08
-            )
     }
 }
 

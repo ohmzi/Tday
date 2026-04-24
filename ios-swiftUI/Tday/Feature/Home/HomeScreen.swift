@@ -4,7 +4,7 @@ private enum HomeMetrics {
     static let screenPadding: CGFloat = 18
     static let sectionSpacing: CGFloat = 14
     static let tileGap: CGFloat = 10
-    static let topBarButtonSize: CGFloat = 54
+    static let topBarButtonSize: CGFloat = 56
     static let compactButtonSize: CGFloat = 30
     static let tileCornerRadius: CGFloat = 26
     static let tileHeight: CGFloat = 102
@@ -858,8 +858,8 @@ private struct HomeIconButtonStyle: ButtonStyle {
             .tdayPressEffect(
                 isPressed: configuration.isPressed,
                 shadowColor: Color.black,
-                pressedShadowOpacity: compact ? 0 : 0.08,
-                normalShadowOpacity: compact ? 0 : 0.14
+                pressedShadowOpacity: compact ? 0 : 0.14,
+                normalShadowOpacity: compact ? 0 : 0.24
             )
     }
 }
@@ -1169,7 +1169,7 @@ private struct CreateListSheetActionButton: View {
             Image(systemName: icon)
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.4))
-                .frame(width: 54, height: 54)
+                .frame(width: 56, height: 56)
                 .background(colors.surfaceVariant)
                 .clipShape(Circle())
                 .overlay(
@@ -1177,20 +1177,8 @@ private struct CreateListSheetActionButton: View {
                         .stroke(accentColor.opacity(enabled ? 0.8 : 0.42), lineWidth: 1.5)
                 )
         }
-        .buttonStyle(CreateListSheetActionButtonStyle())
+        .buttonStyle(TdayPressButtonStyle())
         .disabled(!enabled)
-    }
-}
-
-private struct CreateListSheetActionButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .tdayPressEffect(
-                isPressed: configuration.isPressed,
-                shadowColor: Color.black,
-                pressedShadowOpacity: 0.06,
-                normalShadowOpacity: 0.12
-            )
     }
 }
 
