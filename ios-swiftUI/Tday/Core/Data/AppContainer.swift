@@ -67,7 +67,7 @@ final class AppContainer {
         )
         syncManager = SyncManager(api: apiService, cacheManager: cacheManager)
         todoRepository = TodoRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
-        listRepository = ListRepository(cacheManager: cacheManager, syncManager: syncManager)
+        listRepository = ListRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         completedRepository = CompletedRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         settingsRepository = SettingsRepository(api: apiService, cacheManager: cacheManager)
         realtimeClient = RealtimeClient(configuration: networkConfiguration)
