@@ -8,6 +8,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:fontFamily="@font/nunito_app"
         android:text="@string/widget_loading"
+        android:textStyle="bold"
         android:textSize="14sp" />
 </FrameLayout>

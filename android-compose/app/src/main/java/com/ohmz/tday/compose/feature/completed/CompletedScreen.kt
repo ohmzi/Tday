@@ -417,7 +417,7 @@ private fun CompletedTimelineSection(
                 text = section.title,
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
             )
             Icon(
                 imageVector = Icons.Rounded.ExpandMore,
@@ -640,7 +640,7 @@ private fun CompletedSwipeRow(
                                 text = item.title,
                                 color = titleColor,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.ExtraBold,
                                 textDecoration = if (showStrikethrough) {
                                     TextDecoration.LineThrough
                                 } else {
@@ -783,7 +783,7 @@ private fun EmptyCompletedState(
             text = message,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.52f),
             style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
         )
     }
 }
