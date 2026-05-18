@@ -234,8 +234,12 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 | `AUTH_SESSION_RENEW_THRESHOLD_SEC` | Renewal threshold in seconds before expiry (default: 604,800) |
 | `AUTH_CREDENTIALS_PRIVATE_KEY` | RSA key for credential envelope encryption; recommended in production to avoid ephemeral startup keys |
 | `AUTH_CAPTCHA_SECRET` | Cloudflare Turnstile secret; recommended in production so adaptive CAPTCHA does not fail closed when triggered |
+| `APPLE_TEAM_ID` | Apple Developer Team ID used in Tday's canonical `apple-app-site-association` webcredentials payload for iOS Password AutoFill |
+| `IOS_BUNDLE_ID` | iOS app bundle identifier for webcredentials association (default: `com.ohmz.tday.ios`) |
 | `OLLAMA_URL` | Ollama service URL (default: `http://ollama:11434`) |
 | `OLLAMA_MODEL` | AI model for summaries (default: `qwen2.5:0.5b`) |
+
+The native iOS app saves and retrieves Tday credentials under the canonical `tday.ohmz.cloud` Apple Passwords scope, regardless of the server URL a user connects to.
 
 #### Docker Compose (project-root `.env`)
 

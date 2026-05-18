@@ -9,7 +9,10 @@ struct AppRootView: View {
     init(container: AppContainer) {
         self.container = container
         _appViewModel = State(initialValue: AppViewModel(container: container))
-        _authViewModel = State(initialValue: AuthViewModel(authRepository: container.authRepository))
+        _authViewModel = State(initialValue: AuthViewModel(
+            authRepository: container.authRepository,
+            systemCredentialService: container.systemCredentialService
+        ))
     }
 
     var body: some View {
@@ -98,14 +101,15 @@ struct AppRootView: View {
                                     serverCanResetTrust: appViewModel.canResetServerTrust,
                                     pendingApprovalMessage: appViewModel.pendingApprovalMessage,
                                     authViewModel: authViewModel,
+                                    systemCredentialService: container.systemCredentialService,
                                     onConnectServer: { rawURL in
                                         await appViewModel.connectServer(rawURL: rawURL)
                                     },
                                     onResetServerTrust: { rawURL in
                                         await appViewModel.resetTrustedServer(rawURL: rawURL)
                                     },
-                                    onLogin: { email, password in
-                                        let success = await authViewModel.login(email: email, password: password)
+                                    onLogin: { email, password, source in
+                                        let success = await authViewModel.login(email: email, password: password, source: source)
                                         if success {
                                             await appViewModel.refreshSession()
                                         }
