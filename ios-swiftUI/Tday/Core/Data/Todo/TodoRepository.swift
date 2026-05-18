@@ -472,7 +472,7 @@ final class TodoRepository {
         guard let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) else {
             return false
         }
-        return todo.due >= now && todo.due >= startOfToday && todo.due < startOfTomorrow
+        return todo.due >= startOfToday && todo.due < startOfTomorrow
     }
 
     private func isScheduledTodo(_ todo: TodoItem, now: Date = Date()) -> Bool {
