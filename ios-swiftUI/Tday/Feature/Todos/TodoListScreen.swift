@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-private enum TodoTimelineMetrics {
+enum TodoTimelineMetrics {
     static let horizontalPadding: CGFloat = 18
     static let heroTitleSize: CGFloat = 32
     static let sectionTitleSize: CGFloat = 22
@@ -42,7 +42,7 @@ private enum TodoTimelineMetrics {
     }
 }
 
-private struct TimelineTopBarAction {
+struct TimelineTopBarAction {
     let systemName: String
     let action: () -> Void
 }
@@ -724,7 +724,7 @@ struct TodoListScreen: View {
     }
 }
 
-private struct TimelineTopBar: View {
+struct TimelineTopBar: View {
     let title: String
     let accentColor: Color
     let collapseProgress: CGFloat
@@ -785,7 +785,7 @@ private struct TimelineTopBar: View {
     }
 }
 
-private struct TimelineExpandedTitleRow: View {
+struct TimelineExpandedTitleRow: View {
     let title: String
     let accentColor: Color
     let collapseProgress: CGFloat
@@ -894,7 +894,7 @@ private struct TimelineScrollOffsetTrackingRow: View {
     }
 }
 
-private struct TimelineScrollOffsetObserver: UIViewRepresentable {
+struct TimelineScrollOffsetObserver: UIViewRepresentable {
     let onChange: (CGFloat) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -954,7 +954,7 @@ private extension UIView {
     }
 }
 
-private struct TimelineSectionHeader: View {
+struct TimelineSectionHeader: View {
     let title: String
     let isActiveDropTarget: Bool
     let isCollapsible: Bool
@@ -1017,7 +1017,7 @@ private struct TimelineSectionHeader: View {
     }
 }
 
-private struct TimelineEmptyState: View {
+struct TimelineEmptyState: View {
     let message: String
 
     @Environment(\.tdayColors) private var colors
@@ -1382,7 +1382,7 @@ private func monthIndex(for date: Date, calendar: Calendar) -> Int {
     return year * 12 + month
 }
 
-private func priorityColor(_ priority: String) -> Color {
+func priorityColor(_ priority: String) -> Color {
     switch priority.lowercased() {
     case "high":
         return .red
@@ -1427,7 +1427,7 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
     }
 }
 
-private func todoListAccentColor(for key: String?) -> Color {
+func todoListAccentColor(for key: String?) -> Color {
     switch key {
     case "RED":
         return todoHexColor(0xE65E52)
