@@ -896,7 +896,7 @@ private fun SplashScreen() {
             Text(
                 text = "T\u2019Day",
                 style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(

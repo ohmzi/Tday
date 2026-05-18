@@ -476,7 +476,7 @@ struct TodoListScreen: View {
                     .fill(priorityColor(todo.priority))
                     .frame(width: 10, height: 10)
                 Text(todo.title)
-                    .font(useTodayCardStyle ? .system(size: 19, weight: .semibold) : .subheadline.weight(.semibold))
+                    .font(useTodayCardStyle ? .tdayRounded(size: 19, weight: .bold) : .tdayRounded(size: 15, weight: .bold))
                     .foregroundStyle(colors.onSurface)
                 Spacer()
                 if todo.pinned {
@@ -491,12 +491,12 @@ struct TodoListScreen: View {
                         .foregroundStyle(colors.primary.opacity(0.9))
                 }
                 Text(todo.due.formatted(date: useTodayCardStyle ? .omitted : .abbreviated, time: .shortened))
-                    .font(.caption.weight(useTodayCardStyle ? .semibold : .regular))
+                    .font(.tdayRounded(size: 12, weight: useTodayCardStyle ? .bold : .semibold))
                     .foregroundStyle(useTodayCardStyle ? colors.primary.opacity(0.9) : colors.onSurfaceVariant)
             }
             if let description = todo.description, !description.isEmpty {
                 Text(description)
-                    .font(.caption)
+                    .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(colors.onSurfaceVariant)
                     .lineLimit(2)
             }
@@ -601,12 +601,12 @@ struct TodoListScreen: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(todo.title)
-                        .font(.system(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .semibold))
+                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold))
                         .foregroundStyle(colors.onSurface)
                         .lineLimit(2)
 
                     Text(subtitleText)
-                        .font(.system(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .medium))
+                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
                         .foregroundStyle(subtitleColor)
                 }
 
@@ -788,7 +788,7 @@ struct TimelineTopBar: View {
 
     private var titleContent: some View {
         Text(title)
-            .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
+            .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
             .foregroundStyle(accentColor)
             .lineLimit(1)
     }
@@ -862,7 +862,7 @@ struct TimelineExpandedTitleRow: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             Text(title)
-                .font(.system(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy, design: .rounded))
+                .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
                 .foregroundStyle(accentColor)
                 .lineLimit(1)
                 .frame(
@@ -1018,7 +1018,7 @@ struct TimelineSectionHeader: View {
         let content = VStack(alignment: .leading, spacing: TodoTimelineMetrics.sectionSpacing) {
             HStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: TodoTimelineMetrics.sectionTitleSize, weight: .bold, design: .rounded))
+                    .font(.tdayRounded(size: TodoTimelineMetrics.sectionTitleSize, weight: .bold))
                     .foregroundStyle(isActiveDropTarget ? colors.primary : colors.onSurfaceVariant.opacity(0.78))
                     .textCase(nil)
 
@@ -1061,7 +1061,7 @@ struct TimelineEmptyState: View {
 
     var body: some View {
         Text(message)
-            .font(.system(size: TodoTimelineMetrics.emptyStateSize, weight: .semibold, design: .rounded))
+            .font(.tdayRounded(size: TodoTimelineMetrics.emptyStateSize, weight: .bold))
             .foregroundStyle(colors.onSurfaceVariant.opacity(0.54))
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)

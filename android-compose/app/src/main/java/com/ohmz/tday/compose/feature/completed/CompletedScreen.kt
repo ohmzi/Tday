@@ -289,7 +289,7 @@ private fun CompletedTopBar(
                 Text(
                     text = stringResource(R.string.completed_title),
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = COMPLETED_TITLE_COLOR,
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -311,7 +311,7 @@ private fun CompletedTopBar(
                 Text(
                     text = stringResource(R.string.completed_title),
                     style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = COMPLETED_TITLE_COLOR,
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
@@ -417,7 +417,7 @@ private fun CompletedTimelineSection(
                 text = section.title,
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
             )
             Icon(
                 imageVector = Icons.Rounded.ExpandMore,
@@ -640,7 +640,7 @@ private fun CompletedSwipeRow(
                                 text = item.title,
                                 color = titleColor,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 textDecoration = if (showStrikethrough) {
                                     TextDecoration.LineThrough
                                 } else {
@@ -783,7 +783,7 @@ private fun EmptyCompletedState(
             text = message,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.52f),
             style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
         )
     }
 }
