@@ -1,8 +1,11 @@
 package com.ohmz.tday.compose.feature.completed
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -14,7 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,7 +25,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.background
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -38,7 +39,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ripple
 import androidx.compose.material3.Scaffold
@@ -84,9 +84,14 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
-import java.time.YearMonth
 import java.util.Locale
+
+private enum class CompletedRestorePhase {
+    Completed,
+    Unchecked,
+    Unstruck,
+    Fading,
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -161,7 +166,7 @@ fun CompletedScreen(
         label = "completedTitleCollapseProgress",
     )
     var collapsedSectionKeys by rememberSaveable {
-        mutableStateOf(setOf("earlier"))
+        mutableStateOf(emptySet<String>())
     }
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     val editTarget = remember(editTargetId, uiState.items) {
@@ -271,45 +276,28 @@ private fun CompletedTopBar(
         Box(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CompletedHeaderButton(
+                    modifier = Modifier.align(Alignment.CenterVertically),
                     onClick = onBack,
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.action_back),
-                    isBackButton = true,
-                )
-                CompletedHeaderButton(
-                    onClick = { },
-                    icon = Icons.Rounded.MoreHoriz,
-                    contentDescription = stringResource(R.string.action_more_options),
                 )
             }
             if (collapsedTitleAlpha > 0.001f) {
-                Row(
+                Text(
+                    text = stringResource(R.string.completed_title),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = COMPLETED_TITLE_COLOR,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
                         },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CheckCircle,
-                        contentDescription = null,
-                        tint = Color(0xFF4E8A67),
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.completed_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4E8A67),
-                    )
-                }
+                )
             }
         }
         Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
@@ -320,27 +308,16 @@ private fun CompletedTopBar(
             contentAlignment = Alignment.BottomStart,
         ) {
             if (expandedTitleAlpha > 0.001f) {
-                Row(
+                Text(
+                    text = stringResource(R.string.completed_title),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = COMPLETED_TITLE_COLOR,
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
                     },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CheckCircle,
-                        contentDescription = null,
-                        tint = Color(0xFF4E8A67),
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.completed_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4E8A67),
-                    )
-                }
+                )
             }
         }
     }
@@ -348,24 +325,18 @@ private fun CompletedTopBar(
 
 @Composable
 private fun CompletedHeaderButton(
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
-    isBackButton: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val containerColor = if (isBackButton) {
+    val containerColor =
         if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
-    } else {
-        colorScheme.background
-    }
-    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
-    val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
-    val iconSize = if (isBackButton) 36.dp else 30.dp
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.93f else 1f,
         label = "completedHeaderButtonScale",
@@ -377,6 +348,7 @@ private fun CompletedHeaderButton(
 
     androidx.compose.material3.Card(
         modifier = Modifier
+            .then(modifier)
             .offset(y = offsetY)
             .graphicsLayer {
                 scaleX = scale
@@ -388,47 +360,23 @@ private fun CompletedHeaderButton(
         },
         interactionSource = interactionSource,
         shape = CircleShape,
-        border = buttonBorder,
         colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = containerColor),
         elevation = androidx.compose.material3.CardDefaults.cardElevation(
-            defaultElevation = if (isBackButton) TdayDimens.FabElevation else 0.dp,
-            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else 0.dp,
+            defaultElevation = TdayDimens.FabElevation,
+            pressedElevation = TdayDimens.FabPressedElevation,
         ),
     ) {
         Box(
-            modifier = Modifier.size(buttonSize),
+            modifier = Modifier.size(TdayDimens.FabSize),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = colorScheme.onSurface,
-                modifier = Modifier.size(iconSize),
+                modifier = Modifier.size(36.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun completedSectionDisplayTitle(section: CompletedSection): String {
-    val zoneId = ZoneId.systemDefault()
-    val today = LocalDate.now(zoneId)
-    return when {
-        section.key == "earlier" -> stringResource(R.string.completed_section_earlier)
-        section.key.startsWith("day-") -> {
-            val date = LocalDate.parse(section.key.removePrefix("day-"))
-            when (date) {
-                today -> stringResource(R.string.completed_section_today)
-                today.plusDays(1) -> stringResource(R.string.completed_section_tomorrow)
-                else -> section.title
-            }
-        }
-        section.key.startsWith("rest-") -> {
-            val yearMonth = YearMonth.parse(section.key.removePrefix("rest-"))
-            val monthName = yearMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-            stringResource(R.string.completed_section_rest_of, monthName)
-        }
-        else -> section.title
     }
 }
 
@@ -450,7 +398,9 @@ private fun CompletedTimelineSection(
         label = "completedSectionChevronRotation",
     )
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(durationMillis = 240)),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
@@ -464,7 +414,7 @@ private fun CompletedTimelineSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = completedSectionDisplayTitle(section),
+                text = section.title,
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
@@ -524,14 +474,37 @@ private fun CompletedSwipeRow(
     val actionRevealPx = with(density) { 130.dp.toPx() }
     val maxElasticDragPx = actionRevealPx * 1.22f
     var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
-    var pendingUncomplete by remember(item.id) { mutableStateOf(false) }
+    var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(),
         label = "completedSwipeOffset",
     )
-    val showCompletedState = !pendingUncomplete
-    val completedAtText = DateTimeFormatter.ofPattern("EEE, MMM d · h:mm a")
+    val showCompletedCheckmark = restorePhase == CompletedRestorePhase.Completed
+    val showStrikethrough =
+        restorePhase == CompletedRestorePhase.Completed || restorePhase == CompletedRestorePhase.Unchecked
+    val isFading = restorePhase == CompletedRestorePhase.Fading
+    val isRestoring = restorePhase != CompletedRestorePhase.Completed
+    val rowAlpha by animateFloatAsState(
+        targetValue = if (isFading) 0f else 1f,
+        animationSpec = tween(durationMillis = 220),
+        label = "completedRestoreRowAlpha",
+    )
+    val rowScale by animateFloatAsState(
+        targetValue = if (isFading) 0.985f else 1f,
+        animationSpec = tween(durationMillis = 220),
+        label = "completedRestoreRowScale",
+    )
+    val titleColor by animateColorAsState(
+        targetValue = if (showStrikethrough) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = tween(durationMillis = 160),
+        label = "completedRestoreTitleColor",
+    )
+    val completedAtText = COMPLETED_ROW_TIME_FORMATTER
         .withZone(ZoneId.systemDefault())
         .format(item.completedAt ?: item.due)
     val listMeta = item.resolveListSummary(lists)
@@ -546,7 +519,13 @@ private fun CompletedSwipeRow(
     val foregroundColor = colorScheme.background
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = rowAlpha
+                scaleX = rowScale
+                scaleY = rowScale
+            },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
             Box(
@@ -627,27 +606,31 @@ private fun CompletedSwipeRow(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         CompletedCircularToggleIcon(
-                            imageVector = if (showCompletedState) {
+                            imageVector = if (showCompletedCheckmark) {
                                 Icons.Rounded.CheckCircle
                             } else {
                                 Icons.Rounded.RadioButtonUnchecked
                             },
                             contentDescription = stringResource(R.string.label_undo_complete),
-                            tint = if (showCompletedState) {
+                            tint = if (showCompletedCheckmark) {
                                 Color(0xFF6FBF86)
                             } else {
                                 colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                             },
-                            enabled = !pendingUncomplete,
+                            enabled = !isRestoring,
                             onClick = {
                                 ViewCompat.performHapticFeedback(
                                     view,
                                     HapticFeedbackConstantsCompat.CLOCK_TICK,
                                 )
                                 targetOffsetX = 0f
-                                pendingUncomplete = true
                                 coroutineScope.launch {
-                                    delay(500)
+                                    restorePhase = CompletedRestorePhase.Unchecked
+                                    delay(180)
+                                    restorePhase = CompletedRestorePhase.Unstruck
+                                    delay(180)
+                                    restorePhase = CompletedRestorePhase.Fading
+                                    delay(220)
                                     onUncomplete()
                                 }
                             },
@@ -660,14 +643,10 @@ private fun CompletedSwipeRow(
                         ) {
                             Text(
                                 text = item.title,
-                                color = if (showCompletedState) {
-                                    colorScheme.onSurface.copy(alpha = 0.78f)
-                                } else {
-                                    colorScheme.onSurface
-                                },
+                                color = titleColor,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                textDecoration = if (showCompletedState) {
+                                textDecoration = if (showStrikethrough) {
                                     TextDecoration.LineThrough
                                 } else {
                                     TextDecoration.None
@@ -912,91 +891,27 @@ private fun buildCompletedTimelineSections(
     items: List<CompletedItem>,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): List<CompletedSection> {
-    val sorted = items.sortedBy { it.due }
-    val groupedByDate = sorted.groupBy { item ->
-        LocalDate.ofInstant(item.due, zoneId)
-    }
-    val today = LocalDate.now(zoneId)
-    val horizonStart = today.plusDays(7)
-    val currentMonth = YearMonth.from(today)
-
-    val sections = mutableListOf<CompletedSection>()
-    fun daySection(date: LocalDate, title: String): CompletedSection {
-        return CompletedSection(
-            key = "day-$date",
-            title = title,
-            items = groupedByDate[date].orEmpty(),
-        )
+    val groupedByDate = items.groupBy { item ->
+        LocalDate.ofInstant(item.completedAt ?: item.due, zoneId)
     }
 
-    val earlierItems = groupedByDate.asSequence().filter { (date, _) -> date < today }
-        .flatMap { (_, dayItems) -> dayItems.asSequence() }
-        .sortedBy { it.due }
-        .toList()
-    if (earlierItems.isNotEmpty()) {
-        sections += CompletedSection(
-            key = "earlier",
-            title = "Earlier",
-            items = earlierItems,
-        )
-    }
-
-    sections += daySection(today, "Today")
-    sections += daySection(today.plusDays(1), "Tomorrow")
-    for (offset in 2..6) {
-        val date = today.plusDays(offset.toLong())
-        sections += daySection(
-            date = date,
-            title = date.format(COMPLETED_DAY_FORMATTER),
-        )
-    }
-
-    val restOfCurrentMonthItems = groupedByDate.asSequence().filter { (date, _) ->
-        date >= horizonStart && YearMonth.from(date) == currentMonth
-    }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
-    val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-    sections += CompletedSection(
-        key = "rest-$currentMonth",
-        title = "Rest of $monthName",
-        items = restOfCurrentMonthItems,
-    )
-
-    val futureMonthsWithData =
-        groupedByDate.keys.asSequence().filter { it >= horizonStart }.map { YearMonth.from(it) }
-            .toSet()
-    val minimumFinalMonth = YearMonth.of(currentMonth.year, 12)
-    val finalMonth = maxOf(
-        minimumFinalMonth,
-        futureMonthsWithData.maxOrNull() ?: minimumFinalMonth,
-    )
-
-    var targetMonth = currentMonth.plusMonths(1)
-    while (targetMonth <= finalMonth) {
-        val monthItems = groupedByDate.asSequence().filter { (date, _) ->
-            date >= horizonStart && YearMonth.from(date) == targetMonth
-        }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
-        sections += CompletedSection(
-            key = "month-$targetMonth",
-            title = completedMonthTitle(targetMonth, currentMonth.year),
-            items = monthItems,
-        )
-        targetMonth = targetMonth.plusMonths(1)
-    }
-
-    return sections
+    return groupedByDate.keys
+        .sortedDescending()
+        .map { date ->
+            val sectionItems = groupedByDate[date].orEmpty().sortedWith(
+                compareByDescending<CompletedItem> { it.completedAt ?: it.due }
+                    .thenBy { it.title.lowercase(Locale.getDefault()) }
+                    .thenBy { it.id },
+            )
+            CompletedSection(
+                key = "completed-$date",
+                title = date.format(COMPLETED_SECTION_FORMATTER),
+                items = sectionItems,
+            )
+        }
 }
 
-private fun completedMonthTitle(
-    month: YearMonth,
-    currentYear: Int,
-): String {
-    val monthName = month.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-    return if (month.year == currentYear) {
-        monthName
-    } else {
-        "$monthName ${month.year}"
-    }
-}
-
-private val COMPLETED_DAY_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE MMM d")
+private val COMPLETED_TITLE_COLOR = Color(0xFF5E6878)
+private val COMPLETED_SECTION_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
+private val COMPLETED_ROW_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 private const val COMPLETED_TITLE_COLLAPSE_DISTANCE_DP = 180f
