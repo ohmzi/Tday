@@ -202,14 +202,14 @@ struct CompletedScreen: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
-                        .font(.system(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .semibold))
+                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold))
                         .foregroundStyle(showsStrikethrough ? colors.onSurface.opacity(0.78) : colors.onSurface)
                         .strikethrough(showsStrikethrough, color: colors.onSurface.opacity(0.65))
                         .lineLimit(2)
                         .animation(.easeInOut(duration: 0.16), value: showsStrikethrough)
 
                     Text("Completed, \(completedDate.formatted(date: .omitted, time: .shortened))")
-                        .font(.system(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .medium))
+                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
                 }
 

@@ -406,7 +406,7 @@ fun CalendarScreen(
                         Text(
                             text = stringResource(R.string.calendar_completed_header),
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                         )
@@ -540,7 +540,7 @@ private fun CalendarViewModeTabs(
                     Text(
                         text = mode.name.lowercase(Locale.getDefault()).replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        fontWeight = FontWeight.Bold,
                         color = if (selected) colorScheme.onSurface else colorScheme.onSurfaceVariant,
                     )
                 }
@@ -657,7 +657,7 @@ private fun CalendarWeekCard(
                         Text(
                             text = weekLabel,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = colorScheme.onSurface,
                         )
                     }
@@ -739,7 +739,7 @@ private fun CalendarWeekDayCell(
                 text = date.dayOfMonth.toString(),
                 style = MaterialTheme.typography.titleMedium,
                 color = if (isSelected) colorScheme.primary else colorScheme.onSurface,
-                fontWeight = if (isSelected || isToday) FontWeight.SemiBold else FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
             )
             Text(
                 text = if (taskCount > 9) {
@@ -749,7 +749,7 @@ private fun CalendarWeekDayCell(
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = if (taskCount > 0) colorScheme.secondary else colorScheme.onSurfaceVariant.copy(alpha = 0.42f),
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
             )
         }
     }
@@ -859,7 +859,7 @@ private fun CalendarDayCard(
                             text = displayDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault()),
                             style = MaterialTheme.typography.titleMedium,
                             color = colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                     MiniCalendarNavButton(
@@ -883,7 +883,7 @@ private fun CalendarDayCard(
                     },
                     style = MaterialTheme.typography.titleMedium,
                     color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                 )
             }
         }
@@ -954,29 +954,18 @@ private fun CalendarTopBar(
                 )
             }
             if (collapsedTitleAlpha > 0.001f) {
-                Row(
+                Text(
+                    text = stringResource(R.string.calendar_title),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF7D67B6),
                     modifier = Modifier
                         .align(Alignment.Center)
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
                         },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CalendarMonth,
-                        contentDescription = null,
-                        tint = Color(0xFF7D67B6),
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.calendar_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF7D67B6),
-                    )
-                }
+                )
             }
         }
         Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
@@ -987,27 +976,16 @@ private fun CalendarTopBar(
             contentAlignment = Alignment.BottomStart,
         ) {
             if (expandedTitleAlpha > 0.001f) {
-                Row(
+                Text(
+                    text = stringResource(R.string.calendar_title),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF7D67B6),
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
                     },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CalendarMonth,
-                        contentDescription = null,
-                        tint = Color(0xFF7D67B6),
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.calendar_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF7D67B6),
-                    )
-                }
+                )
             }
         }
     }
@@ -1185,7 +1163,7 @@ private fun CalendarMonthCard(
                         Text(
                             text = monthLabel,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = colorScheme.onSurface,
                         )
                     }
@@ -1202,7 +1180,7 @@ private fun CalendarMonthCard(
                             text = dayLabel,
                             style = MaterialTheme.typography.labelMedium,
                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -1324,7 +1302,7 @@ private fun CalendarDayCell(
             text = cell.date.dayOfMonth.toString(),
             style = MaterialTheme.typography.labelLarge,
             color = dayTextColor,
-            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(start = 8.dp, top = 6.dp),
@@ -1352,7 +1330,7 @@ private fun CalendarDayCell(
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                 )
             }
         }
@@ -1514,7 +1492,7 @@ private fun CalendarTodoRow(
                                 colorScheme.onSurface
                             },
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             textDecoration = if (showCompletedState) {
                                 TextDecoration.LineThrough
                             } else {
@@ -1641,7 +1619,7 @@ private fun CalendarCompletedTodoRow(
                             colorScheme.onSurface
                         },
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         textDecoration = if (showCompletedState) {
                             TextDecoration.LineThrough
                         } else {
@@ -1781,7 +1759,7 @@ private fun EmptyCalendarState(message: String) {
             text = message,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
         )
     }
 }

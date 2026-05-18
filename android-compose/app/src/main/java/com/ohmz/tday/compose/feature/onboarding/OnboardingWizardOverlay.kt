@@ -779,7 +779,7 @@ private fun WizardLoading(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
