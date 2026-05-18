@@ -9,26 +9,39 @@ private enum CalendarScope: String, CaseIterable {
 struct CalendarScreen: View {
     @State private var viewModel: CalendarViewModel
     @Environment(\.tdayColors) private var colors
+    @Environment(\.dismiss) private var dismiss
+    private let calendarAccentColor = Color(red: 125.0 / 255.0, green: 103.0 / 255.0, blue: 182.0 / 255.0)
 
     @State private var selectedDate = Date()
     @State private var scope: CalendarScope = .month
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
+    @State private var calendarScrollOffset: CGFloat = 0
 
     init(container: AppContainer) {
         _viewModel = State(initialValue: CalendarViewModel(container: container))
     }
 
     private var pendingItems: [TodoItem] {
-        viewModel.items.filter { matches(date: $0.due) }.sorted(by: { $0.due < $1.due })
+        viewModel.items.filter { isSelectedDay($0.due) }.sorted(by: { $0.due < $1.due })
     }
 
-    private var completedItems: [CompletedItem] {
-        viewModel.completedItems.filter { matches(date: $0.completedAt ?? $0.due) }.sorted(by: { ($0.completedAt ?? $0.due) < ($1.completedAt ?? $1.due) })
+    private var selectedDateHeaderText: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE, MMM d"
+        return formatter.string(from: selectedDate)
+    }
+
+    private var titleCollapseProgress: CGFloat {
+        let distance = TodoTimelineMetrics.titleCollapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(calendarScrollOffset / distance, 0), 1)
     }
 
     var body: some View {
         List {
+            calendarHeroTitleRow
+
             Section {
                 Picker("Scope", selection: $scope) {
                     ForEach(CalendarScope.allCases, id: \.self) { value in
@@ -50,19 +63,23 @@ struct CalendarScreen: View {
                 }
             }
 
-            Section("Pending") {
+            Section {
                 if pendingItems.isEmpty {
-                    Text("No scheduled tasks for this selection.")
+                    Text("No pending task due for this day")
+                        .font(.tdayRounded(size: 13, weight: .bold))
                         .foregroundStyle(colors.onSurfaceVariant)
+                        .listRowInsets(EdgeInsets(top: 4, leading: TodoTimelineMetrics.horizontalPadding, bottom: 12, trailing: TodoTimelineMetrics.horizontalPadding))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 } else {
                     ForEach(pendingItems) { todo in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(todo.title)
-                                .font(.tdayRounded(.subheadline, weight: .bold))
-                            Text(todo.due.formatted(date: .abbreviated, time: .shortened))
-                                .font(.tdayRounded(.caption, weight: .bold))
-                                .foregroundStyle(colors.onSurfaceVariant)
-                        }
+                        CalendarPendingTaskRow(
+                            todo: todo,
+                            onComplete: { Task { await viewModel.complete(todo) } }
+                        )
+                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
                                 Task { await viewModel.complete(todo) }
@@ -86,49 +103,34 @@ struct CalendarScreen: View {
                         }
                     }
                 }
-            }
-
-            Section("Completed") {
-                if completedItems.isEmpty {
-                    Text("No completed tasks for this selection.")
-                        .foregroundStyle(colors.onSurfaceVariant)
-                } else {
-                    ForEach(completedItems) { item in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.title)
-                                .font(.tdayRounded(.subheadline, weight: .bold))
-                            Text((item.completedAt ?? item.due).formatted(date: .abbreviated, time: .shortened))
-                                .font(.tdayRounded(.caption, weight: .bold))
-                                .foregroundStyle(colors.onSurfaceVariant)
-                        }
-                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                            Button {
-                                Task { await viewModel.uncomplete(item) }
-                            } label: {
-                                Label("Restore", systemImage: "arrow.uturn.backward")
-                            }
-                            .tint(.blue)
-                        }
-                    }
-                }
+            } header: {
+                Text("Tasks due \(selectedDateHeaderText)")
+                    .font(.tdayRounded(size: 22, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+                    .textCase(nil)
+                    .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .contentMargins(.top, 0, for: .scrollContent)
+        .listSectionSpacing(8)
+        .disableVerticalScrollBounce()
         .background(colors.background)
         .navigationBackButtonBehavior()
-        .navigationTitle("Calendar")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    selectedDate = Date()
-                } label: {
-                    Text("Today")
-                }
-            }
+        .navigationTitleTypography(
+            largeTitleColor: calendarAccentColor,
+            inlineTitleColor: colors.onSurface,
+            backgroundColor: colors.background
+        )
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            calendarTopInset
         }
         .safeAreaInset(edge: .bottom) {
-            TaskFloatingActionButtonDock {
+            TaskFloatingActionButtonDock(fillColor: calendarAccentColor) {
                 showingCreateTask = true
             }
         }
@@ -164,15 +166,81 @@ struct CalendarScreen: View {
         }
     }
 
-    private func matches(date: Date) -> Bool {
-        let calendar = Calendar.current
-        switch scope {
-        case .month:
-            return calendar.isDate(date, equalTo: selectedDate, toGranularity: .month)
-        case .week:
-            return calendar.isDate(date, equalTo: selectedDate, toGranularity: .weekOfYear)
-        case .day:
-            return calendar.isDate(date, inSameDayAs: selectedDate)
+    private var calendarTopInset: some View {
+        TimelineTopBar(
+            title: "Calendar",
+            accentColor: calendarAccentColor,
+            collapseProgress: titleCollapseProgress,
+            onBack: { dismiss() },
+            action: TimelineTopBarAction(
+                systemName: "calendar",
+                action: { selectedDate = Date() }
+            )
+        )
+    }
+
+    private var calendarHeroTitleRow: some View {
+        TimelineExpandedTitleRow(
+            title: "Calendar",
+            accentColor: calendarAccentColor,
+            collapseProgress: titleCollapseProgress
+        )
+        .background {
+            TimelineScrollOffsetObserver { calendarScrollOffset = $0 }
+                .frame(width: 0, height: 0)
+        }
+        .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
+        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
+    private func isSelectedDay(_ date: Date) -> Bool {
+        Calendar.current.isDate(date, inSameDayAs: selectedDate)
+    }
+}
+
+private struct CalendarPendingTaskRow: View {
+    let todo: TodoItem
+    let onComplete: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 12) {
+                Button(action: onComplete) {
+                    Image(systemName: "circle")
+                        .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
+                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                        .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
+                }
+                .buttonStyle(
+                    TdayPressButtonStyle(
+                        shadowColor: Color.black,
+                        pressedShadowOpacity: 0,
+                        normalShadowOpacity: 0
+                    )
+                )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(todo.title)
+                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold))
+                        .foregroundStyle(colors.onSurface)
+                        .lineLimit(2)
+
+                    Text(todo.due.formatted(date: .omitted, time: .shortened))
+                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
+                }
+
+                Spacer(minLength: 0)
+            }
+            .frame(minHeight: 58)
+
+            Rectangle()
+                .fill(colors.onSurfaceVariant.opacity(0.18))
+                .frame(height: 1)
         }
     }
 }

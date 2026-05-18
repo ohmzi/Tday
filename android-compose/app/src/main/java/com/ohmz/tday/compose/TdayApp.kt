@@ -2,7 +2,6 @@ package com.ohmz.tday.compose
 
 import android.net.Uri
 import android.widget.Toast
-import com.ohmz.tday.compose.R
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -14,8 +13,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -24,9 +21,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -46,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -53,37 +53,34 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.NavHostController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import androidx.compose.ui.platform.LocalContext
-import io.sentry.android.navigation.SentryNavigationListener
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.ui.OfflineBanner
-import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
+import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
-import com.ohmz.tday.compose.feature.calendar.CalendarViewModel
 import com.ohmz.tday.compose.feature.calendar.CalendarScreen
+import com.ohmz.tday.compose.feature.calendar.CalendarViewModel
 import com.ohmz.tday.compose.feature.completed.CompletedScreen
 import com.ohmz.tday.compose.feature.completed.CompletedViewModel
 import com.ohmz.tday.compose.feature.home.HomeScreen
 import com.ohmz.tday.compose.feature.home.HomeUiState
 import com.ohmz.tday.compose.feature.home.HomeViewModel
 import com.ohmz.tday.compose.feature.onboarding.OnboardingWizardOverlay
-import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.release.LatestReleaseScreen
 import com.ohmz.tday.compose.feature.release.LatestReleaseUiState
 import com.ohmz.tday.compose.feature.release.LatestReleaseViewModel
@@ -91,6 +88,7 @@ import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.theme.TdayTheme
+import io.sentry.android.navigation.SentryNavigationListener
 import kotlin.math.roundToInt
 
 private const val NAV_ENTER_DURATION_MS = 440
@@ -533,7 +531,6 @@ fun TdayApp() {
                         onCreateTask = viewModel::createTask,
                         onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
                         onCompleteTask = viewModel::complete,
-                        onUncompleteTask = viewModel::uncomplete,
                         onUpdateTask = viewModel::updateTask,
                         onDelete = { todo ->
                             viewModel.delete(todo) {
