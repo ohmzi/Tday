@@ -162,14 +162,6 @@ fun TodoListScreen(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
     )
-    val titleIcon = when (uiState.mode) {
-        TodoListMode.TODAY -> Icons.Rounded.WbSunny
-        TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
-        TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
-        TodoListMode.ALL -> Icons.Rounded.Inbox
-        TodoListMode.PRIORITY -> Icons.Rounded.Flag
-        TodoListMode.LIST -> listIconForKey(selectedList?.iconKey)
-    }
     val fabColor = todoFabColorForMode(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -331,7 +323,6 @@ fun TodoListScreen(
                     onBack = onBack,
                     collapseProgress = todayCollapseProgress,
                     title = uiState.title,
-                    titleIcon = titleIcon,
                     titleColor = titleColor,
                     showActionButton = showTopBarActionButton,
                     actionIcon = if (canSummarizeCurrentMode) {
@@ -365,23 +356,12 @@ fun TodoListScreen(
             } else {
                 TopAppBar(
                     title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Icon(
-                                imageVector = titleIcon,
-                                contentDescription = null,
-                                tint = titleColor,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Text(
-                                text = uiState.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = titleColor,
-                            )
-                        }
+                        Text(
+                            text = uiState.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = titleColor,
+                        )
                     },
                     navigationIcon = {
                         TodayHeaderButton(
@@ -646,7 +626,7 @@ fun TodoListScreen(
             title = {
                 Text(
                     text = stringResource(R.string.error_connectivity_title),
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                 )
             },
             text = {
@@ -724,7 +704,6 @@ private fun TodayTopBar(
     onBack: () -> Unit,
     collapseProgress: Float,
     title: String,
-    titleIcon: ImageVector,
     titleColor: Color,
     showActionButton: Boolean,
     actionIcon: ImageVector,
@@ -768,29 +747,18 @@ private fun TodayTopBar(
                 }
             }
             if (collapsedTitleAlpha > 0.001f) {
-                Row(
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = titleColor,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
                         },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = titleIcon,
-                        contentDescription = null,
-                        tint = titleColor,
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = titleColor,
-                    )
-                }
+                )
             }
         }
         Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
@@ -801,27 +769,16 @@ private fun TodayTopBar(
             contentAlignment = Alignment.BottomStart,
         ) {
             if (expandedTitleAlpha > 0.001f) {
-                Row(
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = titleColor,
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
                     },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = titleIcon,
-                        contentDescription = null,
-                        tint = titleColor,
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = titleColor,
-                    )
-                }
+                )
             }
         }
     }
@@ -1113,7 +1070,7 @@ private fun ListSettingsBottomSheet(
                 Text(
                     text = stringResource(R.string.home_section_list),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
@@ -1212,7 +1169,7 @@ private fun ListSettingsBottomSheet(
                 Text(
                     text = stringResource(R.string.home_section_color),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
@@ -1266,7 +1223,7 @@ private fun ListSettingsBottomSheet(
                 Text(
                     text = stringResource(R.string.home_section_icon),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     color = colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
@@ -1471,7 +1428,7 @@ private fun TimelineSectionHeader(
                 } else {
                     MaterialTheme.typography.titleMedium
                 },
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
             )
             if (onHeaderClick != null) {
                 Icon(
@@ -1631,7 +1588,7 @@ private fun EmptyTimelineState(
             } else {
                 MaterialTheme.typography.headlineSmall
             },
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.Bold,
         )
     }
 }
@@ -2376,7 +2333,7 @@ private fun SwipeTaskRow(
                                         colorScheme.onSurface
                                     },
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.Bold,
                                     textDecoration = if (visuallyCompleted) {
                                         TextDecoration.LineThrough
                                     } else {
@@ -2474,7 +2431,7 @@ private fun TodayTodoRow(
                         text = todo.title,
                         color = colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = detailDueText,
@@ -2541,7 +2498,7 @@ private fun TodoRow(
                         text = todo.title,
                         color = colorScheme.onSurface,
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = due,
