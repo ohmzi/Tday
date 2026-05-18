@@ -325,7 +325,7 @@ private struct HomeTopBar: View {
                             .foregroundStyle(Color(hex: daytime ? 0xF4C542 : 0xA8B8E8))
 
                         Text("T'Day")
-                            .font(.system(size: 32, weight: .bold))
+                            .font(.tdayRounded(size: 32, weight: .heavy))
                             .foregroundStyle(colors.onSurface)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -349,7 +349,7 @@ private struct HomeTopBar: View {
                                 .focused(searchFieldFocused)
                                 .textInputAutocapitalization(.never)
                                 .autocorrectionDisabled()
-                                .font(.system(size: 18, weight: .medium))
+                                .font(.tdayRounded(size: 18, weight: .bold))
                                 .foregroundStyle(colors.onSurface)
                                 .tint(colors.primary)
 
@@ -595,12 +595,12 @@ private struct HomeCategoryTile: View {
                             .foregroundStyle(.white)
                         Spacer()
                         Text("\(count)")
-                            .font(.system(size: 28, weight: .black))
+                            .font(.tdayRounded(size: 28, weight: .black))
                             .foregroundStyle(.white)
                     }
 
                     Text(title)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.tdayRounded(size: 22, weight: .bold))
                         .foregroundStyle(.white)
                 }
                 .padding(16)
@@ -656,7 +656,7 @@ private struct HomeListsHeader: View {
 
     var body: some View {
         Text("My Lists")
-            .font(.system(size: 28, weight: .bold))
+            .font(.tdayRounded(size: 28, weight: .bold))
             .foregroundStyle(colors.onSurface)
             .padding(.top, 2)
     }
@@ -730,7 +730,7 @@ private struct HomeListRow: View {
                             .frame(width: 32, height: 32)
 
                         Text(name)
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(.tdayRounded(size: 22, weight: .bold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
                     }
@@ -738,7 +738,7 @@ private struct HomeListRow: View {
                     Spacer()
 
                     Text("\(count)")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.tdayRounded(size: 22, weight: .bold))
                         .foregroundStyle(.white)
                 }
                 .padding(.horizontal, 16)
@@ -767,7 +767,7 @@ private struct HomeSearchResultsOverlay: View {
         VStack(spacing: 0) {
             if todos.isEmpty {
                 Text("No matching tasks")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.tdayRounded(size: 14, weight: .bold))
                     .foregroundStyle(colors.onSurfaceVariant)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14)
@@ -789,12 +789,12 @@ private struct HomeSearchResultsOverlay: View {
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(todo.title)
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(.tdayRounded(size: 15, weight: .bold))
                                     .foregroundStyle(colors.onSurface)
                                     .lineLimit(1)
 
                                 Text(dueFormatter.string(from: todo.due))
-                                    .font(.system(size: 12, weight: .regular))
+                                    .font(.tdayRounded(size: 12, weight: .bold))
                                     .foregroundStyle(colors.onSurfaceVariant)
                                     .lineLimit(1)
                             }
@@ -1011,7 +1011,7 @@ private struct CreateListSheet: View {
                         .textInputAutocapitalization(.words)
                         .autocorrectionDisabled()
                         .multilineTextAlignment(.center)
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.tdayRounded(size: 28, weight: .bold))
                         .foregroundStyle(accentColor)
                         .padding(.horizontal, 14)
                         .frame(maxWidth: .infinity)
@@ -1146,7 +1146,7 @@ private struct CreateListSheetHeader: View {
             Spacer()
 
             Text("New list")
-                .font(.system(size: 34, weight: .bold))
+                .font(.tdayRounded(size: 34, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
 
             Spacer()
@@ -1194,7 +1194,7 @@ private struct CreateListSheetSectionTitle: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 30, weight: .bold))
+            .font(.tdayRounded(size: 30, weight: .bold))
             .foregroundStyle(colors.onSurfaceVariant)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 4)
