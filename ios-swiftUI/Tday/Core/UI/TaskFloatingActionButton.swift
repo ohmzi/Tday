@@ -1,10 +1,14 @@
 import SwiftUI
 
-private let taskFabFillColor = Color(red: 110.0 / 255.0, green: 168.0 / 255.0, blue: 225.0 / 255.0)
-private let taskFabBorderColor = Color(red: 61.0 / 255.0, green: 127.0 / 255.0, blue: 234.0 / 255.0)
+private let defaultTaskFabFillColor = Color(red: 110.0 / 255.0, green: 168.0 / 255.0, blue: 225.0 / 255.0)
 
 struct TaskFloatingActionButton: View {
+    var fillColor = defaultTaskFabFillColor
     let action: () -> Void
+
+    private var borderColor: Color {
+        taskFabBlend(fillColor, with: .black, amount: 0.18)
+    }
 
     var body: some View {
         Button(action: action) {
@@ -12,10 +16,10 @@ struct TaskFloatingActionButton: View {
                 .font(.system(size: 28, weight: .medium))
                 .foregroundStyle(.white)
                 .frame(width: 56, height: 56)
-                .background(taskFabFillColor)
+                .background(fillColor)
                 .overlay(
                     Circle()
-                        .stroke(taskFabBorderColor.opacity(0.58), lineWidth: 1)
+                        .stroke(borderColor.opacity(0.58), lineWidth: 1)
                 )
                 .clipShape(Circle())
         }
@@ -24,13 +28,40 @@ struct TaskFloatingActionButton: View {
     }
 }
 
+private func taskFabBlend(_ color: Color, with other: Color, amount: CGFloat) -> Color {
+    let lhs = UIColor(color)
+    let rhs = UIColor(other)
+    var lhsRed: CGFloat = 0
+    var lhsGreen: CGFloat = 0
+    var lhsBlue: CGFloat = 0
+    var lhsAlpha: CGFloat = 0
+    var rhsRed: CGFloat = 0
+    var rhsGreen: CGFloat = 0
+    var rhsBlue: CGFloat = 0
+    var rhsAlpha: CGFloat = 0
+
+    lhs.getRed(&lhsRed, green: &lhsGreen, blue: &lhsBlue, alpha: &lhsAlpha)
+    rhs.getRed(&rhsRed, green: &rhsGreen, blue: &rhsBlue, alpha: &rhsAlpha)
+
+    let mix = Swift.min(Swift.max(amount, 0), 1)
+    return Color(
+        uiColor: UIColor(
+            red: lhsRed + ((rhsRed - lhsRed) * mix),
+            green: lhsGreen + ((rhsGreen - lhsGreen) * mix),
+            blue: lhsBlue + ((rhsBlue - lhsBlue) * mix),
+            alpha: lhsAlpha + ((rhsAlpha - lhsAlpha) * mix)
+        )
+    )
+}
+
 struct TaskFloatingActionButtonDock: View {
+    var fillColor = defaultTaskFabFillColor
     let action: () -> Void
 
     var body: some View {
         HStack {
             Spacer()
-            TaskFloatingActionButton(action: action)
+            TaskFloatingActionButton(fillColor: fillColor, action: action)
                 .padding(.trailing, 18)
                 .padding(.vertical, 8)
         }
