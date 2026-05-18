@@ -56,6 +56,7 @@ final class TdayAPIService {
             path: url.absoluteString,
             method: "GET",
             allowRewrite: false,
+            session: configuration.probeSession,
             responseType: MobileProbeResponse.self
         )
     }
@@ -314,6 +315,7 @@ final class TdayAPIService {
         body: Body,
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
+        session: URLSession? = nil,
         responseType: Response.Type
     ) async throws -> Response {
         let encodedBody = try encoder.encode(body)
@@ -324,7 +326,8 @@ final class TdayAPIService {
             body: encodedBody,
             contentType: "application/json",
             extraHeaders: extraHeaders,
-            allowRewrite: allowRewrite
+            allowRewrite: allowRewrite,
+            session: session
         )
         return try decode(response.data, as: responseType)
     }
@@ -335,6 +338,7 @@ final class TdayAPIService {
         queryItems: [URLQueryItem] = [],
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
+        session: URLSession? = nil,
         responseType: Response.Type
     ) async throws -> Response {
         let response = try await requestRaw(
@@ -342,7 +346,8 @@ final class TdayAPIService {
             method: method,
             queryItems: queryItems,
             extraHeaders: extraHeaders,
-            allowRewrite: allowRewrite
+            allowRewrite: allowRewrite,
+            session: session
         )
         return try decode(response.data, as: responseType)
     }
@@ -354,7 +359,8 @@ final class TdayAPIService {
         body: Data? = nil,
         contentType: String? = nil,
         extraHeaders: [String: String] = [:],
-        allowRewrite: Bool = true
+        allowRewrite: Bool = true,
+        session: URLSession? = nil
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         try await performRequestRaw(
             path: path,
@@ -364,6 +370,7 @@ final class TdayAPIService {
             contentType: contentType,
             extraHeaders: extraHeaders,
             allowRewrite: allowRewrite,
+            session: session,
             validateStatus: true
         )
     }
@@ -375,7 +382,8 @@ final class TdayAPIService {
         body: Data? = nil,
         contentType: String? = nil,
         extraHeaders: [String: String] = [:],
-        allowRewrite: Bool = true
+        allowRewrite: Bool = true,
+        session: URLSession? = nil
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         try await performRequestRaw(
             path: path,
@@ -385,6 +393,7 @@ final class TdayAPIService {
             contentType: contentType,
             extraHeaders: extraHeaders,
             allowRewrite: allowRewrite,
+            session: session,
             validateStatus: false
         )
     }
@@ -397,6 +406,7 @@ final class TdayAPIService {
         contentType: String? = nil,
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
+        session: URLSession? = nil,
         validateStatus: Bool
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         var url = try configuration.makeURL(path: path, allowRewrite: allowRewrite)
@@ -423,7 +433,8 @@ final class TdayAPIService {
         }
 
         do {
-            let (data, response) = try await configuration.session.data(for: request)
+            let urlSession = session ?? configuration.session
+            let (data, response) = try await urlSession.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError(message: "Unexpected server response", statusCode: nil)
             }
