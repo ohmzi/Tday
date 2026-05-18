@@ -4,7 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 describe("loadCurrentRelease", () => {
   afterEach(() => {
-    window.localStorage.clear();
+    if (typeof window.localStorage.clear === "function") {
+      window.localStorage.clear();
+    }
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });

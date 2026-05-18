@@ -29,5 +29,10 @@ let package = Package(
                 "TdayApp.swift",
             ]
         ),
+        .testTarget(
+            name: "TdayCoreTests",
+            dependencies: ["TdayCore"],
+            path: "Tests/TdayCoreTests"
+        ),
     ]
 )
