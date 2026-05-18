@@ -44,6 +44,7 @@ struct OnboardingWizardOverlay: View {
     @State private var isCreatingAccount = false
     @State private var localError: String?
     @State private var isConnecting = false
+    @State private var isCompletingAuthentication = false
     @State private var credentialCoordinator = LoginCredentialCoordinator()
 
     var body: some View {
@@ -84,6 +85,7 @@ struct OnboardingWizardOverlay: View {
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isCreatingAccount)
         .animation(.easeInOut(duration: 0.2), value: isConnecting)
         .animation(.easeInOut(duration: 0.2), value: authViewModel.isLoading)
+        .animation(.easeInOut(duration: 0.2), value: isCompletingAuthentication)
     }
 
     private var stableCardLayout: some View {
@@ -138,13 +140,11 @@ struct OnboardingWizardOverlay: View {
                         title: "Connecting to server",
                         subtitle: "Validating your secure T'Day endpoint."
                     )
-                } else if authViewModel.isLoading {
+                } else if isAuthInFlight {
                     WizardLoadingPanel(
                         systemImage: isCreatingAccount ? "person.badge.plus.fill" : "lock.fill",
-                        title: isCreatingAccount ? "Creating account" : "Authenticating",
-                        subtitle: isCreatingAccount
-                            ? "Preparing your new T'Day account."
-                            : "Completing encrypted sign in."
+                        title: authLoadingTitle,
+                        subtitle: authLoadingSubtitle
                     )
                 } else if step == .server {
                     serverStepContent
@@ -306,6 +306,7 @@ struct OnboardingWizardOverlay: View {
                 Button(isCreatingAccount ? "I already have an account" : "Create account") {
                     localError = nil
                     onClearAuthStatus()
+                    isCompletingAuthentication = false
                     isCreatingAccount.toggle()
                 }
                 .buttonStyle(WizardTextButtonStyle())
@@ -317,6 +318,7 @@ struct OnboardingWizardOverlay: View {
                 Button("Change server") {
                     localError = nil
                     onClearAuthStatus()
+                    isCompletingAuthentication = false
                     isCreatingAccount = false
                     step = .server
                 }
@@ -330,6 +332,26 @@ struct OnboardingWizardOverlay: View {
 
     private var isLoginStep: Bool {
         step == .login
+    }
+
+    private var isAuthInFlight: Bool {
+        authViewModel.isLoading || isCompletingAuthentication
+    }
+
+    private var authLoadingTitle: String {
+        if isCompletingAuthentication && !authViewModel.isLoading {
+            return "Opening T'Day"
+        }
+        return isCreatingAccount ? "Creating account" : "Authenticating"
+    }
+
+    private var authLoadingSubtitle: String {
+        if isCompletingAuthentication && !authViewModel.isLoading {
+            return "Loading your workspace."
+        }
+        return isCreatingAccount
+            ? "Preparing your new T'Day account."
+            : "Completing encrypted sign in."
     }
 
     private var currentMessage: String? {
@@ -350,12 +372,12 @@ struct OnboardingWizardOverlay: View {
                 !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
                 !registerPassword.isEmpty &&
                 !confirmPassword.isEmpty &&
-                !authViewModel.isLoading
+                !isAuthInFlight
         }
 
         return !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             !password.isEmpty &&
-            !authViewModel.isLoading
+            !isAuthInFlight
     }
 
     private func connectServer() async {
@@ -387,7 +409,7 @@ struct OnboardingWizardOverlay: View {
     }
 
     private func requestSavedCredentialIfAvailable() {
-        guard isLoginStep else {
+        guard isLoginStep, !isCompletingAuthentication else {
             return
         }
 
@@ -395,10 +417,15 @@ struct OnboardingWizardOverlay: View {
             _ = await credentialCoordinator.requestSavedCredentialIfAvailable(
                 currentPassword: password,
                 isCreatingAccount: isCreatingAccount,
-                isAuthLoading: authViewModel.isLoading,
+                isAuthLoading: isAuthInFlight,
                 credentialService: systemCredentialService
             ) { credential in
-                await onLogin(credential.email, credential.password, .systemPasswordAutoFill)
+                isCompletingAuthentication = true
+                let didLogin = await onLogin(credential.email, credential.password, .systemPasswordAutoFill)
+                if !didLogin || authViewModel.pendingApproval {
+                    isCompletingAuthentication = false
+                }
+                return didLogin
             }
         }
     }
@@ -410,17 +437,25 @@ struct OnboardingWizardOverlay: View {
             guard validateRegistration() else {
                 return
             }
-            _ = await onRegister(
+            isCompletingAuthentication = true
+            let didRegister = await onRegister(
                 firstName.trimmingCharacters(in: .whitespacesAndNewlines),
                 email.trimmingCharacters(in: .whitespacesAndNewlines),
                 registerPassword
             )
+            if !didRegister || authViewModel.pendingApproval {
+                isCompletingAuthentication = false
+            }
         } else {
             guard !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !password.isEmpty else {
                 localError = "Email and password are required"
                 return
             }
-            _ = await onLogin(email.trimmingCharacters(in: .whitespacesAndNewlines), password, .manual)
+            isCompletingAuthentication = true
+            let didLogin = await onLogin(email.trimmingCharacters(in: .whitespacesAndNewlines), password, .manual)
+            if !didLogin || authViewModel.pendingApproval {
+                isCompletingAuthentication = false
+            }
         }
     }
 
