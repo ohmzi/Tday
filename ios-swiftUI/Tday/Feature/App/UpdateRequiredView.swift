@@ -17,11 +17,11 @@ struct UpdateRequiredView: View {
                         .foregroundStyle(colors.primary)
 
                     Text("Update Required")
-                        .font(.title2.bold())
+                        .font(.tdayRounded(.title2, weight: .bold))
                         .foregroundStyle(colors.onSurface)
 
                     Text("An update is required to continue. Please update to v\(requiredVersion).")
-                        .font(.subheadline)
+                        .font(.tdayRounded(.subheadline, weight: .bold))
                         .foregroundStyle(colors.onSurfaceVariant)
                         .multilineTextAlignment(.center)
 
@@ -43,11 +43,11 @@ struct UpdateRequiredView: View {
                         .foregroundStyle(colors.error)
 
                     Text("Server Update Needed")
-                        .font(.title2.bold())
+                        .font(.tdayRounded(.title2, weight: .bold))
                         .foregroundStyle(colors.onSurface)
 
                     Text("Your app requires a newer server version. The server is on v\(serverVersion). Please contact your administrator to update the server.")
-                        .font(.subheadline)
+                        .font(.tdayRounded(.subheadline, weight: .bold))
                         .foregroundStyle(colors.onSurfaceVariant)
                         .multilineTextAlignment(.center)
 
