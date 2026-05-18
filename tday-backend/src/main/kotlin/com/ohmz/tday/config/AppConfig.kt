@@ -54,6 +54,8 @@ data class AppConfig(
     val probeAppVersion: String?,
     val probeUpdateRequired: Boolean,
     val probeEncryptionKey: String?,
+    val appleTeamId: String?,
+    val iosBundleId: String,
     val sentryDsn: String?,
 ) {
     companion object {
@@ -121,6 +123,8 @@ data class AppConfig(
                 probeUpdateRequired = env("TDAY_UPDATE_REQUIRED", "false")
                     .equals("true", ignoreCase = true),
                 probeEncryptionKey = secret("TDAY_PROBE_ENCRYPTION_KEY", "TDAY_PROBE_ENCRYPTION_KEY_FILE"),
+                appleTeamId = env("APPLE_TEAM_ID"),
+                iosBundleId = env("IOS_BUNDLE_ID", "com.ohmz.tday.ios"),
                 sentryDsn = env("SENTRY_DSN"),
             )
         }

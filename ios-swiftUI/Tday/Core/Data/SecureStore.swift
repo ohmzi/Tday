@@ -2,12 +2,20 @@ import Foundation
 import Security
 
 final class SecureStore {
-    private let service = "com.ohmz.tday.ios.secure-store"
-    private let defaults = UserDefaults.standard
+    private let service: String
+    private let defaults: UserDefaults
     private let trustedHostsKey = "secure.trusted.hosts"
     private let runtimeServerURLKey = "runtime.server.url"
     private let listIconsKey = "list.icons"
     private let installSentinelKey = "app.install.sentinel"
+
+    init(
+        service: String = "com.ohmz.tday.ios.secure-store",
+        defaults: UserDefaults = .standard
+    ) {
+        self.service = service
+        self.defaults = defaults
+    }
 
     enum Key: String {
         case persistedServerURL = "persisted-server-url"
@@ -89,8 +97,10 @@ final class SecureStore {
         defaults.removeObject(forKey: trustedHostsKey)
     }
 
-    func clearAllUserValues() {
-        clearPersistedServerURL()
+    func clearAllUserValues(preservingServerURL: Bool = false) {
+        if !preservingServerURL {
+            clearPersistedServerURL()
+        }
         clearPersistedAuthSessionCookie()
         clearLastEmail()
         clearAllTrustedFingerprints()
