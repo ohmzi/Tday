@@ -17,6 +17,7 @@ final class AppContainer {
     let modelContainer: ModelContainer
     let cacheManager: OfflineCacheManager
     let serverConfigRepository: ServerConfigRepository
+    let systemCredentialService: SystemCredentialService
     let authRepository: AuthRepository
     let syncManager: SyncManager
     let todoRepository: TodoRepository
@@ -56,6 +57,7 @@ final class AppContainer {
             serverURLState: serverURLState,
             api: apiService
         )
+        systemCredentialService = SystemCredentialService()
         authRepository = AuthRepository(
             api: apiService,
             secureStore: secureStore,

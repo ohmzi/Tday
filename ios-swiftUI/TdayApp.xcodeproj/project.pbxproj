@@ -10,6 +10,7 @@
 		013BE5C9AD66548E50177C48 /* SettingsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */; };
 		01C535860D5694F91772B940 /* CookieStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D210E2E24F013C1E30BE80A /* CookieStore.swift */; };
 		02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */; };
+		03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */; };
 		041712E33446975E528F050E /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */; };
 		04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */; };
 		0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */; };
@@ -36,6 +37,7 @@
 		58BD5E982FB87AE6986E3E79 /* CreateTodoUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 718528F64C339E527223D93F /* CreateTodoUseCase.swift */; };
 		58EB6EF803693EB982E331E4 /* SyncAndRefreshUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */; };
 		5B82443B89507719EDD7215C /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF6FD5D2845A10D7052467D /* AppContainer.swift */; };
+		5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */; };
 		64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */; };
 		701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */; };
 		765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D006E491513605369E7D5 /* DomainModels.swift */; };
@@ -47,6 +49,7 @@
 		8F2E99D406CD695C364FE1DF /* UserFacingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */; };
 		9146B23E1A1F6A3A71DE7A5B /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */; };
 		91660A57CFA826E39338BD33 /* CalendarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25A90A443440754855071C9D /* CalendarScreen.swift */; };
+		957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */; };
 		9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42749601AFF38EAE17BD3213 /* HomeViewModel.swift */; };
 		A03B553E316CEEDFAB8EBA69 /* OfflineSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */; };
 		A316B4B3BB1AEA5FDF9998DF /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BFFE8167D3639FF09C033A2 /* AppRootView.swift */; };
@@ -60,6 +63,7 @@
 		C0ABAA1F11269C7FC0682201 /* PullToRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32538D5E9182018AFEAB8DEC /* PullToRefresh.swift */; };
 		C1B29C5E4D5D247E8D0B5C0C /* TodoRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055D0F0501B287B70456AF4B /* TodoRepository.swift */; };
 		C7229E3F4839B156CDEFA453 /* UpdateRequiredView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F15244DE3A08B82F3DDD8EB /* UpdateRequiredView.swift */; };
+		C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */; };
 		CEA5C5F8B16C461F661396D0 /* ProbeDecryptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */; };
 		CFD25493E8027AACCC39FE21 /* CompletedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7699A4200FA2F2970A1838D6 /* CompletedViewModel.swift */; };
 		D1EC81F59DDFE7F8A10D1D30 /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */; };
@@ -74,16 +78,27 @@
 		FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		5892908396EB5C4983360D8B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DEBED54F5F85A969685E5452 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CEB0667A66D01D2A147D96AA;
+			remoteInfo = Tday;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProbeDecryptor.swift; sourceTree = "<group>"; };
 		055D0F0501B287B70456AF4B /* TodoRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRepository.swift; sourceTree = "<group>"; };
 		0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFloatingActionButton.swift; sourceTree = "<group>"; };
 		133161412A6BD2A0C04F745A /* SnackbarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnackbarManager.swift; sourceTree = "<group>"; };
 		15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBackHistoryTitle.swift; sourceTree = "<group>"; };
+		19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCredentialLoginTests.swift; sourceTree = "<group>"; };
 		1DABE0225668571D48D55B96 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		22BFAB0C2FA0BB186AEBFC5F /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
 		25A90A443440754855071C9D /* CalendarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarScreen.swift; sourceTree = "<group>"; };
-		2A80E8562326D2BB4FF7E8C7 /* Tday.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tday.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2A80E8562326D2BB4FF7E8C7 /* Tday.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tday.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2BFFE8167D3639FF09C033A2 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
 		2D210E2E24F013C1E30BE80A /* CookieStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookieStore.swift; sourceTree = "<group>"; };
 		2E70F2999E1965A77EB21FF8 /* BootstrapSessionUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BootstrapSessionUseCase.swift; sourceTree = "<group>"; };
@@ -106,6 +121,7 @@
 		718528F64C339E527223D93F /* CreateTodoUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTodoUseCase.swift; sourceTree = "<group>"; };
 		7699A4200FA2F2970A1838D6 /* CompletedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedViewModel.swift; sourceTree = "<group>"; };
 		78690CB92403D76DCA200972 /* TdayAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayAPIService.swift; sourceTree = "<group>"; };
+		7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCredentialService.swift; sourceTree = "<group>"; };
 		7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRepository.swift; sourceTree = "<group>"; };
 		84798381A9E2DF3C9468ED8F /* SwipeActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeActions.swift; sourceTree = "<group>"; };
 		85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCacheManager.swift; sourceTree = "<group>"; };
@@ -116,6 +132,7 @@
 		91CFC3C0B9ADD376389DF63C /* NetworkConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkConfiguration.swift; sourceTree = "<group>"; };
 		9BA781886DCE6963CA364F6F /* CompletedScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedScreen.swift; sourceTree = "<group>"; };
 		9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeClient.swift; sourceTree = "<group>"; };
+		A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginCredentialCoordinator.swift; sourceTree = "<group>"; };
 		A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineSyncModels.swift; sourceTree = "<group>"; };
 		AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
@@ -124,13 +141,16 @@
 		AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorRetryView.swift; sourceTree = "<group>"; };
 		AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTaskSheet.swift; sourceTree = "<group>"; };
 		AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListViewModel.swift; sourceTree = "<group>"; };
+		B3F7D3043A1EFC1A4EBBDA02 /* Tday.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tday.entitlements; sourceTree = "<group>"; };
 		C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPreferenceStore.swift; sourceTree = "<group>"; };
 		C9D2CB40ACEE85331512EEC2 /* HomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
 		CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionCompatibility.swift; sourceTree = "<group>"; };
 		CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		D0ACC8B538184310B385746A /* ServerConfigRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerConfigRepository.swift; sourceTree = "<group>"; };
 		D19AB4B0B909242B323D5ABF /* ListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListRepository.swift; sourceTree = "<group>"; };
+		D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLPersistenceTests.swift; sourceTree = "<group>"; };
 		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
+		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappers.swift; sourceTree = "<group>"; };
 		D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWizardOverlay.swift; sourceTree = "<group>"; };
 		D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
@@ -159,6 +179,7 @@
 			children = (
 				E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */,
 				E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */,
+				7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -177,6 +198,15 @@
 				D19AB4B0B909242B323D5ABF /* ListRepository.swift */,
 			);
 			path = List;
+			sourceTree = "<group>";
+		};
+		0887DFEE17FD8E0DCDABDD10 /* TdayCoreTests */ = {
+			isa = PBXGroup;
+			children = (
+				D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */,
+				19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */,
+			);
+			path = TdayCoreTests;
 			sourceTree = "<group>";
 		};
 		0D57A85AA8A54CBA3AB77925 /* Todos */ = {
@@ -201,6 +231,7 @@
 			isa = PBXGroup;
 			children = (
 				2A80E8562326D2BB4FF7E8C7 /* Tday.app */,
+				D26B48A87B57A0417CC3F578 /* TdayTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -217,6 +248,7 @@
 			isa = PBXGroup;
 			children = (
 				1DABE0225668571D48D55B96 /* AuthViewModel.swift */,
+				A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -240,6 +272,7 @@
 			isa = PBXGroup;
 			children = (
 				83705160F9DB3C02FBD56E41 /* Tday */,
+				75319F4921808A73555E9EC0 /* Tests */,
 				3F0733C5DBF6EC9BC6DBCB4D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -273,6 +306,14 @@
 			path = Notification;
 			sourceTree = "<group>";
 		};
+		75319F4921808A73555E9EC0 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				0887DFEE17FD8E0DCDABDD10 /* TdayCoreTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		7BA4A69F753AF1C268BCD197 /* Home */ = {
 			isa = PBXGroup;
 			children = (
@@ -297,6 +338,7 @@
 				DCE08ADACC8F11CE2113C13B /* Assets.xcassets */,
 				A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */,
 				4C3B5EA549D268759EDF91CF /* LaunchScreenShared.storyboard */,
+				B3F7D3043A1EFC1A4EBBDA02 /* Tday.entitlements */,
 				70A4E591B572A2A9980EC6B7 /* TdayApp.swift */,
 				DD5065F404F570ED9397862C /* Core */,
 				554826ABF1DA81CDB2234C1D /* Feature */,
@@ -492,6 +534,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		870B7E606F6196C1CA699A1F /* TdayTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 032110A302C6CF9B65A2760A /* Build configuration list for PBXNativeTarget "TdayTests" */;
+			buildPhases = (
+				64E975FE272A463522F716BE /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				02FB644F67D312B59373E866 /* PBXTargetDependency */,
+			);
+			name = TdayTests;
+			packageProductDependencies = (
+			);
+			productName = TdayTests;
+			productReference = D26B48A87B57A0417CC3F578 /* TdayTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		CEB0667A66D01D2A147D96AA /* Tday */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B5D9306D62E6A4AB95C26819 /* Build configuration list for PBXNativeTarget "Tday" */;
@@ -519,7 +579,9 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2620;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 98FEFA2339B3785EC6B323E6 /* Build configuration list for PBXProject "TdayApp" */;
 			developmentRegion = en;
@@ -539,6 +601,7 @@
 			projectRoot = "";
 			targets = (
 				CEB0667A66D01D2A147D96AA /* Tday */,
+				870B7E606F6196C1CA699A1F /* TdayTests */,
 			);
 		};
 /* End PBXProject section */
@@ -558,6 +621,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		64E975FE272A463522F716BE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */,
+				C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EE513C8DAF31C33B310B4E38 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -587,6 +659,7 @@
 				C0768A60B1B807FCA7A6D37F /* HomeScreen.swift in Sources */,
 				9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */,
 				DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */,
+				957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */,
 				1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */,
 				C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */,
 				3667E1D45490DE558553F39F /* OfflineBanner.swift in Sources */,
@@ -610,6 +683,7 @@
 				2C1549AFC2F29218C879306C /* SwipeActions.swift in Sources */,
 				58EB6EF803693EB982E331E4 /* SyncAndRefreshUseCase.swift in Sources */,
 				02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */,
+				5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */,
 				EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */,
 				3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */,
 				2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */,
@@ -627,12 +701,19 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		02FB644F67D312B59373E866 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CEB0667A66D01D2A147D96AA /* Tday */;
+			targetProxy = 5892908396EB5C4983360D8B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
 		74588D51AB2D65C6956DC010 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -666,7 +747,6 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -680,7 +760,6 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -691,6 +770,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -715,6 +795,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -735,11 +816,28 @@
 			};
 			name = Debug;
 		};
+		B38EA14A0A17C1F777BD5D3E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tday.app/Tday";
+			};
+			name = Release;
+		};
 		BEF868E3016FE4A0364CD65D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -773,7 +871,6 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -794,16 +891,42 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
+		EF702053FF0F6973A8F8181C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tday.app/Tday";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		032110A302C6CF9B65A2760A /* Build configuration list for PBXNativeTarget "TdayTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EF702053FF0F6973A8F8181C /* Debug */,
+				B38EA14A0A17C1F777BD5D3E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		98FEFA2339B3785EC6B323E6 /* Build configuration list for PBXProject "TdayApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
