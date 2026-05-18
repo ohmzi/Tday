@@ -7,11 +7,17 @@ private struct RemoteSnapshot {
     let aiSummaryEnabled: Bool
 
     var todoUpdatedAtByCanonical: [String: Int64] {
-        Dictionary(uniqueKeysWithValues: todos.map { ($0.canonicalId, $0.updatedAt?.epochMilliseconds ?? 0) })
+        todos.reduce(into: [:]) { result, todo in
+            let updatedAt = todo.updatedAt?.epochMilliseconds ?? 0
+            result[todo.canonicalId] = max(result[todo.canonicalId] ?? 0, updatedAt)
+        }
     }
 
     var listUpdatedAtByID: [String: Int64] {
-        Dictionary(uniqueKeysWithValues: lists.map { ($0.id, $0.updatedAt?.epochMilliseconds ?? 0) })
+        lists.reduce(into: [:]) { result, list in
+            let updatedAt = list.updatedAt?.epochMilliseconds ?? 0
+            result[list.id] = max(result[list.id] ?? 0, updatedAt)
+        }
     }
 }
 
@@ -94,6 +100,11 @@ final class SyncManager {
 
     private func mergeRemoteWithLocal(localState: OfflineSyncState, remote: RemoteSnapshot) -> OfflineSyncState {
         let pendingTargets = Set(localState.pendingMutations.compactMap(\.targetId))
+        let pendingTodoTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind.affectsTodo ? mutation.targetId : nil
+            }
+        )
         let pendingListTargets = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 switch mutation.kind {
@@ -110,8 +121,15 @@ final class SyncManager {
         for localTodo in localState.todos {
             let key = todoMergeKey(record: localTodo)
             let remoteTodo = remoteTodosByKey[key]
-            let localWins = localTodo.id.hasPrefix(LOCAL_TODO_PREFIX) ||
-                pendingTargets.contains(localTodo.canonicalId) ||
+
+            if remoteTodo == nil,
+               !localTodo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX),
+               !pendingTodoTargets.contains(localTodo.canonicalId) {
+                continue
+            }
+
+            let localWins = localTodo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX) ||
+                pendingTodoTargets.contains(localTodo.canonicalId) ||
                 localTodo.updatedAtEpochMs > (remoteTodo?.updatedAtEpochMs ?? 0)
             if localWins {
                 mergedTodos.append(localTodo)
@@ -207,9 +225,16 @@ final class SyncManager {
 
     private func buildLocalWinsMutations(localState: OfflineSyncState, remote: RemoteSnapshot) -> [PendingMutationRecord] {
         let existingKeys = Set(localState.pendingMutations.map { mutationKey(for: $0) })
+        let pendingTodoTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind.affectsTodo ? mutation.targetId : nil
+            }
+        )
         var generated: [PendingMutationRecord] = []
 
-        for todo in localState.todos where !todo.id.hasPrefix(LOCAL_TODO_PREFIX) {
+        for todo in localState.todos
+            where !todo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX) &&
+                !pendingTodoTargets.contains(todo.canonicalId) {
             guard let remoteUpdatedAt = remote.todoUpdatedAtByCanonical[todo.canonicalId], todo.updatedAtEpochMs > remoteUpdatedAt else {
                 continue
             }
@@ -593,5 +618,24 @@ final class SyncManager {
             mutation.name ?? "",
             mutation.title ?? "",
         ].joined(separator: "::")
+    }
+}
+
+private extension MutationKind {
+    var affectsTodo: Bool {
+        switch self {
+        case .createTodo,
+             .updateTodo,
+             .deleteTodo,
+             .setPinned,
+             .setPriority,
+             .completeTodo,
+             .completeTodoInstance,
+             .uncompleteTodo:
+            return true
+        case .createList,
+             .updateList:
+            return false
+        }
     }
 }
