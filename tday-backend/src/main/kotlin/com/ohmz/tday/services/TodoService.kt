@@ -13,6 +13,7 @@ import com.ohmz.tday.security.FieldEncryption
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -209,6 +210,18 @@ class TodoServiceImpl(
                 Todos.update({ (Todos.id eq todoId) and (Todos.userID eq userId) }) {
                     it[Todos.completed] = false
                     it[Todos.updatedAt] = LocalDateTime.now()
+                }
+            }
+
+            CompletedTodos.deleteWhere {
+                if (instanceDate != null) {
+                    (CompletedTodos.userID eq userId) and
+                        (CompletedTodos.originalTodoID eq todoId) and
+                        (CompletedTodos.instanceDate eq instanceDate)
+                } else {
+                    (CompletedTodos.userID eq userId) and
+                        (CompletedTodos.originalTodoID eq todoId) and
+                        CompletedTodos.instanceDate.isNull()
                 }
             }
         }
