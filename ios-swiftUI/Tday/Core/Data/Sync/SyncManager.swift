@@ -160,12 +160,7 @@ final class SyncManager {
         return OfflineSyncState(
             lastSuccessfulSyncEpochMs: localState.lastSuccessfulSyncEpochMs,
             lastSyncAttemptEpochMs: localState.lastSyncAttemptEpochMs,
-            todos: mergedTodos.sorted { lhs, rhs in
-                if lhs.pinned != rhs.pinned {
-                    return lhs.pinned && !rhs.pinned
-                }
-                return lhs.dueEpochMs < rhs.dueEpochMs
-            },
+            todos: mergedTodos.sorted(by: cachedTodoSortPrecedes),
             completedItems: dedupedCompleted.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
             lists: mergedLists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
             pendingMutations: pendingMutations,
