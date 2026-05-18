@@ -17,6 +17,16 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }()
 
+    lazy var probeSession: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpCookieStorage = HTTPCookieStorage.shared
+        configuration.httpShouldSetCookies = true
+        configuration.waitsForConnectivity = false
+        configuration.timeoutIntervalForRequest = 5
+        configuration.timeoutIntervalForResource = 8
+        return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+    }()
+
     init(secureStore: SecureStore, serverURLState: ServerURLState, cookieStore: CookieStore) {
         self.secureStore = secureStore
         self.serverURLState = serverURLState
