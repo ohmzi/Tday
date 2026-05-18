@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct TdayColors {
     let background: Color
@@ -47,6 +48,57 @@ struct TdayTheme {
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
+}
+
+enum TdayFont {
+    static func font(size: CGFloat, weight: Font.Weight) -> Font {
+        .custom(postScriptName(for: weight), size: size)
+    }
+
+    static func uiFont(size: CGFloat, weight: UIFont.Weight) -> UIFont {
+        UIFont(name: postScriptName(for: weight), size: size)
+            ?? UIFont.systemFont(ofSize: size, weight: weight)
+    }
+
+    private static func postScriptName(for weight: Font.Weight) -> String {
+        switch weight {
+        case .black:
+            return "Nunito-Black"
+        case .heavy, .bold:
+            return "Nunito-ExtraBold"
+        case .semibold:
+            return "Nunito-Bold"
+        case .medium:
+            return "Nunito-SemiBold"
+        default:
+            return "Nunito-Bold"
+        }
+    }
+
+    private static func postScriptName(for weight: UIFont.Weight) -> String {
+        if weight.rawValue >= UIFont.Weight.black.rawValue {
+            return "Nunito-Black"
+        }
+        if weight.rawValue >= UIFont.Weight.heavy.rawValue {
+            return "Nunito-ExtraBold"
+        }
+        if weight.rawValue >= UIFont.Weight.bold.rawValue {
+            return "Nunito-ExtraBold"
+        }
+        if weight.rawValue >= UIFont.Weight.semibold.rawValue {
+            return "Nunito-Bold"
+        }
+        if weight.rawValue >= UIFont.Weight.medium.rawValue {
+            return "Nunito-SemiBold"
+        }
+        return "Nunito-Bold"
+    }
+}
+
+extension Font {
+    static func tdayRounded(size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        TdayFont.font(size: size, weight: weight)
+    }
 }
 
 struct TdayBackground<Content: View>: View {

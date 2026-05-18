@@ -208,7 +208,7 @@ fun SettingsScreen(
                                 text = stringResource(R.string.settings_ai_task_summary),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = colorScheme.onSurface,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
                         if (adminAiSummaryEnabled == null) {
@@ -252,7 +252,7 @@ fun SettingsScreen(
                         text = "v$latestVersionName available",
                         style = MaterialTheme.typography.labelSmall,
                         color = colorScheme.primary,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
                 if (backendVersion != null) {
@@ -264,7 +264,7 @@ fun SettingsScreen(
                         Text(
                             text = "Server",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = colorScheme.onSurface,
                         )
                         Row(
@@ -281,7 +281,7 @@ fun SettingsScreen(
                             Text(
                                 text = if (isCompatible) "Compatible" else "Incompatible",
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 color = if (isCompatible) {
                                     Color(0xFF4CAF50)
                                 } else {
@@ -312,7 +312,7 @@ fun SettingsScreen(
             title = {
                 Text(
                     text = stringResource(R.string.settings_ai_unavailable_title),
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                 )
             },
             text = {
@@ -337,7 +337,7 @@ private fun SettingsProfileCard(
         Text(
             text = user?.name ?: stringResource(R.string.settings_unknown_user),
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = colorScheme.onSurface,
         )
         if (!user?.email.isNullOrBlank()) {
@@ -384,7 +384,7 @@ private fun SettingsSectionTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
     )
 }
@@ -410,7 +410,7 @@ private fun SettingsListRow(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = titleColor,
         )
         Row(
@@ -488,7 +488,7 @@ private fun SettingsTopBar(
                     Text(
                         text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
@@ -511,7 +511,7 @@ private fun SettingsTopBar(
                     Text(
                         text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
@@ -638,7 +638,7 @@ private fun ThemeModeSelector(
                         Text(
                             text = mode.label,
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                            fontWeight = FontWeight.Bold,
                             color = if (selected) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.58f),
                         )
                     }
@@ -673,7 +673,7 @@ private fun ReminderSelector(
             Text(
                 text = "Default reminder",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Bold,
                 color = colorScheme.onSurface,
             )
             Row(
@@ -683,7 +683,7 @@ private fun ReminderSelector(
                 Text(
                     text = selectedReminder.label,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     color = colorScheme.primary,
                 )
                 Icon(
@@ -705,7 +705,7 @@ private fun ReminderSelector(
                     text = {
                         Text(
                             text = option.label,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            fontWeight = FontWeight.Bold,
                         )
                     },
                     onClick = {
