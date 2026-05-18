@@ -109,11 +109,11 @@ struct OnboardingWizardOverlay: View {
         VStack(alignment: .leading, spacing: Metrics.sectionSpacing) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Set Up T'Day")
-                    .font(.system(size: 23, weight: .bold))
+                    .font(.tdayRounded(size: 23, weight: .bold))
                     .foregroundStyle(colors.onSurface)
 
                 Text("Secure onboarding wizard")
-                    .font(.system(size: 12, weight: .regular))
+                    .font(.tdayRounded(size: 12, weight: .bold))
                     .foregroundStyle(colors.onSurface.opacity(0.6))
             }
 
@@ -205,7 +205,7 @@ struct OnboardingWizardOverlay: View {
 
             if let message = currentMessage {
                 Text(message)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.tdayRounded(size: 14, weight: .bold))
                     .foregroundStyle(currentMessageColor)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -217,7 +217,7 @@ struct OnboardingWizardOverlay: View {
                     }
                 }
                 .buttonStyle(WizardTextButtonStyle())
-                .font(.system(size: 15, weight: .semibold))
+                .font(.tdayRounded(size: 15, weight: .bold))
                 .foregroundStyle(colors.primary)
             }
 
@@ -288,7 +288,7 @@ struct OnboardingWizardOverlay: View {
 
             if let message = currentMessage {
                 Text(message)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.tdayRounded(size: 14, weight: .bold))
                     .foregroundStyle(currentMessageColor)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -310,7 +310,7 @@ struct OnboardingWizardOverlay: View {
                     isCreatingAccount.toggle()
                 }
                 .buttonStyle(WizardTextButtonStyle())
-                .font(.system(size: 15, weight: .semibold))
+                .font(.tdayRounded(size: 15, weight: .bold))
                 .foregroundStyle(colors.primary)
 
                 Spacer(minLength: 16)
@@ -323,7 +323,7 @@ struct OnboardingWizardOverlay: View {
                     step = .server
                 }
                 .buttonStyle(WizardTextButtonStyle())
-                .font(.system(size: 15, weight: .semibold))
+                .font(.tdayRounded(size: 15, weight: .bold))
                 .foregroundStyle(colors.primary)
             }
             .padding(.top, 6)
@@ -508,7 +508,7 @@ private struct WizardStepChip: View {
                 .font(.system(size: 14, weight: .bold))
 
             Text(title)
-                .font(.system(size: 14, weight: .bold))
+                .font(.tdayRounded(size: 14, weight: .bold))
                 .lineLimit(1)
         }
         .foregroundStyle(.white)
@@ -550,7 +550,7 @@ private struct WizardInputField: View {
             .onSubmit {
                 onSubmit?()
             }
-            .font(.system(size: 15, weight: .regular))
+            .font(.tdayRounded(size: 15, weight: .bold))
             .foregroundStyle(colors.onSurface)
             .tint(colors.primary)
             .padding(.horizontal, 16)
@@ -656,7 +656,7 @@ private struct WizardPrimaryButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.tdayRounded(size: 15, weight: .bold))
                 .foregroundStyle(enabled ? colors.onPrimary : colors.onSurfaceVariant.opacity(0.65))
                 .frame(maxWidth: .infinity)
                 .frame(height: OnboardingWizardOverlay.Metrics.buttonHeight)
@@ -710,11 +710,11 @@ private struct WizardLoadingPanel: View {
                 .tint(colors.primary)
 
             Text(title)
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .font(.tdayRounded(size: 22, weight: .bold))
                 .foregroundStyle(colors.onSurface)
 
             Text(subtitle)
-                .font(.system(size: 14, weight: .medium))
+                .font(.tdayRounded(size: 14, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.62))
                 .multilineTextAlignment(.center)
         }
