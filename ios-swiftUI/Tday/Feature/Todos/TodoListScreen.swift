@@ -265,7 +265,7 @@ struct TodoListScreen: View {
                         ProgressView()
                     } else if let summaryText = viewModel.summaryText {
                         Text(summaryText)
-                            .font(.body)
+                            .font(.tdayRounded(.body, weight: .bold))
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else if viewModel.summaryConnectivityError {
                         ErrorRetryView(message: "Summary needs a network connection.") {
