@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.right
 import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.db.tables.CompletedTodos
+import com.ohmz.tday.db.tables.Lists
 import com.ohmz.tday.db.tables.TodoInstances
 import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
@@ -155,20 +156,40 @@ class TodoServiceImpl(
             val now = LocalDateTime.now()
             val todoDue = todo[Todos.due]
             val daysToComplete = Duration.between(todo[Todos.createdAt], now).toDays().toDouble()
+            val list = todo[Todos.listID]?.let { listId ->
+                Lists.selectAll().where {
+                    (Lists.id eq listId) and (Lists.userID eq userId)
+                }.firstOrNull()
+            }
+            val existingCompleted = CompletedTodos.selectAll().where {
+                if (instanceDate != null) {
+                    (CompletedTodos.userID eq userId) and
+                        (CompletedTodos.originalTodoID eq todoId) and
+                        (CompletedTodos.instanceDate eq instanceDate)
+                } else {
+                    (CompletedTodos.userID eq userId) and
+                        (CompletedTodos.originalTodoID eq todoId) and
+                        CompletedTodos.instanceDate.isNull()
+                }
+            }.firstOrNull()
 
-            CompletedTodos.insert {
-                it[CompletedTodos.id] = CuidGenerator.newCuid()
-                it[CompletedTodos.originalTodoID] = todoId
-                it[CompletedTodos.title] = todo[Todos.title]
-                it[CompletedTodos.description] = todo[Todos.description]
-                it[CompletedTodos.priority] = todo[Todos.priority]
-                it[CompletedTodos.completedAt] = now
-                it[CompletedTodos.due] = todoDue
-                it[CompletedTodos.completedOnTime] = !now.isAfter(todoDue)
-                it[CompletedTodos.daysToComplete] = BigDecimal.valueOf(daysToComplete).setScale(2, RoundingMode.HALF_UP)
-                it[CompletedTodos.rrule] = todo[Todos.rrule]
-                it[CompletedTodos.userID] = userId
-                it[CompletedTodos.instanceDate] = instanceDate
+            if (existingCompleted == null) {
+                CompletedTodos.insert {
+                    it[CompletedTodos.id] = CuidGenerator.newCuid()
+                    it[CompletedTodos.originalTodoID] = todoId
+                    it[CompletedTodos.title] = todo[Todos.title]
+                    it[CompletedTodos.description] = todo[Todos.description]
+                    it[CompletedTodos.priority] = todo[Todos.priority]
+                    it[CompletedTodos.completedAt] = now
+                    it[CompletedTodos.due] = todoDue
+                    it[CompletedTodos.completedOnTime] = !now.isAfter(todoDue)
+                    it[CompletedTodos.daysToComplete] = BigDecimal.valueOf(daysToComplete).setScale(2, RoundingMode.HALF_UP)
+                    it[CompletedTodos.rrule] = todo[Todos.rrule]
+                    it[CompletedTodos.userID] = userId
+                    it[CompletedTodos.instanceDate] = instanceDate
+                    it[CompletedTodos.listName] = list?.get(Lists.name)
+                    it[CompletedTodos.listColor] = list?.get(Lists.color)?.name
+                }
             }
 
             if (todo[Todos.rrule] == null) {
