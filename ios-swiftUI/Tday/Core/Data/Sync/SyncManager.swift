@@ -152,6 +152,7 @@ final class SyncManager {
             }
         }
         mergedCompleted.append(contentsOf: remoteCompletedByID.values)
+        let dedupedCompleted = collapseCompletedDuplicates(mergedCompleted, pendingTargets: pendingTargets)
 
         let generatedMutations = buildLocalWinsMutations(localState: localState, remote: remote)
         let pendingMutations = dedupePendingMutations(localState.pendingMutations + generatedMutations)
@@ -165,11 +166,48 @@ final class SyncManager {
                 }
                 return lhs.dueEpochMs < rhs.dueEpochMs
             },
-            completedItems: mergedCompleted.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
+            completedItems: dedupedCompleted.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
             lists: mergedLists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
             pendingMutations: pendingMutations,
             aiSummaryEnabled: remote.aiSummaryEnabled
         )
+    }
+
+    private func collapseCompletedDuplicates(_ records: [CachedCompletedRecord], pendingTargets: Set<String>) -> [CachedCompletedRecord] {
+        var recordsByKey: [String: CachedCompletedRecord] = [:]
+        for record in records {
+            let key = completedMergeKey(record: record)
+            guard let existing = recordsByKey[key] else {
+                recordsByKey[key] = record
+                continue
+            }
+            recordsByKey[key] = preferredCompletedRecord(existing, record, pendingTargets: pendingTargets)
+        }
+        return Array(recordsByKey.values)
+    }
+
+    private func preferredCompletedRecord(
+        _ lhs: CachedCompletedRecord,
+        _ rhs: CachedCompletedRecord,
+        pendingTargets: Set<String>
+    ) -> CachedCompletedRecord {
+        let lhsIsPendingLocal = lhs.id.hasPrefix(LOCAL_COMPLETED_PREFIX) && lhs.originalTodoId.map(pendingTargets.contains) == true
+        let rhsIsPendingLocal = rhs.id.hasPrefix(LOCAL_COMPLETED_PREFIX) && rhs.originalTodoId.map(pendingTargets.contains) == true
+        if lhsIsPendingLocal != rhsIsPendingLocal {
+            return lhsIsPendingLocal ? lhs : rhs
+        }
+
+        let lhsIsRemote = !lhs.id.hasPrefix(LOCAL_COMPLETED_PREFIX)
+        let rhsIsRemote = !rhs.id.hasPrefix(LOCAL_COMPLETED_PREFIX)
+        if lhsIsRemote != rhsIsRemote {
+            return lhsIsRemote ? lhs : rhs
+        }
+
+        if lhs.completedAtEpochMs != rhs.completedAtEpochMs {
+            return lhs.completedAtEpochMs > rhs.completedAtEpochMs ? lhs : rhs
+        }
+
+        return lhs.id < rhs.id ? lhs : rhs
     }
 
     private func buildLocalWinsMutations(localState: OfflineSyncState, remote: RemoteSnapshot) -> [PendingMutationRecord] {
