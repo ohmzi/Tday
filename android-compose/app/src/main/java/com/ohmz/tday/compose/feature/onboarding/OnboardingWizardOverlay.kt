@@ -314,7 +314,7 @@ fun OnboardingWizardOverlay(
                         text = stringResource(R.string.onboarding_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                     )
                     Text(
                         text = stringResource(R.string.onboarding_subtitle),
@@ -779,7 +779,7 @@ private fun WizardLoading(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
@@ -832,7 +832,7 @@ private fun WizardStepChip(
                     text = title,
                     color = Color.White,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }
