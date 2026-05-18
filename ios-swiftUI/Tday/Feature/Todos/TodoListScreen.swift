@@ -60,6 +60,7 @@ struct TodoListScreen: View {
     @State private var activeDropSectionId: String?
     @State private var collapsedSectionIDs: Set<String>
     @State private var timelineScrollOffset: CGFloat = 0
+    @State private var completingTodoIDs: Set<String> = []
 
     init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?, highlightedTodoId: String?) {
         self.highlightedTodoId = highlightedTodoId
@@ -91,6 +92,12 @@ struct TodoListScreen: View {
         let distance = TodoTimelineMetrics.titleCollapseDistance
         guard distance > 0 else { return 0 }
         return min(max(timelineScrollOffset / distance, 0), 1)
+    }
+
+    private var timelineItemAnimationKey: String {
+        let itemIDs = viewModel.items.map(\.id).joined(separator: "|")
+        let completingIDs = completingTodoIDs.sorted().joined(separator: "|")
+        return "\(itemIDs)::\(completingIDs)"
     }
 
     private var canSummarizeCurrentMode: Bool {
@@ -350,6 +357,7 @@ struct TodoListScreen: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .disableVerticalScrollBounce()
+        .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
     }
 
     private var todayModeContent: some View {
@@ -407,6 +415,7 @@ struct TodoListScreen: View {
             .scrollContentBackground(.hidden)
             .contentMargins(.top, 0, for: .scrollContent)
             .listSectionSpacing(0)
+            .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
             if viewModel.items.isEmpty {
                 TimelineEmptyState(message: "No tasks for today")
@@ -446,6 +455,7 @@ struct TodoListScreen: View {
             .scrollContentBackground(.hidden)
             .contentMargins(.top, 0, for: .scrollContent)
             .listSectionSpacing(0)
+            .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
             if viewModel.items.isEmpty {
                 TimelineEmptyState(message: emptyTimelineMessage(for: viewModel.mode))
@@ -459,6 +469,7 @@ struct TodoListScreen: View {
         in section: TodoTimelineSection,
         useTodayCardStyle: Bool = false,
     ) -> some View {
+        let isCompleting = completingTodoIDs.contains(todo.id)
         let rowContent = VStack(alignment: .leading, spacing: useTodayCardStyle ? 10 : 6) {
             HStack(spacing: 10) {
                 Circle()
@@ -491,6 +502,9 @@ struct TodoListScreen: View {
             }
         }
         .padding(useTodayCardStyle ? TodoTimelineMetrics.todayCardPadding : 0)
+        .opacity(isCompleting ? 0 : 1)
+        .scaleEffect(isCompleting ? 0.985 : 1, anchor: .center)
+        .animation(.easeInOut(duration: 0.16), value: isCompleting)
         .background(
             Group {
                 if useTodayCardStyle {
@@ -505,6 +519,7 @@ struct TodoListScreen: View {
             }
         )
         .opacity(draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1)
+        .allowsHitTesting(!isCompleting)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 Task { await viewModel.delete(todo) }
@@ -520,7 +535,7 @@ struct TodoListScreen: View {
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
-                Task { await viewModel.complete(todo) }
+                completeTodoWithoutReflow(todo)
             } label: {
                 Label("Complete", systemImage: "checkmark")
             }
@@ -528,6 +543,7 @@ struct TodoListScreen: View {
         }
 
         return rowContent
+            .transition(.opacity.combined(with: .scale(scale: 0.985)))
             .onDrop(
                 of: [UTType.plainText.identifier],
                 delegate: ScheduledTodoDropDelegate(
@@ -563,11 +579,12 @@ struct TodoListScreen: View {
         let subtitleText = minimalTimelineSubtitle(for: todo, in: section)
         let isOverdueTask = !todo.completed && todo.due < Date()
         let subtitleColor = isOverdueTask ? colors.error : colors.onSurfaceVariant.opacity(0.8)
+        let isCompleting = completingTodoIDs.contains(todo.id)
 
         return VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
                 Button {
-                    Task { await viewModel.complete(todo) }
+                    completeTodoWithoutReflow(todo)
                 } label: {
                     Image(systemName: todo.completed ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
@@ -617,7 +634,11 @@ struct TodoListScreen: View {
                 .fill(colors.onSurfaceVariant.opacity(0.18))
                 .frame(height: 1)
         }
-        .opacity(draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1)
+        .opacity(isCompleting ? 0 : (draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1))
+        .scaleEffect(isCompleting ? 0.985 : 1, anchor: .center)
+        .animation(.easeInOut(duration: 0.16), value: isCompleting)
+        .allowsHitTesting(!isCompleting)
+        .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 Task { await viewModel.delete(todo) }
@@ -655,6 +676,22 @@ struct TodoListScreen: View {
                 }
             )
         )
+    }
+
+    private func completeTodoWithoutReflow(_ todo: TodoItem) {
+        guard !completingTodoIDs.contains(todo.id) else {
+            return
+        }
+        withAnimation(.easeInOut(duration: 0.16)) {
+            completingTodoIDs.insert(todo.id)
+        }
+        Task {
+            try? await Task.sleep(nanoseconds: 190_000_000)
+            await viewModel.complete(todo)
+            await MainActor.run {
+                completingTodoIDs.remove(todo.id)
+            }
+        }
     }
 
     @ViewBuilder
@@ -1156,7 +1193,7 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
             return TodoTimelineSection(
                 id: key,
                 title: key,
-                items: grouped[key, default: []].sorted(by: { $0.due < $1.due }),
+                items: grouped[key, default: []].sorted(by: todoTimelineSortPrecedes),
                 isCollapsible: false,
                 targetDate: nil
             )
@@ -1175,7 +1212,7 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
                 TodoTimelineSection(
                     id: "today",
                     title: "Today",
-                    items: todaysItems.sorted(by: { $0.due < $1.due }),
+                    items: todaysItems.sorted(by: todoTimelineSortPrecedes),
                     isCollapsible: false,
                     targetDate: nil
                 )
@@ -1191,7 +1228,7 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
                 TodoTimelineSection(
                     id: "overdue-\(date.timeIntervalSince1970)",
                     title: date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()),
-                    items: grouped[date]?.sorted(by: { $0.due < $1.due }) ?? [],
+                    items: grouped[date]?.sorted(by: todoTimelineSortPrecedes) ?? [],
                     isCollapsible: false,
                     targetDate: nil
                 )
@@ -1208,7 +1245,7 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
             TodoTimelineSection(
                 id: "scheduled-\(date.timeIntervalSince1970)",
                 title: scheduledSectionTitle(for: date, calendar: calendar),
-                items: grouped[date]?.sorted(by: { $0.due < $1.due }) ?? [],
+                items: grouped[date]?.sorted(by: todoTimelineSortPrecedes) ?? [],
                 isCollapsible: false,
                 targetDate: date
             )
@@ -1226,7 +1263,7 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
             TodoTimelineSection(
                 id: key,
                 title: key,
-                items: grouped[key]?.sorted(by: { $0.due < $1.due }) ?? [],
+                items: grouped[key]?.sorted(by: todoTimelineSortPrecedes) ?? [],
                 isCollapsible: key == "Earlier",
                 targetDate: nil
             )
@@ -1247,7 +1284,7 @@ private func scheduledSectionTitle(for date: Date, calendar: Calendar) -> String
 private func buildFutureTimelineSections(items: [TodoItem], calendar: Calendar) -> [TodoTimelineSection] {
     let now = Date()
     let today = calendar.startOfDay(for: now)
-    let groupedByDate = Dictionary(grouping: items.sorted(by: { $0.due < $1.due })) { item in
+    let groupedByDate = Dictionary(grouping: items.sorted(by: todoTimelineSortPrecedes)) { item in
         calendar.startOfDay(for: item.due)
     }
     let currentYear = calendar.component(.year, from: today)
