@@ -1,6 +1,7 @@
 import SwiftUI
+import UIKit
 
-enum OnboardingStep {
+enum OnboardingStep: Equatable {
     case server
     case login
 }
@@ -25,9 +26,10 @@ struct OnboardingWizardOverlay: View {
     let serverCanResetTrust: Bool
     let pendingApprovalMessage: String?
     let authViewModel: AuthViewModel
+    let systemCredentialService: SystemCredentialServicing
     let onConnectServer: (String) async -> Result<Void, MessageError>
     let onResetServerTrust: (String) async -> Result<Void, MessageError>
-    let onLogin: (String, String) async -> Bool
+    let onLogin: (String, String, LoginCredentialSource) async -> Bool
     let onRegister: (String, String, String) async -> Bool
     let onClearAuthStatus: () -> Void
 
@@ -42,6 +44,7 @@ struct OnboardingWizardOverlay: View {
     @State private var isCreatingAccount = false
     @State private var localError: String?
     @State private var isConnecting = false
+    @State private var credentialCoordinator = LoginCredentialCoordinator()
 
     var body: some View {
         ZStack {
@@ -77,6 +80,17 @@ struct OnboardingWizardOverlay: View {
             serverURL = initialServerURL ?? ""
             email = authViewModel.savedEmail
             step = (initialServerURL?.isEmpty == false) ? .login : .server
+            requestSavedCredentialIfAvailable()
+        }
+        .onChange(of: step) { _, newStep in
+            if newStep == .login {
+                requestSavedCredentialIfAvailable()
+            }
+        }
+        .onChange(of: isCreatingAccount) { _, creatingAccount in
+            if !creatingAccount {
+                requestSavedCredentialIfAvailable()
+            }
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: step)
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isCreatingAccount)
@@ -234,6 +248,7 @@ struct OnboardingWizardOverlay: View {
                 title: "Email",
                 text: $email,
                 keyboardType: .emailAddress,
+                textContentType: .username,
                 autocapitalization: .never,
                 disableAutocorrection: true,
                 submitLabel: .next
@@ -245,6 +260,8 @@ struct OnboardingWizardOverlay: View {
                         title: "Password",
                         text: $registerPassword,
                         isSecure: true,
+                        textContentType: .newPassword,
+                        passwordRulesDescriptor: TdayPasswordRules.descriptor,
                         submitLabel: .next
                     )
                 } else {
@@ -252,6 +269,7 @@ struct OnboardingWizardOverlay: View {
                         title: "Password",
                         text: $password,
                         isSecure: true,
+                        textContentType: .password,
                         submitLabel: .done,
                         onSubmit: {
                             Task { await submitAuth() }
@@ -265,6 +283,8 @@ struct OnboardingWizardOverlay: View {
                     title: "Confirm password",
                     text: $confirmPassword,
                     isSecure: true,
+                    textContentType: .newPassword,
+                    passwordRulesDescriptor: TdayPasswordRules.descriptor,
                     submitLabel: .done,
                     onSubmit: {
                         Task { await submitAuth() }
@@ -372,6 +392,23 @@ struct OnboardingWizardOverlay: View {
         }
     }
 
+    private func requestSavedCredentialIfAvailable() {
+        guard isLoginStep else {
+            return
+        }
+
+        Task { @MainActor in
+            _ = await credentialCoordinator.requestSavedCredentialIfAvailable(
+                currentPassword: password,
+                isCreatingAccount: isCreatingAccount,
+                isAuthLoading: authViewModel.isLoading,
+                credentialService: systemCredentialService
+            ) { credential in
+                await onLogin(credential.email, credential.password, .systemPasswordAutoFill)
+            }
+        }
+    }
+
     private func submitAuth() async {
         localError = nil
         onClearAuthStatus()
@@ -389,7 +426,7 @@ struct OnboardingWizardOverlay: View {
                 localError = "Email and password are required"
                 return
             }
-            _ = await onLogin(email.trimmingCharacters(in: .whitespacesAndNewlines), password)
+            _ = await onLogin(email.trimmingCharacters(in: .whitespacesAndNewlines), password, .manual)
         }
     }
 
@@ -467,6 +504,8 @@ private struct WizardInputField: View {
     @Binding var text: String
     var isSecure = false
     var keyboardType: UIKeyboardType = .default
+    var textContentType: UITextContentType?
+    var passwordRulesDescriptor: String?
     var autocapitalization: TextInputAutocapitalization? = .sentences
     var disableAutocorrection = false
     var submitLabel: SubmitLabel = .done
@@ -499,6 +538,7 @@ private struct WizardInputField: View {
                             )
                     )
             }
+            .background(PasswordRulesConfigurator(rulesDescriptor: passwordRulesDescriptor))
             .accessibilityLabel(title)
             .frame(maxWidth: .infinity)
     }
@@ -511,15 +551,68 @@ private struct WizardInputField: View {
                 text: $text,
                 prompt: Text(title).foregroundStyle(colors.onSurface.opacity(0.42))
             )
+            .textContentType(textContentType)
         } else {
             TextField(
                 "",
                 text: $text,
                 prompt: Text(title).foregroundStyle(colors.onSurface.opacity(0.42))
             )
+                .textContentType(textContentType)
                 .textInputAutocapitalization(autocapitalization)
                 .keyboardType(keyboardType)
                 .autocorrectionDisabled(disableAutocorrection)
+        }
+    }
+}
+
+private enum TdayPasswordRules {
+    static let descriptor = "allowed: ascii-printable; minlength: 8; required: upper; required: special;"
+}
+
+private struct PasswordRulesConfigurator: UIViewRepresentable {
+    let rulesDescriptor: String?
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isHidden = true
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        guard let rulesDescriptor, !rulesDescriptor.isEmpty else {
+            return
+        }
+
+        DispatchQueue.main.async {
+            let rules = UITextInputPasswordRules(descriptor: rulesDescriptor)
+            uiView.nearestTextFields()
+                .filter { $0.textContentType == .newPassword }
+                .forEach { $0.passwordRules = rules }
+        }
+    }
+}
+
+private extension UIView {
+    func nearestTextFields() -> [UITextField] {
+        var ancestor = superview
+        while let current = ancestor {
+            let fields = current.recursiveTextFields()
+            if !fields.isEmpty {
+                return fields
+            }
+            ancestor = current.superview
+        }
+        return []
+    }
+
+    func recursiveTextFields() -> [UITextField] {
+        subviews.flatMap { subview -> [UITextField] in
+            if let textField = subview as? UITextField {
+                return [textField]
+            }
+            return subview.recursiveTextFields()
         }
     }
 }
