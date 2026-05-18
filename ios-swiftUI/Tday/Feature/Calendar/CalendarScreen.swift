@@ -58,9 +58,9 @@ struct CalendarScreen: View {
                     ForEach(pendingItems) { todo in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(todo.title)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.tdayRounded(.subheadline, weight: .bold))
                             Text(todo.due.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
+                                .font(.tdayRounded(.caption, weight: .bold))
                                 .foregroundStyle(colors.onSurfaceVariant)
                         }
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -96,9 +96,9 @@ struct CalendarScreen: View {
                     ForEach(completedItems) { item in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.title)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.tdayRounded(.subheadline, weight: .bold))
                             Text((item.completedAt ?? item.due).formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
+                                .font(.tdayRounded(.caption, weight: .bold))
                                 .foregroundStyle(colors.onSurfaceVariant)
                         }
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {

@@ -10,7 +10,7 @@ struct OfflineBanner: View {
             HStack(spacing: 10) {
                 Image(systemName: "wifi.slash")
                 Text(pendingMutationCount > 0 ? "Offline. \(pendingMutationCount) changes waiting to sync." : "Offline mode")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.tdayRounded(.subheadline, weight: .bold))
             }
             .foregroundStyle(colors.onPrimary)
             .padding(.horizontal, 16)

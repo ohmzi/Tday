@@ -72,7 +72,7 @@ struct AppRootView: View {
                     .overlay(alignment: .bottom) {
                         if let message = container.snackbarManager.message {
                             Text(message)
-                                .font(.footnote.weight(.semibold))
+                                .font(.tdayRounded(.footnote, weight: .bold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
@@ -253,7 +253,7 @@ private struct SplashLoadingBadge: View {
             }
 
             Text("Restoring your workspace")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.tdayRounded(size: 14, weight: .bold))
                 .foregroundStyle(palette.loadingText)
         }
         .padding(.horizontal, 14)
