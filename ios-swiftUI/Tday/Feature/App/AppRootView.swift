@@ -140,8 +140,10 @@ struct AppRootView: View {
                         }
                     }
                 }
+                .background(TdayTheme.backgroundGradient.ignoresSafeArea())
             }
         }
+        .background(TdayTheme.backgroundGradient.ignoresSafeArea())
         .preferredColorScheme(appViewModel.themeMode.colorScheme)
         .task {
             if !appViewModel.hasCompletedInitialBootstrap {
