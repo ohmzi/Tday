@@ -283,6 +283,7 @@ extension DateFormatter {
             "yyyy-MM-dd'T'HH:mm:ss.SS",
             "yyyy-MM-dd'T'HH:mm:ss.S",
             "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm",
         ]
 
         return patterns.map { pattern in

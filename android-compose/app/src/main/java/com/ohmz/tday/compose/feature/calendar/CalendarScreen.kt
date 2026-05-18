@@ -2,26 +2,26 @@ package com.ohmz.tday.compose.feature.calendar
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -49,10 +49,11 @@ import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.FitnessCenter
@@ -62,7 +63,6 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -93,8 +93,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -102,34 +102,36 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
-import androidx.compose.ui.geometry.Offset
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
-import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+
+private val CalendarAccentPurple = Color(0xFF7D67B6)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -140,7 +142,6 @@ fun CalendarScreen(
     onCreateTask: (CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCompleteTask: (TodoItem) -> Unit,
-    onUncompleteTask: (CompletedItem) -> Unit,
     onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
     onDelete: (TodoItem) -> Unit,
 ) {
@@ -221,13 +222,7 @@ fun CalendarScreen(
             .groupBy { LocalDate.ofInstant(it.due, zoneId) }
             .mapValues { (_, tasks) -> tasks.sortedBy { it.due } }
     }
-    val completedTasksByDate = remember(uiState.completedItems, zoneId) {
-        uiState.completedItems
-            .groupBy { LocalDate.ofInstant(it.due, zoneId) }
-            .mapValues { (_, tasks) -> tasks.sortedBy { it.due } }
-    }
     val selectedDatePendingTasks = tasksByDate[selectedDate].orEmpty()
-    val selectedDateCompletedTasks = completedTasksByDate[selectedDate].orEmpty()
     fun canNavigateTo(date: LocalDate): Boolean = YearMonth.from(date) >= minNavigableMonth
     fun selectDate(date: LocalDate) {
         if (!canNavigateTo(date)) return
@@ -401,26 +396,6 @@ fun CalendarScreen(
                     }
                 }
 
-                if (selectedDateCompletedTasks.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.calendar_completed_header),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                        )
-                    }
-
-                    items(selectedDateCompletedTasks, key = { it.id }) { completed ->
-                        CalendarCompletedTodoRow(
-                            item = completed,
-                            lists = uiState.lists,
-                            onUndoComplete = { onUncompleteTask(completed) },
-                        )
-                    }
-                }
-
                 uiState.errorMessage?.let { message ->
                     item {
                         com.ohmz.tday.compose.core.ui.ErrorRetryCard(
@@ -478,8 +453,10 @@ private fun CalendarCreateTaskFab(
             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
             onClick()
         },
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+        modifier = Modifier.size(TdayDimens.FabSize),
+        shape = CircleShape,
+        containerColor = CalendarAccentPurple,
+        contentColor = Color.White,
         elevation = FloatingActionButtonDefaults.elevation(
             defaultElevation = TdayDimens.FabElevation,
             pressedElevation = TdayDimens.FabPressedElevation,
@@ -490,7 +467,7 @@ private fun CalendarCreateTaskFab(
         Icon(
             imageVector = Icons.Rounded.Add,
             contentDescription = stringResource(R.string.action_create_task),
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier.size(40.dp),
         )
     }
 }
@@ -958,7 +935,7 @@ private fun CalendarTopBar(
                     text = stringResource(R.string.calendar_title),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF7D67B6),
+                    color = CalendarAccentPurple,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .graphicsLayer {
@@ -980,7 +957,7 @@ private fun CalendarTopBar(
                     text = stringResource(R.string.calendar_title),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF7D67B6),
+                    color = CalendarAccentPurple,
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
