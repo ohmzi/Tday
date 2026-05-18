@@ -565,7 +565,7 @@ fun HomeScreen(
                                                     color = colorScheme.onSurface,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis,
-                                                    fontWeight = FontWeight.Bold,
+                                                    fontWeight = FontWeight.ExtraBold,
                                                 )
                                                 Text(
                                                     text = dueFormatter.format(todo.due),
@@ -724,7 +724,7 @@ private fun CreateListBottomSheet(
                             singleLine = true,
                             textStyle = MaterialTheme.typography.headlineSmall.copy(
                                 color = selectedAccent,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.ExtraBold,
                             ),
                             modifier = Modifier.fillMaxWidth(),
                             decorationBox = { innerTextField ->
@@ -741,7 +741,7 @@ private fun CreateListBottomSheet(
                                             text = stringResource(R.string.home_list_name_placeholder),
                                             style = MaterialTheme.typography.headlineSmall,
                                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                                            fontWeight = FontWeight.Bold,
+                                            fontWeight = FontWeight.ExtraBold,
                                         )
                                     }
                                     innerTextField()
@@ -862,7 +862,7 @@ private fun ListSheetHeader(
             text = stringResource(R.string.home_new_list),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
         )
 
         ListSheetActionButton(
@@ -948,7 +948,7 @@ private fun ListSheetSectionTitle(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.ExtraBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp),
     )
@@ -1063,7 +1063,7 @@ private fun TopSearchBar(
                     text = stringResource(R.string.home_title),
                     style = MaterialTheme.typography.headlineLarge,
                     color = colorScheme.onBackground,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
         }
@@ -1131,7 +1131,7 @@ private fun TopSearchBar(
                                 singleLine = true,
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.ExtraBold,
                                 ),
                                 cursorBrush = SolidColor(colorScheme.primary),
                                 decorationBox = { innerTextField ->
@@ -1198,7 +1198,7 @@ private fun MyListsHeader() {
             text = stringResource(R.string.home_my_lists),
             style = MaterialTheme.typography.headlineMedium,
             color = colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
         )
     }
 }
@@ -1554,7 +1554,7 @@ private fun CategoryCard(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
         }
@@ -1689,7 +1689,7 @@ private fun ListRow(
                         text = displayName,
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1699,7 +1699,7 @@ private fun ListRow(
                     text = animatedCount.toString(),
                     color = Color.White,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
         }

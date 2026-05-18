@@ -669,7 +669,7 @@ private fun ReleaseSectionTitle(
     Text(
         text = title,
         style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.ExtraBold,
         color = color,
     )
 }
@@ -694,7 +694,7 @@ private fun InstalledVersionRow(
             Text(
                 text = stringResource(R.string.release_up_to_date),
                 style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface.copy(alpha = 0.6f),
             )
         }
@@ -726,7 +726,7 @@ private fun ReleaseNotesSection(
         Text(
             text = stringResource(R.string.release_whats_new_in_version, versionLabel),
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             color = colorScheme.onSurface,
         )
         Card(
@@ -805,7 +805,7 @@ private fun ApkAssetCard(apk: GitHubAsset) {
                 Text(
                     text = apk.name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = colorScheme.onSurface,
                 )
                 Text(
@@ -848,7 +848,7 @@ private fun ApkInstallButton(
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = apkInstallButtonLabel(apkInstallUiState = apkInstallUiState),
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
         )
     }
 }
@@ -942,7 +942,7 @@ private fun SignatureConflictCard() {
             Text(
                 text = stringResource(R.string.release_signature_conflict),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onErrorContainer,
             )
             Text(
@@ -961,7 +961,7 @@ private fun SignatureConflictCard() {
                 Text(
                     text = stringResource(R.string.release_uninstall),
                     color = colorScheme.error,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
         }
@@ -1000,7 +1000,7 @@ private fun ReleaseBrowserButton(
                 text = stringResource(R.string.release_view_on_github),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
             )
             Icon(
@@ -1026,7 +1026,7 @@ private fun VersionBadge(
             .background(backgroundColor)
             .padding(horizontal = 10.dp, vertical = 5.dp),
         style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.ExtraBold,
         color = textColor,
     )
 }
