@@ -452,12 +452,7 @@ final class TodoRepository {
             filtered = items.filter { $0.listId == listId }
         }
 
-        return filtered.sorted { lhs, rhs in
-            if lhs.pinned != rhs.pinned {
-                return lhs.pinned && !rhs.pinned
-            }
-            return lhs.due < rhs.due
-        }
+        return filtered.sorted(by: todoSortPrecedes)
     }
 
     private func normalizedPriority(_ priority: String) -> String {

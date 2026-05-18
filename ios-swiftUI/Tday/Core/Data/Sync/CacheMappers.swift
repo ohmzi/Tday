@@ -61,6 +61,48 @@ func todoMergeKey(record: CachedTodoRecord) -> String {
     todoMergeKey(canonicalId: record.canonicalId, instanceDateEpochMs: record.instanceDateEpochMs)
 }
 
+func todoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
+    if lhs.pinned != rhs.pinned {
+        return lhs.pinned && !rhs.pinned
+    }
+    if lhs.due != rhs.due {
+        return lhs.due < rhs.due
+    }
+    let lhsKey = todoMergeKey(item: lhs)
+    let rhsKey = todoMergeKey(item: rhs)
+    if lhsKey != rhsKey {
+        return lhsKey < rhsKey
+    }
+    return lhs.id < rhs.id
+}
+
+func cachedTodoSortPrecedes(_ lhs: CachedTodoRecord, _ rhs: CachedTodoRecord) -> Bool {
+    if lhs.pinned != rhs.pinned {
+        return lhs.pinned && !rhs.pinned
+    }
+    if lhs.dueEpochMs != rhs.dueEpochMs {
+        return lhs.dueEpochMs < rhs.dueEpochMs
+    }
+    let lhsKey = todoMergeKey(record: lhs)
+    let rhsKey = todoMergeKey(record: rhs)
+    if lhsKey != rhsKey {
+        return lhsKey < rhsKey
+    }
+    return lhs.id < rhs.id
+}
+
+func todoTimelineSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
+    if lhs.due != rhs.due {
+        return lhs.due < rhs.due
+    }
+    let lhsKey = todoMergeKey(item: lhs)
+    let rhsKey = todoMergeKey(item: rhs)
+    if lhsKey != rhsKey {
+        return lhsKey < rhsKey
+    }
+    return lhs.id < rhs.id
+}
+
 func completedMergeKey(originalTodoId: String?, fallbackId: String, instanceDateEpochMs: Int64?) -> String {
     guard let originalTodoId else {
         return "completed-id::\(fallbackId)"
