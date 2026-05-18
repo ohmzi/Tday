@@ -62,19 +62,7 @@ struct OnboardingWizardOverlay: View {
                     .ignoresSafeArea()
                 )
 
-            ViewThatFits(in: .vertical) {
-                centeredCardLayout
-
-                ScrollView(showsIndicators: false) {
-                    VStack {
-                        wizardCard
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, Metrics.overlayPadding)
-                    .padding(.vertical, Metrics.overlayPadding)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-            }
+            stableCardLayout
         }
         .onAppear {
             serverURL = initialServerURL ?? ""
@@ -98,15 +86,21 @@ struct OnboardingWizardOverlay: View {
         .animation(.easeInOut(duration: 0.2), value: authViewModel.isLoading)
     }
 
-    private var centeredCardLayout: some View {
-        VStack {
-            Spacer(minLength: Metrics.overlayPadding)
-            wizardCard
-            Spacer(minLength: Metrics.overlayPadding)
+    private var stableCardLayout: some View {
+        GeometryReader { proxy in
+            ScrollView(showsIndicators: false) {
+                VStack {
+                    Spacer(minLength: Metrics.overlayPadding)
+                    wizardCard
+                    Spacer(minLength: Metrics.overlayPadding)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: proxy.size.height)
+                .padding(.horizontal, Metrics.overlayPadding)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollDismissesKeyboard(.never)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, Metrics.overlayPadding)
-        .padding(.vertical, Metrics.overlayPadding)
     }
 
     private var wizardCard: some View {
