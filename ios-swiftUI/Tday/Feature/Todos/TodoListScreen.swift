@@ -220,7 +220,7 @@ struct TodoListScreen: View {
     }
 
     private var floatingActionButtonDock: some View {
-        TaskFloatingActionButtonDock {
+        TaskFloatingActionButtonDock(fillColor: modeAccentColor) {
             showingCreateTask = true
         }
     }
