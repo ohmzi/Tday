@@ -565,7 +565,7 @@ fun HomeScreen(
                                                     color = colorScheme.onSurface,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis,
-                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontWeight = FontWeight.Bold,
                                                 )
                                                 Text(
                                                     text = dueFormatter.format(todo.due),
@@ -948,7 +948,7 @@ private fun ListSheetSectionTitle(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp),
     )
@@ -1131,7 +1131,7 @@ private fun TopSearchBar(
                                 singleLine = true,
                                 textStyle = MaterialTheme.typography.bodyLarge.copy(
                                     color = colorScheme.onSurface,
-                                    fontWeight = FontWeight.Medium,
+                                    fontWeight = FontWeight.Bold,
                                 ),
                                 cursorBrush = SolidColor(colorScheme.primary),
                                 decorationBox = { innerTextField ->
@@ -1689,7 +1689,7 @@ private fun ListRow(
                         text = displayName,
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

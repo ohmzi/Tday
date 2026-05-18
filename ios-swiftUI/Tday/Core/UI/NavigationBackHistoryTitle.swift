@@ -179,10 +179,6 @@ private final class NoMenuBackBarButtonItem: UIBarButtonItem {
 
 private extension UIFont {
     static func tdayRoundedNavigationFont(size: CGFloat, weight: UIFont.Weight) -> UIFont {
-        let baseFont = UIFont.systemFont(ofSize: size, weight: weight)
-        guard let roundedDescriptor = baseFont.fontDescriptor.withDesign(.rounded) else {
-            return baseFont
-        }
-        return UIFont(descriptor: roundedDescriptor, size: size)
+        TdayFont.uiFont(size: size, weight: weight)
     }
 }

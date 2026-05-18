@@ -27,6 +27,7 @@
 		2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */; };
 		3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */; };
 		3667E1D45490DE558553F39F /* OfflineBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC35A6A50C3BFA68468FEDF9 /* OfflineBanner.swift */; };
+		384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */; };
 		3E0BE8F327DB1A2EE5B101C4 /* ReminderPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */; };
 		51A46F8E627C26BF34E91F7B /* TodoListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */; };
 		527A4947BD0D1BE156122F96 /* BootstrapSessionUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E70F2999E1965A77EB21FF8 /* BootstrapSessionUseCase.swift */; };
@@ -62,6 +63,7 @@
 		C0768A60B1B807FCA7A6D37F /* HomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D2CB40ACEE85331512EEC2 /* HomeScreen.swift */; };
 		C0ABAA1F11269C7FC0682201 /* PullToRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32538D5E9182018AFEAB8DEC /* PullToRefresh.swift */; };
 		C1B29C5E4D5D247E8D0B5C0C /* TodoRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055D0F0501B287B70456AF4B /* TodoRepository.swift */; };
+		C4E342DFC88BD5C188893628 /* Nunito-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = DF332994A97F93EBE1525BB5 /* Nunito-OFL.txt */; };
 		C7229E3F4839B156CDEFA453 /* UpdateRequiredView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F15244DE3A08B82F3DDD8EB /* UpdateRequiredView.swift */; };
 		C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */; };
 		CEA5C5F8B16C461F661396D0 /* ProbeDecryptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */; };
@@ -155,7 +157,9 @@
 		D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWizardOverlay.swift; sourceTree = "<group>"; };
 		D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
 		D79494E8119BA69CDDA51597 /* LaunchSplashBundle.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LaunchSplashBundle.png; sourceTree = "<group>"; };
+		D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito.ttf; sourceTree = "<group>"; };
 		DCE08ADACC8F11CE2113C13B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		DF332994A97F93EBE1525BB5 /* Nunito-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Nunito-OFL.txt"; sourceTree = "<group>"; };
 		E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialEnvelope.swift; sourceTree = "<group>"; };
 		E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRepository.swift; sourceTree = "<group>"; };
 		E867FA22FEB66EDCE837CF6D /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
@@ -188,6 +192,7 @@
 			isa = PBXGroup;
 			children = (
 				D79494E8119BA69CDDA51597 /* LaunchSplashBundle.png */,
+				2D679EC9EE22239446D1DE67 /* Fonts */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -216,6 +221,15 @@
 				AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */,
 			);
 			path = Todos;
+			sourceTree = "<group>";
+		};
+		2D679EC9EE22239446D1DE67 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				DF332994A97F93EBE1525BB5 /* Nunito-OFL.txt */,
+				D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */,
+			);
+			path = Fonts;
 			sourceTree = "<group>";
 		};
 		362209AA0D62827302EA84D5 /* UI */ = {
@@ -615,6 +629,8 @@
 				85B5397D25D2A1436CF34394 /* LaunchScreen.storyboard in Resources */,
 				F97A47CE289AE4325670F4E0 /* LaunchScreenShared.storyboard in Resources */,
 				EA2657129BC8959D8543501E /* LaunchSplashBundle.png in Resources */,
+				C4E342DFC88BD5C188893628 /* Nunito-OFL.txt in Resources */,
+				384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
