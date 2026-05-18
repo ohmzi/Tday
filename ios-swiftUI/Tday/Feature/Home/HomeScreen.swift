@@ -10,7 +10,7 @@ private enum HomeMetrics {
     static let tileCornerRadius: CGFloat = 26
     static let tileHeight: CGFloat = 102
     static let listRowHeight: CGFloat = 70
-    static let tileWatermarkSize: CGFloat = 124
+    static let tileWatermarkSize: CGFloat = 116
     static let tileWatermarkTrailingInset: CGFloat = 22
 }
 
