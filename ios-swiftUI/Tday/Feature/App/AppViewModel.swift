@@ -149,9 +149,9 @@ final class AppViewModel {
             canResetServerTrust = true
             return .success(())
         } catch {
-            let msg = userFacingMessage(for: error, fallback: "Could not connect to server.")
+            let msg = serverConnectionMessage(for: error)
             self.error = msg
-            canResetServerTrust = true
+            canResetServerTrust = shouldOfferServerTrustReset(for: error)
             return .failure(MessageError(message: msg))
         }
     }
@@ -178,8 +178,9 @@ final class AppViewModel {
             error = nil
             return .success(())
         } catch {
-            let msg = userFacingMessage(for: error, fallback: "Could not reset trusted server.")
+            let msg = serverConnectionMessage(for: error)
             self.error = msg
+            canResetServerTrust = shouldOfferServerTrustReset(for: error)
             return .failure(MessageError(message: msg))
         }
     }
@@ -360,6 +361,65 @@ final class AppViewModel {
 
     private func isAdmin(_ user: SessionUser?) -> Bool {
         user?.role?.uppercased() == "ADMIN"
+    }
+
+    private func serverConnectionMessage(for error: Error) -> String {
+        if let probeError = error as? ServerProbeError {
+            switch probeError {
+            case .invalidURL:
+                return "Enter a valid server URL, like https://tday.example.com."
+            case .insecureTransport:
+                return "Use an HTTPS server URL. HTTP is only allowed for local servers."
+            case .notTdayServer:
+                return "That server responded, but it does not look like a T'Day server."
+            case .certificateChanged:
+                return "This server's certificate changed. Reset saved server trust only if you recognize this server."
+            }
+        }
+
+        if let apiError = error as? APIError {
+            if apiError.statusCode == nil {
+                return serverConnectionMessage(from: apiError.message)
+            }
+            return userFacingMessage(for: apiError, fallback: "Could not connect to that T'Day server.")
+        }
+
+        return serverConnectionMessage(from: error.localizedDescription)
+    }
+
+    private func serverConnectionMessage(from rawMessage: String) -> String {
+        let message = rawMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = message.lowercased()
+
+        if lower.contains("unsupported url") || lower.contains("bad url") || lower.contains("invalid url") {
+            return "Enter a valid server URL, like https://tday.example.com."
+        }
+        if lower.contains("timed out") || lower.contains("cannot connect") ||
+           lower.contains("could not connect") || lower.contains("network connection was lost") {
+            return "Could not reach that server. Check the URL and make sure the T'Day server is online."
+        }
+        if lower.contains("a server with the specified hostname could not be found") ||
+           lower.contains("cannot find host") || lower.contains("dns") {
+            return "That server name could not be found. Check the URL for typos."
+        }
+        if lower.contains("not connected to the internet") {
+            return "No internet connection. Connect to the network and try again."
+        }
+        if lower.contains("ssl") || lower.contains("certificate") || lower.contains("secure connection") {
+            return "Could not verify this server's secure connection. Reset saved server trust only if you recognize this server."
+        }
+
+        return message.isEmpty ? "Could not reach that server. Check the URL and try again." : message
+    }
+
+    private func shouldOfferServerTrustReset(for error: Error) -> Bool {
+        if case .certificateChanged? = error as? ServerProbeError {
+            return true
+        }
+
+        let message = (error as? APIError)?.message ?? error.localizedDescription
+        let lower = message.lowercased()
+        return lower.contains("ssl") || lower.contains("certificate") || lower.contains("secure connection")
     }
 
     private func finishBootstrap() {
