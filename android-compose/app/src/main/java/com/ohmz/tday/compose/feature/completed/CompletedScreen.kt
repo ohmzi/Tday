@@ -189,7 +189,7 @@ fun CompletedScreen(
                 .nestedScroll(nestedScrollConnection),
             state = listState,
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(timelineSections, key = { it.key }) { section ->
                 val isCollapsed = collapsedSectionKeys.contains(section.key)
@@ -401,7 +401,7 @@ private fun CompletedTimelineSection(
         modifier = modifier
             .fillMaxWidth()
             .animateContentSize(animationSpec = tween(durationMillis = 240)),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(
             modifier = Modifier
@@ -439,12 +439,7 @@ private fun CompletedTimelineSection(
         }
 
         if (section.items.isEmpty()) {
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
-            )
+            return@Column
         } else {
             section.items.forEach { item ->
                 CompletedSwipeRow(

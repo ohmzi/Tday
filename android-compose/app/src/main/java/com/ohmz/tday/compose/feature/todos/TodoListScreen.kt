@@ -291,8 +291,8 @@ fun TodoListScreen(
         targetValue = if (fabPressed) 2.dp else 0.dp,
         label = "todoFabOffsetY",
     )
-    val timelineItemSpacing = if (usesTodayStyle) 18.dp else 8.dp
-    val timelineHeaderBodySpacing = 8.dp
+    val timelineItemSpacing = if (usesTodayStyle) 4.dp else 8.dp
+    val timelineHeaderBodySpacing = if (usesTodayStyle) 2.dp else 8.dp
     LaunchedEffect(showSummarySheet, canSummarizeCurrentMode) {
         if (showSummarySheet && canSummarizeCurrentMode) {
             onSummarize()
@@ -455,6 +455,8 @@ fun TodoListScreen(
                 timelineSections.forEach { section ->
                     val sectionCanCollapse = when (uiState.mode) {
                         TodoListMode.ALL -> true
+                        TodoListMode.OVERDUE -> true
+                        TodoListMode.SCHEDULED -> true
                         TodoListMode.PRIORITY -> section.key == "earlier"
                         else -> false
                     }
@@ -502,7 +504,6 @@ fun TodoListScreen(
                             section = section,
                             useMinimalStyle = usesTodayStyle,
                             isCollapsed = isCollapsed,
-                            showTopDivider = uiState.mode == TodoListMode.ALL && section.title == "Today",
                             isDropTarget = activeDropSectionKey == section.key,
                             bottomSpacing = if (isCollapsed) {
                                 timelineItemSpacing
@@ -521,20 +522,18 @@ fun TodoListScreen(
                             } else {
                                 null
                             },
-                            onTapForQuickAdd = if (sectionCanCollapse) {
-                                null
-                            } else {
-                                section.quickAddDefaults?.let { dueEpochMs ->
+                            onTapForQuickAdd = section.quickAddDefaults
+                                ?.takeUnless { sectionCanCollapse }
+                                ?.let { dueEpochMs ->
                                     {
                                         quickAddDueEpochMs = dueEpochMs
                                         showCreateTaskSheet = true
                                     }
-                                }
-                            },
+                                },
                         )
                     }
 
-                    if (!isCollapsed) {
+                    if (!isCollapsed && section.items.isNotEmpty()) {
                         item(key = "timeline-body-${section.key}") {
                             TimelineSectionBody(
                                 modifier = Modifier
@@ -1411,7 +1410,6 @@ private fun TimelineSectionHeader(
     section: TodoSection,
     useMinimalStyle: Boolean,
     isCollapsed: Boolean = false,
-    showTopDivider: Boolean = false,
     isDropTarget: Boolean,
     bottomSpacing: Dp,
     onHeaderClick: (() -> Unit)? = null,
@@ -1423,21 +1421,28 @@ private fun TimelineSectionHeader(
         targetValue = if (isCollapsed) 0f else 180f,
         label = "sectionChevronRotation",
     )
+    val minimumHeaderHeight = if (useMinimalStyle) 34.dp else 48.dp
+    val headerClickModifier = when {
+        onHeaderClick != null -> Modifier.clickable(
+            interactionSource = headerInteractionSource,
+            indication = null,
+            onClick = onHeaderClick,
+        )
+
+        onTapForQuickAdd != null -> Modifier.clickable(
+            interactionSource = headerInteractionSource,
+            indication = null,
+            onClick = onTapForQuickAdd,
+        )
+
+        else -> Modifier
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
             .background(colorScheme.background)
             .padding(bottom = bottomSpacing),
     ) {
-        if (showTopDivider) {
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
-            )
-        }
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1450,27 +1455,8 @@ private fun TimelineSectionHeader(
                     },
                 )
                 .padding(horizontal = 4.dp)
-                .then(
-                    if (onHeaderClick != null) {
-                        Modifier
-                            .heightIn(min = 48.dp)
-                            .clickable(
-                                interactionSource = headerInteractionSource,
-                                indication = null,
-                                onClick = onHeaderClick,
-                            )
-                    } else if (onTapForQuickAdd != null) {
-                        Modifier
-                            .heightIn(min = 48.dp)
-                            .clickable(
-                                interactionSource = headerInteractionSource,
-                                indication = null,
-                                onClick = onTapForQuickAdd,
-                            )
-                    } else {
-                        Modifier
-                    },
-                ),
+                .heightIn(min = minimumHeaderHeight)
+                .then(headerClickModifier),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -1522,21 +1508,10 @@ private fun TimelineSectionBody(
     draggedTodo: TodoItem? = null,
     onDragTodoStart: ((TodoItem) -> Unit)? = null,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (section.items.isEmpty()) {
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
-            )
-            return@Column
-        }
-
         val showEarlierDateTimeSubtitle =
             section.key == "earlier" &&
                 (mode == TodoListMode.ALL || mode == TodoListMode.PRIORITY)
