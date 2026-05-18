@@ -359,7 +359,7 @@ fun TodoListScreen(
                         Text(
                             text = uiState.title,
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = titleColor,
                         )
                     },
@@ -626,7 +626,7 @@ fun TodoListScreen(
             title = {
                 Text(
                     text = stringResource(R.string.error_connectivity_title),
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             },
             text = {
@@ -889,7 +889,7 @@ private fun SummaryBottomSheet(
                 Text(
                     text = stringResource(R.string.todos_summary_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = colorScheme.onBackground,
                 )
                 IconButton(onClick = onDismiss) {
@@ -1052,7 +1052,7 @@ private fun ListSettingsBottomSheet(
                         text = stringResource(R.string.todos_list_settings),
                         style = MaterialTheme.typography.headlineSmall,
                         color = colorScheme.onBackground,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                     )
 
                     ListSettingsActionButton(
@@ -1070,7 +1070,7 @@ private fun ListSettingsBottomSheet(
                 Text(
                     text = stringResource(R.string.home_section_list),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
@@ -1117,7 +1117,7 @@ private fun ListSettingsBottomSheet(
                             ),
                             textStyle = MaterialTheme.typography.headlineSmall.copy(
                                 color = selectedAccent,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.ExtraBold,
                                 textAlign = TextAlign.Center,
                             ),
                             modifier = Modifier
@@ -1150,7 +1150,7 @@ private fun ListSettingsBottomSheet(
                                             text = stringResource(R.string.home_list_name_placeholder),
                                             style = MaterialTheme.typography.headlineSmall,
                                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                                            fontWeight = FontWeight.Bold,
+                                            fontWeight = FontWeight.ExtraBold,
                                             textAlign = TextAlign.Center,
                                         )
                                     }
@@ -1169,7 +1169,7 @@ private fun ListSettingsBottomSheet(
                 Text(
                     text = stringResource(R.string.home_section_color),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
@@ -1223,7 +1223,7 @@ private fun ListSettingsBottomSheet(
                 Text(
                     text = stringResource(R.string.home_section_icon),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     color = colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
@@ -1428,7 +1428,7 @@ private fun TimelineSectionHeader(
                 } else {
                     MaterialTheme.typography.titleMedium
                 },
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
             )
             if (onHeaderClick != null) {
                 Icon(
@@ -1588,7 +1588,7 @@ private fun EmptyTimelineState(
             } else {
                 MaterialTheme.typography.headlineSmall
             },
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
         )
     }
 }
@@ -2333,7 +2333,7 @@ private fun SwipeTaskRow(
                                         colorScheme.onSurface
                                     },
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.ExtraBold,
                                     textDecoration = if (visuallyCompleted) {
                                         TextDecoration.LineThrough
                                     } else {
@@ -2431,7 +2431,7 @@ private fun TodayTodoRow(
                         text = todo.title,
                         color = colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                     )
                     Text(
                         text = detailDueText,
@@ -2498,7 +2498,7 @@ private fun TodoRow(
                         text = todo.title,
                         color = colorScheme.onSurface,
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                     )
                     Text(
                         text = due,
