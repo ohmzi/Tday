@@ -95,33 +95,33 @@ export default function Register() {
                 <Label htmlFor="firstName">First name</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="firstName" type="text" placeholder="First name" value={firstName} onChange={(e) => { setFirstName(e.target.value); clearError(); }} className="h-12 bg-background/50 pl-10" required />
+                  <Input id="firstName" type="text" autoComplete="given-name" placeholder="First name" value={firstName} onChange={(e) => { setFirstName(e.target.value); clearError(); }} className="h-12 bg-background/50 pl-10" required />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last name</Label>
-                <Input id="lastName" type="text" placeholder="Last name" value={lastName} onChange={(e) => { setLastName(e.target.value); clearError(); }} className="h-12 bg-background/50" />
+                <Input id="lastName" type="text" autoComplete="family-name" placeholder="Last name" value={lastName} onChange={(e) => { setLastName(e.target.value); clearError(); }} className="h-12 bg-background/50" />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => { setEmail(e.target.value); clearError(); }} className="h-12 bg-background/50 pl-10" required />
+                <Input id="email" type="email" autoComplete="username" placeholder="you@example.com" value={email} onChange={(e) => { setEmail(e.target.value); clearError(); }} className="h-12 bg-background/50 pl-10" required />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => { setPassword(e.target.value); clearError(); }} className="h-12 bg-background/50 pl-10" minLength={8} required />
+                <Input id="password" type="password" autoComplete="new-password" placeholder="••••••••" value={password} onChange={(e) => { setPassword(e.target.value); clearError(); }} className="h-12 bg-background/50 pl-10" minLength={8} required />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="confirmPassword" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); clearError(); }} className="h-12 bg-background/50 pl-10" minLength={8} required />
+                <Input id="confirmPassword" type="password" autoComplete="new-password" placeholder="••••••••" value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); clearError(); }} className="h-12 bg-background/50 pl-10" minLength={8} required />
               </div>
             </div>
 
