@@ -289,7 +289,7 @@ struct CompletedScreen: View {
             let didRestore = await viewModel.uncomplete(item)
             if !didRestore {
                 withAnimation(.easeInOut(duration: 0.18)) {
-                    restorePhases.removeValue(forKey: item.id)
+                    _ = restorePhases.removeValue(forKey: item.id)
                 }
             }
         }
