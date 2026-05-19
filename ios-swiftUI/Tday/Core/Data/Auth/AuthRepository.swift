@@ -129,11 +129,7 @@ final class AuthRepository: AuthRepositoryServicing {
     }
 
     func logout() async {
-        do {
-            _ = try? await api.signOut()
-        } catch {
-            // Best effort sign-out before local cleanup.
-        }
+        _ = try? await api.signOut()
         await clearAllLocalUserDataForUnauthenticatedState(preservingServerConfiguration: true)
     }
 

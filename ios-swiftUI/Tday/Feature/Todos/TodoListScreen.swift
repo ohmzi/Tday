@@ -683,13 +683,13 @@ struct TodoListScreen: View {
             return
         }
         withAnimation(.easeInOut(duration: 0.16)) {
-            completingTodoIDs.insert(todo.id)
+            _ = completingTodoIDs.insert(todo.id)
         }
         Task {
             try? await Task.sleep(nanoseconds: 190_000_000)
             await viewModel.complete(todo)
             await MainActor.run {
-                completingTodoIDs.remove(todo.id)
+                _ = completingTodoIDs.remove(todo.id)
             }
         }
     }
@@ -767,8 +767,31 @@ struct TimelineTopBar: View {
     let collapseProgress: CGFloat
     let onBack: () -> Void
     let action: TimelineTopBarAction?
+    let titleRevealStart: CGFloat
+    let titleRevealEnd: CGFloat
+    let titleRevealDistance: CGFloat
 
     @Environment(\.tdayColors) private var colors
+
+    init(
+        title: String,
+        accentColor: Color,
+        collapseProgress: CGFloat,
+        onBack: @escaping () -> Void,
+        action: TimelineTopBarAction?,
+        titleRevealStart: CGFloat = TodoTimelineMetrics.collapsedTitleRevealStart,
+        titleRevealEnd: CGFloat = TodoTimelineMetrics.collapsedTitleRevealEnd,
+        titleRevealDistance: CGFloat = TodoTimelineMetrics.collapsedTitleRevealDistance
+    ) {
+        self.title = title
+        self.accentColor = accentColor
+        self.collapseProgress = collapseProgress
+        self.onBack = onBack
+        self.action = action
+        self.titleRevealStart = titleRevealStart
+        self.titleRevealEnd = titleRevealEnd
+        self.titleRevealDistance = titleRevealDistance
+    }
 
     private var progress: CGFloat {
         min(max(collapseProgress, 0), 1)
@@ -777,13 +800,13 @@ struct TimelineTopBar: View {
     private var revealProgress: CGFloat {
         TodoTimelineMetrics.progress(
             progress,
-            from: TodoTimelineMetrics.collapsedTitleRevealStart,
-            to: TodoTimelineMetrics.collapsedTitleRevealEnd
+            from: titleRevealStart,
+            to: titleRevealEnd
         )
     }
 
     private var titleOffsetY: CGFloat {
-        TodoTimelineMetrics.collapsedTitleRevealDistance * (1 - revealProgress)
+        titleRevealDistance * (1 - revealProgress)
     }
 
     private var titleContent: some View {

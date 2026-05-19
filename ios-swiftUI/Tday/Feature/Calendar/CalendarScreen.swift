@@ -6,6 +6,11 @@ private enum CalendarScope: String, CaseIterable {
     case day
 }
 
+private enum CalendarTitleHandoff {
+    static let pinnedRevealStart: CGFloat = 0.18
+    static let pinnedRevealEnd: CGFloat = 0.62
+}
+
 struct CalendarScreen: View {
     @State private var viewModel: CalendarViewModel
     @Environment(\.tdayColors) private var colors
@@ -175,12 +180,14 @@ struct CalendarScreen: View {
             action: TimelineTopBarAction(
                 systemName: "calendar",
                 action: { selectedDate = Date() }
-            )
+            ),
+            titleRevealStart: CalendarTitleHandoff.pinnedRevealStart,
+            titleRevealEnd: CalendarTitleHandoff.pinnedRevealEnd
         )
     }
 
     private var calendarHeroTitleRow: some View {
-        TimelineExpandedTitleRow(
+        CalendarExpandedTitleRow(
             title: "Calendar",
             accentColor: calendarAccentColor,
             collapseProgress: titleCollapseProgress
@@ -197,6 +204,45 @@ struct CalendarScreen: View {
 
     private func isSelectedDay(_ date: Date) -> Bool {
         Calendar.current.isDate(date, inSameDayAs: selectedDate)
+    }
+}
+
+private struct CalendarExpandedTitleRow: View {
+    let title: String
+    let accentColor: Color
+    let collapseProgress: CGFloat
+
+    private var progress: CGFloat {
+        min(max(collapseProgress, 0), 1)
+    }
+
+    private var fadeProgress: CGFloat {
+        TodoTimelineMetrics.progress(
+            progress,
+            from: TodoTimelineMetrics.expandedTitleFadeStart,
+            to: TodoTimelineMetrics.expandedTitleFadeEnd
+        )
+    }
+
+    private var titleOffsetY: CGFloat {
+        -TodoTimelineMetrics.expandedTitleLiftDistance * fadeProgress
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
+            .foregroundStyle(accentColor)
+            .lineLimit(1)
+            .frame(
+                maxWidth: .infinity,
+                minHeight: TodoTimelineMetrics.expandedTitleHeight,
+                maxHeight: TodoTimelineMetrics.expandedTitleHeight,
+                alignment: .topLeading
+            )
+            .opacity(Double(1 - fadeProgress))
+            .offset(y: titleOffsetY)
+            .clipped()
+            .allowsHitTesting(false)
     }
 }
 
