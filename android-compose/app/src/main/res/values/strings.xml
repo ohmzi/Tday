@@ -9,6 +9,7 @@
     <string name="action_close_search">Close search</string>
     <string name="action_create_task">Create task</string>
     <string name="action_create_list">Create list</string>
+    <string name="action_edit">Edit</string>
     <string name="action_edit_task">Edit task</string>
     <string name="action_delete_task">Delete task</string>
     <string name="action_delete">Delete</string>
