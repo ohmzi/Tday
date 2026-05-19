@@ -11,6 +11,13 @@ private enum CalendarModeControlMetrics {
     static let height: CGFloat = 52
 }
 
+private enum CalendarPeriodCardMetrics {
+    static let contentSpacing: CGFloat = 14
+    static let pageHeight: CGFloat = 78
+    static let topPadding: CGFloat = 16
+    static let bottomPadding: CGFloat = 18
+}
+
 private let calendarNativePagerCenterIndex = 1
 
 private struct CalendarTodayJumpRequest: Equatable {
@@ -700,7 +707,7 @@ private struct CalendarWeekCard: View {
         let nextPageWeekDate = jumpDirection == .next ? pendingTodayJump?.targetDate : nextWeekDate
         let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
 
-        return VStack(spacing: 14) {
+        return VStack(spacing: CalendarPeriodCardMetrics.contentSpacing) {
             HStack {
                 CalendarNavButton(
                     systemName: "chevron.left",
@@ -737,11 +744,11 @@ private struct CalendarWeekCard: View {
                 selection: $pageSelection,
                 onSettledSelection: settlePageSelection
             )
-            .frame(height: 78)
+            .frame(height: CalendarPeriodCardMetrics.pageHeight)
         }
         .padding(.horizontal, 14)
-        .padding(.top, 16)
-        .padding(.bottom, 18)
+        .padding(.top, CalendarPeriodCardMetrics.topPadding)
+        .padding(.bottom, CalendarPeriodCardMetrics.bottomPadding)
         .frame(maxWidth: .infinity)
     }
 
@@ -876,7 +883,7 @@ private struct CalendarWeekDayCell: View {
                     .font(.tdayRounded(size: 12, weight: .heavy))
                     .foregroundStyle(taskCount > 0 ? accentColor : colors.onSurfaceVariant.opacity(0.42))
             }
-            .frame(maxWidth: .infinity, minHeight: 78)
+            .frame(maxWidth: .infinity, minHeight: CalendarPeriodCardMetrics.pageHeight)
             .background(cellBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -965,7 +972,7 @@ private struct CalendarDayCard: View {
         let nextPageDay = jumpDirection == .next ? pendingTodayJump.map { Calendar.current.startOfDay(for: $0.targetDate) } : nextDay
         let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
 
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: CalendarPeriodCardMetrics.contentSpacing) {
             HStack {
                 CalendarNavButton(
                     systemName: "chevron.left",
@@ -999,11 +1006,11 @@ private struct CalendarDayCard: View {
                 selection: $pageSelection,
                 onSettledSelection: settlePageSelection
             )
-            .frame(height: 70)
+            .frame(height: CalendarPeriodCardMetrics.pageHeight)
         }
         .padding(.horizontal, 18)
-        .padding(.top, 16)
-        .padding(.bottom, 22)
+        .padding(.top, CalendarPeriodCardMetrics.topPadding)
+        .padding(.bottom, CalendarPeriodCardMetrics.bottomPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
