@@ -14,6 +14,7 @@ enum TodoTimelineMetrics {
     static let minimalRowIndicatorSize: CGFloat = 14
     static let minimalRowTrailingIndicatorPadding: CGFloat = 24
     static let minimalRowVerticalPadding: CGFloat = 10
+    static let swipeDividerExtension: CGFloat = 230
     static let emptyStateSize: CGFloat = 28
     static let emptyStateOffset: CGFloat = 78
     static let titleCollapseDistance: CGFloat = 64
@@ -614,6 +615,7 @@ struct TodoListScreen: View {
             Rectangle()
                 .fill(colors.onSurfaceVariant.opacity(0.18))
                 .frame(height: 1)
+                .padding(.trailing, -TodoTimelineMetrics.swipeDividerExtension)
         }
         .opacity(isCompleting ? 0 : (draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1))
         .scaleEffect(isCompleting ? 0.985 : 1, anchor: .center)

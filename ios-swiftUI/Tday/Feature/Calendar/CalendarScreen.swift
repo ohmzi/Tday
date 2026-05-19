@@ -288,6 +288,7 @@ private struct CalendarPendingTaskRow: View {
             Rectangle()
                 .fill(colors.onSurfaceVariant.opacity(0.18))
                 .frame(height: 1)
+                .padding(.trailing, -TodoTimelineMetrics.swipeDividerExtension)
         }
     }
 }
