@@ -69,7 +69,7 @@ struct CompletedScreen: View {
             .sheet(item: $editingItem) { item in
                 CreateTaskSheet(
                     lists: viewModel.lists,
-                    titleText: "Edit Completed Task",
+                    titleText: "Edit task",
                     submitText: "Save",
                     initialPayload: CreateTaskPayload(title: item.title, description: item.description, priority: item.priority, due: item.due, rrule: item.rrule, listId: nil),
                     onParseTaskTitleNlp: nil,
