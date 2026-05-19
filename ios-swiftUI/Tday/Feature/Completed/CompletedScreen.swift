@@ -170,10 +170,7 @@ struct CompletedScreen: View {
             )
                 .listRowInsets(
                     EdgeInsets(
-                        top: firstPinnedHeaderElasticTopInset(
-                            isFirstSection: isFirstSection,
-                            defaultTopInset: isFirstSection ? 0 : 8
-                        ),
+                        top: isFirstSection ? 0 : 8,
                         leading: 0,
                         bottom: 0,
                         trailing: 0
@@ -184,29 +181,17 @@ struct CompletedScreen: View {
         }
     }
 
-    private func firstPinnedHeaderElasticTopInset(isFirstSection: Bool, defaultTopInset: CGFloat) -> CGFloat {
-        guard isFirstSection else {
-            return defaultTopInset
-        }
-
-        return defaultTopInset + firstPinnedElasticClearance()
-    }
-
     private func firstPinnedRowElasticTopInset(isFirstSection: Bool, itemIndex: Int) -> CGFloat {
         guard isFirstSection, itemIndex == 0 else {
             return 0
         }
 
-        return firstPinnedElasticClearance()
-    }
-
-    private func firstPinnedElasticClearance() -> CGFloat {
         let elasticProgress = TodoTimelineMetrics.progress(
             titleCollapseProgress,
-            from: TodoTimelineMetrics.firstPinnedElasticStart,
-            to: TodoTimelineMetrics.firstPinnedElasticEnd
+            from: TodoTimelineMetrics.firstPinnedRowElasticStart,
+            to: TodoTimelineMetrics.firstPinnedRowElasticEnd
         )
-        return TodoTimelineMetrics.firstPinnedElasticClearance * elasticProgress
+        return TodoTimelineMetrics.firstPinnedRowElasticClearance * elasticProgress
     }
 
     private func completedTimelineRow(_ item: CompletedItem) -> some View {

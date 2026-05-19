@@ -7,6 +7,10 @@ private enum CalendarTitleHandoff {
     static let titleRowHeight: CGFloat = TodoTimelineMetrics.titleCollapseDistance
 }
 
+private enum CalendarModeControlMetrics {
+    static let height: CGFloat = 52
+}
+
 private let calendarNativePagerCenterIndex = 1
 
 private struct CalendarTodayJumpRequest: Equatable {
@@ -248,6 +252,7 @@ struct CalendarScreen: View {
             onBack: { dismiss() },
             action: TimelineTopBarAction(
                 systemName: "calendar",
+                tint: calendarAccentColor,
                 action: jumpToToday
             ),
             titleRevealStart: CalendarTitleHandoff.pinnedRevealStart,
@@ -357,21 +362,85 @@ private struct CalendarViewModeTabs: View {
     let onSelect: (CalendarDisplayMode) -> Void
 
     var body: some View {
-        Picker("Calendar view", selection: selectedModeBinding) {
-            ForEach(CalendarDisplayMode.allCases, id: \.self) { mode in
-                Text(mode.rawValue.capitalized)
-                    .tag(mode)
-            }
-        }
-        .pickerStyle(.segmented)
-        .tint(accentColor)
+        CalendarThickNativeSegmentedControl(
+            selectedMode: selectedMode,
+            accentColor: accentColor,
+            onSelect: onSelect
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: CalendarModeControlMetrics.height)
+    }
+}
+
+private struct CalendarThickNativeSegmentedControl: UIViewRepresentable {
+    let selectedMode: CalendarDisplayMode
+    let accentColor: Color
+    let onSelect: (CalendarDisplayMode) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
     }
 
-    private var selectedModeBinding: Binding<CalendarDisplayMode> {
-        Binding(
-            get: { selectedMode },
-            set: { onSelect($0) }
+    func makeUIView(context: Context) -> ThickSegmentedControl {
+        let control = ThickSegmentedControl(items: CalendarDisplayMode.allCases.map { $0.rawValue.capitalized })
+        control.selectedSegmentIndex = selectedModeIndex
+        control.apportionsSegmentWidthsByContent = false
+        control.addTarget(context.coordinator, action: #selector(Coordinator.didChange(_:)), for: .valueChanged)
+        applySizingAndTint(to: control)
+        return control
+    }
+
+    func updateUIView(_ control: ThickSegmentedControl, context: Context) {
+        context.coordinator.onSelect = onSelect
+        if control.selectedSegmentIndex != selectedModeIndex {
+            control.selectedSegmentIndex = selectedModeIndex
+        }
+        applySizingAndTint(to: control)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: ThickSegmentedControl, context: Context) -> CGSize? {
+        CGSize(
+            width: proposal.width ?? uiView.intrinsicContentSize.width,
+            height: CalendarModeControlMetrics.height
         )
+    }
+
+    private var selectedModeIndex: Int {
+        CalendarDisplayMode.allCases.firstIndex(of: selectedMode) ?? 0
+    }
+
+    private func applySizingAndTint(to control: ThickSegmentedControl) {
+        control.tintColor = UIColor(accentColor)
+        control.invalidateIntrinsicContentSize()
+    }
+
+    final class Coordinator: NSObject {
+        var onSelect: (CalendarDisplayMode) -> Void
+
+        init(onSelect: @escaping (CalendarDisplayMode) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        @objc func didChange(_ sender: UISegmentedControl) {
+            let modes = CalendarDisplayMode.allCases
+            guard modes.indices.contains(sender.selectedSegmentIndex) else {
+                return
+            }
+            onSelect(modes[sender.selectedSegmentIndex])
+        }
+    }
+
+    final class ThickSegmentedControl: UISegmentedControl {
+        override var intrinsicContentSize: CGSize {
+            let baseSize = super.intrinsicContentSize
+            return CGSize(width: baseSize.width, height: CalendarModeControlMetrics.height)
+        }
+
+        override func sizeThatFits(_ size: CGSize) -> CGSize {
+            var fittingSize = super.sizeThatFits(size)
+            fittingSize.height = CalendarModeControlMetrics.height
+            return fittingSize
+        }
     }
 }
 
