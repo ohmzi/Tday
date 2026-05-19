@@ -7,6 +7,9 @@ enum TodoTimelineMetrics {
     static let sectionTitleSize: CGFloat = 22
     static let sectionChevronSize: CGFloat = 14
     static let sectionSpacing: CGFloat = 10
+    static let firstPinnedRowElasticClearance: CGFloat = 34
+    static let firstPinnedRowElasticStart: CGFloat = 0.42
+    static let firstPinnedRowElasticEnd: CGFloat = 1
     static let minimalRowToggleSize: CGFloat = 24
     static let minimalRowToggleFrame: CGFloat = 38
     static let minimalRowTitleSize: CGFloat = 18
@@ -702,8 +705,9 @@ struct TodoListScreen: View {
 
         Section {
             if !isCollapsed {
-                ForEach(section.items) { todo in
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                     minimalTimelineRow(todo, in: section)
+                        .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstSection: isFirstSection, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -728,6 +732,27 @@ struct TodoListScreen: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
+    }
+
+    private func firstPinnedRowElasticTopInset(section: TodoTimelineSection, isFirstSection: Bool, itemIndex: Int) -> CGFloat {
+        guard isFirstSection, itemIndex == 0 else {
+            return 0
+        }
+
+        let isOverdueFirstSection = viewModel.mode == .overdue
+        let isExpandedPriorityEarlier = viewModel.mode == .priority && section.id == "earlier"
+        let isExpandedAllTasksEarlier = viewModel.mode == .all && section.id == "earlier"
+        let isScheduledFirstSection = viewModel.mode == .scheduled
+        guard isOverdueFirstSection || isExpandedPriorityEarlier || isExpandedAllTasksEarlier || isScheduledFirstSection else {
+            return 0
+        }
+
+        let progress = TodoTimelineMetrics.progress(
+            titleCollapseProgress,
+            from: TodoTimelineMetrics.firstPinnedRowElasticStart,
+            to: TodoTimelineMetrics.firstPinnedRowElasticEnd
+        )
+        return TodoTimelineMetrics.firstPinnedRowElasticClearance * progress
     }
 
     private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String {
