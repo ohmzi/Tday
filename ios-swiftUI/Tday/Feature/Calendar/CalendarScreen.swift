@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private enum CalendarTitleHandoff {
     static let pinnedRevealStart: CGFloat = 0.18
@@ -437,23 +438,15 @@ private struct CalendarMonthGrid: View {
                     }
                 }
 
-                TabView(selection: $pageSelection) {
-                    if let previousMonth {
-                        monthGrid(for: previousMonth)
-                            .tag(0)
-                    }
-
-                    monthGrid(for: displayMonth)
-                        .tag(calendarNativePagerCenterIndex)
-
-                    if let nextMonth {
-                        monthGrid(for: nextMonth)
-                            .tag(2)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                CalendarPagingScrollView(
+                    pages: monthPages(
+                        previousMonth: previousMonth,
+                        displayMonth: displayMonth,
+                        nextMonth: nextMonth
+                    ),
+                    selection: $pageSelection
+                )
                 .frame(height: 283)
-                .clipped()
             }
         }
         .padding(.horizontal, 16)
@@ -476,6 +469,22 @@ private struct CalendarMonthGrid: View {
                 )
             }
         }
+    }
+
+    private func monthPages(previousMonth: Date?, displayMonth: Date, nextMonth: Date?) -> [CalendarPagerPage] {
+        var pages: [CalendarPagerPage] = []
+
+        if let previousMonth {
+            pages.append(CalendarPagerPage(id: 0, content: AnyView(monthGrid(for: previousMonth))))
+        }
+
+        pages.append(CalendarPagerPage(id: calendarNativePagerCenterIndex, content: AnyView(monthGrid(for: displayMonth))))
+
+        if let nextMonth {
+            pages.append(CalendarPagerPage(id: 2, content: AnyView(monthGrid(for: nextMonth))))
+        }
+
+        return pages
     }
 
     private func resetPageSelection() {
@@ -571,23 +580,15 @@ private struct CalendarWeekCard: View {
             }
             .padding(.horizontal, 6)
 
-            TabView(selection: $pageSelection) {
-                if let previousWeekDate, canGoPrevious {
-                    weekDaysRow(for: previousWeekDate)
-                        .tag(0)
-                }
-
-                weekDaysRow(for: displaySelectedDate)
-                    .tag(calendarNativePagerCenterIndex)
-
-                if let nextWeekDate {
-                    weekDaysRow(for: nextWeekDate)
-                        .tag(2)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            CalendarPagingScrollView(
+                pages: weekPages(
+                    previousWeekDate: canGoPrevious ? previousWeekDate : nil,
+                    displaySelectedDate: displaySelectedDate,
+                    nextWeekDate: nextWeekDate
+                ),
+                selection: $pageSelection
+            )
             .frame(height: 78)
-            .clipped()
         }
         .padding(.horizontal, 14)
         .padding(.top, 16)
@@ -615,6 +616,22 @@ private struct CalendarWeekCard: View {
                 )
             }
         }
+    }
+
+    private func weekPages(previousWeekDate: Date?, displaySelectedDate: Date, nextWeekDate: Date?) -> [CalendarPagerPage] {
+        var pages: [CalendarPagerPage] = []
+
+        if let previousWeekDate {
+            pages.append(CalendarPagerPage(id: 0, content: AnyView(weekDaysRow(for: previousWeekDate))))
+        }
+
+        pages.append(CalendarPagerPage(id: calendarNativePagerCenterIndex, content: AnyView(weekDaysRow(for: displaySelectedDate))))
+
+        if let nextWeekDate {
+            pages.append(CalendarPagerPage(id: 2, content: AnyView(weekDaysRow(for: nextWeekDate))))
+        }
+
+        return pages
     }
 
     private func resetPageSelection() {
@@ -769,28 +786,36 @@ private struct CalendarDayCard: View {
                 )
             }
 
-            TabView(selection: $pageSelection) {
-                if let previousDay, canGoPrevious {
-                    daySummary(for: previousDay)
-                        .tag(0)
-                }
-
-                daySummary(for: displayDate)
-                    .tag(calendarNativePagerCenterIndex)
-
-                if let nextDay {
-                    daySummary(for: nextDay)
-                        .tag(2)
-                }
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            CalendarPagingScrollView(
+                pages: dayPages(
+                    previousDay: canGoPrevious ? previousDay : nil,
+                    displayDate: displayDate,
+                    nextDay: nextDay
+                ),
+                selection: $pageSelection
+            )
             .frame(height: 70)
-            .clipped()
         }
         .padding(.horizontal, 18)
         .padding(.top, 16)
         .padding(.bottom, 22)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func dayPages(previousDay: Date?, displayDate: Date, nextDay: Date?) -> [CalendarPagerPage] {
+        var pages: [CalendarPagerPage] = []
+
+        if let previousDay {
+            pages.append(CalendarPagerPage(id: 0, content: AnyView(daySummary(for: previousDay))))
+        }
+
+        pages.append(CalendarPagerPage(id: calendarNativePagerCenterIndex, content: AnyView(daySummary(for: displayDate))))
+
+        if let nextDay {
+            pages.append(CalendarPagerPage(id: 2, content: AnyView(daySummary(for: nextDay))))
+        }
+
+        return pages
     }
 
     private func daySummary(for date: Date) -> some View {
@@ -848,6 +873,157 @@ private struct CalendarNavButton: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
+    }
+}
+
+private struct CalendarPagerPage: Identifiable {
+    let id: Int
+    let content: AnyView
+}
+
+private struct CalendarPagingScrollView: UIViewRepresentable {
+    let pages: [CalendarPagerPage]
+    @Binding var selection: Int
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(selection: $selection)
+    }
+
+    func makeUIView(context: Context) -> UIScrollView {
+        let scrollView = UIScrollView()
+        scrollView.isPagingEnabled = true
+        scrollView.bounces = false
+        scrollView.alwaysBounceHorizontal = false
+        scrollView.alwaysBounceVertical = false
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.showsVerticalScrollIndicator = false
+        scrollView.decelerationRate = .fast
+        scrollView.delegate = context.coordinator
+        scrollView.backgroundColor = .clear
+        scrollView.clipsToBounds = true
+
+        let stackView = UIStackView()
+        stackView.axis = .horizontal
+        stackView.alignment = .fill
+        stackView.distribution = .fill
+        stackView.spacing = 0
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(stackView)
+
+        NSLayoutConstraint.activate([
+            stackView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            stackView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            stackView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            stackView.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor)
+        ])
+
+        context.coordinator.stackView = stackView
+        return scrollView
+    }
+
+    func updateUIView(_ scrollView: UIScrollView, context: Context) {
+        context.coordinator.parent = self
+        context.coordinator.rebuildPagesIfNeeded(pages, in: scrollView)
+        context.coordinator.scrollToSelection(selection, in: scrollView, animated: false)
+    }
+
+    final class Coordinator: NSObject, UIScrollViewDelegate {
+        var parent: CalendarPagingScrollView?
+        var stackView: UIStackView?
+        private var hostedControllers: [UIHostingController<AnyView>] = []
+        private var pageIDs: [Int] = []
+        private var selection: Binding<Int>
+        private var isProgrammaticScroll = false
+
+        init(selection: Binding<Int>) {
+            self.selection = selection
+        }
+
+        func rebuildPagesIfNeeded(_ pages: [CalendarPagerPage], in scrollView: UIScrollView) {
+            let incomingIDs = pages.map(\.id)
+            guard incomingIDs != pageIDs else {
+                for (controller, page) in zip(hostedControllers, pages) {
+                    controller.rootView = page.content
+                }
+                return
+            }
+
+            hostedControllers.forEach { controller in
+                controller.view.removeFromSuperview()
+            }
+            hostedControllers.removeAll()
+            pageIDs = incomingIDs
+
+            guard let stackView else { return }
+            stackView.arrangedSubviews.forEach { view in
+                stackView.removeArrangedSubview(view)
+                view.removeFromSuperview()
+            }
+
+            for page in pages {
+                let controller = UIHostingController(rootView: page.content)
+                controller.view.backgroundColor = .clear
+                controller.view.translatesAutoresizingMaskIntoConstraints = false
+                hostedControllers.append(controller)
+                stackView.addArrangedSubview(controller.view)
+
+                NSLayoutConstraint.activate([
+                    controller.view.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+                    controller.view.heightAnchor.constraint(equalTo: scrollView.frameLayoutGuide.heightAnchor)
+                ])
+            }
+        }
+
+        func scrollToSelection(_ selection: Int, in scrollView: UIScrollView, animated: Bool) {
+            guard let index = pageIDs.firstIndex(of: selection) else { return }
+
+            scrollView.layoutIfNeeded()
+            guard scrollView.bounds.width > 0 else {
+                DispatchQueue.main.async { [weak self, weak scrollView] in
+                    guard let self, let scrollView else { return }
+                    self.scrollToSelection(selection, in: scrollView, animated: false)
+                }
+                return
+            }
+
+            let targetX = CGFloat(index) * scrollView.bounds.width
+            guard abs(scrollView.contentOffset.x - targetX) > 0.5 else { return }
+
+            isProgrammaticScroll = true
+            scrollView.setContentOffset(CGPoint(x: targetX, y: 0), animated: animated)
+            if !animated {
+                isProgrammaticScroll = false
+            }
+        }
+
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            updateSelection(from: scrollView)
+        }
+
+        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+            if !decelerate {
+                updateSelection(from: scrollView)
+            }
+        }
+
+        func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+            isProgrammaticScroll = false
+        }
+
+        private func updateSelection(from scrollView: UIScrollView) {
+            guard !isProgrammaticScroll else { return }
+            guard scrollView.bounds.width > 0 else { return }
+
+            let index = Int(round(scrollView.contentOffset.x / scrollView.bounds.width))
+            guard pageIDs.indices.contains(index) else { return }
+            let selectedID = pageIDs[index]
+            guard selectedID != selection.wrappedValue else { return }
+
+            DispatchQueue.main.async {
+                self.selection.wrappedValue = selectedID
+            }
+        }
     }
 }
 
