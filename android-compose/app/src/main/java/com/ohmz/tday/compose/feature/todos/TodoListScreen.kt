@@ -2039,21 +2039,31 @@ private fun SwipeActionButton(
     label: String,
     tint: Color,
     background: Color,
+    revealProgress: Float,
+    revealDelay: Float,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val density = LocalDensity.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
+    val pressedScale by animateFloatAsState(
         targetValue = if (pressed) 0.92f else 1f,
         label = "swipeActionScale",
     )
+    val normalizedReveal = ((revealProgress - revealDelay) / (1f - revealDelay))
+        .coerceIn(0f, 1f)
+    val easedReveal = FastOutSlowInEasing.transform(normalizedReveal)
+    val revealOffsetPx = with(density) { 18.dp.toPx() }
     Column(
         modifier = Modifier
             .sizeIn(minWidth = 60.dp)
             .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
+                alpha = easedReveal
+                translationX = revealOffsetPx * (1f - easedReveal)
+                val revealScale = 0.84f + (0.16f * easedReveal)
+                scaleX = pressedScale * revealScale
+                scaleY = pressedScale * revealScale
             },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -2162,6 +2172,7 @@ private fun SwipeTaskRow(
         animationSpec = spring(),
         label = "swipeTaskOffset",
     )
+    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
         animationSpec = tween(durationMillis = 220),
@@ -2270,6 +2281,8 @@ private fun SwipeTaskRow(
                         label = stringResource(R.string.action_edit),
                         tint = Color.White,
                         background = colorScheme.primary,
+                        revealProgress = actionRevealProgress,
+                        revealDelay = 0.28f,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
@@ -2285,6 +2298,8 @@ private fun SwipeTaskRow(
                         label = stringResource(R.string.action_delete),
                         tint = Color.White,
                         background = colorScheme.error,
+                        revealProgress = actionRevealProgress,
+                        revealDelay = 0.08f,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
@@ -2443,7 +2458,7 @@ private fun SwipeTaskRow(
                         }
                         if (showListIndicator || showPriorityFlag) {
                             Row(
-                                modifier = Modifier.padding(start = 8.dp),
+                                modifier = Modifier.padding(start = 8.dp, end = 24.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {

@@ -12,6 +12,7 @@ enum TodoTimelineMetrics {
     static let minimalRowTitleSize: CGFloat = 18
     static let minimalRowSubtitleSize: CGFloat = 13
     static let minimalRowIndicatorSize: CGFloat = 14
+    static let minimalRowTrailingIndicatorPadding: CGFloat = 24
     static let minimalRowVerticalPadding: CGFloat = 10
     static let emptyStateSize: CGFloat = 28
     static let emptyStateOffset: CGFloat = 78
@@ -603,6 +604,7 @@ struct TodoListScreen: View {
                                 .foregroundStyle(priorityColor(todo.priority))
                         }
                     }
+                    .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
                 }
             }
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
