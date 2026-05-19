@@ -66,5 +66,7 @@ fun testAppConfig(
     probeAppVersion = null,
     probeUpdateRequired = false,
     probeEncryptionKey = null,
+    appleTeamId = "TEAM123456",
+    iosBundleId = "com.ohmz.tday.ios",
     sentryDsn = null,
 )

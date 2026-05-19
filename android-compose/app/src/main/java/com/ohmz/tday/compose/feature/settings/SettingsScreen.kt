@@ -1,9 +1,12 @@
 package com.ohmz.tday.compose.feature.settings
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -21,8 +25,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -47,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -68,6 +73,7 @@ import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 
 @Composable
 fun SettingsScreen(
@@ -202,7 +208,7 @@ fun SettingsScreen(
                                 text = stringResource(R.string.settings_ai_task_summary),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = colorScheme.onSurface,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.ExtraBold,
                             )
                         }
                         if (adminAiSummaryEnabled == null) {
@@ -246,7 +252,7 @@ fun SettingsScreen(
                         text = "v$latestVersionName available",
                         style = MaterialTheme.typography.labelSmall,
                         color = colorScheme.primary,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.ExtraBold,
                     )
                 }
                 if (backendVersion != null) {
@@ -258,7 +264,7 @@ fun SettingsScreen(
                         Text(
                             text = "Server",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
                         )
                         Row(
@@ -275,7 +281,7 @@ fun SettingsScreen(
                             Text(
                                 text = if (isCompatible) "Compatible" else "Incompatible",
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.ExtraBold,
                                 color = if (isCompatible) {
                                     Color(0xFF4CAF50)
                                 } else {
@@ -306,7 +312,7 @@ fun SettingsScreen(
             title = {
                 Text(
                     text = stringResource(R.string.settings_ai_unavailable_title),
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             },
             text = {
@@ -331,7 +337,7 @@ private fun SettingsProfileCard(
         Text(
             text = user?.name ?: stringResource(R.string.settings_unknown_user),
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.ExtraBold,
             color = colorScheme.onSurface,
         )
         if (!user?.email.isNullOrBlank()) {
@@ -378,7 +384,7 @@ private fun SettingsSectionTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.ExtraBold,
         color = MaterialTheme.colorScheme.onSurface,
     )
 }
@@ -404,7 +410,7 @@ private fun SettingsListRow(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.ExtraBold,
             color = titleColor,
         )
         Row(
@@ -465,9 +471,10 @@ private fun SettingsTopBar(
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             SettingsHeaderButton(
-                icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                icon = Icons.Rounded.ChevronLeft,
                 contentDescription = stringResource(R.string.action_back),
                 onClick = onBack,
+                isBackButton = true,
             )
             if (collapsedTitleAlpha > 0.001f) {
                 Row(
@@ -481,7 +488,7 @@ private fun SettingsTopBar(
                     Text(
                         text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
@@ -504,7 +511,7 @@ private fun SettingsTopBar(
                     Text(
                         text = stringResource(R.string.settings_title),
                         style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                 }
@@ -518,30 +525,61 @@ private fun SettingsHeaderButton(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
+    isBackButton: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
+    val containerColor = if (isBackButton) {
+        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
+    } else {
+        colorScheme.background
+    }
+    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
+    val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
+    val iconSize = if (isBackButton) 36.dp else 28.dp
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        label = "settingsHeaderButtonScale",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "settingsHeaderButtonOffsetY",
+    )
+
     Card(
+        modifier = Modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
         onClick = {
             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
             onClick()
         },
+        interactionSource = interactionSource,
         shape = CircleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        border = buttonBorder,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isBackButton) TdayDimens.FabElevation else 0.dp,
+            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else 0.dp,
+        ),
     ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
-                .height(56.dp),
+                .size(buttonSize)
+                .height(buttonSize),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = colorScheme.onSurface,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(iconSize),
             )
         }
     }
@@ -600,7 +638,7 @@ private fun ThemeModeSelector(
                         Text(
                             text = mode.label,
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                            fontWeight = FontWeight.ExtraBold,
                             color = if (selected) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.58f),
                         )
                     }
@@ -635,7 +673,7 @@ private fun ReminderSelector(
             Text(
                 text = "Default reminder",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
             )
             Row(
@@ -645,7 +683,7 @@ private fun ReminderSelector(
                 Text(
                     text = selectedReminder.label,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.ExtraBold,
                     color = colorScheme.primary,
                 )
                 Icon(
@@ -667,7 +705,7 @@ private fun ReminderSelector(
                     text = {
                         Text(
                             text = option.label,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            fontWeight = FontWeight.ExtraBold,
                         )
                     },
                     onClick = {

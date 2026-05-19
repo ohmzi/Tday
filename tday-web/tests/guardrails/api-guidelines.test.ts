@@ -48,7 +48,12 @@ describe("Ktor API route conventions", () => {
   describe("authenticated routes check auth context", () => {
     const dataRoutes = NON_AUTH_ROUTES.filter((f) => {
       const name = path.basename(f, ".kt");
-      return !["MobileProbeRoutes", "TimezoneRoutes", "AppSettingsRoutes"].includes(name);
+      return ![
+        "AppleAppSiteAssociationRoutes",
+        "MobileProbeRoutes",
+        "TimezoneRoutes",
+        "AppSettingsRoutes",
+      ].includes(name);
     });
 
     it.each(dataRoutes.map((f) => [relPath(f), f]))(

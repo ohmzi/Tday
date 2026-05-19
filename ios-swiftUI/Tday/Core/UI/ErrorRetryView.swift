@@ -18,7 +18,7 @@ struct ErrorRetryView: View {
                 .font(.system(size: 30))
                 .foregroundStyle(colors.tertiary)
             Text(message)
-                .font(.body)
+                .font(.tdayRounded(.body, weight: .bold))
                 .foregroundStyle(colors.onSurface)
                 .multilineTextAlignment(.center)
             Button(retryTitle, action: onRetry)
