@@ -18,6 +18,7 @@ struct CalendarScreen: View {
     private let calendarAccentColor = Color(red: 125.0 / 255.0, green: 103.0 / 255.0, blue: 182.0 / 255.0)
 
     @State private var selectedDate = Date()
+    @State private var visibleMonth = CalendarScreen.monthStart(for: Date())
     @State private var scope: CalendarScope = .month
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
@@ -29,6 +30,12 @@ struct CalendarScreen: View {
 
     private var pendingItems: [TodoItem] {
         viewModel.items.filter { isSelectedDay($0.due) }.sorted(by: { $0.due < $1.due })
+    }
+
+    private var pendingItemsByDay: [Date: [TodoItem]] {
+        Dictionary(grouping: viewModel.items) { todo in
+            Calendar.current.startOfDay(for: todo.due)
+        }
     }
 
     private var selectedDateHeaderText: String {
@@ -55,8 +62,25 @@ struct CalendarScreen: View {
                 }
                 .pickerStyle(.segmented)
 
-                DatePicker("Selected date", selection: $selectedDate, displayedComponents: [.date])
-                    .datePickerStyle(.graphical)
+                CalendarMonthGrid(
+                    visibleMonth: visibleMonth,
+                    selectedDate: selectedDate,
+                    tasksByDay: pendingItemsByDay,
+                    accentColor: calendarAccentColor,
+                    onPreviousMonth: {
+                        visibleMonth = Calendar.current.date(byAdding: .month, value: -1, to: visibleMonth) ?? visibleMonth
+                    },
+                    onNextMonth: {
+                        visibleMonth = Calendar.current.date(byAdding: .month, value: 1, to: visibleMonth) ?? visibleMonth
+                    },
+                    onSelectDate: { date in
+                        selectedDate = date
+                        visibleMonth = Self.monthStart(for: date)
+                    }
+                )
+                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
 
             if let errorMessage = viewModel.errorMessage {
@@ -118,10 +142,10 @@ struct CalendarScreen: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .contentMargins(.top, 0, for: .scrollContent)
-        .listSectionSpacing(8)
+        .listSectionSpacing(0)
         .environment(\.defaultMinListRowHeight, 1)
         .disableVerticalScrollBounce()
         .background(colors.background)
@@ -182,7 +206,11 @@ struct CalendarScreen: View {
             onBack: { dismiss() },
             action: TimelineTopBarAction(
                 systemName: "calendar",
-                action: { selectedDate = Date() }
+                action: {
+                    let today = Date()
+                    selectedDate = today
+                    visibleMonth = Self.monthStart(for: today)
+                }
             ),
             titleRevealStart: CalendarTitleHandoff.pinnedRevealStart,
             titleRevealEnd: CalendarTitleHandoff.pinnedRevealEnd
@@ -207,6 +235,198 @@ struct CalendarScreen: View {
 
     private func isSelectedDay(_ date: Date) -> Bool {
         Calendar.current.isDate(date, inSameDayAs: selectedDate)
+    }
+
+    private static func monthStart(for date: Date) -> Date {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month], from: date)
+        return calendar.date(from: components) ?? calendar.startOfDay(for: date)
+    }
+}
+
+private struct CalendarMonthGrid: View {
+    let visibleMonth: Date
+    let selectedDate: Date
+    let tasksByDay: [Date: [TodoItem]]
+    let accentColor: Color
+    let onPreviousMonth: () -> Void
+    let onNextMonth: () -> Void
+    let onSelectDate: (Date) -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+
+    private var monthTitle: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: visibleMonth)
+    }
+
+    private var weekdaySymbols: [String] {
+        Calendar.current.veryShortStandaloneWeekdaySymbols.map { $0.uppercased() }
+    }
+
+    private var days: [CalendarMonthDay] {
+        Self.makeDays(for: visibleMonth)
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Button(action: onPreviousMonth) {
+                    Image(systemName: "chevron.left")
+                        .font(.tdayRounded(size: 20, weight: .heavy))
+                        .foregroundStyle(accentColor)
+                        .frame(width: 40, height: 36)
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+
+                Text(monthTitle)
+                    .font(.tdayRounded(size: 18, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+
+                Spacer(minLength: 0)
+
+                Button(action: onNextMonth) {
+                    Image(systemName: "chevron.right")
+                        .font(.tdayRounded(size: 20, weight: .heavy))
+                        .foregroundStyle(accentColor)
+                        .frame(width: 40, height: 36)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 6)
+
+            LazyVGrid(columns: columns, spacing: 11) {
+                ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                    Text(symbol)
+                        .font(.tdayRounded(size: 12, weight: .heavy))
+                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.48))
+                        .frame(height: 18)
+                }
+
+                ForEach(days) { day in
+                    let dayTasks = tasksByDay[Calendar.current.startOfDay(for: day.date)].orEmpty
+                    CalendarMonthDayCell(
+                        day: day,
+                        isSelected: Calendar.current.isDate(day.date, inSameDayAs: selectedDate),
+                        isToday: Calendar.current.isDateInToday(day.date),
+                        taskCount: dayTasks.count,
+                        accentColor: accentColor,
+                        onSelectDate: onSelectDate
+                    )
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 18)
+        .padding(.bottom, 20)
+        .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
+    }
+
+    private static func makeDays(for month: Date) -> [CalendarMonthDay] {
+        let calendar = Calendar.current
+        let monthStartComponents = calendar.dateComponents([.year, .month], from: month)
+        let monthStart = calendar.date(from: monthStartComponents) ?? month
+        let firstWeekday = calendar.component(.weekday, from: monthStart)
+        let leadingDays = (firstWeekday - calendar.firstWeekday + 7) % 7
+        let gridStart = calendar.date(byAdding: .day, value: -leadingDays, to: monthStart) ?? monthStart
+
+        return (0..<42).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: gridStart) else {
+                return nil
+            }
+            return CalendarMonthDay(
+                date: date,
+                isCurrentMonth: calendar.isDate(date, equalTo: monthStart, toGranularity: .month)
+            )
+        }
+    }
+}
+
+private struct CalendarMonthDayCell: View {
+    let day: CalendarMonthDay
+    let isSelected: Bool
+    let isToday: Bool
+    let taskCount: Int
+    let accentColor: Color
+    let onSelectDate: (Date) -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button {
+            onSelectDate(day.date)
+        } label: {
+            VStack(spacing: 3) {
+                Text(dayNumberText)
+                    .font(.tdayRounded(size: 18, weight: .bold))
+                    .foregroundStyle(dayTextColor)
+                    .frame(width: 32, height: 28)
+                    .background {
+                        if isSelected {
+                            Circle()
+                                .fill(accentColor)
+                        } else if isToday {
+                            Circle()
+                                .fill(accentColor.opacity(0.16))
+                        }
+                    }
+
+                HStack(spacing: 3) {
+                    if taskCount > 0 {
+                        Circle()
+                            .fill(accentColor)
+                            .frame(width: 4.2, height: 4.2)
+
+                        Text("\(taskCount)")
+                            .font(.tdayRounded(size: 10, weight: .heavy))
+                            .foregroundStyle(accentColor)
+                    }
+                }
+                .frame(height: 6)
+            }
+            .frame(height: 38)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!day.isCurrentMonth)
+        .opacity(day.isCurrentMonth ? 1 : 0.45)
+    }
+
+    private var dayNumberText: String {
+        String(Calendar.current.component(.day, from: day.date))
+    }
+
+    private var dayTextColor: Color {
+        if isSelected {
+            return .white
+        }
+        if !day.isCurrentMonth {
+            return colors.onSurfaceVariant.opacity(0.48)
+        }
+        if isToday {
+            return accentColor
+        }
+        return colors.onSurface
+    }
+}
+
+private struct CalendarMonthDay: Identifiable {
+    let date: Date
+    let isCurrentMonth: Bool
+
+    var id: Date { date }
+}
+
+private extension Optional where Wrapped == [TodoItem] {
+    var orEmpty: [TodoItem] {
+        self ?? []
     }
 }
 
@@ -285,7 +505,8 @@ private struct CalendarPendingTaskRow: View {
 
                 Spacer(minLength: 0)
             }
-            .frame(minHeight: 58)
+            .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
+            .contentShape(Rectangle())
         }
     }
 }
