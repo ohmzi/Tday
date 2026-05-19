@@ -4,6 +4,11 @@ import UIKit
 extension View {
     func navigationBackButtonBehavior() -> some View {
         background(NavigationBackButtonConfigurator())
+            .navigationInteractivePopGesture()
+    }
+
+    func navigationInteractivePopGesture() -> some View {
+        background(NavigationInteractivePopGestureConfigurator())
     }
 
     func navigationTitleTypography(
@@ -18,6 +23,83 @@ extension View {
                 backgroundColor: UIColor(backgroundColor)
             )
         )
+    }
+}
+
+private struct NavigationInteractivePopGestureConfigurator: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> Controller {
+        Controller()
+    }
+
+    func updateUIViewController(_ controller: Controller, context: Context) {
+        controller.scheduleGestureUpdate()
+    }
+
+    final class Controller: UIViewController, UIGestureRecognizerDelegate {
+        private weak var configuredNavigationController: UINavigationController?
+
+        override func loadView() {
+            let view = UIView(frame: .zero)
+            view.isHidden = true
+            view.isUserInteractionEnabled = false
+            self.view = view
+        }
+
+        override func didMove(toParent parent: UIViewController?) {
+            super.didMove(toParent: parent)
+            scheduleGestureUpdate()
+        }
+
+        override func viewWillAppear(_ animated: Bool) {
+            super.viewWillAppear(animated)
+            scheduleGestureUpdate()
+        }
+
+        func scheduleGestureUpdate() {
+            DispatchQueue.main.async { [weak self] in
+                self?.applyGestureState()
+            }
+        }
+
+        private func applyGestureState() {
+            guard let navigationController = nearestNavigationController else {
+                return
+            }
+
+            configuredNavigationController = navigationController
+            navigationController.interactivePopGestureRecognizer?.isEnabled = true
+            navigationController.interactivePopGestureRecognizer?.delegate = self
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard
+                gestureRecognizer === configuredNavigationController?.interactivePopGestureRecognizer,
+                let navigationController = configuredNavigationController
+            else {
+                return true
+            }
+
+            return navigationController.viewControllers.count > 1 &&
+                navigationController.transitionCoordinator == nil
+        }
+
+        private var nearestNavigationController: UINavigationController? {
+            var current = parent
+
+            while let viewController = current {
+                if let navigationController = viewController as? UINavigationController {
+                    return navigationController
+                }
+
+                if let navigationController = viewController.navigationController {
+                    return navigationController
+                }
+
+                current = viewController.parent
+            }
+
+            return nil
+        }
     }
 }
 

@@ -63,11 +63,18 @@ struct TimelineRowDivider: View {
 struct TimelineTopBarAction {
     let systemName: String
     let tint: Color?
+    let usesCircularChrome: Bool
     let action: () -> Void
 
-    init(systemName: String, tint: Color? = nil, action: @escaping () -> Void) {
+    init(
+        systemName: String,
+        tint: Color? = nil,
+        usesCircularChrome: Bool = false,
+        action: @escaping () -> Void
+    ) {
         self.systemName = systemName
         self.tint = tint
+        self.usesCircularChrome = usesCircularChrome
         self.action = action
     }
 }
@@ -102,7 +109,11 @@ struct TodoListScreen: View {
     }
 
     private var isMinimalTimelineMode: Bool {
-        viewModel.mode == .overdue || viewModel.mode == .scheduled || viewModel.mode == .priority || viewModel.mode == .all
+        viewModel.mode == .overdue ||
+            viewModel.mode == .scheduled ||
+            viewModel.mode == .priority ||
+            viewModel.mode == .all ||
+            viewModel.mode == .list
     }
 
     private var usesHeroTimelineMode: Bool {
@@ -138,7 +149,8 @@ struct TodoListScreen: View {
         }
         if viewModel.mode == .list {
             return TimelineTopBarAction(
-                systemName: "slider.horizontal.3",
+                systemName: "ellipsis",
+                usesCircularChrome: true,
                 action: { showingListSettings = true }
             )
         }
@@ -774,11 +786,13 @@ struct TodoListScreen: View {
         let isExpandedPriorityEarlier = viewModel.mode == .priority && section.id == "earlier"
         let isExpandedAllTasksEarlier = viewModel.mode == .all && section.id == "earlier"
         let isScheduledFirstSection = viewModel.mode == .scheduled
+        let isListFirstSection = viewModel.mode == .list
         return isOverdueFirstSection ||
             isTodayFirstSection ||
             isExpandedPriorityEarlier ||
             isExpandedAllTasksEarlier ||
-            isScheduledFirstSection
+            isScheduledFirstSection ||
+            isListFirstSection
     }
 
     private func firstPinnedRowElasticClearance() -> CGFloat {
@@ -814,6 +828,11 @@ struct TodoListScreen: View {
             }
             return "Due \(dueBodyText)"
         case .priority:
+            if !todo.completed && todo.due < Date() {
+                return "Overdue, \(dueBodyText)"
+            }
+            return "Due \(dueBodyText)"
+        case .list:
             if !todo.completed && todo.due < Date() {
                 return "Overdue, \(dueBodyText)"
             }
@@ -885,7 +904,12 @@ struct TimelineTopBar: View {
                 TimelineTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
                 Spacer(minLength: 0)
                 if let action {
-                    TimelineTopBarButton(systemName: action.systemName, chrome: .plain, tint: action.tint, action: action.action)
+                    TimelineTopBarButton(
+                        systemName: action.systemName,
+                        chrome: action.usesCircularChrome ? .outlined : .plain,
+                        tint: action.tint,
+                        action: action.action
+                    )
                 } else {
                     Color.clear
                         .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
@@ -970,6 +994,7 @@ private struct TimelineTopBarButton: View {
     enum Chrome {
         case plain
         case filled
+        case outlined
     }
 
     let systemName: String
@@ -995,12 +1020,19 @@ private struct TimelineTopBarButton: View {
                     if chrome == .filled {
                         Circle()
                             .fill(colors.surface)
+                    } else if chrome == .outlined {
+                        Circle()
+                            .fill(colors.background)
+                            .overlay {
+                                Circle()
+                                    .stroke(colors.onSurfaceVariant.opacity(0.28), lineWidth: 1)
+                            }
                     }
                 }
                 .contentShape(Circle())
         }
         .buttonStyle(TimelineTopBarButtonStyle(isFilled: chrome == .filled))
-        .foregroundStyle(chrome == .filled ? colors.onSurface : (tint ?? Color.accentColor))
+        .foregroundStyle(chrome == .filled || chrome == .outlined ? colors.onSurface : (tint ?? Color.accentColor))
     }
 }
 
@@ -1378,24 +1410,8 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
                 targetDate: date
             )
         }
-    case .all, .priority:
+    case .all, .priority, .list:
         return buildFutureTimelineSections(items: items, calendar: calendar)
-    case .list:
-        let grouped = Dictionary(grouping: items) { item -> String in
-            if item.due < calendar.startOfDay(for: Date()) {
-                return "Earlier"
-            }
-            return item.due.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
-        }
-        return grouped.keys.sorted().map { key in
-            TodoTimelineSection(
-                id: key,
-                title: key,
-                items: grouped[key]?.sorted(by: todoTimelineSortPrecedes) ?? [],
-                isCollapsible: key == "Earlier",
-                targetDate: nil
-            )
-        }
     }
 }
 
