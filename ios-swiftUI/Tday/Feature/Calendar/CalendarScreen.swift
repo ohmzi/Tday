@@ -107,6 +107,7 @@ struct CalendarScreen: View {
                             }
                             .tint(colors.secondary)
                         }
+                        TimelineRowDivider()
                     }
                 }
             } header: {
@@ -121,6 +122,7 @@ struct CalendarScreen: View {
         .scrollContentBackground(.hidden)
         .contentMargins(.top, 0, for: .scrollContent)
         .listSectionSpacing(8)
+        .environment(\.defaultMinListRowHeight, 1)
         .disableVerticalScrollBounce()
         .background(colors.background)
         .navigationBackButtonBehavior()
@@ -284,11 +286,6 @@ private struct CalendarPendingTaskRow: View {
                 Spacer(minLength: 0)
             }
             .frame(minHeight: 58)
-
-            Rectangle()
-                .fill(colors.onSurfaceVariant.opacity(0.18))
-                .frame(height: 1)
-                .padding(.trailing, -TodoTimelineMetrics.swipeDividerExtension)
         }
     }
 }
