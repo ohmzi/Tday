@@ -1485,6 +1485,7 @@ private fun CalendarTodoRow(
                     }
                     if (showListIndicator || showPriorityFlag) {
                         Row(
+                            modifier = Modifier.padding(end = 24.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -1612,6 +1613,7 @@ private fun CalendarCompletedTodoRow(
                 }
                 if (showPriorityFlag) {
                     Row(
+                        modifier = Modifier.padding(end = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -1635,7 +1637,9 @@ private fun CalendarCompletedTodoRow(
                         imageVector = listIconForKey(listMeta?.iconKey),
                         contentDescription = stringResource(R.string.label_task_list),
                         tint = listIndicatorColor,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier
+                            .padding(end = 24.dp)
+                            .size(18.dp),
                     )
                 }
             }

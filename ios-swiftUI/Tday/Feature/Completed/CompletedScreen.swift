@@ -228,6 +228,7 @@ struct CompletedScreen: View {
                                 .foregroundStyle(priorityColor(item.priority))
                         }
                     }
+                    .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
                 }
             }
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
