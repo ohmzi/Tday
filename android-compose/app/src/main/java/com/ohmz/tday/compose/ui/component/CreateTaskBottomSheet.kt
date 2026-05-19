@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -39,8 +40,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -700,23 +699,29 @@ private fun SheetRow(
             modifier = Modifier.weight(1f),
         )
 
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+        Row(
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .weight(1f, fill = false)
                 .padding(start = 8.dp),
-        )
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
 
-        Icon(
-            imageVector = Icons.Rounded.ExpandMore,
-            contentDescription = null,
-            tint = colorScheme.onSurfaceVariant,
-        )
+            Spacer(modifier = Modifier.width(2.dp))
+
+            Icon(
+                imageVector = Icons.Rounded.ExpandMore,
+                contentDescription = null,
+                tint = colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -731,58 +736,139 @@ private fun <T> SheetDropdownRow(
     isSelected: (T) -> Boolean,
     onOptionSelected: (T) -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    var expanded by remember { mutableStateOf(false) }
+    var selectorOpen by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxWidth()) {
         SheetRow(
             icon = icon,
             title = title,
             value = value,
-            onClick = { expanded = true },
+            onClick = { selectorOpen = true },
         )
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(colorScheme.surface),
+        if (selectorOpen) {
+            CenteredSelectorDialog(
+                title = title,
+                options = options,
+                optionLabel = optionLabel,
+                optionSwatchColor = optionSwatchColor,
+                isSelected = isSelected,
+                onDismiss = { selectorOpen = false },
+                onOptionSelected = { option ->
+                    onOptionSelected(option)
+                    selectorOpen = false
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun <T> CenteredSelectorDialog(
+    title: String,
+    options: List<T>,
+    optionLabel: (T) -> String,
+    optionSwatchColor: (T) -> Color,
+    isSelected: (T) -> Boolean,
+    onDismiss: () -> Unit,
+    onOptionSelected: (T) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = colorScheme.background.luminance() < 0.5f
+    val containerColor = if (isDark) {
+        lerp(colorScheme.surface, colorScheme.surfaceVariant, 0.18f)
+    } else {
+        colorScheme.surface
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.74f)
+                .heightIn(max = 380.dp),
+            shape = RoundedCornerShape(32.dp),
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
         ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = optionLabel(option),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = colorScheme.onSurface,
-                            fontWeight = FontWeight.ExtraBold,
-                        )
-                    },
-                    onClick = {
-                        onOptionSelected(option)
-                        expanded = false
-                    },
-                    leadingIcon = {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .background(
-                                    color = optionSwatchColor(option),
-                                    shape = RoundedCornerShape(999.dp),
-                                ),
-                        )
-                    },
-                    trailingIcon = {
-                        if (isSelected(option)) {
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = colorScheme.primary,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    },
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 10.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
                 )
+
+                options.forEachIndexed { index, option ->
+                    if (index > 0) {
+                        RowDivider()
+                    }
+                    CenteredSelectorRow(
+                        title = optionLabel(option),
+                        swatchColor = optionSwatchColor(option),
+                        selected = isSelected(option),
+                        onClick = { onOptionSelected(option) },
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun CenteredSelectorRow(
+    title: String,
+    swatchColor: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .background(
+                    color = swatchColor,
+                    shape = RoundedCornerShape(999.dp),
+                ),
+        )
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = colorScheme.onSurface,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+
+        if (selected) {
+            Icon(
+                imageVector = Icons.Rounded.Check,
+                contentDescription = null,
+                tint = colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+        } else {
+            Spacer(modifier = Modifier.size(20.dp))
         }
     }
 }
