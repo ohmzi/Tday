@@ -337,34 +337,33 @@ private struct CreateTaskSheetDueRow: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 14) {
-                leadingContent
+        HStack(spacing: 12) {
+            leadingContent
 
-                Spacer(minLength: 8)
+            Spacer(minLength: 6)
 
-                HStack(spacing: 8) {
-                    CreateTaskSheetDatePickerChip(dueDate: $dueDate, components: .date, width: 130)
-                    CreateTaskSheetDatePickerChip(dueDate: $dueDate, components: .hourAndMinute, width: 90)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                leadingContent
-
-                HStack(spacing: 8) {
-                    CreateTaskSheetDatePickerChip(dueDate: $dueDate, components: .date, width: 130)
-                    CreateTaskSheetDatePickerChip(dueDate: $dueDate, components: .hourAndMinute, width: 90)
-                }
-                .padding(.leading, 36)
+            HStack(spacing: 6) {
+                CreateTaskSheetDatePickerChip(
+                    dueDate: $dueDate,
+                    components: .date,
+                    text: dueDate.formatted(.dateTime.month(.abbreviated).day().year()),
+                    width: 126
+                )
+                CreateTaskSheetDatePickerChip(
+                    dueDate: $dueDate,
+                    components: .hourAndMinute,
+                    text: dueDate.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute()),
+                    width: 86
+                )
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        .frame(minHeight: 72)
     }
 
     private var leadingContent: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 10) {
             Image(systemName: "calendar")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(colors.onSurfaceVariant)
@@ -380,18 +379,30 @@ private struct CreateTaskSheetDueRow: View {
 private struct CreateTaskSheetDatePickerChip: View {
     @Binding var dueDate: Date
     let components: DatePickerComponents
+    let text: String
     let width: CGFloat
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        DatePicker("", selection: $dueDate, displayedComponents: components)
-            .labelsHidden()
-            .datePickerStyle(.compact)
-            .tint(colors.onSurfaceVariant)
-            .font(.tdayRounded(size: 13, weight: .heavy))
-            .frame(width: width, height: 38)
-            .background(colors.surfaceVariant.opacity(0.66), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        ZStack {
+            Text(text)
+                .font(.tdayRounded(size: 15, weight: .bold))
+                .foregroundStyle(colors.onSurface)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .frame(width: width, height: 38)
+                .background(colors.surfaceVariant.opacity(0.66), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            DatePicker("", selection: $dueDate, displayedComponents: components)
+                .labelsHidden()
+                .datePickerStyle(.compact)
+                .tint(colors.onSurfaceVariant)
+                .frame(width: width, height: 38)
+                .opacity(0.02)
+        }
+        .frame(width: width, height: 38)
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -419,16 +430,19 @@ private struct CreateTaskSheetMenuRow<MenuContent: View>: View {
 
                 Spacer(minLength: 8)
 
-                Text(value)
-                    .font(.tdayRounded(size: 14, weight: .heavy))
-                    .foregroundStyle(colors.onSurfaceVariant)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
+                HStack(spacing: 4) {
+                    Text(value)
+                        .font(.tdayRounded(size: 14, weight: .heavy))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
 
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 12, weight: .heavy))
-                    .foregroundStyle(colors.onSurfaceVariant.opacity(0.72))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.72))
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .contentShape(Rectangle())
@@ -449,11 +463,20 @@ private struct CreateTaskSheetMenuItemLabel: View {
                 .frame(width: 10, height: 10)
 
             Text(title)
+                .lineLimit(1)
+
+            Spacer(minLength: 24)
 
             if selected {
                 Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.blue)
+            } else {
+                Color.clear
+                    .frame(width: 14, height: 14)
             }
         }
+        .frame(minWidth: 164, alignment: .leading)
     }
 }
 
