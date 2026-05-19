@@ -55,9 +55,16 @@ private struct NavigationInteractivePopGestureConfigurator: UIViewControllerRepr
             scheduleGestureUpdate()
         }
 
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            scheduleGestureUpdate()
+        }
+
         func scheduleGestureUpdate() {
-            DispatchQueue.main.async { [weak self] in
-                self?.applyGestureState()
+            [0.0, 0.05, 0.20].forEach { delay in
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                    self?.applyGestureState()
+                }
             }
         }
 
@@ -69,6 +76,7 @@ private struct NavigationInteractivePopGestureConfigurator: UIViewControllerRepr
             configuredNavigationController = navigationController
             navigationController.interactivePopGestureRecognizer?.isEnabled = true
             navigationController.interactivePopGestureRecognizer?.delegate = self
+            navigationController.interactivePopGestureRecognizer?.cancelsTouchesInView = true
         }
 
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -81,6 +89,13 @@ private struct NavigationInteractivePopGestureConfigurator: UIViewControllerRepr
 
             return navigationController.viewControllers.count > 1 &&
                 navigationController.transitionCoordinator == nil
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            gestureRecognizer === configuredNavigationController?.interactivePopGestureRecognizer
         }
 
         private var nearestNavigationController: UINavigationController? {
@@ -98,8 +113,32 @@ private struct NavigationInteractivePopGestureConfigurator: UIViewControllerRepr
                 current = viewController.parent
             }
 
-            return nil
+            return view.window?.rootViewController?.nearestNavigationControllerInHierarchy()
         }
+    }
+}
+
+private extension UIViewController {
+    func nearestNavigationControllerInHierarchy() -> UINavigationController? {
+        if let navigationController = self as? UINavigationController {
+            return navigationController
+        }
+
+        if let navigationController {
+            return navigationController
+        }
+
+        for child in children {
+            if let navigationController = child.nearestNavigationControllerInHierarchy() {
+                return navigationController
+            }
+        }
+
+        if let presentedViewController {
+            return presentedViewController.nearestNavigationControllerInHierarchy()
+        }
+
+        return nil
     }
 }
 
