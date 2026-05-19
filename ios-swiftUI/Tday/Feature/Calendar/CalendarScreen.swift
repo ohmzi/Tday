@@ -13,6 +13,9 @@ private enum CalendarModeControlMetrics {
 
 private enum CalendarPeriodCardMetrics {
     static let contentSpacing: CGFloat = 14
+    static let horizontalPadding: CGFloat = 16
+    static let headerHeight: CGFloat = 36
+    static let headerHorizontalPadding: CGFloat = 6
     static let pageHeight: CGFloat = 78
     static let topPadding: CGFloat = 16
     static let bottomPadding: CGFloat = 18
@@ -222,7 +225,7 @@ struct CalendarScreen: View {
         .sheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
                 lists: viewModel.lists,
-                titleText: "Create Task",
+                titleText: "New task",
                 submitText: "Create",
                 initialPayload: CreateTaskPayload(title: "", description: nil, priority: "Low", due: selectedDate, rrule: nil, listId: nil),
                 onParseTaskTitleNlp: { title, dueRef in
@@ -237,7 +240,7 @@ struct CalendarScreen: View {
         .sheet(item: $editingTodo) { todo in
             CreateTaskSheet(
                 lists: viewModel.lists,
-                titleText: "Edit Task",
+                titleText: "Edit task",
                 submitText: "Save",
                 initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
                 onParseTaskTitleNlp: { title, dueRef in
@@ -527,7 +530,8 @@ private struct CalendarMonthGrid: View {
                 .buttonStyle(.plain)
                 .disabled(!isNextEnabled)
             }
-            .padding(.horizontal, 6)
+            .frame(height: CalendarPeriodCardMetrics.headerHeight)
+            .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
 
             VStack(spacing: 11) {
                 HStack(spacing: 0) {
@@ -552,7 +556,7 @@ private struct CalendarMonthGrid: View {
                 .frame(height: 283)
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
         .padding(.top, 18)
         .padding(.bottom, 20)
         .frame(maxWidth: .infinity)
@@ -733,7 +737,8 @@ private struct CalendarWeekCard: View {
                     action: goToNextPage
                 )
             }
-            .padding(.horizontal, 6)
+            .frame(height: CalendarPeriodCardMetrics.headerHeight)
+            .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
 
             CalendarPagingScrollView(
                 pages: weekPages(
@@ -746,7 +751,7 @@ private struct CalendarWeekCard: View {
             )
             .frame(height: CalendarPeriodCardMetrics.pageHeight)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
         .padding(.top, CalendarPeriodCardMetrics.topPadding)
         .padding(.bottom, CalendarPeriodCardMetrics.bottomPadding)
         .frame(maxWidth: .infinity)
@@ -996,6 +1001,8 @@ private struct CalendarDayCard: View {
                     action: goToNextPage
                 )
             }
+            .frame(height: CalendarPeriodCardMetrics.headerHeight)
+            .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
 
             CalendarPagingScrollView(
                 pages: dayPages(
@@ -1008,7 +1015,7 @@ private struct CalendarDayCard: View {
             )
             .frame(height: CalendarPeriodCardMetrics.pageHeight)
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
         .padding(.top, CalendarPeriodCardMetrics.topPadding)
         .padding(.bottom, CalendarPeriodCardMetrics.bottomPadding)
         .frame(maxWidth: .infinity, alignment: .leading)

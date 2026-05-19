@@ -253,7 +253,7 @@ struct HomeScreen: View {
         .sheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
                 lists: viewModel.summary.lists,
-                titleText: "Create Task",
+                titleText: "New task",
                 submitText: "Create",
                 initialPayload: nil,
                 onParseTaskTitleNlp: { title, dueRef in
@@ -1138,7 +1138,7 @@ private struct CreateListSheetHeader: View {
         HStack {
             CreateListSheetActionButton(
                 icon: "xmark",
-                accentColor: Color(hex: 0xE79A9A),
+                accentColor: Color(hex: 0xE35A5A),
                 enabled: true,
                 action: onClose
             )
@@ -1153,7 +1153,7 @@ private struct CreateListSheetHeader: View {
 
             CreateListSheetActionButton(
                 icon: "checkmark",
-                accentColor: Color(hex: 0xA6D4B3),
+                accentColor: Color(hex: 0x2FA35B),
                 enabled: canCreate,
                 action: onConfirm
             )
@@ -1173,16 +1173,22 @@ private struct CreateListSheetActionButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.4))
+                .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
                 .frame(width: 56, height: 56)
                 .background(colors.surfaceVariant)
                 .clipShape(Circle())
                 .overlay(
                     Circle()
-                        .stroke(accentColor.opacity(enabled ? 0.8 : 0.42), lineWidth: 1.5)
+                        .stroke(accentColor.opacity(enabled ? 0.55 : 0.3), lineWidth: 1.5)
                 )
         }
-        .buttonStyle(TdayPressButtonStyle())
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: enabled ? 0.16 : 0.06
+            )
+        )
         .disabled(!enabled)
     }
 }

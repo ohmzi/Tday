@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -117,11 +116,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.unit.sp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
@@ -142,6 +143,25 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val CalendarAccentPurple = Color(0xFF7D67B6)
+private val CalendarCardCornerRadius = 24.dp
+private val CalendarCardHeaderHeight = 36.dp
+private val CalendarCardHeaderHorizontalPadding = 6.dp
+private val CalendarCardNavButtonWidth = 40.dp
+private val CalendarCardNavButtonHeight = 36.dp
+private val CalendarMonthCardHorizontalPadding = 16.dp
+private val CalendarMonthCardTopPadding = 18.dp
+private val CalendarMonthCardBottomPadding = 20.dp
+private val CalendarMonthCardOuterSpacing = 16.dp
+private val CalendarMonthGridSpacing = 11.dp
+private val CalendarMonthWeekdayHeight = 18.dp
+private val CalendarMonthGridHeight = 283.dp
+private val CalendarMonthDayCellHeight = 38.dp
+private val CalendarMonthDayNumberWidth = 32.dp
+private val CalendarMonthDayNumberHeight = 28.dp
+private val CalendarMonthHeaderTitleSize = 18.sp
+private val CalendarPeriodHeaderTitleSize = 21.sp
+private val CalendarDaySummaryTitleSize = 25.sp
+private val CalendarDaySummaryCountSize = 18.sp
 private val CalendarPeriodCardPageHeight = 78.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
 
@@ -758,20 +778,26 @@ private fun CalendarWeekCard(
                     },
                 )
             },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 14.dp, top = 16.dp, end = 14.dp, bottom = 18.dp),
+                .padding(
+                    start = CalendarMonthCardHorizontalPadding,
+                    top = 16.dp,
+                    end = CalendarMonthCardHorizontalPadding,
+                    bottom = CalendarPeriodCardBottomPadding,
+                ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(36.dp),
+                    .height(CalendarCardHeaderHeight)
+                    .padding(horizontal = CalendarCardHeaderHorizontalPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
@@ -786,7 +812,9 @@ private fun CalendarWeekCard(
                 ) {
                     Text(
                         text = formatWeekRange(weekStart),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = CalendarPeriodHeaderTitleSize,
+                        ),
                         fontWeight = FontWeight.ExtraBold,
                         color = colorScheme.onSurface,
                     )
@@ -966,7 +994,7 @@ private fun CalendarDayCard(
                     },
                 )
             },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
@@ -974,17 +1002,18 @@ private fun CalendarDayCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = 18.dp,
+                    start = CalendarMonthCardHorizontalPadding,
                     top = 16.dp,
-                    end = 18.dp,
-                    bottom = CalendarPeriodCardBottomPadding
+                    end = CalendarMonthCardHorizontalPadding,
+                    bottom = CalendarPeriodCardBottomPadding,
                 ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(36.dp),
+                    .height(CalendarCardHeaderHeight)
+                    .padding(horizontal = CalendarCardHeaderHorizontalPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
@@ -999,7 +1028,9 @@ private fun CalendarDayCard(
                 ) {
                     Text(
                         text = selectedDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault()),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = CalendarPeriodHeaderTitleSize,
+                        ),
                         color = colorScheme.onSurface,
                         fontWeight = FontWeight.ExtraBold,
                     )
@@ -1042,7 +1073,9 @@ private fun CalendarDayCard(
                 ) {
                     Text(
                         text = displayDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = CalendarDaySummaryTitleSize,
+                        ),
                         color = if (displayDate == today) CalendarAccentPurple else colorScheme.onSurface,
                         fontWeight = FontWeight.ExtraBold,
                     )
@@ -1052,7 +1085,9 @@ private fun CalendarDayCard(
                         } else {
                             stringResource(R.string.calendar_task_count_many, taskCount)
                         },
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = CalendarDaySummaryCountSize,
+                        ),
                         color = colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.ExtraBold,
                     )
@@ -1294,24 +1329,33 @@ private fun CalendarMonthCard(
                     },
                 )
             },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(
+                    start = CalendarMonthCardHorizontalPadding,
+                    top = CalendarMonthCardTopPadding,
+                    end = CalendarMonthCardHorizontalPadding,
+                    bottom = CalendarMonthCardBottomPadding,
+                ),
+            verticalArrangement = Arrangement.spacedBy(CalendarMonthCardOuterSpacing),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(CalendarCardHeaderHeight)
+                    .padding(horizontal = CalendarCardHeaderHorizontalPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.calendar_prev_month),
                     enabled = canGoPrevMonth,
+                    iconTint = CalendarAccentPurple,
                     onClick = onPrevMonth,
                 )
                 Box(
@@ -1321,7 +1365,9 @@ private fun CalendarMonthCard(
                     Text(
                         text = visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) +
                             " " + visibleMonth.year,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = CalendarMonthHeaderTitleSize,
+                        ),
                         fontWeight = FontWeight.ExtraBold,
                         color = colorScheme.onSurface,
                     )
@@ -1329,17 +1375,24 @@ private fun CalendarMonthCard(
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronRight,
                     contentDescription = stringResource(R.string.calendar_next_month),
+                    iconTint = CalendarAccentPurple,
                     onClick = onNextMonth,
                 )
             }
 
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(CalendarMonthWeekdayHeight),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 WEEKDAY_HEADERS.forEach { dayLabel ->
                     Text(
                         text = dayLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.64f),
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.48f),
                         fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -1349,6 +1402,7 @@ private fun CalendarMonthCard(
                 targetState = visibleMonth,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(CalendarMonthGridHeight)
                     .graphicsLayer { translationX = dragTranslationX },
                 transitionSpec = {
                     val movingToFuture = targetState > initialState
@@ -1371,12 +1425,12 @@ private fun CalendarMonthCard(
                 val monthDays = remember(displayMonth) { buildMonthCells(displayMonth) }
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(CalendarMonthGridSpacing),
                 ) {
                     monthDays.chunked(7).forEach { week ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(0.dp),
                         ) {
                             week.forEach { cell ->
                                 val taskCount = tasksByDate[cell.date]?.size ?: 0
@@ -1404,14 +1458,17 @@ private fun MiniCalendarNavButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
     enabled: Boolean = true,
+    iconTint: Color? = null,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val enabledIconTint = iconTint ?: colorScheme.onSurfaceVariant
     Box(
         modifier = Modifier
-            .size(34.dp)
+            .width(CalendarCardNavButtonWidth)
+            .height(CalendarCardNavButtonHeight)
             .clip(RoundedCornerShape(12.dp))
             .background(
                 color = if (enabled && isPressed) {
@@ -1425,7 +1482,7 @@ private fun MiniCalendarNavButton(
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 17.dp,
+                    radius = 20.dp,
                 ),
                 onClick = onClick,
             ),
@@ -1435,7 +1492,7 @@ private fun MiniCalendarNavButton(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = if (enabled) {
-                colorScheme.onSurfaceVariant
+                enabledIconTint
             } else {
                 colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
             },
@@ -1454,70 +1511,64 @@ private fun CalendarDayCell(
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val containerColor = when {
-        isSelected -> CalendarAccentPurple.copy(alpha = 0.2f)
-        isToday -> CalendarAccentPurple.copy(alpha = 0.12f)
+    val numberBackground = when {
+        isSelected -> CalendarAccentPurple
+        isToday -> CalendarAccentPurple.copy(alpha = 0.16f)
         else -> Color.Transparent
     }
-    val borderColor = when {
-        isSelected -> CalendarAccentPurple.copy(alpha = 0.8f)
-        isToday -> CalendarAccentPurple.copy(alpha = 0.5f)
-        else -> Color.Transparent
-    }
-    val cellShape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
     val dayTextColor = when {
-        isSelected || isToday -> CalendarAccentPurple
+        isSelected -> Color.White
+        isToday -> CalendarAccentPurple
         cell.isCurrentMonth -> colorScheme.onSurface
         else -> colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     }
     val interactionSource = remember { MutableInteractionSource() }
 
-    Box(
+    Column(
         modifier = modifier
-            .minimumInteractiveComponentSize()
-            .aspectRatio(1f)
-            .clip(cellShape)
-            .background(
-                color = containerColor,
-                shape = cellShape,
-            )
-            .border(
-                width = if (borderColor == Color.Transparent) 0.dp else 1.2.dp,
-                color = borderColor,
-                shape = cellShape,
-            )
+            .fillMaxWidth()
+            .height(CalendarMonthDayCellHeight)
+            .graphicsLayer { alpha = if (cell.isCurrentMonth) 1f else 0.45f }
+            .clip(RoundedCornerShape(12.dp))
             .clickable(
+                enabled = cell.isCurrentMonth,
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 28.dp,
+                    radius = 20.dp,
                 ),
                 onClick = onClick,
             ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        Text(
-            text = cell.date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.labelLarge,
-            color = dayTextColor,
-            fontWeight = FontWeight.ExtraBold,
+        Box(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 8.dp, top = 6.dp),
-        )
+                .width(CalendarMonthDayNumberWidth)
+                .height(CalendarMonthDayNumberHeight)
+                .background(numberBackground, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = cell.date.dayOfMonth.toString(),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 18.sp),
+                color = dayTextColor,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+            )
+        }
 
-        if (taskCount > 0 && cell.isCurrentMonth) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
+        Row(
+            modifier = Modifier.height(7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            if (taskCount > 0 && cell.isCurrentMonth) {
                 Icon(
                     imageVector = Icons.Rounded.FiberManualRecord,
                     contentDescription = null,
                     tint = CalendarAccentPurple,
-                    modifier = Modifier.size(7.dp),
+                    modifier = Modifier.size(4.dp),
                 )
                 Text(
                     text = if (taskCount > 9) {
@@ -1525,7 +1576,7 @@ private fun CalendarDayCell(
                     } else {
                         taskCount.toString()
                     },
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     color = CalendarAccentPurple,
                     fontWeight = FontWeight.ExtraBold,
                 )
