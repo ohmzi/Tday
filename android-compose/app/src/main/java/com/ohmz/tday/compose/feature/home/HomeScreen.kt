@@ -150,6 +150,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -172,6 +173,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -704,7 +706,7 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun CreateListBottomSheet(
     listName: String,
@@ -719,6 +721,9 @@ private fun CreateListBottomSheet(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+    var nameFieldFocused by remember { mutableStateOf(false) }
+    val imeVisible = WindowInsets.isImeVisible
+    val useTypingHeight = nameFieldFocused && imeVisible
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = listColorAccent(listColor)
@@ -754,11 +759,12 @@ private fun CreateListBottomSheet(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.8f),
+                .then(if (useTypingHeight) Modifier.fillMaxHeight(0.8f) else Modifier),
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .then(if (useTypingHeight) Modifier.fillMaxSize() else Modifier)
                     .navigationBarsPadding()
                     .padding(horizontal = 18.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -805,10 +811,12 @@ private fun CreateListBottomSheet(
                             textStyle = MaterialTheme.typography.headlineSmall.copy(
                                 color = selectedAccent,
                                 fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center,
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .focusRequester(focusRequester),
+                                .focusRequester(focusRequester)
+                                .onFocusChanged { nameFieldFocused = it.isFocused },
                             decorationBox = { innerTextField ->
                                 Box(
                                     modifier = Modifier
