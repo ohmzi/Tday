@@ -243,6 +243,7 @@ struct CompletedScreen: View {
         .animation(.easeInOut(duration: 0.22), value: restorePhase)
         .allowsHitTesting(!isRestoring)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
+        .swipeRevealHintOnTap(enabled: !isRestoring)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
                 restoreCompletedItem(item)

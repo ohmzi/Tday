@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.view.View
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -2159,8 +2160,10 @@ private fun SwipeTaskRow(
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val actionRevealPx = with(density) { 176.dp.toPx() }
+    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
     val maxElasticDragPx = actionRevealPx * 1.14f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
+    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
     var localCompleted by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
@@ -2168,7 +2171,7 @@ private fun SwipeTaskRow(
     val visuallyCompleted = localCompleted || (keepCompletedInline && todo.completed)
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
-        animationSpec = spring(),
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "swipeTaskOffset",
     )
     val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
@@ -2358,7 +2361,18 @@ private fun SwipeTaskRow(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
-                            if (targetOffsetX != 0f) targetOffsetX = 0f
+                            if (targetOffsetX != 0f) {
+                                targetOffsetX = 0f
+                            } else if (!swipeHinting && !pendingCompletion && !dragging) {
+                                swipeHinting = true
+                                coroutineScope.launch {
+                                    targetOffsetX = -swipeHintOffsetPx
+                                    delay(150)
+                                    targetOffsetX = 0f
+                                    delay(360)
+                                    swipeHinting = false
+                                }
+                            }
                         },
                     shape = rowShape,
                     colors = CardDefaults.cardColors(containerColor = foregroundColor),

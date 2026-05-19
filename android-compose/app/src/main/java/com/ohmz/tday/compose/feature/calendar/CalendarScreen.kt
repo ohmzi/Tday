@@ -3,8 +3,10 @@ package com.ohmz.tday.compose.feature.calendar
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -1328,11 +1330,13 @@ private fun CalendarTodoRow(
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val actionRevealPx = with(density) { 130.dp.toPx() }
+    val swipeHintOffsetPx = with(density) { 36.dp.toPx() }.coerceAtMost(actionRevealPx * 0.28f)
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
+    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
-        animationSpec = tween(durationMillis = 150),
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "calendarTaskSwipeOffset",
     )
     val showCompletedState = pendingCompletion
@@ -1417,7 +1421,18 @@ private fun CalendarTodoRow(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) {
-                        if (targetOffsetX != 0f) targetOffsetX = 0f
+                        if (targetOffsetX != 0f) {
+                            targetOffsetX = 0f
+                        } else if (!swipeHinting && !pendingCompletion) {
+                            swipeHinting = true
+                            coroutineScope.launch {
+                                targetOffsetX = -swipeHintOffsetPx
+                                delay(150)
+                                targetOffsetX = 0f
+                                delay(360)
+                                swipeHinting = false
+                            }
+                        }
                     },
                 shape = rowShape,
                 colors = CardDefaults.cardColors(containerColor = foregroundColor),
