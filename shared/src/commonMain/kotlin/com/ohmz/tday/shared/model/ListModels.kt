@@ -33,6 +33,18 @@ data class CreateListResponse(
 )
 
 @Serializable
+data class ListDetailResponse(
+    val list: ListDto,
+    val todos: List<ListTodoDto> = emptyList(),
+)
+
+@Serializable
+data class DeleteListResponse(
+    val message: String? = null,
+    val deletedIds: List<String> = emptyList(),
+)
+
+@Serializable
 data class UpdateListRequest(
     val id: String,
     val name: String? = null,
@@ -42,7 +54,8 @@ data class UpdateListRequest(
 
 @Serializable
 data class DeleteListRequest(
-    val id: String,
+    val id: String? = null,
+    val ids: List<String> = emptyList(),
 )
 
 @Serializable

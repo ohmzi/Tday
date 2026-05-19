@@ -7,6 +7,7 @@ Native SwiftUI client that mirrors the existing Android Compose app against the 
 ```text
 ios/
   Package.swift
+  TdayApp.xcodeproj
   Tday/
     TdayApp.swift
     Info.plist
@@ -29,6 +30,5 @@ ios/
 
 - Targets iOS 17+.
 - Uses `URLSession`, `SwiftData`, `Observation`, `CryptoKit`, and `UserNotifications`.
-- This workspace is not running on macOS/Xcode, so `xcodebuild` and project generation are not available here.
-- A Swift Package manifest is included at `ios/Package.swift` so the source tree can be opened directly in Xcode on macOS.
-- No validated `.xcodeproj` metadata is included from this Linux environment, and the package manifest has not been compiled here.
+- Open `TdayApp.xcodeproj` and run the `Tday` scheme for simulator/device installs.
+- The root `Package.swift` is support-only and intentionally non-runnable; it exists for source indexing/package resolution, not for launching the iOS app.
