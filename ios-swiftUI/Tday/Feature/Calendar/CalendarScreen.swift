@@ -17,9 +17,26 @@ private enum CalendarPeriodCardMetrics {
     static let headerHeight: CGFloat = 36
     static let headerHorizontalPadding: CGFloat = 6
     static let pageHeight: CGFloat = 78
+    static let weekDayCellHeight: CGFloat = 72
+    static let pageHorizontalGutter: CGFloat = 2
     static let topPadding: CGFloat = 16
     static let bottomPadding: CGFloat = 18
 }
+
+private enum CalendarMonthGridMetrics {
+    static let spacing: CGFloat = 8
+    static let height: CGFloat = 292
+    static let dayCellHeight: CGFloat = 42
+    static let dayHighlightWidth: CGFloat = 42
+    static let dayHighlightHeight: CGFloat = 40
+    static let dayNumberWidth: CGFloat = 34
+    static let dayNumberHeight: CGFloat = 24
+    static let taskCountHeight: CGFloat = 13
+    static let taskDotSize: CGFloat = 4.6
+    static let cellCornerRadius: CGFloat = 16
+}
+
+private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
 
 private let calendarNativePagerCenterIndex = 1
 
@@ -502,38 +519,34 @@ private struct CalendarMonthGrid: View {
         let isPreviousEnabled = canGoPrevious && isPagingAtRest
         let isNextEnabled = isPagingAtRest
 
-        return VStack(spacing: 16) {
+        return VStack(spacing: CalendarPeriodCardMetrics.contentSpacing) {
             HStack {
-                Button(action: goToPreviousPage) {
-                    Image(systemName: "chevron.left")
-                        .font(.tdayRounded(size: 20, weight: .heavy))
-                        .foregroundStyle(isPreviousEnabled ? accentColor : colors.onSurfaceVariant.opacity(0.36))
-                        .frame(width: 40, height: 36)
-                }
-                .buttonStyle(.plain)
-                .disabled(!isPreviousEnabled)
+                CalendarNavButton(
+                    systemName: "chevron.left",
+                    isEnabled: isPreviousEnabled,
+                    color: colors.onSurfaceVariant,
+                    action: goToPreviousPage
+                )
 
                 Spacer(minLength: 0)
 
                 Text(monthTitle(for: displayMonth))
-                    .font(.tdayRounded(size: 18, weight: .heavy))
+                    .font(.tdayRounded(size: 21, weight: .heavy))
                     .foregroundStyle(colors.onSurface)
 
                 Spacer(minLength: 0)
 
-                Button(action: goToNextPage) {
-                    Image(systemName: "chevron.right")
-                        .font(.tdayRounded(size: 20, weight: .heavy))
-                        .foregroundStyle(isNextEnabled ? accentColor : accentColor.opacity(0.36))
-                        .frame(width: 40, height: 36)
-                }
-                .buttonStyle(.plain)
-                .disabled(!isNextEnabled)
+                CalendarNavButton(
+                    systemName: "chevron.right",
+                    isEnabled: isNextEnabled,
+                    color: colors.onSurfaceVariant,
+                    action: goToNextPage
+                )
             }
             .frame(height: CalendarPeriodCardMetrics.headerHeight)
             .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
 
-            VStack(spacing: 11) {
+            VStack(spacing: CalendarMonthGridMetrics.spacing) {
                 HStack(spacing: 0) {
                     ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                         Text(symbol)
@@ -553,17 +566,17 @@ private struct CalendarMonthGrid: View {
                     selection: $pageSelection,
                     onSettledSelection: settlePageSelection
                 )
-                .frame(height: 283)
+                .frame(height: CalendarMonthGridMetrics.height)
             }
         }
         .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
-        .padding(.top, 18)
+        .padding(.top, CalendarPeriodCardMetrics.topPadding)
         .padding(.bottom, 20)
         .frame(maxWidth: .infinity)
     }
 
     private func monthGrid(for displayMonth: Date) -> some View {
-        LazyVGrid(columns: columns, spacing: 11) {
+        LazyVGrid(columns: columns, spacing: CalendarMonthGridMetrics.spacing) {
             ForEach(Self.makeDays(for: displayMonth)) { day in
                 let dayTasks = tasksByDay[Calendar.current.startOfDay(for: day.date)].orEmpty
                 CalendarMonthDayCell(
@@ -777,6 +790,7 @@ private struct CalendarWeekCard: View {
                 )
             }
         }
+        .padding(.horizontal, CalendarPeriodCardMetrics.pageHorizontalGutter)
     }
 
     private func weekPages(previousWeekDate: Date?, displaySelectedDate: Date, nextWeekDate: Date?) -> [CalendarPagerPage] {
@@ -886,15 +900,18 @@ private struct CalendarWeekDayCell: View {
 
                 Text(calendarTaskCountText(taskCount))
                     .font(.tdayRounded(size: 12, weight: .heavy))
-                    .foregroundStyle(taskCount > 0 ? accentColor : colors.onSurfaceVariant.opacity(0.42))
+                    .foregroundStyle(taskCount > 0 ? stateTint : colors.onSurfaceVariant.opacity(0.42))
             }
-            .frame(maxWidth: .infinity, minHeight: CalendarPeriodCardMetrics.pageHeight)
+            .frame(maxWidth: .infinity)
+            .frame(height: CalendarPeriodCardMetrics.weekDayCellHeight)
             .background(cellBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(cellBorderColor, lineWidth: cellBorderWidth)
             }
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .frame(maxWidth: .infinity)
+            .frame(height: CalendarPeriodCardMetrics.pageHeight)
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -913,33 +930,52 @@ private struct CalendarWeekDayCell: View {
 
     private var cellBackground: Color {
         if isSelected {
-            return accentColor.opacity(0.20)
+            return accentColor.opacity(0.24)
         }
         if isToday {
-            return accentColor.opacity(0.12)
+            return calendarTodayTintColor.opacity(0.16)
         }
         return colors.background
     }
 
     private var cellBorderColor: Color {
         if isSelected {
-            return accentColor.opacity(0.82)
+            return accentColor.opacity(0.95)
         }
         if isToday {
-            return accentColor.opacity(0.42)
+            return calendarTodayTintColor.opacity(0.74)
         }
         return .clear
     }
 
     private var cellBorderWidth: CGFloat {
-        (isSelected || isToday) ? 1.4 : 0
+        if isSelected {
+            return 1.6
+        }
+        if isToday {
+            return 1.4
+        }
+        return 0
     }
 
     private var dayTextColor: Color {
-        if isSelected || isToday {
+        if isSelected {
             return accentColor
         }
+        if isToday {
+            return calendarTodayTintColor
+        }
         return colors.onSurface
+    }
+
+    private var stateTint: Color {
+        if isSelected {
+            return accentColor
+        }
+        if isToday {
+            return calendarTodayTintColor
+        }
+        return accentColor
     }
 }
 
@@ -1329,37 +1365,48 @@ private struct CalendarMonthDayCell: View {
         Button {
             onSelectDate(day.date)
         } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 1) {
                 Text(dayNumberText)
-                    .font(.tdayRounded(size: 18, weight: .bold))
+                    .font(.tdayRounded(size: 19, weight: .bold))
                     .foregroundStyle(dayTextColor)
-                    .frame(width: 32, height: 28)
-                    .background {
-                        if isSelected {
-                            Circle()
-                                .fill(accentColor)
-                        } else if isToday {
-                            Circle()
-                                .fill(accentColor.opacity(0.16))
-                        }
-                    }
+                    .frame(
+                        width: CalendarMonthGridMetrics.dayNumberWidth,
+                        height: CalendarMonthGridMetrics.dayNumberHeight
+                    )
 
-                HStack(spacing: 3) {
+                HStack(spacing: 2) {
                     if taskCount > 0 {
                         Circle()
-                            .fill(accentColor)
-                            .frame(width: 4.2, height: 4.2)
+                            .fill(stateTint)
+                            .frame(
+                                width: CalendarMonthGridMetrics.taskDotSize,
+                                height: CalendarMonthGridMetrics.taskDotSize
+                            )
 
                         Text(calendarTaskCountText(taskCount))
-                            .font(.tdayRounded(size: 10, weight: .heavy))
-                            .foregroundStyle(accentColor)
+                            .font(.tdayRounded(size: 11, weight: .heavy))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                            .foregroundStyle(stateTint)
                     }
                 }
-                .frame(height: 6)
+                .frame(height: CalendarMonthGridMetrics.taskCountHeight)
             }
-            .frame(height: 38)
+            .frame(
+                width: CalendarMonthGridMetrics.dayHighlightWidth,
+                height: CalendarMonthGridMetrics.dayHighlightHeight
+            )
+            .background(
+                cellBackground,
+                in: RoundedRectangle(cornerRadius: CalendarMonthGridMetrics.cellCornerRadius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: CalendarMonthGridMetrics.cellCornerRadius, style: .continuous)
+                    .stroke(cellBorderColor, lineWidth: cellBorderWidth)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: CalendarMonthGridMetrics.cellCornerRadius, style: .continuous))
             .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+            .frame(height: CalendarMonthGridMetrics.dayCellHeight)
         }
         .buttonStyle(.plain)
         .disabled(!day.isCurrentMonth)
@@ -1371,16 +1418,53 @@ private struct CalendarMonthDayCell: View {
     }
 
     private var dayTextColor: Color {
-        if isSelected {
-            return .white
-        }
         if !day.isCurrentMonth {
             return colors.onSurfaceVariant.opacity(0.48)
         }
-        if isToday {
-            return accentColor
+        if isSelected || isToday {
+            return stateTint
         }
         return colors.onSurface
+    }
+
+    private var cellBackground: Color {
+        if isSelected {
+            return accentColor.opacity(0.24)
+        }
+        if isToday {
+            return calendarTodayTintColor.opacity(0.16)
+        }
+        return .clear
+    }
+
+    private var cellBorderColor: Color {
+        if isSelected {
+            return accentColor.opacity(0.95)
+        }
+        if isToday {
+            return calendarTodayTintColor.opacity(0.74)
+        }
+        return .clear
+    }
+
+    private var cellBorderWidth: CGFloat {
+        if isSelected {
+            return 1.6
+        }
+        if isToday {
+            return 1.4
+        }
+        return 0
+    }
+
+    private var stateTint: Color {
+        if isSelected {
+            return accentColor
+        }
+        if isToday {
+            return calendarTodayTintColor
+        }
+        return accentColor
     }
 }
 
