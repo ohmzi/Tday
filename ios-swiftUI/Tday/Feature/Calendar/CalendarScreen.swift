@@ -85,6 +85,7 @@ struct CalendarScreen: View {
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
+                        .swipeRevealHintOnTap()
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
                                 Task { await viewModel.complete(todo) }
