@@ -2,25 +2,28 @@ package com.ohmz.tday.compose.feature.calendar
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -33,25 +36,26 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.FitnessCenter
@@ -59,9 +63,7 @@ import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -73,6 +75,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -83,6 +86,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,8 +95,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -100,33 +104,36 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
-import androidx.compose.ui.geometry.Offset
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
-import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.theme.TdayDimens
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+
+private val CalendarAccentPurple = Color(0xFF7D67B6)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -137,7 +144,6 @@ fun CalendarScreen(
     onCreateTask: (CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCompleteTask: (TodoItem) -> Unit,
-    onUncompleteTask: (CompletedItem) -> Unit,
     onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
     onDelete: (TodoItem) -> Unit,
 ) {
@@ -218,13 +224,7 @@ fun CalendarScreen(
             .groupBy { LocalDate.ofInstant(it.due, zoneId) }
             .mapValues { (_, tasks) -> tasks.sortedBy { it.due } }
     }
-    val completedTasksByDate = remember(uiState.completedItems, zoneId) {
-        uiState.completedItems
-            .groupBy { LocalDate.ofInstant(it.due, zoneId) }
-            .mapValues { (_, tasks) -> tasks.sortedBy { it.due } }
-    }
     val selectedDatePendingTasks = tasksByDate[selectedDate].orEmpty()
-    val selectedDateCompletedTasks = completedTasksByDate[selectedDate].orEmpty()
     fun canNavigateTo(date: LocalDate): Boolean = YearMonth.from(date) >= minNavigableMonth
     fun selectDate(date: LocalDate) {
         if (!canNavigateTo(date)) return
@@ -370,7 +370,7 @@ fun CalendarScreen(
                     Text(
                         text = stringResource(R.string.calendar_tasks_due, tasksDueDateLabel),
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 4.dp),
                     )
@@ -386,35 +386,20 @@ fun CalendarScreen(
                         )
                     }
                 } else {
-                    items(selectedDatePendingTasks, key = { it.id }) { todo ->
-                        CalendarTodoRow(
-                            modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
-                            todo = todo,
-                            lists = uiState.lists,
-                            onComplete = { onCompleteTask(todo) },
-                            onInfo = { editTargetId = todo.id },
-                            onDelete = { onDelete(todo) },
-                        )
-                    }
-                }
-
-                if (selectedDateCompletedTasks.isNotEmpty()) {
                     item {
-                        Text(
-                            text = stringResource(R.string.calendar_completed_header),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                        )
-                    }
-
-                    items(selectedDateCompletedTasks, key = { it.id }) { completed ->
-                        CalendarCompletedTodoRow(
-                            item = completed,
-                            lists = uiState.lists,
-                            onUndoComplete = { onUncompleteTask(completed) },
-                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            selectedDatePendingTasks.forEach { todo ->
+                                key(todo.id) {
+                                    CalendarTodoRow(
+                                        todo = todo,
+                                        lists = uiState.lists,
+                                        onComplete = { onCompleteTask(todo) },
+                                        onInfo = { editTargetId = todo.id },
+                                        onDelete = { onDelete(todo) },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -475,13 +460,21 @@ private fun CalendarCreateTaskFab(
             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
             onClick()
         },
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+        modifier = Modifier.size(TdayDimens.FabSize),
+        shape = CircleShape,
+        containerColor = CalendarAccentPurple,
+        contentColor = Color.White,
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = TdayDimens.FabElevation,
+            pressedElevation = TdayDimens.FabPressedElevation,
+            focusedElevation = TdayDimens.FabElevation,
+            hoveredElevation = TdayDimens.FabElevation,
+        ),
     ) {
         Icon(
             imageVector = Icons.Rounded.Add,
             contentDescription = stringResource(R.string.action_create_task),
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier.size(40.dp),
         )
     }
 }
@@ -531,7 +524,7 @@ private fun CalendarViewModeTabs(
                     Text(
                         text = mode.name.lowercase(Locale.getDefault()).replaceFirstChar { it.uppercase() },
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        fontWeight = FontWeight.ExtraBold,
                         color = if (selected) colorScheme.onSurface else colorScheme.onSurfaceVariant,
                     )
                 }
@@ -648,7 +641,7 @@ private fun CalendarWeekCard(
                         Text(
                             text = weekLabel,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
                         )
                     }
@@ -730,7 +723,7 @@ private fun CalendarWeekDayCell(
                 text = date.dayOfMonth.toString(),
                 style = MaterialTheme.typography.titleMedium,
                 color = if (isSelected) colorScheme.primary else colorScheme.onSurface,
-                fontWeight = if (isSelected || isToday) FontWeight.SemiBold else FontWeight.Medium,
+                fontWeight = FontWeight.ExtraBold,
             )
             Text(
                 text = if (taskCount > 9) {
@@ -740,7 +733,7 @@ private fun CalendarWeekDayCell(
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = if (taskCount > 0) colorScheme.secondary else colorScheme.onSurfaceVariant.copy(alpha = 0.42f),
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.ExtraBold,
             )
         }
     }
@@ -850,7 +843,7 @@ private fun CalendarDayCard(
                             text = displayDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault()),
                             style = MaterialTheme.typography.titleMedium,
                             color = colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.ExtraBold,
                         )
                     }
                     MiniCalendarNavButton(
@@ -864,7 +857,7 @@ private fun CalendarDayCard(
                     text = displayDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
                     style = MaterialTheme.typography.headlineSmall,
                     color = if (displayDate == today) colorScheme.primary else colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
                 Text(
                     text = if (taskCount == 1) {
@@ -874,7 +867,7 @@ private fun CalendarDayCard(
                     },
                     style = MaterialTheme.typography.titleMedium,
                     color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
         }
@@ -933,9 +926,10 @@ private fun CalendarTopBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CalendarCircleButton(
-                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                    icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.action_back),
                     onClick = onBack,
+                    isBackButton = true,
                 )
                 CalendarCircleButton(
                     icon = Icons.Rounded.CalendarMonth,
@@ -944,29 +938,18 @@ private fun CalendarTopBar(
                 )
             }
             if (collapsedTitleAlpha > 0.001f) {
-                Row(
+                Text(
+                    text = stringResource(R.string.calendar_title),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = CalendarAccentPurple,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
                         },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CalendarMonth,
-                        contentDescription = null,
-                        tint = Color(0xFF7D67B6),
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.calendar_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF7D67B6),
-                    )
-                }
+                )
             }
         }
         Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
@@ -977,27 +960,16 @@ private fun CalendarTopBar(
             contentAlignment = Alignment.BottomStart,
         ) {
             if (expandedTitleAlpha > 0.001f) {
-                Row(
+                Text(
+                    text = stringResource(R.string.calendar_title),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = CalendarAccentPurple,
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
                     },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.CalendarMonth,
-                        contentDescription = null,
-                        tint = Color(0xFF7D67B6),
-                        modifier = Modifier.size(28.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.calendar_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF7D67B6),
-                    )
-                }
+                )
             }
         }
     }
@@ -1008,28 +980,59 @@ private fun CalendarCircleButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
+    isBackButton: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = androidx.compose.ui.platform.LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
+    val containerColor = if (isBackButton) {
+        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
+    } else {
+        colorScheme.background
+    }
+    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f))
+    val buttonSize = if (isBackButton) TdayDimens.FabSize else 54.dp
+    val iconSize = if (isBackButton) 36.dp else 28.dp
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.93f else 1f,
+        label = "calendarHeaderButtonScale",
+    )
+    val offsetY by animateDpAsState(
+        targetValue = if (pressed) 2.dp else 0.dp,
+        label = "calendarHeaderButtonOffsetY",
+    )
+
     Card(
+        modifier = Modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
         onClick = {
             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
             onClick()
         },
+        interactionSource = interactionSource,
         shape = androidx.compose.foundation.shape.CircleShape,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        border = buttonBorder,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isBackButton) TdayDimens.FabElevation else 0.dp,
+            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else 0.dp,
+        ),
     ) {
         Box(
-            modifier = Modifier.size(54.dp),
+            modifier = Modifier.size(buttonSize),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = colorScheme.onSurface,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(iconSize),
             )
         }
     }
@@ -1144,7 +1147,7 @@ private fun CalendarMonthCard(
                         Text(
                             text = monthLabel,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
                         )
                     }
@@ -1161,7 +1164,7 @@ private fun CalendarMonthCard(
                             text = dayLabel,
                             style = MaterialTheme.typography.labelMedium,
                             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.ExtraBold,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -1283,7 +1286,7 @@ private fun CalendarDayCell(
             text = cell.date.dayOfMonth.toString(),
             style = MaterialTheme.typography.labelLarge,
             color = dayTextColor,
-            fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = FontWeight.ExtraBold,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(start = 8.dp, top = 6.dp),
@@ -1311,7 +1314,7 @@ private fun CalendarDayCell(
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
         }
@@ -1331,12 +1334,15 @@ private fun CalendarTodoRow(
     val view = LocalView.current
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 130.dp.toPx() }
+    val actionRevealPx = with(density) { 176.dp.toPx() }
+    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
+    val maxElasticDragPx = actionRevealPx * 1.14f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
+    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
-        animationSpec = tween(durationMillis = 150),
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "calendarTaskSwipeOffset",
     )
     val showCompletedState = pendingCompletion
@@ -1348,9 +1354,8 @@ private fun CalendarTodoRow(
     val showPriorityFlag = isHighPriority(todo.priority)
     val listIndicatorColor = listAccentColor(listMeta?.color)
     val rowShape = RoundedCornerShape(16.dp)
-    val actionContainerColor =
-        colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
     val foregroundColor = colorScheme.background
+    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
 
     Column(
         modifier = modifier
@@ -1361,39 +1366,41 @@ private fun CalendarTodoRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(58.dp)
-                .clip(rowShape)
-                .background(actionContainerColor),
+                .height(58.dp),
         ) {
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(end = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CalendarSwipeActionCircle(
-                    icon = Icons.Rounded.Info,
+                CalendarSwipeActionButton(
+                    icon = Icons.Rounded.BorderColor,
                     contentDescription = stringResource(R.string.action_edit_task),
-                    tint = colorScheme.onSurface,
-                    background = colorScheme.surface,
+                    label = stringResource(R.string.action_edit),
+                    tint = Color.White,
+                    background = Color(0xFF4C7DDE),
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.62f,
                     onClick = {
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
                         onInfo()
                         targetOffsetX = 0f
                     },
                 )
-                CalendarSwipeActionCircle(
-                    icon = Icons.Rounded.DeleteSweep,
+                CalendarSwipeActionButton(
+                    icon = Icons.Rounded.DeleteOutline,
                     contentDescription = stringResource(R.string.action_delete_task),
-                    tint = colorScheme.error,
-                    background = colorScheme.surface,
+                    label = stringResource(R.string.action_delete),
+                    tint = Color.White,
+                    background = Color(0xFFFF453A),
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.04f,
                     onClick = {
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
                         targetOffsetX = 0f
-                        coroutineScope.launch {
-                            onDelete()
-                        }
+                        onDelete()
                     },
                 )
             }
@@ -1405,7 +1412,10 @@ private fun CalendarTodoRow(
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
-                            targetOffsetX = (targetOffsetX + delta).coerceIn(-actionRevealPx, 0f)
+                            targetOffsetX = (targetOffsetX + delta).coerceIn(
+                                -maxElasticDragPx,
+                                0f,
+                            )
                         },
                         onDragStopped = { velocity ->
                             val flingOpen = velocity < -1450f
@@ -1421,7 +1431,18 @@ private fun CalendarTodoRow(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) {
-                        if (targetOffsetX != 0f) targetOffsetX = 0f
+                        if (targetOffsetX != 0f) {
+                            targetOffsetX = 0f
+                        } else if (!swipeHinting && !pendingCompletion) {
+                            swipeHinting = true
+                            coroutineScope.launch {
+                                targetOffsetX = -swipeHintOffsetPx
+                                delay(150)
+                                targetOffsetX = 0f
+                                delay(360)
+                                swipeHinting = false
+                            }
+                        }
                     },
                 shape = rowShape,
                 colors = CardDefaults.cardColors(containerColor = foregroundColor),
@@ -1473,7 +1494,7 @@ private fun CalendarTodoRow(
                                 colorScheme.onSurface
                             },
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.ExtraBold,
                             textDecoration = if (showCompletedState) {
                                 TextDecoration.LineThrough
                             } else {
@@ -1489,6 +1510,7 @@ private fun CalendarTodoRow(
                     }
                     if (showListIndicator || showPriorityFlag) {
                         Row(
+                            modifier = Modifier.padding(end = 24.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -1600,7 +1622,7 @@ private fun CalendarCompletedTodoRow(
                             colorScheme.onSurface
                         },
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.ExtraBold,
                         textDecoration = if (showCompletedState) {
                             TextDecoration.LineThrough
                         } else {
@@ -1616,6 +1638,7 @@ private fun CalendarCompletedTodoRow(
                 }
                 if (showPriorityFlag) {
                     Row(
+                        modifier = Modifier.padding(end = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -1639,7 +1662,9 @@ private fun CalendarCompletedTodoRow(
                         imageVector = listIconForKey(listMeta?.iconKey),
                         contentDescription = stringResource(R.string.label_task_list),
                         tint = listIndicatorColor,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier
+                            .padding(end = 24.dp)
+                            .size(18.dp),
                     )
                 }
             }
@@ -1655,43 +1680,69 @@ private fun CalendarCompletedTodoRow(
 }
 
 @Composable
-private fun CalendarSwipeActionCircle(
+private fun CalendarSwipeActionButton(
     icon: ImageVector,
     contentDescription: String,
+    label: String,
     tint: Color,
     background: Color,
+    revealProgress: Float,
+    revealDelay: Float,
     onClick: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
+    val pressedScale by animateFloatAsState(
         targetValue = if (pressed) 0.92f else 1f,
         label = "calendarSwipeActionScale",
     )
-    Card(
+    val normalizedReveal = ((revealProgress - revealDelay) / (1f - revealDelay))
+        .coerceIn(0f, 1f)
+    val easedReveal = FastOutSlowInEasing.transform(normalizedReveal)
+
+    Column(
         modifier = Modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .sizeIn(minWidth = 60.dp)
             .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
+                alpha = easedReveal
+                val revealScale = 0.38f + (0.62f * easedReveal)
+                scaleX = pressedScale * revealScale
+                scaleY = pressedScale * revealScale
             },
-        onClick = onClick,
-        interactionSource = interactionSource,
-        shape = androidx.compose.foundation.shape.CircleShape,
-        colors = CardDefaults.cardColors(containerColor = background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
+        Card(
+            modifier = Modifier.size(width = 56.dp, height = 34.dp),
+            onClick = onClick,
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = background),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+            ),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(22.dp),
-            )
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = tint,
+                    modifier = Modifier.size(21.dp),
+                )
+            }
         }
+        Text(
+            text = label,
+            color = colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+        )
     }
 }
 
@@ -1740,7 +1791,7 @@ private fun EmptyCalendarState(message: String) {
             text = message,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.ExtraBold,
         )
     }
 }

@@ -9,6 +9,7 @@
     <string name="action_close_search">Close search</string>
     <string name="action_create_task">Create task</string>
     <string name="action_create_list">Create list</string>
+    <string name="action_edit">Edit</string>
     <string name="action_edit_task">Edit task</string>
     <string name="action_delete_task">Delete task</string>
     <string name="action_delete">Delete</string>
@@ -122,7 +123,7 @@
     <string name="completed_title">Completed</string>
     <string name="completed_empty">No completed tasks yet</string>
     <string name="completed_created_prefix">Created: </string>
-    <string name="completed_at_prefix">Completed: </string>
+    <string name="completed_at_prefix">Completed, </string>
     <string name="completed_section_earlier">Earlier</string>
     <string name="completed_section_today">Today</string>
     <string name="completed_section_tomorrow">Tomorrow</string>

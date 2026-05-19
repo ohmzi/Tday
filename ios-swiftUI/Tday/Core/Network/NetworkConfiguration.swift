@@ -17,6 +17,16 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }()
 
+    lazy var probeSession: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpCookieStorage = HTTPCookieStorage.shared
+        configuration.httpShouldSetCookies = true
+        configuration.waitsForConnectivity = false
+        configuration.timeoutIntervalForRequest = 5
+        configuration.timeoutIntervalForResource = 8
+        return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+    }()
+
     init(secureStore: SecureStore, serverURLState: ServerURLState, cookieStore: CookieStore) {
         self.secureStore = secureStore
         self.serverURLState = serverURLState
@@ -99,6 +109,10 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         cookieStore.clearAll()
     }
 
+    func syncPersistedAuthCookie() {
+        cookieStore.syncPersistedAuthCookie()
+    }
+
     func isSecureTransportRequired(for url: URL) -> Bool {
         guard let host = url.host?.lowercased() else {
             return true
@@ -129,7 +143,9 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
     }
 
     private func leafCertificateHash(for trust: SecTrust) -> String? {
-        guard let certificate = SecTrustGetCertificateAtIndex(trust, 0) else {
+        guard let certificates = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
+              let certificate = certificates.first
+        else {
             return nil
         }
         let data = SecCertificateCopyData(certificate) as Data

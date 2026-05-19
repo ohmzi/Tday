@@ -50,31 +50,35 @@ final class ServerConfigRepository {
     }
 
     func saveServerURL(rawURL: String) async throws -> MobileProbeResponse {
-        let normalizedURL = try normalize(rawURL: rawURL)
-        serverURLState.currentURL = normalizedURL
-        let probeURL = normalizedURL.appending(path: "api/mobile/probe")
-        return try await api.probeServer(url: probeURL)
-    }
-
-    func saveServerURL(_ rawURL: String) async throws -> String {
-        let response = try await saveServerURL(rawURL: rawURL)
+        let result = try await probe(rawURL: rawURL)
+        let response = result.response
         guard response.service.compare("tday", options: .caseInsensitive) == .orderedSame,
               response.version == "1" else {
             throw ServerProbeError.notTdayServer
         }
+        serverURLState.currentURL = result.serverURL
+        persistRuntimeServerURL()
+        return response
+    }
+
+    func saveServerURL(_ rawURL: String) async throws -> String {
+        _ = try await saveServerURL(rawURL: rawURL)
         return getServerURL()?.absoluteString ?? rawURL
     }
 
     func probeAndSave(_ rawURL: String) async throws -> ProbeResult {
-        let response = try await saveServerURL(rawURL: rawURL)
+        let result = try await probe(rawURL: rawURL)
+        let response = result.response
         guard response.service.compare("tday", options: .caseInsensitive) == .orderedSame,
               response.version == "1" else {
             throw ServerProbeError.notTdayServer
         }
+        serverURLState.currentURL = result.serverURL
+        persistRuntimeServerURL()
         let compatibility = response.encryptedCompatibility.flatMap { ProbeDecryptor.decrypt($0) }
         let versionCheck = checkVersionCompatibility(payload: compatibility)
         return ProbeResult(
-            serverURL: getServerURL()?.absoluteString ?? rawURL,
+            serverURL: result.serverURL.absoluteString,
             versionCheck: versionCheck,
             backendVersion: compatibility?.appVersion
         )
@@ -93,8 +97,14 @@ final class ServerConfigRepository {
         if let host = normalizedURL.host {
             secureStore.clearTrustedFingerprint(for: host)
         }
+        let response = try await api.probeServer(url: normalizedURL.appending(path: "api/mobile/probe"))
+        guard response.service.compare("tday", options: .caseInsensitive) == .orderedSame,
+              response.version == "1" else {
+            throw ServerProbeError.notTdayServer
+        }
         serverURLState.currentURL = normalizedURL
-        return try await api.probeServer(url: normalizedURL.appending(path: "api/mobile/probe"))
+        persistRuntimeServerURL()
+        return response
     }
 
     func resetTrustedServer(_ rawURL: String) {
@@ -148,6 +158,12 @@ final class ServerConfigRepository {
             throw ServerProbeError.invalidURL
         }
         return resolvedURL
+    }
+
+    private func probe(rawURL: String) async throws -> (serverURL: URL, response: MobileProbeResponse) {
+        let normalizedURL = try normalize(rawURL: rawURL)
+        let response = try await api.probeServer(url: normalizedURL.appending(path: "api/mobile/probe"))
+        return (normalizedURL, response)
     }
 
     private func isLocalAddress(_ host: String) -> Bool {

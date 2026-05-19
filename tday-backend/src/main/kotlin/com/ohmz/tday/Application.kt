@@ -81,4 +81,8 @@ private fun logStartupSecurityWarnings(config: AppConfig) {
     if (config.credentialsPrivateKeyPem.isNullOrBlank()) {
         logger.warn("AUTH_CREDENTIALS_PRIVATE_KEY is unset in production; credential envelope encryption will use an ephemeral key")
     }
+
+    if (config.appleTeamId.isNullOrBlank()) {
+        logger.warn("APPLE_TEAM_ID is unset in production; iOS webcredentials association will be incomplete")
+    }
 }

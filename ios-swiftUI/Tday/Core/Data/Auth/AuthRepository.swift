@@ -1,6 +1,18 @@
 import Foundation
 
-final class AuthRepository {
+protocol AuthRepositoryServicing: AnyObject {
+    func restoreSession() async -> SessionUser?
+    func login(email: String, password: String) async -> AuthResult
+    func register(firstName: String, lastName: String, email: String, password: String) async -> RegisterOutcome
+    func logout() async
+    func syncTimezone() async
+    @MainActor func clearSessionOnly()
+    @MainActor func clearAllLocalUserDataForUnauthenticatedState()
+    func getLastEmail() -> String?
+    func lastEmail() -> String?
+}
+
+final class AuthRepository: AuthRepositoryServicing {
     private let api: TdayAPIService
     private let secureStore: SecureStore
     private let serverConfigRepository: ServerConfigRepository
@@ -117,12 +129,8 @@ final class AuthRepository {
     }
 
     func logout() async {
-        do {
-            _ = try? await api.signOut()
-        } catch {
-            // Best effort sign-out before local cleanup.
-        }
-        await clearAllLocalUserDataForUnauthenticatedState()
+        _ = try? await api.signOut()
+        await clearAllLocalUserDataForUnauthenticatedState(preservingServerConfiguration: true)
     }
 
     func syncTimezone() async {
@@ -137,12 +145,19 @@ final class AuthRepository {
 
     @MainActor
     func clearAllLocalUserDataForUnauthenticatedState() {
+        clearAllLocalUserDataForUnauthenticatedState(preservingServerConfiguration: false)
+    }
+
+    @MainActor
+    private func clearAllLocalUserDataForUnauthenticatedState(preservingServerConfiguration: Bool) {
         cacheManager.clearAllLocalData()
         cookieStore.clearAll()
-        secureStore.clearAllUserValues()
+        secureStore.clearAllUserValues(preservingServerURL: preservingServerConfiguration)
         themeStore.clear()
         reminderPreferenceStore.clear()
-        serverConfigRepository.clearServerConfiguration()
+        if !preservingServerConfiguration {
+            serverConfigRepository.clearServerConfiguration()
+        }
     }
 
     func getLastEmail() -> String? {

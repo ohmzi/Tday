@@ -140,8 +140,10 @@ fun OnboardingWizardOverlay(
                 onClearAuthStatus()
             }.onFailure { error ->
                 step = WizardStep.SERVER
-                serverError = error.message?.takeIf { it.length < 80 && !it.contains("serial") }
-                    ?: "Could not connect to server."
+                serverError = onboardingServerErrorMessage(
+                    error = error,
+                    fallback = "Could not connect to server.",
+                )
             }
         }
     }
@@ -312,7 +314,7 @@ fun OnboardingWizardOverlay(
                         text = stringResource(R.string.onboarding_title),
                         style = MaterialTheme.typography.headlineSmall,
                         color = colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                     )
                     Text(
                         text = stringResource(R.string.onboarding_subtitle),
@@ -386,15 +388,17 @@ fun OnboardingWizardOverlay(
                                                                     onClearAuthStatus()
                                                                 }.onFailure { error ->
                                                                     step = WizardStep.SERVER
-                                                                    serverError = error.message
-                                                                        ?.takeIf { it.length < 80 && !it.contains("serial") }
-                                                                        ?: "Could not connect to server."
+                                                                    serverError = onboardingServerErrorMessage(
+                                                                        error = error,
+                                                                        fallback = "Could not connect to server.",
+                                                                    )
                                                                 }
                                                             }
                                                         }.onFailure { error ->
-                                                            serverError = error.message
-                                                                ?.takeIf { it.length < 80 && !it.contains("serial") }
-                                                                ?: "Could not reset trusted server."
+                                                            serverError = onboardingServerErrorMessage(
+                                                                error = error,
+                                                                fallback = "Could not reset trusted server.",
+                                                            )
                                                         }
                                                     }
                                                 },
@@ -728,6 +732,18 @@ fun OnboardingWizardOverlay(
     }
 }
 
+private fun onboardingServerErrorMessage(
+    error: Throwable,
+    fallback: String,
+): String {
+    val message = error.message?.trim().orEmpty()
+    if (message.isBlank()) return fallback
+    if (message.contains("serial", ignoreCase = true)) {
+        return "This version of the app is out of date. Please update to continue."
+    }
+    return message
+}
+
 @Composable
 private fun WizardLoading(
     title: String,
@@ -763,7 +779,7 @@ private fun WizardLoading(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
@@ -816,7 +832,7 @@ private fun WizardStepChip(
                     text = title,
                     color = Color.White,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.padding(start = 6.dp),
                 )
             }
