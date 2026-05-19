@@ -4,7 +4,8 @@ import Observation
 @MainActor
 @Observable
 final class AuthViewModel {
-    private let authRepository: AuthRepository
+    private let authRepository: AuthRepositoryServicing
+    private let systemCredentialService: SystemCredentialServicing
 
     var isLoading = false
     var errorMessage: String?
@@ -12,8 +13,12 @@ final class AuthViewModel {
     var pendingApproval = false
     var savedEmail = ""
 
-    init(authRepository: AuthRepository) {
+    init(
+        authRepository: AuthRepositoryServicing,
+        systemCredentialService: SystemCredentialServicing
+    ) {
         self.authRepository = authRepository
+        self.systemCredentialService = systemCredentialService
         savedEmail = authRepository.getLastEmail() ?? ""
     }
 
@@ -23,7 +28,7 @@ final class AuthViewModel {
         pendingApproval = false
     }
 
-    func login(email: String, password: String) async -> Bool {
+    func login(email: String, password: String, source: LoginCredentialSource = .manual) async -> Bool {
         isLoading = true
         clearStatus()
         defer { isLoading = false }
@@ -31,6 +36,13 @@ final class AuthViewModel {
         let result = await authRepository.login(email: email, password: password)
         switch result {
         case .success:
+            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            savedEmail = normalizedEmail
+            if source == .manual {
+                _ = await systemCredentialService.offerSaveOrUpdateCredential(
+                    SystemCredential(email: normalizedEmail, password: password)
+                )
+            }
             return true
         case .pendingApproval:
             pendingApproval = true
@@ -51,7 +63,11 @@ final class AuthViewModel {
         if outcome.success {
             infoMessage = outcome.message
             pendingApproval = outcome.requiresApproval
-            savedEmail = email
+            let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            savedEmail = normalizedEmail
+            _ = await systemCredentialService.offerSaveOrUpdateCredential(
+                SystemCredential(email: normalizedEmail, password: password)
+            )
             return true
         }
 

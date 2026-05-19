@@ -33,12 +33,15 @@ final class CompletedViewModel {
         isLoading = false
     }
 
-    func uncomplete(_ item: CompletedItem) async {
+    @discardableResult
+    func uncomplete(_ item: CompletedItem) async -> Bool {
         do {
             try await container.completedRepository.uncomplete(item)
             hydrateFromCache()
+            return true
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not restore task.")
+            return false
         }
     }
 

@@ -2,16 +2,26 @@ import Foundation
 import Security
 
 final class SecureStore {
-    private let service = "com.ohmz.tday.ios.secure-store"
-    private let defaults = UserDefaults.standard
+    private let service: String
+    private let defaults: UserDefaults
     private let trustedHostsKey = "secure.trusted.hosts"
     private let runtimeServerURLKey = "runtime.server.url"
     private let listIconsKey = "list.icons"
+    private let installSentinelKey = "app.install.sentinel"
+
+    init(
+        service: String = "com.ohmz.tday.ios.secure-store",
+        defaults: UserDefaults = .standard
+    ) {
+        self.service = service
+        self.defaults = defaults
+    }
 
     enum Key: String {
         case persistedServerURL = "persisted-server-url"
         case deviceID = "device-id"
         case lastEmail = "last-email"
+        case persistedAuthSessionCookie = "persisted-auth-session-cookie"
     }
 
     func loadPersistedServerURL() -> URL? {
@@ -87,8 +97,11 @@ final class SecureStore {
         defaults.removeObject(forKey: trustedHostsKey)
     }
 
-    func clearAllUserValues() {
-        clearPersistedServerURL()
+    func clearAllUserValues(preservingServerURL: Bool = false) {
+        if !preservingServerURL {
+            clearPersistedServerURL()
+        }
+        clearPersistedAuthSessionCookie()
         clearLastEmail()
         clearAllTrustedFingerprints()
         defaults.removeObject(forKey: runtimeServerURLKey)
@@ -132,6 +145,27 @@ final class SecureStore {
 
     func lastEmail() -> String? {
         loadLastEmail()
+    }
+
+    func loadPersistedAuthSessionCookieData() -> Data? {
+        loadData(for: .persistedAuthSessionCookie)
+    }
+
+    func savePersistedAuthSessionCookieData(_ data: Data) {
+        saveData(data, for: .persistedAuthSessionCookie)
+    }
+
+    func clearPersistedAuthSessionCookie() {
+        deleteValue(for: .persistedAuthSessionCookie)
+    }
+
+    func clearPersistedAuthSessionCookieIfAppReinstalled() {
+        guard defaults.string(forKey: installSentinelKey) == nil else {
+            return
+        }
+
+        clearPersistedAuthSessionCookie()
+        defaults.set(UUID().uuidString.lowercased(), forKey: installSentinelKey)
     }
 
     func normalizeServerURL(_ rawURL: String) -> URL? {
@@ -193,22 +227,39 @@ final class SecureStore {
     }
 
     private func saveString(_ value: String, for key: Key) {
-        saveString(value, forRawKey: key.rawValue)
+        guard let data = value.data(using: .utf8) else {
+            return
+        }
+        saveData(data, for: key)
     }
 
     private func loadString(for key: Key) -> String? {
-        loadString(forRawKey: key.rawValue)
+        guard let data = loadData(for: key) else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
     }
 
     private func deleteValue(for key: Key) {
         deleteValue(forRawKey: key.rawValue)
     }
 
+    private func saveData(_ data: Data, for key: Key) {
+        saveData(data, forRawKey: key.rawValue)
+    }
+
+    private func loadData(for key: Key) -> Data? {
+        loadData(forRawKey: key.rawValue)
+    }
+
     private func saveString(_ value: String, forRawKey key: String) {
         guard let data = value.data(using: .utf8) else {
             return
         }
+        saveData(data, forRawKey: key)
+    }
 
+    private func saveData(_ data: Data, forRawKey key: String) {
         let query = keychainQuery(for: key)
         let attributes = [kSecValueData as String: data]
         let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
@@ -220,6 +271,13 @@ final class SecureStore {
     }
 
     private func loadString(forRawKey key: String) -> String? {
+        guard let data = loadData(forRawKey: key) else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private func loadData(forRawKey key: String) -> Data? {
         var query = keychainQuery(for: key)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -230,7 +288,7 @@ final class SecureStore {
             return nil
         }
 
-        return String(data: data, encoding: .utf8)
+        return data
     }
 
     private func deleteValue(forRawKey key: String) {

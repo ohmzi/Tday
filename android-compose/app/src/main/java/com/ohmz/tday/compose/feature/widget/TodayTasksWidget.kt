@@ -29,6 +29,7 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -40,6 +41,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+private val TdayWidgetFontFamily = FontFamily("Nunito")
 
 class TodayTasksWidget : GlanceAppWidget() {
 
@@ -92,6 +95,7 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
                 text = "Today's Tasks",
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
+                    fontFamily = TdayWidgetFontFamily,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                 ),
@@ -101,7 +105,9 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
                 text = "${tasks.size}",
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurfaceVariant,
+                    fontFamily = TdayWidgetFontFamily,
                     fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
                 ),
             )
         }
@@ -115,7 +121,9 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
                     text = "No tasks due today",
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurfaceVariant,
+                        fontFamily = TdayWidgetFontFamily,
                         fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
                     ),
                 )
             }
@@ -164,7 +172,9 @@ private fun TaskRow(task: CachedTodoRecord) {
                 text = task.title,
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
+                    fontFamily = TdayWidgetFontFamily,
                     fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
                 ),
                 maxLines = 1,
             )
@@ -174,7 +184,9 @@ private fun TaskRow(task: CachedTodoRecord) {
             text = dueText,
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
+                fontFamily = TdayWidgetFontFamily,
                 fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
             ),
         )
     }

@@ -1,3 +1,12 @@
 <resources>
-    <style name="Theme.Tday" parent="Theme.Material3.DayNight.NoActionBar" />
+    <style name="Theme.Tday" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:fontFamily">@font/nunito_app</item>
+        <item name="fontFamily">@font/nunito_app</item>
+        <item name="android:textViewStyle">@style/TdayTextViewStyle</item>
+    </style>
+
+    <style name="TdayTextViewStyle" parent="@android:style/Widget.TextView">
+        <item name="android:fontFamily">@font/nunito_app</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 </resources>
