@@ -143,7 +143,9 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
     }
 
     private func leafCertificateHash(for trust: SecTrust) -> String? {
-        guard let certificate = SecTrustGetCertificateAtIndex(trust, 0) else {
+        guard let certificates = SecTrustCopyCertificateChain(trust) as? [SecCertificate],
+              let certificate = certificates.first
+        else {
             return nil
         }
         let data = SecCertificateCopyData(certificate) as Data
