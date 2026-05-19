@@ -13,8 +13,6 @@ enum TodoTimelineMetrics {
     static let minimalRowSubtitleSize: CGFloat = 13
     static let minimalRowIndicatorSize: CGFloat = 14
     static let minimalRowVerticalPadding: CGFloat = 10
-    static let todayCardPadding: CGFloat = 16
-    static let todayCardCornerRadius: CGFloat = 20
     static let emptyStateSize: CGFloat = 28
     static let emptyStateOffset: CGFloat = 78
     static let titleCollapseDistance: CGFloat = 64
@@ -387,8 +385,8 @@ struct TodoListScreen: View {
                                 .allowsHitTesting(false)
                         } else {
                             ForEach(section.items) { todo in
-                                todoRow(todo, in: section, useTodayCardStyle: true)
-                                    .listRowInsets(EdgeInsets(top: 4, leading: TodoTimelineMetrics.horizontalPadding, bottom: 4, trailing: TodoTimelineMetrics.horizontalPadding))
+                                minimalTimelineRow(todo, in: section)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
                             }
@@ -466,17 +464,16 @@ struct TodoListScreen: View {
 
     private func todoRow(
         _ todo: TodoItem,
-        in section: TodoTimelineSection,
-        useTodayCardStyle: Bool = false,
+        in section: TodoTimelineSection
     ) -> some View {
         let isCompleting = completingTodoIDs.contains(todo.id)
-        let rowContent = VStack(alignment: .leading, spacing: useTodayCardStyle ? 10 : 6) {
+        let rowContent = VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
                 Circle()
                     .fill(priorityColor(todo.priority))
                     .frame(width: 10, height: 10)
                 Text(todo.title)
-                    .font(useTodayCardStyle ? .tdayRounded(size: 19, weight: .bold) : .tdayRounded(size: 15, weight: .bold))
+                    .font(.tdayRounded(size: 15, weight: .bold))
                     .foregroundStyle(colors.onSurface)
                 Spacer()
                 if todo.pinned {
@@ -485,14 +482,9 @@ struct TodoListScreen: View {
                 }
             }
             HStack(spacing: 6) {
-                if useTodayCardStyle {
-                    Image(systemName: "clock")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(colors.primary.opacity(0.9))
-                }
-                Text(todo.due.formatted(date: useTodayCardStyle ? .omitted : .abbreviated, time: .shortened))
-                    .font(.tdayRounded(size: 12, weight: useTodayCardStyle ? .bold : .semibold))
-                    .foregroundStyle(useTodayCardStyle ? colors.primary.opacity(0.9) : colors.onSurfaceVariant)
+                Text(todo.due.formatted(date: .abbreviated, time: .shortened))
+                    .font(.tdayRounded(size: 12, weight: .semibold))
+                    .foregroundStyle(colors.onSurfaceVariant)
             }
             if let description = todo.description, !description.isEmpty {
                 Text(description)
@@ -501,23 +493,9 @@ struct TodoListScreen: View {
                     .lineLimit(2)
             }
         }
-        .padding(useTodayCardStyle ? TodoTimelineMetrics.todayCardPadding : 0)
         .opacity(isCompleting ? 0 : 1)
         .scaleEffect(isCompleting ? 0.985 : 1, anchor: .center)
         .animation(.easeInOut(duration: 0.16), value: isCompleting)
-        .background(
-            Group {
-                if useTodayCardStyle {
-                    RoundedRectangle(cornerRadius: TodoTimelineMetrics.todayCardCornerRadius, style: .continuous)
-                        .fill(todo.id == highlightedTodoId ? colors.surfaceVariant : colors.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: TodoTimelineMetrics.todayCardCornerRadius, style: .continuous)
-                                .stroke(colors.primary.opacity(0.10), lineWidth: 1)
-                        )
-                        .shadow(color: colors.onSurface.opacity(0.04), radius: 12, x: 0, y: 7)
-                }
-            }
-        )
         .opacity(draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1)
         .allowsHitTesting(!isCompleting)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -741,6 +719,11 @@ struct TodoListScreen: View {
         }
 
         switch viewModel.mode {
+        case .today:
+            if !todo.completed && todo.due < Date() {
+                return "Overdue, \(dueBodyText)"
+            }
+            return "Due \(dueBodyText)"
         case .overdue:
             return "Overdue, \(dueBodyText)"
         case .scheduled:
