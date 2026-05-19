@@ -499,6 +499,7 @@ struct TodoListScreen: View {
         .animation(.easeInOut(duration: 0.16), value: isCompleting)
         .opacity(draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1)
         .allowsHitTesting(!isCompleting)
+        .swipeRevealHintOnTap(enabled: !isCompleting)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 Task { await viewModel.delete(todo) }
@@ -619,6 +620,7 @@ struct TodoListScreen: View {
         .animation(.easeInOut(duration: 0.16), value: isCompleting)
         .allowsHitTesting(!isCompleting)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
+        .swipeRevealHintOnTap(enabled: !isCompleting)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 Task { await viewModel.delete(todo) }
