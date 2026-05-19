@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.feature.calendar
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -28,6 +29,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -41,8 +43,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -79,9 +84,6 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ripple
@@ -99,6 +101,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -111,6 +114,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -494,42 +498,121 @@ private enum class CalendarViewMode {
     DAY,
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CalendarViewModeTabs(
     selectedMode: CalendarViewMode,
     onModeSelected: (CalendarViewMode) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val segmentColors = SegmentedButtonDefaults.colors(
-        activeContainerColor = CalendarAccentPurple.copy(alpha = 0.18f),
-        activeContentColor = CalendarAccentPurple,
-        activeBorderColor = CalendarAccentPurple.copy(alpha = 0.62f),
-        inactiveContainerColor = colorScheme.surface,
-        inactiveContentColor = colorScheme.onSurfaceVariant,
-        inactiveBorderColor = colorScheme.outline.copy(alpha = 0.42f),
-    )
-    SingleChoiceSegmentedButtonRow(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        CalendarViewMode.entries.forEachIndexed { index, mode ->
-            val selected = mode == selectedMode
-            SegmentedButton(
-                selected = selected,
-                onClick = { onModeSelected(mode) },
-                shape = SegmentedButtonDefaults.itemShape(
-                    index = index,
-                    count = CalendarViewMode.entries.size,
-                ),
-                colors = segmentColors,
-                icon = {},
-                label = {
-                    Text(
-                        text = mode.name.lowercase(Locale.getDefault()).replaceFirstChar { it.uppercase() },
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-                },
+    val modes = CalendarViewMode.entries
+    val selectedIndex = modes.indexOf(selectedMode).coerceAtLeast(0)
+    val containerShape = RoundedCornerShape(22.dp)
+    val selectorShape = RoundedCornerShape(18.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .clip(containerShape)
+            .background(colorScheme.surfaceVariant.copy(alpha = 0.5f), containerShape)
+            .border(
+                width = 1.dp,
+                color = colorScheme.surface.copy(alpha = 0.62f),
+                shape = containerShape,
             )
+            .padding(5.dp),
+    ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val segmentWidth = maxWidth / modes.size
+            val selectedOffset by animateDpAsState(
+                targetValue = segmentWidth * selectedIndex,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessLow,
+                ),
+                label = "calendarViewModeSelectorOffset",
+            )
+
+            Box(
+                modifier = Modifier
+                    .offset(x = selectedOffset)
+                    .width(segmentWidth)
+                    .fillMaxSize()
+                    .padding(2.dp)
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = selectorShape,
+                        ambientColor = CalendarAccentPurple.copy(alpha = 0.16f),
+                        spotColor = Color.Black.copy(alpha = 0.14f),
+                    )
+                    .clip(selectorShape)
+                    .background(colorScheme.surface.copy(alpha = 0.92f), selectorShape)
+                    .background(CalendarAccentPurple.copy(alpha = 0.08f), selectorShape)
+                    .border(
+                        width = 1.dp,
+                        color = colorScheme.surface.copy(alpha = 0.82f),
+                        shape = selectorShape,
+                    )
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .selectableGroup(),
+            ) {
+                modes.forEach { mode ->
+                    val selected = mode == selectedMode
+                    val interactionSource = remember(mode) { MutableInteractionSource() }
+                    val isPressed by interactionSource.collectIsPressedAsState()
+                    val scale by animateFloatAsState(
+                        targetValue = if (isPressed) 0.96f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessLow,
+                        ),
+                        label = "calendarViewModePressScale",
+                    )
+                    val contentColor by animateColorAsState(
+                        targetValue = if (selected) {
+                            CalendarAccentPurple
+                        } else {
+                            colorScheme.onSurfaceVariant.copy(alpha = 0.88f)
+                        },
+                        label = "calendarViewModeContentColor",
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            }
+                            .clip(selectorShape)
+                            .selectable(
+                                selected = selected,
+                                onClick = { onModeSelected(mode) },
+                                role = Role.RadioButton,
+                                interactionSource = interactionSource,
+                                indication = ripple(
+                                    bounded = true,
+                                    radius = 28.dp,
+                                    color = CalendarAccentPurple,
+                                ),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = mode.name.lowercase(Locale.getDefault())
+                                .replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = contentColor,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -588,18 +671,20 @@ private fun CalendarWeekCard(
                     },
                 )
             },
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(start = 14.dp, top = 16.dp, end = 14.dp, bottom = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
@@ -630,6 +715,7 @@ private fun CalendarWeekCard(
                 targetState = weekStart,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(78.dp)
                     .graphicsLayer { translationX = dragTranslationX },
                 transitionSpec = {
                     val movingToFuture = targetState > initialState
@@ -697,8 +783,10 @@ private fun CalendarWeekDayCell(
     }
 
     Card(
-        modifier = modifier.minimumInteractiveComponentSize(),
-        shape = RoundedCornerShape(14.dp),
+        modifier = modifier
+            .height(78.dp)
+            .minimumInteractiveComponentSize(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = BorderStroke(
             width = if (borderColor == Color.Transparent) 0.dp else 1.dp,
@@ -791,18 +879,20 @@ private fun CalendarDayCard(
                     },
                 )
             },
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(start = 18.dp, top = 16.dp, end = 18.dp, bottom = 22.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
@@ -833,6 +923,7 @@ private fun CalendarDayCard(
                 targetState = selectedDate,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(70.dp)
                     .graphicsLayer { translationX = dragTranslationX },
                 transitionSpec = {
                     val movingToFuture = targetState > initialState
