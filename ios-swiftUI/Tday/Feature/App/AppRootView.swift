@@ -140,6 +140,7 @@ struct AppRootView: View {
                         }
                     }
                 }
+                .navigationInteractivePopGesture()
                 .background(TdayTheme.backgroundGradient.ignoresSafeArea())
             }
         }
