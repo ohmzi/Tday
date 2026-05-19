@@ -1,6 +1,5 @@
 package com.ohmz.tday.compose.ui.component
 
-import android.graphics.Color as AndroidColor
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -10,8 +9,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -28,13 +27,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.LowPriority
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
@@ -42,6 +39,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,12 +50,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -64,9 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -85,19 +81,12 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import kotlinx.coroutines.delay
-
-private enum class TaskSheetPage {
-    MAIN,
-    DETAILS,
-    LIST,
-    PRIORITY,
-    REPEAT,
-}
+import android.graphics.Color as AndroidColor
 
 private enum class RepeatPreset(
     val label: String,
@@ -147,7 +136,6 @@ fun CreateTaskBottomSheet(
     }
     val listIdsKey = remember(lists) { lists.joinToString(separator = "|") { it.id } }
 
-    var page by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN) }
     val isEditMode = editingTask != null
     var title by rememberSaveable(editingTask?.id) {
         mutableStateOf(editingTask?.title.orEmpty())
@@ -198,9 +186,6 @@ fun CreateTaskBottomSheet(
     var selectedRepeat by rememberSaveable(editingTask?.id) {
         mutableStateOf(repeatPresetFromRrule(editingTask?.rrule).name)
     }
-    var listReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN.name) }
-    var priorityReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
-    var repeatReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
 
@@ -262,28 +247,12 @@ fun CreateTaskBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 SheetHeader(
-                    title = when (page) {
-                        TaskSheetPage.MAIN -> if (isEditMode) "Edit task" else "New task"
-                        TaskSheetPage.DETAILS -> "Details"
-                        TaskSheetPage.LIST -> "List"
-                        TaskSheetPage.PRIORITY -> "Priority"
-                        TaskSheetPage.REPEAT -> "Repeat"
-                    },
-                    leftIcon = if (page == TaskSheetPage.MAIN) {
-                        Icons.Rounded.Close
-                    } else {
-                        Icons.AutoMirrored.Rounded.ArrowBack
-                    },
-                    leftContentDescription = if (page == TaskSheetPage.MAIN) "Close" else "Back",
+                    title = if (isEditMode) "Edit task" else "New task",
+                    leftIcon = Icons.Rounded.Close,
+                    leftContentDescription = "Close",
                     onLeftClick = {
                         focusManager.clearFocus(force = true)
-                        when (page) {
-                            TaskSheetPage.MAIN -> onDismiss()
-                            TaskSheetPage.DETAILS -> page = TaskSheetPage.MAIN
-                            TaskSheetPage.LIST -> page = TaskSheetPage.valueOf(listReturnPage)
-                            TaskSheetPage.PRIORITY -> page = TaskSheetPage.valueOf(priorityReturnPage)
-                            TaskSheetPage.REPEAT -> page = TaskSheetPage.valueOf(repeatReturnPage)
-                        }
+                        onDismiss()
                     },
                     onConfirm = {
                         focusManager.clearFocus(force = true)
@@ -294,180 +263,66 @@ fun CreateTaskBottomSheet(
                     confirmEnabled = canSubmit,
                 )
 
-                when (page) {
-                    TaskSheetPage.MAIN -> {
-                        TaskTextCard(
-                            title = title,
-                            notes = notes,
-                            onTitleChange = { title = it },
-                            onNotesChange = { notes = it },
-                        )
+                TaskTextCard(
+                    title = title,
+                    notes = notes,
+                    onTitleChange = { title = it },
+                    onNotesChange = { notes = it },
+                )
 
-                        SectionHeading("Date & Time")
-                        GroupCard {
-                            SplitDateTimeRow(
-                                icon = Icons.Rounded.CalendarMonth,
-                                title = "Due",
-                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onDateClick = { dueDatePickerOpen = true },
-                                onTimeClick = { dueTimePickerOpen = true },
-                            )
-                        }
+                SectionHeading("Schedule")
+                GroupCard {
+                    SplitDateTimeRow(
+                        icon = Icons.Rounded.CalendarMonth,
+                        title = "Due",
+                        dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                        timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                        onDateClick = { dueDatePickerOpen = true },
+                        onTimeClick = { dueTimePickerOpen = true },
+                    )
+                }
 
-                        SectionHeading("More Options")
-                        GroupCard {
-                            if (lists.isNotEmpty()) {
-                                SheetRow(
-                                    icon = Icons.AutoMirrored.Rounded.List,
-                                    title = "List",
-                                    value = selectedListName,
-                                    onClick = {
-                                        listReturnPage = TaskSheetPage.MAIN.name
-                                        page = TaskSheetPage.LIST
-                                    },
+                SectionHeading("Details")
+                GroupCard {
+                    SheetDropdownRow(
+                        icon = Icons.AutoMirrored.Rounded.List,
+                        title = "List",
+                        value = selectedListName,
+                        options = listOf<ListSummary?>(null) + lists,
+                        optionLabel = { option -> option?.name ?: "No list" },
+                        optionSwatchColor = { option ->
+                            option?.let {
+                                listColorSwatchForSelector(
+                                    raw = it.color,
+                                    fallback = colorScheme.primary.copy(alpha = 0.75f),
                                 )
-                                RowDivider()
-                            }
-                            SheetRow(
-                                icon = Icons.Rounded.LowPriority,
-                                title = "Priority",
-                                value = selectedPriority,
-                                onClick = {
-                                    priorityReturnPage = TaskSheetPage.MAIN.name
-                                    page = TaskSheetPage.PRIORITY
-                                },
-                            )
-                            RowDivider()
-                            SheetRow(
-                                icon = Icons.Rounded.Info,
-                                title = "Details",
-                                value = "",
-                                forceChevron = true,
-                                onClick = { page = TaskSheetPage.DETAILS },
-                            )
-                        }
-                    }
-
-                    TaskSheetPage.DETAILS -> {
-                        SectionHeading("Scheduling")
-                        GroupCard {
-                            SplitDateTimeRow(
-                                icon = Icons.Rounded.CalendarMonth,
-                                title = "Due",
-                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onDateClick = { dueDatePickerOpen = true },
-                                onTimeClick = { dueTimePickerOpen = true },
-                            )
-                            RowDivider()
-                            SheetRow(
-                                icon = Icons.Rounded.Repeat,
-                                title = "Repeat",
-                                value = repeatPreset.label,
-                                onClick = {
-                                    repeatReturnPage = TaskSheetPage.DETAILS.name
-                                    page = TaskSheetPage.REPEAT
-                                },
-                            )
-                        }
-
-                        SectionHeading("Organization")
-                        GroupCard {
-                            SheetRow(
-                                icon = Icons.Rounded.LowPriority,
-                                title = "Priority",
-                                value = selectedPriority,
-                                onClick = {
-                                    priorityReturnPage = TaskSheetPage.DETAILS.name
-                                    page = TaskSheetPage.PRIORITY
-                                },
-                            )
-
-                            if (lists.isNotEmpty()) {
-                                RowDivider()
-                                SheetRow(
-                                    icon = Icons.AutoMirrored.Rounded.List,
-                                    title = "List",
-                                    value = selectedListName,
-                                    onClick = {
-                                        listReturnPage = TaskSheetPage.DETAILS.name
-                                        page = TaskSheetPage.LIST
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    TaskSheetPage.LIST -> {
-                        SectionHeading("Choose List")
-                        GroupCard {
-                            ListSelectionRow(
-                                title = "No list",
-                                swatchColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.95f),
-                                selected = selectedListId == null,
-                                onClick = {
-                                    selectedListId = null
-                                    page = TaskSheetPage.valueOf(listReturnPage)
-                                },
-                            )
-                            lists.forEach { list ->
-                                RowDivider()
-                                ListSelectionRow(
-                                    title = list.name,
-                                    swatchColor = listColorSwatchForSelector(
-                                        raw = list.color,
-                                        fallback = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
-                                    ),
-                                    selected = selectedListId == list.id,
-                                    onClick = {
-                                        selectedListId = list.id
-                                        page = TaskSheetPage.valueOf(listReturnPage)
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    TaskSheetPage.PRIORITY -> {
-                        SectionHeading("Choose Priority")
-                        GroupCard {
-                            listOf("Low", "Medium", "High").forEachIndexed { index, option ->
-                                if (index > 0) {
-                                    RowDivider()
-                                }
-                                ListSelectionRow(
-                                    title = option,
-                                    swatchColor = prioritySwatchColor(option),
-                                    selected = selectedPriority == option,
-                                    onClick = {
-                                        selectedPriority = option
-                                        page = TaskSheetPage.valueOf(priorityReturnPage)
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    TaskSheetPage.REPEAT -> {
-                        SectionHeading("Choose Repeat")
-                        GroupCard {
-                            RepeatPreset.entries.forEachIndexed { index, option ->
-                                if (index > 0) {
-                                    RowDivider()
-                                }
-                                ListSelectionRow(
-                                    title = option.label,
-                                    swatchColor = repeatSwatchColor(option),
-                                    selected = selectedRepeat == option.name,
-                                    onClick = {
-                                        selectedRepeat = option.name
-                                        page = TaskSheetPage.valueOf(repeatReturnPage)
-                                    },
-                                )
-                            }
-                        }
-                    }
+                            } ?: colorScheme.outlineVariant.copy(alpha = 0.95f)
+                        },
+                        isSelected = { option -> option?.id == selectedListId },
+                        onOptionSelected = { option -> selectedListId = option?.id },
+                    )
+                    RowDivider()
+                    SheetDropdownRow(
+                        icon = Icons.Rounded.LowPriority,
+                        title = "Priority",
+                        value = selectedPriority,
+                        options = listOf("Low", "Medium", "High"),
+                        optionLabel = { option -> option },
+                        optionSwatchColor = { option -> prioritySwatchColor(option) },
+                        isSelected = { option -> selectedPriority == option },
+                        onOptionSelected = { option -> selectedPriority = option },
+                    )
+                    RowDivider()
+                    SheetDropdownRow(
+                        icon = Icons.Rounded.Repeat,
+                        title = "Repeat",
+                        value = repeatPreset.label,
+                        options = RepeatPreset.entries.toList(),
+                        optionLabel = { option -> option.label },
+                        optionSwatchColor = { option -> repeatSwatchColor(option) },
+                        isSelected = { option -> selectedRepeat == option.name },
+                        onOptionSelected = { option -> selectedRepeat = option.name },
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -819,8 +674,9 @@ private fun SheetRow(
     title: String,
     value: String,
     onClick: () -> Unit,
-    forceChevron: Boolean = false,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -831,7 +687,7 @@ private fun SheetRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = colorScheme.onSurfaceVariant,
             modifier = Modifier.size(22.dp),
         )
         Spacer(modifier = Modifier.size(14.dp))
@@ -839,71 +695,94 @@ private fun SheetRow(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.weight(1f),
-        )
-
-        if (value.isNotBlank()) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 8.dp),
-            )
-        }
-
-        if (forceChevron || value.isNotBlank()) {
-            Icon(
-                imageVector = Icons.Rounded.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ListSelectionRow(
-    title: String,
-    swatchColor: Color,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .background(
-                    color = swatchColor,
-                    shape = RoundedCornerShape(999.dp),
-                ),
-        )
-        Spacer(modifier = Modifier.size(12.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
             color = colorScheme.onSurface,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.weight(1f),
         )
-        if (selected) {
-            Icon(
-                imageVector = Icons.Rounded.Check,
-                contentDescription = null,
-                tint = colorScheme.primary,
-                modifier = Modifier.size(18.dp),
-            )
+
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .padding(start = 8.dp),
+        )
+
+        Icon(
+            imageVector = Icons.Rounded.ExpandMore,
+            contentDescription = null,
+            tint = colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun <T> SheetDropdownRow(
+    icon: ImageVector,
+    title: String,
+    value: String,
+    options: List<T>,
+    optionLabel: (T) -> String,
+    optionSwatchColor: (T) -> Color,
+    isSelected: (T) -> Boolean,
+    onOptionSelected: (T) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        SheetRow(
+            icon = icon,
+            title = title,
+            value = value,
+            onClick = { expanded = true },
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(colorScheme.surface),
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = optionLabel(option),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = colorScheme.onSurface,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(
+                                    color = optionSwatchColor(option),
+                                    shape = RoundedCornerShape(999.dp),
+                                ),
+                        )
+                    },
+                    trailingIcon = {
+                        if (isSelected(option)) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    },
+                )
+            }
         }
     }
 }
