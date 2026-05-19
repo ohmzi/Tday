@@ -9,8 +9,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -61,7 +59,6 @@ import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Flight
@@ -143,26 +140,34 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val CalendarAccentPurple = Color(0xFF7D67B6)
+private val CalendarTodayBlue = Color(0xFF509AE6)
 private val CalendarCardCornerRadius = 24.dp
 private val CalendarCardHeaderHeight = 36.dp
 private val CalendarCardHeaderHorizontalPadding = 6.dp
 private val CalendarCardNavButtonWidth = 40.dp
 private val CalendarCardNavButtonHeight = 36.dp
-private val CalendarMonthCardHorizontalPadding = 16.dp
-private val CalendarMonthCardTopPadding = 18.dp
+private val CalendarCardNavIconSize = 28.dp
+private val CalendarCardHorizontalPadding = 16.dp
+private val CalendarMonthCardTopPadding = 16.dp
 private val CalendarMonthCardBottomPadding = 20.dp
-private val CalendarMonthCardOuterSpacing = 16.dp
-private val CalendarMonthGridSpacing = 11.dp
+private val CalendarMonthCardOuterSpacing = 14.dp
+private val CalendarMonthGridSpacing = 8.dp
 private val CalendarMonthWeekdayHeight = 18.dp
-private val CalendarMonthGridHeight = 283.dp
-private val CalendarMonthDayCellHeight = 38.dp
-private val CalendarMonthDayNumberWidth = 32.dp
-private val CalendarMonthDayNumberHeight = 28.dp
-private val CalendarMonthHeaderTitleSize = 18.sp
+private val CalendarMonthGridHeight = 292.dp
+private val CalendarMonthDayCellHeight = 42.dp
+private val CalendarMonthDayHighlightWidth = 42.dp
+private val CalendarMonthDayHighlightHeight = 40.dp
+private val CalendarMonthDayNumberWidth = 34.dp
+private val CalendarMonthDayNumberHeight = 24.dp
+private val CalendarMonthTaskCountHeight = 13.dp
+private val CalendarMonthTaskDotSize = 4.6.dp
+private val CalendarMonthHeaderTitleSize = 21.sp
 private val CalendarPeriodHeaderTitleSize = 21.sp
 private val CalendarDaySummaryTitleSize = 25.sp
 private val CalendarDaySummaryCountSize = 18.sp
 private val CalendarPeriodCardPageHeight = 78.dp
+private val CalendarPeriodWeekDayCellHeight = 72.dp
+private val CalendarPeriodPageHorizontalGutter = 2.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
 
 private fun calendarPageAnimationSpec() = tween<IntOffset>(
@@ -341,60 +346,77 @@ fun CalendarScreen(
                 }
 
                 item {
-                    AnimatedContent(
-                        targetState = selectedViewMode,
-                        transitionSpec = {
-                            val enteringForward = targetState.ordinal > initialState.ordinal
-                            val enter = slideInHorizontally(
-                                animationSpec = tween(durationMillis = 200),
-                                initialOffsetX = { fullWidth ->
-                                    if (enteringForward) fullWidth / 4 else -fullWidth / 4
-                                },
-                            ) + fadeIn(animationSpec = tween(durationMillis = 200))
-                            val exit = slideOutHorizontally(
-                                animationSpec = tween(durationMillis = 180),
-                                targetOffsetX = { fullWidth ->
-                                    if (enteringForward) -fullWidth / 4 else fullWidth / 4
-                                },
-                            ) + fadeOut(animationSpec = tween(durationMillis = 180))
-                            enter togetherWith exit
-                        },
-                        label = "calendarViewModeAnimatedContent",
-                    ) { mode ->
-                        when (mode) {
-                            CalendarViewMode.MONTH -> CalendarMonthCard(
-                                visibleMonth = visibleMonth,
-                                canGoPrevMonth = visibleMonth > minNavigableMonth,
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = tasksByDate,
-                                onPrevMonth = {
-                                    if (visibleMonth > minNavigableMonth) {
-                                        visibleMonthIso = visibleMonth.minusMonths(1).toString()
-                                    }
-                                },
-                                onNextMonth = { visibleMonthIso = visibleMonth.plusMonths(1).toString() },
-                                onSelectDate = ::selectDate,
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(
+                                elevation = 2.dp,
+                                shape = RoundedCornerShape(CalendarCardCornerRadius),
+                                clip = false,
                             )
+                            .clip(RoundedCornerShape(CalendarCardCornerRadius))
+                            .background(
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = RoundedCornerShape(CalendarCardCornerRadius),
+                            ),
+                    ) {
+                        AnimatedContent(
+                            targetState = selectedViewMode,
+                            transitionSpec = {
+                                val enteringForward = targetState.ordinal > initialState.ordinal
+                                val enter = slideInHorizontally(
+                                    animationSpec = tween(durationMillis = 200),
+                                    initialOffsetX = { fullWidth ->
+                                        if (enteringForward) fullWidth / 4 else -fullWidth / 4
+                                    },
+                                )
+                                val exit = slideOutHorizontally(
+                                    animationSpec = tween(durationMillis = 180),
+                                    targetOffsetX = { fullWidth ->
+                                        if (enteringForward) -fullWidth / 4 else fullWidth / 4
+                                    },
+                                )
+                                (enter togetherWith exit).using(SizeTransform(clip = true))
+                            },
+                            label = "calendarViewModeAnimatedContent",
+                        ) { mode ->
+                            when (mode) {
+                                CalendarViewMode.MONTH -> CalendarMonthCard(
+                                    visibleMonth = visibleMonth,
+                                    canGoPrevMonth = visibleMonth > minNavigableMonth,
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    tasksByDate = tasksByDate,
+                                    onPrevMonth = {
+                                        if (visibleMonth > minNavigableMonth) {
+                                            visibleMonthIso = visibleMonth.minusMonths(1).toString()
+                                        }
+                                    },
+                                    onNextMonth = {
+                                        visibleMonthIso = visibleMonth.plusMonths(1).toString()
+                                    },
+                                    onSelectDate = ::selectDate,
+                                )
 
-                            CalendarViewMode.WEEK -> CalendarWeekCard(
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = tasksByDate,
-                                canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
-                                onPrevWeek = { selectDate(selectedDate.minusWeeks(1)) },
-                                onNextWeek = { selectDate(selectedDate.plusWeeks(1)) },
-                                onSelectDate = ::selectDate,
-                            )
+                                CalendarViewMode.WEEK -> CalendarWeekCard(
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    tasksByDate = tasksByDate,
+                                    canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
+                                    onPrevWeek = { selectDate(selectedDate.minusWeeks(1)) },
+                                    onNextWeek = { selectDate(selectedDate.plusWeeks(1)) },
+                                    onSelectDate = ::selectDate,
+                                )
 
-                            CalendarViewMode.DAY -> CalendarDayCard(
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = tasksByDate,
-                                canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
-                                onPrevDay = { selectDate(selectedDate.minusDays(1)) },
-                                onNextDay = { selectDate(selectedDate.plusDays(1)) },
-                            )
+                                CalendarViewMode.DAY -> CalendarDayCard(
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    tasksByDate = tasksByDate,
+                                    canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
+                                    onPrevDay = { selectDate(selectedDate.minusDays(1)) },
+                                    onNextDay = { selectDate(selectedDate.plusDays(1)) },
+                                )
+                            }
                         }
                     }
                 }
@@ -780,15 +802,15 @@ private fun CalendarWeekCard(
             },
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = CalendarMonthCardHorizontalPadding,
+                    start = CalendarCardHorizontalPadding,
                     top = 16.dp,
-                    end = CalendarMonthCardHorizontalPadding,
+                    end = CalendarCardHorizontalPadding,
                     bottom = CalendarPeriodCardBottomPadding,
                 ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -854,7 +876,9 @@ private fun CalendarWeekCard(
                     List(7) { offset -> displayWeekStart.plusDays(offset.toLong()) }
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = CalendarPeriodPageHorizontalGutter),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     weekDays.forEach { day ->
@@ -887,57 +911,76 @@ private fun CalendarWeekDayCell(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val containerColor = when {
-        isSelected -> CalendarAccentPurple.copy(alpha = 0.2f)
-        isToday -> CalendarAccentPurple.copy(alpha = 0.12f)
+        isSelected -> CalendarAccentPurple.copy(alpha = 0.24f)
+        isToday -> CalendarTodayBlue.copy(alpha = 0.16f)
         else -> colorScheme.background
     }
     val borderColor = when {
-        isSelected -> CalendarAccentPurple.copy(alpha = 0.8f)
-        isToday -> CalendarAccentPurple.copy(alpha = 0.42f)
+        isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
+        isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
         else -> Color.Transparent
     }
+    val borderWidth = when {
+        isSelected -> 1.6.dp
+        isToday -> 1.4.dp
+        else -> 0.dp
+    }
+    val stateTint = when {
+        isSelected -> CalendarAccentPurple
+        isToday -> CalendarTodayBlue
+        else -> CalendarAccentPurple
+    }
 
-    Card(
+    Box(
         modifier = modifier
             .height(CalendarPeriodCardPageHeight)
             .minimumInteractiveComponentSize(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = BorderStroke(
-            width = if (borderColor == Color.Transparent) 0.dp else 1.dp,
-            color = borderColor,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        onClick = onClick,
+        contentAlignment = Alignment.Center,
     ) {
-        Column(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+                .height(CalendarPeriodWeekDayCellHeight),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            border = BorderStroke(
+                width = borderWidth,
+                color = borderColor,
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            onClick = onClick,
         ) {
-            Text(
-                text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
-                style = MaterialTheme.typography.labelMedium,
-                color = colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
-            )
-            Text(
-                text = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.titleMedium,
-                color = if (isSelected || isToday) CalendarAccentPurple else colorScheme.onSurface,
-                fontWeight = FontWeight.ExtraBold,
-            )
-            Text(
-                text = if (taskCount > 9) {
-                    stringResource(R.string.calendar_task_count_cap)
-                } else {
-                    taskCount.toString()
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = if (taskCount > 0) CalendarAccentPurple else colorScheme.onSurfaceVariant.copy(alpha = 0.42f),
-                fontWeight = FontWeight.ExtraBold,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+                )
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isSelected || isToday) stateTint else colorScheme.onSurface,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                Text(
+                    text = if (taskCount > 9) {
+                        stringResource(R.string.calendar_task_count_cap)
+                    } else {
+                        taskCount.toString()
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (taskCount > 0) stateTint else colorScheme.onSurfaceVariant.copy(
+                        alpha = 0.42f
+                    ),
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
         }
     }
 }
@@ -996,15 +1039,15 @@ private fun CalendarDayCard(
             },
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = CalendarMonthCardHorizontalPadding,
+                    start = CalendarCardHorizontalPadding,
                     top = 16.dp,
-                    end = CalendarMonthCardHorizontalPadding,
+                    end = CalendarCardHorizontalPadding,
                     bottom = CalendarPeriodCardBottomPadding,
                 ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -1069,7 +1112,7 @@ private fun CalendarDayCard(
                 val taskCount = tasksByDate[displayDate]?.size ?: 0
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text(
                         text = displayDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
@@ -1331,15 +1374,15 @@ private fun CalendarMonthCard(
             },
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = CalendarMonthCardHorizontalPadding,
+                    start = CalendarCardHorizontalPadding,
                     top = CalendarMonthCardTopPadding,
-                    end = CalendarMonthCardHorizontalPadding,
+                    end = CalendarCardHorizontalPadding,
                     bottom = CalendarMonthCardBottomPadding,
                 ),
             verticalArrangement = Arrangement.spacedBy(CalendarMonthCardOuterSpacing),
@@ -1355,7 +1398,6 @@ private fun CalendarMonthCard(
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.calendar_prev_month),
                     enabled = canGoPrevMonth,
-                    iconTint = CalendarAccentPurple,
                     onClick = onPrevMonth,
                 )
                 Box(
@@ -1375,7 +1417,6 @@ private fun CalendarMonthCard(
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronRight,
                     contentDescription = stringResource(R.string.calendar_next_month),
-                    iconTint = CalendarAccentPurple,
                     onClick = onNextMonth,
                 )
             }
@@ -1496,7 +1537,7 @@ private fun MiniCalendarNavButton(
             } else {
                 colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
             },
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(CalendarCardNavIconSize),
         )
     }
 }
@@ -1511,75 +1552,117 @@ private fun CalendarDayCell(
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val numberBackground = when {
-        isSelected -> CalendarAccentPurple
-        isToday -> CalendarAccentPurple.copy(alpha = 0.16f)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val targetCellBackground = when {
+        isSelected -> CalendarAccentPurple.copy(alpha = if (isPressed) 0.32f else 0.24f)
+        isToday -> CalendarTodayBlue.copy(alpha = if (isPressed) 0.24f else 0.16f)
+        isPressed && cell.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
         else -> Color.Transparent
     }
+    val cellBackground by animateColorAsState(
+        targetValue = targetCellBackground,
+        label = "calendarMonthDateCellBackground",
+    )
+    val targetCellBorderColor = when {
+        isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
+        isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
+        isPressed && cell.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
+        else -> Color.Transparent
+    }
+    val cellBorderColor by animateColorAsState(
+        targetValue = targetCellBorderColor,
+        label = "calendarMonthDateCellBorder",
+    )
+    val targetCellBorderWidth = when {
+        isSelected -> 1.6.dp
+        isToday -> 1.4.dp
+        isPressed && cell.isCurrentMonth -> 1.2.dp
+        else -> 0.dp
+    }
+    val cellBorderWidth by animateDpAsState(
+        targetValue = targetCellBorderWidth,
+        label = "calendarMonthDateCellBorderWidth",
+    )
+    val stateTint = when {
+        isSelected -> CalendarAccentPurple
+        isToday -> CalendarTodayBlue
+        else -> CalendarAccentPurple
+    }
+    val cellShape = RoundedCornerShape(16.dp)
     val dayTextColor = when {
-        isSelected -> Color.White
-        isToday -> CalendarAccentPurple
+        isSelected || isToday -> stateTint
         cell.isCurrentMonth -> colorScheme.onSurface
         else -> colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     }
-    val interactionSource = remember { MutableInteractionSource() }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .height(CalendarMonthDayCellHeight)
             .graphicsLayer { alpha = if (cell.isCurrentMonth) 1f else 0.45f }
-            .clip(RoundedCornerShape(12.dp))
             .clickable(
                 enabled = cell.isCurrentMonth,
                 interactionSource = interactionSource,
-                indication = ripple(
-                    bounded = true,
-                    radius = 20.dp,
-                ),
+                indication = null,
                 onClick = onClick,
             ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .width(CalendarMonthDayNumberWidth)
-                .height(CalendarMonthDayNumberHeight)
-                .background(numberBackground, CircleShape),
-            contentAlignment = Alignment.Center,
+                .width(CalendarMonthDayHighlightWidth)
+                .height(CalendarMonthDayHighlightHeight)
+                .clip(cellShape)
+                .background(cellBackground, cellShape)
+                .border(
+                    width = cellBorderWidth,
+                    color = cellBorderColor,
+                    shape = cellShape,
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
         ) {
-            Text(
-                text = cell.date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 18.sp),
-                color = dayTextColor,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center,
-            )
-        }
-
-        Row(
-            modifier = Modifier.height(7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            if (taskCount > 0 && cell.isCurrentMonth) {
-                Icon(
-                    imageVector = Icons.Rounded.FiberManualRecord,
-                    contentDescription = null,
-                    tint = CalendarAccentPurple,
-                    modifier = Modifier.size(4.dp),
-                )
+            Box(
+                modifier = Modifier
+                    .width(CalendarMonthDayNumberWidth)
+                    .height(CalendarMonthDayNumberHeight),
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
-                    text = if (taskCount > 9) {
-                        stringResource(R.string.calendar_task_count_cap)
-                    } else {
-                        taskCount.toString()
-                    },
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = CalendarAccentPurple,
+                    text = cell.date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 19.sp),
+                    color = dayTextColor,
                     fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center,
                 )
+            }
+
+            Row(
+                modifier = Modifier.height(CalendarMonthTaskCountHeight),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                if (taskCount > 0 && cell.isCurrentMonth) {
+                    Box(
+                        modifier = Modifier
+                            .size(CalendarMonthTaskDotSize)
+                            .background(stateTint, CircleShape),
+                    )
+                    Text(
+                        text = if (taskCount > 9) {
+                            stringResource(R.string.calendar_task_count_cap)
+                        } else {
+                            taskCount.toString()
+                        },
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            lineHeight = 11.sp,
+                        ),
+                        color = stateTint,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
             }
         }
     }
