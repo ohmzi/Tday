@@ -145,8 +145,9 @@ struct CompletedScreen: View {
 
         Section {
             if !isCollapsed {
-                ForEach(section.items) { item in
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, item in
                     completedTimelineRow(item)
+                        .padding(.top, firstPinnedRowElasticTopInset(isFirstSection: isFirstSection, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -171,6 +172,19 @@ struct CompletedScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
         }
+    }
+
+    private func firstPinnedRowElasticTopInset(isFirstSection: Bool, itemIndex: Int) -> CGFloat {
+        guard isFirstSection, itemIndex == 0 else {
+            return 0
+        }
+
+        let progress = TodoTimelineMetrics.progress(
+            titleCollapseProgress,
+            from: TodoTimelineMetrics.firstPinnedRowElasticStart,
+            to: TodoTimelineMetrics.firstPinnedRowElasticEnd
+        )
+        return TodoTimelineMetrics.firstPinnedRowElasticClearance * progress
     }
 
     private func completedTimelineRow(_ item: CompletedItem) -> some View {
