@@ -17,6 +17,7 @@ final class AppContainer {
     let modelContainer: ModelContainer
     let cacheManager: OfflineCacheManager
     let serverConfigRepository: ServerConfigRepository
+    let systemCredentialService: SystemCredentialService
     let authRepository: AuthRepository
     let syncManager: SyncManager
     let todoRepository: TodoRepository
@@ -36,7 +37,7 @@ final class AppContainer {
         themeStore = ThemeStore()
         reminderPreferenceStore = ReminderPreferenceStore()
         serverURLState = ServerURLState(currentURL: secureStore.loadPersistedServerURL())
-        cookieStore = CookieStore()
+        cookieStore = CookieStore(secureStore: secureStore)
         networkConfiguration = NetworkConfiguration(
             secureStore: secureStore,
             serverURLState: serverURLState,
@@ -56,6 +57,7 @@ final class AppContainer {
             serverURLState: serverURLState,
             api: apiService
         )
+        systemCredentialService = SystemCredentialService()
         authRepository = AuthRepository(
             api: apiService,
             secureStore: secureStore,
@@ -67,7 +69,7 @@ final class AppContainer {
         )
         syncManager = SyncManager(api: apiService, cacheManager: cacheManager)
         todoRepository = TodoRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
-        listRepository = ListRepository(cacheManager: cacheManager, syncManager: syncManager)
+        listRepository = ListRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         completedRepository = CompletedRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         settingsRepository = SettingsRepository(api: apiService, cacheManager: cacheManager)
         realtimeClient = RealtimeClient(configuration: networkConfiguration)

@@ -530,7 +530,7 @@ private fun SheetHeader(
             text = title,
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
         )
 
         CircleActionButton(
@@ -630,7 +630,7 @@ private fun SectionHeading(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.ExtraBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp),
     )
@@ -694,7 +694,7 @@ private fun TaskField(
         singleLine = singleLine,
         textStyle = MaterialTheme.typography.titleMedium.copy(
             color = colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.ExtraBold,
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -705,7 +705,7 @@ private fun TaskField(
                     text = placeholder,
                     style = MaterialTheme.typography.titleMedium,
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
             innerTextField()
@@ -754,7 +754,7 @@ private fun SplitDateTimeRow(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             color = colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.weight(1f),
         )
 
@@ -780,7 +780,7 @@ private fun SplitDateTimeRow(
                     text = dateValue,
                     style = MaterialTheme.typography.bodySmall,
                     color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.ExtraBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -804,7 +804,7 @@ private fun SplitDateTimeRow(
                     text = timeValue,
                     style = MaterialTheme.typography.bodySmall,
                     color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.ExtraBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -840,7 +840,7 @@ private fun SheetRow(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.weight(1f),
         )
 
@@ -849,7 +849,7 @@ private fun SheetRow(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 8.dp),
@@ -894,7 +894,7 @@ private fun ListSelectionRow(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             color = colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.weight(1f),
         )
         if (selected) {
@@ -1185,7 +1185,7 @@ private fun SpectrumPickerDialog(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = primaryText,
                     )
                 }
@@ -1212,7 +1212,7 @@ private fun SpectrumPickerDialog(
                             text = "Cancel",
                             color = mutedText,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.ExtraBold,
                         )
                     }
                     TextButton(onClick = onConfirm) {
@@ -1220,7 +1220,7 @@ private fun SpectrumPickerDialog(
                             text = "Done",
                             color = primaryText,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.ExtraBold,
                         )
                     }
                 }

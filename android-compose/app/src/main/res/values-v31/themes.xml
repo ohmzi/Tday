@@ -1,5 +1,8 @@
 <resources>
     <style name="Theme.Tday" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:fontFamily">@font/nunito_app</item>
+        <item name="fontFamily">@font/nunito_app</item>
+        <item name="android:textViewStyle">@style/TdayTextViewStyle</item>
         <item name="android:windowSplashScreenBackground">@color/splash_background</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
     </style>

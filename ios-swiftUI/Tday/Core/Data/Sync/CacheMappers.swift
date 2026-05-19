@@ -1,10 +1,52 @@
 import Foundation
 
-func parseOptionalDate(_ value: String?) -> Date? {
-    guard let value, value.isEmpty == false else {
+private let timezoneSuffixPattern = #"([zZ]|[+\-]\d{2}:?\d{2})$"#
+
+private func parseUTCLikeDate(_ value: String) -> Date? {
+    if let date = ISO8601DateFormatter.full.date(from: value) {
+        return date
+    }
+    if let date = ISO8601DateFormatter.standard.date(from: value) {
+        return date
+    }
+
+    let hasExplicitTimezone = value.range(of: timezoneSuffixPattern, options: .regularExpression) != nil
+    guard !hasExplicitTimezone else {
         return nil
     }
-    return ISO8601DateFormatter.full.date(from: value) ?? ISO8601DateFormatter().date(from: value)
+
+    for formatter in DateFormatter.utcLikeParsers {
+        if let date = formatter.date(from: value) {
+            return date
+        }
+    }
+
+    return nil
+}
+
+func parseOptionalDate(_ value: String?) -> Date? {
+    guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), value.isEmpty == false else {
+        return nil
+    }
+    return parseUTCLikeDate(value)
+}
+
+private func canonicalTodoID(from rawID: String) -> String {
+    guard let separator = rawID.firstIndex(of: ":") else {
+        return rawID
+    }
+    return String(rawID[..<separator])
+}
+
+private func instanceDateFromTodoID(_ rawID: String) -> Date? {
+    guard let separator = rawID.firstIndex(of: ":") else {
+        return nil
+    }
+    let suffix = rawID[rawID.index(after: separator)...]
+    guard let epochMilliseconds = Int64(suffix) else {
+        return nil
+    }
+    return Date(epochMilliseconds: epochMilliseconds)
 }
 
 func todoMergeKey(canonicalId: String, instanceDateEpochMs: Int64?) -> String {
@@ -19,14 +61,73 @@ func todoMergeKey(record: CachedTodoRecord) -> String {
     todoMergeKey(canonicalId: record.canonicalId, instanceDateEpochMs: record.instanceDateEpochMs)
 }
 
+func todoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
+    if lhs.pinned != rhs.pinned {
+        return lhs.pinned && !rhs.pinned
+    }
+    if lhs.due != rhs.due {
+        return lhs.due < rhs.due
+    }
+    let lhsKey = todoMergeKey(item: lhs)
+    let rhsKey = todoMergeKey(item: rhs)
+    if lhsKey != rhsKey {
+        return lhsKey < rhsKey
+    }
+    return lhs.id < rhs.id
+}
+
+func cachedTodoSortPrecedes(_ lhs: CachedTodoRecord, _ rhs: CachedTodoRecord) -> Bool {
+    if lhs.pinned != rhs.pinned {
+        return lhs.pinned && !rhs.pinned
+    }
+    if lhs.dueEpochMs != rhs.dueEpochMs {
+        return lhs.dueEpochMs < rhs.dueEpochMs
+    }
+    let lhsKey = todoMergeKey(record: lhs)
+    let rhsKey = todoMergeKey(record: rhs)
+    if lhsKey != rhsKey {
+        return lhsKey < rhsKey
+    }
+    return lhs.id < rhs.id
+}
+
+func todoTimelineSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
+    if lhs.due != rhs.due {
+        return lhs.due < rhs.due
+    }
+    let lhsKey = todoMergeKey(item: lhs)
+    let rhsKey = todoMergeKey(item: rhs)
+    if lhsKey != rhsKey {
+        return lhsKey < rhsKey
+    }
+    return lhs.id < rhs.id
+}
+
+func completedMergeKey(originalTodoId: String?, fallbackId: String, instanceDateEpochMs: Int64?) -> String {
+    guard let originalTodoId else {
+        return "completed-id::\(fallbackId)"
+    }
+    return "completed-original::\(originalTodoId)::\(instanceDateEpochMs.map(String.init) ?? "root")"
+}
+
+func completedMergeKey(record: CachedCompletedRecord) -> String {
+    completedMergeKey(originalTodoId: record.originalTodoId, fallbackId: record.id, instanceDateEpochMs: record.instanceDateEpochMs)
+}
+
+func completedMergeKey(item: CompletedItem) -> String {
+    completedMergeKey(
+        originalTodoId: item.originalTodoId,
+        fallbackId: item.id,
+        instanceDateEpochMs: item.instanceDate.map { Int64($0.timeIntervalSince1970 * 1000.0) }
+    )
+}
+
 func mapTodoDTO(_ dto: TodoDTO) -> TodoItem {
-    let instanceDate = parseOptionalDate(dto.instanceDate)
-    let id = instanceDate.map {
-        "\(dto.id):\(Int64($0.timeIntervalSince1970 * 1000.0))"
-    } ?? dto.id
+    let explicitInstanceDate = parseOptionalDate(dto.instanceDate)
+    let instanceDate = explicitInstanceDate ?? instanceDateFromTodoID(dto.id)
     return TodoItem(
-        id: id,
-        canonicalId: dto.id,
+        id: dto.id,
+        canonicalId: canonicalTodoID(from: dto.id),
         title: dto.title,
         description: dto.description,
         priority: dto.priority,
@@ -160,5 +261,38 @@ extension ISO8601DateFormatter {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
+    }()
+
+    static let standard: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+}
+
+extension DateFormatter {
+    fileprivate static let utcLikeParsers: [DateFormatter] = {
+        let patterns = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SS",
+            "yyyy-MM-dd'T'HH:mm:ss.S",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm",
+        ]
+
+        return patterns.map { pattern in
+            let formatter = DateFormatter()
+            formatter.calendar = Calendar(identifier: .iso8601)
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = pattern
+            return formatter
+        }
     }()
 }

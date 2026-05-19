@@ -176,7 +176,7 @@ fun UpdateRequiredOverlay(
                         Text(
                             text = "Update Required",
                             style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
                         )
                         Text(
@@ -260,7 +260,7 @@ fun UpdateRequiredOverlay(
                         Text(
                             text = "Server Update Needed",
                             style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
                         )
                         Text(

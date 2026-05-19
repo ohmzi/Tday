@@ -27,19 +27,36 @@ targets:
         PRODUCT_NAME: Tday
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios
         INFOPLIST_FILE: Tday/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Tday/Tday.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 1
+        CURRENT_PROJECT_VERSION: 5
         MARKETING_VERSION: 1.23.0
         TARGETED_DEVICE_FAMILY: 1
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+  TdayTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests/TdayCoreTests
+    dependencies:
+      - target: Tday
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
 
 schemes:
   Tday:
     build:
       targets:
         Tday: all
+        TdayTests: [test]
+    test:
+      targets:
+        - TdayTests
     run:
       config: Debug
     archive:
