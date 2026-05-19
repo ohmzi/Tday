@@ -4,9 +4,7 @@ import UIKit
 private enum CalendarTitleHandoff {
     static let pinnedRevealStart: CGFloat = 0.18
     static let pinnedRevealEnd: CGFloat = 0.62
-    static let modeTabsElasticClearance: CGFloat = TodoTimelineMetrics.titleCollapseDistance
-    static let modeTabsElasticStart: CGFloat = 0
-    static let modeTabsElasticEnd: CGFloat = 1
+    static let titleRowHeight: CGFloat = TodoTimelineMetrics.titleCollapseDistance
 }
 
 private let calendarNativePagerCenterIndex = 1
@@ -71,15 +69,6 @@ struct CalendarScreen: View {
         return min(max(calendarScrollOffset / distance, 0), 1)
     }
 
-    private var modeTabsElasticTopInset: CGFloat {
-        let elasticProgress = TodoTimelineMetrics.progress(
-            titleCollapseProgress,
-            from: CalendarTitleHandoff.modeTabsElasticStart,
-            to: CalendarTitleHandoff.modeTabsElasticEnd
-        )
-        return CalendarTitleHandoff.modeTabsElasticClearance * elasticProgress
-    }
-
     private var minimumNavigableMonth: Date {
         calendarMonthStart(for: Date())
     }
@@ -121,7 +110,7 @@ struct CalendarScreen: View {
                 )
                 .listRowInsets(
                     EdgeInsets(
-                        top: modeTabsElasticTopInset,
+                        top: 0,
                         leading: TodoTimelineMetrics.horizontalPadding,
                         bottom: 14,
                         trailing: TodoTimelineMetrics.horizontalPadding
@@ -1411,8 +1400,8 @@ private struct CalendarExpandedTitleRow: View {
             .lineLimit(1)
             .frame(
                 maxWidth: .infinity,
-                minHeight: TodoTimelineMetrics.expandedTitleHeight,
-                maxHeight: TodoTimelineMetrics.expandedTitleHeight,
+                minHeight: CalendarTitleHandoff.titleRowHeight,
+                maxHeight: CalendarTitleHandoff.titleRowHeight,
                 alignment: .topLeading
             )
             .opacity(Double(1 - fadeProgress))
