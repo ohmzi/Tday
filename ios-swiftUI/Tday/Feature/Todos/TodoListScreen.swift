@@ -7,9 +7,9 @@ enum TodoTimelineMetrics {
     static let sectionTitleSize: CGFloat = 22
     static let sectionChevronSize: CGFloat = 14
     static let sectionSpacing: CGFloat = 10
-    static let firstPinnedElasticClearance: CGFloat = 34
-    static let firstPinnedElasticStart: CGFloat = 0.42
-    static let firstPinnedElasticEnd: CGFloat = 1
+    static let firstPinnedRowElasticClearance: CGFloat = 34
+    static let firstPinnedRowElasticStart: CGFloat = 0.42
+    static let firstPinnedRowElasticEnd: CGFloat = 1
     static let minimalRowToggleSize: CGFloat = 24
     static let minimalRowToggleFrame: CGFloat = 38
     static let minimalRowTitleSize: CGFloat = 18
@@ -62,7 +62,14 @@ struct TimelineRowDivider: View {
 
 struct TimelineTopBarAction {
     let systemName: String
+    let tint: Color?
     let action: () -> Void
+
+    init(systemName: String, tint: Color? = nil, action: @escaping () -> Void) {
+        self.systemName = systemName
+        self.tint = tint
+        self.action = action
+    }
 }
 
 struct TodoListScreen: View {
@@ -420,11 +427,7 @@ struct TodoListScreen: View {
                         )
                         .listRowInsets(
                             EdgeInsets(
-                                top: firstPinnedHeaderElasticTopInset(
-                                    section: section,
-                                    isFirstSection: index == 0,
-                                    defaultTopInset: index == 0 ? 0 : 8
-                                ),
+                                top: index == 0 ? 0 : 8,
                                 leading: 0,
                                 bottom: 0,
                                 trailing: 0
@@ -742,11 +745,7 @@ struct TodoListScreen: View {
             )
             .listRowInsets(
                 EdgeInsets(
-                    top: firstPinnedHeaderElasticTopInset(
-                        section: section,
-                        isFirstSection: isFirstSection,
-                        defaultTopInset: isFirstSection ? 0 : 8
-                    ),
+                    top: isFirstSection ? 0 : 8,
                     leading: 0,
                     bottom: 0,
                     trailing: 0
@@ -757,27 +756,19 @@ struct TodoListScreen: View {
         }
     }
 
-    private func firstPinnedHeaderElasticTopInset(section: TodoTimelineSection, isFirstSection: Bool, defaultTopInset: CGFloat) -> CGFloat {
-        guard isFirstSection, shouldApplyFirstPinnedElasticClearance(to: section) else {
-            return defaultTopInset
-        }
-
-        return defaultTopInset + firstPinnedElasticClearance()
-    }
-
     private func firstPinnedRowElasticTopInset(section: TodoTimelineSection, isFirstSection: Bool, itemIndex: Int) -> CGFloat {
         guard isFirstSection, itemIndex == 0 else {
             return 0
         }
 
-        guard shouldApplyFirstPinnedElasticClearance(to: section) else {
+        guard shouldApplyFirstPinnedRowElasticClearance(to: section) else {
             return 0
         }
 
-        return firstPinnedElasticClearance()
+        return firstPinnedRowElasticClearance()
     }
 
-    private func shouldApplyFirstPinnedElasticClearance(to section: TodoTimelineSection) -> Bool {
+    private func shouldApplyFirstPinnedRowElasticClearance(to section: TodoTimelineSection) -> Bool {
         let isOverdueFirstSection = viewModel.mode == .overdue
         let isTodayFirstSection = viewModel.mode == .today
         let isExpandedPriorityEarlier = viewModel.mode == .priority && section.id == "earlier"
@@ -790,13 +781,13 @@ struct TodoListScreen: View {
             isScheduledFirstSection
     }
 
-    private func firstPinnedElasticClearance() -> CGFloat {
+    private func firstPinnedRowElasticClearance() -> CGFloat {
         let elasticProgress = TodoTimelineMetrics.progress(
             titleCollapseProgress,
-            from: TodoTimelineMetrics.firstPinnedElasticStart,
-            to: TodoTimelineMetrics.firstPinnedElasticEnd
+            from: TodoTimelineMetrics.firstPinnedRowElasticStart,
+            to: TodoTimelineMetrics.firstPinnedRowElasticEnd
         )
-        return TodoTimelineMetrics.firstPinnedElasticClearance * elasticProgress
+        return TodoTimelineMetrics.firstPinnedRowElasticClearance * elasticProgress
     }
 
     private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String {
@@ -894,7 +885,7 @@ struct TimelineTopBar: View {
                 TimelineTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
                 Spacer(minLength: 0)
                 if let action {
-                    TimelineTopBarButton(systemName: action.systemName, chrome: .plain, action: action.action)
+                    TimelineTopBarButton(systemName: action.systemName, chrome: .plain, tint: action.tint, action: action.action)
                 } else {
                     Color.clear
                         .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
@@ -983,9 +974,17 @@ private struct TimelineTopBarButton: View {
 
     let systemName: String
     let chrome: Chrome
+    let tint: Color?
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
+
+    init(systemName: String, chrome: Chrome, tint: Color? = nil, action: @escaping () -> Void) {
+        self.systemName = systemName
+        self.chrome = chrome
+        self.tint = tint
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
@@ -1001,7 +1000,7 @@ private struct TimelineTopBarButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(TimelineTopBarButtonStyle(isFilled: chrome == .filled))
-        .foregroundStyle(chrome == .filled ? colors.onSurface : Color.accentColor)
+        .foregroundStyle(chrome == .filled ? colors.onSurface : (tint ?? Color.accentColor))
     }
 }
 
