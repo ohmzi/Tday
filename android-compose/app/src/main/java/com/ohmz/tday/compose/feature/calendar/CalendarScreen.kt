@@ -50,12 +50,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.FitnessCenter
@@ -63,7 +64,6 @@ import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalBar
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
@@ -1329,8 +1329,9 @@ private fun CalendarTodoRow(
     val view = LocalView.current
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 130.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 36.dp.toPx() }.coerceAtMost(actionRevealPx * 0.28f)
+    val actionRevealPx = with(density) { 176.dp.toPx() }
+    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
+    val maxElasticDragPx = actionRevealPx * 1.14f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -1348,9 +1349,8 @@ private fun CalendarTodoRow(
     val showPriorityFlag = isHighPriority(todo.priority)
     val listIndicatorColor = listAccentColor(listMeta?.color)
     val rowShape = RoundedCornerShape(16.dp)
-    val actionContainerColor =
-        colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
     val foregroundColor = colorScheme.background
+    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
 
     Column(
         modifier = modifier
@@ -1361,39 +1361,41 @@ private fun CalendarTodoRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(58.dp)
-                .clip(rowShape)
-                .background(actionContainerColor),
+                .height(58.dp),
         ) {
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(end = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CalendarSwipeActionCircle(
-                    icon = Icons.Rounded.Info,
+                CalendarSwipeActionButton(
+                    icon = Icons.Rounded.BorderColor,
                     contentDescription = stringResource(R.string.action_edit_task),
-                    tint = colorScheme.onSurface,
-                    background = colorScheme.surface,
+                    label = stringResource(R.string.action_edit),
+                    tint = Color.White,
+                    background = Color(0xFF4C7DDE),
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.62f,
                     onClick = {
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
                         onInfo()
                         targetOffsetX = 0f
                     },
                 )
-                CalendarSwipeActionCircle(
-                    icon = Icons.Rounded.DeleteSweep,
+                CalendarSwipeActionButton(
+                    icon = Icons.Rounded.DeleteOutline,
                     contentDescription = stringResource(R.string.action_delete_task),
-                    tint = colorScheme.error,
-                    background = colorScheme.surface,
+                    label = stringResource(R.string.action_delete),
+                    tint = Color.White,
+                    background = Color(0xFFFF453A),
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.04f,
                     onClick = {
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
                         targetOffsetX = 0f
-                        coroutineScope.launch {
-                            onDelete()
-                        }
+                        onDelete()
                     },
                 )
             }
@@ -1405,7 +1407,10 @@ private fun CalendarTodoRow(
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
-                            targetOffsetX = (targetOffsetX + delta).coerceIn(-actionRevealPx, 0f)
+                            targetOffsetX = (targetOffsetX + delta).coerceIn(
+                                -maxElasticDragPx,
+                                0f,
+                            )
                         },
                         onDragStopped = { velocity ->
                             val flingOpen = velocity < -1450f
@@ -1670,43 +1675,69 @@ private fun CalendarCompletedTodoRow(
 }
 
 @Composable
-private fun CalendarSwipeActionCircle(
+private fun CalendarSwipeActionButton(
     icon: ImageVector,
     contentDescription: String,
+    label: String,
     tint: Color,
     background: Color,
+    revealProgress: Float,
+    revealDelay: Float,
     onClick: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
+    val pressedScale by animateFloatAsState(
         targetValue = if (pressed) 0.92f else 1f,
         label = "calendarSwipeActionScale",
     )
-    Card(
+    val normalizedReveal = ((revealProgress - revealDelay) / (1f - revealDelay))
+        .coerceIn(0f, 1f)
+    val easedReveal = FastOutSlowInEasing.transform(normalizedReveal)
+
+    Column(
         modifier = Modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .sizeIn(minWidth = 60.dp)
             .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
+                alpha = easedReveal
+                val revealScale = 0.38f + (0.62f * easedReveal)
+                scaleX = pressedScale * revealScale
+                scaleY = pressedScale * revealScale
             },
-        onClick = onClick,
-        interactionSource = interactionSource,
-        shape = androidx.compose.foundation.shape.CircleShape,
-        colors = CardDefaults.cardColors(containerColor = background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
+        Card(
+            modifier = Modifier.size(width = 56.dp, height = 34.dp),
+            onClick = onClick,
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = background),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+            ),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(22.dp),
-            )
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = tint,
+                    modifier = Modifier.size(21.dp),
+                )
+            }
         }
+        Text(
+            text = label,
+            color = colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+        )
     }
 }
 
