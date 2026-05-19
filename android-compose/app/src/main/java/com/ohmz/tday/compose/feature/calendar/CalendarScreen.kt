@@ -42,7 +42,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -87,6 +86,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -386,15 +386,20 @@ fun CalendarScreen(
                         )
                     }
                 } else {
-                    items(selectedDatePendingTasks, key = { it.id }) { todo ->
-                        CalendarTodoRow(
-                            modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
-                            todo = todo,
-                            lists = uiState.lists,
-                            onComplete = { onCompleteTask(todo) },
-                            onInfo = { editTargetId = todo.id },
-                            onDelete = { onDelete(todo) },
-                        )
+                    item {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            selectedDatePendingTasks.forEach { todo ->
+                                key(todo.id) {
+                                    CalendarTodoRow(
+                                        todo = todo,
+                                        lists = uiState.lists,
+                                        onComplete = { onCompleteTask(todo) },
+                                        onInfo = { editTargetId = todo.id },
+                                        onDelete = { onDelete(todo) },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
