@@ -32,9 +32,6 @@ enum TodoTimelineMetrics {
     static let collapsedTitleRevealDistance: CGFloat = 10
     static let collapsedTitleRevealStart: CGFloat = 0.68
     static let collapsedTitleRevealEnd: CGFloat = 1
-    static let topBarHandoffCoverHeight: CGFloat = 34
-    static let topBarHandoffCoverStart: CGFloat = 0.38
-    static let topBarHandoffCoverEnd: CGFloat = 0.78
 
     static func smoothstep(_ value: CGFloat) -> CGFloat {
         let clamped = min(max(value, 0), 1)
@@ -796,18 +793,26 @@ struct TodoListScreen: View {
             return 0
         }
 
-        guard shouldApplyFirstPinnedRowElasticClearance() else {
+        guard shouldApplyFirstPinnedRowElasticClearance(to: section) else {
             return 0
         }
 
         return firstPinnedRowElasticClearance()
     }
 
-    private func shouldApplyFirstPinnedRowElasticClearance() -> Bool {
-        switch viewModel.mode {
-        case .today, .overdue, .scheduled, .priority, .all, .list:
-            return true
-        }
+    private func shouldApplyFirstPinnedRowElasticClearance(to section: TodoTimelineSection) -> Bool {
+        let isOverdueFirstSection = viewModel.mode == .overdue
+        let isTodayFirstSection = viewModel.mode == .today
+        let isExpandedPriorityEarlier = viewModel.mode == .priority && section.id == "earlier"
+        let isExpandedAllTasksEarlier = viewModel.mode == .all && section.id == "earlier"
+        let isScheduledFirstSection = viewModel.mode == .scheduled
+        let isListFirstSection = viewModel.mode == .list
+        return isOverdueFirstSection ||
+            isTodayFirstSection ||
+            isExpandedPriorityEarlier ||
+            isExpandedAllTasksEarlier ||
+            isScheduledFirstSection ||
+            isListFirstSection
     }
 
     private func firstPinnedRowElasticClearance() -> CGFloat {
@@ -917,16 +922,6 @@ struct TimelineTopBar: View {
         titleRevealDistance * (1 - revealProgress)
     }
 
-    private var handoffCoverOpacity: Double {
-        Double(
-            TodoTimelineMetrics.progress(
-                progress,
-                from: TodoTimelineMetrics.topBarHandoffCoverStart,
-                to: TodoTimelineMetrics.topBarHandoffCoverEnd
-            )
-        )
-    }
-
     private var titleContent: some View {
         Text(title)
             .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
@@ -965,13 +960,6 @@ struct TimelineTopBar: View {
         .padding(.top, 2)
         .padding(.bottom, 4)
         .background(colors.background)
-        .overlay(alignment: .bottom) {
-            colors.background
-                .frame(height: TodoTimelineMetrics.topBarHandoffCoverHeight)
-                .offset(y: TodoTimelineMetrics.topBarHandoffCoverHeight)
-                .opacity(handoffCoverOpacity)
-                .allowsHitTesting(false)
-        }
     }
 }
 
