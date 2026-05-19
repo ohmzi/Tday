@@ -62,6 +62,7 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Backpack
 import androidx.compose.material.icons.rounded.BeachAccess
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Cake
 import androidx.compose.material.icons.rounded.CalendarToday
@@ -79,6 +80,7 @@ import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.DirectionsBoat
@@ -2044,7 +2046,6 @@ private fun SwipeActionButton(
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val density = LocalDensity.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val pressedScale by animateFloatAsState(
@@ -2054,14 +2055,12 @@ private fun SwipeActionButton(
     val normalizedReveal = ((revealProgress - revealDelay) / (1f - revealDelay))
         .coerceIn(0f, 1f)
     val easedReveal = FastOutSlowInEasing.transform(normalizedReveal)
-    val revealOffsetPx = with(density) { 18.dp.toPx() }
     Column(
         modifier = Modifier
             .sizeIn(minWidth = 60.dp)
             .graphicsLayer {
                 alpha = easedReveal
-                translationX = revealOffsetPx * (1f - easedReveal)
-                val revealScale = 0.84f + (0.16f * easedReveal)
+                val revealScale = 0.38f + (0.62f * easedReveal)
                 scaleX = pressedScale * revealScale
                 scaleY = pressedScale * revealScale
             },
@@ -2276,13 +2275,13 @@ private fun SwipeTaskRow(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SwipeActionButton(
-                        icon = Icons.Rounded.Edit,
+                        icon = Icons.Rounded.BorderColor,
                         contentDescription = stringResource(R.string.action_edit_task),
                         label = stringResource(R.string.action_edit),
                         tint = Color.White,
-                        background = colorScheme.primary,
+                        background = Color(0xFF4C7DDE),
                         revealProgress = actionRevealProgress,
-                        revealDelay = 0.28f,
+                        revealDelay = 0.62f,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
@@ -2293,13 +2292,13 @@ private fun SwipeTaskRow(
                         },
                     )
                     SwipeActionButton(
-                        icon = Icons.Rounded.Delete,
+                        icon = Icons.Rounded.DeleteOutline,
                         contentDescription = stringResource(R.string.action_delete_task),
                         label = stringResource(R.string.action_delete),
                         tint = Color.White,
-                        background = colorScheme.error,
+                        background = Color(0xFFFF453A),
                         revealProgress = actionRevealProgress,
-                        revealDelay = 0.08f,
+                        revealDelay = 0.04f,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
