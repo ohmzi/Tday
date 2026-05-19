@@ -213,6 +213,7 @@ struct CalendarScreen: View {
                     .foregroundStyle(colors.onSurface)
                     .textCase(nil)
                     .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                    .timelinePinnedSectionHeaderBackground()
             }
         }
         .listStyle(.plain)
