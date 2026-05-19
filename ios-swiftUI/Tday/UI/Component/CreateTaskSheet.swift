@@ -20,6 +20,7 @@ struct CreateTaskSheet: View {
     @State private var repeatRule: String?
     @State private var isSubmitting = false
     @State private var parserTask: Task<Void, Never>?
+    @State private var activeSelector: CreateTaskSheetSelector?
 
     private let priorityOptions = ["Low", "Medium", "High"]
     private let repeatOptions: [(label: String, value: String?)] = [
@@ -109,73 +110,30 @@ struct CreateTaskSheet: View {
 
                     CreateTaskSheetSectionTitle(text: "Details")
                     CreateTaskSheetGroupCard {
-                        CreateTaskSheetMenuRow(
+                        CreateTaskSheetSelectorTriggerRow(
                             iconName: "list.bullet",
                             title: "List",
-                            value: selectedListName
-                        ) {
-                            Button {
-                                selectedListID = nil
-                            } label: {
-                                CreateTaskSheetMenuItemLabel(
-                                    title: "No list",
-                                    selected: selectedListID == nil,
-                                    swatchColor: colors.onSurfaceVariant.opacity(0.35)
-                                )
-                            }
-
-                            ForEach(lists) { list in
-                                Button {
-                                    selectedListID = list.id
-                                } label: {
-                                    CreateTaskSheetMenuItemLabel(
-                                        title: list.name,
-                                        selected: selectedListID == list.id,
-                                        swatchColor: createTaskSheetListSwatchColor(list.color)
-                                    )
-                                }
-                            }
-                        }
+                            value: selectedListName,
+                            onTap: { activeSelector = .list }
+                        )
 
                         CreateTaskSheetDivider()
 
-                        CreateTaskSheetMenuRow(
+                        CreateTaskSheetSelectorTriggerRow(
                             iconName: "text.badge.checkmark",
                             title: "Priority",
-                            value: priority
-                        ) {
-                            ForEach(priorityOptions, id: \.self) { option in
-                                Button {
-                                    priority = option
-                                } label: {
-                                    CreateTaskSheetMenuItemLabel(
-                                        title: option,
-                                        selected: priority == option,
-                                        swatchColor: createTaskSheetPrioritySwatchColor(option)
-                                    )
-                                }
-                            }
-                        }
+                            value: priority,
+                            onTap: { activeSelector = .priority }
+                        )
 
                         CreateTaskSheetDivider()
 
-                        CreateTaskSheetMenuRow(
+                        CreateTaskSheetSelectorTriggerRow(
                             iconName: "repeat",
                             title: "Repeat",
-                            value: selectedRepeatLabel
-                        ) {
-                            ForEach(repeatOptions, id: \.label) { option in
-                                Button {
-                                    repeatRule = option.value
-                                } label: {
-                                    CreateTaskSheetMenuItemLabel(
-                                        title: option.label,
-                                        selected: repeatRule == option.value,
-                                        swatchColor: createTaskSheetRepeatSwatchColor(option.value)
-                                    )
-                                }
-                            }
-                        }
+                            value: selectedRepeatLabel,
+                            onTap: { activeSelector = .repeat }
+                        )
                     }
 
                     Spacer(minLength: 6)
@@ -190,6 +148,11 @@ struct CreateTaskSheet: View {
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground(colors.background)
+        .overlay {
+            if let activeSelector {
+                selectorOverlay(for: activeSelector)
+            }
+        }
         .task {
             hydrateFromInitialPayload()
         }
@@ -246,6 +209,93 @@ struct CreateTaskSheet: View {
         isSubmitting = false
         onDismiss()
         dismiss()
+    }
+
+    @ViewBuilder
+    private func selectorOverlay(for selector: CreateTaskSheetSelector) -> some View {
+        ZStack {
+            Color.black.opacity(0.48)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    activeSelector = nil
+                }
+
+            CreateTaskSheetSelectorCard(title: selector.title) {
+                switch selector {
+                case .list:
+                    CreateTaskSheetSelectorRow(
+                        title: "No list",
+                        swatchColor: colors.onSurfaceVariant.opacity(0.35),
+                        selected: selectedListID == nil
+                    ) {
+                        selectedListID = nil
+                        activeSelector = nil
+                    }
+
+                    ForEach(lists) { list in
+                        CreateTaskSheetSelectorDivider()
+                        CreateTaskSheetSelectorRow(
+                            title: list.name,
+                            swatchColor: createTaskSheetListSwatchColor(list.color),
+                            selected: selectedListID == list.id
+                        ) {
+                            selectedListID = list.id
+                            activeSelector = nil
+                        }
+                    }
+
+                case .priority:
+                    ForEach(Array(priorityOptions.enumerated()), id: \.element) { index, option in
+                        if index > 0 {
+                            CreateTaskSheetSelectorDivider()
+                        }
+                        CreateTaskSheetSelectorRow(
+                            title: option,
+                            swatchColor: createTaskSheetPrioritySwatchColor(option),
+                            selected: priority == option
+                        ) {
+                            priority = option
+                            activeSelector = nil
+                        }
+                    }
+
+                case .repeat:
+                    ForEach(Array(repeatOptions.enumerated()), id: \.element.label) { index, option in
+                        if index > 0 {
+                            CreateTaskSheetSelectorDivider()
+                        }
+                        CreateTaskSheetSelectorRow(
+                            title: option.label,
+                            swatchColor: createTaskSheetRepeatSwatchColor(option.value),
+                            selected: repeatRule == option.value
+                        ) {
+                            repeatRule = option.value
+                            activeSelector = nil
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 54)
+        }
+    }
+}
+
+private enum CreateTaskSheetSelector: String, Identifiable {
+    case list
+    case priority
+    case repeat
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .list:
+            return "List"
+        case .priority:
+            return "Priority"
+        case .repeat:
+            return "Repeat"
+        }
     }
 }
 
@@ -342,20 +392,7 @@ private struct CreateTaskSheetDueRow: View {
 
             Spacer(minLength: 6)
 
-            HStack(spacing: 6) {
-                CreateTaskSheetDatePickerChip(
-                    dueDate: $dueDate,
-                    components: .date,
-                    text: dueDate.formatted(.dateTime.month(.abbreviated).day().year()),
-                    width: 126
-                )
-                CreateTaskSheetDatePickerChip(
-                    dueDate: $dueDate,
-                    components: .hourAndMinute,
-                    text: dueDate.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute()),
-                    width: 86
-                )
-            }
+            CreateTaskSheetDateTimeControl(dueDate: $dueDate)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -376,48 +413,75 @@ private struct CreateTaskSheetDueRow: View {
     }
 }
 
-private struct CreateTaskSheetDatePickerChip: View {
+private struct CreateTaskSheetDateTimeControl: View {
     @Binding var dueDate: Date
-    let components: DatePickerComponents
-    let text: String
-    let width: CGFloat
 
     @Environment(\.tdayColors) private var colors
+
+    private var dateText: String {
+        dueDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    }
+
+    private var timeText: String {
+        dueDate.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated)).minute())
+    }
 
     var body: some View {
         ZStack {
-            Text(text)
-                .font(.tdayRounded(size: 15, weight: .bold))
-                .foregroundStyle(colors.onSurface)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-                .frame(width: width, height: 38)
-                .background(colors.surfaceVariant.opacity(0.66), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            HStack(spacing: 0) {
+                Text(dateText)
+                    .frame(maxWidth: .infinity)
 
-            DatePicker("", selection: $dueDate, displayedComponents: components)
-                .labelsHidden()
-                .datePickerStyle(.compact)
-                .tint(colors.onSurfaceVariant)
-                .frame(width: width, height: 38)
-                .opacity(0.02)
+                Rectangle()
+                    .fill(colors.onSurfaceVariant.opacity(0.2))
+                    .frame(width: 1, height: 22)
+
+                Text(timeText)
+                    .frame(maxWidth: .infinity)
+            }
+            .font(.tdayRounded(size: 13, weight: .heavy))
+            .foregroundStyle(colors.onSurfaceVariant)
+            .lineLimit(1)
+            .minimumScaleFactor(0.74)
+            .padding(.horizontal, 10)
+            .frame(width: 206, height: 38)
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(colors.onSurfaceVariant.opacity(0.24), lineWidth: 1)
+            }
+            .background(colors.surfaceVariant.opacity(0.32), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            HStack(spacing: 0) {
+                DatePicker("", selection: $dueDate, displayedComponents: .date)
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                    .tint(colors.onSurfaceVariant)
+                    .frame(width: 114, height: 38)
+                    .opacity(0.02)
+
+                DatePicker("", selection: $dueDate, displayedComponents: .hourAndMinute)
+                    .labelsHidden()
+                    .datePickerStyle(.compact)
+                    .tint(colors.onSurfaceVariant)
+                    .frame(width: 92, height: 38)
+                    .opacity(0.02)
+            }
         }
-        .frame(width: width, height: 38)
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .frame(width: 206, height: 38)
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
-private struct CreateTaskSheetMenuRow<MenuContent: View>: View {
+private struct CreateTaskSheetSelectorTriggerRow: View {
     let iconName: String
     let title: String
     let value: String
-    @ViewBuilder let menuContent: () -> MenuContent
+    let onTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        Menu {
-            menuContent()
-        } label: {
+        Button(action: onTap) {
             HStack(spacing: 14) {
                 Image(systemName: iconName)
                     .font(.system(size: 20, weight: .semibold))
@@ -451,32 +515,77 @@ private struct CreateTaskSheetMenuRow<MenuContent: View>: View {
     }
 }
 
-private struct CreateTaskSheetMenuItemLabel: View {
+private struct CreateTaskSheetSelectorCard<Content: View>: View {
     let title: String
-    let selected: Bool
-    let swatchColor: Color
+    @ViewBuilder let content: Content
+
+    @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(swatchColor)
-                .frame(width: 10, height: 10)
-
+        VStack(alignment: .leading, spacing: 0) {
             Text(title)
-                .lineLimit(1)
+                .font(.tdayRounded(size: 18, weight: .heavy))
+                .foregroundStyle(colors.onSurfaceVariant)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 12)
 
-            Spacer(minLength: 24)
-
-            if selected {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.blue)
-            } else {
-                Color.clear
-                    .frame(width: 14, height: 14)
-            }
+            content
         }
-        .frame(minWidth: 164, alignment: .leading)
+        .padding(.bottom, 14)
+        .frame(maxWidth: 330)
+        .background(colors.surface, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .shadow(color: Color.black.opacity(0.18), radius: 24, x: 0, y: 18)
+    }
+}
+
+private struct CreateTaskSheetSelectorRow: View {
+    let title: String
+    let swatchColor: Color
+    let selected: Bool
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Circle()
+                    .fill(swatchColor)
+                    .frame(width: 10, height: 10)
+
+                Text(title)
+                    .font(.tdayRounded(size: 18, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+
+                Spacer(minLength: 12)
+
+                if selected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(colors.primary)
+                } else {
+                    Color.clear
+                        .frame(width: 18, height: 18)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct CreateTaskSheetSelectorDivider: View {
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Rectangle()
+            .fill(colors.onSurfaceVariant.opacity(0.16))
+            .frame(height: 1)
+            .padding(.horizontal, 20)
     }
 }
 
