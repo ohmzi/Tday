@@ -79,7 +79,6 @@ import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.DirectionsBoat
@@ -95,7 +94,6 @@ import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Inventory
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Lightbulb
@@ -2035,45 +2033,61 @@ private fun AllTaskSwipeRow(
 }
 
 @Composable
-private fun SwipeActionCircle(
+private fun SwipeActionButton(
     icon: ImageVector,
     contentDescription: String,
+    label: String,
     tint: Color,
     background: Color,
     onClick: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.92f else 1f,
         label = "swipeActionScale",
     )
-    Card(
+    Column(
         modifier = Modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-            .wrapContentSize(Alignment.Center)
-            .size(42.dp)
+            .sizeIn(minWidth = 60.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             },
-        onClick = onClick,
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        colors = CardDefaults.cardColors(containerColor = background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
+        Card(
+            modifier = Modifier.size(width = 56.dp, height = 34.dp),
+            onClick = onClick,
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = background),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp
+            ),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(22.dp),
-            )
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = tint,
+                    modifier = Modifier.size(21.dp),
+                )
+            }
         }
+        Text(
+            text = label,
+            color = colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+        )
     }
 }
 
@@ -2135,8 +2149,8 @@ private fun SwipeTaskRow(
     val view = LocalView.current
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 130.dp.toPx() }
-    val maxElasticDragPx = actionRevealPx * 1.22f
+    val actionRevealPx = with(density) { 176.dp.toPx() }
+    val maxElasticDragPx = actionRevealPx * 1.14f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var localCompleted by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -2169,8 +2183,6 @@ private fun SwipeTaskRow(
         dueBodyText
     }
     val rowShape = RoundedCornerShape(16.dp)
-    val actionContainerColor =
-        colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
     val foregroundColor = colorScheme.background
     val highlightStrength = highlightAnim.value.coerceIn(0f, 1f)
     val contentGlowBrush = Brush.horizontalGradient(
@@ -2243,22 +2255,21 @@ private fun SwipeTaskRow(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(SWIPE_ROW_HEIGHT)
-                    .clip(rowShape)
-                    .background(actionContainerColor),
+                    .height(SWIPE_ROW_HEIGHT),
             ) {
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(end = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SwipeActionCircle(
-                        icon = Icons.Rounded.Info,
+                    SwipeActionButton(
+                        icon = Icons.Rounded.Edit,
                         contentDescription = stringResource(R.string.action_edit_task),
-                        tint = colorScheme.onSurface,
-                        background = colorScheme.surface,
+                        label = stringResource(R.string.action_edit),
+                        tint = Color.White,
+                        background = colorScheme.primary,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
@@ -2268,11 +2279,12 @@ private fun SwipeTaskRow(
                             targetOffsetX = 0f
                         },
                     )
-                    SwipeActionCircle(
-                        icon = Icons.Rounded.DeleteSweep,
+                    SwipeActionButton(
+                        icon = Icons.Rounded.Delete,
                         contentDescription = stringResource(R.string.action_delete_task),
-                        tint = colorScheme.error,
-                        background = colorScheme.surface,
+                        label = stringResource(R.string.action_delete),
+                        tint = Color.White,
+                        background = colorScheme.error,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
