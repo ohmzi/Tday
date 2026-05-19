@@ -504,10 +504,14 @@ private fun CalendarViewModeTabs(
     onModeSelected: (CalendarViewMode) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
     val modes = CalendarViewMode.entries
     val selectedIndex = modes.indexOf(selectedMode).coerceAtLeast(0)
     val containerShape = RoundedCornerShape(22.dp)
     val selectorShape = RoundedCornerShape(18.dp)
+    val interactionSources = remember {
+        modes.associateWith { MutableInteractionSource() }
+    }
 
     Box(
         modifier = Modifier
@@ -524,6 +528,21 @@ private fun CalendarViewModeTabs(
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val segmentWidth = maxWidth / modes.size
+            val monthPressed by interactionSources
+                .getValue(CalendarViewMode.MONTH)
+                .collectIsPressedAsState()
+            val weekPressed by interactionSources
+                .getValue(CalendarViewMode.WEEK)
+                .collectIsPressedAsState()
+            val dayPressed by interactionSources
+                .getValue(CalendarViewMode.DAY)
+                .collectIsPressedAsState()
+            val pressedMode = when {
+                monthPressed -> CalendarViewMode.MONTH
+                weekPressed -> CalendarViewMode.WEEK
+                dayPressed -> CalendarViewMode.DAY
+                else -> null
+            }
             val selectedOffset by animateDpAsState(
                 targetValue = segmentWidth * selectedIndex,
                 animationSpec = spring(
@@ -532,6 +551,24 @@ private fun CalendarViewModeTabs(
                 ),
                 label = "calendarViewModeSelectorOffset",
             )
+            val selectorScale by animateFloatAsState(
+                targetValue = if (pressedMode == selectedMode) 0.985f else 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+                label = "calendarViewModeSelectorPressScale",
+            )
+            val selectorSurfaceAlpha by animateFloatAsState(
+                targetValue = if (pressedMode == selectedMode) 0.98f else 0.92f,
+                animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
+                label = "calendarViewModeSelectorSurfaceAlpha",
+            )
+            val selectorAccentAlpha by animateFloatAsState(
+                targetValue = if (pressedMode == selectedMode) 0.15f else 0.08f,
+                animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
+                label = "calendarViewModeSelectorAccentAlpha",
+            )
 
             Box(
                 modifier = Modifier
@@ -539,6 +576,10 @@ private fun CalendarViewModeTabs(
                     .width(segmentWidth)
                     .fillMaxSize()
                     .padding(2.dp)
+                    .graphicsLayer {
+                        scaleX = selectorScale
+                        scaleY = selectorScale
+                    }
                     .shadow(
                         elevation = 12.dp,
                         shape = selectorShape,
@@ -546,8 +587,14 @@ private fun CalendarViewModeTabs(
                         spotColor = Color.Black.copy(alpha = 0.14f),
                     )
                     .clip(selectorShape)
-                    .background(colorScheme.surface.copy(alpha = 0.92f), selectorShape)
-                    .background(CalendarAccentPurple.copy(alpha = 0.08f), selectorShape)
+                    .background(
+                        colorScheme.surface.copy(alpha = selectorSurfaceAlpha),
+                        selectorShape
+                    )
+                    .background(
+                        CalendarAccentPurple.copy(alpha = selectorAccentAlpha),
+                        selectorShape
+                    )
                     .border(
                         width = 1.dp,
                         color = colorScheme.surface.copy(alpha = 0.82f),
@@ -562,15 +609,31 @@ private fun CalendarViewModeTabs(
             ) {
                 modes.forEach { mode ->
                     val selected = mode == selectedMode
-                    val interactionSource = remember(mode) { MutableInteractionSource() }
+                    val interactionSource = interactionSources.getValue(mode)
                     val isPressed by interactionSource.collectIsPressedAsState()
-                    val scale by animateFloatAsState(
-                        targetValue = if (isPressed) 0.96f else 1f,
+                    val contentScale by animateFloatAsState(
+                        targetValue = if (isPressed) 0.98f else 1f,
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessLow,
+                            stiffness = Spring.StiffnessMediumLow,
                         ),
-                        label = "calendarViewModePressScale",
+                        label = "calendarViewModeContentPressScale",
+                    )
+                    val pressHaloAlpha by animateFloatAsState(
+                        targetValue = if (isPressed && !selected) 1f else 0f,
+                        animationSpec = tween(
+                            durationMillis = if (isPressed && !selected) 90 else 190,
+                            easing = FastOutSlowInEasing,
+                        ),
+                        label = "calendarViewModePressHaloAlpha",
+                    )
+                    val pressHaloScale by animateFloatAsState(
+                        targetValue = if (isPressed && !selected) 1f else 0.92f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                        label = "calendarViewModePressHaloScale",
                     )
                     val contentColor by animateColorAsState(
                         targetValue = if (selected) {
@@ -585,30 +648,52 @@ private fun CalendarViewModeTabs(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxSize()
-                            .graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                            }
                             .clip(selectorShape)
                             .selectable(
                                 selected = selected,
-                                onClick = { onModeSelected(mode) },
+                                onClick = {
+                                    if (!selected) {
+                                        ViewCompat.performHapticFeedback(
+                                            view,
+                                            HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                        )
+                                    }
+                                    onModeSelected(mode)
+                                },
                                 role = Role.RadioButton,
                                 interactionSource = interactionSource,
-                                indication = ripple(
-                                    bounded = true,
-                                    radius = 28.dp,
-                                    color = CalendarAccentPurple,
-                                ),
+                                indication = null,
                             ),
                         contentAlignment = Alignment.Center,
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                .graphicsLayer {
+                                    alpha = pressHaloAlpha
+                                    scaleX = pressHaloScale
+                                    scaleY = pressHaloScale
+                                }
+                                .clip(selectorShape)
+                                .background(colorScheme.surface.copy(alpha = 0.62f), selectorShape)
+                                .background(CalendarAccentPurple.copy(alpha = 0.10f), selectorShape)
+                                .border(
+                                    width = 1.dp,
+                                    color = colorScheme.surface.copy(alpha = 0.76f),
+                                    shape = selectorShape,
+                                )
+                        )
                         Text(
                             text = mode.name.lowercase(Locale.getDefault())
                                 .replaceFirstChar { it.uppercase() },
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = contentColor,
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = contentScale
+                                scaleY = contentScale
+                            },
                         )
                     }
                 }
@@ -1031,6 +1116,7 @@ private fun CalendarTopBar(
                     icon = Icons.Rounded.CalendarMonth,
                     contentDescription = stringResource(R.string.calendar_jump_to_today),
                     onClick = onJumpToday,
+                    isAccentButton = true,
                 )
             }
             if (collapsedTitleAlpha > 0.001f) {
@@ -1077,18 +1163,31 @@ private fun CalendarCircleButton(
     contentDescription: String,
     onClick: () -> Unit,
     isBackButton: Boolean = false,
+    isAccentButton: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = androidx.compose.ui.platform.LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val containerColor = if (isBackButton) {
-        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
-    } else {
-        colorScheme.background
+    val containerColor = when {
+        isBackButton -> if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(
+            alpha = 0.96f
+        )
+
+        isAccentButton -> CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.22f else 0.12f)
+        else -> colorScheme.background
     }
-    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f))
+    val buttonBorder = when {
+        isBackButton -> null
+        isAccentButton -> BorderStroke(
+            1.dp,
+            CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.62f else 0.48f)
+        )
+
+        else -> BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f))
+    }
+    val iconTint = if (isAccentButton) CalendarAccentPurple else colorScheme.onSurface
     val buttonSize = if (isBackButton) TdayDimens.FabSize else 54.dp
     val iconSize = if (isBackButton) 36.dp else 28.dp
     val scale by animateFloatAsState(
@@ -1127,7 +1226,7 @@ private fun CalendarCircleButton(
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                tint = colorScheme.onSurface,
+                tint = iconTint,
                 modifier = Modifier.size(iconSize),
             )
         }
