@@ -112,6 +112,7 @@ struct CompletedScreen: View {
             .scrollContentBackground(.hidden)
             .contentMargins(.top, 0, for: .scrollContent)
             .listSectionSpacing(0)
+            .environment(\.defaultMinListRowHeight, 1)
             .disableVerticalScrollBounce()
             .animation(.easeInOut(duration: 0.24), value: completedTimelineAnimationKey)
 
@@ -149,6 +150,7 @@ struct CompletedScreen: View {
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
+                    TimelineRowDivider()
                 }
             }
         } header: {
@@ -233,11 +235,6 @@ struct CompletedScreen: View {
             }
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
             .contentShape(Rectangle())
-
-            Rectangle()
-                .fill(colors.onSurfaceVariant.opacity(0.18))
-                .frame(height: 1)
-                .padding(.trailing, -TodoTimelineMetrics.swipeDividerExtension)
         }
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)

@@ -14,7 +14,6 @@ enum TodoTimelineMetrics {
     static let minimalRowIndicatorSize: CGFloat = 14
     static let minimalRowTrailingIndicatorPadding: CGFloat = 24
     static let minimalRowVerticalPadding: CGFloat = 10
-    static let swipeDividerExtension: CGFloat = 230
     static let emptyStateSize: CGFloat = 28
     static let emptyStateOffset: CGFloat = 78
     static let titleCollapseDistance: CGFloat = 64
@@ -39,6 +38,22 @@ enum TodoTimelineMetrics {
     static func progress(_ value: CGFloat, from start: CGFloat, to end: CGFloat) -> CGFloat {
         guard end > start else { return value >= end ? 1 : 0 }
         return smoothstep((value - start) / (end - start))
+    }
+}
+
+struct TimelineRowDivider: View {
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Rectangle()
+            .fill(colors.onSurfaceVariant.opacity(0.18))
+            .frame(height: 1)
+            .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .environment(\.defaultMinListRowHeight, 1)
+            .allowsHitTesting(false)
     }
 }
 
@@ -391,6 +406,7 @@ struct TodoListScreen: View {
                                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
+                                TimelineRowDivider()
                             }
                         }
                     } header: {
@@ -415,6 +431,7 @@ struct TodoListScreen: View {
             .scrollContentBackground(.hidden)
             .contentMargins(.top, 0, for: .scrollContent)
             .listSectionSpacing(0)
+            .environment(\.defaultMinListRowHeight, 1)
             .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
             if viewModel.items.isEmpty {
@@ -455,6 +472,7 @@ struct TodoListScreen: View {
             .scrollContentBackground(.hidden)
             .contentMargins(.top, 0, for: .scrollContent)
             .listSectionSpacing(0)
+            .environment(\.defaultMinListRowHeight, 1)
             .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
             if viewModel.items.isEmpty {
@@ -611,11 +629,6 @@ struct TodoListScreen: View {
             }
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
             .contentShape(Rectangle())
-
-            Rectangle()
-                .fill(colors.onSurfaceVariant.opacity(0.18))
-                .frame(height: 1)
-                .padding(.trailing, -TodoTimelineMetrics.swipeDividerExtension)
         }
         .opacity(isCompleting ? 0 : (draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1))
         .scaleEffect(isCompleting ? 0.985 : 1, anchor: .center)
@@ -694,6 +707,7 @@ struct TodoListScreen: View {
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
+                    TimelineRowDivider()
                 }
             }
         } header: {
