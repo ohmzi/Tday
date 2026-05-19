@@ -44,6 +44,23 @@ enum TodoTimelineMetrics {
     }
 }
 
+struct TimelinePinnedSectionHeaderBackground: ViewModifier {
+    @Environment(\.tdayColors) private var colors
+
+    func body(content: Content) -> some View {
+        content
+            .background(colors.background)
+            .listRowBackground(colors.background)
+            .zIndex(1)
+    }
+}
+
+extension View {
+    func timelinePinnedSectionHeaderBackground() -> some View {
+        modifier(TimelinePinnedSectionHeaderBackground())
+    }
+}
+
 struct TimelineRowDivider: View {
     @Environment(\.tdayColors) private var colors
 
@@ -134,6 +151,12 @@ struct TodoListScreen: View {
         let itemIDs = viewModel.items.map(\.id).joined(separator: "|")
         let completingIDs = completingTodoIDs.sorted().joined(separator: "|")
         return "\(itemIDs)::\(completingIDs)"
+    }
+
+    private var firstVisibleExpandedTimelineSectionID: String? {
+        groupedSections.first { section in
+            !section.items.isEmpty && !isTimelineSectionCollapsed(section)
+        }?.id
     }
 
     private var canSummarizeCurrentMode: Bool {
@@ -388,6 +411,7 @@ struct TodoListScreen: View {
                 } header: {
                     Text(section.title)
                         .foregroundStyle(activeDropSectionId == section.id ? colors.primary : colors.onSurfaceVariant)
+                        .timelinePinnedSectionHeaderBackground()
                 }
             }
         }
@@ -425,7 +449,7 @@ struct TodoListScreen: View {
                         } else {
                             ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                                 minimalTimelineRow(todo, in: section)
-                                    .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstSection: index == 0, itemIndex: itemIndex))
+                                    .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
@@ -445,7 +469,7 @@ struct TodoListScreen: View {
                                 trailing: 0
                             )
                         )
-                        .listRowBackground(Color.clear)
+                        .timelinePinnedSectionHeaderBackground()
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -723,18 +747,14 @@ struct TodoListScreen: View {
 
     @ViewBuilder
     private func minimalTimelineSection(_ section: TodoTimelineSection, isFirstSection: Bool) -> some View {
-        let canCollapseSection = if viewModel.mode == .all {
-            true
-        } else {
-            viewModel.mode == .priority && section.isCollapsible
-        }
+        let canCollapseSection = canCollapseTimelineSection(section)
         let isCollapsed = canCollapseSection && collapsedSectionIDs.contains(section.id)
 
         Section {
             if !isCollapsed {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                     minimalTimelineRow(todo, in: section)
-                        .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstSection: isFirstSection, itemIndex: itemIndex))
+                        .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -763,13 +783,13 @@ struct TodoListScreen: View {
                     trailing: 0
                 )
             )
-            .listRowBackground(Color.clear)
+            .timelinePinnedSectionHeaderBackground()
             .listRowSeparator(.hidden)
         }
     }
 
-    private func firstPinnedRowElasticTopInset(section: TodoTimelineSection, isFirstSection: Bool, itemIndex: Int) -> CGFloat {
-        guard isFirstSection, itemIndex == 0 else {
+    private func firstPinnedRowElasticTopInset(section: TodoTimelineSection, isFirstVisibleExpandedSection: Bool, itemIndex: Int) -> CGFloat {
+        guard isFirstVisibleExpandedSection, itemIndex == 0 else {
             return 0
         }
 
@@ -802,6 +822,17 @@ struct TodoListScreen: View {
             to: TodoTimelineMetrics.firstPinnedRowElasticEnd
         )
         return TodoTimelineMetrics.firstPinnedRowElasticClearance * elasticProgress
+    }
+
+    private func canCollapseTimelineSection(_ section: TodoTimelineSection) -> Bool {
+        if viewModel.mode == .all {
+            return true
+        }
+        return viewModel.mode == .priority && section.isCollapsible
+    }
+
+    private func isTimelineSectionCollapsed(_ section: TodoTimelineSection) -> Bool {
+        canCollapseTimelineSection(section) && collapsedSectionIDs.contains(section.id)
     }
 
     private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String {
@@ -1195,7 +1226,6 @@ struct TimelineSectionHeader: View {
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
         .padding(.bottom, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(colors.background)
 
         if let onTap {
             Button(action: onTap) {
