@@ -5,20 +5,19 @@ private enum CalendarTitleHandoff {
     static let pinnedRevealEnd: CGFloat = 0.62
 }
 
-private enum CalendarSlideDirection {
-    case backward
-    case forward
-
-    var insertionEdge: Edge {
-        self == .forward ? .trailing : .leading
-    }
-
-    var removalEdge: Edge {
-        self == .forward ? .leading : .trailing
-    }
+private enum CalendarPageDirection {
+    case previous
+    case next
 }
 
-private let calendarPageAnimation = Animation.interactiveSpring(response: 0.34, dampingFraction: 0.88, blendDuration: 0.08)
+private struct CalendarPagerActions {
+    let previous: () -> Void
+    let next: () -> Void
+}
+
+private let calendarPageSettleDuration: TimeInterval = 0.24
+private let calendarPageSettleAnimation = Animation.interactiveSpring(response: 0.28, dampingFraction: 0.86, blendDuration: 0.05)
+private let calendarSelectionAnimation = Animation.easeInOut(duration: 0.16)
 
 struct CalendarScreen: View {
     @State private var viewModel: CalendarViewModel
@@ -29,7 +28,6 @@ struct CalendarScreen: View {
     @State private var selectedDate = Date()
     @State private var visibleMonth = calendarMonthStart(for: Date())
     @State private var displayMode: CalendarDisplayMode = .month
-    @State private var slideDirection: CalendarSlideDirection = .forward
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
     @State private var calendarScrollOffset: CGFloat = 0
@@ -271,7 +269,7 @@ struct CalendarScreen: View {
                 tasksByDay: pendingItemsByDay,
                 accentColor: calendarAccentColor,
                 canGoPreviousMonth: canGoPreviousMonth,
-                slideDirection: slideDirection,
+                minimumNavigableMonth: minimumNavigableMonth,
                 onPreviousMonth: { navigateMonth(by: -1) },
                 onNextMonth: { navigateMonth(by: 1) },
                 onSelectDate: { selectDate($0) }
@@ -284,7 +282,6 @@ struct CalendarScreen: View {
                 accentColor: calendarAccentColor,
                 canGoPreviousWeek: canGoPreviousWeek,
                 canSelectDate: { canNavigate(to: $0) },
-                slideDirection: slideDirection,
                 onPreviousWeek: { navigateDay(by: -7) },
                 onNextWeek: { navigateDay(by: 7) },
                 onSelectDate: { selectDate($0) }
@@ -296,7 +293,7 @@ struct CalendarScreen: View {
                 tasksByDay: pendingItemsByDay,
                 accentColor: calendarAccentColor,
                 canGoPreviousDay: canGoPreviousDay,
-                slideDirection: slideDirection,
+                canSelectDate: { canNavigate(to: $0) },
                 onPreviousDay: { navigateDay(by: -1) },
                 onNextDay: { navigateDay(by: 1) }
             )
@@ -309,8 +306,7 @@ struct CalendarScreen: View {
 
     private func selectDate(_ date: Date) {
         guard canNavigate(to: date) else { return }
-        slideDirection = date >= selectedDate ? .forward : .backward
-        withAnimation(calendarPageAnimation) {
+        withAnimation(calendarSelectionAnimation) {
             selectedDate = date
             visibleMonth = calendarMonthStart(for: date)
         }
@@ -321,8 +317,7 @@ struct CalendarScreen: View {
         guard let targetMonth = Calendar.current.date(byAdding: .month, value: value, to: visibleMonth) else {
             return
         }
-        slideDirection = value >= 0 ? .forward : .backward
-        withAnimation(calendarPageAnimation) {
+        withAnimation(calendarSelectionAnimation) {
             visibleMonth = calendarMonthStart(for: targetMonth)
         }
     }
@@ -376,7 +371,7 @@ private struct CalendarMonthGrid: View {
     let tasksByDay: [Date: [TodoItem]]
     let accentColor: Color
     let canGoPreviousMonth: Bool
-    let slideDirection: CalendarSlideDirection
+    let minimumNavigableMonth: Date
     let onPreviousMonth: () -> Void
     let onNextMonth: () -> Void
     let onSelectDate: (Date) -> Void
@@ -396,37 +391,33 @@ private struct CalendarMonthGrid: View {
     }
 
     var body: some View {
-        ZStack {
-            monthContent(for: visibleMonth)
-                .id(calendarMonthStart(for: visibleMonth))
-                .transition(calendarPageTransition(slideDirection))
-        }
-        .animation(calendarPageAnimation, value: calendarMonthStart(for: visibleMonth))
-        .padding(.horizontal, 16)
-        .padding(.top, 18)
-        .padding(.bottom, 20)
-        .frame(maxWidth: .infinity)
-        .calendarSwipeNavigation(
+        let displayMonth = calendarMonthStart(for: visibleMonth)
+        CalendarPagingCard(
+            center: displayMonth,
+            previous: canGoPreviousMonth ? calendarMonth(byAdding: -1, to: displayMonth) : nil,
+            next: calendarMonth(byAdding: 1, to: displayMonth),
+            height: 402,
             canNavigatePrevious: canGoPreviousMonth,
             onPrevious: onPreviousMonth,
             onNext: onNextMonth
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
+        ) { month, actions in
+            monthContent(for: month, actions: actions)
+        }
     }
 
-    private func monthContent(for displayMonth: Date) -> some View {
-        VStack(spacing: 16) {
+    private func monthContent(for displayMonth: Date, actions: CalendarPagerActions) -> some View {
+        let canGoPrevious = calendarMonthStart(for: displayMonth) > minimumNavigableMonth
+
+        return VStack(spacing: 16) {
             HStack {
-                Button(action: onPreviousMonth) {
+                Button(action: actions.previous) {
                     Image(systemName: "chevron.left")
                         .font(.tdayRounded(size: 20, weight: .heavy))
-                        .foregroundStyle(canGoPreviousMonth ? accentColor : colors.onSurfaceVariant.opacity(0.36))
+                        .foregroundStyle(canGoPrevious ? accentColor : colors.onSurfaceVariant.opacity(0.36))
                         .frame(width: 40, height: 36)
                 }
                 .buttonStyle(.plain)
-                .disabled(!canGoPreviousMonth)
+                .disabled(!canGoPrevious)
 
                 Spacer(minLength: 0)
 
@@ -436,7 +427,7 @@ private struct CalendarMonthGrid: View {
 
                 Spacer(minLength: 0)
 
-                Button(action: onNextMonth) {
+                Button(action: actions.next) {
                     Image(systemName: "chevron.right")
                         .font(.tdayRounded(size: 20, weight: .heavy))
                         .foregroundStyle(accentColor)
@@ -467,6 +458,9 @@ private struct CalendarMonthGrid: View {
                 }
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 18)
+        .padding(.bottom, 20)
         .frame(maxWidth: .infinity)
     }
 
@@ -497,7 +491,6 @@ private struct CalendarWeekCard: View {
     let accentColor: Color
     let canGoPreviousWeek: Bool
     let canSelectDate: (Date) -> Bool
-    let slideDirection: CalendarSlideDirection
     let onPreviousWeek: () -> Void
     let onNextWeek: () -> Void
     let onSelectDate: (Date) -> Void
@@ -505,37 +498,32 @@ private struct CalendarWeekCard: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        let weekStart = calendarStartOfWeek(for: selectedDate)
-        ZStack {
-            weekContent(for: weekStart)
-                .id(weekStart)
-                .transition(calendarPageTransition(slideDirection))
-        }
-        .animation(calendarPageAnimation, value: weekStart)
-        .padding(.horizontal, 14)
-        .padding(.top, 16)
-        .padding(.bottom, 18)
-        .frame(maxWidth: .infinity)
-        .calendarSwipeNavigation(
+        CalendarPagingCard(
+            center: Calendar.current.startOfDay(for: selectedDate),
+            previous: canGoPreviousWeek ? calendarDate(byAddingDays: -7, to: selectedDate) : nil,
+            next: calendarDate(byAddingDays: 7, to: selectedDate),
+            height: 162,
             canNavigatePrevious: canGoPreviousWeek,
             onPrevious: onPreviousWeek,
             onNext: onNextWeek
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
+        ) { displaySelectedDate, actions in
+            weekContent(for: displaySelectedDate, actions: actions)
+        }
     }
 
-    private func weekContent(for weekStart: Date) -> some View {
+    private func weekContent(for displaySelectedDate: Date, actions: CalendarPagerActions) -> some View {
+        let weekStart = calendarStartOfWeek(for: displaySelectedDate)
         let weekDays = (0..<7).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: weekStart) }
+        let previousWeekDate = calendarDate(byAddingDays: -7, to: displaySelectedDate)
+        let canGoPrevious = previousWeekDate.map(canSelectDate) ?? false
 
         return VStack(spacing: 14) {
             HStack {
                 CalendarNavButton(
                     systemName: "chevron.left",
-                    isEnabled: canGoPreviousWeek,
+                    isEnabled: canGoPrevious,
                     color: colors.onSurfaceVariant,
-                    action: onPreviousWeek
+                    action: actions.previous
                 )
 
                 Spacer(minLength: 0)
@@ -552,7 +540,7 @@ private struct CalendarWeekCard: View {
                     systemName: "chevron.right",
                     isEnabled: true,
                     color: colors.onSurfaceVariant,
-                    action: onNextWeek
+                    action: actions.next
                 )
             }
             .padding(.horizontal, 6)
@@ -565,7 +553,7 @@ private struct CalendarWeekCard: View {
                     CalendarWeekDayCell(
                         date: date,
                         taskCount: taskCount,
-                        isSelected: Calendar.current.isDate(date, inSameDayAs: selectedDate),
+                        isSelected: Calendar.current.isDate(date, inSameDayAs: displaySelectedDate),
                         isToday: Calendar.current.isDate(date, inSameDayAs: today),
                         isEnabled: isEnabled,
                         accentColor: accentColor,
@@ -574,6 +562,9 @@ private struct CalendarWeekCard: View {
                 }
             }
         }
+        .padding(.horizontal, 14)
+        .padding(.top, 16)
+        .padding(.bottom, 18)
         .frame(maxWidth: .infinity)
     }
 }
@@ -667,42 +658,37 @@ private struct CalendarDayCard: View {
     let tasksByDay: [Date: [TodoItem]]
     let accentColor: Color
     let canGoPreviousDay: Bool
-    let slideDirection: CalendarSlideDirection
+    let canSelectDate: (Date) -> Bool
     let onPreviousDay: () -> Void
     let onNextDay: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        let displayDate = Calendar.current.startOfDay(for: selectedDate)
-        ZStack {
-            dayContent(for: displayDate)
-                .id(displayDate)
-                .transition(calendarPageTransition(slideDirection))
-        }
-        .animation(calendarPageAnimation, value: displayDate)
-        .padding(.horizontal, 18)
-        .padding(.top, 16)
-        .padding(.bottom, 22)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .calendarSwipeNavigation(
+        CalendarPagingCard(
+            center: Calendar.current.startOfDay(for: selectedDate),
+            previous: canGoPreviousDay ? calendarDate(byAddingDays: -1, to: selectedDate) : nil,
+            next: calendarDate(byAddingDays: 1, to: selectedDate),
+            height: 158,
             canNavigatePrevious: canGoPreviousDay,
             onPrevious: onPreviousDay,
             onNext: onNextDay
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
+        ) { displayDate, actions in
+            dayContent(for: displayDate, actions: actions)
+        }
     }
 
-    private func dayContent(for displayDate: Date) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private func dayContent(for displayDate: Date, actions: CalendarPagerActions) -> some View {
+        let previousDay = calendarDate(byAddingDays: -1, to: displayDate)
+        let canGoPrevious = previousDay.map(canSelectDate) ?? false
+
+        return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 CalendarNavButton(
                     systemName: "chevron.left",
-                    isEnabled: canGoPreviousDay,
+                    isEnabled: canGoPrevious,
                     color: colors.onSurfaceVariant,
-                    action: onPreviousDay
+                    action: actions.previous
                 )
 
                 Spacer(minLength: 0)
@@ -717,7 +703,7 @@ private struct CalendarDayCard: View {
                     systemName: "chevron.right",
                     isEnabled: true,
                     color: colors.onSurfaceVariant,
-                    action: onNextDay
+                    action: actions.next
                 )
             }
 
@@ -729,6 +715,9 @@ private struct CalendarDayCard: View {
                 .font(.tdayRounded(size: 18, weight: .heavy))
                 .foregroundStyle(colors.onSurfaceVariant)
         }
+        .padding(.horizontal, 18)
+        .padding(.top, 16)
+        .padding(.bottom, 22)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -769,53 +758,129 @@ private struct CalendarNavButton: View {
     }
 }
 
-private struct CalendarSwipeNavigationModifier: ViewModifier {
+private struct CalendarPagingCard<Page: Hashable, PageContent: View>: View {
+    let center: Page
+    let previous: Page?
+    let next: Page?
+    let height: CGFloat
     let canNavigatePrevious: Bool
     let onPrevious: () -> Void
     let onNext: () -> Void
+    let content: (Page, CalendarPagerActions) -> PageContent
 
-    private static let swipeThreshold: CGFloat = 44
+    @Environment(\.tdayColors) private var colors
+    @State private var dragOffset: CGFloat = 0
+    @State private var animatedOffset: CGFloat = 0
+    @State private var isCompletingPage = false
 
-    func body(content: Content) -> some View {
-        content
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 22, coordinateSpace: .local)
-                    .onEnded { value in
-                        let horizontal = value.predictedEndTranslation.width
-                        let vertical = value.predictedEndTranslation.height
-                        guard abs(horizontal) > abs(vertical) * 1.15 else { return }
+    private let swipeThreshold: CGFloat = 48
 
-                        if horizontal > Self.swipeThreshold, canNavigatePrevious {
-                            onPrevious()
-                        } else if horizontal < -Self.swipeThreshold {
-                            onNext()
-                        }
-                    }
+    var body: some View {
+        GeometryReader { proxy in
+            let width = max(proxy.size.width, 1)
+            let currentDragOffset = isCompletingPage ? animatedOffset : boundedDragOffset(dragOffset, width: width)
+            let actions = CalendarPagerActions(
+                previous: { completePage(.previous, width: width) },
+                next: { completePage(.next, width: width) }
             )
-    }
-}
 
-private extension View {
-    func calendarSwipeNavigation(
-        canNavigatePrevious: Bool,
-        onPrevious: @escaping () -> Void,
-        onNext: @escaping () -> Void
-    ) -> some View {
-        modifier(
-            CalendarSwipeNavigationModifier(
-                canNavigatePrevious: canNavigatePrevious,
-                onPrevious: onPrevious,
-                onNext: onNext
-            )
-        )
+            HStack(spacing: 0) {
+                pageView(previous ?? center, actions: actions, width: width)
+                pageView(center, actions: actions, width: width)
+                pageView(next ?? center, actions: actions, width: width)
+            }
+            .offset(x: -width + currentDragOffset)
+            .contentShape(Rectangle())
+            .simultaneousGesture(dragGesture(width: width))
+        }
+        .frame(height: height)
+        .clipped()
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
     }
-}
 
-private func calendarPageTransition(_ direction: CalendarSlideDirection) -> AnyTransition {
-    .asymmetric(
-        insertion: .move(edge: direction.insertionEdge).combined(with: .opacity),
-        removal: .move(edge: direction.removalEdge).combined(with: .opacity)
-    )
+    private func pageView(_ page: Page, actions: CalendarPagerActions, width: CGFloat) -> some View {
+        content(page, actions)
+            .frame(width: width)
+    }
+
+    private func dragGesture(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 12, coordinateSpace: .local)
+            .onChanged { value in
+                guard !isCompletingPage else { return }
+                guard isHorizontalSwipe(value) else { return }
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    dragOffset = boundedDragOffset(value.translation.width, width: width)
+                }
+            }
+            .onEnded { value in
+                guard !isCompletingPage else { return }
+                guard isHorizontalSwipe(value) else {
+                    settleBackToCenter()
+                    return
+                }
+
+                let predictedOffset = boundedDragOffset(value.predictedEndTranslation.width, width: width)
+                let actualOffset = boundedDragOffset(value.translation.width, width: width)
+                let intendedOffset = abs(predictedOffset) > abs(actualOffset) ? predictedOffset : actualOffset
+
+                if intendedOffset > swipeThreshold, canNavigatePrevious {
+                    completePage(.previous, width: width)
+                } else if intendedOffset < -swipeThreshold {
+                    completePage(.next, width: width)
+                } else {
+                    settleBackToCenter()
+                }
+            }
+    }
+
+    private func completePage(_ direction: CalendarPageDirection, width: CGFloat) {
+        guard !isCompletingPage else { return }
+        guard direction != .previous || canNavigatePrevious else { return }
+        guard direction != .next || next != nil else { return }
+
+        animatedOffset = dragOffset
+        isCompletingPage = true
+        dragOffset = 0
+        withAnimation(calendarPageSettleAnimation) {
+            animatedOffset = direction == .previous ? width : -width
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + calendarPageSettleDuration) {
+            switch direction {
+            case .previous:
+                onPrevious()
+            case .next:
+                onNext()
+            }
+
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                animatedOffset = 0
+                isCompletingPage = false
+            }
+        }
+    }
+
+    private func boundedDragOffset(_ offset: CGFloat, width: CGFloat) -> CGFloat {
+        let maxRight = canNavigatePrevious ? width : 0
+        let maxLeft = next == nil ? 0 : -width
+        return min(max(offset, maxLeft), maxRight)
+    }
+
+    private func settleBackToCenter() {
+        withAnimation(calendarPageSettleAnimation) {
+            dragOffset = 0
+        }
+    }
+
+    private func isHorizontalSwipe(_ value: DragGesture.Value) -> Bool {
+        abs(value.translation.width) > abs(value.translation.height) * 1.12
+    }
 }
 
 private struct CalendarMonthDayCell: View {
@@ -898,6 +963,16 @@ private func calendarMonthStart(for date: Date) -> Date {
     let calendar = Calendar.current
     let components = calendar.dateComponents([.year, .month], from: date)
     return calendar.date(from: components) ?? calendar.startOfDay(for: date)
+}
+
+private func calendarMonth(byAdding value: Int, to month: Date) -> Date? {
+    Calendar.current
+        .date(byAdding: .month, value: value, to: calendarMonthStart(for: month))
+        .map { calendarMonthStart(for: $0) }
+}
+
+private func calendarDate(byAddingDays value: Int, to date: Date) -> Date? {
+    Calendar.current.date(byAdding: .day, value: value, to: Calendar.current.startOfDay(for: date))
 }
 
 private func calendarStartOfWeek(for date: Date) -> Date {
