@@ -265,7 +265,7 @@ struct TodoListScreen: View {
     private var createTaskSheetContent: some View {
         CreateTaskSheet(
             lists: viewModel.lists,
-            titleText: "Create Task",
+            titleText: "New task",
             submitText: "Create",
             initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? "High" : "Low", due: Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
             onParseTaskTitleNlp: { title, dueRef in
@@ -281,7 +281,7 @@ struct TodoListScreen: View {
     private func editTaskSheetContent(for todo: TodoItem) -> some View {
         CreateTaskSheet(
             lists: viewModel.lists,
-            titleText: "Edit Task",
+            titleText: "Edit task",
             submitText: "Save",
             initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
             onParseTaskTitleNlp: { title, dueRef in
@@ -1234,6 +1234,7 @@ private struct ListSettingsSheet: View {
     let list: ListSummary?
     let onSubmit: (String, String?, String?) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.tdayColors) private var tdayColors
 
     @State private var name = ""
     @State private var color = "BLUE"
@@ -1241,41 +1242,123 @@ private struct ListSettingsSheet: View {
 
     private let colors = ["BLUE", "GREEN", "ORANGE", "PINK", "PURPLE", "GRAY"]
     private let icons = ["inbox", "briefcase", "calendar", "list.bullet", "star", "heart"]
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         NavigationStack {
-            Form {
-                TextField("Name", text: $name)
-                Picker("Color", selection: $color) {
-                    ForEach(colors, id: \.self) { value in
-                        Text(value.capitalized).tag(value)
-                    }
-                }
-                Picker("Icon", selection: $iconKey) {
-                    ForEach(icons, id: \.self) { value in
-                        Label(value.replacingOccurrences(of: ".", with: " "), systemImage: value).tag(value)
-                    }
-                }
-            }
-            .disableVerticalScrollBounce()
-            .navigationTitle("List Settings")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSubmit(name, color, iconKey)
+            VStack(spacing: 0) {
+                ListSettingsSheetHeader(
+                    canSave: canSave,
+                    onClose: { dismiss() },
+                    onConfirm: {
+                        onSubmit(name.trimmingCharacters(in: .whitespacesAndNewlines), color, iconKey)
                         dismiss()
                     }
+                )
+
+                Form {
+                    TextField("Name", text: $name)
+                    Picker("Color", selection: $color) {
+                        ForEach(colors, id: \.self) { value in
+                            Text(value.capitalized).tag(value)
+                        }
+                    }
+                    Picker("Icon", selection: $iconKey) {
+                        ForEach(icons, id: \.self) { value in
+                            Label(value.replacingOccurrences(of: ".", with: " "), systemImage: value).tag(value)
+                        }
+                    }
                 }
+                .scrollContentBackground(.hidden)
             }
+            .background(tdayColors.background)
+            .disableVerticalScrollBounce()
+            .toolbar(.hidden, for: .navigationBar)
             .task {
                 name = list?.name ?? ""
                 color = list?.color ?? "BLUE"
                 iconKey = list?.iconKey ?? "inbox"
             }
         }
+    }
+}
+
+private struct ListSettingsSheetHeader: View {
+    let canSave: Bool
+    let onClose: () -> Void
+    let onConfirm: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack {
+            ListSettingsSheetActionButton(
+                icon: "xmark",
+                accessibilityLabel: "Cancel",
+                accentColor: Color(red: 227.0 / 255.0, green: 90.0 / 255.0, blue: 90.0 / 255.0),
+                enabled: true,
+                action: onClose
+            )
+
+            Spacer(minLength: 0)
+
+            Text("List Settings")
+                .font(.tdayRounded(size: 28, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+
+            Spacer(minLength: 0)
+
+            ListSettingsSheetActionButton(
+                icon: "checkmark",
+                accessibilityLabel: "Save",
+                accentColor: Color(red: 47.0 / 255.0, green: 163.0 / 255.0, blue: 91.0 / 255.0),
+                enabled: canSave,
+                action: onConfirm
+            )
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 14)
+        .background(colors.background)
+    }
+}
+
+private struct ListSettingsSheetActionButton: View {
+    let icon: String
+    let accessibilityLabel: String
+    let accentColor: Color
+    let enabled: Bool
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
+                .frame(width: 56, height: 56)
+                .background(colors.surfaceVariant, in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(accentColor.opacity(enabled ? 0.55 : 0.3), lineWidth: 1.5)
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: enabled ? 0.16 : 0.06
+            )
+        )
+        .disabled(!enabled)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityAddTraits(.isButton)
     }
 }
 

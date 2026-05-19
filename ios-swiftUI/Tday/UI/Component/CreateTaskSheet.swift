@@ -74,7 +74,7 @@ struct CreateTaskSheet: View {
             VStack(spacing: 0) {
                 CreateTaskSheetHeader(
                     title: titleText,
-                    submitTitle: isSubmitting ? "Saving..." : submitText,
+                    submitAccessibilityLabel: submitText,
                     isSubmitEnabled: !isSubmitting && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                     onCancel: {
                         onDismiss()
@@ -187,7 +187,7 @@ struct CreateTaskSheet: View {
 
 private struct CreateTaskSheetHeader: View {
     let title: String
-    let submitTitle: String
+    let submitAccessibilityLabel: String
     let isSubmitEnabled: Bool
     let onCancel: () -> Void
     let onSubmit: () -> Void
@@ -195,39 +195,44 @@ private struct CreateTaskSheetHeader: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        ZStack {
+        HStack {
+            CreateTaskSheetHeaderButton(
+                systemName: "xmark",
+                accessibilityLabel: "Cancel",
+                accentColor: Color(red: 227.0 / 255.0, green: 90.0 / 255.0, blue: 90.0 / 255.0),
+                isEnabled: true,
+                action: onCancel
+            )
+
+            Spacer(minLength: 0)
+
             Text(title)
-                .font(.tdayRounded(size: 17, weight: .bold))
+                .font(.tdayRounded(size: 28, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
                 .lineLimit(1)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 132)
+                .minimumScaleFactor(0.78)
 
-            HStack {
-                CreateTaskSheetHeaderButton(
-                    title: "Cancel",
-                    isEnabled: true,
-                    action: onCancel
-                )
+            Spacer(minLength: 0)
 
-                Spacer(minLength: 0)
-
-                CreateTaskSheetHeaderButton(
-                    title: submitTitle,
-                    isEnabled: isSubmitEnabled,
-                    action: onSubmit
-                )
-            }
+            CreateTaskSheetHeaderButton(
+                systemName: "checkmark",
+                accessibilityLabel: submitAccessibilityLabel,
+                accentColor: Color(red: 47.0 / 255.0, green: 163.0 / 255.0, blue: 91.0 / 255.0),
+                isEnabled: isSubmitEnabled,
+                action: onSubmit
+            )
         }
         .padding(.horizontal, 18)
-        .padding(.top, 16)
+        .padding(.top, 14)
         .padding(.bottom, 14)
         .background(colors.background)
     }
 }
 
 private struct CreateTaskSheetHeaderButton: View {
-    let title: String
+    let systemName: String
+    let accessibilityLabel: String
+    let accentColor: Color
     let isEnabled: Bool
     let action: () -> Void
 
@@ -235,31 +240,26 @@ private struct CreateTaskSheetHeaderButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.tdayRounded(size: 17, weight: .bold))
-                .foregroundStyle(isEnabled ? colors.onSurface : colors.onSurfaceVariant.opacity(0.38))
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-                .allowsTightening(false)
-                .frame(width: 108, height: 54)
-                .background(colors.surface, in: Capsule(style: .continuous))
+            Image(systemName: systemName)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(colors.onSurface.opacity(isEnabled ? 1 : 0.55))
+                .frame(width: 56, height: 56)
+                .background(colors.surfaceVariant, in: Circle())
                 .overlay {
-                    Capsule(style: .continuous)
-                        .stroke(colors.onSurfaceVariant.opacity(0.12), lineWidth: 1)
+                    Circle()
+                        .stroke(accentColor.opacity(isEnabled ? 0.55 : 0.3), lineWidth: 1.5)
                 }
-                .contentShape(Capsule(style: .continuous))
+                .contentShape(Circle())
         }
-        .buttonStyle(CreateTaskSheetHeaderButtonStyle())
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: isEnabled ? 0.16 : 0.06
+            )
+        )
         .disabled(!isEnabled)
+        .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(.isButton)
-    }
-}
-
-private struct CreateTaskSheetHeaderButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .opacity(configuration.isPressed ? 0.78 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
