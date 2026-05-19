@@ -79,6 +79,9 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ripple
@@ -491,50 +494,42 @@ private enum class CalendarViewMode {
     DAY,
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CalendarViewModeTabs(
     selectedMode: CalendarViewMode,
     onModeSelected: (CalendarViewMode) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    Card(
+    val segmentColors = SegmentedButtonDefaults.colors(
+        activeContainerColor = CalendarAccentPurple.copy(alpha = 0.18f),
+        activeContentColor = CalendarAccentPurple,
+        activeBorderColor = CalendarAccentPurple.copy(alpha = 0.62f),
+        inactiveContainerColor = colorScheme.surface,
+        inactiveContentColor = colorScheme.onSurfaceVariant,
+        inactiveBorderColor = colorScheme.outline.copy(alpha = 0.42f),
+    )
+    SingleChoiceSegmentedButtonRow(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(5.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
-            CalendarViewMode.entries.forEach { mode ->
-                val selected = mode == selectedMode
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            color = if (selected) {
-                                colorScheme.background
-                            } else {
-                                Color.Transparent
-                            },
-                        )
-                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                        .clickable { onModeSelected(mode) }
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
+        CalendarViewMode.entries.forEachIndexed { index, mode ->
+            val selected = mode == selectedMode
+            SegmentedButton(
+                selected = selected,
+                onClick = { onModeSelected(mode) },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = CalendarViewMode.entries.size,
+                ),
+                colors = segmentColors,
+                icon = {},
+                label = {
                     Text(
                         text = mode.name.lowercase(Locale.getDefault()).replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.ExtraBold,
-                        color = if (selected) colorScheme.onSurface else colorScheme.onSurfaceVariant,
                     )
-                }
-            }
+                },
+            )
         }
     }
 }
