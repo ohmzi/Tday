@@ -109,6 +109,7 @@ struct CalendarScreen: View {
             Section {
                 CalendarViewModeTabs(
                     selectedMode: displayMode,
+                    accentColor: calendarAccentColor,
                     onSelect: { mode in
                         withAnimation(.easeInOut(duration: 0.2)) {
                             displayMode = mode
@@ -363,36 +364,25 @@ struct CalendarScreen: View {
 
 private struct CalendarViewModeTabs: View {
     let selectedMode: CalendarDisplayMode
+    let accentColor: Color
     let onSelect: (CalendarDisplayMode) -> Void
 
-    @Environment(\.tdayColors) private var colors
-
     var body: some View {
-        HStack(spacing: 5) {
+        Picker("Calendar view", selection: selectedModeBinding) {
             ForEach(CalendarDisplayMode.allCases, id: \.self) { mode in
-                let isSelected = mode == selectedMode
-                Button {
-                    onSelect(mode)
-                } label: {
-                    Text(mode.rawValue.capitalized)
-                        .font(.tdayRounded(size: 15, weight: .heavy))
-                        .foregroundStyle(isSelected ? colors.onSurface : colors.onSurfaceVariant.opacity(0.86))
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background {
-                            if isSelected {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(colors.background)
-                                    .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
-                            }
-                        }
-                        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                Text(mode.rawValue.capitalized)
+                    .tag(mode)
             }
         }
-        .padding(5)
-        .background(colors.surfaceVariant.opacity(0.55), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .pickerStyle(.segmented)
+        .tint(accentColor)
+    }
+
+    private var selectedModeBinding: Binding<CalendarDisplayMode> {
+        Binding(
+            get: { selectedMode },
+            set: { onSelect($0) }
+        )
     }
 }
 
