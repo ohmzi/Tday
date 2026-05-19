@@ -5,19 +5,7 @@ private enum CalendarTitleHandoff {
     static let pinnedRevealEnd: CGFloat = 0.62
 }
 
-private enum CalendarPageDirection {
-    case previous
-    case next
-}
-
-private struct CalendarPagerActions {
-    let previous: () -> Void
-    let next: () -> Void
-}
-
-private let calendarPageSettleDuration: TimeInterval = 0.24
-private let calendarPageSettleAnimation = Animation.interactiveSpring(response: 0.28, dampingFraction: 0.86, blendDuration: 0.05)
-private let calendarSelectionAnimation = Animation.easeInOut(duration: 0.16)
+private let calendarNativePagerCenterIndex = 1
 
 struct CalendarScreen: View {
     @State private var viewModel: CalendarViewModel
@@ -306,10 +294,8 @@ struct CalendarScreen: View {
 
     private func selectDate(_ date: Date) {
         guard canNavigate(to: date) else { return }
-        withAnimation(calendarSelectionAnimation) {
-            selectedDate = date
-            visibleMonth = calendarMonthStart(for: date)
-        }
+        selectedDate = date
+        visibleMonth = calendarMonthStart(for: date)
     }
 
     private func navigateMonth(by value: Int) {
@@ -317,9 +303,7 @@ struct CalendarScreen: View {
         guard let targetMonth = Calendar.current.date(byAdding: .month, value: value, to: visibleMonth) else {
             return
         }
-        withAnimation(calendarSelectionAnimation) {
-            visibleMonth = calendarMonthStart(for: targetMonth)
-        }
+        visibleMonth = calendarMonthStart(for: targetMonth)
     }
 
     private func navigateDay(by value: Int) {
@@ -377,6 +361,7 @@ private struct CalendarMonthGrid: View {
     let onSelectDate: (Date) -> Void
 
     @Environment(\.tdayColors) private var colors
+    @State private var pageSelection = calendarNativePagerCenterIndex
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
 
@@ -392,25 +377,29 @@ private struct CalendarMonthGrid: View {
 
     var body: some View {
         let displayMonth = calendarMonthStart(for: visibleMonth)
-        CalendarPagingCard(
-            center: displayMonth,
-            previous: canGoPreviousMonth ? calendarMonth(byAdding: -1, to: displayMonth) : nil,
-            next: calendarMonth(byAdding: 1, to: displayMonth),
-            height: 402,
-            canNavigatePrevious: canGoPreviousMonth,
-            onPrevious: onPreviousMonth,
-            onNext: onNextMonth
-        ) { month, actions in
-            monthContent(for: month, actions: actions)
-        }
+        monthContent(for: displayMonth)
+            .onChange(of: pageSelection) { _, newValue in
+                guard newValue != calendarNativePagerCenterIndex else { return }
+                if newValue < calendarNativePagerCenterIndex {
+                    onPreviousMonth()
+                } else {
+                    onNextMonth()
+                }
+                resetPageSelection()
+            }
+            .onChange(of: displayMonth) { _, _ in resetPageSelection() }
+            .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
     }
 
-    private func monthContent(for displayMonth: Date, actions: CalendarPagerActions) -> some View {
+    private func monthContent(for displayMonth: Date) -> some View {
         let canGoPrevious = calendarMonthStart(for: displayMonth) > minimumNavigableMonth
+        let previousMonth = canGoPrevious ? calendarMonth(byAdding: -1, to: displayMonth) : nil
+        let nextMonth = calendarMonth(byAdding: 1, to: displayMonth)
 
         return VStack(spacing: 16) {
             HStack {
-                Button(action: actions.previous) {
+                Button(action: onPreviousMonth) {
                     Image(systemName: "chevron.left")
                         .font(.tdayRounded(size: 20, weight: .heavy))
                         .foregroundStyle(canGoPrevious ? accentColor : colors.onSurfaceVariant.opacity(0.36))
@@ -427,7 +416,7 @@ private struct CalendarMonthGrid: View {
 
                 Spacer(minLength: 0)
 
-                Button(action: actions.next) {
+                Button(action: onNextMonth) {
                     Image(systemName: "chevron.right")
                         .font(.tdayRounded(size: 20, weight: .heavy))
                         .foregroundStyle(accentColor)
@@ -437,31 +426,64 @@ private struct CalendarMonthGrid: View {
             }
             .padding(.horizontal, 6)
 
-            LazyVGrid(columns: columns, spacing: 11) {
-                ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
-                    Text(symbol)
-                        .font(.tdayRounded(size: 12, weight: .heavy))
-                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.48))
-                        .frame(height: 18)
+            VStack(spacing: 11) {
+                HStack(spacing: 0) {
+                    ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                        Text(symbol)
+                            .font(.tdayRounded(size: 12, weight: .heavy))
+                            .foregroundStyle(colors.onSurfaceVariant.opacity(0.48))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 18)
+                    }
                 }
 
-                ForEach(Self.makeDays(for: displayMonth)) { day in
-                    let dayTasks = tasksByDay[Calendar.current.startOfDay(for: day.date)].orEmpty
-                    CalendarMonthDayCell(
-                        day: day,
-                        isSelected: Calendar.current.isDate(day.date, inSameDayAs: selectedDate),
-                        isToday: Calendar.current.isDateInToday(day.date),
-                        taskCount: dayTasks.count,
-                        accentColor: accentColor,
-                        onSelectDate: onSelectDate
-                    )
+                TabView(selection: $pageSelection) {
+                    if let previousMonth {
+                        monthGrid(for: previousMonth)
+                            .tag(0)
+                    }
+
+                    monthGrid(for: displayMonth)
+                        .tag(calendarNativePagerCenterIndex)
+
+                    if let nextMonth {
+                        monthGrid(for: nextMonth)
+                            .tag(2)
+                    }
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 283)
+                .clipped()
             }
         }
         .padding(.horizontal, 16)
         .padding(.top, 18)
         .padding(.bottom, 20)
         .frame(maxWidth: .infinity)
+    }
+
+    private func monthGrid(for displayMonth: Date) -> some View {
+        LazyVGrid(columns: columns, spacing: 11) {
+            ForEach(Self.makeDays(for: displayMonth)) { day in
+                let dayTasks = tasksByDay[Calendar.current.startOfDay(for: day.date)].orEmpty
+                CalendarMonthDayCell(
+                    day: day,
+                    isSelected: Calendar.current.isDate(day.date, inSameDayAs: selectedDate),
+                    isToday: Calendar.current.isDateInToday(day.date),
+                    taskCount: dayTasks.count,
+                    accentColor: accentColor,
+                    onSelectDate: onSelectDate
+                )
+            }
+        }
+    }
+
+    private func resetPageSelection() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            pageSelection = calendarNativePagerCenterIndex
+        }
     }
 
     private static func makeDays(for month: Date) -> [CalendarMonthDay] {
@@ -496,25 +518,29 @@ private struct CalendarWeekCard: View {
     let onSelectDate: (Date) -> Void
 
     @Environment(\.tdayColors) private var colors
+    @State private var pageSelection = calendarNativePagerCenterIndex
 
     var body: some View {
-        CalendarPagingCard(
-            center: Calendar.current.startOfDay(for: selectedDate),
-            previous: canGoPreviousWeek ? calendarDate(byAddingDays: -7, to: selectedDate) : nil,
-            next: calendarDate(byAddingDays: 7, to: selectedDate),
-            height: 162,
-            canNavigatePrevious: canGoPreviousWeek,
-            onPrevious: onPreviousWeek,
-            onNext: onNextWeek
-        ) { displaySelectedDate, actions in
-            weekContent(for: displaySelectedDate, actions: actions)
-        }
+        let displaySelectedDate = Calendar.current.startOfDay(for: selectedDate)
+        weekContent(for: displaySelectedDate)
+            .onChange(of: pageSelection) { _, newValue in
+                guard newValue != calendarNativePagerCenterIndex else { return }
+                if newValue < calendarNativePagerCenterIndex {
+                    onPreviousWeek()
+                } else {
+                    onNextWeek()
+                }
+                resetPageSelection()
+            }
+            .onChange(of: displaySelectedDate) { _, _ in resetPageSelection() }
+            .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
     }
 
-    private func weekContent(for displaySelectedDate: Date, actions: CalendarPagerActions) -> some View {
+    private func weekContent(for displaySelectedDate: Date) -> some View {
         let weekStart = calendarStartOfWeek(for: displaySelectedDate)
-        let weekDays = (0..<7).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: weekStart) }
         let previousWeekDate = calendarDate(byAddingDays: -7, to: displaySelectedDate)
+        let nextWeekDate = calendarDate(byAddingDays: 7, to: displaySelectedDate)
         let canGoPrevious = previousWeekDate.map(canSelectDate) ?? false
 
         return VStack(spacing: 14) {
@@ -523,7 +549,7 @@ private struct CalendarWeekCard: View {
                     systemName: "chevron.left",
                     isEnabled: canGoPrevious,
                     color: colors.onSurfaceVariant,
-                    action: actions.previous
+                    action: onPreviousWeek
                 )
 
                 Spacer(minLength: 0)
@@ -540,32 +566,63 @@ private struct CalendarWeekCard: View {
                     systemName: "chevron.right",
                     isEnabled: true,
                     color: colors.onSurfaceVariant,
-                    action: actions.next
+                    action: onNextWeek
                 )
             }
             .padding(.horizontal, 6)
 
-            HStack(spacing: 6) {
-                ForEach(weekDays, id: \.self) { date in
-                    let normalizedDate = Calendar.current.startOfDay(for: date)
-                    let taskCount = tasksByDay[normalizedDate].orEmpty.count
-                    let isEnabled = canSelectDate(date)
-                    CalendarWeekDayCell(
-                        date: date,
-                        taskCount: taskCount,
-                        isSelected: Calendar.current.isDate(date, inSameDayAs: displaySelectedDate),
-                        isToday: Calendar.current.isDate(date, inSameDayAs: today),
-                        isEnabled: isEnabled,
-                        accentColor: accentColor,
-                        onSelect: { onSelectDate(date) }
-                    )
+            TabView(selection: $pageSelection) {
+                if let previousWeekDate, canGoPrevious {
+                    weekDaysRow(for: previousWeekDate)
+                        .tag(0)
+                }
+
+                weekDaysRow(for: displaySelectedDate)
+                    .tag(calendarNativePagerCenterIndex)
+
+                if let nextWeekDate {
+                    weekDaysRow(for: nextWeekDate)
+                        .tag(2)
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 78)
+            .clipped()
         }
         .padding(.horizontal, 14)
         .padding(.top, 16)
         .padding(.bottom, 18)
         .frame(maxWidth: .infinity)
+    }
+
+    private func weekDaysRow(for displaySelectedDate: Date) -> some View {
+        let weekStart = calendarStartOfWeek(for: displaySelectedDate)
+        let weekDays = (0..<7).compactMap { Calendar.current.date(byAdding: .day, value: $0, to: weekStart) }
+
+        return HStack(spacing: 6) {
+            ForEach(weekDays, id: \.self) { date in
+                let normalizedDate = Calendar.current.startOfDay(for: date)
+                let taskCount = tasksByDay[normalizedDate].orEmpty.count
+                let isEnabled = canSelectDate(date)
+                CalendarWeekDayCell(
+                    date: date,
+                    taskCount: taskCount,
+                    isSelected: Calendar.current.isDate(date, inSameDayAs: displaySelectedDate),
+                    isToday: Calendar.current.isDate(date, inSameDayAs: today),
+                    isEnabled: isEnabled,
+                    accentColor: accentColor,
+                    onSelect: { onSelectDate(date) }
+                )
+            }
+        }
+    }
+
+    private func resetPageSelection() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            pageSelection = calendarNativePagerCenterIndex
+        }
     }
 }
 
@@ -663,23 +720,28 @@ private struct CalendarDayCard: View {
     let onNextDay: () -> Void
 
     @Environment(\.tdayColors) private var colors
+    @State private var pageSelection = calendarNativePagerCenterIndex
 
     var body: some View {
-        CalendarPagingCard(
-            center: Calendar.current.startOfDay(for: selectedDate),
-            previous: canGoPreviousDay ? calendarDate(byAddingDays: -1, to: selectedDate) : nil,
-            next: calendarDate(byAddingDays: 1, to: selectedDate),
-            height: 158,
-            canNavigatePrevious: canGoPreviousDay,
-            onPrevious: onPreviousDay,
-            onNext: onNextDay
-        ) { displayDate, actions in
-            dayContent(for: displayDate, actions: actions)
-        }
+        let displayDate = Calendar.current.startOfDay(for: selectedDate)
+        dayContent(for: displayDate)
+            .onChange(of: pageSelection) { _, newValue in
+                guard newValue != calendarNativePagerCenterIndex else { return }
+                if newValue < calendarNativePagerCenterIndex {
+                    onPreviousDay()
+                } else {
+                    onNextDay()
+                }
+                resetPageSelection()
+            }
+            .onChange(of: displayDate) { _, _ in resetPageSelection() }
+            .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
     }
 
-    private func dayContent(for displayDate: Date, actions: CalendarPagerActions) -> some View {
+    private func dayContent(for displayDate: Date) -> some View {
         let previousDay = calendarDate(byAddingDays: -1, to: displayDate)
+        let nextDay = calendarDate(byAddingDays: 1, to: displayDate)
         let canGoPrevious = previousDay.map(canSelectDate) ?? false
 
         return VStack(alignment: .leading, spacing: 14) {
@@ -688,7 +750,7 @@ private struct CalendarDayCard: View {
                     systemName: "chevron.left",
                     isEnabled: canGoPrevious,
                     color: colors.onSurfaceVariant,
-                    action: actions.previous
+                    action: onPreviousDay
                 )
 
                 Spacer(minLength: 0)
@@ -703,22 +765,53 @@ private struct CalendarDayCard: View {
                     systemName: "chevron.right",
                     isEnabled: true,
                     color: colors.onSurfaceVariant,
-                    action: actions.next
+                    action: onNextDay
                 )
             }
 
-            Text(dateTitle(for: displayDate))
-                .font(.tdayRounded(size: 25, weight: .heavy))
-                .foregroundStyle(Calendar.current.isDate(displayDate, inSameDayAs: today) ? accentColor : colors.onSurface)
+            TabView(selection: $pageSelection) {
+                if let previousDay, canGoPrevious {
+                    daySummary(for: previousDay)
+                        .tag(0)
+                }
 
-            Text(taskCountText(for: displayDate))
-                .font(.tdayRounded(size: 18, weight: .heavy))
-                .foregroundStyle(colors.onSurfaceVariant)
+                daySummary(for: displayDate)
+                    .tag(calendarNativePagerCenterIndex)
+
+                if let nextDay {
+                    daySummary(for: nextDay)
+                        .tag(2)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 70)
+            .clipped()
         }
         .padding(.horizontal, 18)
         .padding(.top, 16)
         .padding(.bottom, 22)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func daySummary(for date: Date) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(dateTitle(for: date))
+                .font(.tdayRounded(size: 25, weight: .heavy))
+                .foregroundStyle(Calendar.current.isDate(date, inSameDayAs: today) ? accentColor : colors.onSurface)
+
+            Text(taskCountText(for: date))
+                .font(.tdayRounded(size: 18, weight: .heavy))
+                .foregroundStyle(colors.onSurfaceVariant)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func resetPageSelection() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            pageSelection = calendarNativePagerCenterIndex
+        }
     }
 
     private func weekdayTitle(for date: Date) -> String {
@@ -755,131 +848,6 @@ private struct CalendarNavButton: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
-    }
-}
-
-private struct CalendarPagingCard<Page: Hashable, PageContent: View>: View {
-    let center: Page
-    let previous: Page?
-    let next: Page?
-    let height: CGFloat
-    let canNavigatePrevious: Bool
-    let onPrevious: () -> Void
-    let onNext: () -> Void
-    let content: (Page, CalendarPagerActions) -> PageContent
-
-    @Environment(\.tdayColors) private var colors
-    @State private var dragOffset: CGFloat = 0
-    @State private var animatedOffset: CGFloat = 0
-    @State private var isCompletingPage = false
-
-    private let swipeThreshold: CGFloat = 48
-
-    var body: some View {
-        GeometryReader { proxy in
-            let width = max(proxy.size.width, 1)
-            let currentDragOffset = isCompletingPage ? animatedOffset : boundedDragOffset(dragOffset, width: width)
-            let actions = CalendarPagerActions(
-                previous: { completePage(.previous, width: width) },
-                next: { completePage(.next, width: width) }
-            )
-
-            HStack(spacing: 0) {
-                pageView(previous ?? center, actions: actions, width: width)
-                pageView(center, actions: actions, width: width)
-                pageView(next ?? center, actions: actions, width: width)
-            }
-            .offset(x: -width + currentDragOffset)
-            .contentShape(Rectangle())
-            .simultaneousGesture(dragGesture(width: width))
-        }
-        .frame(height: height)
-        .clipped()
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
-    }
-
-    private func pageView(_ page: Page, actions: CalendarPagerActions, width: CGFloat) -> some View {
-        content(page, actions)
-            .frame(width: width)
-    }
-
-    private func dragGesture(width: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 12, coordinateSpace: .local)
-            .onChanged { value in
-                guard !isCompletingPage else { return }
-                guard isHorizontalSwipe(value) else { return }
-                var transaction = Transaction()
-                transaction.disablesAnimations = true
-                withTransaction(transaction) {
-                    dragOffset = boundedDragOffset(value.translation.width, width: width)
-                }
-            }
-            .onEnded { value in
-                guard !isCompletingPage else { return }
-                guard isHorizontalSwipe(value) else {
-                    settleBackToCenter()
-                    return
-                }
-
-                let predictedOffset = boundedDragOffset(value.predictedEndTranslation.width, width: width)
-                let actualOffset = boundedDragOffset(value.translation.width, width: width)
-                let intendedOffset = abs(predictedOffset) > abs(actualOffset) ? predictedOffset : actualOffset
-
-                if intendedOffset > swipeThreshold, canNavigatePrevious {
-                    completePage(.previous, width: width)
-                } else if intendedOffset < -swipeThreshold {
-                    completePage(.next, width: width)
-                } else {
-                    settleBackToCenter()
-                }
-            }
-    }
-
-    private func completePage(_ direction: CalendarPageDirection, width: CGFloat) {
-        guard !isCompletingPage else { return }
-        guard direction != .previous || canNavigatePrevious else { return }
-        guard direction != .next || next != nil else { return }
-
-        animatedOffset = dragOffset
-        isCompletingPage = true
-        dragOffset = 0
-        withAnimation(calendarPageSettleAnimation) {
-            animatedOffset = direction == .previous ? width : -width
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + calendarPageSettleDuration) {
-            switch direction {
-            case .previous:
-                onPrevious()
-            case .next:
-                onNext()
-            }
-
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                animatedOffset = 0
-                isCompletingPage = false
-            }
-        }
-    }
-
-    private func boundedDragOffset(_ offset: CGFloat, width: CGFloat) -> CGFloat {
-        let maxRight = canNavigatePrevious ? width : 0
-        let maxLeft = next == nil ? 0 : -width
-        return min(max(offset, maxLeft), maxRight)
-    }
-
-    private func settleBackToCenter() {
-        withAnimation(calendarPageSettleAnimation) {
-            dragOffset = 0
-        }
-    }
-
-    private func isHorizontalSwipe(_ value: DragGesture.Value) -> Bool {
-        abs(value.translation.width) > abs(value.translation.height) * 1.12
     }
 }
 
