@@ -114,6 +114,7 @@ Tday/
 
 | Document | Purpose |
 |----------|---------|
+| [`AGENTS.md`](AGENTS.md) | AI agent workflow, git expectations, and cross-platform UX parity rules |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Developer setup, conventions, PR process |
 | [`SECURITY.md`](SECURITY.md) | Security practices and responsible disclosure |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design, domain boundaries, data flow |
