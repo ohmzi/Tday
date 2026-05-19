@@ -71,59 +71,59 @@ struct CreateTaskSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Task") {
-                    TextField("Title", text: $title)
-                        .textInputAutocapitalization(.sentences)
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3 ... 6)
-                }
-
-                Section("Schedule") {
-                    DatePicker("Due", selection: $dueDate)
-                }
-
-                Section("Details") {
-                    Picker("Priority", selection: $priority) {
-                        ForEach(priorityOptions, id: \.self) { option in
-                            Text(option).tag(option)
-                        }
-                    }
-                    Picker("List", selection: Binding(get: { selectedListID ?? "" }, set: { selectedListID = $0.isEmpty ? nil : $0 })) {
-                        Text("No list").tag("")
-                        ForEach(lists) { list in
-                            Text(list.name).tag(list.id)
-                        }
-                    }
-                    Picker("Repeat", selection: Binding(get: { repeatRule ?? "" }, set: { newValue in
-                        repeatRule = newValue.isEmpty ? nil : newValue
-                    })) {
-                        ForEach(repeatOptions, id: \.label) { option in
-                            Text(option.label).tag(option.value ?? "")
-                        }
-                    }
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(colors.background)
-            .navigationTitle(titleText)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+            VStack(spacing: 0) {
+                CreateTaskSheetHeader(
+                    title: titleText,
+                    submitTitle: isSubmitting ? "Saving..." : submitText,
+                    isSubmitEnabled: !isSubmitting && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                    onCancel: {
                         onDismiss()
                         dismiss()
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(isSubmitting ? "Saving..." : submitText) {
+                    },
+                    onSubmit: {
                         Task {
                             await submit()
                         }
                     }
-                    .disabled(isSubmitting || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                )
+
+                Form {
+                    Section("Task") {
+                        TextField("Title", text: $title)
+                            .textInputAutocapitalization(.sentences)
+                        TextField("Notes", text: $notes, axis: .vertical)
+                            .lineLimit(3 ... 6)
+                    }
+
+                    Section("Schedule") {
+                        DatePicker("Due", selection: $dueDate)
+                    }
+
+                    Section("Details") {
+                        Picker("Priority", selection: $priority) {
+                            ForEach(priorityOptions, id: \.self) { option in
+                                Text(option).tag(option)
+                            }
+                        }
+                        Picker("List", selection: Binding(get: { selectedListID ?? "" }, set: { selectedListID = $0.isEmpty ? nil : $0 })) {
+                            Text("No list").tag("")
+                            ForEach(lists) { list in
+                                Text(list.name).tag(list.id)
+                            }
+                        }
+                        Picker("Repeat", selection: Binding(get: { repeatRule ?? "" }, set: { newValue in
+                            repeatRule = newValue.isEmpty ? nil : newValue
+                        })) {
+                            ForEach(repeatOptions, id: \.label) { option in
+                                Text(option.label).tag(option.value ?? "")
+                            }
+                        }
+                    }
                 }
+                .scrollContentBackground(.hidden)
             }
+            .background(colors.background)
+            .toolbar(.hidden, for: .navigationBar)
         }
         .presentationDetents([.large])
         .task {
@@ -182,5 +182,84 @@ struct CreateTaskSheet: View {
         isSubmitting = false
         onDismiss()
         dismiss()
+    }
+}
+
+private struct CreateTaskSheetHeader: View {
+    let title: String
+    let submitTitle: String
+    let isSubmitEnabled: Bool
+    let onCancel: () -> Void
+    let onSubmit: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            Text(title)
+                .font(.tdayRounded(size: 17, weight: .bold))
+                .foregroundStyle(colors.onSurface)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 132)
+
+            HStack {
+                CreateTaskSheetHeaderButton(
+                    title: "Cancel",
+                    isEnabled: true,
+                    action: onCancel
+                )
+
+                Spacer(minLength: 0)
+
+                CreateTaskSheetHeaderButton(
+                    title: submitTitle,
+                    isEnabled: isSubmitEnabled,
+                    action: onSubmit
+                )
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 16)
+        .padding(.bottom, 14)
+        .background(colors.background)
+    }
+}
+
+private struct CreateTaskSheetHeaderButton: View {
+    let title: String
+    let isEnabled: Bool
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.tdayRounded(size: 17, weight: .bold))
+                .foregroundStyle(isEnabled ? colors.onSurface : colors.onSurfaceVariant.opacity(0.38))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .allowsTightening(false)
+                .frame(width: 108, height: 54)
+                .background(colors.surface, in: Capsule(style: .continuous))
+                .overlay {
+                    Capsule(style: .continuous)
+                        .stroke(colors.onSurfaceVariant.opacity(0.12), lineWidth: 1)
+                }
+                .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(CreateTaskSheetHeaderButtonStyle())
+        .disabled(!isEnabled)
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+private struct CreateTaskSheetHeaderButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.78 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
