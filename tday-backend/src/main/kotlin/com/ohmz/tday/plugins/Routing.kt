@@ -27,6 +27,8 @@ fun Application.configureRouting() {
             call.respond(mapOf("status" to "ok"))
         }
 
+        appleAppSiteAssociationRoutes(config)
+
         route("/api") {
             todoRoutes()
             listRoutes()

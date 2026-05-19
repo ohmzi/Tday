@@ -39,8 +39,9 @@ final class TodoRepository {
         let normalizedDescription = payload.description.nilIfBlank
         let normalizedListID = payload.listId.nilIfBlank
         let normalizedPriorityValue = normalizedPriority(payload.priority)
+        let mutationID = UUID().uuidString
         let mutation = PendingMutationRecord(
-            mutationId: UUID().uuidString,
+            mutationId: mutationID,
             kind: .createTodo,
             targetId: localTodoID,
             timestampEpochMs: now,
@@ -80,9 +81,44 @@ final class TodoRepository {
             return nextState
         }
 
-        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
-        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
-            throw error
+        if normalizedListID?.hasPrefix(LOCAL_LIST_PREFIX) == true {
+            _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+            return
+        }
+
+        do {
+            let response = try await api.createTodo(
+                payload: CreateTodoRequest(
+                    title: normalizedTitle,
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
+                    due: payload.due.ISO8601Format(),
+                    rrule: payload.rrule,
+                    listID: normalizedListID
+                )
+            )
+            guard let createdDTO = response.todo else {
+                return
+            }
+            let createdTodo = mapTodoDTO(createdDTO)
+            _ = try await cacheManager.updateOfflineState { state in
+                var nextState = self.replaceLocalTodoID(
+                    state,
+                    localTodoID: localTodoID,
+                    serverTodoID: createdTodo.canonicalId
+                )
+                let createdRecord = todoToCache(createdTodo)
+                nextState.todos = nextState.todos.map { todo in
+                    guard todo.canonicalId == createdTodo.canonicalId else {
+                        return todo
+                    }
+                    return createdRecord
+                }
+                nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
+                return nextState
+            }
+        } catch {
+            // Keep the pending CREATE_TODO mutation so background sync can retry it.
         }
     }
 
@@ -310,55 +346,113 @@ final class TodoRepository {
         }
     }
 
+    private func replaceLocalTodoID(_ state: OfflineSyncState, localTodoID: String, serverTodoID: String) -> OfflineSyncState {
+        OfflineSyncState(
+            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
+            todos: state.todos.map { todo in
+                guard todo.canonicalId == localTodoID || todo.id == localTodoID else {
+                    return todo
+                }
+                return CachedTodoRecord(
+                    id: todo.instanceDateEpochMs == nil ? serverTodoID : todo.id,
+                    canonicalId: serverTodoID,
+                    title: todo.title,
+                    description: todo.description,
+                    priority: todo.priority,
+                    dueEpochMs: todo.dueEpochMs,
+                    rrule: todo.rrule,
+                    instanceDateEpochMs: todo.instanceDateEpochMs,
+                    pinned: todo.pinned,
+                    completed: todo.completed,
+                    listId: todo.listId,
+                    updatedAtEpochMs: todo.updatedAtEpochMs
+                )
+            },
+            completedItems: state.completedItems.map { item in
+                guard item.originalTodoId == localTodoID else {
+                    return item
+                }
+                return CachedCompletedRecord(
+                    id: item.id,
+                    originalTodoId: serverTodoID,
+                    title: item.title,
+                    description: item.description,
+                    priority: item.priority,
+                    dueEpochMs: item.dueEpochMs,
+                    completedAtEpochMs: item.completedAtEpochMs,
+                    rrule: item.rrule,
+                    instanceDateEpochMs: item.instanceDateEpochMs,
+                    listName: item.listName,
+                    listColor: item.listColor
+                )
+            },
+            lists: state.lists,
+            pendingMutations: state.pendingMutations.map { mutation in
+                PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId == localTodoID ? serverTodoID : mutation.targetId,
+                    timestampEpochMs: mutation.timestampEpochMs,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: mutation.dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey
+                )
+            },
+            aiSummaryEnabled: state.aiSummaryEnabled
+        )
+    }
+
     private func buildDashboardSummary(from state: OfflineSyncState) -> DashboardSummary {
-        let todos = state.todos.map(todoFromCache).filter { !$0.completed }
+        let timelineTodos = state.todos.map(todoFromCache).filter { !$0.completed }
         let now = Date()
-        let calendar = Calendar.current
-        let startOfToday = calendar.startOfDay(for: now)
-        let endOfToday = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? now
+        let todayTodos = timelineTodos.filter { isTodayTodo($0, now: now) }
+        let scheduledTodos = timelineTodos.filter { isScheduledTodo($0, now: now) }
+        let todoCountsByList = Dictionary(grouping: timelineTodos, by: \.listId).mapValues(\.count)
         let lists = state.lists.map { list in
-            listFromCache(list, todoCountOverride: todos.filter { $0.listId == list.id }.count)
+            listFromCache(list, todoCountOverride: todoCountsByList[list.id] ?? 0)
         }
 
         return DashboardSummary(
-            todayCount: todos.filter { $0.due >= startOfToday && $0.due < endOfToday }.count,
-            scheduledCount: todos.filter { $0.due >= endOfToday }.count,
-            allCount: todos.count,
-            priorityCount: todos.filter { normalizedPriority($0.priority) != "Low" }.count,
+            todayCount: todayTodos.count,
+            scheduledCount: scheduledTodos.count,
+            allCount: timelineTodos.count,
+            priorityCount: timelineTodos.filter { isPriorityTodo($0.priority) }.count,
             completedCount: state.completedItems.count,
-            lists: lists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            lists: lists
         )
     }
 
     private func buildTodos(from state: OfflineSyncState, mode: TodoListMode, listId: String?) -> [TodoItem] {
         let items = state.todos.map(todoFromCache).filter { !$0.completed }
-        let calendar = Calendar.current
         let now = Date()
-        let startOfToday = calendar.startOfDay(for: Date())
-        let endOfToday = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? Date()
 
         let filtered: [TodoItem]
         switch mode {
         case .today:
-            filtered = items.filter { $0.due >= startOfToday && $0.due < endOfToday }
+            filtered = items.filter { isTodayTodo($0, now: now) }
         case .overdue:
-            filtered = items.filter { $0.due < now }
+            filtered = items.filter { isOverdueTodo($0, now: now) }
         case .scheduled:
-            filtered = items.filter { $0.due >= endOfToday }
+            filtered = items.filter { isScheduledTodo($0, now: now) }
         case .all:
             filtered = items
         case .priority:
-            filtered = items.filter { normalizedPriority($0.priority) != "Low" }
+            filtered = items.filter { isPriorityTodo($0.priority) }
         case .list:
             filtered = items.filter { $0.listId == listId }
         }
 
-        return filtered.sorted { lhs, rhs in
-            if lhs.pinned != rhs.pinned {
-                return lhs.pinned && !rhs.pinned
-            }
-            return lhs.due < rhs.due
-        }
+        return filtered.sorted(by: todoSortPrecedes)
     }
 
     private func normalizedPriority(_ priority: String) -> String {
@@ -370,5 +464,29 @@ final class TodoRepository {
         default:
             return "Low"
         }
+    }
+
+    private func isTodayTodo(_ todo: TodoItem, now: Date = Date()) -> Bool {
+        let calendar = Calendar.current
+        let startOfToday = calendar.startOfDay(for: now)
+        guard let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) else {
+            return false
+        }
+        return todo.due >= startOfToday && todo.due < startOfTomorrow
+    }
+
+    private func isScheduledTodo(_ todo: TodoItem, now: Date = Date()) -> Bool {
+        todo.due >= now
+    }
+
+    private func isOverdueTodo(_ todo: TodoItem, now: Date = Date()) -> Bool {
+        todo.due < now
+    }
+
+    private func isPriorityTodo(_ priority: String?) -> Bool {
+        guard let normalized = priority?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else {
+            return false
+        }
+        return normalized == "medium" || normalized == "high" || normalized == "important" || normalized == "urgent"
     }
 }

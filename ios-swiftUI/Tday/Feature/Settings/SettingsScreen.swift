@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SettingsScreen: View {
     let viewModel: AppViewModel
-    let onBack: () -> Void
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
@@ -10,12 +9,12 @@ struct SettingsScreen: View {
             Section {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(viewModel.user?.name ?? "Unknown user")
-                        .font(.headline)
+                        .font(.tdayRounded(.headline, weight: .bold))
                     Text(viewModel.user?.email ?? "")
-                        .font(.subheadline)
+                        .font(.tdayRounded(.subheadline, weight: .bold))
                         .foregroundStyle(colors.onSurfaceVariant)
                     Text("Role: \(viewModel.user?.role ?? "USER")")
-                        .font(.caption.weight(.semibold))
+                        .font(.tdayRounded(.caption, weight: .bold))
                         .foregroundStyle(colors.onSurfaceVariant)
                 }
                 .padding(.vertical, 4)
@@ -52,7 +51,7 @@ struct SettingsScreen: View {
 
                     if let adminAiSummaryError = viewModel.adminAiSummaryError {
                         Text(adminAiSummaryError)
-                            .font(.footnote)
+                            .font(.tdayRounded(.footnote, weight: .bold))
                             .foregroundStyle(colors.error)
                     }
                 }
@@ -67,7 +66,7 @@ struct SettingsScreen: View {
                 }
                 if viewModel.hasUpdate, let latest = viewModel.latestVersionName {
                     Text("v\(latest) available")
-                        .font(.footnote)
+                        .font(.tdayRounded(.footnote, weight: .bold))
                         .foregroundStyle(colors.primary)
                 }
                 if let backendVersion = viewModel.backendVersion {
@@ -79,7 +78,7 @@ struct SettingsScreen: View {
                                 .foregroundStyle(colors.onSurfaceVariant)
                             let isCompatible = viewModel.versionCheckResult == .compatible
                             Text(isCompatible ? "Compatible" : "Incompatible")
-                                .font(.caption.weight(.semibold))
+                                .font(.tdayRounded(.caption, weight: .bold))
                                 .foregroundStyle(isCompatible ? Color.green : colors.error)
                         }
                     }
@@ -96,13 +95,9 @@ struct SettingsScreen: View {
         }
         .scrollContentBackground(.hidden)
         .background(colors.background)
+        .navigationBackButtonBehavior()
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back", action: onBack)
-            }
-        }
         .task {
             await viewModel.refreshAdminAiSummarySetting()
         }

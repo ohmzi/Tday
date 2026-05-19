@@ -4,6 +4,7 @@ type fetchOptions = {
   method: string;
   headers?: object;
   body?: string | FormData;
+  signal?: AbortSignal;
 };
 
 type ApiErrorPayload = {
@@ -28,6 +29,7 @@ const fetchApi = async (url: string, options: fetchOptions) => {
     method: options.method,
     headers: options.headers as HeadersInit | undefined,
     body: options.body,
+    signal: options.signal,
     cache: "no-store",
     credentials: "same-origin",
   });
@@ -57,40 +59,46 @@ const fetchApi = async (url: string, options: fetchOptions) => {
 };
 
 export const api = {
-  GET({ url }: { url: string }) {
-    return fetchApi(url, { method: "GET" });
+  GET({ url, signal }: { url: string; signal?: AbortSignal }) {
+    return fetchApi(url, { method: "GET", signal });
   },
   PATCH({
     url,
     headers,
     body,
+    signal,
   }: {
     url: string;
     headers?: fetchOptions["headers"];
     body?: fetchOptions["body"];
+    signal?: fetchOptions["signal"];
   }) {
-    return fetchApi(url, { method: "PATCH", headers, body });
+    return fetchApi(url, { method: "PATCH", headers, body, signal });
   },
   DELETE({
     url,
     headers,
     body,
+    signal,
   }: {
     url: string;
     headers?: fetchOptions["headers"];
     body?: fetchOptions["body"];
+    signal?: fetchOptions["signal"];
   }) {
-    return fetchApi(url, { method: "DELETE", headers, body });
+    return fetchApi(url, { method: "DELETE", headers, body, signal });
   },
   POST({
     url,
     headers,
     body,
+    signal,
   }: {
     url: string;
     headers?: fetchOptions["headers"];
     body: fetchOptions["body"];
+    signal?: fetchOptions["signal"];
   }) {
-    return fetchApi(url, { method: "POST", headers, body });
+    return fetchApi(url, { method: "POST", headers, body, signal });
   },
 };
