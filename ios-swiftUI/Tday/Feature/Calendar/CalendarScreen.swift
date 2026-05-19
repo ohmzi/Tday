@@ -8,6 +8,25 @@ private enum CalendarTitleHandoff {
 
 private let calendarNativePagerCenterIndex = 1
 
+private struct CalendarTodayJumpRequest: Equatable {
+    let id: Int
+    let targetDate: Date
+}
+
+private enum CalendarPagerDirection {
+    case previous
+    case next
+
+    var pageIndex: Int {
+        switch self {
+        case .previous:
+            return 0
+        case .next:
+            return 2
+        }
+    }
+}
+
 struct CalendarScreen: View {
     @State private var viewModel: CalendarViewModel
     @Environment(\.tdayColors) private var colors
@@ -20,6 +39,8 @@ struct CalendarScreen: View {
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
     @State private var calendarScrollOffset: CGFloat = 0
+    @State private var todayJumpRequestID = 0
+    @State private var todayJumpRequest: CalendarTodayJumpRequest?
 
     init(container: AppContainer) {
         _viewModel = State(initialValue: CalendarViewModel(container: container))
@@ -218,10 +239,7 @@ struct CalendarScreen: View {
             onBack: { dismiss() },
             action: TimelineTopBarAction(
                 systemName: "calendar",
-                action: {
-                    let today = Date()
-                    selectDate(today)
-                }
+                action: jumpToToday
             ),
             titleRevealStart: CalendarTitleHandoff.pinnedRevealStart,
             titleRevealEnd: CalendarTitleHandoff.pinnedRevealEnd
@@ -259,6 +277,7 @@ struct CalendarScreen: View {
                 accentColor: calendarAccentColor,
                 canGoPreviousMonth: canGoPreviousMonth,
                 minimumNavigableMonth: minimumNavigableMonth,
+                todayJumpRequest: todayJumpRequest,
                 onPreviousMonth: { navigateMonth(by: -1) },
                 onNextMonth: { navigateMonth(by: 1) },
                 onSelectDate: { selectDate($0) }
@@ -271,6 +290,7 @@ struct CalendarScreen: View {
                 accentColor: calendarAccentColor,
                 canGoPreviousWeek: canGoPreviousWeek,
                 canSelectDate: { canNavigate(to: $0) },
+                todayJumpRequest: todayJumpRequest,
                 onPreviousWeek: { navigateDay(by: -7) },
                 onNextWeek: { navigateDay(by: 7) },
                 onSelectDate: { selectDate($0) }
@@ -283,8 +303,10 @@ struct CalendarScreen: View {
                 accentColor: calendarAccentColor,
                 canGoPreviousDay: canGoPreviousDay,
                 canSelectDate: { canNavigate(to: $0) },
+                todayJumpRequest: todayJumpRequest,
                 onPreviousDay: { navigateDay(by: -1) },
-                onNextDay: { navigateDay(by: 1) }
+                onNextDay: { navigateDay(by: 1) },
+                onSelectDate: { selectDate($0) }
             )
         }
     }
@@ -312,6 +334,11 @@ struct CalendarScreen: View {
             return
         }
         selectDate(targetDate)
+    }
+
+    private func jumpToToday() {
+        todayJumpRequestID += 1
+        todayJumpRequest = CalendarTodayJumpRequest(id: todayJumpRequestID, targetDate: Date())
     }
 }
 
@@ -357,12 +384,14 @@ private struct CalendarMonthGrid: View {
     let accentColor: Color
     let canGoPreviousMonth: Bool
     let minimumNavigableMonth: Date
+    let todayJumpRequest: CalendarTodayJumpRequest?
     let onPreviousMonth: () -> Void
     let onNextMonth: () -> Void
     let onSelectDate: (Date) -> Void
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
+    @State private var pendingTodayJump: CalendarTodayJumpRequest?
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
 
@@ -379,6 +408,7 @@ private struct CalendarMonthGrid: View {
     var body: some View {
         let displayMonth = calendarMonthStart(for: visibleMonth)
         monthContent(for: displayMonth)
+            .onChange(of: todayJumpRequest) { _, request in handleTodayJump(request, from: displayMonth) }
             .onChange(of: displayMonth) { _, _ in resetPageSelection() }
             .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
@@ -388,6 +418,9 @@ private struct CalendarMonthGrid: View {
         let canGoPrevious = calendarMonthStart(for: displayMonth) > minimumNavigableMonth
         let previousMonth = canGoPrevious ? calendarMonth(byAdding: -1, to: displayMonth) : nil
         let nextMonth = calendarMonth(byAdding: 1, to: displayMonth)
+        let jumpDirection = todayJumpDirection(from: displayMonth)
+        let previousPageMonth = jumpDirection == .previous ? pendingTodayJump.map { calendarMonthStart(for: $0.targetDate) } : previousMonth
+        let nextPageMonth = jumpDirection == .next ? pendingTodayJump.map { calendarMonthStart(for: $0.targetDate) } : nextMonth
         let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
         let isPreviousEnabled = canGoPrevious && isPagingAtRest
         let isNextEnabled = isPagingAtRest
@@ -435,9 +468,9 @@ private struct CalendarMonthGrid: View {
 
                 CalendarPagingScrollView(
                     pages: monthPages(
-                        previousMonth: previousMonth,
+                        previousMonth: previousPageMonth,
                         displayMonth: displayMonth,
-                        nextMonth: nextMonth
+                        nextMonth: nextPageMonth
                     ),
                     selection: $pageSelection,
                     onSettledSelection: settlePageSelection
@@ -503,12 +536,46 @@ private struct CalendarMonthGrid: View {
 
     private func settlePageSelection(_ selection: Int) {
         guard selection != calendarNativePagerCenterIndex else { return }
+        if let pendingTodayJump {
+            self.pendingTodayJump = nil
+            onSelectDate(pendingTodayJump.targetDate)
+            resetPageSelection()
+            return
+        }
+
         if selection < calendarNativePagerCenterIndex {
             onPreviousMonth()
         } else {
             onNextMonth()
         }
         resetPageSelection()
+    }
+
+    private func handleTodayJump(_ request: CalendarTodayJumpRequest?, from displayMonth: Date) {
+        guard let request else { return }
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+
+        let targetMonth = calendarMonthStart(for: request.targetDate)
+        guard targetMonth != displayMonth else {
+            onSelectDate(request.targetDate)
+            resetPageSelection()
+            return
+        }
+
+        pendingTodayJump = request
+        pageSelection = targetMonth < displayMonth ? CalendarPagerDirection.previous.pageIndex : CalendarPagerDirection.next.pageIndex
+    }
+
+    private func todayJumpDirection(from displayMonth: Date) -> CalendarPagerDirection? {
+        guard let pendingTodayJump else { return nil }
+        let targetMonth = calendarMonthStart(for: pendingTodayJump.targetDate)
+        if targetMonth < displayMonth {
+            return .previous
+        }
+        if targetMonth > displayMonth {
+            return .next
+        }
+        return nil
     }
 
     private static func makeDays(for month: Date) -> [CalendarMonthDay] {
@@ -538,16 +605,19 @@ private struct CalendarWeekCard: View {
     let accentColor: Color
     let canGoPreviousWeek: Bool
     let canSelectDate: (Date) -> Bool
+    let todayJumpRequest: CalendarTodayJumpRequest?
     let onPreviousWeek: () -> Void
     let onNextWeek: () -> Void
     let onSelectDate: (Date) -> Void
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
+    @State private var pendingTodayJump: CalendarTodayJumpRequest?
 
     var body: some View {
         let displaySelectedDate = Calendar.current.startOfDay(for: selectedDate)
         weekContent(for: displaySelectedDate)
+            .onChange(of: todayJumpRequest) { _, request in handleTodayJump(request, from: displaySelectedDate) }
             .onChange(of: displaySelectedDate) { _, _ in resetPageSelection() }
             .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
@@ -558,6 +628,9 @@ private struct CalendarWeekCard: View {
         let previousWeekDate = calendarDate(byAddingDays: -7, to: displaySelectedDate)
         let nextWeekDate = calendarDate(byAddingDays: 7, to: displaySelectedDate)
         let canGoPrevious = previousWeekDate.map(canSelectDate) ?? false
+        let jumpDirection = todayJumpDirection(from: displaySelectedDate)
+        let previousPageWeekDate = jumpDirection == .previous ? pendingTodayJump?.targetDate : previousWeekDate
+        let nextPageWeekDate = jumpDirection == .next ? pendingTodayJump?.targetDate : nextWeekDate
         let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
 
         return VStack(spacing: 14) {
@@ -590,9 +663,9 @@ private struct CalendarWeekCard: View {
 
             CalendarPagingScrollView(
                 pages: weekPages(
-                    previousWeekDate: canGoPrevious ? previousWeekDate : nil,
+                    previousWeekDate: jumpDirection == .previous ? previousPageWeekDate : (canGoPrevious ? previousPageWeekDate : nil),
                     displaySelectedDate: displaySelectedDate,
-                    nextWeekDate: nextWeekDate
+                    nextWeekDate: nextPageWeekDate
                 ),
                 selection: $pageSelection,
                 onSettledSelection: settlePageSelection
@@ -663,12 +736,48 @@ private struct CalendarWeekCard: View {
 
     private func settlePageSelection(_ selection: Int) {
         guard selection != calendarNativePagerCenterIndex else { return }
+        if let pendingTodayJump {
+            self.pendingTodayJump = nil
+            onSelectDate(pendingTodayJump.targetDate)
+            resetPageSelection()
+            return
+        }
+
         if selection < calendarNativePagerCenterIndex {
             onPreviousWeek()
         } else {
             onNextWeek()
         }
         resetPageSelection()
+    }
+
+    private func handleTodayJump(_ request: CalendarTodayJumpRequest?, from displaySelectedDate: Date) {
+        guard let request else { return }
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+
+        let currentWeek = calendarStartOfWeek(for: displaySelectedDate)
+        let targetWeek = calendarStartOfWeek(for: request.targetDate)
+        guard targetWeek != currentWeek else {
+            onSelectDate(request.targetDate)
+            resetPageSelection()
+            return
+        }
+
+        pendingTodayJump = request
+        pageSelection = targetWeek < currentWeek ? CalendarPagerDirection.previous.pageIndex : CalendarPagerDirection.next.pageIndex
+    }
+
+    private func todayJumpDirection(from displaySelectedDate: Date) -> CalendarPagerDirection? {
+        guard let pendingTodayJump else { return nil }
+        let currentWeek = calendarStartOfWeek(for: displaySelectedDate)
+        let targetWeek = calendarStartOfWeek(for: pendingTodayJump.targetDate)
+        if targetWeek < currentWeek {
+            return .previous
+        }
+        if targetWeek > currentWeek {
+            return .next
+        }
+        return nil
     }
 }
 
@@ -762,15 +871,19 @@ private struct CalendarDayCard: View {
     let accentColor: Color
     let canGoPreviousDay: Bool
     let canSelectDate: (Date) -> Bool
+    let todayJumpRequest: CalendarTodayJumpRequest?
     let onPreviousDay: () -> Void
     let onNextDay: () -> Void
+    let onSelectDate: (Date) -> Void
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
+    @State private var pendingTodayJump: CalendarTodayJumpRequest?
 
     var body: some View {
         let displayDate = Calendar.current.startOfDay(for: selectedDate)
         dayContent(for: displayDate)
+            .onChange(of: todayJumpRequest) { _, request in handleTodayJump(request, from: displayDate) }
             .onChange(of: displayDate) { _, _ in resetPageSelection() }
             .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
@@ -780,6 +893,9 @@ private struct CalendarDayCard: View {
         let previousDay = calendarDate(byAddingDays: -1, to: displayDate)
         let nextDay = calendarDate(byAddingDays: 1, to: displayDate)
         let canGoPrevious = previousDay.map(canSelectDate) ?? false
+        let jumpDirection = todayJumpDirection(from: displayDate)
+        let previousPageDay = jumpDirection == .previous ? pendingTodayJump.map { Calendar.current.startOfDay(for: $0.targetDate) } : previousDay
+        let nextPageDay = jumpDirection == .next ? pendingTodayJump.map { Calendar.current.startOfDay(for: $0.targetDate) } : nextDay
         let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
 
         return VStack(alignment: .leading, spacing: 14) {
@@ -809,9 +925,9 @@ private struct CalendarDayCard: View {
 
             CalendarPagingScrollView(
                 pages: dayPages(
-                    previousDay: canGoPrevious ? previousDay : nil,
+                    previousDay: jumpDirection == .previous ? previousPageDay : (canGoPrevious ? previousPageDay : nil),
                     displayDate: displayDate,
-                    nextDay: nextDay
+                    nextDay: nextPageDay
                 ),
                 selection: $pageSelection,
                 onSettledSelection: settlePageSelection
@@ -873,12 +989,46 @@ private struct CalendarDayCard: View {
 
     private func settlePageSelection(_ selection: Int) {
         guard selection != calendarNativePagerCenterIndex else { return }
+        if let pendingTodayJump {
+            self.pendingTodayJump = nil
+            onSelectDate(pendingTodayJump.targetDate)
+            resetPageSelection()
+            return
+        }
+
         if selection < calendarNativePagerCenterIndex {
             onPreviousDay()
         } else {
             onNextDay()
         }
         resetPageSelection()
+    }
+
+    private func handleTodayJump(_ request: CalendarTodayJumpRequest?, from displayDate: Date) {
+        guard let request else { return }
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+
+        let targetDate = Calendar.current.startOfDay(for: request.targetDate)
+        guard targetDate != displayDate else {
+            onSelectDate(request.targetDate)
+            resetPageSelection()
+            return
+        }
+
+        pendingTodayJump = request
+        pageSelection = targetDate < displayDate ? CalendarPagerDirection.previous.pageIndex : CalendarPagerDirection.next.pageIndex
+    }
+
+    private func todayJumpDirection(from displayDate: Date) -> CalendarPagerDirection? {
+        guard let pendingTodayJump else { return nil }
+        let targetDate = Calendar.current.startOfDay(for: pendingTodayJump.targetDate)
+        if targetDate < displayDate {
+            return .previous
+        }
+        if targetDate > displayDate {
+            return .next
+        }
+        return nil
     }
 
     private func weekdayTitle(for date: Date) -> String {
