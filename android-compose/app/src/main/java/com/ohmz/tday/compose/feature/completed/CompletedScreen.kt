@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.feature.completed
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -488,12 +489,14 @@ private fun CompletedSwipeRow(
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     val actionRevealPx = with(density) { 130.dp.toPx() }
+    val swipeHintOffsetPx = with(density) { 36.dp.toPx() }.coerceAtMost(actionRevealPx * 0.28f)
     val maxElasticDragPx = actionRevealPx * 1.22f
     var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
+    var swipeHinting by remember(item.id) { mutableStateOf(false) }
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
-        animationSpec = spring(),
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "completedSwipeOffset",
     )
     val showCompletedCheckmark = restorePhase == CompletedRestorePhase.Completed
@@ -609,7 +612,18 @@ private fun CompletedSwipeRow(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
-                            if (targetOffsetX != 0f) targetOffsetX = 0f
+                            if (targetOffsetX != 0f) {
+                                targetOffsetX = 0f
+                            } else if (!swipeHinting && !isRestoring) {
+                                swipeHinting = true
+                                coroutineScope.launch {
+                                    targetOffsetX = -swipeHintOffsetPx
+                                    delay(150)
+                                    targetOffsetX = 0f
+                                    delay(360)
+                                    swipeHinting = false
+                                }
+                            }
                         },
                     shape = rowShape,
                     colors = CardDefaults.cardColors(containerColor = foregroundColor),
