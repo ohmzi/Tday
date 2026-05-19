@@ -379,15 +379,6 @@ private struct CalendarMonthGrid: View {
     var body: some View {
         let displayMonth = calendarMonthStart(for: visibleMonth)
         monthContent(for: displayMonth)
-            .onChange(of: pageSelection) { _, newValue in
-                guard newValue != calendarNativePagerCenterIndex else { return }
-                if newValue < calendarNativePagerCenterIndex {
-                    onPreviousMonth()
-                } else {
-                    onNextMonth()
-                }
-                resetPageSelection()
-            }
             .onChange(of: displayMonth) { _, _ in resetPageSelection() }
             .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
@@ -397,17 +388,20 @@ private struct CalendarMonthGrid: View {
         let canGoPrevious = calendarMonthStart(for: displayMonth) > minimumNavigableMonth
         let previousMonth = canGoPrevious ? calendarMonth(byAdding: -1, to: displayMonth) : nil
         let nextMonth = calendarMonth(byAdding: 1, to: displayMonth)
+        let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
+        let isPreviousEnabled = canGoPrevious && isPagingAtRest
+        let isNextEnabled = isPagingAtRest
 
         return VStack(spacing: 16) {
             HStack {
-                Button(action: onPreviousMonth) {
+                Button(action: goToPreviousPage) {
                     Image(systemName: "chevron.left")
                         .font(.tdayRounded(size: 20, weight: .heavy))
-                        .foregroundStyle(canGoPrevious ? accentColor : colors.onSurfaceVariant.opacity(0.36))
+                        .foregroundStyle(isPreviousEnabled ? accentColor : colors.onSurfaceVariant.opacity(0.36))
                         .frame(width: 40, height: 36)
                 }
                 .buttonStyle(.plain)
-                .disabled(!canGoPrevious)
+                .disabled(!isPreviousEnabled)
 
                 Spacer(minLength: 0)
 
@@ -417,13 +411,14 @@ private struct CalendarMonthGrid: View {
 
                 Spacer(minLength: 0)
 
-                Button(action: onNextMonth) {
+                Button(action: goToNextPage) {
                     Image(systemName: "chevron.right")
                         .font(.tdayRounded(size: 20, weight: .heavy))
-                        .foregroundStyle(accentColor)
+                        .foregroundStyle(isNextEnabled ? accentColor : accentColor.opacity(0.36))
                         .frame(width: 40, height: 36)
                 }
                 .buttonStyle(.plain)
+                .disabled(!isNextEnabled)
             }
             .padding(.horizontal, 6)
 
@@ -444,7 +439,8 @@ private struct CalendarMonthGrid: View {
                         displayMonth: displayMonth,
                         nextMonth: nextMonth
                     ),
-                    selection: $pageSelection
+                    selection: $pageSelection,
+                    onSettledSelection: settlePageSelection
                 )
                 .frame(height: 283)
             }
@@ -495,6 +491,26 @@ private struct CalendarMonthGrid: View {
         }
     }
 
+    private func goToPreviousPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 0
+    }
+
+    private func goToNextPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 2
+    }
+
+    private func settlePageSelection(_ selection: Int) {
+        guard selection != calendarNativePagerCenterIndex else { return }
+        if selection < calendarNativePagerCenterIndex {
+            onPreviousMonth()
+        } else {
+            onNextMonth()
+        }
+        resetPageSelection()
+    }
+
     private static func makeDays(for month: Date) -> [CalendarMonthDay] {
         let calendar = Calendar.current
         let monthStartComponents = calendar.dateComponents([.year, .month], from: month)
@@ -532,15 +548,6 @@ private struct CalendarWeekCard: View {
     var body: some View {
         let displaySelectedDate = Calendar.current.startOfDay(for: selectedDate)
         weekContent(for: displaySelectedDate)
-            .onChange(of: pageSelection) { _, newValue in
-                guard newValue != calendarNativePagerCenterIndex else { return }
-                if newValue < calendarNativePagerCenterIndex {
-                    onPreviousWeek()
-                } else {
-                    onNextWeek()
-                }
-                resetPageSelection()
-            }
             .onChange(of: displaySelectedDate) { _, _ in resetPageSelection() }
             .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
@@ -551,14 +558,15 @@ private struct CalendarWeekCard: View {
         let previousWeekDate = calendarDate(byAddingDays: -7, to: displaySelectedDate)
         let nextWeekDate = calendarDate(byAddingDays: 7, to: displaySelectedDate)
         let canGoPrevious = previousWeekDate.map(canSelectDate) ?? false
+        let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
 
         return VStack(spacing: 14) {
             HStack {
                 CalendarNavButton(
                     systemName: "chevron.left",
-                    isEnabled: canGoPrevious,
+                    isEnabled: canGoPrevious && isPagingAtRest,
                     color: colors.onSurfaceVariant,
-                    action: onPreviousWeek
+                    action: goToPreviousPage
                 )
 
                 Spacer(minLength: 0)
@@ -573,9 +581,9 @@ private struct CalendarWeekCard: View {
 
                 CalendarNavButton(
                     systemName: "chevron.right",
-                    isEnabled: true,
+                    isEnabled: isPagingAtRest,
                     color: colors.onSurfaceVariant,
-                    action: onNextWeek
+                    action: goToNextPage
                 )
             }
             .padding(.horizontal, 6)
@@ -586,7 +594,8 @@ private struct CalendarWeekCard: View {
                     displaySelectedDate: displaySelectedDate,
                     nextWeekDate: nextWeekDate
                 ),
-                selection: $pageSelection
+                selection: $pageSelection,
+                onSettledSelection: settlePageSelection
             )
             .frame(height: 78)
         }
@@ -640,6 +649,26 @@ private struct CalendarWeekCard: View {
         withTransaction(transaction) {
             pageSelection = calendarNativePagerCenterIndex
         }
+    }
+
+    private func goToPreviousPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 0
+    }
+
+    private func goToNextPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 2
+    }
+
+    private func settlePageSelection(_ selection: Int) {
+        guard selection != calendarNativePagerCenterIndex else { return }
+        if selection < calendarNativePagerCenterIndex {
+            onPreviousWeek()
+        } else {
+            onNextWeek()
+        }
+        resetPageSelection()
     }
 }
 
@@ -742,15 +771,6 @@ private struct CalendarDayCard: View {
     var body: some View {
         let displayDate = Calendar.current.startOfDay(for: selectedDate)
         dayContent(for: displayDate)
-            .onChange(of: pageSelection) { _, newValue in
-                guard newValue != calendarNativePagerCenterIndex else { return }
-                if newValue < calendarNativePagerCenterIndex {
-                    onPreviousDay()
-                } else {
-                    onNextDay()
-                }
-                resetPageSelection()
-            }
             .onChange(of: displayDate) { _, _ in resetPageSelection() }
             .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
@@ -760,14 +780,15 @@ private struct CalendarDayCard: View {
         let previousDay = calendarDate(byAddingDays: -1, to: displayDate)
         let nextDay = calendarDate(byAddingDays: 1, to: displayDate)
         let canGoPrevious = previousDay.map(canSelectDate) ?? false
+        let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
 
         return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 CalendarNavButton(
                     systemName: "chevron.left",
-                    isEnabled: canGoPrevious,
+                    isEnabled: canGoPrevious && isPagingAtRest,
                     color: colors.onSurfaceVariant,
-                    action: onPreviousDay
+                    action: goToPreviousPage
                 )
 
                 Spacer(minLength: 0)
@@ -780,9 +801,9 @@ private struct CalendarDayCard: View {
 
                 CalendarNavButton(
                     systemName: "chevron.right",
-                    isEnabled: true,
+                    isEnabled: isPagingAtRest,
                     color: colors.onSurfaceVariant,
-                    action: onNextDay
+                    action: goToNextPage
                 )
             }
 
@@ -792,7 +813,8 @@ private struct CalendarDayCard: View {
                     displayDate: displayDate,
                     nextDay: nextDay
                 ),
-                selection: $pageSelection
+                selection: $pageSelection,
+                onSettledSelection: settlePageSelection
             )
             .frame(height: 70)
         }
@@ -837,6 +859,26 @@ private struct CalendarDayCard: View {
         withTransaction(transaction) {
             pageSelection = calendarNativePagerCenterIndex
         }
+    }
+
+    private func goToPreviousPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 0
+    }
+
+    private func goToNextPage() {
+        guard pageSelection == calendarNativePagerCenterIndex else { return }
+        pageSelection = 2
+    }
+
+    private func settlePageSelection(_ selection: Int) {
+        guard selection != calendarNativePagerCenterIndex else { return }
+        if selection < calendarNativePagerCenterIndex {
+            onPreviousDay()
+        } else {
+            onNextDay()
+        }
+        resetPageSelection()
     }
 
     private func weekdayTitle(for date: Date) -> String {
@@ -884,9 +926,10 @@ private struct CalendarPagerPage: Identifiable {
 private struct CalendarPagingScrollView: UIViewRepresentable {
     let pages: [CalendarPagerPage]
     @Binding var selection: Int
+    let onSettledSelection: (Int) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(selection: $selection)
+        Coordinator()
     }
 
     func makeUIView(context: Context) -> UIScrollView {
@@ -925,7 +968,11 @@ private struct CalendarPagingScrollView: UIViewRepresentable {
     func updateUIView(_ scrollView: UIScrollView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.rebuildPagesIfNeeded(pages, in: scrollView)
-        context.coordinator.scrollToSelection(selection, in: scrollView, animated: false)
+        context.coordinator.scrollToSelection(
+            selection,
+            in: scrollView,
+            animated: selection != calendarNativePagerCenterIndex
+        )
     }
 
     final class Coordinator: NSObject, UIScrollViewDelegate {
@@ -933,12 +980,8 @@ private struct CalendarPagingScrollView: UIViewRepresentable {
         var stackView: UIStackView?
         private var hostedControllers: [UIHostingController<AnyView>] = []
         private var pageIDs: [Int] = []
-        private var selection: Binding<Int>
         private var isProgrammaticScroll = false
-
-        init(selection: Binding<Int>) {
-            self.selection = selection
-        }
+        private var programmaticSelection: Int?
 
         func rebuildPagesIfNeeded(_ pages: [CalendarPagerPage], in scrollView: UIScrollView) {
             let incomingIDs = pages.map(\.id)
@@ -989,8 +1032,10 @@ private struct CalendarPagingScrollView: UIViewRepresentable {
 
             let targetX = CGFloat(index) * scrollView.bounds.width
             guard abs(scrollView.contentOffset.x - targetX) > 0.5 else { return }
+            guard !animated || programmaticSelection != selection else { return }
 
             isProgrammaticScroll = true
+            programmaticSelection = animated ? selection : nil
             scrollView.setContentOffset(CGPoint(x: targetX, y: 0), animated: animated)
             if !animated {
                 isProgrammaticScroll = false
@@ -1009,19 +1054,31 @@ private struct CalendarPagingScrollView: UIViewRepresentable {
 
         func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
             isProgrammaticScroll = false
+            programmaticSelection = nil
+            notifySettledSelection(from: scrollView)
         }
 
         private func updateSelection(from scrollView: UIScrollView) {
             guard !isProgrammaticScroll else { return }
+            notifySettledSelection(from: scrollView)
+        }
+
+        private func notifySettledSelection(from scrollView: UIScrollView) {
             guard scrollView.bounds.width > 0 else { return }
+            guard let selectedID = settledPageID(from: scrollView) else { return }
+            notifyParentIfNeeded(selectedID)
+        }
 
+        private func settledPageID(from scrollView: UIScrollView) -> Int? {
             let index = Int(round(scrollView.contentOffset.x / scrollView.bounds.width))
-            guard pageIDs.indices.contains(index) else { return }
-            let selectedID = pageIDs[index]
-            guard selectedID != selection.wrappedValue else { return }
+            guard pageIDs.indices.contains(index) else { return nil }
+            return pageIDs[index]
+        }
 
+        private func notifyParentIfNeeded(_ selectedID: Int) {
+            guard selectedID != calendarNativePagerCenterIndex else { return }
             DispatchQueue.main.async {
-                self.selection.wrappedValue = selectedID
+                self.parent?.onSettledSelection(selectedID)
             }
         }
     }
