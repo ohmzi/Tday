@@ -142,6 +142,8 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val CalendarAccentPurple = Color(0xFF7D67B6)
+private val CalendarPeriodCardPageHeight = 78.dp
+private val CalendarPeriodCardBottomPadding = 18.dp
 
 private fun calendarPageAnimationSpec() = tween<IntOffset>(
     durationMillis = 260,
@@ -800,7 +802,7 @@ private fun CalendarWeekCard(
                 targetState = weekStart,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(78.dp)
+                    .height(CalendarPeriodCardPageHeight)
                     .graphicsLayer { translationX = dragTranslationX },
                 transitionSpec = {
                     val movingToFuture = targetState > initialState
@@ -869,7 +871,7 @@ private fun CalendarWeekDayCell(
 
     Card(
         modifier = modifier
-            .height(78.dp)
+            .height(CalendarPeriodCardPageHeight)
             .minimumInteractiveComponentSize(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
@@ -971,7 +973,12 @@ private fun CalendarDayCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 18.dp, top = 16.dp, end = 18.dp, bottom = 22.dp),
+                .padding(
+                    start = 18.dp,
+                    top = 16.dp,
+                    end = 18.dp,
+                    bottom = CalendarPeriodCardBottomPadding
+                ),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
@@ -1008,7 +1015,7 @@ private fun CalendarDayCard(
                 targetState = selectedDate,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(70.dp)
+                    .height(CalendarPeriodCardPageHeight)
                     .graphicsLayer { translationX = dragTranslationX },
                 transitionSpec = {
                     val movingToFuture = targetState > initialState
