@@ -4,6 +4,9 @@ import UIKit
 private enum CalendarTitleHandoff {
     static let pinnedRevealStart: CGFloat = 0.18
     static let pinnedRevealEnd: CGFloat = 0.62
+    static let modeTabsElasticClearance: CGFloat = TodoTimelineMetrics.titleCollapseDistance
+    static let modeTabsElasticStart: CGFloat = 0
+    static let modeTabsElasticEnd: CGFloat = 1
 }
 
 private let calendarNativePagerCenterIndex = 1
@@ -68,6 +71,15 @@ struct CalendarScreen: View {
         return min(max(calendarScrollOffset / distance, 0), 1)
     }
 
+    private var modeTabsElasticTopInset: CGFloat {
+        let elasticProgress = TodoTimelineMetrics.progress(
+            titleCollapseProgress,
+            from: CalendarTitleHandoff.modeTabsElasticStart,
+            to: CalendarTitleHandoff.modeTabsElasticEnd
+        )
+        return CalendarTitleHandoff.modeTabsElasticClearance * elasticProgress
+    }
+
     private var minimumNavigableMonth: Date {
         calendarMonthStart(for: Date())
     }
@@ -106,7 +118,14 @@ struct CalendarScreen: View {
                         }
                     }
                 )
-                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 14, trailing: TodoTimelineMetrics.horizontalPadding))
+                .listRowInsets(
+                    EdgeInsets(
+                        top: modeTabsElasticTopInset,
+                        leading: TodoTimelineMetrics.horizontalPadding,
+                        bottom: 14,
+                        trailing: TodoTimelineMetrics.horizontalPadding
+                    )
+                )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
