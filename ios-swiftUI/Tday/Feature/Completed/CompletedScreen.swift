@@ -42,6 +42,12 @@ struct CompletedScreen: View {
         return "\(itemIDs)::\(phaseIDs)"
     }
 
+    private var firstVisibleExpandedCompletedSectionID: String? {
+        groupedItems.first { section in
+            !section.items.isEmpty && !collapsedSectionIDs.contains(section.id)
+        }?.id
+    }
+
     var body: some View {
         completedTimelineContent
             .background(colors.background)
@@ -147,7 +153,7 @@ struct CompletedScreen: View {
             if !isCollapsed {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, item in
                     completedTimelineRow(item)
-                        .padding(.top, firstPinnedRowElasticTopInset(isFirstSection: isFirstSection, itemIndex: itemIndex))
+                        .padding(.top, firstPinnedRowElasticTopInset(isFirstVisibleExpandedSection: section.id == firstVisibleExpandedCompletedSectionID, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -168,21 +174,21 @@ struct CompletedScreen: View {
                     }
                 }
             )
-                .listRowInsets(
-                    EdgeInsets(
-                        top: isFirstSection ? 0 : 8,
-                        leading: 0,
-                        bottom: 0,
-                        trailing: 0
-                    )
+            .listRowInsets(
+                EdgeInsets(
+                    top: isFirstSection ? 0 : 8,
+                    leading: 0,
+                    bottom: 0,
+                    trailing: 0
                 )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+            )
+            .timelinePinnedSectionHeaderBackground()
+            .listRowSeparator(.hidden)
         }
     }
 
-    private func firstPinnedRowElasticTopInset(isFirstSection: Bool, itemIndex: Int) -> CGFloat {
-        guard isFirstSection, itemIndex == 0 else {
+    private func firstPinnedRowElasticTopInset(isFirstVisibleExpandedSection: Bool, itemIndex: Int) -> CGFloat {
+        guard isFirstVisibleExpandedSection, itemIndex == 0 else {
             return 0
         }
 
