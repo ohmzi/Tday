@@ -48,7 +48,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
@@ -718,6 +717,8 @@ private fun CreateListBottomSheet(
     onCreate: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = listColorAccent(listColor)
@@ -733,6 +734,12 @@ private fun CreateListBottomSheet(
         Color.Black.copy(alpha = 0.68f)
     } else {
         Color.Black.copy(alpha = 0.40f)
+    }
+
+    LaunchedEffect(Unit) {
+        delay(500)
+        focusRequester.requestFocus()
+        keyboardController?.show()
     }
 
     ModalBottomSheet(
@@ -753,7 +760,6 @@ private fun CreateListBottomSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .navigationBarsPadding()
-                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 18.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
@@ -769,7 +775,6 @@ private fun CreateListBottomSheet(
                     confirmEnabled = canCreate,
                 )
 
-                ListSheetSectionTitle(stringResource(R.string.home_section_list))
                 ListSheetCard {
                     Column(
                         modifier = Modifier
@@ -801,7 +806,9 @@ private fun CreateListBottomSheet(
                                 color = selectedAccent,
                                 fontWeight = FontWeight.ExtraBold,
                             ),
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(focusRequester),
                             decorationBox = { innerTextField ->
                                 Box(
                                     modifier = Modifier
