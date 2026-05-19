@@ -1278,11 +1278,13 @@ private fun CalendarDayCell(
         cell.isCurrentMonth -> colorScheme.onSurface
         else -> colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     }
+    val interactionSource = remember { MutableInteractionSource() }
 
     Box(
         modifier = modifier
             .minimumInteractiveComponentSize()
             .aspectRatio(1f)
+            .clip(cellShape)
             .background(
                 color = containerColor,
                 shape = cellShape,
@@ -1292,7 +1294,14 @@ private fun CalendarDayCell(
                 color = borderColor,
                 shape = cellShape,
             )
-            .clickable(onClick = onClick),
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(
+                    bounded = true,
+                    radius = 28.dp,
+                ),
+                onClick = onClick,
+            ),
     ) {
         Text(
             text = cell.date.dayOfMonth.toString(),
