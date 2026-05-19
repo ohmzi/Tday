@@ -237,6 +237,7 @@ struct CompletedScreen: View {
             Rectangle()
                 .fill(colors.onSurfaceVariant.opacity(0.18))
                 .frame(height: 1)
+                .padding(.trailing, -TodoTimelineMetrics.swipeDividerExtension)
         }
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
