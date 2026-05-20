@@ -87,6 +87,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
     let iconKey: String?
     let todoCount: Int
     let updatedAt: Date?
+    let createdAt: Date?
 }
 
 struct DashboardSummary: Equatable, Hashable, Codable {

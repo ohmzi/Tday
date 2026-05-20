@@ -4,7 +4,39 @@ import UIKit
 private enum CalendarTitleHandoff {
     static let pinnedRevealStart: CGFloat = 0.18
     static let pinnedRevealEnd: CGFloat = 0.62
+    static let titleRowHeight: CGFloat = TodoTimelineMetrics.titleCollapseDistance
 }
+
+private enum CalendarModeControlMetrics {
+    static let height: CGFloat = 52
+}
+
+private enum CalendarPeriodCardMetrics {
+    static let contentSpacing: CGFloat = 14
+    static let horizontalPadding: CGFloat = 16
+    static let headerHeight: CGFloat = 36
+    static let headerHorizontalPadding: CGFloat = 6
+    static let pageHeight: CGFloat = 78
+    static let weekDayCellHeight: CGFloat = 72
+    static let pageHorizontalGutter: CGFloat = 2
+    static let topPadding: CGFloat = 16
+    static let bottomPadding: CGFloat = 18
+}
+
+private enum CalendarMonthGridMetrics {
+    static let spacing: CGFloat = 8
+    static let height: CGFloat = 292
+    static let dayCellHeight: CGFloat = 42
+    static let dayHighlightWidth: CGFloat = 42
+    static let dayHighlightHeight: CGFloat = 40
+    static let dayNumberWidth: CGFloat = 34
+    static let dayNumberHeight: CGFloat = 24
+    static let taskCountHeight: CGFloat = 13
+    static let taskDotSize: CGFloat = 4.6
+    static let cellCornerRadius: CGFloat = 16
+}
+
+private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
 
 private let calendarNativePagerCenterIndex = 1
 
@@ -97,6 +129,7 @@ struct CalendarScreen: View {
             Section {
                 CalendarViewModeTabs(
                     selectedMode: displayMode,
+                    accentColor: calendarAccentColor,
                     onSelect: { mode in
                         withAnimation(.easeInOut(duration: 0.2)) {
                             displayMode = mode
@@ -106,7 +139,14 @@ struct CalendarScreen: View {
                         }
                     }
                 )
-                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 14, trailing: TodoTimelineMetrics.horizontalPadding))
+                .listRowInsets(
+                    EdgeInsets(
+                        top: 0,
+                        leading: TodoTimelineMetrics.horizontalPadding,
+                        bottom: 14,
+                        trailing: TodoTimelineMetrics.horizontalPadding
+                    )
+                )
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
@@ -173,6 +213,7 @@ struct CalendarScreen: View {
                     .foregroundStyle(colors.onSurface)
                     .textCase(nil)
                     .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                    .timelinePinnedSectionHeaderBackground()
             }
         }
         .listStyle(.plain)
@@ -202,7 +243,7 @@ struct CalendarScreen: View {
         .sheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
                 lists: viewModel.lists,
-                titleText: "Create Task",
+                titleText: "New task",
                 submitText: "Create",
                 initialPayload: CreateTaskPayload(title: "", description: nil, priority: "Low", due: selectedDate, rrule: nil, listId: nil),
                 onParseTaskTitleNlp: { title, dueRef in
@@ -217,7 +258,7 @@ struct CalendarScreen: View {
         .sheet(item: $editingTodo) { todo in
             CreateTaskSheet(
                 lists: viewModel.lists,
-                titleText: "Edit Task",
+                titleText: "Edit task",
                 submitText: "Save",
                 initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
                 onParseTaskTitleNlp: { title, dueRef in
@@ -239,6 +280,8 @@ struct CalendarScreen: View {
             onBack: { dismiss() },
             action: TimelineTopBarAction(
                 systemName: "calendar",
+                tint: calendarAccentColor,
+                usesCircularChrome: true,
                 action: jumpToToday
             ),
             titleRevealStart: CalendarTitleHandoff.pinnedRevealStart,
@@ -344,36 +387,89 @@ struct CalendarScreen: View {
 
 private struct CalendarViewModeTabs: View {
     let selectedMode: CalendarDisplayMode
+    let accentColor: Color
     let onSelect: (CalendarDisplayMode) -> Void
 
-    @Environment(\.tdayColors) private var colors
-
     var body: some View {
-        HStack(spacing: 5) {
-            ForEach(CalendarDisplayMode.allCases, id: \.self) { mode in
-                let isSelected = mode == selectedMode
-                Button {
-                    onSelect(mode)
-                } label: {
-                    Text(mode.rawValue.capitalized)
-                        .font(.tdayRounded(size: 15, weight: .heavy))
-                        .foregroundStyle(isSelected ? colors.onSurface : colors.onSurfaceVariant.opacity(0.86))
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background {
-                            if isSelected {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(colors.background)
-                                    .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
-                            }
-                        }
-                        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
-            }
+        CalendarThickNativeSegmentedControl(
+            selectedMode: selectedMode,
+            accentColor: accentColor,
+            onSelect: onSelect
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: CalendarModeControlMetrics.height)
+    }
+}
+
+private struct CalendarThickNativeSegmentedControl: UIViewRepresentable {
+    let selectedMode: CalendarDisplayMode
+    let accentColor: Color
+    let onSelect: (CalendarDisplayMode) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
+    }
+
+    func makeUIView(context: Context) -> ThickSegmentedControl {
+        let control = ThickSegmentedControl(items: CalendarDisplayMode.allCases.map { $0.rawValue.capitalized })
+        control.selectedSegmentIndex = selectedModeIndex
+        control.apportionsSegmentWidthsByContent = false
+        control.addTarget(context.coordinator, action: #selector(Coordinator.didChange(_:)), for: .valueChanged)
+        applySizingAndTint(to: control)
+        return control
+    }
+
+    func updateUIView(_ control: ThickSegmentedControl, context: Context) {
+        context.coordinator.onSelect = onSelect
+        if control.selectedSegmentIndex != selectedModeIndex {
+            control.selectedSegmentIndex = selectedModeIndex
         }
-        .padding(5)
-        .background(colors.surfaceVariant.opacity(0.55), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        applySizingAndTint(to: control)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: ThickSegmentedControl, context: Context) -> CGSize? {
+        CGSize(
+            width: proposal.width ?? uiView.intrinsicContentSize.width,
+            height: CalendarModeControlMetrics.height
+        )
+    }
+
+    private var selectedModeIndex: Int {
+        CalendarDisplayMode.allCases.firstIndex(of: selectedMode) ?? 0
+    }
+
+    private func applySizingAndTint(to control: ThickSegmentedControl) {
+        control.tintColor = UIColor(accentColor)
+        control.invalidateIntrinsicContentSize()
+    }
+
+    final class Coordinator: NSObject {
+        var onSelect: (CalendarDisplayMode) -> Void
+
+        init(onSelect: @escaping (CalendarDisplayMode) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        @objc func didChange(_ sender: UISegmentedControl) {
+            let modes = CalendarDisplayMode.allCases
+            guard modes.indices.contains(sender.selectedSegmentIndex) else {
+                return
+            }
+            onSelect(modes[sender.selectedSegmentIndex])
+        }
+    }
+
+    final class ThickSegmentedControl: UISegmentedControl {
+        override var intrinsicContentSize: CGSize {
+            let baseSize = super.intrinsicContentSize
+            return CGSize(width: baseSize.width, height: CalendarModeControlMetrics.height)
+        }
+
+        override func sizeThatFits(_ size: CGSize) -> CGSize {
+            var fittingSize = super.sizeThatFits(size)
+            fittingSize.height = CalendarModeControlMetrics.height
+            return fittingSize
+        }
     }
 }
 
@@ -425,37 +521,34 @@ private struct CalendarMonthGrid: View {
         let isPreviousEnabled = canGoPrevious && isPagingAtRest
         let isNextEnabled = isPagingAtRest
 
-        return VStack(spacing: 16) {
+        return VStack(spacing: CalendarPeriodCardMetrics.contentSpacing) {
             HStack {
-                Button(action: goToPreviousPage) {
-                    Image(systemName: "chevron.left")
-                        .font(.tdayRounded(size: 20, weight: .heavy))
-                        .foregroundStyle(isPreviousEnabled ? accentColor : colors.onSurfaceVariant.opacity(0.36))
-                        .frame(width: 40, height: 36)
-                }
-                .buttonStyle(.plain)
-                .disabled(!isPreviousEnabled)
+                CalendarNavButton(
+                    systemName: "chevron.left",
+                    isEnabled: isPreviousEnabled,
+                    color: colors.onSurfaceVariant,
+                    action: goToPreviousPage
+                )
 
                 Spacer(minLength: 0)
 
                 Text(monthTitle(for: displayMonth))
-                    .font(.tdayRounded(size: 18, weight: .heavy))
+                    .font(.tdayRounded(size: 21, weight: .heavy))
                     .foregroundStyle(colors.onSurface)
 
                 Spacer(minLength: 0)
 
-                Button(action: goToNextPage) {
-                    Image(systemName: "chevron.right")
-                        .font(.tdayRounded(size: 20, weight: .heavy))
-                        .foregroundStyle(isNextEnabled ? accentColor : accentColor.opacity(0.36))
-                        .frame(width: 40, height: 36)
-                }
-                .buttonStyle(.plain)
-                .disabled(!isNextEnabled)
+                CalendarNavButton(
+                    systemName: "chevron.right",
+                    isEnabled: isNextEnabled,
+                    color: colors.onSurfaceVariant,
+                    action: goToNextPage
+                )
             }
-            .padding(.horizontal, 6)
+            .frame(height: CalendarPeriodCardMetrics.headerHeight)
+            .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
 
-            VStack(spacing: 11) {
+            VStack(spacing: CalendarMonthGridMetrics.spacing) {
                 HStack(spacing: 0) {
                     ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                         Text(symbol)
@@ -475,17 +568,17 @@ private struct CalendarMonthGrid: View {
                     selection: $pageSelection,
                     onSettledSelection: settlePageSelection
                 )
-                .frame(height: 283)
+                .frame(height: CalendarMonthGridMetrics.height)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 18)
+        .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
+        .padding(.top, CalendarPeriodCardMetrics.topPadding)
         .padding(.bottom, 20)
         .frame(maxWidth: .infinity)
     }
 
     private func monthGrid(for displayMonth: Date) -> some View {
-        LazyVGrid(columns: columns, spacing: 11) {
+        LazyVGrid(columns: columns, spacing: CalendarMonthGridMetrics.spacing) {
             ForEach(Self.makeDays(for: displayMonth)) { day in
                 let dayTasks = tasksByDay[Calendar.current.startOfDay(for: day.date)].orEmpty
                 CalendarMonthDayCell(
@@ -633,7 +726,7 @@ private struct CalendarWeekCard: View {
         let nextPageWeekDate = jumpDirection == .next ? pendingTodayJump?.targetDate : nextWeekDate
         let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
 
-        return VStack(spacing: 14) {
+        return VStack(spacing: CalendarPeriodCardMetrics.contentSpacing) {
             HStack {
                 CalendarNavButton(
                     systemName: "chevron.left",
@@ -659,7 +752,8 @@ private struct CalendarWeekCard: View {
                     action: goToNextPage
                 )
             }
-            .padding(.horizontal, 6)
+            .frame(height: CalendarPeriodCardMetrics.headerHeight)
+            .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
 
             CalendarPagingScrollView(
                 pages: weekPages(
@@ -670,11 +764,11 @@ private struct CalendarWeekCard: View {
                 selection: $pageSelection,
                 onSettledSelection: settlePageSelection
             )
-            .frame(height: 78)
+            .frame(height: CalendarPeriodCardMetrics.pageHeight)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 16)
-        .padding(.bottom, 18)
+        .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
+        .padding(.top, CalendarPeriodCardMetrics.topPadding)
+        .padding(.bottom, CalendarPeriodCardMetrics.bottomPadding)
         .frame(maxWidth: .infinity)
     }
 
@@ -698,6 +792,7 @@ private struct CalendarWeekCard: View {
                 )
             }
         }
+        .padding(.horizontal, CalendarPeriodCardMetrics.pageHorizontalGutter)
     }
 
     private func weekPages(previousWeekDate: Date?, displaySelectedDate: Date, nextWeekDate: Date?) -> [CalendarPagerPage] {
@@ -807,15 +902,18 @@ private struct CalendarWeekDayCell: View {
 
                 Text(calendarTaskCountText(taskCount))
                     .font(.tdayRounded(size: 12, weight: .heavy))
-                    .foregroundStyle(taskCount > 0 ? accentColor : colors.onSurfaceVariant.opacity(0.42))
+                    .foregroundStyle(taskCount > 0 ? stateTint : colors.onSurfaceVariant.opacity(0.42))
             }
-            .frame(maxWidth: .infinity, minHeight: 78)
+            .frame(maxWidth: .infinity)
+            .frame(height: CalendarPeriodCardMetrics.weekDayCellHeight)
             .background(cellBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(cellBorderColor, lineWidth: cellBorderWidth)
             }
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .frame(maxWidth: .infinity)
+            .frame(height: CalendarPeriodCardMetrics.pageHeight)
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -834,33 +932,52 @@ private struct CalendarWeekDayCell: View {
 
     private var cellBackground: Color {
         if isSelected {
-            return accentColor.opacity(0.20)
+            return accentColor.opacity(0.24)
         }
         if isToday {
-            return accentColor.opacity(0.12)
+            return calendarTodayTintColor.opacity(0.16)
         }
         return colors.background
     }
 
     private var cellBorderColor: Color {
         if isSelected {
-            return accentColor.opacity(0.82)
+            return accentColor.opacity(0.95)
         }
         if isToday {
-            return accentColor.opacity(0.42)
+            return calendarTodayTintColor.opacity(0.74)
         }
         return .clear
     }
 
     private var cellBorderWidth: CGFloat {
-        (isSelected || isToday) ? 1.4 : 0
+        if isSelected {
+            return 1.6
+        }
+        if isToday {
+            return 1.4
+        }
+        return 0
     }
 
     private var dayTextColor: Color {
-        if isSelected || isToday {
+        if isSelected {
             return accentColor
         }
+        if isToday {
+            return calendarTodayTintColor
+        }
         return colors.onSurface
+    }
+
+    private var stateTint: Color {
+        if isSelected {
+            return accentColor
+        }
+        if isToday {
+            return calendarTodayTintColor
+        }
+        return accentColor
     }
 }
 
@@ -898,7 +1015,7 @@ private struct CalendarDayCard: View {
         let nextPageDay = jumpDirection == .next ? pendingTodayJump.map { Calendar.current.startOfDay(for: $0.targetDate) } : nextDay
         let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
 
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: CalendarPeriodCardMetrics.contentSpacing) {
             HStack {
                 CalendarNavButton(
                     systemName: "chevron.left",
@@ -922,6 +1039,8 @@ private struct CalendarDayCard: View {
                     action: goToNextPage
                 )
             }
+            .frame(height: CalendarPeriodCardMetrics.headerHeight)
+            .padding(.horizontal, CalendarPeriodCardMetrics.headerHorizontalPadding)
 
             CalendarPagingScrollView(
                 pages: dayPages(
@@ -932,11 +1051,11 @@ private struct CalendarDayCard: View {
                 selection: $pageSelection,
                 onSettledSelection: settlePageSelection
             )
-            .frame(height: 70)
+            .frame(height: CalendarPeriodCardMetrics.pageHeight)
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 16)
-        .padding(.bottom, 22)
+        .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
+        .padding(.top, CalendarPeriodCardMetrics.topPadding)
+        .padding(.bottom, CalendarPeriodCardMetrics.bottomPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -1248,37 +1367,48 @@ private struct CalendarMonthDayCell: View {
         Button {
             onSelectDate(day.date)
         } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 1) {
                 Text(dayNumberText)
-                    .font(.tdayRounded(size: 18, weight: .bold))
+                    .font(.tdayRounded(size: 19, weight: .bold))
                     .foregroundStyle(dayTextColor)
-                    .frame(width: 32, height: 28)
-                    .background {
-                        if isSelected {
-                            Circle()
-                                .fill(accentColor)
-                        } else if isToday {
-                            Circle()
-                                .fill(accentColor.opacity(0.16))
-                        }
-                    }
+                    .frame(
+                        width: CalendarMonthGridMetrics.dayNumberWidth,
+                        height: CalendarMonthGridMetrics.dayNumberHeight
+                    )
 
-                HStack(spacing: 3) {
+                HStack(spacing: 2) {
                     if taskCount > 0 {
                         Circle()
-                            .fill(accentColor)
-                            .frame(width: 4.2, height: 4.2)
+                            .fill(stateTint)
+                            .frame(
+                                width: CalendarMonthGridMetrics.taskDotSize,
+                                height: CalendarMonthGridMetrics.taskDotSize
+                            )
 
                         Text(calendarTaskCountText(taskCount))
-                            .font(.tdayRounded(size: 10, weight: .heavy))
-                            .foregroundStyle(accentColor)
+                            .font(.tdayRounded(size: 11, weight: .heavy))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                            .foregroundStyle(stateTint)
                     }
                 }
-                .frame(height: 6)
+                .frame(height: CalendarMonthGridMetrics.taskCountHeight)
             }
-            .frame(height: 38)
+            .frame(
+                width: CalendarMonthGridMetrics.dayHighlightWidth,
+                height: CalendarMonthGridMetrics.dayHighlightHeight
+            )
+            .background(
+                cellBackground,
+                in: RoundedRectangle(cornerRadius: CalendarMonthGridMetrics.cellCornerRadius, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: CalendarMonthGridMetrics.cellCornerRadius, style: .continuous)
+                    .stroke(cellBorderColor, lineWidth: cellBorderWidth)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: CalendarMonthGridMetrics.cellCornerRadius, style: .continuous))
             .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+            .frame(height: CalendarMonthGridMetrics.dayCellHeight)
         }
         .buttonStyle(.plain)
         .disabled(!day.isCurrentMonth)
@@ -1290,16 +1420,53 @@ private struct CalendarMonthDayCell: View {
     }
 
     private var dayTextColor: Color {
-        if isSelected {
-            return .white
-        }
         if !day.isCurrentMonth {
             return colors.onSurfaceVariant.opacity(0.48)
         }
-        if isToday {
-            return accentColor
+        if isSelected || isToday {
+            return stateTint
         }
         return colors.onSurface
+    }
+
+    private var cellBackground: Color {
+        if isSelected {
+            return accentColor.opacity(0.24)
+        }
+        if isToday {
+            return calendarTodayTintColor.opacity(0.16)
+        }
+        return .clear
+    }
+
+    private var cellBorderColor: Color {
+        if isSelected {
+            return accentColor.opacity(0.95)
+        }
+        if isToday {
+            return calendarTodayTintColor.opacity(0.74)
+        }
+        return .clear
+    }
+
+    private var cellBorderWidth: CGFloat {
+        if isSelected {
+            return 1.6
+        }
+        if isToday {
+            return 1.4
+        }
+        return 0
+    }
+
+    private var stateTint: Color {
+        if isSelected {
+            return accentColor
+        }
+        if isToday {
+            return calendarTodayTintColor
+        }
+        return accentColor
     }
 }
 
@@ -1402,8 +1569,8 @@ private struct CalendarExpandedTitleRow: View {
             .lineLimit(1)
             .frame(
                 maxWidth: .infinity,
-                minHeight: TodoTimelineMetrics.expandedTitleHeight,
-                maxHeight: TodoTimelineMetrics.expandedTitleHeight,
+                minHeight: CalendarTitleHandoff.titleRowHeight,
+                maxHeight: CalendarTitleHandoff.titleRowHeight,
                 alignment: .topLeading
             )
             .opacity(Double(1 - fadeProgress))
