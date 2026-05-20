@@ -47,7 +47,7 @@ private struct HomeListIconOption {
 
 private enum CreateListSheetMetrics {
     static let initialCompactHeight: CGFloat = 620
-    static let maximumHeightFraction: CGFloat = 0.8
+    static let maximumHeightFraction: CGFloat = 0.7
 }
 
 private struct CreateListSheetContentHeightKey: PreferenceKey {
