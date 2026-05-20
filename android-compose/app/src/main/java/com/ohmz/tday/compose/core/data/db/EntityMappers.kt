@@ -43,6 +43,7 @@ fun CachedListRecord.toEntity() = CachedListEntity(
     iconKey = iconKey,
     todoCount = todoCount,
     updatedAtEpochMs = updatedAtEpochMs,
+    createdAtEpochMs = createdAtEpochMs,
 )
 
 fun CachedListEntity.toRecord() = CachedListRecord(
@@ -52,6 +53,7 @@ fun CachedListEntity.toRecord() = CachedListRecord(
     iconKey = iconKey,
     todoCount = todoCount,
     updatedAtEpochMs = updatedAtEpochMs,
+    createdAtEpochMs = createdAtEpochMs,
 )
 
 fun CachedCompletedRecord.toEntity() = CachedCompletedEntity(
