@@ -108,8 +108,6 @@ struct TodoListScreen: View {
     @State private var draggedTodo: TodoItem?
     @State private var activeDropSectionId: String?
     @State private var collapsedSectionIDs: Set<String>
-    @State private var collapsingSectionIDs: Set<String> = []
-    @State private var revealingSectionIDs: Set<String> = []
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var completingTodoIDs: Set<String> = []
 
@@ -362,8 +360,6 @@ struct TodoListScreen: View {
     private func handleItemsChanged() {
         activeDropSectionId = nil
         draggedTodo = nil
-        collapsingSectionIDs = []
-        revealingSectionIDs = []
         if viewModel.mode == .all, highlightedTodoId != nil {
             collapsedSectionIDs = []
         }
@@ -753,22 +749,18 @@ struct TodoListScreen: View {
     private func minimalTimelineSection(_ section: TodoTimelineSection, isFirstSection: Bool) -> some View {
         let canCollapseSection = canCollapseTimelineSection(section)
         let isCollapsed = canCollapseSection && collapsedSectionIDs.contains(section.id)
-        let shouldRenderBody = shouldRenderTimelineSectionBody(section)
-        let bodyOpacity = timelineSectionBodyOpacity(section)
 
         Section {
-            if shouldRenderBody {
+            if !isCollapsed {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                     minimalTimelineRow(todo, in: section)
                         .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
-                        .opacity(bodyOpacity)
-                        .animation(.easeOut(duration: 0.14), value: bodyOpacity)
+                        .transition(timelineRowTransition())
                     TimelineRowDivider()
-                        .opacity(bodyOpacity)
-                        .animation(.easeOut(duration: 0.14), value: bodyOpacity)
+                        .transition(timelineRowTransition())
                 }
             }
         } header: {
@@ -831,7 +823,13 @@ struct TodoListScreen: View {
     }
 
     private func canCollapseTimelineSection(_ section: TodoTimelineSection) -> Bool {
+        guard !section.items.isEmpty else {
+            return false
+        }
         if viewModel.mode == .all {
+            return true
+        }
+        if viewModel.mode == .overdue {
             return true
         }
         return viewModel.mode == .priority && section.isCollapsible
@@ -841,47 +839,25 @@ struct TodoListScreen: View {
         canCollapseTimelineSection(section) && collapsedSectionIDs.contains(section.id)
     }
 
-    private func shouldRenderTimelineSectionBody(_ section: TodoTimelineSection) -> Bool {
-        !section.items.isEmpty &&
-            (!isTimelineSectionCollapsed(section) ||
-                collapsingSectionIDs.contains(section.id) ||
-                revealingSectionIDs.contains(section.id))
-    }
-
-    private func timelineSectionBodyOpacity(_ section: TodoTimelineSection) -> Double {
-        if revealingSectionIDs.contains(section.id) || collapsedSectionIDs.contains(section.id) {
-            return 0
-        }
-        return 1
-    }
-
     private func toggleTimelineSection(_ section: TodoTimelineSection) {
         let id = section.id
-        if collapsedSectionIDs.contains(id) {
-            withAnimation(.easeInOut(duration: 0.24)) {
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+            if collapsedSectionIDs.contains(id) {
                 collapsedSectionIDs.remove(id)
-                collapsingSectionIDs.remove(id)
-                revealingSectionIDs.insert(id)
-            }
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 90_000_000)
-                withAnimation(.easeOut(duration: 0.16)) {
-                    revealingSectionIDs.remove(id)
-                }
-            }
-        } else {
-            withAnimation(.easeOut(duration: 0.12)) {
-                revealingSectionIDs.remove(id)
-                collapsingSectionIDs.insert(id)
+            } else {
                 collapsedSectionIDs.insert(id)
             }
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 140_000_000)
-                withAnimation(.easeInOut(duration: 0.24)) {
-                    collapsingSectionIDs.remove(id)
-                }
-            }
         }
+    }
+
+    private func timelineRowTransition() -> AnyTransition {
+        let insertion = AnyTransition.opacity
+            .combined(with: .move(edge: .top))
+            .animation(.easeOut(duration: 0.16))
+        let removal = AnyTransition.opacity
+            .combined(with: .move(edge: .top))
+            .animation(.easeOut(duration: 0.1))
+        return .asymmetric(insertion: insertion, removal: removal)
     }
 
     private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String {
