@@ -1,7 +1,12 @@
 package com.ohmz.tday.compose.feature.completed
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -415,15 +420,27 @@ private fun CompletedTimelineSection(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val headerInteractionSource = remember { MutableInteractionSource() }
+    val isHeaderPressed by headerInteractionSource.collectIsPressedAsState()
     val collapseChevronRotation by animateFloatAsState(
-        targetValue = if (isCollapsed) 0f else 180f,
+        targetValue = if (isCollapsed) -90f else 0f,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
         label = "completedSectionChevronRotation",
     )
+    val baseHeaderColor = colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
+    val headerTextColor = if (isHeaderPressed) {
+        androidx.compose.ui.graphics.lerp(baseHeaderColor, colorScheme.onSurface, 0.16f)
+    } else {
+        baseHeaderColor
+    }
+    val baseChevronColor = colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+    val chevronColor = if (isHeaderPressed) {
+        androidx.compose.ui.graphics.lerp(baseChevronColor, colorScheme.onSurface, 0.16f)
+    } else {
+        baseChevronColor
+    }
     Column(
         modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(durationMillis = 240)),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+            .fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
@@ -437,7 +454,7 @@ private fun CompletedTimelineSection(
         ) {
             Text(
                 text = section.title,
-                color = colorScheme.onSurfaceVariant.copy(alpha = 0.62f),
+                color = headerTextColor,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.ExtraBold,
             )
@@ -448,7 +465,7 @@ private fun CompletedTimelineSection(
                 } else {
                     stringResource(R.string.action_collapse_section)
                 },
-                tint = colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                tint = chevronColor,
                 modifier = Modifier
                     .padding(start = 6.dp)
                     .size(18.dp)
@@ -456,23 +473,56 @@ private fun CompletedTimelineSection(
             )
         }
 
-        if (isCollapsed) {
-            return@Column
-        }
-
-        if (section.items.isEmpty()) {
-            return@Column
-        } else {
-            section.items.forEach { item ->
-                CompletedSwipeRow(
-                    item = item,
-                    lists = lists,
-                    onInfo = { onInfo(item) },
-                    onDelete = { onDelete(item) },
-                    onUncomplete = { onUncomplete(item) },
-                )
+        CompletedSectionBodyVisibility(
+            visible = !isCollapsed && section.items.isNotEmpty(),
+            modifier = Modifier.padding(top = 4.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                section.items.forEach { item ->
+                    CompletedSwipeRow(
+                        item = item,
+                        lists = lists,
+                        onInfo = { onInfo(item) },
+                        onDelete = { onDelete(item) },
+                        onUncomplete = { onUncomplete(item) },
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun CompletedSectionBodyVisibility(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier.fillMaxWidth(),
+        enter = expandVertically(
+            expandFrom = Alignment.Top,
+            animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+        ) + fadeIn(
+            animationSpec = tween(
+                durationMillis = 150,
+                delayMillis = 90,
+                easing = FastOutSlowInEasing
+            ),
+        ),
+        exit = fadeOut(
+            animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing),
+        ) + shrinkVertically(
+            shrinkTowards = Alignment.Top,
+            animationSpec = tween(
+                durationMillis = 240,
+                delayMillis = 45,
+                easing = FastOutSlowInEasing
+            ),
+        ),
+    ) {
+        content()
     }
 }
 
