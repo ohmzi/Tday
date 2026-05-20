@@ -4,6 +4,7 @@ import UIKit
 private enum CreateTaskSheetMetrics {
     static let initialSheetHeight: CGFloat = 560
     static let maximumHeightFraction: CGFloat = 0.86
+    static let bottomContentPadding: CGFloat = 8
 }
 
 private struct CreateTaskSheetHeaderHeightKey: PreferenceKey {
@@ -179,7 +180,7 @@ struct CreateTaskSheet: View {
                     }
                 }
                 .padding(.horizontal, 18)
-                .padding(.bottom, 14)
+                .padding(.bottom, CreateTaskSheetMetrics.bottomContentPadding)
                 .background(
                     GeometryReader { proxy in
                         Color.clear
@@ -194,7 +195,10 @@ struct CreateTaskSheet: View {
         .presentationDetents([.height(measuredSheetHeight)])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
-        .presentationBackground(colors.background)
+        .presentationBackground {
+            colors.background
+                .ignoresSafeArea(.container, edges: .bottom)
+        }
         .overlay {
             if let activeSelector {
                 selectorOverlay(for: activeSelector)
