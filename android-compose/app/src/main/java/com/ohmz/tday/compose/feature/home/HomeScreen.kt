@@ -1127,9 +1127,8 @@ private fun TopSearchBar(
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val buttonSize = TdayDimens.FabSize
         val buttonGap = 8.dp
-        val fixedActionWidth = (buttonSize * 2) + buttonGap
         val collapsedSearchWidth = buttonSize
-        val expandedSearchWidth = (maxWidth - fixedActionWidth - buttonGap).coerceAtLeast(buttonSize)
+        val expandedSearchWidth = maxWidth.coerceAtLeast(buttonSize)
         val animatedSearchWidth by animateDpAsState(
             targetValue = if (searchExpanded) expandedSearchWidth else collapsedSearchWidth,
             label = "topSearchBarSearchWidth",
@@ -1244,18 +1243,20 @@ private fun TopSearchBar(
                     }
                 }
 
-                PressableIconButton(
-                    icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                    contentDescription = stringResource(R.string.action_create_list),
-                    tint = colorScheme.onSurface,
-                    onClick = onCreateList,
-                )
-                PressableIconButton(
-                    icon = Icons.Rounded.MoreHoriz,
-                    contentDescription = stringResource(R.string.action_more),
-                    tint = colorScheme.onSurface,
-                    onClick = onOpenSettings,
-                )
+                if (!searchExpanded) {
+                    PressableIconButton(
+                        icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                        contentDescription = stringResource(R.string.action_create_list),
+                        tint = colorScheme.onSurface,
+                        onClick = onCreateList,
+                    )
+                    PressableIconButton(
+                        icon = Icons.Rounded.MoreHoriz,
+                        contentDescription = stringResource(R.string.action_more),
+                        tint = colorScheme.onSurface,
+                        onClick = onOpenSettings,
+                    )
+                }
             }
         }
     }
