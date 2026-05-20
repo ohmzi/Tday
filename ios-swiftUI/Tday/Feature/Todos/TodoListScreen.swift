@@ -167,6 +167,7 @@ struct TodoListScreen: View {
         if canSummarizeCurrentMode {
             return TimelineTopBarAction(
                 systemName: "sparkles",
+                usesCircularChrome: true,
                 action: presentSummary
             )
         }
@@ -1063,7 +1064,7 @@ private struct TimelineTopBarButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: TodoTimelineMetrics.topBarButtonIconSize, weight: .semibold))
+                .font(.system(size: iconSize, weight: .semibold))
                 .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
                 .background {
                     if chrome == .filled {
@@ -1071,17 +1072,46 @@ private struct TimelineTopBarButton: View {
                             .fill(colors.surface)
                     } else if chrome == .outlined {
                         Circle()
-                            .fill(colors.background)
+                            .fill(outlinedFillColor)
                             .overlay {
                                 Circle()
-                                    .stroke(colors.onSurfaceVariant.opacity(0.28), lineWidth: 1)
+                                    .stroke(outlinedBorderColor, lineWidth: 1)
                             }
                     }
                 }
                 .contentShape(Circle())
         }
         .buttonStyle(TimelineTopBarButtonStyle(isFilled: chrome == .filled))
-        .foregroundStyle(chrome == .filled || chrome == .outlined ? colors.onSurface : (tint ?? Color.accentColor))
+        .foregroundStyle(foregroundColor)
+    }
+
+    private var iconSize: CGFloat {
+        chrome == .filled ? TodoTimelineMetrics.topBarButtonIconSize : 28
+    }
+
+    private var foregroundColor: Color {
+        switch chrome {
+        case .filled:
+            return colors.onSurface
+        case .outlined:
+            return tint ?? colors.onSurface
+        case .plain:
+            return tint ?? Color.accentColor
+        }
+    }
+
+    private var outlinedFillColor: Color {
+        if let tint {
+            return tint.opacity(0.12)
+        }
+        return colors.background
+    }
+
+    private var outlinedBorderColor: Color {
+        if let tint {
+            return tint.opacity(0.48)
+        }
+        return colors.onSurfaceVariant.opacity(0.28)
     }
 }
 
