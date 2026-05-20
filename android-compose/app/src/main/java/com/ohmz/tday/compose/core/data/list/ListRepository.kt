@@ -9,6 +9,8 @@ import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.cache.LOCAL_LIST_PREFIX
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.cache.listFromCache
+import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
+import com.ohmz.tday.compose.core.data.cache.parseOptionalInstant
 import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.data.sync.SyncManager
@@ -16,7 +18,6 @@ import com.ohmz.tday.compose.core.model.CreateListRequest
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
-import com.ohmz.tday.compose.core.data.cache.parseOptionalInstant
 import com.ohmz.tday.compose.core.network.TdayApiService
 import java.util.UUID
 import javax.inject.Inject
@@ -55,6 +56,7 @@ class ListRepository @Inject constructor(
                 color = color,
                 iconKey = iconKey,
                 todoCount = 0,
+                createdAtEpochMs = timestampMs,
                 updatedAtEpochMs = timestampMs,
             )
             state.copy(
@@ -84,7 +86,10 @@ class ListRepository @Inject constructor(
             ).list
         }.onSuccess { createdList ->
             if (createdList == null) return@onSuccess
-            val createdAt = parseOptionalInstant(createdList.updatedAt)?.toEpochMilli() ?: timestampMs
+            val createdAt =
+                parseOptionalInstant(createdList.createdAt)?.toEpochMilli() ?: timestampMs
+            val updatedAt =
+                parseOptionalInstant(createdList.updatedAt)?.toEpochMilli() ?: timestampMs
             cacheManager.updateOfflineState { state ->
                 val remapped = replaceLocalListId(
                     state = state,
@@ -100,7 +105,8 @@ class ListRepository @Inject constructor(
                                 color = createdList.color,
                                 iconKey = createdList.iconKey ?: list.iconKey,
                                 todoCount = todoCount,
-                                updatedAtEpochMs = createdAt,
+                                updatedAtEpochMs = updatedAt,
+                                createdAtEpochMs = createdAt,
                             )
                         } else {
                             list
@@ -240,7 +246,7 @@ class ListRepository @Inject constructor(
             .filterNot { it.completed }
             .groupingBy { it.listId }
             .eachCount()
-        return state.lists.map {
+        return orderListsLikeWeb(state.lists).map {
             listFromCache(cache = it, todoCountOverride = todoCountsByList[it.id] ?: 0)
         }
     }

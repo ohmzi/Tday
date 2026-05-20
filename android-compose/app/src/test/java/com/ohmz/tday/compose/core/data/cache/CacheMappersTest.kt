@@ -9,13 +9,13 @@ import com.ohmz.tday.compose.core.model.ListDto
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoDto
 import com.ohmz.tday.compose.core.model.TodoItem
-import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Instant
 
 class CacheMappersTest {
 
@@ -23,6 +23,7 @@ class CacheMappersTest {
     private val dueInstant: Instant = Instant.parse("2025-06-15T13:30:00Z")
     private val completedInstant: Instant = Instant.parse("2025-06-15T14:00:00Z")
     private val updatedInstant: Instant = Instant.parse("2025-06-15T12:00:00Z")
+    private val createdInstant: Instant = Instant.parse("2025-06-10T12:00:00Z")
 
     // --- todoToCache / todoFromCache round-trip ---
 
@@ -102,6 +103,7 @@ class CacheMappersTest {
         assertEquals(list.iconKey, cached.iconKey)
         assertEquals(list.todoCount, cached.todoCount)
         assertEquals(list.updatedAt?.toEpochMilli() ?: 0L, cached.updatedAtEpochMs)
+        assertEquals(list.createdAt?.toEpochMilli() ?: 0L, cached.createdAtEpochMs)
     }
 
     @Test
@@ -208,6 +210,7 @@ class CacheMappersTest {
         assertEquals(dto.name, item.name)
         assertEquals(dto.color, item.color)
         assertEquals(dto.todoCount, item.todoCount)
+        assertEquals(createdInstant, item.createdAt)
     }
 
     @Test
@@ -347,6 +350,7 @@ class CacheMappersTest {
         iconKey = "cart",
         todoCount = 5,
         updatedAt = updatedInstant,
+        createdAt = createdInstant,
     )
 
     private fun makeCachedList() = CachedListRecord(
@@ -356,6 +360,7 @@ class CacheMappersTest {
         iconKey = "cart",
         todoCount = 5,
         updatedAtEpochMs = updatedInstant.toEpochMilli(),
+        createdAtEpochMs = createdInstant.toEpochMilli(),
     )
 
     private fun makeCompletedItem() = CompletedItem(
@@ -410,5 +415,6 @@ class CacheMappersTest {
         todoCount = 3,
         iconKey = "cart",
         updatedAt = updatedInstant.toString(),
+        createdAt = createdInstant.toString(),
     )
 }

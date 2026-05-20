@@ -35,6 +35,7 @@ data class CachedListEntity(
     val iconKey: String?,
     val todoCount: Int,
     val updatedAtEpochMs: Long,
+    val createdAtEpochMs: Long,
 )
 
 @Entity(

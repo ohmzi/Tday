@@ -11,7 +11,7 @@ import androidx.room.RoomDatabase
         PendingMutationEntity::class,
         SyncMetadataEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class TdayDatabase : RoomDatabase() {
