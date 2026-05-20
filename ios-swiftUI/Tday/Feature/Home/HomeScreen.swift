@@ -1166,7 +1166,6 @@ private struct CreateListSheet: View {
             colors.background
                 .ignoresSafeArea(.container, edges: .bottom)
         }
-        .tdayBottomSheetSizing()
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onPreferenceChange(CreateListSheetContentHeightKey.self) { height in
             guard !nameFieldFocused else { return }
