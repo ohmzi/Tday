@@ -254,8 +254,11 @@ struct HomeScreen: View {
         }
         .onChange(of: searchExpanded) { _, expanded in
             if expanded {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    searchFieldFocused = true
+                searchFieldFocused = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                    if searchExpanded {
+                        searchFieldFocused = true
+                    }
                 }
             } else {
                 searchFieldFocused = false

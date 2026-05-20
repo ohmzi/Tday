@@ -1116,6 +1116,7 @@ private fun TopSearchBar(
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
+            delay(300)
             focusRequester.requestFocus()
             keyboardController?.show()
         } else {
