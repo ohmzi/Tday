@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.feature.todos
 
 import android.content.ClipData
 import android.view.View
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -9,6 +10,10 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -587,9 +592,10 @@ fun TodoListScreen(
                         )
                     }
 
-                    if (!isCollapsed && section.items.isNotEmpty()) {
+                    if (section.items.isNotEmpty()) {
                         item(key = "timeline-body-${section.key}") {
-                            TimelineSectionBody(
+                            TimelineSectionBodyVisibility(
+                                visible = !isCollapsed,
                                 modifier = Modifier
                                     .animateItem(fadeInSpec = null, fadeOutSpec = null)
                                     .timelineSectionDropTarget(
@@ -598,28 +604,31 @@ fun TodoListScreen(
                                         onDropTargetChanged = onSectionDropTargetChanged,
                                         onDragTodoEnd = onSectionDragEnd,
                                         onMoveTaskToDate = onMoveTaskToSectionDate,
-                                    )
-                                    .padding(bottom = timelineItemSpacing),
-                                section = section,
-                                mode = uiState.mode,
-                                lists = uiState.lists,
-                                useMinimalStyle = usesTodayStyle,
-                                highlightTodoId = flashTodoId,
-                                onComplete = onComplete,
-                                onDelete = onDelete,
-                                onInfo = { todo ->
-                                    editTargetTodoId = todo.id
-                                },
-                                draggedTodo = sectionDraggedTodo,
-                                onDragTodoStart = if (uiState.mode == TodoListMode.SCHEDULED) {
-                                    { todo ->
-                                        activeDropSectionKey = null
-                                        draggedScheduledTodoId = todo.id
-                                    }
-                                } else {
-                                    null
-                                },
-                            )
+                                    ),
+                            ) {
+                                TimelineSectionBody(
+                                    modifier = Modifier.padding(bottom = timelineItemSpacing),
+                                    section = section,
+                                    mode = uiState.mode,
+                                    lists = uiState.lists,
+                                    useMinimalStyle = usesTodayStyle,
+                                    highlightTodoId = flashTodoId,
+                                    onComplete = onComplete,
+                                    onDelete = onDelete,
+                                    onInfo = { todo ->
+                                        editTargetTodoId = todo.id
+                                    },
+                                    draggedTodo = sectionDraggedTodo,
+                                    onDragTodoStart = if (uiState.mode == TodoListMode.SCHEDULED) {
+                                        { todo ->
+                                            activeDropSectionKey = null
+                                            draggedScheduledTodoId = todo.id
+                                        }
+                                    } else {
+                                        null
+                                    },
+                                )
+                            }
                         }
                     }
                 }
@@ -1448,10 +1457,29 @@ private fun TimelineSectionHeader(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val headerInteractionSource = remember { MutableInteractionSource() }
+    val isHeaderPressed by headerInteractionSource.collectIsPressedAsState()
     val collapseChevronRotation by animateFloatAsState(
-        targetValue = if (isCollapsed) 0f else 180f,
+        targetValue = if (isCollapsed) -90f else 0f,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
         label = "sectionChevronRotation",
     )
+    val baseHeaderColor = if (useMinimalStyle) {
+        colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
+    } else {
+        colorScheme.onSurfaceVariant
+    }
+    val headerTextColor = if (isHeaderPressed) {
+        androidx.compose.ui.graphics.lerp(baseHeaderColor, colorScheme.onSurface, 0.16f)
+    } else {
+        baseHeaderColor
+    }
+    val baseChevronColor =
+        colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.72f else 1f)
+    val chevronColor = if (isHeaderPressed) {
+        androidx.compose.ui.graphics.lerp(baseChevronColor, colorScheme.onSurface, 0.16f)
+    } else {
+        baseChevronColor
+    }
     val minimumHeaderHeight = if (useMinimalStyle) 34.dp else 48.dp
     val headerClickModifier = when {
         onHeaderClick != null -> Modifier.clickable(
@@ -1492,11 +1520,7 @@ private fun TimelineSectionHeader(
         ) {
             Text(
                 text = localizedSectionTitle(section),
-                color = if (useMinimalStyle) {
-                    colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
-                } else {
-                    colorScheme.onSurfaceVariant
-                },
+                color = headerTextColor,
                 style = if (useMinimalStyle) {
                     MaterialTheme.typography.headlineSmall
                 } else {
@@ -1512,7 +1536,7 @@ private fun TimelineSectionHeader(
                     } else {
                         stringResource(R.string.action_collapse_section)
                     },
-                    tint = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.72f else 1f),
+                    tint = chevronColor,
                     modifier = Modifier
                         .padding(start = 6.dp)
                         .size(18.dp)
@@ -1522,6 +1546,40 @@ private fun TimelineSectionHeader(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TimelineSectionBodyVisibility(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier.fillMaxWidth(),
+        enter = expandVertically(
+            expandFrom = Alignment.Top,
+            animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+        ) + fadeIn(
+            animationSpec = tween(
+                durationMillis = 150,
+                delayMillis = 90,
+                easing = FastOutSlowInEasing
+            ),
+        ),
+        exit = fadeOut(
+            animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing),
+        ) + shrinkVertically(
+            shrinkTowards = Alignment.Top,
+            animationSpec = tween(
+                durationMillis = 240,
+                delayMillis = 45,
+                easing = FastOutSlowInEasing
+            ),
+        ),
+    ) {
+        content()
     }
 }
 
