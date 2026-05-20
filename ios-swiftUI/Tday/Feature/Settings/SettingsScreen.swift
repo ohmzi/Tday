@@ -7,6 +7,9 @@ struct SettingsScreen: View {
     @Environment(\.tdayColors) private var colors
     @State private var settingsScrollOffset: CGFloat = 0
 
+    private let topTitleRevealStart: CGFloat = 0.48
+    private let topTitleRevealEnd: CGFloat = 0.76
+
     private var isAdminUser: Bool {
         (viewModel.user?.role ?? "").uppercased() == "ADMIN"
     }
@@ -84,6 +87,12 @@ struct SettingsScreen: View {
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 24)
+            .background {
+                TimelineScrollOffsetObserver { settingsScrollOffset = $0 }
+                    .frame(width: 0, height: 0)
+            }
+            .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
+            .disableVerticalScrollBounce()
         }
         .background(colors.background.ignoresSafeArea())
         .navigationTitle("")
@@ -96,7 +105,10 @@ struct SettingsScreen: View {
                 accentColor: colors.onSurface,
                 collapseProgress: titleCollapseProgress,
                 onBack: { dismiss() },
-                action: nil
+                action: nil,
+                titleRevealStart: topTitleRevealStart,
+                titleRevealEnd: topTitleRevealEnd,
+                titleRevealDistance: 6
             )
         }
         .task {
@@ -128,11 +140,16 @@ struct SettingsScreen: View {
             accentColor: colors.onSurface,
             collapseProgress: titleCollapseProgress
         )
-        .background {
-            TimelineScrollOffsetObserver { settingsScrollOffset = $0 }
-                .frame(width: 0, height: 0)
-        }
-        .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
+        .padding(.bottom, profileCardTopClearance)
+    }
+
+    private var profileCardTopClearance: CGFloat {
+        let progress = TodoTimelineMetrics.progress(
+            titleCollapseProgress,
+            from: 0.54,
+            to: 1
+        )
+        return 10 * progress
     }
 }
 
