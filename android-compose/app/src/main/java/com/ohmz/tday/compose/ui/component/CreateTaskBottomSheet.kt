@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,14 +44,13 @@ import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -69,6 +67,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -112,6 +111,7 @@ private fun normalizePriorityValue(value: String?): String {
 }
 
 private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
+private const val CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION = 0.86f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +135,6 @@ fun CreateTaskBottomSheet(
         keyboardController?.hide()
         focusManager.clearFocus(force = true)
     }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val dateOnlyFormatter = remember {
         DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault())
     }
@@ -212,6 +211,8 @@ fun CreateTaskBottomSheet(
     } else {
         Color.Black.copy(alpha = 0.40f)
     }
+    val maxSheetHeight =
+        LocalConfiguration.current.screenHeightDp.dp * CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION
 
     fun submitTask() {
         val due = Instant.ofEpochMilli(dueEpochMs)
@@ -232,109 +233,127 @@ fun CreateTaskBottomSheet(
         }
     }
 
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = null,
-        containerColor = sheetContainerColor,
-        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
-        scrimColor = sheetScrimColor,
-        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.8f),
+                .fillMaxSize(),
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .navigationBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                SheetHeader(
-                    title = if (isEditMode) "Edit task" else "New task",
-                    leftIcon = Icons.Rounded.Close,
-                    leftContentDescription = "Close",
-                    onLeftClick = {
+                    .background(sheetScrimColor)
+                    .clickable {
                         dismissKeyboard()
                         onDismiss()
                     },
-                    onConfirm = {
-                        dismissKeyboard()
-                        if (canSubmit) {
-                            submitTask()
-                        }
-                    },
-                    confirmEnabled = canSubmit,
-                )
+            )
 
-                TaskTextCard(
-                    title = title,
-                    notes = notes,
-                    onTitleChange = { title = it },
-                    onNotesChange = { notes = it },
-                    onKeyboardDone = dismissKeyboard,
-                )
-
-                SectionHeading("Schedule")
-                GroupCard {
-                    SplitDateTimeRow(
-                        icon = Icons.Rounded.CalendarMonth,
-                        title = "Due",
-                        dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                        timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                        onDateClick = { dueDatePickerOpen = true },
-                        onTimeClick = { dueTimePickerOpen = true },
-                    )
-                }
-
-                SectionHeading("Details")
-                GroupCard {
-                    SheetDropdownRow(
-                        icon = Icons.AutoMirrored.Rounded.List,
-                        title = "List",
-                        value = selectedListName,
-                        options = listOf<ListSummary?>(null) + lists,
-                        optionLabel = { option -> option?.name ?: "No list" },
-                        optionSwatchColor = { option ->
-                            option?.let {
-                                listColorSwatchForSelector(
-                                    raw = it.color,
-                                    fallback = colorScheme.primary.copy(alpha = 0.75f),
-                                )
-                            } ?: colorScheme.outlineVariant.copy(alpha = 0.95f)
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .heightIn(max = maxSheetHeight)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {},
+                shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+                color = sheetContainerColor,
+                tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(start = 18.dp, top = 14.dp, end = 18.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    SheetHeader(
+                        title = if (isEditMode) "Edit task" else "New task",
+                        leftIcon = Icons.Rounded.Close,
+                        leftContentDescription = "Close",
+                        onLeftClick = {
+                            dismissKeyboard()
+                            onDismiss()
                         },
-                        isSelected = { option -> option?.id == selectedListId },
-                        onOptionSelected = { option -> selectedListId = option?.id },
+                        onConfirm = {
+                            dismissKeyboard()
+                            if (canSubmit) {
+                                submitTask()
+                            }
+                        },
+                        confirmEnabled = canSubmit,
                     )
-                    RowDivider()
-                    SheetDropdownRow(
-                        icon = Icons.Rounded.LowPriority,
-                        title = "Priority",
-                        value = selectedPriority,
-                        options = listOf("Low", "Medium", "High"),
-                        optionLabel = { option -> option },
-                        optionSwatchColor = { option -> prioritySwatchColor(option) },
-                        isSelected = { option -> selectedPriority == option },
-                        onOptionSelected = { option -> selectedPriority = option },
-                    )
-                    RowDivider()
-                    SheetDropdownRow(
-                        icon = Icons.Rounded.Repeat,
-                        title = "Repeat",
-                        value = repeatPreset.label,
-                        options = RepeatPreset.entries.toList(),
-                        optionLabel = { option -> option.label },
-                        optionSwatchColor = { option -> repeatSwatchColor(option) },
-                        isSelected = { option -> selectedRepeat == option.name },
-                        onOptionSelected = { option -> selectedRepeat = option.name },
-                    )
-                }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    TaskTextCard(
+                        title = title,
+                        notes = notes,
+                        onTitleChange = { title = it },
+                        onNotesChange = { notes = it },
+                        onKeyboardDone = dismissKeyboard,
+                    )
+
+                    SectionHeading("Schedule")
+                    GroupCard {
+                        SplitDateTimeRow(
+                            icon = Icons.Rounded.CalendarMonth,
+                            title = "Due",
+                            dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                            timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                            onDateClick = { dueDatePickerOpen = true },
+                            onTimeClick = { dueTimePickerOpen = true },
+                        )
+                    }
+
+                    SectionHeading("Details")
+                    GroupCard {
+                        SheetDropdownRow(
+                            icon = Icons.AutoMirrored.Rounded.List,
+                            title = "List",
+                            value = selectedListName,
+                            options = listOf<ListSummary?>(null) + lists,
+                            optionLabel = { option -> option?.name ?: "No list" },
+                            optionSwatchColor = { option ->
+                                option?.let {
+                                    listColorSwatchForSelector(
+                                        raw = it.color,
+                                        fallback = colorScheme.primary.copy(alpha = 0.75f),
+                                    )
+                                } ?: colorScheme.outlineVariant.copy(alpha = 0.95f)
+                            },
+                            isSelected = { option -> option?.id == selectedListId },
+                            onOptionSelected = { option -> selectedListId = option?.id },
+                        )
+                        RowDivider()
+                        SheetDropdownRow(
+                            icon = Icons.Rounded.LowPriority,
+                            title = "Priority",
+                            value = selectedPriority,
+                            options = listOf("Low", "Medium", "High"),
+                            optionLabel = { option -> option },
+                            optionSwatchColor = { option -> prioritySwatchColor(option) },
+                            isSelected = { option -> selectedPriority == option },
+                            onOptionSelected = { option -> selectedPriority = option },
+                        )
+                        RowDivider()
+                        SheetDropdownRow(
+                            icon = Icons.Rounded.Repeat,
+                            title = "Repeat",
+                            value = repeatPreset.label,
+                            options = RepeatPreset.entries.toList(),
+                            optionLabel = { option -> option.label },
+                            optionSwatchColor = { option -> repeatSwatchColor(option) },
+                            isSelected = { option -> selectedRepeat == option.name },
+                            onOptionSelected = { option -> selectedRepeat = option.name },
+                        )
+                    }
+                }
             }
         }
     }
