@@ -40,6 +40,7 @@ final class CachedListEntity {
     var iconKey: String?
     var todoCount: Int
     var updatedAtEpochMs: Int64
+    var createdAtEpochMs: Int64?
 
     init(from record: CachedListRecord) {
         id = record.id
@@ -48,6 +49,7 @@ final class CachedListEntity {
         iconKey = record.iconKey
         todoCount = record.todoCount
         updatedAtEpochMs = record.updatedAtEpochMs
+        createdAtEpochMs = record.createdAtEpochMs
     }
 }
 
