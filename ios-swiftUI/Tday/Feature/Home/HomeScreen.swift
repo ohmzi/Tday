@@ -48,6 +48,7 @@ private struct HomeListIconOption {
 private enum CreateListSheetMetrics {
     static let initialCompactHeight: CGFloat = 620
     static let maximumHeightFraction: CGFloat = 0.7
+    static let bottomContentPadding: CGFloat = 8
 }
 
 private struct CreateListSheetContentHeightKey: PreferenceKey {
@@ -1145,11 +1146,10 @@ private struct CreateListSheet: View {
                 }
             }
 
-            Spacer(minLength: 8)
         }
         .padding(.horizontal, 18)
         .padding(.top, 14)
-        .padding(.bottom, 20)
+        .padding(.bottom, CreateListSheetMetrics.bottomContentPadding)
         .frame(maxWidth: .infinity, alignment: .top)
         .background(
             GeometryReader { proxy in
@@ -1162,7 +1162,10 @@ private struct CreateListSheet: View {
         .presentationContentInteraction(.resizes)
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
-        .presentationBackground(colors.background)
+        .presentationBackground {
+            colors.background
+                .ignoresSafeArea(.container, edges: .bottom)
+        }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onPreferenceChange(CreateListSheetContentHeightKey.self) { height in
             guard !nameFieldFocused else { return }
