@@ -5,17 +5,22 @@ struct SettingsScreen: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
+    @State private var settingsScrollOffset: CGFloat = 0
 
     private var isAdminUser: Bool {
         (viewModel.user?.role ?? "").uppercased() == "ADMIN"
     }
 
+    private var titleCollapseProgress: CGFloat {
+        let distance = TodoTimelineMetrics.titleCollapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(settingsScrollOffset / distance, 0), 1)
+    }
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 12) {
-                SettingsPageHeader(title: "Settings") {
-                    dismiss()
-                }
+                settingsHeroTitleRow
 
                 SettingsProfileCard(user: viewModel.user)
 
@@ -81,8 +86,19 @@ struct SettingsScreen: View {
             .padding(.bottom, 24)
         }
         .background(colors.background.ignoresSafeArea())
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .navigationBackButtonBehavior()
+        .safeAreaInset(edge: .top, spacing: 0) {
+            TimelineTopBar(
+                title: "Settings",
+                accentColor: colors.onSurface,
+                collapseProgress: titleCollapseProgress,
+                onBack: { dismiss() },
+                action: nil
+            )
+        }
         .task {
             await viewModel.refreshAdminAiSummarySetting()
             await viewModel.refreshVersionInfo()
@@ -105,51 +121,18 @@ struct SettingsScreen: View {
             Text(viewModel.aiSummaryValidationError ?? "")
         }
     }
-}
 
-struct SettingsPageHeader: View {
-    let title: String
-    let onBack: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: TodoTimelineMetrics.topBarButtonIconSize, weight: .semibold))
-                    .foregroundStyle(colors.onSurface)
-                    .frame(
-                        width: TodoTimelineMetrics.topBarButtonFrame,
-                        height: TodoTimelineMetrics.topBarButtonFrame
-                    )
-                    .background(colors.surface, in: Circle())
-                    .contentShape(Circle())
-            }
-            .buttonStyle(SettingsBackButtonStyle())
-            .accessibilityLabel("Back")
-
-            Text(title)
-                .font(.tdayRounded(size: 32, weight: .heavy))
-                .foregroundStyle(colors.onSurface)
+    private var settingsHeroTitleRow: some View {
+        TimelineExpandedTitleRow(
+            title: "Settings",
+            accentColor: colors.onSurface,
+            collapseProgress: titleCollapseProgress
+        )
+        .background {
+            TimelineScrollOffsetObserver { settingsScrollOffset = $0 }
+                .frame(width: 0, height: 0)
         }
-        .padding(.top, 6)
-    }
-}
-
-private struct SettingsBackButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .tdayRippleEffect(isPressed: configuration.isPressed)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .offset(y: configuration.isPressed ? 1 : 0)
-            .shadow(
-                color: Color.black.opacity(configuration.isPressed ? 0.04 : 0.08),
-                radius: configuration.isPressed ? 3 : 7,
-                x: 0,
-                y: configuration.isPressed ? 1 : 3
-            )
-            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+        .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
     }
 }
 
@@ -440,13 +423,18 @@ struct LatestReleaseScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.tdayColors) private var colors
+    @State private var releaseScrollOffset: CGFloat = 0
+
+    private var titleCollapseProgress: CGFloat {
+        let distance = TodoTimelineMetrics.titleCollapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(releaseScrollOffset / distance, 0), 1)
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 12) {
-                SettingsPageHeader(title: "App Version") {
-                    dismiss()
-                }
+                releaseHeroTitleRow
 
                 if viewModel.isReleaseLoading && viewModel.currentRelease == nil && viewModel.latestRelease == nil {
                     HStack {
@@ -496,11 +484,35 @@ struct LatestReleaseScreen: View {
             .padding(.bottom, 24)
         }
         .background(colors.background.ignoresSafeArea())
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
         .navigationBackButtonBehavior()
+        .safeAreaInset(edge: .top, spacing: 0) {
+            TimelineTopBar(
+                title: "App Version",
+                accentColor: colors.onSurface,
+                collapseProgress: titleCollapseProgress,
+                onBack: { dismiss() },
+                action: nil
+            )
+        }
         .task {
             await viewModel.refreshVersionInfo()
         }
+    }
+
+    private var releaseHeroTitleRow: some View {
+        TimelineExpandedTitleRow(
+            title: "App Version",
+            accentColor: colors.onSurface,
+            collapseProgress: titleCollapseProgress
+        )
+        .background {
+            TimelineScrollOffsetObserver { releaseScrollOffset = $0 }
+                .frame(width: 0, height: 0)
+        }
+        .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
     }
 }
 
