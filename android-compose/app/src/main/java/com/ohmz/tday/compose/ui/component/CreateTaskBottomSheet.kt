@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -129,6 +130,11 @@ fun CreateTaskBottomSheet(
     onUpdateTask: ((todo: TodoItem, payload: CreateTaskPayload) -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val dismissKeyboard = {
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+    }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val dateOnlyFormatter = remember {
         DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault())
@@ -253,11 +259,11 @@ fun CreateTaskBottomSheet(
                     leftIcon = Icons.Rounded.Close,
                     leftContentDescription = "Close",
                     onLeftClick = {
-                        focusManager.clearFocus(force = true)
+                        dismissKeyboard()
                         onDismiss()
                     },
                     onConfirm = {
-                        focusManager.clearFocus(force = true)
+                        dismissKeyboard()
                         if (canSubmit) {
                             submitTask()
                         }
@@ -270,7 +276,7 @@ fun CreateTaskBottomSheet(
                     notes = notes,
                     onTitleChange = { title = it },
                     onNotesChange = { notes = it },
-                    onKeyboardDone = { focusManager.clearFocus(force = true) },
+                    onKeyboardDone = dismissKeyboard,
                 )
 
                 SectionHeading("Schedule")
@@ -552,7 +558,12 @@ private fun TaskField(
         onValueChange = { onValueChange(it.replace('\n', ' ').replace('\r', ' ')) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { onKeyboardDone() }),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                onKeyboardDone()
+                defaultKeyboardAction(ImeAction.Done)
+            },
+        ),
         textStyle = MaterialTheme.typography.titleMedium.copy(
             color = colorScheme.onSurface,
             fontWeight = FontWeight.ExtraBold,
