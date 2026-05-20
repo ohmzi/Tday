@@ -47,6 +47,7 @@ private struct HomeListIconOption {
 
 private enum CreateListSheetMetrics {
     static let initialCompactHeight: CGFloat = 620
+    static let maximumHeightFraction: CGFloat = 0.8
 }
 
 private struct CreateListSheetContentHeightKey: PreferenceKey {
@@ -986,8 +987,10 @@ private struct CreateListSheet: View {
     @State private var name = ""
     @State private var color = "BLUE"
     @State private var iconKey = "inbox"
-    @State private var compactSheetHeight: CGFloat = CreateListSheetMetrics.initialCompactHeight
-    @State private var sheetDetent: PresentationDetent = .height(CreateListSheetMetrics.initialCompactHeight)
+    @State private var compactSheetHeight: CGFloat = min(
+        CreateListSheetMetrics.initialCompactHeight,
+        UIScreen.main.bounds.height * CreateListSheetMetrics.maximumHeightFraction
+    )
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1005,12 +1008,20 @@ private struct CreateListSheet: View {
         homeListSymbolName(for: iconKey)
     }
 
+    private var maximumSheetHeight: CGFloat {
+        max(1, UIScreen.main.bounds.height * CreateListSheetMetrics.maximumHeightFraction)
+    }
+
     private var compactDetent: PresentationDetent {
         .height(compactSheetHeight)
     }
 
     private var typingDetent: PresentationDetent {
-        .fraction(0.8)
+        .fraction(CreateListSheetMetrics.maximumHeightFraction)
+    }
+
+    private var activeDetents: Set<PresentationDetent> {
+        nameFieldFocused ? [typingDetent] : [compactDetent]
     }
 
     var body: some View {
@@ -1147,28 +1158,18 @@ private struct CreateListSheet: View {
             }
         )
         .background(colors.background.ignoresSafeArea())
-        .presentationDetents([compactDetent, typingDetent], selection: $sheetDetent)
+        .presentationDetents(activeDetents)
+        .presentationContentInteraction(.resizes)
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground(colors.background)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onPreferenceChange(CreateListSheetContentHeightKey.self) { height in
-            let nextHeight = max(height, 1)
+            guard !nameFieldFocused else { return }
+            let nextHeight = min(max(height, 1), maximumSheetHeight)
             compactSheetHeight = nextHeight
-            if !nameFieldFocused {
-                sheetDetent = .height(nextHeight)
-            }
         }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                nameFieldFocused = true
-            }
-        }
-        .onChange(of: nameFieldFocused) { _, focused in
-            withAnimation(.snappy(duration: 0.24)) {
-                sheetDetent = focused ? typingDetent : compactDetent
-            }
-        }
+        .animation(.snappy(duration: 0.24), value: nameFieldFocused)
     }
 
     private func formattedOptionName(_ value: String) -> String {
