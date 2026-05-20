@@ -323,7 +323,7 @@ private struct HomeTopBar: View {
     var body: some View {
         let buttonSize = HomeMetrics.topBarButtonSize
         let buttonGap: CGFloat = 8
-        let expandedSearchWidth = max(buttonSize, totalWidth - (buttonSize * 2) - (buttonGap * 2))
+        let expandedSearchWidth = max(buttonSize, totalWidth)
         let searchWidth = searchExpanded ? expandedSearchWidth : buttonSize
 
         ZStack(alignment: .trailing) {
@@ -407,12 +407,14 @@ private struct HomeTopBar: View {
                     }
                 )
 
-                HomeIconCircleButton(icon: "text.badge.plus") {
-                    onCreateList()
-                }
+                if !searchExpanded {
+                    HomeIconCircleButton(icon: "text.badge.plus") {
+                        onCreateList()
+                    }
 
-                HomeIconCircleButton(icon: "ellipsis") {
-                    onOpenSettings()
+                    HomeIconCircleButton(icon: "ellipsis") {
+                        onOpenSettings()
+                    }
                 }
             }
             .animation(.spring(response: 0.28, dampingFraction: 0.86), value: searchExpanded)
