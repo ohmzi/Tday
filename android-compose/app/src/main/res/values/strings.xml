@@ -52,7 +52,7 @@
     <!-- Settings screen -->
     <string name="settings_title">Settings</string>
     <string name="settings_unknown_user">Unknown user</string>
-    <string name="settings_role_prefix">Role: </string>
+    <string name="settings_role_label">Role: %1$s</string>
     <string name="settings_role_default">USER</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_reminders">Reminders</string>
@@ -122,8 +122,6 @@
     <!-- Completed screen -->
     <string name="completed_title">Completed</string>
     <string name="completed_empty">No completed tasks yet</string>
-    <string name="completed_created_prefix">Created: </string>
-    <string name="completed_at_prefix">Completed, </string>
     <string name="completed_section_earlier">Earlier</string>
     <string name="completed_section_today">Today</string>
     <string name="completed_section_tomorrow">Tomorrow</string>
