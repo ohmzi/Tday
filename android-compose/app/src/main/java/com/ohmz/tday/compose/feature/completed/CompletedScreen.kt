@@ -1,11 +1,6 @@
 package com.ohmz.tday.compose.feature.completed
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -33,7 +28,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -216,27 +210,63 @@ fun CompletedScreen(
                 .nestedScroll(nestedScrollConnection),
             state = listState,
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
-            items(timelineSections, key = { it.key }) { section ->
+            timelineSections.forEachIndexed { sectionIndex, section ->
                 val isCollapsed = collapsedSectionKeys.contains(section.key)
-                CompletedTimelineSection(
-                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
-                    section = section,
-                    isCollapsed = isCollapsed,
-                    onHeaderClick = {
-                        collapsedSectionKeys =
-                            if (isCollapsed) {
-                                collapsedSectionKeys - section.key
-                            } else {
-                                collapsedSectionKeys + section.key
-                            }
-                    },
-                    lists = uiState.lists,
-                    onInfo = { item -> editTargetId = item.id },
-                    onDelete = onDelete,
-                    onUncomplete = onUncomplete,
-                )
+                item(key = "completed-header-${section.key}") {
+                    CompletedTimelineSectionHeader(
+                        modifier = Modifier
+                            .animateItem(
+                                fadeInSpec = null,
+                                placementSpec = tween(
+                                    durationMillis = 320,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                                fadeOutSpec = null,
+                            )
+                            .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
+                        section = section,
+                        isCollapsed = isCollapsed,
+                        onHeaderClick = {
+                            collapsedSectionKeys =
+                                if (isCollapsed) {
+                                    collapsedSectionKeys - section.key
+                                } else {
+                                    collapsedSectionKeys + section.key
+                                }
+                        },
+                    )
+                }
+                if (!isCollapsed) {
+                    section.items.forEachIndexed { itemIndex, completed ->
+                        item(key = "completed-row-${section.key}-${completed.id}") {
+                            CompletedSwipeRow(
+                                modifier = Modifier
+                                    .animateItem(
+                                        fadeInSpec = tween(
+                                            durationMillis = 190,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                        placementSpec = tween(
+                                            durationMillis = 320,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                        fadeOutSpec = tween(
+                                            durationMillis = 150,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                    )
+                                    .padding(top = 4.dp),
+                                item = completed,
+                                lists = uiState.lists,
+                                onInfo = { editTargetId = completed.id },
+                                onDelete = { onDelete(completed) },
+                                onUncomplete = { onUncomplete(completed) },
+                            )
+                        }
+                    }
+                }
             }
 
             if (uiState.items.isEmpty()) {
@@ -408,22 +438,18 @@ private fun CompletedHeaderButton(
 }
 
 @Composable
-private fun CompletedTimelineSection(
+private fun CompletedTimelineSectionHeader(
     modifier: Modifier = Modifier,
     section: CompletedSection,
     isCollapsed: Boolean,
     onHeaderClick: () -> Unit,
-    lists: List<ListSummary>,
-    onInfo: (CompletedItem) -> Unit,
-    onDelete: (CompletedItem) -> Unit,
-    onUncomplete: (CompletedItem) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val headerInteractionSource = remember { MutableInteractionSource() }
     val isHeaderPressed by headerInteractionSource.collectIsPressedAsState()
     val collapseChevronRotation by animateFloatAsState(
         targetValue = if (isCollapsed) -90f else 0f,
-        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
         label = "completedSectionChevronRotation",
     )
     val baseHeaderColor = colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
@@ -472,62 +498,12 @@ private fun CompletedTimelineSection(
                     .graphicsLayer { rotationZ = collapseChevronRotation },
             )
         }
-
-        CompletedSectionBodyVisibility(
-            visible = !isCollapsed && section.items.isNotEmpty(),
-            modifier = Modifier.padding(top = 4.dp),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                section.items.forEach { item ->
-                    CompletedSwipeRow(
-                        item = item,
-                        lists = lists,
-                        onInfo = { onInfo(item) },
-                        onDelete = { onDelete(item) },
-                        onUncomplete = { onUncomplete(item) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CompletedSectionBodyVisibility(
-    visible: Boolean,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    AnimatedVisibility(
-        visible = visible,
-        modifier = modifier.fillMaxWidth(),
-        enter = expandVertically(
-            expandFrom = Alignment.Top,
-            animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
-        ) + fadeIn(
-            animationSpec = tween(
-                durationMillis = 150,
-                delayMillis = 90,
-                easing = FastOutSlowInEasing
-            ),
-        ),
-        exit = fadeOut(
-            animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing),
-        ) + shrinkVertically(
-            shrinkTowards = Alignment.Top,
-            animationSpec = tween(
-                durationMillis = 240,
-                delayMillis = 45,
-                easing = FastOutSlowInEasing
-            ),
-        ),
-    ) {
-        content()
     }
 }
 
 @Composable
 private fun CompletedSwipeRow(
+    modifier: Modifier = Modifier,
     item: CompletedItem,
     lists: List<ListSummary>,
     onInfo: () -> Unit,
@@ -588,7 +564,7 @@ private fun CompletedSwipeRow(
     val foregroundColor = colorScheme.background
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .graphicsLayer {
                 alpha = rowAlpha
