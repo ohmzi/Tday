@@ -1143,6 +1143,10 @@ private fun TopSearchBar(
             targetValue = if (searchExpanded) 0f else 1f,
             label = "topSearchBarActionsAlpha",
         )
+        val searchContentAlpha by animateFloatAsState(
+            targetValue = if (searchExpanded) 1f else 0f,
+            label = "topSearchBarContentAlpha",
+        )
 
         Row(
             modifier = Modifier
@@ -1216,36 +1220,45 @@ private fun TopSearchBar(
                 pressedElevation = 0.dp
             ),
         ) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                PressableIconButton(
-                    icon = Icons.Rounded.Search,
-                    contentDescription = if (searchExpanded) stringResource(R.string.action_close_search) else stringResource(
-                        R.string.action_search
-                    ),
-                    tint = colorScheme.onSurface,
-                    compact = true,
-                    onClick = {
-                        if (searchExpanded) {
-                            onSearchClose()
-                        } else {
-                            onSearchExpandedChange(true)
-                        }
-                    },
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = 1f - searchContentAlpha },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = stringResource(R.string.action_search),
+                        tint = colorScheme.onSurface,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
 
-                if (searchExpanded) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = searchContentAlpha }
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = colorScheme.onSurface,
+                        modifier = Modifier.size(24.dp),
+                    )
                     BasicTextField(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(focusRequester),
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
+                        enabled = searchExpanded,
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                             color = colorScheme.onSurface,
@@ -1267,6 +1280,14 @@ private fun TopSearchBar(
                                 innerTextField()
                             }
                         },
+                    )
+
+                    PressableIconButton(
+                        icon = Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.action_close_search),
+                        tint = colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
+                        compact = true,
+                        onClick = onSearchClose,
                     )
                 }
             }
