@@ -1,6 +1,28 @@
 import Foundation
 import Observation
 
+struct GitHubRelease: Codable, Equatable, Identifiable {
+    let tagName: String
+    let name: String?
+    let body: String?
+    let publishedAt: String?
+    let htmlUrl: String
+
+    var id: String { tagName }
+
+    var version: String {
+        tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case tagName = "tag_name"
+        case name
+        case body
+        case publishedAt = "published_at"
+        case htmlUrl = "html_url"
+    }
+}
+
 @MainActor
 @Observable
 final class AppViewModel {
@@ -28,6 +50,10 @@ final class AppViewModel {
     var pendingMutationCount = 0
     var navigationPath: [AppRoute] = []
     var latestVersionName: String?
+    var latestRelease: GitHubRelease?
+    var currentRelease: GitHubRelease?
+    var isReleaseLoading = false
+    var releaseError: String?
     var versionCheckResult: VersionCheckResult = .compatible
     var backendVersion: String?
 
@@ -110,7 +136,7 @@ final class AppViewModel {
             startSyncLoop()
             await container.reminderScheduler.requestAuthorization()
             await rescheduleReminders()
-            await checkForUpdate()
+            await refreshVersionInfo()
             return
         }
 
@@ -432,17 +458,46 @@ final class AppViewModel {
         await container.reminderScheduler.reschedule(tasks: tasks, defaultReminder: selectedReminder)
     }
 
+    func refreshVersionInfo() async {
+        await recheckVersion()
+        await refreshGitHubReleases()
+    }
+
     func checkForUpdate() async {
-        guard let url = URL(string: "https://api.github.com/repos/ohmzi/Tday/releases/latest") else { return }
+        await refreshGitHubReleases()
+    }
+
+    private func refreshGitHubReleases() async {
+        isReleaseLoading = latestRelease == nil && currentRelease == nil
+        releaseError = nil
+        async let latestResult = fetchGitHubRelease(urlString: "https://api.github.com/repos/ohmzi/Tday/releases/latest")
+        async let currentResult = fetchGitHubRelease(urlString: "https://api.github.com/repos/ohmzi/Tday/releases/tags/v\(currentVersionName)")
+        let latest = await latestResult
+        let current = await currentResult
+
+        latestRelease = latest.release
+        currentRelease = current.release
+        latestVersionName = latest.release?.version
+        releaseError = latest.error?.localizedDescription
+        isReleaseLoading = false
+    }
+
+    private func fetchGitHubRelease(urlString: String) async -> (release: GitHubRelease?, error: Error?) {
+        guard let url = URL(string: urlString) else {
+            return (nil, nil)
+        }
         var request = URLRequest(url: url)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         do {
-            let (data, _) = try await URLSession.shared.data(for: request)
-            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let tagName = json["tag_name"] as? String {
-                latestVersionName = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+            let (data, response) = try await URLSession.shared.data(for: request)
+            if let httpResponse = response as? HTTPURLResponse,
+               !(200..<300).contains(httpResponse.statusCode) {
+                return (nil, nil)
             }
-        } catch {}
+            return (try JSONDecoder().decode(GitHubRelease.self, from: data), nil)
+        } catch {
+            return (nil, error)
+        }
     }
 
     nonisolated static func compareVersions(_ a: String, _ b: String) -> Int {
