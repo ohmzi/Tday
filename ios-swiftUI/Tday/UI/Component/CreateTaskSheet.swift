@@ -199,7 +199,6 @@ struct CreateTaskSheet: View {
             colors.background
                 .ignoresSafeArea(.container, edges: .bottom)
         }
-        .tdayBottomSheetSizing()
         .overlay {
             if let activeSelector {
                 selectorOverlay(for: activeSelector)
