@@ -1,6 +1,27 @@
 import SwiftUI
 import UIKit
 
+private enum CreateTaskSheetMetrics {
+    static let initialSheetHeight: CGFloat = 560
+    static let maximumHeightFraction: CGFloat = 0.86
+}
+
+private struct CreateTaskSheetHeaderHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct CreateTaskSheetFormHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 struct CreateTaskSheet: View {
     let lists: [ListSummary]
     let titleText: String
@@ -22,6 +43,8 @@ struct CreateTaskSheet: View {
     @State private var isSubmitting = false
     @State private var parserTask: Task<Void, Never>?
     @State private var activeSelector: CreateTaskSheetSelector?
+    @State private var headerHeight: CGFloat = 84
+    @State private var formHeight: CGFloat = CreateTaskSheetMetrics.initialSheetHeight - 84
 
     private let priorityOptions = ["Low", "Medium", "High"]
     private let repeatOptions: [(label: String, value: String?)] = [
@@ -43,6 +66,18 @@ struct CreateTaskSheet: View {
 
     private var selectedRepeatLabel: String {
         repeatOptions.first(where: { $0.value == repeatRule })?.label ?? "No repeat"
+    }
+
+    private var maximumSheetHeight: CGFloat {
+        max(1, UIScreen.main.bounds.height * CreateTaskSheetMetrics.maximumHeightFraction)
+    }
+
+    private var measuredSheetHeight: CGFloat {
+        min(max(headerHeight + formHeight, 1), maximumSheetHeight)
+    }
+
+    private var formNeedsScrolling: Bool {
+        headerHeight + formHeight > maximumSheetHeight
     }
 
     init(
@@ -99,6 +134,12 @@ struct CreateTaskSheet: View {
                     }
                 }
             )
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: CreateTaskSheetHeaderHeightKey.self, value: ceil(proxy.size.height))
+                }
+            )
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
@@ -136,16 +177,21 @@ struct CreateTaskSheet: View {
                             onTap: { activeSelector = .recurrence }
                         )
                     }
-
-                    Spacer(minLength: 6)
                 }
                 .padding(.horizontal, 18)
-                .padding(.bottom, 20)
+                .padding(.bottom, 14)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .preference(key: CreateTaskSheetFormHeightKey.self, value: ceil(proxy.size.height))
+                    }
+                )
             }
+            .scrollDisabled(!formNeedsScrolling)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, alignment: .top)
         .background(colors.background.ignoresSafeArea())
-        .presentationDetents([.fraction(0.8)])
+        .presentationDetents([.height(measuredSheetHeight)])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground(colors.background)
@@ -159,6 +205,12 @@ struct CreateTaskSheet: View {
         }
         .onChange(of: title) { _, _ in
             scheduleNlpParse()
+        }
+        .onPreferenceChange(CreateTaskSheetHeaderHeightKey.self) { height in
+            headerHeight = max(height, 1)
+        }
+        .onPreferenceChange(CreateTaskSheetFormHeightKey.self) { height in
+            formHeight = max(height, 1)
         }
     }
 
