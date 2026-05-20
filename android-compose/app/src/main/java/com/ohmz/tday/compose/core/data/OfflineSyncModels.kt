@@ -37,6 +37,7 @@ data class CachedListRecord(
     val iconKey: String? = null,
     val todoCount: Int = 0,
     val updatedAtEpochMs: Long = 0L,
+    val createdAtEpochMs: Long = 0L,
 )
 
 @Serializable
