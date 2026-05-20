@@ -6,20 +6,17 @@ import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
-import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.CompletedItem
+import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
-import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class CompletedUiState(
     val isLoading: Boolean = false,
@@ -34,7 +31,6 @@ class CompletedViewModel @Inject constructor(
     private val listRepository: ListRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
-    private val reminderScheduler: TaskReminderScheduler,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -130,19 +126,6 @@ class CompletedViewModel @Inject constructor(
         }
     }
 
-    fun uncomplete(item: CompletedItem) {
-        viewModelScope.launch {
-            runCatching { completedRepository.uncomplete(item) }
-                .onSuccess {
-                    rescheduleReminders()
-                    loadInternal(forceSync = false, showLoading = false)
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not restore task.")) }
-                }
-        }
-    }
-
     fun delete(item: CompletedItem, onDeleted: (() -> Unit)? = null) {
         viewModelScope.launch {
             runCatching { completedRepository.deleteCompletedTodo(item) }
@@ -163,12 +146,6 @@ class CompletedViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not update task.")) }
                 }
-        }
-    }
-
-    private fun rescheduleReminders() {
-        viewModelScope.launch(Dispatchers.Default) {
-            runCatching { reminderScheduler.rescheduleAll() }
         }
     }
 }
