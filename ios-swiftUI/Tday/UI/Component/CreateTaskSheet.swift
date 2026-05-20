@@ -132,7 +132,7 @@ struct CreateTaskSheet: View {
                             iconName: "repeat",
                             title: "Repeat",
                             value: selectedRepeatLabel,
-                            onTap: { activeSelector = .repeat }
+                            onTap: { activeSelector = .recurrence }
                         )
                     }
 
@@ -259,7 +259,7 @@ struct CreateTaskSheet: View {
                         }
                     }
 
-                case .repeat:
+                case .recurrence:
                     ForEach(Array(repeatOptions.enumerated()), id: \.element.label) { index, option in
                         if index > 0 {
                             CreateTaskSheetSelectorDivider()
@@ -283,7 +283,7 @@ struct CreateTaskSheet: View {
 private enum CreateTaskSheetSelector: String, Identifiable {
     case list
     case priority
-    case repeat
+    case recurrence
 
     var id: String { rawValue }
 
@@ -293,7 +293,7 @@ private enum CreateTaskSheetSelector: String, Identifiable {
             return "List"
         case .priority:
             return "Priority"
-        case .repeat:
+        case .recurrence:
             return "Repeat"
         }
     }
