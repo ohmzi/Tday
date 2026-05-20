@@ -206,6 +206,7 @@ struct CompletedScreen: View {
 
     private func completedTimelineRow(_ item: CompletedItem) -> some View {
         let completedDate = item.completedAt ?? item.due
+        let completedTimeText = completedDate.formatted(date: .omitted, time: .shortened)
         let showListIndicator = item.listName?.isEmpty == false
         let showPriorityFlag = item.priority.lowercased() == "high"
 
@@ -223,9 +224,13 @@ struct CompletedScreen: View {
                         .strikethrough(true, color: colors.onSurface.opacity(0.65))
                         .lineLimit(2)
 
-                    Text("Completed, \(completedDate.formatted(date: .omitted, time: .shortened))")
-                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
-                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
+                    HStack(spacing: 5) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 10, weight: .bold))
+                        Text(completedTimeText)
+                            .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
+                    }
+                    .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
                 }
 
                 Spacer(minLength: 0)

@@ -1,6 +1,5 @@
 package com.ohmz.tday.compose.feature.completed
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -51,7 +50,6 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalBar
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.WbSunny
@@ -63,7 +61,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -74,7 +71,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -107,20 +103,12 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private enum class CompletedRestorePhase {
-    Completed,
-    Unchecked,
-    Unstruck,
-    Fading,
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompletedScreen(
     uiState: CompletedUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
-    onUncomplete: (CompletedItem) -> Unit,
     onDelete: (CompletedItem) -> Unit,
     onUpdateTask: (CompletedItem, CreateTaskPayload) -> Unit,
 ) {
@@ -262,7 +250,6 @@ fun CompletedScreen(
                                 lists = uiState.lists,
                                 onInfo = { editTargetId = completed.id },
                                 onDelete = { onDelete(completed) },
-                                onUncomplete = { onUncomplete(completed) },
                             )
                         }
                     }
@@ -508,7 +495,6 @@ private fun CompletedSwipeRow(
     lists: List<ListSummary>,
     onInfo: () -> Unit,
     onDelete: () -> Unit,
-    onUncomplete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -519,35 +505,10 @@ private fun CompletedSwipeRow(
     val maxElasticDragPx = actionRevealPx * 1.22f
     var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(item.id) { mutableStateOf(false) }
-    var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "completedSwipeOffset",
-    )
-    val showCompletedCheckmark = restorePhase == CompletedRestorePhase.Completed
-    val showStrikethrough =
-        restorePhase == CompletedRestorePhase.Completed || restorePhase == CompletedRestorePhase.Unchecked
-    val isFading = restorePhase == CompletedRestorePhase.Fading
-    val isRestoring = restorePhase != CompletedRestorePhase.Completed
-    val rowAlpha by animateFloatAsState(
-        targetValue = if (isFading) 0f else 1f,
-        animationSpec = tween(durationMillis = 220),
-        label = "completedRestoreRowAlpha",
-    )
-    val rowScale by animateFloatAsState(
-        targetValue = if (isFading) 0.985f else 1f,
-        animationSpec = tween(durationMillis = 220),
-        label = "completedRestoreRowScale",
-    )
-    val titleColor by animateColorAsState(
-        targetValue = if (showStrikethrough) {
-            colorScheme.onSurface.copy(alpha = 0.78f)
-        } else {
-            colorScheme.onSurface
-        },
-        animationSpec = tween(durationMillis = 160),
-        label = "completedRestoreTitleColor",
     )
     val completedAtText = COMPLETED_ROW_TIME_FORMATTER
         .withZone(ZoneId.systemDefault())
@@ -565,12 +526,7 @@ private fun CompletedSwipeRow(
 
     Column(
         modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                alpha = rowAlpha
-                scaleX = rowScale
-                scaleY = rowScale
-            },
+            .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
             Box(
@@ -640,7 +596,7 @@ private fun CompletedSwipeRow(
                         ) {
                             if (targetOffsetX != 0f) {
                                 targetOffsetX = 0f
-                            } else if (!swipeHinting && !isRestoring) {
+                            } else if (!swipeHinting) {
                                 swipeHinting = true
                                 coroutineScope.launch {
                                     targetOffsetX = -swipeHintOffsetPx
@@ -661,35 +617,13 @@ private fun CompletedSwipeRow(
                             .padding(horizontal = 4.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CompletedCircularToggleIcon(
-                            imageVector = if (showCompletedCheckmark) {
-                                Icons.Rounded.CheckCircle
-                            } else {
-                                Icons.Rounded.RadioButtonUnchecked
-                            },
-                            contentDescription = stringResource(R.string.label_undo_complete),
-                            tint = if (showCompletedCheckmark) {
-                                Color(0xFF6FBF86)
-                            } else {
-                                colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                            },
-                            enabled = !isRestoring,
-                            onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
-                                targetOffsetX = 0f
-                                coroutineScope.launch {
-                                    restorePhase = CompletedRestorePhase.Unchecked
-                                    delay(180)
-                                    restorePhase = CompletedRestorePhase.Unstruck
-                                    delay(180)
-                                    restorePhase = CompletedRestorePhase.Fading
-                                    delay(220)
-                                    onUncomplete()
-                                }
-                            },
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = stringResource(R.string.label_completed),
+                            tint = Color(0xFF6FBF86),
+                            modifier = Modifier
+                                .padding(horizontal = 10.dp)
+                                .size(28.dp),
                         )
 
                         Column(
@@ -699,21 +633,28 @@ private fun CompletedSwipeRow(
                         ) {
                             Text(
                                 text = item.title,
-                                color = titleColor,
+                                color = colorScheme.onSurface.copy(alpha = 0.78f),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                textDecoration = if (showStrikethrough) {
-                                    TextDecoration.LineThrough
-                                } else {
-                                    TextDecoration.None
-                                },
+                                textDecoration = TextDecoration.LineThrough,
                             )
-                            Text(
-                                text = stringResource(R.string.completed_at_prefix) + completedAtText,
-                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.84f),
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Schedule,
+                                    contentDescription = null,
+                                    tint = colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
+                                    modifier = Modifier.size(13.dp),
+                                )
+                                Text(
+                                    text = completedAtText,
+                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                )
+                            }
                         }
 
                         if (showPriorityFlag) {
@@ -756,39 +697,6 @@ private fun CompletedSwipeRow(
                     .height(1.dp)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
-    }
-}
-
-@Composable
-private fun CompletedCircularToggleIcon(
-    imageVector: ImageVector,
-    contentDescription: String,
-    tint: Color,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Box(
-        modifier = Modifier
-            .size(28.dp)
-            .clip(CircleShape)
-            .clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = ripple(
-                    bounded = true,
-                    radius = 14.dp,
-                ),
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(24.dp),
-        )
     }
 }
 
