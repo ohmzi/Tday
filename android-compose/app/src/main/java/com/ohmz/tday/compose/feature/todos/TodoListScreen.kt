@@ -2237,12 +2237,10 @@ private fun SwipeTaskRow(
         DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
     val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
-    val overduePrefix = stringResource(R.string.todos_due_overdue_prefix)
-    val duePrefix = stringResource(R.string.todos_due_prefix)
     val dueSubtitleText = if (isOverdue) {
-        overduePrefix + dueBodyText
+        stringResource(R.string.todos_due_overdue_text, dueBodyText)
     } else if (showDuePrefix) {
-        duePrefix + dueBodyText
+        stringResource(R.string.todos_due_text, dueBodyText)
     } else {
         dueBodyText
     }
@@ -2566,8 +2564,11 @@ private fun TodayTodoRow(
     val dueText =
         DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
     val isDetailOverdue = !todo.completed && todo.due.isBefore(Instant.now())
-    val overduePrefix = stringResource(R.string.todos_due_overdue_prefix)
-    val detailDueText = if (isDetailOverdue) overduePrefix + dueText else dueText
+    val detailDueText = if (isDetailOverdue) {
+        stringResource(R.string.todos_due_overdue_text, dueText)
+    } else {
+        dueText
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
