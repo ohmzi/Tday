@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -166,6 +165,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -724,6 +724,19 @@ private fun CreateListBottomSheet(
     var nameFieldFocused by remember { mutableStateOf(false) }
     val imeVisible = WindowInsets.isImeVisible
     val useTypingHeight = nameFieldFocused && imeVisible
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val keyboardExtraHeight by animateDpAsState(
+        targetValue = if (useTypingHeight) {
+            screenHeight * CREATE_LIST_SHEET_KEYBOARD_EXTRA_HEIGHT_FRACTION
+        } else {
+            0.dp
+        },
+        animationSpec = tween(
+            durationMillis = CREATE_LIST_SHEET_MOTION_MS,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "createListSheetKeyboardExtraHeight",
+    )
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = listColorAccent(listColor)
@@ -758,13 +771,11 @@ private fun CreateListBottomSheet(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .then(if (useTypingHeight) Modifier.fillMaxHeight(0.8f) else Modifier),
+                .fillMaxWidth(),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .then(if (useTypingHeight) Modifier.fillMaxSize() else Modifier)
                     .navigationBarsPadding()
                     .padding(horizontal = 18.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -923,7 +934,7 @@ private fun CreateListBottomSheet(
                     }
                 }
 
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(4.dp + keyboardExtraHeight))
             }
         }
     }
@@ -1847,6 +1858,8 @@ private data class ListIconOption(
 
 private const val DEFAULT_LIST_COLOR = "BLUE"
 private const val DEFAULT_LIST_ICON_KEY = "inbox"
+private const val CREATE_LIST_SHEET_KEYBOARD_EXTRA_HEIGHT_FRACTION = 0.10f
+private const val CREATE_LIST_SHEET_MOTION_MS = 320
 
 private fun performGentleHaptic(view: android.view.View) {
     ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
