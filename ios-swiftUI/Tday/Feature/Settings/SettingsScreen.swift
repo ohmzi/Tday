@@ -12,9 +12,17 @@ struct SettingsScreen: View {
     }
 
     private var titleCollapseProgress: CGFloat {
+        utilitySnappedTitleCollapseProgress(rawProgress: rawTitleCollapseProgress)
+    }
+
+    private var rawTitleCollapseProgress: CGFloat {
         let distance = TodoTimelineMetrics.titleCollapseDistance
         guard distance > 0 else { return 0 }
         return min(max(settingsScrollOffset / distance, 0), 1)
+    }
+
+    private var firstContentTopInset: CGFloat {
+        utilityFirstContentTopInset(collapseProgress: rawTitleCollapseProgress)
     }
 
     var body: some View {
@@ -65,7 +73,7 @@ struct SettingsScreen: View {
         List {
             settingsHeroTitleRow
 
-            settingsListRow(topInset: utilityFirstContentTopInset(collapseProgress: titleCollapseProgress)) {
+            settingsListRow(topInset: firstContentTopInset) {
                 SettingsProfileCard(user: viewModel.user)
             }
 
@@ -187,6 +195,10 @@ private func utilityFirstContentTopInset(collapseProgress: CGFloat) -> CGFloat {
         to: TodoTimelineMetrics.firstPinnedRowElasticEnd
     )
     return TodoTimelineMetrics.firstPinnedRowElasticClearance * elasticProgress
+}
+
+private func utilitySnappedTitleCollapseProgress(rawProgress: CGFloat) -> CGFloat {
+    rawProgress >= 0.5 ? 1 : 0
 }
 
 private struct SettingsProfileCard: View {
@@ -479,9 +491,17 @@ struct LatestReleaseScreen: View {
     @State private var releaseScrollOffset: CGFloat = 0
 
     private var titleCollapseProgress: CGFloat {
+        utilitySnappedTitleCollapseProgress(rawProgress: rawTitleCollapseProgress)
+    }
+
+    private var rawTitleCollapseProgress: CGFloat {
         let distance = TodoTimelineMetrics.titleCollapseDistance
         guard distance > 0 else { return 0 }
         return min(max(releaseScrollOffset / distance, 0), 1)
+    }
+
+    private var firstContentTopInset: CGFloat {
+        utilityFirstContentTopInset(collapseProgress: rawTitleCollapseProgress)
     }
 
     var body: some View {
@@ -515,7 +535,7 @@ struct LatestReleaseScreen: View {
             releaseHeroTitleRow
 
             if viewModel.isReleaseLoading && viewModel.currentRelease == nil && viewModel.latestRelease == nil {
-                releaseListRow(topInset: utilityFirstContentTopInset(collapseProgress: titleCollapseProgress)) {
+                releaseListRow(topInset: firstContentTopInset) {
                     HStack {
                         Spacer()
                         ProgressView()
@@ -530,14 +550,14 @@ struct LatestReleaseScreen: View {
                     viewModel.latestRelease == nil
 
                 if hasInitialReleaseError {
-                    releaseListRow(topInset: utilityFirstContentTopInset(collapseProgress: titleCollapseProgress)) {
+                    releaseListRow(topInset: firstContentTopInset) {
                         ReleaseErrorCard {
                             Task { await viewModel.refreshVersionInfo() }
                         }
                     }
                 }
 
-                releaseListRow(topInset: hasInitialReleaseError ? 0 : utilityFirstContentTopInset(collapseProgress: titleCollapseProgress)) {
+                releaseListRow(topInset: hasInitialReleaseError ? 0 : firstContentTopInset) {
                     ReleaseOverviewCard(viewModel: viewModel)
                 }
 
