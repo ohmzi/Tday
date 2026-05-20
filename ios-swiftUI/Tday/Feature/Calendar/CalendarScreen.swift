@@ -281,6 +281,7 @@ struct CalendarScreen: View {
             action: TimelineTopBarAction(
                 systemName: "calendar",
                 tint: calendarAccentColor,
+                usesCircularChrome: true,
                 action: jumpToToday
             ),
             titleRevealStart: CalendarTitleHandoff.pinnedRevealStart,
