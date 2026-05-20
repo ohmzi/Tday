@@ -1,11 +1,5 @@
 import SwiftUI
 
-private enum CompletedRestorePhase: String, Hashable {
-    case unchecked
-    case unstruck
-    case fading
-}
-
 struct CompletedScreen: View {
     @State private var viewModel: CompletedViewModel
     @Environment(\.tdayColors) private var colors
@@ -13,7 +7,6 @@ struct CompletedScreen: View {
     @State private var editingItem: CompletedItem?
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String> = []
-    @State private var restorePhases: [String: CompletedRestorePhase] = [:]
 
     init(container: AppContainer) {
         _viewModel = State(initialValue: CompletedViewModel(container: container))
@@ -34,12 +27,7 @@ struct CompletedScreen: View {
     }
 
     private var completedTimelineAnimationKey: String {
-        let itemIDs = viewModel.items.map(\.id).joined(separator: "|")
-        let phaseIDs = restorePhases
-            .sorted { $0.key < $1.key }
-            .map { "\($0.key):\($0.value.rawValue)" }
-            .joined(separator: "|")
-        return "\(itemIDs)::\(phaseIDs)"
+        viewModel.items.map(\.id).joined(separator: "|")
     }
 
     private var firstVisibleExpandedCompletedSectionID: String? {
@@ -60,9 +48,6 @@ struct CompletedScreen: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
-            .onChange(of: viewModel.items) {
-                pruneRestorePhases()
-            }
             .safeAreaInset(edge: .top, spacing: 0) {
                 TimelineTopBar(
                     title: "Completed",
@@ -223,38 +208,20 @@ struct CompletedScreen: View {
         let completedDate = item.completedAt ?? item.due
         let showListIndicator = item.listName?.isEmpty == false
         let showPriorityFlag = item.priority.lowercased() == "high"
-        let restorePhase = restorePhases[item.id]
-        let isRestoring = restorePhase != nil
-        let showsCompletedCheckmark = restorePhase == nil
-        let showsStrikethrough = restorePhase == nil || restorePhase == .unchecked
-        let isFading = restorePhase == .fading
 
         return VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
-                Button {
-                    restoreCompletedItem(item)
-                } label: {
-                    Image(systemName: showsCompletedCheckmark ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
-                        .foregroundStyle(showsCompletedCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
-                        .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
-                }
-                .disabled(isRestoring)
-                .buttonStyle(
-                    TdayPressButtonStyle(
-                        shadowColor: Color.black,
-                        pressedShadowOpacity: 0,
-                        normalShadowOpacity: 0
-                    )
-                )
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
+                    .foregroundStyle(Color.green)
+                    .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
                         .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold))
-                        .foregroundStyle(showsStrikethrough ? colors.onSurface.opacity(0.78) : colors.onSurface)
-                        .strikethrough(showsStrikethrough, color: colors.onSurface.opacity(0.65))
+                        .foregroundStyle(colors.onSurface.opacity(0.78))
+                        .strikethrough(true, color: colors.onSurface.opacity(0.65))
                         .lineLimit(2)
-                        .animation(.easeInOut(duration: 0.16), value: showsStrikethrough)
 
                     Text("Completed, \(completedDate.formatted(date: .omitted, time: .shortened))")
                         .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
@@ -282,20 +249,8 @@ struct CompletedScreen: View {
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
             .contentShape(Rectangle())
         }
-        .opacity(isFading ? 0 : 1)
-        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
-        .animation(.easeInOut(duration: 0.22), value: restorePhase)
-        .allowsHitTesting(!isRestoring)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
-        .swipeRevealHintOnTap(enabled: !isRestoring)
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button {
-                restoreCompletedItem(item)
-            } label: {
-                Label("Restore", systemImage: "arrow.uturn.backward")
-            }
-            .tint(.blue)
-        }
+        .swipeRevealHintOnTap()
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 Task { await viewModel.delete(item) }
@@ -309,41 +264,6 @@ struct CompletedScreen: View {
             }
             .tint(colors.secondary)
         }
-    }
-
-    private func restoreCompletedItem(_ item: CompletedItem) {
-        guard restorePhases[item.id] == nil else {
-            return
-        }
-
-        Task { @MainActor in
-            withAnimation(.easeInOut(duration: 0.14)) {
-                restorePhases[item.id] = .unchecked
-            }
-            try? await Task.sleep(nanoseconds: 180_000_000)
-
-            withAnimation(.easeInOut(duration: 0.16)) {
-                restorePhases[item.id] = .unstruck
-            }
-            try? await Task.sleep(nanoseconds: 180_000_000)
-
-            withAnimation(.easeInOut(duration: 0.22)) {
-                restorePhases[item.id] = .fading
-            }
-            try? await Task.sleep(nanoseconds: 220_000_000)
-
-            let didRestore = await viewModel.uncomplete(item)
-            if !didRestore {
-                withAnimation(.easeInOut(duration: 0.18)) {
-                    _ = restorePhases.removeValue(forKey: item.id)
-                }
-            }
-        }
-    }
-
-    private func pruneRestorePhases() {
-        let visibleIDs = Set(viewModel.items.map(\.id))
-        restorePhases = restorePhases.filter { visibleIDs.contains($0.key) }
     }
 }
 
