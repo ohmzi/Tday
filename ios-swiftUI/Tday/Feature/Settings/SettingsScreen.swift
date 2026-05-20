@@ -65,7 +65,7 @@ struct SettingsScreen: View {
         List {
             settingsHeroTitleRow
 
-            settingsListRow {
+            settingsListRow(topInset: utilityFirstContentTopInset(collapseProgress: titleCollapseProgress)) {
                 SettingsProfileCard(user: viewModel.user)
             }
 
@@ -132,7 +132,7 @@ struct SettingsScreen: View {
             }
 
             Color.clear
-                .frame(height: 24)
+                .frame(height: TodoTimelineMetrics.titleCollapseDistance + TodoTimelineMetrics.topBarRowHeight + 24)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -162,11 +162,14 @@ struct SettingsScreen: View {
         .listRowSeparator(.hidden)
     }
 
-    private func settingsListRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    private func settingsListRow<Content: View>(
+        topInset: CGFloat = 0,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
         content()
             .listRowInsets(
                 EdgeInsets(
-                    top: 0,
+                    top: topInset,
                     leading: TodoTimelineMetrics.horizontalPadding,
                     bottom: 12,
                     trailing: TodoTimelineMetrics.horizontalPadding
@@ -175,6 +178,15 @@ struct SettingsScreen: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
     }
+}
+
+private func utilityFirstContentTopInset(collapseProgress: CGFloat) -> CGFloat {
+    let elasticProgress = TodoTimelineMetrics.progress(
+        collapseProgress,
+        from: TodoTimelineMetrics.firstPinnedRowElasticStart,
+        to: TodoTimelineMetrics.firstPinnedRowElasticEnd
+    )
+    return TodoTimelineMetrics.firstPinnedRowElasticClearance * elasticProgress
 }
 
 private struct SettingsProfileCard: View {
@@ -473,62 +485,17 @@ struct LatestReleaseScreen: View {
     }
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 12) {
-                releaseHeroTitleRow
-
-                if viewModel.isReleaseLoading && viewModel.currentRelease == nil && viewModel.latestRelease == nil {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                            .controlSize(.large)
-                            .padding(.top, 48)
-                        Spacer()
-                    }
-                } else {
-                    if viewModel.releaseError != nil &&
-                        viewModel.currentRelease == nil &&
-                        viewModel.latestRelease == nil {
-                        ReleaseErrorCard {
-                            Task { await viewModel.refreshVersionInfo() }
-                        }
-                    }
-
-                    ReleaseOverviewCard(viewModel: viewModel)
-
-                    if viewModel.hasUpdate, let latestRelease = viewModel.latestRelease {
-                        UpdateAvailableCard(release: latestRelease) {
-                            if let url = URL(string: latestRelease.htmlUrl) {
-                                openURL(url)
-                            }
-                        }
-                    }
-
-                    if !viewModel.hasUpdate {
-                        InstalledVersionCard(
-                            currentVersion: viewModel.currentVersionName,
-                            currentRelease: viewModel.currentRelease
-                        )
-                    }
-
-                    if let browseUrl = viewModel.latestRelease?.htmlUrl ?? viewModel.currentRelease?.htmlUrl,
-                       let url = URL(string: browseUrl) {
-                        ReleaseBrowserButton {
-                            openURL(url)
-                        }
-                    }
-                }
-
-                Spacer(minLength: 24)
-            }
-            .padding(.horizontal, 18)
-            .padding(.bottom, 24)
-        }
-        .background(colors.background.ignoresSafeArea())
+        releaseContent
+        .background(colors.background)
+        .navigationBackButtonBehavior()
+        .navigationTitleTypography(
+            largeTitleColor: colors.onSurface,
+            inlineTitleColor: colors.onSurface,
+            backgroundColor: colors.background
+        )
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
-        .navigationBackButtonBehavior()
         .safeAreaInset(edge: .top, spacing: 0) {
             TimelineTopBar(
                 title: "App Version",
@@ -543,6 +510,81 @@ struct LatestReleaseScreen: View {
         }
     }
 
+    private var releaseContent: some View {
+        List {
+            releaseHeroTitleRow
+
+            if viewModel.isReleaseLoading && viewModel.currentRelease == nil && viewModel.latestRelease == nil {
+                releaseListRow(topInset: utilityFirstContentTopInset(collapseProgress: titleCollapseProgress)) {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .controlSize(.large)
+                            .padding(.top, 48)
+                        Spacer()
+                    }
+                }
+            } else {
+                let hasInitialReleaseError = viewModel.releaseError != nil &&
+                    viewModel.currentRelease == nil &&
+                    viewModel.latestRelease == nil
+
+                if hasInitialReleaseError {
+                    releaseListRow(topInset: utilityFirstContentTopInset(collapseProgress: titleCollapseProgress)) {
+                        ReleaseErrorCard {
+                            Task { await viewModel.refreshVersionInfo() }
+                        }
+                    }
+                }
+
+                releaseListRow(topInset: hasInitialReleaseError ? 0 : utilityFirstContentTopInset(collapseProgress: titleCollapseProgress)) {
+                    ReleaseOverviewCard(viewModel: viewModel)
+                }
+
+                if viewModel.hasUpdate, let latestRelease = viewModel.latestRelease {
+                    releaseListRow {
+                        UpdateAvailableCard(release: latestRelease) {
+                            if let url = URL(string: latestRelease.htmlUrl) {
+                                openURL(url)
+                            }
+                        }
+                    }
+                }
+
+                if !viewModel.hasUpdate {
+                    releaseListRow {
+                        InstalledVersionCard(
+                            currentVersion: viewModel.currentVersionName,
+                            currentRelease: viewModel.currentRelease
+                        )
+                    }
+                }
+
+                if let browseUrl = viewModel.latestRelease?.htmlUrl ?? viewModel.currentRelease?.htmlUrl,
+                   let url = URL(string: browseUrl) {
+                    releaseListRow {
+                        ReleaseBrowserButton {
+                            openURL(url)
+                        }
+                    }
+                }
+            }
+
+            Color.clear
+                .frame(height: TodoTimelineMetrics.titleCollapseDistance + TodoTimelineMetrics.topBarRowHeight + 24)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .disableVerticalScrollBounce()
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .contentMargins(.top, 0, for: .scrollContent)
+        .listSectionSpacing(0)
+        .environment(\.defaultMinListRowHeight, 1)
+        .disableVerticalScrollBounce()
+    }
+
     private var releaseHeroTitleRow: some View {
         TimelineExpandedTitleRow(
             title: "App Version",
@@ -554,6 +596,26 @@ struct LatestReleaseScreen: View {
                 .frame(width: 0, height: 0)
         }
         .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
+        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
+    private func releaseListRow<Content: View>(
+        topInset: CGFloat = 0,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .listRowInsets(
+                EdgeInsets(
+                    top: topInset,
+                    leading: TodoTimelineMetrics.horizontalPadding,
+                    bottom: 12,
+                    trailing: TodoTimelineMetrics.horizontalPadding
+                )
+            )
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 }
 
