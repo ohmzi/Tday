@@ -182,7 +182,8 @@ func mapListDTO(_ dto: ListDTO, iconFallback: String? = nil) -> ListSummary {
         color: dto.color,
         iconKey: dto.iconKey ?? iconFallback,
         todoCount: dto.todoCount,
-        updatedAt: parseOptionalDate(dto.updatedAt)
+        updatedAt: parseOptionalDate(dto.updatedAt),
+        createdAt: parseOptionalDate(dto.createdAt)
     )
 }
 
@@ -193,8 +194,23 @@ func listToCache(_ list: ListSummary) -> CachedListRecord {
         color: list.color,
         iconKey: list.iconKey,
         todoCount: list.todoCount,
-        updatedAtEpochMs: list.updatedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0
+        updatedAtEpochMs: list.updatedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
+        createdAtEpochMs: list.createdAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0
     )
+}
+
+func orderListsLikeWeb(_ lists: [CachedListRecord]) -> [CachedListRecord] {
+    guard lists.contains(where: { $0.createdAtEpochMs > 0 }) else {
+        return lists
+    }
+    return lists.enumerated()
+        .sorted { lhs, rhs in
+            if lhs.element.createdAtEpochMs != rhs.element.createdAtEpochMs {
+                return lhs.element.createdAtEpochMs > rhs.element.createdAtEpochMs
+            }
+            return lhs.offset < rhs.offset
+        }
+        .map(\.element)
 }
 
 func listFromCache(_ record: CachedListRecord, todoCountOverride: Int? = nil) -> ListSummary {
@@ -204,7 +220,8 @@ func listFromCache(_ record: CachedListRecord, todoCountOverride: Int? = nil) ->
         color: record.color,
         iconKey: record.iconKey,
         todoCount: todoCountOverride ?? record.todoCount,
-        updatedAt: record.updatedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.updatedAtEpochMs) / 1000.0) : nil
+        updatedAt: record.updatedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.updatedAtEpochMs) / 1000.0) : nil,
+        createdAt: record.createdAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.createdAtEpochMs) / 1000.0) : nil
     )
 }
 
