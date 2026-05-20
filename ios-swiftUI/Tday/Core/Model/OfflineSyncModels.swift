@@ -36,6 +36,7 @@ struct CachedListRecord: Identifiable, Equatable, Codable {
     let iconKey: String?
     let todoCount: Int
     let updatedAtEpochMs: Int64
+    let createdAtEpochMs: Int64
 }
 
 struct CachedCompletedRecord: Identifiable, Equatable, Codable {

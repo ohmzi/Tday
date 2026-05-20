@@ -39,6 +39,18 @@ final class OfflineCacheManager {
         let mutations = (try? modelContext.fetch(FetchDescriptor<PendingMutationEntity>())) ?? []
         let metadata = (try? modelContext.fetch(FetchDescriptor<SyncMetadataEntity>()))?.first
 
+        let listRecords = lists.map {
+            CachedListRecord(
+                id: $0.id,
+                name: $0.name,
+                color: $0.color,
+                iconKey: $0.iconKey,
+                todoCount: $0.todoCount,
+                updatedAtEpochMs: $0.updatedAtEpochMs,
+                createdAtEpochMs: $0.createdAtEpochMs ?? 0
+            )
+        }
+
         return OfflineSyncState(
             lastSuccessfulSyncEpochMs: metadata?.lastSuccessfulSyncEpochMs ?? 0,
             lastSyncAttemptEpochMs: metadata?.lastSyncAttemptEpochMs ?? 0,
@@ -73,16 +85,7 @@ final class OfflineCacheManager {
                     listColor: $0.listColor
                 )
             },
-            lists: lists.map {
-                CachedListRecord(
-                    id: $0.id,
-                    name: $0.name,
-                    color: $0.color,
-                    iconKey: $0.iconKey,
-                    todoCount: $0.todoCount,
-                    updatedAtEpochMs: $0.updatedAtEpochMs
-                )
-            },
+            lists: orderListsLikeWeb(listRecords),
             pendingMutations: mutations.map {
                 PendingMutationRecord(
                     mutationId: $0.mutationId,

@@ -17,6 +17,7 @@ import com.ohmz.tday.compose.core.data.cache.listToCache
 import com.ohmz.tday.compose.core.data.cache.mapCompletedDto
 import com.ohmz.tday.compose.core.data.cache.mapListDto
 import com.ohmz.tday.compose.core.data.cache.mapTodoDto
+import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.todoMergeKey
 import com.ohmz.tday.compose.core.data.cache.todoToCache
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
@@ -28,8 +29,8 @@ import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
-import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
+import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
@@ -584,9 +585,11 @@ class SyncManager @Inject constructor(
             .filterNot { it.completed }
             .groupingBy { it.listId }
             .eachCount()
-        val normalizedLists = mergedLists.map {
-            it.copy(todoCount = todoCountByList[it.id] ?: 0)
-        }
+        val normalizedLists = orderListsLikeWeb(
+            mergedLists.map {
+                it.copy(todoCount = todoCountByList[it.id] ?: 0)
+            },
+        )
 
         val dataMergedState = localState.copy(
             todos = mergedTodos,
