@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct CreateTaskSheet: View {
     let lists: [ListSummary]
@@ -310,7 +311,6 @@ private struct CreateTaskSheetTextCard: View {
             CreateTaskSheetTextField(
                 placeholder: "Title",
                 text: $title,
-                axis: .horizontal,
                 lineLimit: 1 ... 1
             )
 
@@ -319,8 +319,7 @@ private struct CreateTaskSheetTextCard: View {
             CreateTaskSheetTextField(
                 placeholder: "Notes",
                 text: $notes,
-                axis: .vertical,
-                lineLimit: 1 ... 3
+                lineLimit: 1 ... 1
             )
         }
     }
@@ -329,20 +328,38 @@ private struct CreateTaskSheetTextCard: View {
 private struct CreateTaskSheetTextField: View {
     let placeholder: String
     @Binding var text: String
-    let axis: Axis
     let lineLimit: ClosedRange<Int>
 
     @Environment(\.tdayColors) private var colors
 
+    private var normalizedText: Binding<String> {
+        Binding(
+            get: { text },
+            set: {
+                text = $0
+                    .replacingOccurrences(of: "\n", with: " ")
+                    .replacingOccurrences(of: "\r", with: " ")
+            }
+        )
+    }
+
     var body: some View {
         TextField(
             "",
-            text: $text,
+            text: normalizedText,
             prompt: Text(placeholder)
-                .foregroundStyle(colors.onSurfaceVariant.opacity(0.65)),
-            axis: axis
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.65))
         )
         .lineLimit(lineLimit)
+        .submitLabel(.done)
+        .onSubmit {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil,
+                from: nil,
+                for: nil
+            )
+        }
         .textInputAutocapitalization(.sentences)
         .font(.tdayRounded(size: 18, weight: .heavy))
         .foregroundStyle(colors.onSurface)
