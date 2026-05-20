@@ -20,6 +20,10 @@ struct CompletedScreen: View {
         Color(.sRGB, red: 94.0 / 255.0, green: 104.0 / 255.0, blue: 120.0 / 255.0, opacity: 1)
     }
 
+    private var completedCheckmarkColor: Color {
+        Color(.sRGB, red: 111.0 / 255.0, green: 191.0 / 255.0, blue: 134.0 / 255.0, opacity: 1)
+    }
+
     private var titleCollapseProgress: CGFloat {
         let distance = TodoTimelineMetrics.titleCollapseDistance
         guard distance > 0 else { return 0 }
@@ -214,7 +218,7 @@ struct CompletedScreen: View {
             HStack(alignment: .center, spacing: 12) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
-                    .foregroundStyle(Color.green)
+                    .foregroundStyle(completedCheckmarkColor)
                     .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
 
                 VStack(alignment: .leading, spacing: 4) {
