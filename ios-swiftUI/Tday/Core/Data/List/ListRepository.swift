@@ -37,7 +37,8 @@ final class ListRepository {
                     color: color,
                     iconKey: iconKey,
                     todoCount: 0,
-                    updatedAtEpochMs: now
+                    updatedAtEpochMs: now,
+                    createdAtEpochMs: now
                 )
             )
             nextState.pendingMutations.append(
@@ -70,7 +71,8 @@ final class ListRepository {
             guard let createdList = response.list else {
                 return
             }
-            let createdAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
+            let createdAt = parseOptionalDate(createdList.createdAt)?.epochMilliseconds ?? now
+            let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
             _ = try await cacheManager.updateOfflineState { state in
                 var nextState = self.replaceLocalListID(state, localListID: localListID, serverListID: createdList.id)
                 let todoCount = nextState.todos.filter { !$0.completed && $0.listId == createdList.id }.count
@@ -84,7 +86,8 @@ final class ListRepository {
                         color: createdList.color,
                         iconKey: createdList.iconKey ?? list.iconKey,
                         todoCount: todoCount,
-                        updatedAtEpochMs: createdAt
+                        updatedAtEpochMs: updatedAt,
+                        createdAtEpochMs: createdAt
                     )
                 }
                 nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
@@ -114,7 +117,8 @@ final class ListRepository {
                         color: color ?? list.color,
                         iconKey: iconKey ?? list.iconKey,
                         todoCount: list.todoCount,
-                        updatedAtEpochMs: now
+                        updatedAtEpochMs: now,
+                        createdAtEpochMs: list.createdAtEpochMs
                     )
                 }
                 nextState.pendingMutations = state.pendingMutations.compactMap { mutation in
@@ -153,7 +157,15 @@ final class ListRepository {
             var nextState = state
             nextState.lists = state.lists.map { list in
                 guard list.id == listId else { return list }
-                return CachedListRecord(id: list.id, name: normalizedName, color: color ?? list.color, iconKey: iconKey ?? list.iconKey, todoCount: list.todoCount, updatedAtEpochMs: now)
+                return CachedListRecord(
+                    id: list.id,
+                    name: normalizedName,
+                    color: color ?? list.color,
+                    iconKey: iconKey ?? list.iconKey,
+                    todoCount: list.todoCount,
+                    updatedAtEpochMs: now,
+                    createdAtEpochMs: list.createdAtEpochMs
+                )
             }
             nextState.pendingMutations.removeAll { $0.kind == .updateList && $0.targetId == listId }
             nextState.pendingMutations.append(
@@ -187,9 +199,8 @@ final class ListRepository {
     private func buildLists(from state: OfflineSyncState) -> [ListSummary] {
         let todoCounts = Dictionary(grouping: state.todos.filter { !$0.completed }, by: { $0.listId })
             .mapValues(\.count)
-        return state.lists
+        return orderListsLikeWeb(state.lists)
             .map { listFromCache($0, todoCountOverride: todoCounts[$0.id] ?? 0) }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     private func replaceLocalListID(_ state: OfflineSyncState, localListID: String, serverListID: String) -> OfflineSyncState {
@@ -226,7 +237,8 @@ final class ListRepository {
                     color: list.color,
                     iconKey: list.iconKey,
                     todoCount: list.todoCount,
-                    updatedAtEpochMs: list.updatedAtEpochMs
+                    updatedAtEpochMs: list.updatedAtEpochMs,
+                    createdAtEpochMs: list.createdAtEpochMs
                 )
             },
             pendingMutations: state.pendingMutations.map { mutation in

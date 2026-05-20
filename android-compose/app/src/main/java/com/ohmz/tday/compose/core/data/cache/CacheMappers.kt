@@ -64,7 +64,18 @@ internal fun listToCache(list: ListSummary): CachedListRecord {
         iconKey = list.iconKey,
         todoCount = list.todoCount,
         updatedAtEpochMs = list.updatedAt?.toEpochMilli() ?: 0L,
+        createdAtEpochMs = list.createdAt?.toEpochMilli() ?: 0L,
     )
+}
+
+internal fun orderListsLikeWeb(lists: List<CachedListRecord>): List<CachedListRecord> {
+    if (lists.none { it.createdAtEpochMs > 0L }) return lists
+    return lists.withIndex()
+        .sortedWith(
+            compareByDescending<IndexedValue<CachedListRecord>> { it.value.createdAtEpochMs }
+                .thenBy { it.index },
+        )
+        .map { it.value }
 }
 
 internal fun listFromCache(
@@ -79,6 +90,11 @@ internal fun listFromCache(
         todoCount = todoCountOverride,
         updatedAt = if (cache.updatedAtEpochMs > 0L) {
             Instant.ofEpochMilli(cache.updatedAtEpochMs)
+        } else {
+            null
+        },
+        createdAt = if (cache.createdAtEpochMs > 0L) {
+            Instant.ofEpochMilli(cache.createdAtEpochMs)
         } else {
             null
         },
@@ -168,6 +184,7 @@ internal fun mapListDto(dto: ListDto, iconFallback: String? = null): ListSummary
         iconKey = dto.iconKey ?: iconFallback,
         todoCount = dto.todoCount,
         updatedAt = parseOptionalInstant(dto.updatedAt),
+        createdAt = parseOptionalInstant(dto.createdAt),
     )
 }
 
