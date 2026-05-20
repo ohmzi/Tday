@@ -50,9 +50,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -64,13 +65,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
-import androidx.compose.ui.geometry.Offset
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
-import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.BuildConfig
-import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
+import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -348,8 +348,10 @@ private fun SettingsProfileCard(
             )
         }
         Text(
-            text = stringResource(R.string.settings_role_prefix) +
-                (user?.role ?: stringResource(R.string.settings_role_default)),
+            text = stringResource(
+                R.string.settings_role_label,
+                user?.role ?: stringResource(R.string.settings_role_default),
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = colorScheme.onSurface.copy(alpha = 0.58f),
         )
@@ -626,7 +628,10 @@ private fun ThemeModeSelector(
                             },
                         )
                         .clickable {
-                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            ViewCompat.performHapticFeedback(
+                                view,
+                                HapticFeedbackConstantsCompat.CLOCK_TICK
+                            )
                             onThemeModeSelected(mode)
                         },
                 ) {

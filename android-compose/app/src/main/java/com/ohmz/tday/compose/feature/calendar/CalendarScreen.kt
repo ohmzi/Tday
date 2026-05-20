@@ -2,14 +2,13 @@ package com.ohmz.tday.compose.feature.calendar
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -28,11 +27,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,8 +40,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -57,7 +59,6 @@ import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Flight
@@ -96,6 +97,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -108,13 +110,16 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.unit.sp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
@@ -135,6 +140,35 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val CalendarAccentPurple = Color(0xFF7D67B6)
+private val CalendarTodayBlue = Color(0xFF509AE6)
+private val CalendarCardCornerRadius = 24.dp
+private val CalendarCardHeaderHeight = 36.dp
+private val CalendarCardHeaderHorizontalPadding = 6.dp
+private val CalendarCardNavButtonWidth = 40.dp
+private val CalendarCardNavButtonHeight = 36.dp
+private val CalendarCardNavIconSize = 28.dp
+private val CalendarCardHorizontalPadding = 16.dp
+private val CalendarMonthCardTopPadding = 16.dp
+private val CalendarMonthCardBottomPadding = 20.dp
+private val CalendarMonthCardOuterSpacing = 14.dp
+private val CalendarMonthGridSpacing = 8.dp
+private val CalendarMonthWeekdayHeight = 18.dp
+private val CalendarMonthGridHeight = 292.dp
+private val CalendarMonthDayCellHeight = 42.dp
+private val CalendarMonthDayHighlightWidth = 42.dp
+private val CalendarMonthDayHighlightHeight = 40.dp
+private val CalendarMonthDayNumberWidth = 34.dp
+private val CalendarMonthDayNumberHeight = 24.dp
+private val CalendarMonthTaskCountHeight = 13.dp
+private val CalendarMonthTaskDotSize = 4.6.dp
+private val CalendarMonthHeaderTitleSize = 21.sp
+private val CalendarPeriodHeaderTitleSize = 21.sp
+private val CalendarDaySummaryTitleSize = 25.sp
+private val CalendarDaySummaryCountSize = 18.sp
+private val CalendarPeriodCardPageHeight = 78.dp
+private val CalendarPeriodWeekDayCellHeight = 72.dp
+private val CalendarPeriodPageHorizontalGutter = 2.dp
+private val CalendarPeriodCardBottomPadding = 18.dp
 
 private fun calendarPageAnimationSpec() = tween<IntOffset>(
     durationMillis = 260,
@@ -312,60 +346,77 @@ fun CalendarScreen(
                 }
 
                 item {
-                    AnimatedContent(
-                        targetState = selectedViewMode,
-                        transitionSpec = {
-                            val enteringForward = targetState.ordinal > initialState.ordinal
-                            val enter = slideInHorizontally(
-                                animationSpec = tween(durationMillis = 200),
-                                initialOffsetX = { fullWidth ->
-                                    if (enteringForward) fullWidth / 4 else -fullWidth / 4
-                                },
-                            ) + fadeIn(animationSpec = tween(durationMillis = 200))
-                            val exit = slideOutHorizontally(
-                                animationSpec = tween(durationMillis = 180),
-                                targetOffsetX = { fullWidth ->
-                                    if (enteringForward) -fullWidth / 4 else fullWidth / 4
-                                },
-                            ) + fadeOut(animationSpec = tween(durationMillis = 180))
-                            enter togetherWith exit
-                        },
-                        label = "calendarViewModeAnimatedContent",
-                    ) { mode ->
-                        when (mode) {
-                            CalendarViewMode.MONTH -> CalendarMonthCard(
-                                visibleMonth = visibleMonth,
-                                canGoPrevMonth = visibleMonth > minNavigableMonth,
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = tasksByDate,
-                                onPrevMonth = {
-                                    if (visibleMonth > minNavigableMonth) {
-                                        visibleMonthIso = visibleMonth.minusMonths(1).toString()
-                                    }
-                                },
-                                onNextMonth = { visibleMonthIso = visibleMonth.plusMonths(1).toString() },
-                                onSelectDate = ::selectDate,
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(
+                                elevation = 2.dp,
+                                shape = RoundedCornerShape(CalendarCardCornerRadius),
+                                clip = false,
                             )
+                            .clip(RoundedCornerShape(CalendarCardCornerRadius))
+                            .background(
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = RoundedCornerShape(CalendarCardCornerRadius),
+                            ),
+                    ) {
+                        AnimatedContent(
+                            targetState = selectedViewMode,
+                            transitionSpec = {
+                                val enteringForward = targetState.ordinal > initialState.ordinal
+                                val enter = slideInHorizontally(
+                                    animationSpec = tween(durationMillis = 200),
+                                    initialOffsetX = { fullWidth ->
+                                        if (enteringForward) fullWidth / 4 else -fullWidth / 4
+                                    },
+                                )
+                                val exit = slideOutHorizontally(
+                                    animationSpec = tween(durationMillis = 180),
+                                    targetOffsetX = { fullWidth ->
+                                        if (enteringForward) -fullWidth / 4 else fullWidth / 4
+                                    },
+                                )
+                                (enter togetherWith exit).using(SizeTransform(clip = true))
+                            },
+                            label = "calendarViewModeAnimatedContent",
+                        ) { mode ->
+                            when (mode) {
+                                CalendarViewMode.MONTH -> CalendarMonthCard(
+                                    visibleMonth = visibleMonth,
+                                    canGoPrevMonth = visibleMonth > minNavigableMonth,
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    tasksByDate = tasksByDate,
+                                    onPrevMonth = {
+                                        if (visibleMonth > minNavigableMonth) {
+                                            visibleMonthIso = visibleMonth.minusMonths(1).toString()
+                                        }
+                                    },
+                                    onNextMonth = {
+                                        visibleMonthIso = visibleMonth.plusMonths(1).toString()
+                                    },
+                                    onSelectDate = ::selectDate,
+                                )
 
-                            CalendarViewMode.WEEK -> CalendarWeekCard(
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = tasksByDate,
-                                canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
-                                onPrevWeek = { selectDate(selectedDate.minusWeeks(1)) },
-                                onNextWeek = { selectDate(selectedDate.plusWeeks(1)) },
-                                onSelectDate = ::selectDate,
-                            )
+                                CalendarViewMode.WEEK -> CalendarWeekCard(
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    tasksByDate = tasksByDate,
+                                    canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
+                                    onPrevWeek = { selectDate(selectedDate.minusWeeks(1)) },
+                                    onNextWeek = { selectDate(selectedDate.plusWeeks(1)) },
+                                    onSelectDate = ::selectDate,
+                                )
 
-                            CalendarViewMode.DAY -> CalendarDayCard(
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = tasksByDate,
-                                canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
-                                onPrevDay = { selectDate(selectedDate.minusDays(1)) },
-                                onNextDay = { selectDate(selectedDate.plusDays(1)) },
-                            )
+                                CalendarViewMode.DAY -> CalendarDayCard(
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    tasksByDate = tasksByDate,
+                                    canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
+                                    onPrevDay = { selectDate(selectedDate.minusDays(1)) },
+                                    onNextDay = { selectDate(selectedDate.plusDays(1)) },
+                                )
+                            }
                         }
                     }
                 }
@@ -497,42 +548,198 @@ private fun CalendarViewModeTabs(
     onModeSelected: (CalendarViewMode) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    val view = LocalView.current
+    val modes = CalendarViewMode.entries
+    val selectedIndex = modes.indexOf(selectedMode).coerceAtLeast(0)
+    val containerShape = RoundedCornerShape(22.dp)
+    val selectorShape = RoundedCornerShape(18.dp)
+    val interactionSources = remember {
+        modes.associateWith { MutableInteractionSource() }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .clip(containerShape)
+            .background(colorScheme.surfaceVariant.copy(alpha = 0.5f), containerShape)
+            .border(
+                width = 1.dp,
+                color = colorScheme.surface.copy(alpha = 0.62f),
+                shape = containerShape,
+            )
+            .padding(5.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(5.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
-            CalendarViewMode.entries.forEach { mode ->
-                val selected = mode == selectedMode
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            color = if (selected) {
-                                colorScheme.background
-                            } else {
-                                Color.Transparent
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val segmentWidth = maxWidth / modes.size
+            val monthPressed by interactionSources
+                .getValue(CalendarViewMode.MONTH)
+                .collectIsPressedAsState()
+            val weekPressed by interactionSources
+                .getValue(CalendarViewMode.WEEK)
+                .collectIsPressedAsState()
+            val dayPressed by interactionSources
+                .getValue(CalendarViewMode.DAY)
+                .collectIsPressedAsState()
+            val pressedMode = when {
+                monthPressed -> CalendarViewMode.MONTH
+                weekPressed -> CalendarViewMode.WEEK
+                dayPressed -> CalendarViewMode.DAY
+                else -> null
+            }
+            val selectedOffset by animateDpAsState(
+                targetValue = segmentWidth * selectedIndex,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessLow,
+                ),
+                label = "calendarViewModeSelectorOffset",
+            )
+            val selectorScale by animateFloatAsState(
+                targetValue = if (pressedMode == selectedMode) 0.985f else 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                ),
+                label = "calendarViewModeSelectorPressScale",
+            )
+            val selectorSurfaceAlpha by animateFloatAsState(
+                targetValue = if (pressedMode == selectedMode) 0.98f else 0.92f,
+                animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
+                label = "calendarViewModeSelectorSurfaceAlpha",
+            )
+            val selectorAccentAlpha by animateFloatAsState(
+                targetValue = if (pressedMode == selectedMode) 0.15f else 0.08f,
+                animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
+                label = "calendarViewModeSelectorAccentAlpha",
+            )
+
+            Box(
+                modifier = Modifier
+                    .offset(x = selectedOffset)
+                    .width(segmentWidth)
+                    .fillMaxSize()
+                    .padding(2.dp)
+                    .graphicsLayer {
+                        scaleX = selectorScale
+                        scaleY = selectorScale
+                    }
+                    .shadow(
+                        elevation = 12.dp,
+                        shape = selectorShape,
+                        ambientColor = CalendarAccentPurple.copy(alpha = 0.16f),
+                        spotColor = Color.Black.copy(alpha = 0.14f),
+                    )
+                    .clip(selectorShape)
+                    .background(
+                        colorScheme.surface.copy(alpha = selectorSurfaceAlpha),
+                        selectorShape
+                    )
+                    .background(
+                        CalendarAccentPurple.copy(alpha = selectorAccentAlpha),
+                        selectorShape
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = colorScheme.surface.copy(alpha = 0.82f),
+                        shape = selectorShape,
+                    )
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .selectableGroup(),
+            ) {
+                modes.forEach { mode ->
+                    val selected = mode == selectedMode
+                    val interactionSource = interactionSources.getValue(mode)
+                    val isPressed by interactionSource.collectIsPressedAsState()
+                    val contentScale by animateFloatAsState(
+                        targetValue = if (isPressed) 0.98f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                        label = "calendarViewModeContentPressScale",
+                    )
+                    val pressHaloAlpha by animateFloatAsState(
+                        targetValue = if (isPressed && !selected) 1f else 0f,
+                        animationSpec = tween(
+                            durationMillis = if (isPressed && !selected) 90 else 190,
+                            easing = FastOutSlowInEasing,
+                        ),
+                        label = "calendarViewModePressHaloAlpha",
+                    )
+                    val pressHaloScale by animateFloatAsState(
+                        targetValue = if (isPressed && !selected) 1f else 0.92f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                        label = "calendarViewModePressHaloScale",
+                    )
+                    val contentColor by animateColorAsState(
+                        targetValue = if (selected) {
+                            CalendarAccentPurple
+                        } else {
+                            colorScheme.onSurfaceVariant.copy(alpha = 0.88f)
+                        },
+                        label = "calendarViewModeContentColor",
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .clip(selectorShape)
+                            .selectable(
+                                selected = selected,
+                                onClick = {
+                                    if (!selected) {
+                                        ViewCompat.performHapticFeedback(
+                                            view,
+                                            HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                        )
+                                    }
+                                    onModeSelected(mode)
+                                },
+                                role = Role.RadioButton,
+                                interactionSource = interactionSource,
+                                indication = null,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                .graphicsLayer {
+                                    alpha = pressHaloAlpha
+                                    scaleX = pressHaloScale
+                                    scaleY = pressHaloScale
+                                }
+                                .clip(selectorShape)
+                                .background(colorScheme.surface.copy(alpha = 0.62f), selectorShape)
+                                .background(CalendarAccentPurple.copy(alpha = 0.10f), selectorShape)
+                                .border(
+                                    width = 1.dp,
+                                    color = colorScheme.surface.copy(alpha = 0.76f),
+                                    shape = selectorShape,
+                                )
+                        )
+                        Text(
+                            text = mode.name.lowercase(Locale.getDefault())
+                                .replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = contentColor,
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = contentScale
+                                scaleY = contentScale
                             },
                         )
-                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                        .clickable { onModeSelected(mode) }
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = mode.name.lowercase(Locale.getDefault()).replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (selected) colorScheme.onSurface else colorScheme.onSurfaceVariant,
-                    )
+                    }
                 }
             }
         }
@@ -593,18 +800,26 @@ private fun CalendarWeekCard(
                     },
                 )
             },
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(
+                    start = CalendarCardHorizontalPadding,
+                    top = 16.dp,
+                    end = CalendarCardHorizontalPadding,
+                    bottom = CalendarPeriodCardBottomPadding,
+                ),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(CalendarCardHeaderHeight)
+                    .padding(horizontal = CalendarCardHeaderHorizontalPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
@@ -619,7 +834,9 @@ private fun CalendarWeekCard(
                 ) {
                     Text(
                         text = formatWeekRange(weekStart),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = CalendarPeriodHeaderTitleSize,
+                        ),
                         fontWeight = FontWeight.ExtraBold,
                         color = colorScheme.onSurface,
                     )
@@ -635,6 +852,7 @@ private fun CalendarWeekCard(
                 targetState = weekStart,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(CalendarPeriodCardPageHeight)
                     .graphicsLayer { translationX = dragTranslationX },
                 transitionSpec = {
                     val movingToFuture = targetState > initialState
@@ -658,7 +876,9 @@ private fun CalendarWeekCard(
                     List(7) { offset -> displayWeekStart.plusDays(offset.toLong()) }
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = CalendarPeriodPageHorizontalGutter),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     weekDays.forEach { day ->
@@ -691,55 +911,76 @@ private fun CalendarWeekDayCell(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val containerColor = when {
-        isSelected -> CalendarAccentPurple.copy(alpha = 0.2f)
-        isToday -> CalendarAccentPurple.copy(alpha = 0.12f)
+        isSelected -> CalendarAccentPurple.copy(alpha = 0.24f)
+        isToday -> CalendarTodayBlue.copy(alpha = 0.16f)
         else -> colorScheme.background
     }
     val borderColor = when {
-        isSelected -> CalendarAccentPurple.copy(alpha = 0.8f)
-        isToday -> CalendarAccentPurple.copy(alpha = 0.42f)
+        isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
+        isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
         else -> Color.Transparent
     }
+    val borderWidth = when {
+        isSelected -> 1.6.dp
+        isToday -> 1.4.dp
+        else -> 0.dp
+    }
+    val stateTint = when {
+        isSelected -> CalendarAccentPurple
+        isToday -> CalendarTodayBlue
+        else -> CalendarAccentPurple
+    }
 
-    Card(
-        modifier = modifier.minimumInteractiveComponentSize(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = BorderStroke(
-            width = if (borderColor == Color.Transparent) 0.dp else 1.dp,
-            color = borderColor,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        onClick = onClick,
+    Box(
+        modifier = modifier
+            .height(CalendarPeriodCardPageHeight)
+            .minimumInteractiveComponentSize(),
+        contentAlignment = Alignment.Center,
     ) {
-        Column(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+                .height(CalendarPeriodWeekDayCellHeight),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            border = BorderStroke(
+                width = borderWidth,
+                color = borderColor,
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            onClick = onClick,
         ) {
-            Text(
-                text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
-                style = MaterialTheme.typography.labelMedium,
-                color = colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
-            )
-            Text(
-                text = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.titleMedium,
-                color = if (isSelected || isToday) CalendarAccentPurple else colorScheme.onSurface,
-                fontWeight = FontWeight.ExtraBold,
-            )
-            Text(
-                text = if (taskCount > 9) {
-                    stringResource(R.string.calendar_task_count_cap)
-                } else {
-                    taskCount.toString()
-                },
-                style = MaterialTheme.typography.labelSmall,
-                color = if (taskCount > 0) CalendarAccentPurple else colorScheme.onSurfaceVariant.copy(alpha = 0.42f),
-                fontWeight = FontWeight.ExtraBold,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+                )
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isSelected || isToday) stateTint else colorScheme.onSurface,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                Text(
+                    text = if (taskCount > 9) {
+                        stringResource(R.string.calendar_task_count_cap)
+                    } else {
+                        taskCount.toString()
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (taskCount > 0) stateTint else colorScheme.onSurfaceVariant.copy(
+                        alpha = 0.42f
+                    ),
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
         }
     }
 }
@@ -796,18 +1037,26 @@ private fun CalendarDayCard(
                     },
                 )
             },
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(
+                    start = CalendarCardHorizontalPadding,
+                    top = 16.dp,
+                    end = CalendarCardHorizontalPadding,
+                    bottom = CalendarPeriodCardBottomPadding,
+                ),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(CalendarCardHeaderHeight)
+                    .padding(horizontal = CalendarCardHeaderHorizontalPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
@@ -822,7 +1071,9 @@ private fun CalendarDayCard(
                 ) {
                     Text(
                         text = selectedDate.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault()),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = CalendarPeriodHeaderTitleSize,
+                        ),
                         color = colorScheme.onSurface,
                         fontWeight = FontWeight.ExtraBold,
                     )
@@ -838,6 +1089,7 @@ private fun CalendarDayCard(
                 targetState = selectedDate,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(CalendarPeriodCardPageHeight)
                     .graphicsLayer { translationX = dragTranslationX },
                 transitionSpec = {
                     val movingToFuture = targetState > initialState
@@ -860,11 +1112,13 @@ private fun CalendarDayCard(
                 val taskCount = tasksByDate[displayDate]?.size ?: 0
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text(
                         text = displayDate.format(DateTimeFormatter.ofPattern("MMMM d, yyyy")),
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = CalendarDaySummaryTitleSize,
+                        ),
                         color = if (displayDate == today) CalendarAccentPurple else colorScheme.onSurface,
                         fontWeight = FontWeight.ExtraBold,
                     )
@@ -874,7 +1128,9 @@ private fun CalendarDayCard(
                         } else {
                             stringResource(R.string.calendar_task_count_many, taskCount)
                         },
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = CalendarDaySummaryCountSize,
+                        ),
                         color = colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.ExtraBold,
                     )
@@ -945,6 +1201,7 @@ private fun CalendarTopBar(
                     icon = Icons.Rounded.CalendarMonth,
                     contentDescription = stringResource(R.string.calendar_jump_to_today),
                     onClick = onJumpToday,
+                    isAccentButton = true,
                 )
             }
             if (collapsedTitleAlpha > 0.001f) {
@@ -991,18 +1248,31 @@ private fun CalendarCircleButton(
     contentDescription: String,
     onClick: () -> Unit,
     isBackButton: Boolean = false,
+    isAccentButton: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = androidx.compose.ui.platform.LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val containerColor = if (isBackButton) {
-        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
-    } else {
-        colorScheme.background
+    val containerColor = when {
+        isBackButton -> if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(
+            alpha = 0.96f
+        )
+
+        isAccentButton -> CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.22f else 0.12f)
+        else -> colorScheme.background
     }
-    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f))
+    val buttonBorder = when {
+        isBackButton -> null
+        isAccentButton -> BorderStroke(
+            1.dp,
+            CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.62f else 0.48f)
+        )
+
+        else -> BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f))
+    }
+    val iconTint = if (isAccentButton) CalendarAccentPurple else colorScheme.onSurface
     val buttonSize = if (isBackButton) TdayDimens.FabSize else 54.dp
     val iconSize = if (isBackButton) 36.dp else 28.dp
     val scale by animateFloatAsState(
@@ -1041,7 +1311,7 @@ private fun CalendarCircleButton(
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                tint = colorScheme.onSurface,
+                tint = iconTint,
                 modifier = Modifier.size(iconSize),
             )
         }
@@ -1102,18 +1372,26 @@ private fun CalendarMonthCard(
                     },
                 )
             },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(
+                    start = CalendarCardHorizontalPadding,
+                    top = CalendarMonthCardTopPadding,
+                    end = CalendarCardHorizontalPadding,
+                    bottom = CalendarMonthCardBottomPadding,
+                ),
+            verticalArrangement = Arrangement.spacedBy(CalendarMonthCardOuterSpacing),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(CalendarCardHeaderHeight)
+                    .padding(horizontal = CalendarCardHeaderHorizontalPadding),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MiniCalendarNavButton(
@@ -1129,7 +1407,9 @@ private fun CalendarMonthCard(
                     Text(
                         text = visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) +
                             " " + visibleMonth.year,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = CalendarMonthHeaderTitleSize,
+                        ),
                         fontWeight = FontWeight.ExtraBold,
                         color = colorScheme.onSurface,
                     )
@@ -1141,13 +1421,19 @@ private fun CalendarMonthCard(
                 )
             }
 
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(CalendarMonthWeekdayHeight),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 WEEKDAY_HEADERS.forEach { dayLabel ->
                     Text(
                         text = dayLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.64f),
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.48f),
                         fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -1157,6 +1443,7 @@ private fun CalendarMonthCard(
                 targetState = visibleMonth,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(CalendarMonthGridHeight)
                     .graphicsLayer { translationX = dragTranslationX },
                 transitionSpec = {
                     val movingToFuture = targetState > initialState
@@ -1179,12 +1466,12 @@ private fun CalendarMonthCard(
                 val monthDays = remember(displayMonth) { buildMonthCells(displayMonth) }
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(CalendarMonthGridSpacing),
                 ) {
                     monthDays.chunked(7).forEach { week ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(0.dp),
                         ) {
                             week.forEach { cell ->
                                 val taskCount = tasksByDate[cell.date]?.size ?: 0
@@ -1212,14 +1499,17 @@ private fun MiniCalendarNavButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
     enabled: Boolean = true,
+    iconTint: Color? = null,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val enabledIconTint = iconTint ?: colorScheme.onSurfaceVariant
     Box(
         modifier = Modifier
-            .size(34.dp)
+            .width(CalendarCardNavButtonWidth)
+            .height(CalendarCardNavButtonHeight)
             .clip(RoundedCornerShape(12.dp))
             .background(
                 color = if (enabled && isPressed) {
@@ -1233,7 +1523,7 @@ private fun MiniCalendarNavButton(
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 17.dp,
+                    radius = 20.dp,
                 ),
                 onClick = onClick,
             ),
@@ -1243,11 +1533,11 @@ private fun MiniCalendarNavButton(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = if (enabled) {
-                colorScheme.onSurfaceVariant
+                enabledIconTint
             } else {
                 colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
             },
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(CalendarCardNavIconSize),
         )
     }
 }
@@ -1262,72 +1552,117 @@ private fun CalendarDayCell(
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val containerColor = when {
-        isSelected -> CalendarAccentPurple.copy(alpha = 0.2f)
-        isToday -> CalendarAccentPurple.copy(alpha = 0.12f)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val targetCellBackground = when {
+        isSelected -> CalendarAccentPurple.copy(alpha = if (isPressed) 0.32f else 0.24f)
+        isToday -> CalendarTodayBlue.copy(alpha = if (isPressed) 0.24f else 0.16f)
+        isPressed && cell.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
         else -> Color.Transparent
     }
-    val borderColor = when {
-        isSelected -> CalendarAccentPurple.copy(alpha = 0.8f)
-        isToday -> CalendarAccentPurple.copy(alpha = 0.5f)
+    val cellBackground by animateColorAsState(
+        targetValue = targetCellBackground,
+        label = "calendarMonthDateCellBackground",
+    )
+    val targetCellBorderColor = when {
+        isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
+        isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
+        isPressed && cell.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
         else -> Color.Transparent
     }
-    val cellShape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+    val cellBorderColor by animateColorAsState(
+        targetValue = targetCellBorderColor,
+        label = "calendarMonthDateCellBorder",
+    )
+    val targetCellBorderWidth = when {
+        isSelected -> 1.6.dp
+        isToday -> 1.4.dp
+        isPressed && cell.isCurrentMonth -> 1.2.dp
+        else -> 0.dp
+    }
+    val cellBorderWidth by animateDpAsState(
+        targetValue = targetCellBorderWidth,
+        label = "calendarMonthDateCellBorderWidth",
+    )
+    val stateTint = when {
+        isSelected -> CalendarAccentPurple
+        isToday -> CalendarTodayBlue
+        else -> CalendarAccentPurple
+    }
+    val cellShape = RoundedCornerShape(16.dp)
     val dayTextColor = when {
-        isSelected || isToday -> CalendarAccentPurple
+        isSelected || isToday -> stateTint
         cell.isCurrentMonth -> colorScheme.onSurface
         else -> colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     }
 
     Box(
         modifier = modifier
-            .minimumInteractiveComponentSize()
-            .aspectRatio(1f)
-            .background(
-                color = containerColor,
-                shape = cellShape,
-            )
-            .border(
-                width = if (borderColor == Color.Transparent) 0.dp else 1.2.dp,
-                color = borderColor,
-                shape = cellShape,
-            )
-            .clickable(onClick = onClick),
+            .fillMaxWidth()
+            .height(CalendarMonthDayCellHeight)
+            .graphicsLayer { alpha = if (cell.isCurrentMonth) 1f else 0.45f }
+            .clickable(
+                enabled = cell.isCurrentMonth,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = cell.date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.labelLarge,
-            color = dayTextColor,
-            fontWeight = FontWeight.ExtraBold,
+        Column(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 8.dp, top = 6.dp),
-        )
-
-        if (taskCount > 0 && cell.isCurrentMonth) {
-            Row(
+                .width(CalendarMonthDayHighlightWidth)
+                .height(CalendarMonthDayHighlightHeight)
+                .clip(cellShape)
+                .background(cellBackground, cellShape)
+                .border(
+                    width = cellBorderWidth,
+                    color = cellBorderColor,
+                    shape = cellShape,
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+        ) {
+            Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    .width(CalendarMonthDayNumberWidth)
+                    .height(CalendarMonthDayNumberHeight),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.FiberManualRecord,
-                    contentDescription = null,
-                    tint = CalendarAccentPurple,
-                    modifier = Modifier.size(7.dp),
-                )
                 Text(
-                    text = if (taskCount > 9) {
-                        stringResource(R.string.calendar_task_count_cap)
-                    } else {
-                        taskCount.toString()
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CalendarAccentPurple,
+                    text = cell.date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 19.sp),
+                    color = dayTextColor,
                     fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center,
                 )
+            }
+
+            Row(
+                modifier = Modifier.height(CalendarMonthTaskCountHeight),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                if (taskCount > 0 && cell.isCurrentMonth) {
+                    Box(
+                        modifier = Modifier
+                            .size(CalendarMonthTaskDotSize)
+                            .background(stateTint, CircleShape),
+                    )
+                    Text(
+                        text = if (taskCount > 9) {
+                            stringResource(R.string.calendar_task_count_cap)
+                        } else {
+                            taskCount.toString()
+                        },
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            lineHeight = 11.sp,
+                        ),
+                        color = stateTint,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
             }
         }
     }

@@ -1,8 +1,14 @@
 package com.ohmz.tday.compose.ui.component
 
-import android.graphics.Color as AndroidColor
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,14 +16,16 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -26,15 +34,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.LowPriority
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Schedule
@@ -45,18 +53,17 @@ import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -64,17 +71,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -85,19 +93,12 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import kotlinx.coroutines.delay
-
-private enum class TaskSheetPage {
-    MAIN,
-    DETAILS,
-    LIST,
-    PRIORITY,
-    REPEAT,
-}
+import android.graphics.Color as AndroidColor
 
 private enum class RepeatPreset(
     val label: String,
@@ -120,6 +121,10 @@ private fun normalizePriorityValue(value: String?): String {
 }
 
 private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
+private const val CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION = 0.86f
+private const val CREATE_TASK_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
+private const val CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.85f
+private const val CREATE_TASK_SHEET_MOTION_MS = 320
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,7 +143,11 @@ fun CreateTaskBottomSheet(
     onUpdateTask: ((todo: TodoItem, payload: CreateTaskPayload) -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val dismissKeyboard = {
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+    }
     val dateOnlyFormatter = remember {
         DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault())
     }
@@ -147,7 +156,6 @@ fun CreateTaskBottomSheet(
     }
     val listIdsKey = remember(lists) { lists.joinToString(separator = "|") { it.id } }
 
-    var page by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN) }
     val isEditMode = editingTask != null
     var title by rememberSaveable(editingTask?.id) {
         mutableStateOf(editingTask?.title.orEmpty())
@@ -198,11 +206,9 @@ fun CreateTaskBottomSheet(
     var selectedRepeat by rememberSaveable(editingTask?.id) {
         mutableStateOf(repeatPresetFromRrule(editingTask?.rrule).name)
     }
-    var listReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.MAIN.name) }
-    var priorityReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
-    var repeatReturnPage by rememberSaveable { mutableStateOf(TaskSheetPage.DETAILS.name) }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
+    var sheetVisible by remember { mutableStateOf(false) }
 
     val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
     val repeatPreset = RepeatPreset.valueOf(selectedRepeat)
@@ -218,6 +224,26 @@ fun CreateTaskBottomSheet(
         Color.Black.copy(alpha = 0.68f)
     } else {
         Color.Black.copy(alpha = 0.40f)
+    }
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val density = LocalDensity.current
+    val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
+    val maxSheetHeight = screenHeight * CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION
+    val sheetHeight by animateDpAsState(
+        targetValue = (screenHeight * if (keyboardVisible) {
+            CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION
+        } else {
+            CREATE_TASK_SHEET_NORMAL_HEIGHT_FRACTION
+        }).coerceAtMost(maxSheetHeight),
+        animationSpec = tween(
+            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "createTaskSheetHeight",
+    )
+
+    LaunchedEffect(Unit) {
+        sheetVisible = true
     }
 
     fun submitTask() {
@@ -239,238 +265,149 @@ fun CreateTaskBottomSheet(
         }
     }
 
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = null,
-        containerColor = sheetContainerColor,
-        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
-        scrimColor = sheetScrimColor,
-        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.8f),
+                .fillMaxSize(),
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .navigationBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                    .background(sheetScrimColor)
+                    .clickable {
+                        dismissKeyboard()
+                        onDismiss()
+                    },
+            )
+
+            AnimatedVisibility(
+                visible = sheetVisible,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(),
+                enter = slideInVertically(
+                    animationSpec = tween(
+                        durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                        easing = FastOutSlowInEasing,
+                    ),
+                    initialOffsetY = { fullHeight -> fullHeight },
+                ) + fadeIn(animationSpec = tween(durationMillis = CREATE_TASK_SHEET_MOTION_MS)),
+                exit = slideOutVertically(
+                    animationSpec = tween(
+                        durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                        easing = FastOutSlowInEasing,
+                    ),
+                    targetOffsetY = { fullHeight -> fullHeight },
+                ) + fadeOut(animationSpec = tween(durationMillis = CREATE_TASK_SHEET_MOTION_MS)),
             ) {
-                SheetHeader(
-                    title = when (page) {
-                        TaskSheetPage.MAIN -> if (isEditMode) "Edit task" else "New task"
-                        TaskSheetPage.DETAILS -> "Details"
-                        TaskSheetPage.LIST -> "List"
-                        TaskSheetPage.PRIORITY -> "Priority"
-                        TaskSheetPage.REPEAT -> "Repeat"
-                    },
-                    leftIcon = if (page == TaskSheetPage.MAIN) {
-                        Icons.Rounded.Close
-                    } else {
-                        Icons.AutoMirrored.Rounded.ArrowBack
-                    },
-                    leftContentDescription = if (page == TaskSheetPage.MAIN) "Close" else "Back",
-                    onLeftClick = {
-                        focusManager.clearFocus(force = true)
-                        when (page) {
-                            TaskSheetPage.MAIN -> onDismiss()
-                            TaskSheetPage.DETAILS -> page = TaskSheetPage.MAIN
-                            TaskSheetPage.LIST -> page = TaskSheetPage.valueOf(listReturnPage)
-                            TaskSheetPage.PRIORITY -> page = TaskSheetPage.valueOf(priorityReturnPage)
-                            TaskSheetPage.REPEAT -> page = TaskSheetPage.valueOf(repeatReturnPage)
-                        }
-                    },
-                    onConfirm = {
-                        focusManager.clearFocus(force = true)
-                        if (canSubmit) {
-                            submitTask()
-                        }
-                    },
-                    confirmEnabled = canSubmit,
-                )
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(sheetHeight)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {},
+                    shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+                    color = sheetContainerColor,
+                    tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(start = 18.dp, top = 14.dp, end = 18.dp, bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                    SheetHeader(
+                        title = if (isEditMode) "Edit task" else "New task",
+                        leftIcon = Icons.Rounded.Close,
+                        leftContentDescription = "Close",
+                        onLeftClick = {
+                            dismissKeyboard()
+                            onDismiss()
+                        },
+                        onConfirm = {
+                            dismissKeyboard()
+                            if (canSubmit) {
+                                submitTask()
+                            }
+                        },
+                        confirmEnabled = canSubmit,
+                    )
 
-                when (page) {
-                    TaskSheetPage.MAIN -> {
-                        TaskTextCard(
-                            title = title,
-                            notes = notes,
-                            onTitleChange = { title = it },
-                            onNotesChange = { notes = it },
+                    TaskTextCard(
+                        title = title,
+                        notes = notes,
+                        onTitleChange = { title = it },
+                        onNotesChange = { notes = it },
+                        onKeyboardDone = dismissKeyboard,
+                    )
+
+                    SectionHeading("Schedule")
+                    GroupCard {
+                        SplitDateTimeRow(
+                            icon = Icons.Rounded.CalendarMonth,
+                            title = "Due",
+                            dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                            timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
+                            onDateClick = { dueDatePickerOpen = true },
+                            onTimeClick = { dueTimePickerOpen = true },
                         )
-
-                        SectionHeading("Date & Time")
-                        GroupCard {
-                            SplitDateTimeRow(
-                                icon = Icons.Rounded.CalendarMonth,
-                                title = "Due",
-                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onDateClick = { dueDatePickerOpen = true },
-                                onTimeClick = { dueTimePickerOpen = true },
-                            )
-                        }
-
-                        SectionHeading("More Options")
-                        GroupCard {
-                            if (lists.isNotEmpty()) {
-                                SheetRow(
-                                    icon = Icons.AutoMirrored.Rounded.List,
-                                    title = "List",
-                                    value = selectedListName,
-                                    onClick = {
-                                        listReturnPage = TaskSheetPage.MAIN.name
-                                        page = TaskSheetPage.LIST
-                                    },
-                                )
-                                RowDivider()
-                            }
-                            SheetRow(
-                                icon = Icons.Rounded.LowPriority,
-                                title = "Priority",
-                                value = selectedPriority,
-                                onClick = {
-                                    priorityReturnPage = TaskSheetPage.MAIN.name
-                                    page = TaskSheetPage.PRIORITY
-                                },
-                            )
-                            RowDivider()
-                            SheetRow(
-                                icon = Icons.Rounded.Info,
-                                title = "Details",
-                                value = "",
-                                forceChevron = true,
-                                onClick = { page = TaskSheetPage.DETAILS },
-                            )
-                        }
                     }
 
-                    TaskSheetPage.DETAILS -> {
-                        SectionHeading("Scheduling")
-                        GroupCard {
-                            SplitDateTimeRow(
-                                icon = Icons.Rounded.CalendarMonth,
-                                title = "Due",
-                                dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                                onDateClick = { dueDatePickerOpen = true },
-                                onTimeClick = { dueTimePickerOpen = true },
-                            )
-                            RowDivider()
-                            SheetRow(
-                                icon = Icons.Rounded.Repeat,
-                                title = "Repeat",
-                                value = repeatPreset.label,
-                                onClick = {
-                                    repeatReturnPage = TaskSheetPage.DETAILS.name
-                                    page = TaskSheetPage.REPEAT
-                                },
-                            )
-                        }
-
-                        SectionHeading("Organization")
-                        GroupCard {
-                            SheetRow(
-                                icon = Icons.Rounded.LowPriority,
-                                title = "Priority",
-                                value = selectedPriority,
-                                onClick = {
-                                    priorityReturnPage = TaskSheetPage.DETAILS.name
-                                    page = TaskSheetPage.PRIORITY
-                                },
-                            )
-
-                            if (lists.isNotEmpty()) {
-                                RowDivider()
-                                SheetRow(
-                                    icon = Icons.AutoMirrored.Rounded.List,
-                                    title = "List",
-                                    value = selectedListName,
-                                    onClick = {
-                                        listReturnPage = TaskSheetPage.DETAILS.name
-                                        page = TaskSheetPage.LIST
-                                    },
-                                )
-                            }
-                        }
+                    SectionHeading("Details")
+                    GroupCard {
+                        SheetDropdownRow(
+                            icon = Icons.AutoMirrored.Rounded.List,
+                            title = "List",
+                            value = selectedListName,
+                            options = listOf<ListSummary?>(null) + lists,
+                            optionLabel = { option -> option?.name ?: "No list" },
+                            optionSwatchColor = { option ->
+                                option?.let {
+                                    listColorSwatchForSelector(
+                                        raw = it.color,
+                                        fallback = colorScheme.primary.copy(alpha = 0.75f),
+                                    )
+                                } ?: colorScheme.outlineVariant.copy(alpha = 0.95f)
+                            },
+                            isSelected = { option -> option?.id == selectedListId },
+                            onOptionSelected = { option -> selectedListId = option?.id },
+                        )
+                        RowDivider()
+                        SheetDropdownRow(
+                            icon = Icons.Rounded.LowPriority,
+                            title = "Priority",
+                            value = selectedPriority,
+                            options = listOf("Low", "Medium", "High"),
+                            optionLabel = { option -> option },
+                            optionSwatchColor = { option -> prioritySwatchColor(option) },
+                            isSelected = { option -> selectedPriority == option },
+                            onOptionSelected = { option -> selectedPriority = option },
+                        )
+                        RowDivider()
+                        SheetDropdownRow(
+                            icon = Icons.Rounded.Repeat,
+                            title = "Repeat",
+                            value = repeatPreset.label,
+                            options = RepeatPreset.entries.toList(),
+                            optionLabel = { option -> option.label },
+                            optionSwatchColor = { option -> repeatSwatchColor(option) },
+                            isSelected = { option -> selectedRepeat == option.name },
+                            onOptionSelected = { option -> selectedRepeat = option.name },
+                        )
                     }
 
-                    TaskSheetPage.LIST -> {
-                        SectionHeading("Choose List")
-                        GroupCard {
-                            ListSelectionRow(
-                                title = "No list",
-                                swatchColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.95f),
-                                selected = selectedListId == null,
-                                onClick = {
-                                    selectedListId = null
-                                    page = TaskSheetPage.valueOf(listReturnPage)
-                                },
-                            )
-                            lists.forEach { list ->
-                                RowDivider()
-                                ListSelectionRow(
-                                    title = list.name,
-                                    swatchColor = listColorSwatchForSelector(
-                                        raw = list.color,
-                                        fallback = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
-                                    ),
-                                    selected = selectedListId == list.id,
-                                    onClick = {
-                                        selectedListId = list.id
-                                        page = TaskSheetPage.valueOf(listReturnPage)
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    TaskSheetPage.PRIORITY -> {
-                        SectionHeading("Choose Priority")
-                        GroupCard {
-                            listOf("Low", "Medium", "High").forEachIndexed { index, option ->
-                                if (index > 0) {
-                                    RowDivider()
-                                }
-                                ListSelectionRow(
-                                    title = option,
-                                    swatchColor = prioritySwatchColor(option),
-                                    selected = selectedPriority == option,
-                                    onClick = {
-                                        selectedPriority = option
-                                        page = TaskSheetPage.valueOf(priorityReturnPage)
-                                    },
-                                )
-                            }
-                        }
-                    }
-
-                    TaskSheetPage.REPEAT -> {
-                        SectionHeading("Choose Repeat")
-                        GroupCard {
-                            RepeatPreset.entries.forEachIndexed { index, option ->
-                                if (index > 0) {
-                                    RowDivider()
-                                }
-                                ListSelectionRow(
-                                    title = option.label,
-                                    swatchColor = repeatSwatchColor(option),
-                                    selected = selectedRepeat == option.name,
-                                    onClick = {
-                                        selectedRepeat = option.name
-                                        page = TaskSheetPage.valueOf(repeatReturnPage)
-                                    },
-                                )
-                            }
-                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
-
-                Spacer(modifier = Modifier.height(6.dp))
             }
         }
     }
@@ -659,6 +596,7 @@ private fun TaskTextCard(
     notes: String,
     onTitleChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
+    onKeyboardDone: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -667,14 +605,14 @@ private fun TaskTextCard(
             value = title,
             placeholder = "Title",
             onValueChange = onTitleChange,
-            singleLine = true,
+            onKeyboardDone = onKeyboardDone,
         )
         RowDivider()
         TaskField(
             value = notes,
             placeholder = "Notes",
             onValueChange = onNotesChange,
-            singleLine = false,
+            onKeyboardDone = onKeyboardDone,
         )
     }
 }
@@ -684,14 +622,21 @@ private fun TaskField(
     value: String,
     placeholder: String,
     onValueChange: (String) -> Unit,
-    singleLine: Boolean,
+    onKeyboardDone: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
     BasicTextField(
         value = value,
-        onValueChange = onValueChange,
-        singleLine = singleLine,
+        onValueChange = { onValueChange(it.replace('\n', ' ').replace('\r', ' ')) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                onKeyboardDone()
+                defaultKeyboardAction(ImeAction.Done)
+            },
+        ),
         textStyle = MaterialTheme.typography.titleMedium.copy(
             color = colorScheme.onSurface,
             fontWeight = FontWeight.ExtraBold,
@@ -819,8 +764,9 @@ private fun SheetRow(
     title: String,
     value: String,
     onClick: () -> Unit,
-    forceChevron: Boolean = false,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -831,7 +777,7 @@ private fun SheetRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = colorScheme.onSurfaceVariant,
             modifier = Modifier.size(22.dp),
         )
         Spacer(modifier = Modifier.size(14.dp))
@@ -839,46 +785,149 @@ private fun SheetRow(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = colorScheme.onSurface,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.weight(1f),
         )
 
-        if (value.isNotBlank()) {
+        Row(
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(start = 8.dp),
+        ) {
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 8.dp),
             )
-        }
 
-        if (forceChevron || value.isNotBlank()) {
+            Spacer(modifier = Modifier.width(2.dp))
+
             Icon(
-                imageVector = Icons.Rounded.ChevronRight,
+                imageVector = Icons.Rounded.ExpandMore,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
 @Composable
-private fun ListSelectionRow(
+private fun <T> SheetDropdownRow(
+    icon: ImageVector,
+    title: String,
+    value: String,
+    options: List<T>,
+    optionLabel: (T) -> String,
+    optionSwatchColor: (T) -> Color,
+    isSelected: (T) -> Boolean,
+    onOptionSelected: (T) -> Unit,
+) {
+    var selectorOpen by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        SheetRow(
+            icon = icon,
+            title = title,
+            value = value,
+            onClick = { selectorOpen = true },
+        )
+
+        if (selectorOpen) {
+            CenteredSelectorDialog(
+                title = title,
+                options = options,
+                optionLabel = optionLabel,
+                optionSwatchColor = optionSwatchColor,
+                isSelected = isSelected,
+                onDismiss = { selectorOpen = false },
+                onOptionSelected = { option ->
+                    onOptionSelected(option)
+                    selectorOpen = false
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun <T> CenteredSelectorDialog(
+    title: String,
+    options: List<T>,
+    optionLabel: (T) -> String,
+    optionSwatchColor: (T) -> Color,
+    isSelected: (T) -> Boolean,
+    onDismiss: () -> Unit,
+    onOptionSelected: (T) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = colorScheme.background.luminance() < 0.5f
+    val containerColor = if (isDark) {
+        lerp(colorScheme.surface, colorScheme.surfaceVariant, 0.18f)
+    } else {
+        colorScheme.surface
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.74f)
+                .heightIn(max = 380.dp),
+            shape = RoundedCornerShape(32.dp),
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 10.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                )
+
+                options.forEachIndexed { index, option ->
+                    if (index > 0) {
+                        RowDivider()
+                    }
+                    CenteredSelectorRow(
+                        title = optionLabel(option),
+                        swatchColor = optionSwatchColor(option),
+                        selected = isSelected(option),
+                        onClick = { onOptionSelected(option) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CenteredSelectorRow(
     title: String,
     swatchColor: Color,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -889,21 +938,28 @@ private fun ListSelectionRow(
                     shape = RoundedCornerShape(999.dp),
                 ),
         )
-        Spacer(modifier = Modifier.size(12.dp))
+
+        Spacer(modifier = Modifier.width(14.dp))
+
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             color = colorScheme.onSurface,
             fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
+
         if (selected) {
             Icon(
                 imageVector = Icons.Rounded.Check,
                 contentDescription = null,
                 tint = colorScheme.primary,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(20.dp),
             )
+        } else {
+            Spacer(modifier = Modifier.size(20.dp))
         }
     }
 }

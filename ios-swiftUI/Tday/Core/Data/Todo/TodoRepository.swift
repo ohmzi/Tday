@@ -418,7 +418,7 @@ final class TodoRepository {
         let todayTodos = timelineTodos.filter { isTodayTodo($0, now: now) }
         let scheduledTodos = timelineTodos.filter { isScheduledTodo($0, now: now) }
         let todoCountsByList = Dictionary(grouping: timelineTodos, by: \.listId).mapValues(\.count)
-        let lists = state.lists.map { list in
+        let lists = orderListsLikeWeb(state.lists).map { list in
             listFromCache(list, todoCountOverride: todoCountsByList[list.id] ?? 0)
         }
 
