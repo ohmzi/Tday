@@ -325,98 +325,101 @@ private struct HomeTopBar: View {
         let buttonGap: CGFloat = 8
         let expandedSearchWidth = max(buttonSize, totalWidth)
         let searchWidth = searchExpanded ? expandedSearchWidth : buttonSize
+        let collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
+        let searchOffsetX = searchExpanded ? 0 : collapsedSearchOffset
 
         ZStack(alignment: .trailing) {
-            if !searchExpanded {
-                TimelineView(.periodic(from: .now, by: 60)) { context in
-                    let daytime = isHomeDaytime(context.date)
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let daytime = isHomeDaytime(context.date)
 
-                    HStack(spacing: 8) {
-                        Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
-                            .font(.system(size: 26, weight: .regular))
-                            .foregroundStyle(Color(hex: daytime ? 0xF4C542 : 0xA8B8E8))
+                HStack(spacing: 8) {
+                    Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
+                        .font(.system(size: 26, weight: .regular))
+                        .foregroundStyle(Color(hex: daytime ? 0xF4C542 : 0xA8B8E8))
 
-                        Text("T'Day")
-                            .font(.tdayRounded(size: 32, weight: .heavy))
-                            .foregroundStyle(colors.onSurface)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, 2)
-                    .transition(.opacity)
+                    Text("T'Day")
+                        .font(.tdayRounded(size: 32, weight: .heavy))
+                        .foregroundStyle(colors.onSurface)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 2)
+                .opacity(searchExpanded ? 0 : 1)
+                .allowsHitTesting(false)
             }
 
             HStack(spacing: buttonGap) {
-                Group {
-                    if searchExpanded {
-                        HStack(spacing: 10) {
-                            HomeIconCircleButton(icon: "magnifyingglass", compact: true) {
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                                    searchExpanded = false
-                                }
-                                searchQuery = ""
-                            }
-
-                            TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
-                                .focused(searchFieldFocused)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .font(.tdayRounded(size: 18, weight: .bold))
-                                .foregroundStyle(colors.onSurface)
-                                .tint(colors.primary)
-
-                            Button {
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                                    searchExpanded = false
-                                }
-                                searchQuery = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
-                            }
-                            .buttonStyle(
-                                TdayPressButtonStyle(
-                                    shadowColor: Color.black,
-                                    pressedShadowOpacity: 0,
-                                    normalShadowOpacity: 0
-                                )
-                            )
-                            .accessibilityLabel("Close search")
-                        }
-                        .padding(.horizontal, 14)
-                        .frame(width: searchWidth, height: buttonSize)
-                        .background(colors.surface, in: Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
-                        )
-                    } else {
-                        HomeIconCircleButton(icon: "magnifyingglass") {
-                            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                                searchExpanded = true
-                            }
-                        }
-                        .frame(width: searchWidth, height: buttonSize)
-                    }
+                HomeIconCircleButton(icon: "text.badge.plus") {
+                    onCreateList()
                 }
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear
-                            .preference(key: HomeSearchBarFrameKey.self, value: proxy.frame(in: .named("home-root")))
-                    }
-                )
 
-                if !searchExpanded {
-                    HomeIconCircleButton(icon: "text.badge.plus") {
-                        onCreateList()
-                    }
-
-                    HomeIconCircleButton(icon: "ellipsis") {
-                        onOpenSettings()
-                    }
+                HomeIconCircleButton(icon: "ellipsis") {
+                    onOpenSettings()
                 }
             }
+            .opacity(searchExpanded ? 0 : 1)
+            .allowsHitTesting(!searchExpanded)
+
+            Group {
+                if searchExpanded {
+                    HStack(spacing: 10) {
+                        HomeIconCircleButton(icon: "magnifyingglass", compact: true) {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                                searchExpanded = false
+                            }
+                            searchQuery = ""
+                        }
+
+                        TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
+                            .focused(searchFieldFocused)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .font(.tdayRounded(size: 18, weight: .bold))
+                            .foregroundStyle(colors.onSurface)
+                            .tint(colors.primary)
+
+                        Button {
+                            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                                searchExpanded = false
+                            }
+                            searchQuery = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                        }
+                        .buttonStyle(
+                            TdayPressButtonStyle(
+                                shadowColor: Color.black,
+                                pressedShadowOpacity: 0,
+                                normalShadowOpacity: 0
+                            )
+                        )
+                        .accessibilityLabel("Close search")
+                    }
+                    .padding(.horizontal, 14)
+                    .frame(width: searchWidth, height: buttonSize)
+                    .background(colors.surface, in: Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
+                    )
+                } else {
+                    HomeIconCircleButton(icon: "magnifyingglass") {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                            searchExpanded = true
+                        }
+                    }
+                    .frame(width: searchWidth, height: buttonSize)
+                }
+            }
+            .offset(x: searchOffsetX)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: HomeSearchBarFrameKey.self, value: proxy.frame(in: .named("home-root")))
+                }
+            )
+            .zIndex(2)
             .animation(.spring(response: 0.28, dampingFraction: 0.86), value: searchExpanded)
         }
         .frame(maxWidth: .infinity, minHeight: HomeMetrics.topBarButtonSize)
