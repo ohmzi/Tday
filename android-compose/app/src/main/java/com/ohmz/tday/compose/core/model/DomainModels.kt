@@ -48,6 +48,7 @@ data class ListSummary(
     val iconKey: String?,
     val todoCount: Int,
     val updatedAt: Instant? = null,
+    val createdAt: Instant? = null,
 )
 
 data class DashboardSummary(

@@ -1,11 +1,16 @@
 package com.ohmz.tday.compose.feature.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -30,11 +35,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -48,7 +53,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
@@ -128,13 +132,11 @@ import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -151,6 +153,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -166,6 +169,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -173,8 +177,11 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
@@ -190,7 +197,7 @@ import java.time.Instant
 import java.time.LocalTime
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
@@ -705,7 +712,6 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CreateListBottomSheet(
     listName: String,
@@ -718,11 +724,35 @@ private fun CreateListBottomSheet(
     onCreate: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val dismissKeyboard = {
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+    }
+    val focusRequester = remember { FocusRequester() }
+    var nameFieldFocused by remember { mutableStateOf(false) }
+    var sheetVisible by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = listColorAccent(listColor)
     val canCreate = listName.isNotBlank()
     val selectedIcon = listIconForKey(listIconKey)
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val density = LocalDensity.current
+    val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
+    val useTypingHeight = nameFieldFocused && keyboardVisible
+    val maxSheetHeight = screenHeight * CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION
+    val sheetHeight by animateDpAsState(
+        targetValue = (screenHeight * if (useTypingHeight) {
+            CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION
+        } else {
+            CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION
+        }).coerceAtMost(maxSheetHeight),
+        animationSpec = tween(
+            durationMillis = CREATE_LIST_SHEET_MOTION_MS,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "createListSheetHeight",
+    )
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
     val sheetContainerColor = if (isDarkTheme) {
         lerp(colorScheme.background, colorScheme.surfaceVariant, 0.34f)
@@ -735,180 +765,236 @@ private fun CreateListBottomSheet(
         Color.Black.copy(alpha = 0.40f)
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = null,
-        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-        containerColor = sheetContainerColor,
-        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
-        scrimColor = sheetScrimColor,
+    LaunchedEffect(Unit) {
+        sheetVisible = true
+        delay(500)
+        focusRequester.requestFocus()
+        keyboardController?.show()
+    }
+
+    Dialog(
+        onDismissRequest = {
+            dismissKeyboard()
+            onDismiss()
+        },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.8f),
+                .fillMaxSize(),
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .navigationBarsPadding()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                ListSheetHeader(
-                    onClose = {
-                        focusManager.clearFocus(force = true)
+                    .background(sheetScrimColor)
+                    .clickable {
+                        dismissKeyboard()
                         onDismiss()
                     },
-                    onConfirm = {
-                        focusManager.clearFocus(force = true)
-                        if (canCreate) onCreate()
-                    },
-                    confirmEnabled = canCreate,
-                )
+            )
 
-                ListSheetSectionTitle(stringResource(R.string.home_section_list))
-                ListSheetCard {
+            AnimatedVisibility(
+                visible = sheetVisible,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(),
+                enter = slideInVertically(
+                    animationSpec = tween(
+                        durationMillis = CREATE_LIST_SHEET_MOTION_MS,
+                        easing = FastOutSlowInEasing,
+                    ),
+                    initialOffsetY = { fullHeight -> fullHeight },
+                ) + fadeIn(animationSpec = tween(durationMillis = CREATE_LIST_SHEET_MOTION_MS)),
+                exit = slideOutVertically(
+                    animationSpec = tween(
+                        durationMillis = CREATE_LIST_SHEET_MOTION_MS,
+                        easing = FastOutSlowInEasing,
+                    ),
+                    targetOffsetY = { fullHeight -> fullHeight },
+                ) + fadeOut(animationSpec = tween(durationMillis = CREATE_LIST_SHEET_MOTION_MS)),
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(sheetHeight)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {},
+                    shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+                    color = sheetContainerColor,
+                    tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+                ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 18.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                            .navigationBarsPadding()
+                            .padding(horizontal = 18.dp, vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(86.dp)
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(selectedAccent),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                imageVector = selectedIcon,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(42.dp),
-                            )
-                        }
+                        ListSheetHeader(
+                            onClose = {
+                                dismissKeyboard()
+                                onDismiss()
+                            },
+                            onConfirm = {
+                                dismissKeyboard()
+                                if (canCreate) onCreate()
+                            },
+                            confirmEnabled = canCreate,
+                        )
 
-                        BasicTextField(
-                            value = listName,
-                            onValueChange = onListNameChange,
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.headlineSmall.copy(
-                                color = selectedAccent,
-                                fontWeight = FontWeight.ExtraBold,
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            decorationBox = { innerTextField ->
+                        ListSheetCard {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 18.dp, vertical = 18.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(colorScheme.surfaceVariant)
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        .size(86.dp)
+                                        .clip(RoundedCornerShape(999.dp))
+                                        .background(selectedAccent),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    if (listName.isBlank()) {
-                                        Text(
-                                            text = stringResource(R.string.home_list_name_placeholder),
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
-                                            fontWeight = FontWeight.ExtraBold,
-                                        )
-                                    }
-                                    innerTextField()
+                                    Icon(
+                                        imageVector = selectedIcon,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(42.dp),
+                                    )
                                 }
-                            },
-                        )
-                    }
-                }
 
-                ListSheetSectionTitle(stringResource(R.string.home_section_color))
-                ListSheetCard {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 14.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        LIST_COLOR_OPTIONS.forEach { option ->
-                            val selected = listColor == option.key
-                            val interactionSource = remember { MutableInteractionSource() }
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .background(option.color)
-                                    .border(
-                                        width = if (selected) 3.dp else 0.dp,
-                                        color = if (selected) colorScheme.onBackground.copy(alpha = 0.32f) else Color.Transparent,
-                                        shape = CircleShape,
-                                    )
-                                    .clickable(
-                                        interactionSource = interactionSource,
-                                        indication = ripple(
-                                            bounded = true,
-                                            radius = 24.dp,
-                                        ),
-                                    ) { onListColorChange(option.key) },
-                            )
-                        }
-                    }
-                }
-
-                ListSheetSectionTitle(stringResource(R.string.home_section_icon))
-                ListSheetCard {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 14.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        LIST_ICON_OPTIONS.forEach { option ->
-                            val selected = listIconKey == option.key
-                            val interactionSource = remember { MutableInteractionSource() }
-                            val iconOptionDescription = stringResource(R.string.home_list_icon_option, option.key)
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (selected) {
-                                            selectedAccent.copy(alpha = 0.2f)
-                                        } else {
-                                            colorScheme.surfaceVariant
-                                        },
-                                    )
-                                    .border(
-                                        width = if (selected) 2.dp else 0.dp,
-                                        color = if (selected) selectedAccent.copy(alpha = 0.55f) else Color.Transparent,
-                                        shape = CircleShape,
-                                    )
-                                    .clickable(
-                                        interactionSource = interactionSource,
-                                        indication = ripple(
-                                            bounded = true,
-                                            radius = 24.dp,
-                                        ),
-                                    ) { onListIconChange(option.key) },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = option.icon,
-                                    contentDescription = iconOptionDescription,
-                                    tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
+                                BasicTextField(
+                                    value = listName,
+                                    onValueChange = onListNameChange,
+                                    singleLine = true,
+                                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                                        color = selectedAccent,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        textAlign = TextAlign.Center,
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(focusRequester)
+                                        .onFocusChanged { nameFieldFocused = it.isFocused },
+                                    decorationBox = { innerTextField ->
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(colorScheme.surfaceVariant)
+                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            if (listName.isBlank()) {
+                                                Text(
+                                                    text = stringResource(R.string.home_list_name_placeholder),
+                                                    style = MaterialTheme.typography.headlineSmall,
+                                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                )
+                                            }
+                                            innerTextField()
+                                        }
+                                    },
                                 )
                             }
                         }
+
+                        ListSheetSectionTitle(stringResource(R.string.home_section_color))
+                        ListSheetCard {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                LIST_COLOR_OPTIONS.forEach { option ->
+                                    val selected = listColor == option.key
+                                    val interactionSource = remember { MutableInteractionSource() }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(CircleShape)
+                                            .background(option.color)
+                                            .border(
+                                                width = if (selected) 3.dp else 0.dp,
+                                                color = if (selected) colorScheme.onBackground.copy(
+                                                    alpha = 0.32f
+                                                ) else Color.Transparent,
+                                                shape = CircleShape,
+                                            )
+                                            .clickable(
+                                                interactionSource = interactionSource,
+                                                indication = ripple(
+                                                    bounded = true,
+                                                    radius = 24.dp,
+                                                ),
+                                            ) { onListColorChange(option.key) },
+                                    )
+                                }
+                            }
+                        }
+
+                        ListSheetSectionTitle(stringResource(R.string.home_section_icon))
+                        ListSheetCard {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                LIST_ICON_OPTIONS.forEach { option ->
+                                    val selected = listIconKey == option.key
+                                    val interactionSource = remember { MutableInteractionSource() }
+                                    val iconOptionDescription =
+                                        stringResource(R.string.home_list_icon_option, option.key)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (selected) {
+                                                    selectedAccent.copy(alpha = 0.2f)
+                                                } else {
+                                                    colorScheme.surfaceVariant
+                                                },
+                                            )
+                                            .border(
+                                                width = if (selected) 2.dp else 0.dp,
+                                                color = if (selected) selectedAccent.copy(alpha = 0.55f) else Color.Transparent,
+                                                shape = CircleShape,
+                                            )
+                                            .clickable(
+                                                interactionSource = interactionSource,
+                                                indication = ripple(
+                                                    bounded = true,
+                                                    radius = 24.dp,
+                                                ),
+                                            ) { onListIconChange(option.key) },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = option.icon,
+                                            contentDescription = iconOptionDescription,
+                                            tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(4.dp))
                     }
                 }
-
-                Spacer(Modifier.height(4.dp))
             }
         }
     }
@@ -1101,6 +1187,7 @@ private fun TopSearchBar(
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
+            delay(300)
             focusRequester.requestFocus()
             keyboardController?.show()
         } else {
@@ -1112,40 +1199,76 @@ private fun TopSearchBar(
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val buttonSize = TdayDimens.FabSize
         val buttonGap = 8.dp
-        val fixedActionWidth = (buttonSize * 2) + buttonGap
         val collapsedSearchWidth = buttonSize
-        val expandedSearchWidth = (maxWidth - fixedActionWidth - buttonGap).coerceAtLeast(buttonSize)
+        val expandedSearchWidth = maxWidth.coerceAtLeast(buttonSize)
+        val collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
         val animatedSearchWidth by animateDpAsState(
             targetValue = if (searchExpanded) expandedSearchWidth else collapsedSearchWidth,
             label = "topSearchBarSearchWidth",
         )
+        val animatedSearchOffset by animateDpAsState(
+            targetValue = if (searchExpanded) 0.dp else collapsedSearchOffset,
+            label = "topSearchBarSearchOffset",
+        )
+        val actionsAlpha by animateFloatAsState(
+            targetValue = if (searchExpanded) 0f else 1f,
+            label = "topSearchBarActionsAlpha",
+        )
+        val searchContentAlpha by animateFloatAsState(
+            targetValue = if (searchExpanded) 1f else 0f,
+            label = "topSearchBarContentAlpha",
+        )
 
-        if (!searchExpanded) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = homeTitleIcon,
-                    contentDescription = null,
-                    tint = homeTitleIconTint,
-                    modifier = Modifier.size(26.dp),
-                )
-                Text(
-                    text = stringResource(R.string.home_title),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = colorScheme.onBackground,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            }
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 2.dp)
+                .graphicsLayer { alpha = actionsAlpha },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = homeTitleIcon,
+                contentDescription = null,
+                tint = homeTitleIconTint,
+                modifier = Modifier.size(26.dp),
+            )
+            Text(
+                text = stringResource(R.string.home_title),
+                style = MaterialTheme.typography.headlineLarge,
+                color = colorScheme.onBackground,
+                fontWeight = FontWeight.ExtraBold,
+            )
         }
 
-        Column(
+        Row(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
+                .graphicsLayer { alpha = actionsAlpha },
+            horizontalArrangement = Arrangement.spacedBy(buttonGap),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PressableIconButton(
+                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                contentDescription = stringResource(R.string.action_create_list),
+                tint = colorScheme.onSurface,
+                onClick = onCreateList,
+            )
+            PressableIconButton(
+                icon = Icons.Rounded.MoreHoriz,
+                contentDescription = stringResource(R.string.action_more),
+                tint = colorScheme.onSurface,
+                onClick = onOpenSettings,
+            )
+        }
+
+        Card(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .offset(x = animatedSearchOffset)
+                .width(animatedSearchWidth)
+                .height(buttonSize)
+                .zIndex(2f)
                 .then(
                     if (searchExpanded) {
                         Modifier.onGloballyPositioned { coordinates ->
@@ -1155,92 +1278,89 @@ private fun TopSearchBar(
                         Modifier
                     }
                 ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            onClick = {
+                if (!searchExpanded) {
+                    onSearchExpandedChange(true)
+                }
+            },
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.26f)),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp
+            ),
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(buttonGap),
-                verticalAlignment = Alignment.CenterVertically,
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
             ) {
-                Card(
+                Box(
                     modifier = Modifier
-                        .width(animatedSearchWidth)
-                        .height(buttonSize),
-                    onClick = {
-                        if (!searchExpanded) {
-                            onSearchExpandedChange(true)
-                        }
-                    },
-                    shape = RoundedCornerShape(28.dp),
-                    border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.26f)),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = 1f - searchContentAlpha },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        PressableIconButton(
-                            icon = Icons.Rounded.Search,
-                            contentDescription = if (searchExpanded) stringResource(R.string.action_close_search) else stringResource(R.string.action_search),
-                            tint = colorScheme.onSurface,
-                            compact = true,
-                            onClick = {
-                                if (searchExpanded) {
-                                    onSearchClose()
-                                } else {
-                                    onSearchExpandedChange(true)
-                                }
-                            },
-                        )
-
-                        if (searchExpanded) {
-                            BasicTextField(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .focusRequester(focusRequester),
-                                value = searchQuery,
-                                onValueChange = onSearchQueryChange,
-                                singleLine = true,
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                    color = colorScheme.onSurface,
-                                    fontWeight = FontWeight.ExtraBold,
-                                ),
-                                cursorBrush = SolidColor(colorScheme.primary),
-                                decorationBox = { innerTextField ->
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.CenterStart,
-                                    ) {
-                                        if (searchQuery.isBlank()) {
-                                            Text(
-                                                text = stringResource(R.string.home_search_placeholder),
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        innerTextField()
-                                    }
-                                },
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = stringResource(R.string.action_search),
+                        tint = colorScheme.onSurface,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
 
-                PressableIconButton(
-                    icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                    contentDescription = stringResource(R.string.action_create_list),
-                    tint = colorScheme.onSurface,
-                    onClick = onCreateList,
-                )
-                PressableIconButton(
-                    icon = Icons.Rounded.MoreHoriz,
-                    contentDescription = stringResource(R.string.action_more),
-                    tint = colorScheme.onSurface,
-                    onClick = onOpenSettings,
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = searchContentAlpha }
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = colorScheme.onSurface,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    BasicTextField(
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        enabled = searchExpanded,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = colorScheme.onSurface,
+                            fontWeight = FontWeight.ExtraBold,
+                        ),
+                        cursorBrush = SolidColor(colorScheme.primary),
+                        decorationBox = { innerTextField ->
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.CenterStart,
+                            ) {
+                                if (searchQuery.isBlank()) {
+                                    Text(
+                                        text = stringResource(R.string.home_search_placeholder),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                    )
+
+                    PressableIconButton(
+                        icon = Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.action_close_search),
+                        tint = colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
+                        compact = true,
+                        onClick = onSearchClose,
+                    )
+                }
             }
         }
     }
@@ -1798,6 +1918,10 @@ private data class ListIconOption(
 
 private const val DEFAULT_LIST_COLOR = "BLUE"
 private const val DEFAULT_LIST_ICON_KEY = "inbox"
+private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
+private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
+private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
+private const val CREATE_LIST_SHEET_MOTION_MS = 320
 
 private fun performGentleHaptic(view: android.view.View) {
     ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
