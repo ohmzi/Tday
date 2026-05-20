@@ -7,9 +7,6 @@ struct SettingsScreen: View {
     @Environment(\.tdayColors) private var colors
     @State private var settingsScrollOffset: CGFloat = 0
 
-    private let topTitleRevealStart: CGFloat = 0.48
-    private let topTitleRevealEnd: CGFloat = 0.76
-
     private var isAdminUser: Bool {
         (viewModel.user?.role ?? "").uppercased() == "ADMIN"
     }
@@ -21,12 +18,58 @@ struct SettingsScreen: View {
     }
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 12) {
-                settingsHeroTitleRow
+        settingsContent
+        .background(colors.background)
+        .navigationBackButtonBehavior()
+        .navigationTitleTypography(
+            largeTitleColor: colors.onSurface,
+            inlineTitleColor: colors.onSurface,
+            backgroundColor: colors.background
+        )
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            TimelineTopBar(
+                title: "Settings",
+                accentColor: colors.onSurface,
+                collapseProgress: titleCollapseProgress,
+                onBack: { dismiss() },
+                action: nil
+            )
+        }
+        .task {
+            await viewModel.refreshAdminAiSummarySetting()
+            await viewModel.refreshVersionInfo()
+        }
+        .alert(
+            "AI Summary Unavailable",
+            isPresented: Binding(
+                get: { viewModel.aiSummaryValidationError != nil },
+                set: { visible in
+                    if !visible {
+                        viewModel.dismissAiSummaryValidationError()
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                viewModel.dismissAiSummaryValidationError()
+            }
+        } message: {
+            Text(viewModel.aiSummaryValidationError ?? "")
+        }
+    }
 
+    private var settingsContent: some View {
+        List {
+            settingsHeroTitleRow
+
+            settingsListRow {
                 SettingsProfileCard(user: viewModel.user)
+            }
 
+            settingsListRow {
                 SettingsSectionCard {
                     SettingsSectionTitle("Appearance")
                     SettingsThemeSelector(
@@ -40,14 +83,18 @@ struct SettingsScreen: View {
                         onSelect: viewModel.setDefaultReminder
                     )
                 }
+            }
 
-                if isAdminUser {
+            if isAdminUser {
+                settingsListRow {
                     SettingsSectionCard {
                         SettingsSectionTitle("Feature toggle")
                         SettingsAiSummaryRow(viewModel: viewModel)
                     }
                 }
+            }
 
+            settingsListRow {
                 SettingsSectionCard {
                     SettingsListRow(
                         title: "App Version",
@@ -82,56 +129,21 @@ struct SettingsScreen: View {
                         }
                     )
                 }
+            }
 
-                Spacer(minLength: 24)
-            }
-            .padding(.horizontal, 18)
-            .padding(.bottom, 24)
-            .background {
-                TimelineScrollOffsetObserver { settingsScrollOffset = $0 }
-                    .frame(width: 0, height: 0)
-            }
-            .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
-            .disableVerticalScrollBounce()
+            Color.clear
+                .frame(height: 24)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .disableVerticalScrollBounce()
         }
-        .background(colors.background.ignoresSafeArea())
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .navigationBar)
-        .navigationBackButtonBehavior()
-        .safeAreaInset(edge: .top, spacing: 0) {
-            TimelineTopBar(
-                title: "Settings",
-                accentColor: colors.onSurface,
-                collapseProgress: titleCollapseProgress,
-                onBack: { dismiss() },
-                action: nil,
-                titleRevealStart: topTitleRevealStart,
-                titleRevealEnd: topTitleRevealEnd,
-                titleRevealDistance: 6
-            )
-        }
-        .task {
-            await viewModel.refreshAdminAiSummarySetting()
-            await viewModel.refreshVersionInfo()
-        }
-        .alert(
-            "AI Summary Unavailable",
-            isPresented: Binding(
-                get: { viewModel.aiSummaryValidationError != nil },
-                set: { visible in
-                    if !visible {
-                        viewModel.dismissAiSummaryValidationError()
-                    }
-                }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                viewModel.dismissAiSummaryValidationError()
-            }
-        } message: {
-            Text(viewModel.aiSummaryValidationError ?? "")
-        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .contentMargins(.top, 0, for: .scrollContent)
+        .listSectionSpacing(0)
+        .environment(\.defaultMinListRowHeight, 1)
+        .disableVerticalScrollBounce()
     }
 
     private var settingsHeroTitleRow: some View {
@@ -140,16 +152,28 @@ struct SettingsScreen: View {
             accentColor: colors.onSurface,
             collapseProgress: titleCollapseProgress
         )
-        .padding(.bottom, profileCardTopClearance)
+        .background {
+            TimelineScrollOffsetObserver { settingsScrollOffset = $0 }
+                .frame(width: 0, height: 0)
+        }
+        .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
+        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
-    private var profileCardTopClearance: CGFloat {
-        let progress = TodoTimelineMetrics.progress(
-            titleCollapseProgress,
-            from: 0.54,
-            to: 1
-        )
-        return 10 * progress
+    private func settingsListRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .listRowInsets(
+                EdgeInsets(
+                    top: 0,
+                    leading: TodoTimelineMetrics.horizontalPadding,
+                    bottom: 12,
+                    trailing: TodoTimelineMetrics.horizontalPadding
+                )
+            )
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 }
 
