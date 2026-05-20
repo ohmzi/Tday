@@ -59,6 +59,14 @@ private struct CreateListSheetContentHeightKey: PreferenceKey {
     }
 }
 
+private struct CreateListSheetHeaderHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 struct HomeScreen: View {
     let onNavigate: (AppRoute) -> Void
 
@@ -988,10 +996,8 @@ private struct CreateListSheet: View {
     @State private var name = ""
     @State private var color = "BLUE"
     @State private var iconKey = "inbox"
-    @State private var compactSheetHeight: CGFloat = min(
-        CreateListSheetMetrics.initialCompactHeight,
-        UIScreen.main.bounds.height * CreateListSheetMetrics.maximumHeightFraction
-    )
+    @State private var headerHeight: CGFloat = 84
+    @State private var contentHeight: CGFloat = CreateListSheetMetrics.initialCompactHeight - 84
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1013,8 +1019,16 @@ private struct CreateListSheet: View {
         max(1, UIScreen.main.bounds.height * CreateListSheetMetrics.maximumHeightFraction)
     }
 
+    private var measuredCompactSheetHeight: CGFloat {
+        min(max(headerHeight + contentHeight, 1), maximumSheetHeight)
+    }
+
+    private var contentNeedsScrolling: Bool {
+        headerHeight + contentHeight > maximumSheetHeight
+    }
+
     private var compactDetent: PresentationDetent {
-        .height(compactSheetHeight)
+        .height(measuredCompactSheetHeight)
     }
 
     private var typingDetent: PresentationDetent {
@@ -1026,7 +1040,7 @@ private struct CreateListSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 0) {
             CreateListSheetHeader(
                 canCreate: canCreate,
                 onClose: { dismiss() },
@@ -1035,131 +1049,142 @@ private struct CreateListSheet: View {
                     dismiss()
                 }
             )
+            .padding(.horizontal, 18)
+            .padding(.top, 14)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: CreateListSheetHeaderHeightKey.self, value: ceil(proxy.size.height))
+                }
+            )
 
-            CreateListSheetCard {
-                VStack(spacing: 18) {
-                    ZStack {
-                        Circle()
-                            .fill(accentColor)
-                            .frame(width: 86, height: 86)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 14) {
+                    CreateListSheetCard {
+                        VStack(spacing: 18) {
+                            ZStack {
+                                Circle()
+                                    .fill(accentColor)
+                                    .frame(width: 86, height: 86)
 
-                        Image(systemName: selectedSymbolName)
-                            .font(.system(size: 38, weight: .semibold))
-                            .foregroundStyle(.white)
+                                Image(systemName: selectedSymbolName)
+                                    .font(.system(size: 38, weight: .semibold))
+                                    .foregroundStyle(.white)
+                            }
+
+                            TextField(
+                                "",
+                                text: $name,
+                                prompt: Text("List name")
+                                    .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                            )
+                            .focused($nameFieldFocused)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .multilineTextAlignment(.center)
+                            .font(.tdayRounded(size: 22, weight: .bold))
+                            .foregroundStyle(accentColor)
+                            .padding(.horizontal, 14)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 62)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(colors.surfaceVariant)
+                            )
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 18)
                     }
 
-                    TextField(
-                        "",
-                        text: $name,
-                        prompt: Text("List name")
-                            .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
-                    )
-                    .focused($nameFieldFocused)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
-                    .multilineTextAlignment(.center)
-                    .font(.tdayRounded(size: 22, weight: .bold))
-                    .foregroundStyle(accentColor)
-                    .padding(.horizontal, 14)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 62)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(colors.surfaceVariant)
-                    )
+                    CreateListSheetSectionTitle(text: "Color")
+                    CreateListSheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(homeListColorOptions, id: \.key) { option in
+                                    let isSelected = option.key == color
+                                    Button {
+                                        color = option.key
+                                    } label: {
+                                        Circle()
+                                            .fill(option.color)
+                                            .frame(width: 48, height: 48)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? colors.onSurface.opacity(0.3) : .clear,
+                                                        lineWidth: 3
+                                                    )
+                                            )
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    CreateListSheetSectionTitle(text: "Icon")
+                    CreateListSheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(homeListIconOptions, id: \.key) { option in
+                                    let isSelected = option.key == iconKey
+                                    Button {
+                                        iconKey = option.key
+                                    } label: {
+                                        Circle()
+                                            .fill(isSelected ? accentColor.opacity(0.2) : colors.surfaceVariant)
+                                            .frame(width: 48, height: 48)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? accentColor.opacity(0.55) : .clear,
+                                                        lineWidth: 2
+                                                    )
+                                            )
+                                            .overlay {
+                                                Image(systemName: option.symbolName)
+                                                    .font(.system(size: 22, weight: .semibold))
+                                                    .foregroundStyle(isSelected ? accentColor : colors.onSurfaceVariant)
+                                            }
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                    .accessibilityLabel(formattedOptionName(option.key))
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
                 }
                 .padding(.horizontal, 18)
-                .padding(.vertical, 18)
-            }
-
-            CreateListSheetSectionTitle(text: "Color")
-            CreateListSheetCard {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(homeListColorOptions, id: \.key) { option in
-                            let isSelected = option.key == color
-                            Button {
-                                color = option.key
-                            } label: {
-                                Circle()
-                                    .fill(option.color)
-                                    .frame(width: 48, height: 48)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(
-                                                isSelected ? colors.onSurface.opacity(0.3) : .clear,
-                                                lineWidth: 3
-                                            )
-                                    )
-                            }
-                            .buttonStyle(
-                                TdayPressButtonStyle(
-                                    shadowColor: Color.black,
-                                    pressedShadowOpacity: 0.04,
-                                    normalShadowOpacity: 0.08
-                                )
-                            )
-                        }
+                .padding(.top, 14)
+                .padding(.bottom, CreateListSheetMetrics.bottomContentPadding)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .preference(key: CreateListSheetContentHeightKey.self, value: ceil(proxy.size.height))
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
-                }
+                )
             }
-
-            CreateListSheetSectionTitle(text: "Icon")
-            CreateListSheetCard {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(homeListIconOptions, id: \.key) { option in
-                            let isSelected = option.key == iconKey
-                            Button {
-                                iconKey = option.key
-                            } label: {
-                                Circle()
-                                    .fill(isSelected ? accentColor.opacity(0.2) : colors.surfaceVariant)
-                                    .frame(width: 48, height: 48)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(
-                                                isSelected ? accentColor.opacity(0.55) : .clear,
-                                                lineWidth: 2
-                                            )
-                                    )
-                                    .overlay {
-                                        Image(systemName: option.symbolName)
-                                            .font(.system(size: 22, weight: .semibold))
-                                            .foregroundStyle(isSelected ? accentColor : colors.onSurfaceVariant)
-                                    }
-                            }
-                            .buttonStyle(
-                                TdayPressButtonStyle(
-                                    shadowColor: Color.black,
-                                    pressedShadowOpacity: 0.04,
-                                    normalShadowOpacity: 0.08
-                                )
-                            )
-                            .accessibilityLabel(formattedOptionName(option.key))
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
-                }
-            }
-
+            .scrollDisabled(!contentNeedsScrolling)
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 14)
-        .padding(.bottom, CreateListSheetMetrics.bottomContentPadding)
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(
-            GeometryReader { proxy in
-                Color.clear
-                    .preference(key: CreateListSheetContentHeightKey.self, value: ceil(proxy.size.height))
-            }
-        )
         .background(colors.background.ignoresSafeArea())
         .presentationDetents(activeDetents)
-        .presentationContentInteraction(.resizes)
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground {
@@ -1167,10 +1192,11 @@ private struct CreateListSheet: View {
                 .ignoresSafeArea(.container, edges: .bottom)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onPreferenceChange(CreateListSheetHeaderHeightKey.self) { height in
+            headerHeight = max(height, 1)
+        }
         .onPreferenceChange(CreateListSheetContentHeightKey.self) { height in
-            guard !nameFieldFocused else { return }
-            let nextHeight = min(max(height, 1), maximumSheetHeight)
-            compactSheetHeight = nextHeight
+            contentHeight = max(height, 1)
         }
         .animation(.snappy(duration: 0.24), value: nameFieldFocused)
     }

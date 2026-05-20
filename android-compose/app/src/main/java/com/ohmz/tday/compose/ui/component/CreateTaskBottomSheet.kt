@@ -1,7 +1,14 @@
 package com.ohmz.tday.compose.ui.component
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,10 +20,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -68,6 +77,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -112,6 +122,9 @@ private fun normalizePriorityValue(value: String?): String {
 
 private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
 private const val CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION = 0.86f
+private const val CREATE_TASK_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
+private const val CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.85f
+private const val CREATE_TASK_SHEET_MOTION_MS = 320
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -195,6 +208,7 @@ fun CreateTaskBottomSheet(
     }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
+    var sheetVisible by remember { mutableStateOf(false) }
 
     val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
     val repeatPreset = RepeatPreset.valueOf(selectedRepeat)
@@ -211,8 +225,26 @@ fun CreateTaskBottomSheet(
     } else {
         Color.Black.copy(alpha = 0.40f)
     }
-    val maxSheetHeight =
-        LocalConfiguration.current.screenHeightDp.dp * CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val density = LocalDensity.current
+    val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
+    val maxSheetHeight = screenHeight * CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION
+    val sheetHeight by animateDpAsState(
+        targetValue = (screenHeight * if (keyboardVisible) {
+            CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION
+        } else {
+            CREATE_TASK_SHEET_NORMAL_HEIGHT_FRACTION
+        }).coerceAtMost(maxSheetHeight),
+        animationSpec = tween(
+            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "createTaskSheetHeight",
+    )
+
+    LaunchedEffect(Unit) {
+        sheetVisible = true
+    }
 
     fun submitTask() {
         val due = Instant.ofEpochMilli(dueEpochMs)
@@ -254,26 +286,45 @@ fun CreateTaskBottomSheet(
                     },
             )
 
-            Surface(
+            AnimatedVisibility(
+                visible = sheetVisible,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .heightIn(max = maxSheetHeight)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {},
-                shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-                color = sheetContainerColor,
-                tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+                    .fillMaxWidth(),
+                enter = slideInVertically(
+                    animationSpec = tween(
+                        durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                        easing = FastOutSlowInEasing,
+                    ),
+                    initialOffsetY = { fullHeight -> fullHeight },
+                ) + fadeIn(animationSpec = tween(durationMillis = CREATE_TASK_SHEET_MOTION_MS)),
+                exit = slideOutVertically(
+                    animationSpec = tween(
+                        durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                        easing = FastOutSlowInEasing,
+                    ),
+                    targetOffsetY = { fullHeight -> fullHeight },
+                ) + fadeOut(animationSpec = tween(durationMillis = CREATE_TASK_SHEET_MOTION_MS)),
             ) {
-                Column(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(start = 18.dp, top = 14.dp, end = 18.dp, bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                        .height(sheetHeight)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {},
+                    shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+                    color = sheetContainerColor,
+                    tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(start = 18.dp, top = 14.dp, end = 18.dp, bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
                     SheetHeader(
                         title = if (isEditMode) "Edit task" else "New task",
                         leftIcon = Icons.Rounded.Close,
@@ -352,6 +403,9 @@ fun CreateTaskBottomSheet(
                             isSelected = { option -> selectedRepeat == option.name },
                             onOptionSelected = { option -> selectedRepeat = option.name },
                         )
+                    }
+
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
             }
