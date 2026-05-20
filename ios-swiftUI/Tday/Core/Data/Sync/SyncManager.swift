@@ -180,7 +180,7 @@ final class SyncManager {
             lastSyncAttemptEpochMs: localState.lastSyncAttemptEpochMs,
             todos: mergedTodos.sorted(by: cachedTodoSortPrecedes),
             completedItems: dedupedCompleted.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
-            lists: mergedLists.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending },
+            lists: orderListsLikeWeb(mergedLists),
             pendingMutations: pendingMutations,
             aiSummaryEnabled: remote.aiSummaryEnabled
         )
@@ -554,7 +554,15 @@ final class SyncManager {
             completedItems: state.completedItems,
             lists: state.lists.map { list in
                 if list.id == localListID {
-                    return CachedListRecord(id: serverListID, name: list.name, color: list.color, iconKey: list.iconKey, todoCount: list.todoCount, updatedAtEpochMs: list.updatedAtEpochMs)
+                    return CachedListRecord(
+                        id: serverListID,
+                        name: list.name,
+                        color: list.color,
+                        iconKey: list.iconKey,
+                        todoCount: list.todoCount,
+                        updatedAtEpochMs: list.updatedAtEpochMs,
+                        createdAtEpochMs: list.createdAtEpochMs
+                    )
                 }
                 return list
             },
