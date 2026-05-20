@@ -116,8 +116,8 @@
     <string name="todos_summary_loading">Creating your task summary…</string>
     <string name="todos_list_settings">List settings</string>
     <string name="todos_save_list_settings">Save list settings</string>
-    <string name="todos_due_overdue_prefix">Overdue, </string>
-    <string name="todos_due_prefix">Due </string>
+    <string name="todos_due_overdue_text">Overdue, %1$s</string>
+    <string name="todos_due_text">Due %1$s</string>
 
     <!-- Completed screen -->
     <string name="completed_title">Completed</string>
