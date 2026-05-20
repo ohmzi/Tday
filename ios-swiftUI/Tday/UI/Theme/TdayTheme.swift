@@ -195,13 +195,4 @@ extension View {
     func tdayAppTypography() -> some View {
         font(.tdayRounded(.body, weight: .bold))
     }
-
-    @ViewBuilder
-    func tdayBottomSheetSizing() -> some View {
-        if #available(iOS 18.0, *) {
-            presentationSizing(.page)
-        } else {
-            self
-        }
-    }
 }
