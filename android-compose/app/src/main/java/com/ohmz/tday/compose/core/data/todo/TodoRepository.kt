@@ -1,14 +1,17 @@
 package com.ohmz.tday.compose.core.data.todo
 
+import android.util.Log
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.MutationKind
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.core.data.PendingMutationRecord
+import com.ohmz.tday.compose.core.data.cache.LOCAL_LIST_PREFIX
 import com.ohmz.tday.compose.core.data.cache.LOCAL_TODO_PREFIX
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.cache.completedFromCache
 import com.ohmz.tday.compose.core.data.cache.listFromCache
 import com.ohmz.tday.compose.core.data.cache.mapTodoDto
+import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.todoFromCache
 import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
 import com.ohmz.tday.compose.core.data.requireApiBody
@@ -28,8 +31,6 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpRequest
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
-import android.util.Log
-import com.ohmz.tday.compose.core.data.cache.LOCAL_LIST_PREFIX
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -552,7 +553,7 @@ class TodoRepository @Inject constructor(
             .groupingBy { it.listId }
             .eachCount()
 
-        val lists = state.lists.map {
+        val lists = orderListsLikeWeb(state.lists).map {
             listFromCache(cache = it, todoCountOverride = todoCountsByList[it.id] ?: 0)
         }
 

@@ -45,6 +45,28 @@ private struct HomeListIconOption {
     let symbolName: String
 }
 
+private enum CreateListSheetMetrics {
+    static let initialCompactHeight: CGFloat = 620
+    static let maximumHeightFraction: CGFloat = 0.7
+    static let bottomContentPadding: CGFloat = 8
+}
+
+private struct CreateListSheetContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct CreateListSheetHeaderHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 struct HomeScreen: View {
     let onNavigate: (AppRoute) -> Void
 
@@ -242,8 +264,11 @@ struct HomeScreen: View {
         }
         .onChange(of: searchExpanded) { _, expanded in
             if expanded {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    searchFieldFocused = true
+                searchFieldFocused = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                    if searchExpanded {
+                        searchFieldFocused = true
+                    }
                 }
             } else {
                 searchFieldFocused = false
@@ -253,7 +278,7 @@ struct HomeScreen: View {
         .sheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
                 lists: viewModel.summary.lists,
-                titleText: "Create Task",
+                titleText: "New task",
                 submitText: "Create",
                 initialPayload: nil,
                 onParseTaskTitleNlp: { title, dueRef in
@@ -311,90 +336,31 @@ private struct HomeTopBar: View {
     var body: some View {
         let buttonSize = HomeMetrics.topBarButtonSize
         let buttonGap: CGFloat = 8
-        let expandedSearchWidth = max(buttonSize, totalWidth - (buttonSize * 2) - (buttonGap * 2))
+        let expandedSearchWidth = max(buttonSize, totalWidth)
         let searchWidth = searchExpanded ? expandedSearchWidth : buttonSize
+        let collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
+        let searchOffsetX = searchExpanded ? 0 : collapsedSearchOffset
 
         ZStack(alignment: .trailing) {
-            if !searchExpanded {
-                TimelineView(.periodic(from: .now, by: 60)) { context in
-                    let daytime = isHomeDaytime(context.date)
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let daytime = isHomeDaytime(context.date)
 
-                    HStack(spacing: 8) {
-                        Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
-                            .font(.system(size: 26, weight: .regular))
-                            .foregroundStyle(Color(hex: daytime ? 0xF4C542 : 0xA8B8E8))
+                HStack(spacing: 8) {
+                    Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
+                        .font(.system(size: 26, weight: .regular))
+                        .foregroundStyle(Color(hex: daytime ? 0xF4C542 : 0xA8B8E8))
 
-                        Text("T'Day")
-                            .font(.tdayRounded(size: 32, weight: .heavy))
-                            .foregroundStyle(colors.onSurface)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, 2)
-                    .transition(.opacity)
+                    Text("T'Day")
+                        .font(.tdayRounded(size: 32, weight: .heavy))
+                        .foregroundStyle(colors.onSurface)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 2)
+                .opacity(searchExpanded ? 0 : 1)
+                .allowsHitTesting(false)
             }
 
             HStack(spacing: buttonGap) {
-                Group {
-                    if searchExpanded {
-                        HStack(spacing: 10) {
-                            HomeIconCircleButton(icon: "magnifyingglass", compact: true) {
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                                    searchExpanded = false
-                                }
-                                searchQuery = ""
-                            }
-
-                            TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
-                                .focused(searchFieldFocused)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .font(.tdayRounded(size: 18, weight: .bold))
-                                .foregroundStyle(colors.onSurface)
-                                .tint(colors.primary)
-
-                            Button {
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                                    searchExpanded = false
-                                }
-                                searchQuery = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
-                            }
-                            .buttonStyle(
-                                TdayPressButtonStyle(
-                                    shadowColor: Color.black,
-                                    pressedShadowOpacity: 0,
-                                    normalShadowOpacity: 0
-                                )
-                            )
-                            .accessibilityLabel("Close search")
-                        }
-                        .padding(.horizontal, 14)
-                        .frame(width: searchWidth, height: buttonSize)
-                        .background(colors.surface, in: Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
-                        )
-                    } else {
-                        HomeIconCircleButton(icon: "magnifyingglass") {
-                            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                                searchExpanded = true
-                            }
-                        }
-                        .frame(width: searchWidth, height: buttonSize)
-                    }
-                }
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear
-                            .preference(key: HomeSearchBarFrameKey.self, value: proxy.frame(in: .named("home-root")))
-                    }
-                )
-
                 HomeIconCircleButton(icon: "text.badge.plus") {
                     onCreateList()
                 }
@@ -403,6 +369,77 @@ private struct HomeTopBar: View {
                     onOpenSettings()
                 }
             }
+            .opacity(searchExpanded ? 0 : 1)
+            .allowsHitTesting(!searchExpanded)
+
+            ZStack {
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                        searchExpanded = true
+                    }
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(colors.onSurface)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .buttonStyle(HomeIconButtonStyle(compact: false))
+                .opacity(searchExpanded ? 0 : 1)
+                .allowsHitTesting(!searchExpanded)
+                .accessibilityLabel("Search")
+
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(colors.onSurface)
+                        .frame(width: HomeMetrics.compactButtonSize, height: HomeMetrics.compactButtonSize)
+
+                    TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
+                        .focused(searchFieldFocused)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.tdayRounded(size: 18, weight: .bold))
+                        .foregroundStyle(colors.onSurface)
+                        .tint(colors.primary)
+                        .disabled(!searchExpanded)
+
+                    Button {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                            searchExpanded = false
+                        }
+                        searchQuery = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                    }
+                    .buttonStyle(
+                        TdayPressButtonStyle(
+                            shadowColor: Color.black,
+                            pressedShadowOpacity: 0,
+                            normalShadowOpacity: 0
+                        )
+                    )
+                    .accessibilityLabel("Cancel search")
+                }
+                .padding(.horizontal, 14)
+                .opacity(searchExpanded ? 1 : 0)
+                .allowsHitTesting(searchExpanded)
+            }
+            .frame(width: searchWidth, height: buttonSize)
+            .background(colors.surface, in: Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
+            )
+            .offset(x: searchOffsetX)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: HomeSearchBarFrameKey.self, value: proxy.frame(in: .named("home-root")))
+                }
+            )
+            .zIndex(2)
             .animation(.spring(response: 0.28, dampingFraction: 0.86), value: searchExpanded)
         }
         .frame(maxWidth: .infinity, minHeight: HomeMetrics.topBarButtonSize)
@@ -959,6 +996,8 @@ private struct CreateListSheet: View {
     @State private var name = ""
     @State private var color = "BLUE"
     @State private var iconKey = "inbox"
+    @State private var headerHeight: CGFloat = 84
+    @State private var contentHeight: CGFloat = CreateListSheetMetrics.initialCompactHeight - 84
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -976,145 +1015,190 @@ private struct CreateListSheet: View {
         homeListSymbolName(for: iconKey)
     }
 
+    private var maximumSheetHeight: CGFloat {
+        max(1, UIScreen.main.bounds.height * CreateListSheetMetrics.maximumHeightFraction)
+    }
+
+    private var measuredCompactSheetHeight: CGFloat {
+        min(max(headerHeight + contentHeight, 1), maximumSheetHeight)
+    }
+
+    private var contentNeedsScrolling: Bool {
+        headerHeight + contentHeight > maximumSheetHeight
+    }
+
+    private var compactDetent: PresentationDetent {
+        .height(measuredCompactSheetHeight)
+    }
+
+    private var typingDetent: PresentationDetent {
+        .fraction(CreateListSheetMetrics.maximumHeightFraction)
+    }
+
+    private var activeDetents: Set<PresentationDetent> {
+        nameFieldFocused ? [typingDetent] : [compactDetent]
+    }
+
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 14) {
-                CreateListSheetHeader(
-                    canCreate: canCreate,
-                    onClose: { dismiss() },
-                    onConfirm: {
-                        onSubmit(trimmedName, color, iconKey)
-                        dismiss()
-                    }
-                )
-
-                CreateListSheetSectionTitle(text: "List")
-                CreateListSheetCard {
-                    VStack(spacing: 18) {
-                        ZStack {
-                            Circle()
-                                .fill(accentColor)
-                                .frame(width: 86, height: 86)
-
-                            Image(systemName: selectedSymbolName)
-                                .font(.system(size: 38, weight: .semibold))
-                                .foregroundStyle(.white)
-                        }
-
-                        TextField(
-                            "",
-                            text: $name,
-                            prompt: Text("List name")
-                                .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
-                        )
-                        .focused($nameFieldFocused)
-                        .textInputAutocapitalization(.words)
-                        .autocorrectionDisabled()
-                        .multilineTextAlignment(.center)
-                        .font(.tdayRounded(size: 28, weight: .bold))
-                        .foregroundStyle(accentColor)
-                        .padding(.horizontal, 14)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 74)
-                        .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(colors.surfaceVariant)
-                        )
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 18)
+        VStack(spacing: 0) {
+            CreateListSheetHeader(
+                canCreate: canCreate,
+                onClose: { dismiss() },
+                onConfirm: {
+                    onSubmit(trimmedName, color, iconKey)
+                    dismiss()
                 }
-
-                CreateListSheetSectionTitle(text: "Color")
-                CreateListSheetCard {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(homeListColorOptions, id: \.key) { option in
-                                let isSelected = option.key == color
-                                Button {
-                                    color = option.key
-                                } label: {
-                                    Circle()
-                                        .fill(option.color)
-                                        .frame(width: 48, height: 48)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(
-                                                    isSelected ? colors.onSurface.opacity(0.3) : .clear,
-                                                    lineWidth: 3
-                                                )
-                                        )
-                                }
-                                .buttonStyle(
-                                    TdayPressButtonStyle(
-                                        shadowColor: Color.black,
-                                        pressedShadowOpacity: 0.04,
-                                        normalShadowOpacity: 0.08
-                                    )
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 14)
-                    }
-                }
-
-                CreateListSheetSectionTitle(text: "Icon")
-                CreateListSheetCard {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(homeListIconOptions, id: \.key) { option in
-                                let isSelected = option.key == iconKey
-                                Button {
-                                    iconKey = option.key
-                                } label: {
-                                    Circle()
-                                        .fill(isSelected ? accentColor.opacity(0.2) : colors.surfaceVariant)
-                                        .frame(width: 48, height: 48)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(
-                                                    isSelected ? accentColor.opacity(0.55) : .clear,
-                                                    lineWidth: 2
-                                                )
-                                        )
-                                        .overlay {
-                                            Image(systemName: option.symbolName)
-                                                .font(.system(size: 22, weight: .semibold))
-                                                .foregroundStyle(isSelected ? accentColor : colors.onSurfaceVariant)
-                                        }
-                                }
-                                .buttonStyle(
-                                    TdayPressButtonStyle(
-                                        shadowColor: Color.black,
-                                        pressedShadowOpacity: 0.04,
-                                        normalShadowOpacity: 0.08
-                                    )
-                                )
-                                .accessibilityLabel(formattedOptionName(option.key))
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 14)
-                    }
-                }
-
-                Spacer(minLength: 8)
-            }
+            )
             .padding(.horizontal, 18)
             .padding(.top, 14)
-            .padding(.bottom, 20)
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: CreateListSheetHeaderHeightKey.self, value: ceil(proxy.size.height))
+                }
+            )
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 14) {
+                    CreateListSheetCard {
+                        VStack(spacing: 18) {
+                            ZStack {
+                                Circle()
+                                    .fill(accentColor)
+                                    .frame(width: 86, height: 86)
+
+                                Image(systemName: selectedSymbolName)
+                                    .font(.system(size: 38, weight: .semibold))
+                                    .foregroundStyle(.white)
+                            }
+
+                            TextField(
+                                "",
+                                text: $name,
+                                prompt: Text("List name")
+                                    .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                            )
+                            .focused($nameFieldFocused)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .multilineTextAlignment(.center)
+                            .font(.tdayRounded(size: 22, weight: .bold))
+                            .foregroundStyle(accentColor)
+                            .padding(.horizontal, 14)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 62)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(colors.surfaceVariant)
+                            )
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 18)
+                    }
+
+                    CreateListSheetSectionTitle(text: "Color")
+                    CreateListSheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(homeListColorOptions, id: \.key) { option in
+                                    let isSelected = option.key == color
+                                    Button {
+                                        color = option.key
+                                    } label: {
+                                        Circle()
+                                            .fill(option.color)
+                                            .frame(width: 48, height: 48)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? colors.onSurface.opacity(0.3) : .clear,
+                                                        lineWidth: 3
+                                                    )
+                                            )
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    CreateListSheetSectionTitle(text: "Icon")
+                    CreateListSheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(homeListIconOptions, id: \.key) { option in
+                                    let isSelected = option.key == iconKey
+                                    Button {
+                                        iconKey = option.key
+                                    } label: {
+                                        Circle()
+                                            .fill(isSelected ? accentColor.opacity(0.2) : colors.surfaceVariant)
+                                            .frame(width: 48, height: 48)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? accentColor.opacity(0.55) : .clear,
+                                                        lineWidth: 2
+                                                    )
+                                            )
+                                            .overlay {
+                                                Image(systemName: option.symbolName)
+                                                    .font(.system(size: 22, weight: .semibold))
+                                                    .foregroundStyle(isSelected ? accentColor : colors.onSurfaceVariant)
+                                            }
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                    .accessibilityLabel(formattedOptionName(option.key))
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, CreateListSheetMetrics.bottomContentPadding)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .preference(key: CreateListSheetContentHeightKey.self, value: ceil(proxy.size.height))
+                    }
+                )
+            }
+            .scrollDisabled(!contentNeedsScrolling)
         }
+        .frame(maxWidth: .infinity, alignment: .top)
         .background(colors.background.ignoresSafeArea())
-        .presentationDetents([.fraction(0.78)])
+        .presentationDetents(activeDetents)
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
-        .presentationBackground(colors.background)
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                nameFieldFocused = true
-            }
+        .presentationBackground {
+            colors.background
+                .ignoresSafeArea(.container, edges: .bottom)
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onPreferenceChange(CreateListSheetHeaderHeightKey.self) { height in
+            headerHeight = max(height, 1)
+        }
+        .onPreferenceChange(CreateListSheetContentHeightKey.self) { height in
+            contentHeight = max(height, 1)
+        }
+        .animation(.snappy(duration: 0.24), value: nameFieldFocused)
     }
 
     private func formattedOptionName(_ value: String) -> String {
@@ -1138,7 +1222,7 @@ private struct CreateListSheetHeader: View {
         HStack {
             CreateListSheetActionButton(
                 icon: "xmark",
-                accentColor: Color(hex: 0xE79A9A),
+                accentColor: Color(hex: 0xE35A5A),
                 enabled: true,
                 action: onClose
             )
@@ -1146,14 +1230,16 @@ private struct CreateListSheetHeader: View {
             Spacer()
 
             Text("New list")
-                .font(.tdayRounded(size: 34, weight: .heavy))
+                .font(.tdayRounded(size: 24, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
 
             Spacer()
 
             CreateListSheetActionButton(
                 icon: "checkmark",
-                accentColor: Color(hex: 0xA6D4B3),
+                accentColor: Color(hex: 0x2FA35B),
                 enabled: canCreate,
                 action: onConfirm
             )
@@ -1173,16 +1259,22 @@ private struct CreateListSheetActionButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.4))
+                .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
                 .frame(width: 56, height: 56)
                 .background(colors.surfaceVariant)
                 .clipShape(Circle())
                 .overlay(
                     Circle()
-                        .stroke(accentColor.opacity(enabled ? 0.8 : 0.42), lineWidth: 1.5)
+                        .stroke(accentColor.opacity(enabled ? 0.55 : 0.3), lineWidth: 1.5)
                 )
         }
-        .buttonStyle(TdayPressButtonStyle())
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: enabled ? 0.16 : 0.06
+            )
+        )
         .disabled(!enabled)
     }
 }
@@ -1194,7 +1286,7 @@ private struct CreateListSheetSectionTitle: View {
 
     var body: some View {
         Text(text)
-            .font(.tdayRounded(size: 30, weight: .bold))
+            .font(.tdayRounded(size: 22, weight: .bold))
             .foregroundStyle(colors.onSurfaceVariant)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 4)

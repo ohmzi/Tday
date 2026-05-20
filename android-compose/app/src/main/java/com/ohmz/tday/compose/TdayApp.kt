@@ -507,7 +507,6 @@ fun TdayApp() {
                         uiState = uiState,
                         onBack = { navController.popBackStack() },
                         onRefresh = viewModel::refresh,
-                        onUncomplete = viewModel::uncomplete,
                         onDelete = { item ->
                             viewModel.delete(item) {
                                 showTaskDeletedToast()

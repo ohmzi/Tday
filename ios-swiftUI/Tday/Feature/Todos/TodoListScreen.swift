@@ -7,6 +7,9 @@ enum TodoTimelineMetrics {
     static let sectionTitleSize: CGFloat = 22
     static let sectionChevronSize: CGFloat = 14
     static let sectionSpacing: CGFloat = 10
+    static let firstPinnedRowElasticClearance: CGFloat = 34
+    static let firstPinnedRowElasticStart: CGFloat = 0.42
+    static let firstPinnedRowElasticEnd: CGFloat = 1
     static let minimalRowToggleSize: CGFloat = 24
     static let minimalRowToggleFrame: CGFloat = 38
     static let minimalRowTitleSize: CGFloat = 18
@@ -41,6 +44,23 @@ enum TodoTimelineMetrics {
     }
 }
 
+struct TimelinePinnedSectionHeaderBackground: ViewModifier {
+    @Environment(\.tdayColors) private var colors
+
+    func body(content: Content) -> some View {
+        content
+            .background(colors.background)
+            .listRowBackground(colors.background)
+            .zIndex(1)
+    }
+}
+
+extension View {
+    func timelinePinnedSectionHeaderBackground() -> some View {
+        modifier(TimelinePinnedSectionHeaderBackground())
+    }
+}
+
 struct TimelineRowDivider: View {
     @Environment(\.tdayColors) private var colors
 
@@ -59,7 +79,21 @@ struct TimelineRowDivider: View {
 
 struct TimelineTopBarAction {
     let systemName: String
+    let tint: Color?
+    let usesCircularChrome: Bool
     let action: () -> Void
+
+    init(
+        systemName: String,
+        tint: Color? = nil,
+        usesCircularChrome: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.systemName = systemName
+        self.tint = tint
+        self.usesCircularChrome = usesCircularChrome
+        self.action = action
+    }
 }
 
 struct TodoListScreen: View {
@@ -92,7 +126,11 @@ struct TodoListScreen: View {
     }
 
     private var isMinimalTimelineMode: Bool {
-        viewModel.mode == .overdue || viewModel.mode == .scheduled || viewModel.mode == .priority || viewModel.mode == .all
+        viewModel.mode == .overdue ||
+            viewModel.mode == .scheduled ||
+            viewModel.mode == .priority ||
+            viewModel.mode == .all ||
+            viewModel.mode == .list
     }
 
     private var usesHeroTimelineMode: Bool {
@@ -115,6 +153,12 @@ struct TodoListScreen: View {
         return "\(itemIDs)::\(completingIDs)"
     }
 
+    private var firstVisibleExpandedTimelineSectionID: String? {
+        groupedSections.first { section in
+            !section.items.isEmpty && !isTimelineSectionCollapsed(section)
+        }?.id
+    }
+
     private var canSummarizeCurrentMode: Bool {
         viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled
     }
@@ -123,12 +167,14 @@ struct TodoListScreen: View {
         if canSummarizeCurrentMode {
             return TimelineTopBarAction(
                 systemName: "sparkles",
+                usesCircularChrome: true,
                 action: presentSummary
             )
         }
         if viewModel.mode == .list {
             return TimelineTopBarAction(
-                systemName: "slider.horizontal.3",
+                systemName: "ellipsis",
+                usesCircularChrome: true,
                 action: { showingListSettings = true }
             )
         }
@@ -243,7 +289,7 @@ struct TodoListScreen: View {
     private var createTaskSheetContent: some View {
         CreateTaskSheet(
             lists: viewModel.lists,
-            titleText: "Create Task",
+            titleText: "New task",
             submitText: "Create",
             initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? "High" : "Low", due: Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
             onParseTaskTitleNlp: { title, dueRef in
@@ -259,7 +305,7 @@ struct TodoListScreen: View {
     private func editTaskSheetContent(for todo: TodoItem) -> some View {
         CreateTaskSheet(
             lists: viewModel.lists,
-            titleText: "Edit Task",
+            titleText: "Edit task",
             submitText: "Save",
             initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
             onParseTaskTitleNlp: { title, dueRef in
@@ -366,6 +412,7 @@ struct TodoListScreen: View {
                 } header: {
                     Text(section.title)
                         .foregroundStyle(activeDropSectionId == section.id ? colors.primary : colors.onSurfaceVariant)
+                        .timelinePinnedSectionHeaderBackground()
                 }
             }
         }
@@ -393,16 +440,10 @@ struct TodoListScreen: View {
 
                 ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
                     Section {
-                        if section.items.isEmpty {
-                            Color.clear
-                                .frame(height: 42)
-                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .allowsHitTesting(false)
-                        } else {
-                            ForEach(section.items) { todo in
+                        if !section.items.isEmpty {
+                            ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                                 minimalTimelineRow(todo, in: section)
+                                    .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
@@ -414,8 +455,15 @@ struct TodoListScreen: View {
                             title: section.title,
                             isActiveDropTarget: activeDropSectionId == section.id
                         )
-                        .listRowInsets(EdgeInsets(top: index == 0 ? 0 : 8, leading: 0, bottom: 0, trailing: 0))
-                        .listRowBackground(Color.clear)
+                        .listRowInsets(
+                            EdgeInsets(
+                                top: index == 0 ? 0 : 8,
+                                leading: 0,
+                                bottom: 0,
+                                trailing: 0
+                            )
+                        )
+                        .timelinePinnedSectionHeaderBackground()
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -693,21 +741,20 @@ struct TodoListScreen: View {
 
     @ViewBuilder
     private func minimalTimelineSection(_ section: TodoTimelineSection, isFirstSection: Bool) -> some View {
-        let canCollapseSection = if viewModel.mode == .all {
-            true
-        } else {
-            viewModel.mode == .priority && section.isCollapsible
-        }
+        let canCollapseSection = canCollapseTimelineSection(section)
         let isCollapsed = canCollapseSection && collapsedSectionIDs.contains(section.id)
 
         Section {
             if !isCollapsed {
-                ForEach(section.items) { todo in
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                     minimalTimelineRow(todo, in: section)
+                        .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
+                        .transition(timelineRowTransition())
                     TimelineRowDivider()
+                        .transition(timelineRowTransition())
                 }
             }
         } header: {
@@ -717,17 +764,94 @@ struct TodoListScreen: View {
                 isCollapsible: canCollapseSection,
                 isCollapsed: isCollapsed,
                 onTap: canCollapseSection ? {
-                    if isCollapsed {
-                        collapsedSectionIDs.remove(section.id)
-                    } else {
-                        collapsedSectionIDs.insert(section.id)
-                    }
+                    toggleTimelineSection(section)
                 } : nil
             )
-            .listRowInsets(EdgeInsets(top: isFirstSection ? 0 : 8, leading: 0, bottom: 0, trailing: 0))
-            .listRowBackground(Color.clear)
+            .listRowInsets(
+                EdgeInsets(
+                    top: isFirstSection ? 0 : 8,
+                    leading: 0,
+                    bottom: 0,
+                    trailing: 0
+                )
+            )
+            .timelinePinnedSectionHeaderBackground()
             .listRowSeparator(.hidden)
         }
+    }
+
+    private func firstPinnedRowElasticTopInset(section: TodoTimelineSection, isFirstVisibleExpandedSection: Bool, itemIndex: Int) -> CGFloat {
+        guard isFirstVisibleExpandedSection, itemIndex == 0 else {
+            return 0
+        }
+
+        guard shouldApplyFirstPinnedRowElasticClearance(to: section) else {
+            return 0
+        }
+
+        return firstPinnedRowElasticClearance()
+    }
+
+    private func shouldApplyFirstPinnedRowElasticClearance(to section: TodoTimelineSection) -> Bool {
+        let isOverdueFirstSection = viewModel.mode == .overdue
+        let isTodayFirstSection = viewModel.mode == .today
+        let isExpandedPriorityEarlier = viewModel.mode == .priority && section.id == "earlier"
+        let isExpandedAllTasksEarlier = viewModel.mode == .all && section.id == "earlier"
+        let isScheduledFirstSection = viewModel.mode == .scheduled
+        let isListFirstSection = viewModel.mode == .list
+        return isOverdueFirstSection ||
+            isTodayFirstSection ||
+            isExpandedPriorityEarlier ||
+            isExpandedAllTasksEarlier ||
+            isScheduledFirstSection ||
+            isListFirstSection
+    }
+
+    private func firstPinnedRowElasticClearance() -> CGFloat {
+        let elasticProgress = TodoTimelineMetrics.progress(
+            titleCollapseProgress,
+            from: TodoTimelineMetrics.firstPinnedRowElasticStart,
+            to: TodoTimelineMetrics.firstPinnedRowElasticEnd
+        )
+        return TodoTimelineMetrics.firstPinnedRowElasticClearance * elasticProgress
+    }
+
+    private func canCollapseTimelineSection(_ section: TodoTimelineSection) -> Bool {
+        guard !section.items.isEmpty else {
+            return false
+        }
+        if viewModel.mode == .all {
+            return true
+        }
+        if viewModel.mode == .overdue {
+            return true
+        }
+        return viewModel.mode == .priority && section.isCollapsible
+    }
+
+    private func isTimelineSectionCollapsed(_ section: TodoTimelineSection) -> Bool {
+        canCollapseTimelineSection(section) && collapsedSectionIDs.contains(section.id)
+    }
+
+    private func toggleTimelineSection(_ section: TodoTimelineSection) {
+        let id = section.id
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+            if collapsedSectionIDs.contains(id) {
+                collapsedSectionIDs.remove(id)
+            } else {
+                collapsedSectionIDs.insert(id)
+            }
+        }
+    }
+
+    private func timelineRowTransition() -> AnyTransition {
+        let insertion = AnyTransition.opacity
+            .combined(with: .move(edge: .top))
+            .animation(.easeOut(duration: 0.16))
+        let removal = AnyTransition.opacity
+            .combined(with: .move(edge: .top))
+            .animation(.easeOut(duration: 0.1))
+        return .asymmetric(insertion: insertion, removal: removal)
     }
 
     private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String {
@@ -754,6 +878,11 @@ struct TodoListScreen: View {
             }
             return "Due \(dueBodyText)"
         case .priority:
+            if !todo.completed && todo.due < Date() {
+                return "Overdue, \(dueBodyText)"
+            }
+            return "Due \(dueBodyText)"
+        case .list:
             if !todo.completed && todo.due < Date() {
                 return "Overdue, \(dueBodyText)"
             }
@@ -825,7 +954,12 @@ struct TimelineTopBar: View {
                 TimelineTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
                 Spacer(minLength: 0)
                 if let action {
-                    TimelineTopBarButton(systemName: action.systemName, chrome: .plain, action: action.action)
+                    TimelineTopBarButton(
+                        systemName: action.systemName,
+                        chrome: action.usesCircularChrome ? .outlined : .plain,
+                        tint: action.tint,
+                        action: action.action
+                    )
                 } else {
                     Color.clear
                         .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
@@ -910,37 +1044,116 @@ private struct TimelineTopBarButton: View {
     enum Chrome {
         case plain
         case filled
+        case outlined
     }
 
     let systemName: String
     let chrome: Chrome
+    let tint: Color?
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
+    init(systemName: String, chrome: Chrome, tint: Color? = nil, action: @escaping () -> Void) {
+        self.systemName = systemName
+        self.chrome = chrome
+        self.tint = tint
+        self.action = action
+    }
+
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: TodoTimelineMetrics.topBarButtonIconSize, weight: .semibold))
+                .font(.system(size: iconSize, weight: .semibold))
                 .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
                 .background {
                     if chrome == .filled {
                         Circle()
                             .fill(colors.surface)
+                    } else if chrome == .outlined {
+                        Circle()
+                            .fill(outlinedFillColor)
+                            .overlay {
+                                Circle()
+                                    .stroke(outlinedBorderColor, lineWidth: 1)
+                            }
                     }
                 }
                 .contentShape(Circle())
         }
-        .buttonStyle(
-            chrome == .filled
-                ? TdayPressButtonStyle()
-                : TdayPressButtonStyle(
-                    shadowColor: Color.black,
-                    pressedShadowOpacity: 0,
-                    normalShadowOpacity: 0
-                )
-        )
-        .foregroundStyle(chrome == .filled ? colors.onSurface : Color.accentColor)
+        .buttonStyle(TimelineTopBarButtonStyle(isFilled: chrome == .filled))
+        .foregroundStyle(foregroundColor)
+    }
+
+    private var iconSize: CGFloat {
+        chrome == .filled ? TodoTimelineMetrics.topBarButtonIconSize : 28
+    }
+
+    private var foregroundColor: Color {
+        switch chrome {
+        case .filled:
+            return colors.onSurface
+        case .outlined:
+            return tint ?? colors.onSurface
+        case .plain:
+            return tint ?? Color.accentColor
+        }
+    }
+
+    private var outlinedFillColor: Color {
+        if let tint {
+            return tint.opacity(0.12)
+        }
+        return colors.background
+    }
+
+    private var outlinedBorderColor: Color {
+        if let tint {
+            return tint.opacity(0.48)
+        }
+        return colors.onSurfaceVariant.opacity(0.28)
+    }
+}
+
+private struct TimelineTopBarButtonStyle: ButtonStyle {
+    let isFilled: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .tdayRippleEffect(isPressed: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .offset(y: configuration.isPressed ? 1 : 0)
+            .shadow(
+                color: Color.black.opacity(shadowOpacity(isPressed: configuration.isPressed)),
+                radius: shadowRadius(isPressed: configuration.isPressed),
+                x: 0,
+                y: shadowOffsetY(isPressed: configuration.isPressed)
+            )
+            .animation(.easeOut(duration: 0.14), value: configuration.isPressed)
+    }
+
+    private func shadowOpacity(isPressed: Bool) -> Double {
+        guard isFilled else {
+            return 0
+        }
+
+        return isPressed ? 0.04 : 0.08
+    }
+
+    private func shadowRadius(isPressed: Bool) -> CGFloat {
+        guard isFilled else {
+            return 0
+        }
+
+        return isPressed ? 3 : 7
+    }
+
+    private func shadowOffsetY(isPressed: Bool) -> CGFloat {
+        guard isFilled else {
+            return 0
+        }
+
+        return isPressed ? 1 : 3
     }
 }
 
@@ -1061,22 +1274,23 @@ struct TimelineSectionHeader: View {
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
         .padding(.bottom, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(colors.background)
 
         if let onTap {
             Button(action: onTap) {
                 content
             }
-            .buttonStyle(
-                TdayPressButtonStyle(
-                    shadowColor: Color.black,
-                    pressedShadowOpacity: 0,
-                    normalShadowOpacity: 0
-                )
-            )
+            .buttonStyle(TimelineSectionHeaderButtonStyle())
         } else {
             content
         }
+    }
+}
+
+private struct TimelineSectionHeaderButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .brightness(configuration.isPressed ? -0.055 : 0)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
@@ -1100,6 +1314,7 @@ private struct ListSettingsSheet: View {
     let list: ListSummary?
     let onSubmit: (String, String?, String?) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.tdayColors) private var tdayColors
 
     @State private var name = ""
     @State private var color = "BLUE"
@@ -1107,41 +1322,123 @@ private struct ListSettingsSheet: View {
 
     private let colors = ["BLUE", "GREEN", "ORANGE", "PINK", "PURPLE", "GRAY"]
     private let icons = ["inbox", "briefcase", "calendar", "list.bullet", "star", "heart"]
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         NavigationStack {
-            Form {
-                TextField("Name", text: $name)
-                Picker("Color", selection: $color) {
-                    ForEach(colors, id: \.self) { value in
-                        Text(value.capitalized).tag(value)
-                    }
-                }
-                Picker("Icon", selection: $iconKey) {
-                    ForEach(icons, id: \.self) { value in
-                        Label(value.replacingOccurrences(of: ".", with: " "), systemImage: value).tag(value)
-                    }
-                }
-            }
-            .disableVerticalScrollBounce()
-            .navigationTitle("List Settings")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSubmit(name, color, iconKey)
+            VStack(spacing: 0) {
+                ListSettingsSheetHeader(
+                    canSave: canSave,
+                    onClose: { dismiss() },
+                    onConfirm: {
+                        onSubmit(name.trimmingCharacters(in: .whitespacesAndNewlines), color, iconKey)
                         dismiss()
                     }
+                )
+
+                Form {
+                    TextField("Name", text: $name)
+                    Picker("Color", selection: $color) {
+                        ForEach(colors, id: \.self) { value in
+                            Text(value.capitalized).tag(value)
+                        }
+                    }
+                    Picker("Icon", selection: $iconKey) {
+                        ForEach(icons, id: \.self) { value in
+                            Label(value.replacingOccurrences(of: ".", with: " "), systemImage: value).tag(value)
+                        }
+                    }
                 }
+                .scrollContentBackground(.hidden)
             }
+            .background(tdayColors.background)
+            .disableVerticalScrollBounce()
+            .toolbar(.hidden, for: .navigationBar)
             .task {
                 name = list?.name ?? ""
                 color = list?.color ?? "BLUE"
                 iconKey = list?.iconKey ?? "inbox"
             }
         }
+    }
+}
+
+private struct ListSettingsSheetHeader: View {
+    let canSave: Bool
+    let onClose: () -> Void
+    let onConfirm: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack {
+            ListSettingsSheetActionButton(
+                icon: "xmark",
+                accessibilityLabel: "Cancel",
+                accentColor: Color(red: 227.0 / 255.0, green: 90.0 / 255.0, blue: 90.0 / 255.0),
+                enabled: true,
+                action: onClose
+            )
+
+            Spacer(minLength: 0)
+
+            Text("List Settings")
+                .font(.tdayRounded(size: 28, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+
+            Spacer(minLength: 0)
+
+            ListSettingsSheetActionButton(
+                icon: "checkmark",
+                accessibilityLabel: "Save",
+                accentColor: Color(red: 47.0 / 255.0, green: 163.0 / 255.0, blue: 91.0 / 255.0),
+                enabled: canSave,
+                action: onConfirm
+            )
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 14)
+        .background(colors.background)
+    }
+}
+
+private struct ListSettingsSheetActionButton: View {
+    let icon: String
+    let accessibilityLabel: String
+    let accentColor: Color
+    let enabled: Bool
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
+                .frame(width: 56, height: 56)
+                .background(colors.surfaceVariant, in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(accentColor.opacity(enabled ? 0.55 : 0.3), lineWidth: 1.5)
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: enabled ? 0.16 : 0.06
+            )
+        )
+        .disabled(!enabled)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -1276,24 +1573,8 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
                 targetDate: date
             )
         }
-    case .all, .priority:
+    case .all, .priority, .list:
         return buildFutureTimelineSections(items: items, calendar: calendar)
-    case .list:
-        let grouped = Dictionary(grouping: items) { item -> String in
-            if item.due < calendar.startOfDay(for: Date()) {
-                return "Earlier"
-            }
-            return item.due.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
-        }
-        return grouped.keys.sorted().map { key in
-            TodoTimelineSection(
-                id: key,
-                title: key,
-                items: grouped[key]?.sorted(by: todoTimelineSortPrecedes) ?? [],
-                isCollapsible: key == "Earlier",
-                targetDate: nil
-            )
-        }
     }
 }
 

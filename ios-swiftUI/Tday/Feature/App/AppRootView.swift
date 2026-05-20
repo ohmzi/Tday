@@ -60,6 +60,8 @@ struct AppRootView: View {
                             CalendarScreen(container: container)
                         case .settings:
                             SettingsScreen(viewModel: appViewModel)
+                        case .latestRelease:
+                            LatestReleaseScreen(viewModel: appViewModel)
                         }
                     }
                     .overlay(alignment: .top) {
@@ -140,6 +142,7 @@ struct AppRootView: View {
                         }
                     }
                 }
+                .navigationInteractivePopGesture()
                 .background(TdayTheme.backgroundGradient.ignoresSafeArea())
             }
         }
