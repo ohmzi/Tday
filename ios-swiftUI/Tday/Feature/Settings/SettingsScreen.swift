@@ -1,5 +1,7 @@
 import SwiftUI
 
+private let settingsSegmentedControlAccentColor = Color(red: 125.0 / 255.0, green: 103.0 / 255.0, blue: 182.0 / 255.0)
+
 struct SettingsScreen: View {
     let viewModel: AppViewModel
 
@@ -265,32 +267,22 @@ private struct SettingsThemeSelector: View {
     let selectedMode: AppThemeMode
     let onSelect: (AppThemeMode) -> Void
 
-    @Environment(\.tdayColors) private var colors
-
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(AppThemeMode.allCases, id: \.self) { mode in
-                let selected = selectedMode == mode
-                Button {
-                    onSelect(mode)
-                } label: {
-                    Text(mode.label)
-                        .font(.tdayRounded(size: 13, weight: .heavy))
-                        .foregroundStyle(selected ? colors.onSurface : colors.onSurface.opacity(0.58))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(
-                            selected ? colors.surface : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        )
+        let modes = AppThemeMode.allCases
+
+        TdayNativeSegmentedControl(
+            labels: modes.map(\.label),
+            selectedIndex: modes.firstIndex(of: selectedMode) ?? 0,
+            accentColor: settingsSegmentedControlAccentColor,
+            onSelect: { index in
+                guard modes.indices.contains(index) else {
+                    return
                 }
-                .buttonStyle(.plain)
+                onSelect(modes[index])
             }
-        }
-        .padding(4)
-        .background(
-            colors.surfaceVariant.opacity(0.76),
-            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
         )
+        .frame(maxWidth: .infinity)
+        .frame(height: TdayNativeSegmentedControlMetrics.height)
     }
 }
 
