@@ -219,6 +219,14 @@ struct CalendarScreen: View {
         .environment(\.defaultMinListRowHeight, 1)
         .disableVerticalScrollBounce()
         .background(colors.background)
+        .overlay {
+            if pendingItems.isEmpty, !viewModel.isLoading {
+                EmptyTaskWatermark(
+                    systemName: "calendar",
+                    accentColor: calendarAccentColor
+                )
+            }
+        }
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: calendarAccentColor,

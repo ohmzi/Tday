@@ -98,6 +98,8 @@ import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
+import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
@@ -190,15 +192,29 @@ fun CompletedScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .nestedScroll(nestedScrollConnection),
-            state = listState,
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp),
+                .padding(padding),
         ) {
+            if (uiState.items.isEmpty() && !uiState.isLoading) {
+                EmptyTaskWatermark(
+                    imageVector = Icons.Rounded.Check,
+                    accentColor = COMPLETED_TITLE_COLOR,
+                )
+                EmptyTaskBackgroundMessage(
+                    message = stringResource(R.string.completed_empty),
+                )
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(nestedScrollConnection),
+                state = listState,
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+            ) {
             timelineSections.forEachIndexed { sectionIndex, section ->
                 val isCollapsed = collapsedSectionKeys.contains(section.key)
                 item(key = "completed-header-${section.key}") {
@@ -256,14 +272,10 @@ fun CompletedScreen(
                 }
             }
 
-            if (uiState.items.isEmpty()) {
+                if (uiState.items.isEmpty() && uiState.isLoading) {
                 item {
                     EmptyCompletedState(
-                        message = if (uiState.isLoading) {
-                            stringResource(R.string.label_loading)
-                        } else {
-                            stringResource(R.string.completed_empty)
-                        },
+                        message = stringResource(R.string.label_loading),
                     )
                 }
             }
@@ -277,7 +289,8 @@ fun CompletedScreen(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(96.dp)) }
+                item { Spacer(modifier = Modifier.height(96.dp)) }
+            }
         }
     }
 
