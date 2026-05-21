@@ -56,6 +56,8 @@ class SyncManager @Inject constructor(
 ) {
     private val offlineSyncFailureMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
     val offlineSyncFailures: SharedFlow<Unit> = offlineSyncFailureMutable.asSharedFlow()
+    private val offlineSyncSuccessMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+    val offlineSyncSuccesses: SharedFlow<Unit> = offlineSyncSuccessMutable.asSharedFlow()
 
     fun hasPendingMutations(): Boolean =
         cacheManager.loadOfflineState().pendingMutations.isNotEmpty()
@@ -67,16 +69,21 @@ class SyncManager @Inject constructor(
         connectionProbeTimeoutMs: Long? = null,
     ): Result<Unit> {
         val result = runCatching {
+            var contactedServer = false
             if (connectionProbeTimeoutMs != null) {
                 verifyServerConnection(connectionProbeTimeoutMs)
+                contactedServer = true
             }
-            cacheManager.withSyncLock {
+            val syncedRemoteData = cacheManager.withSyncLock {
                 syncLocalCache(
                     force = force,
                     replayPendingMutations = replayPendingMutations,
                 )
             }
             runCatching { TodayTasksWidget().updateAll(context) }
+            if (contactedServer || syncedRemoteData) {
+                offlineSyncSuccessMutable.tryEmit(Unit)
+            }
             Unit
         }
         val error = result.exceptionOrNull()
@@ -98,11 +105,11 @@ class SyncManager @Inject constructor(
     private suspend fun syncLocalCache(
         force: Boolean,
         replayPendingMutations: Boolean,
-    ) {
+    ): Boolean {
         var state = cacheManager.loadOfflineState()
         val now = System.currentTimeMillis()
         if (force && (now - state.lastSyncAttemptEpochMs) < MIN_FORCE_SYNC_INTERVAL_MS) {
-            return
+            return false
         }
 
         val shouldReplayPendingMutations = replayPendingMutations &&
@@ -112,7 +119,7 @@ class SyncManager @Inject constructor(
             state.lastSuccessfulSyncEpochMs == 0L ||
             (now - state.lastSyncAttemptEpochMs) >= OFFLINE_RESYNC_INTERVAL_MS
 
-        if (!shouldSync) return
+        if (!shouldSync) return false
 
         state = state.copy(lastSyncAttemptEpochMs = now)
         cacheManager.saveOfflineState(state)
@@ -144,7 +151,7 @@ class SyncManager @Inject constructor(
                     lastSuccessfulSyncEpochMs = now,
                 ),
             )
-            return
+            return true
         }
 
         val afterPending = applyPendingMutations(state, firstRemote)
@@ -160,6 +167,7 @@ class SyncManager @Inject constructor(
         )
 
         cacheManager.saveOfflineState(mergedState)
+        return true
     }
 
     private suspend fun fetchRemoteSnapshot(): RemoteSnapshot {

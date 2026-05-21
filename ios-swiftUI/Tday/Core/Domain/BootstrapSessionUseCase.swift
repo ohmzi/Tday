@@ -19,10 +19,17 @@ struct BootstrapSessionUseCase {
               restored.user.id != nil else {
             return nil
         }
+        let connectionProbeTimeout: TimeInterval?
+        if restored.usedCachedSession {
+            connectionProbeTimeout = SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        } else {
+            connectionProbeTimeout = nil
+        }
         let result = await syncManager.syncCachedData(
             force: true,
             replayPendingMutations: true,
-            notifyOfflineFailure: false
+            notifyOfflineFailure: false,
+            connectionProbeTimeoutSeconds: connectionProbeTimeout
         )
         let syncError: Error?
         switch result {
@@ -33,8 +40,7 @@ struct BootstrapSessionUseCase {
         }
         return BootstrapSessionResult(
             user: restored.user,
-            isOffline: restored.usedCachedSession ||
-                syncError.map(isLikelyConnectivityIssue) == true
+            isOffline: syncError.map(isLikelyConnectivityIssue) == true
         )
     }
 }
