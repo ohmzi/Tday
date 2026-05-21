@@ -17,8 +17,6 @@ enum TodoTimelineMetrics {
     static let minimalRowIndicatorSize: CGFloat = 14
     static let minimalRowTrailingIndicatorPadding: CGFloat = 24
     static let minimalRowVerticalPadding: CGFloat = 10
-    static let emptyStateSize: CGFloat = 28
-    static let emptyStateOffset: CGFloat = 78
     static let titleCollapseDistance: CGFloat = 64
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
@@ -255,10 +253,16 @@ struct TodoListScreen: View {
         .background(colors.background)
         .overlay {
             if viewModel.items.isEmpty, !viewModel.isLoading {
-                EmptyTaskWatermark(
-                    systemName: emptyWatermarkSystemName,
-                    accentColor: modeAccentColor
-                )
+                ZStack {
+                    EmptyTaskWatermark(
+                        systemName: emptyWatermarkSystemName,
+                        accentColor: modeAccentColor
+                    )
+                    EmptyTaskBackgroundMessage(
+                        message: emptyTimelineMessage(for: viewModel.mode)
+                    )
+                }
+                .allowsHitTesting(false)
             }
         }
         .navigationBackButtonBehavior()
@@ -649,12 +653,6 @@ struct TodoListScreen: View {
             .environment(\.defaultMinListRowHeight, 1)
             .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
-            if viewModel.items.isEmpty {
-                TimelineCategoryEmptyState(
-                    message: emptyTimelineMessage(for: viewModel.mode)
-                )
-                    .allowsHitTesting(false)
-            }
         }
     }
 
@@ -695,12 +693,6 @@ struct TodoListScreen: View {
                 .environment(\.defaultMinListRowHeight, 1)
                 .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
-                if viewModel.items.isEmpty {
-                    TimelineCategoryEmptyState(
-                        message: emptyTimelineMessage(for: viewModel.mode)
-                    )
-                        .allowsHitTesting(false)
-                }
             }
             .onAppear {
                 scrollToHighlightedTodo(using: scrollProxy)
@@ -1481,40 +1473,6 @@ private struct TimelineSectionHeaderButtonStyle: ButtonStyle {
         configuration.label
             .brightness(configuration.isPressed ? -0.055 : 0)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-    }
-}
-
-struct TimelineEmptyState: View {
-    let message: String
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Text(message)
-            .font(.tdayRounded(size: TodoTimelineMetrics.emptyStateSize, weight: .bold))
-            .foregroundStyle(colors.onSurfaceVariant.opacity(0.54))
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .offset(y: TodoTimelineMetrics.emptyStateOffset)
-            .padding(.horizontal, 32)
-    }
-}
-
-private struct TimelineCategoryEmptyState: View {
-    let message: String
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Text(message)
-            .font(.tdayRounded(size: TodoTimelineMetrics.emptyStateSize, weight: .bold))
-            .foregroundStyle(colors.onSurfaceVariant.opacity(0.66))
-            .multilineTextAlignment(.center)
-            .lineLimit(2)
-            .minimumScaleFactor(0.82)
-            .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .offset(y: TodoTimelineMetrics.emptyStateOffset)
     }
 }
 

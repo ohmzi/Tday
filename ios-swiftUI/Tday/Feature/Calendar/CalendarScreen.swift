@@ -162,14 +162,7 @@ struct CalendarScreen: View {
             }
 
             Section {
-                if pendingItems.isEmpty {
-                    Text("No pending task due for this day")
-                        .font(.tdayRounded(size: 13, weight: .bold))
-                        .foregroundStyle(colors.onSurfaceVariant)
-                        .listRowInsets(EdgeInsets(top: 4, leading: TodoTimelineMetrics.horizontalPadding, bottom: 12, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                } else {
+                if !pendingItems.isEmpty {
                     ForEach(pendingItems) { todo in
                         CalendarPendingTaskRow(
                             todo: todo,
@@ -221,10 +214,14 @@ struct CalendarScreen: View {
         .background(colors.background)
         .overlay {
             if pendingItems.isEmpty, !viewModel.isLoading {
-                EmptyTaskWatermark(
-                    systemName: "calendar",
-                    accentColor: calendarAccentColor
-                )
+                ZStack {
+                    EmptyTaskWatermark(
+                        systemName: "calendar",
+                        accentColor: calendarAccentColor
+                    )
+                    EmptyTaskBackgroundMessage(message: "No pending task due for this day")
+                }
+                .allowsHitTesting(false)
             }
         }
         .navigationBackButtonBehavior()
