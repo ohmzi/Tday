@@ -146,7 +146,7 @@
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Retry</string>
     <string name="offline_banner_title">Offline mode</string>
-    <string name="offline_banner">Changes will sync when connection returns.</string>
+    <string name="offline_banner">App is in offline mode. Changes will sync when connection returns.</string>
     <string name="offline_banner_pending_one">1 change waiting to sync</string>
     <string name="offline_banner_pending_many">%1$d changes waiting to sync</string>
     <string name="error_auth_expired">Session expired. Please sign in again.</string>

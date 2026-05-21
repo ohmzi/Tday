@@ -3,6 +3,7 @@ import SwiftUI
 struct OfflineBanner: View {
     let visible: Bool
     let pendingMutationCount: Int
+    let noticeID: Int
 
     @Environment(\.tdayColors) private var colors
     @GestureState private var dragOffsetY: CGFloat = 0
@@ -21,6 +22,9 @@ struct OfflineBanner: View {
         }
         .onChange(of: visible) { _, newValue in
             updatePresentation(newValue)
+        }
+        .onChange(of: noticeID) { _, _ in
+            updatePresentation(visible)
         }
     }
 
@@ -92,7 +96,7 @@ struct OfflineBanner: View {
         if pendingMutationCount > 1 {
             return "\(pendingMutationCount) changes waiting to sync"
         }
-        return "Changes will sync when connection returns."
+        return "App is in offline mode. Changes will sync when connection returns."
     }
 
     private var dragProgress: CGFloat {
@@ -109,7 +113,7 @@ struct OfflineBanner: View {
 
         isPresented = true
         dismissalTask = Task {
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 dismissNotice(cancelTimer: false)

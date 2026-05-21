@@ -1,11 +1,12 @@
 package com.ohmz.tday.compose.ui.component
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +69,11 @@ private fun TdayPullToRefreshIndicator(
         animationSpec = tween(durationMillis = 220),
         label = "pullRefreshAlpha",
     )
+    val scale by animateFloatAsState(
+        targetValue = if (visible) 1f else 0.78f,
+        animationSpec = tween(durationMillis = 220),
+        label = "pullRefreshScale",
+    )
     val spin = if (isRefreshing) {
         rememberInfiniteTransition(label = "pullRefreshSpin").animateFloat(
             initialValue = 0f,
@@ -85,12 +92,21 @@ private fun TdayPullToRefreshIndicator(
             .pullToRefreshIndicator(
                 state = state,
                 isRefreshing = isRefreshing,
-                shape = RoundedCornerShape(18.dp),
-                containerColor = colorScheme.surfaceVariant,
-                elevation = 12.dp,
+                shape = RoundedCornerShape(TdayDimens.RadiusLg),
+                containerColor = colorScheme.surface,
+                elevation = TdayDimens.PullRefreshElevation,
+            )
+            .size(48.dp)
+            .border(
+                width = TdayDimens.BorderWidth,
+                color = colorScheme.onSurface.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(TdayDimens.RadiusLg),
             )
             .graphicsLayer {
                 this.alpha = alpha
+                scaleX = scale
+                scaleY = scale
+                translationY = if (visible) 0f else -12.dp.toPx()
             },
         contentAlignment = Alignment.Center,
     ) {
@@ -99,9 +115,9 @@ private fun TdayPullToRefreshIndicator(
             contentDescription = "Refreshing",
             tint = colorScheme.primary,
             modifier = Modifier
-                .size(26.dp)
+                .size(TdayDimens.PullRefreshIndicator)
                 .graphicsLayer {
-                    rotationZ = if (isRefreshing) spin else state.distanceFraction * 140f
+                    rotationZ = if (isRefreshing) spin else state.distanceFraction * 160f
                 },
         )
     }

@@ -54,7 +54,7 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val OFFLINE_NOTICE_AUTO_DISMISS_MS = 1_000L
+private const val OFFLINE_NOTICE_AUTO_DISMISS_MS = 2_000L
 private const val OFFLINE_NOTICE_ENTER_DURATION_MS = 220
 private const val OFFLINE_NOTICE_EXIT_DURATION_MS = 170
 private const val OFFLINE_NOTICE_DRAG_GAIN = 1.16f
@@ -65,11 +65,12 @@ private const val OFFLINE_NOTICE_FADE_DISTANCE_DP = 88
 fun OfflineBanner(
     visible: Boolean,
     pendingMutationCount: Int,
+    noticeKey: Long,
     modifier: Modifier = Modifier,
 ) {
     var isPresented by remember { mutableStateOf(false) }
 
-    LaunchedEffect(visible) {
+    LaunchedEffect(visible, noticeKey) {
         if (!visible) {
             isPresented = false
             return@LaunchedEffect
