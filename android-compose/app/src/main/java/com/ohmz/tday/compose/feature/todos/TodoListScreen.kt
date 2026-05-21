@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.view.View
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -42,6 +44,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -147,6 +150,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -161,7 +165,6 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -172,9 +175,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -185,7 +185,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -210,6 +209,8 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -251,64 +252,20 @@ fun TodoListScreen(
     val listState = rememberLazyListState()
     val density = LocalDensity.current
     val maxTodayCollapsePx = with(density) { TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    var todayHeaderCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val todayCollapseProgressTarget = if (usesTodayStyle && maxTodayCollapsePx > 0f) {
-        (todayHeaderCollapsePx / maxTodayCollapsePx).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    val todayNestedScrollConnection = remember(usesTodayStyle, listState, maxTodayCollapsePx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (!usesTodayStyle) return Offset.Zero
-                val deltaY = available.y
-                if (deltaY < 0f) {
-                    val previous = todayHeaderCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
-                    val consumed = next - previous
-                    if (consumed > 0f) {
-                        todayHeaderCollapsePx = next
-                        return Offset(0f, -consumed)
-                    }
-                    return Offset.Zero
+    val todayCollapseProgress by remember(usesTodayStyle, listState, maxTodayCollapsePx) {
+        derivedStateOf {
+            if (!usesTodayStyle || maxTodayCollapsePx <= 0f) {
+                0f
+            } else {
+                val scrolledPx = if (listState.firstVisibleItemIndex > 0) {
+                    maxTodayCollapsePx
+                } else {
+                    listState.firstVisibleItemScrollOffset.toFloat()
                 }
-
-                if (deltaY > 0f) {
-                    val isListAtTop =
-                        listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                    if (!isListAtTop) return Offset.Zero
-                    val previous = todayHeaderCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
-                    val consumed = previous - next
-                    if (consumed > 0f) {
-                        todayHeaderCollapsePx = next
-                        return Offset(0f, consumed)
-                    }
-                }
-
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (!usesTodayStyle) return Velocity.Zero
-                if (available.y < 0f && todayHeaderCollapsePx < maxTodayCollapsePx) {
-                    todayHeaderCollapsePx = maxTodayCollapsePx
-                    return available
-                }
-                val isListAtTop =
-                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && isListAtTop && todayHeaderCollapsePx > 0f) {
-                    todayHeaderCollapsePx = 0f
-                    return available
-                }
-                return Velocity.Zero
+                (scrolledPx / maxTodayCollapsePx).coerceIn(0f, 1f)
             }
         }
     }
-    val todayCollapseProgress by animateFloatAsState(
-        targetValue = todayCollapseProgressTarget,
-        label = "todayTitleCollapseProgress",
-    )
     val isCollapsibleTimelineMode =
         uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
@@ -390,9 +347,11 @@ fun TodoListScreen(
                 with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
             val centeredScrollOffset =
                 -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
-            listState.animateScrollToItem(
-                index = target.first,
-                scrollOffset = centeredScrollOffset,
+            listState.animateSearchResultScrollToItem(
+                targetIndex = target.first,
+                targetKey = target.second,
+                centeredScrollOffset = centeredScrollOffset,
+                estimatedItemSizePx = estimatedRowHeight,
             )
             flashTodoId = highlightedTodoId
             delay(2300)
@@ -486,14 +445,7 @@ fun TodoListScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .then(
-                    if (usesTodayStyle) {
-                        Modifier.nestedScroll(todayNestedScrollConnection)
-                    } else {
-                        Modifier
-                    },
-                ),
+                .padding(padding),
             state = listState,
             contentPadding = if (usesTodayStyle) {
                 PaddingValues(horizontal = 18.dp, vertical = 2.dp)
@@ -566,7 +518,10 @@ fun TodoListScreen(
                             null
                         }
 
-                    item(key = "timeline-header-${section.key}") {
+                    item(
+                        key = "timeline-header-${section.key}",
+                        contentType = "timeline-header",
+                    ) {
                         TimelineSectionHeader(
                             modifier = Modifier
                                 .animateItem(
@@ -621,7 +576,10 @@ fun TodoListScreen(
                             section.key == "earlier" &&
                                     (uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY)
                         section.items.forEachIndexed { itemIndex, todo ->
-                            item(key = "timeline-todo-${section.key}-${todo.id}") {
+                            item(
+                                key = "timeline-todo-${section.key}-${todo.id}",
+                                contentType = "timeline-todo",
+                            ) {
                                 TimelineTaskRow(
                                     modifier = Modifier
                                         .animateItem(
@@ -688,7 +646,11 @@ fun TodoListScreen(
                     }
                 }
             } else {
-                items(uiState.items, key = { it.id }) { todo ->
+                items(
+                    items = uiState.items,
+                    key = { it.id },
+                    contentType = { "todo-row" },
+                ) { todo ->
                     if (usesTodayStyle) {
                         TodayTodoRow(
                             todo = todo,
@@ -2105,12 +2067,98 @@ private fun createMovedTaskPayload(
     )
 }
 
+private suspend fun LazyListState.animateSearchResultScrollToItem(
+    targetIndex: Int,
+    targetKey: String,
+    centeredScrollOffset: Int,
+    estimatedItemSizePx: Int,
+) {
+    repeat(SEARCH_RESULT_SCROLL_CORRECTION_PASSES) {
+        val visibleTarget =
+            layoutInfo.visibleItemsInfo.firstOrNull { item -> item.key == targetKey }
+        if (visibleTarget != null) {
+            animateVisibleSearchResultToCenter(
+                itemOffset = visibleTarget.offset,
+                itemSize = visibleTarget.size,
+            )
+            return
+        }
+
+        val visibleItems = layoutInfo.visibleItemsInfo
+        val averageItemSizePx = visibleItems
+            .takeIf { it.isNotEmpty() }
+            ?.map { item -> item.size }
+            ?.average()
+            ?.toFloat()
+            ?.takeIf { it > 0f }
+            ?: estimatedItemSizePx.toFloat()
+        val estimatedDistance =
+            ((targetIndex - firstVisibleItemIndex) * averageItemSizePx) +
+                    centeredScrollOffset -
+                    firstVisibleItemScrollOffset
+        if (abs(estimatedDistance) < SEARCH_RESULT_SCROLL_MIN_DISTANCE_PX) return
+        animateScrollBy(
+            value = estimatedDistance,
+            animationSpec = tween(
+                durationMillis = searchResultScrollDurationMillis(estimatedDistance),
+                easing = LinearOutSlowInEasing,
+            ),
+        )
+    }
+
+    val visibleTarget = layoutInfo.visibleItemsInfo.firstOrNull { item -> item.key == targetKey }
+    if (visibleTarget != null) {
+        animateVisibleSearchResultToCenter(
+            itemOffset = visibleTarget.offset,
+            itemSize = visibleTarget.size,
+        )
+    } else {
+        scrollToItem(targetIndex, centeredScrollOffset)
+    }
+}
+
+private suspend fun LazyListState.animateVisibleSearchResultToCenter(
+    itemOffset: Int,
+    itemSize: Int,
+) {
+    val viewportCenter =
+        (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+    val itemCenter = itemOffset + (itemSize / 2)
+    val centerDelta = (itemCenter - viewportCenter).toFloat()
+    if (abs(centerDelta) < SEARCH_RESULT_SCROLL_MIN_DISTANCE_PX) return
+    animateScrollBy(
+        value = centerDelta,
+        animationSpec = tween(
+            durationMillis = SEARCH_RESULT_CENTER_SCROLL_DURATION_MS,
+            easing = FastOutSlowInEasing,
+        ),
+    )
+}
+
+private fun searchResultScrollDurationMillis(distancePx: Float): Int =
+    (abs(distancePx) / SEARCH_RESULT_SCROLL_PX_PER_MS)
+        .roundToInt()
+        .coerceIn(
+            SEARCH_RESULT_SCROLL_MIN_DURATION_MS,
+            SEARCH_RESULT_SCROLL_MAX_DURATION_MS,
+        )
+
 private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
-private const val SEARCH_RESULT_NAV_SETTLE_DELAY_MS = 480L
+private const val SEARCH_RESULT_NAV_SETTLE_DELAY_MS = 380L
+private const val SEARCH_RESULT_SCROLL_CORRECTION_PASSES = 2
+private const val SEARCH_RESULT_SCROLL_MIN_DISTANCE_PX = 2f
+private const val SEARCH_RESULT_SCROLL_PX_PER_MS = 1.15f
+private const val SEARCH_RESULT_SCROLL_MIN_DURATION_MS = 720
+private const val SEARCH_RESULT_SCROLL_MAX_DURATION_MS = 2400
+private const val SEARCH_RESULT_CENTER_SCROLL_DURATION_MS = 520
 private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 58.dp
 private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
+private val TODO_DUE_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+private val TODO_DUE_DATE_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault())
 
 @Composable
 private fun AllTaskSwipeRow(
@@ -2284,10 +2332,8 @@ private fun SwipeTaskRow(
         animationSpec = tween(durationMillis = 220),
         label = "swipeTaskCompletionAlpha",
     )
-    val dueTimeText =
-        DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
-    val dueDateTimeText =
-        DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
+    val dueTimeText = TODO_DUE_TIME_FORMATTER.format(todo.due)
+    val dueDateTimeText = TODO_DUE_DATE_TIME_FORMATTER.format(todo.due)
     val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
     val dueSubtitleText = if (isOverdue) {
@@ -2614,8 +2660,7 @@ private fun TodayTodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val dueText =
-        DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
+    val dueText = TODO_DUE_TIME_FORMATTER.format(todo.due)
     val isDetailOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val detailDueText = if (isDetailOverdue) {
         stringResource(R.string.todos_due_overdue_text, dueText)
@@ -2689,8 +2734,7 @@ private fun TodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault())
-        .format(todo.due)
+    val due = TODO_DUE_DATE_TIME_FORMATTER.format(todo.due)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
