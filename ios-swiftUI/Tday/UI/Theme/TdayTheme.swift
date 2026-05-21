@@ -242,6 +242,28 @@ struct TdayBackground<Content: View>: View {
     }
 }
 
+struct EmptyTaskWatermark: View {
+    let systemName: String
+    let accentColor: Color
+
+    @Environment(\.tdayColors) private var colors
+
+    private var watermarkColor: Color {
+        colors.onSurfaceVariant.tdayBlended(with: accentColor, amount: 0.36).opacity(0.10)
+    }
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 158, weight: .regular))
+            .foregroundStyle(watermarkColor)
+            .rotationEffect(.degrees(-7))
+            .offset(x: 26, y: 22)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
 struct TdayCardModifier: ViewModifier {
     @Environment(\.tdayColors) private var colors
 
