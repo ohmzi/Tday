@@ -384,23 +384,32 @@ fun TodoListScreen(
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         if (collapsedSectionKeys.isNotEmpty()) {
             collapsedSectionKeys = emptySet()
+            delay(SEARCH_RESULT_SECTION_EXPAND_DELAY_MS)
         }
-        delay(SEARCH_RESULT_SCROLL_START_DELAY_MS)
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
-            val viewportHeight =
-                listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
-            val estimatedRowHeight =
-                with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
-            val centeredScrollOffset =
-                -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
-            listState.animateScrollToItem(
-                index = target.first,
-                scrollOffset = centeredScrollOffset,
-            )
-            delay(SEARCH_RESULT_ROW_LAYOUT_DELAY_MS)
-            val visibleTarget = listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+            val preScrollIndex =
+                (target.first - SEARCH_RESULT_PRE_SCROLL_ITEM_COUNT).coerceAtLeast(0)
+            listState.scrollToItem(preScrollIndex)
+            delay(SEARCH_RESULT_SCROLL_START_DELAY_MS)
+            var visibleTarget = listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
                 item.key == target.second
+            }
+            if (visibleTarget == null) {
+                val viewportHeight =
+                    listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
+                val estimatedRowHeight =
+                    with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
+                val centeredScrollOffset =
+                    -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
+                listState.animateScrollToItem(
+                    index = target.first,
+                    scrollOffset = centeredScrollOffset,
+                )
+                delay(SEARCH_RESULT_ROW_LAYOUT_DELAY_MS)
+                visibleTarget = listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+                    item.key == target.second
+                }
             }
             if (visibleTarget != null) {
                 val viewportCenter =
@@ -411,7 +420,7 @@ fun TodoListScreen(
                     listState.animateScrollBy(
                         value = centerDelta,
                         animationSpec = tween(
-                            durationMillis = SEARCH_RESULT_FINE_SCROLL_DURATION_MS,
+                            durationMillis = SEARCH_RESULT_CENTER_SCROLL_DURATION_MS,
                             easing = FastOutSlowInEasing,
                         ),
                     )
@@ -2129,10 +2138,12 @@ private fun createMovedTaskPayload(
 }
 
 private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
-private const val SEARCH_RESULT_SCROLL_START_DELAY_MS = 260L
+private const val SEARCH_RESULT_SECTION_EXPAND_DELAY_MS = 80L
+private const val SEARCH_RESULT_SCROLL_START_DELAY_MS = 440L
 private const val SEARCH_RESULT_ROW_LAYOUT_DELAY_MS = 70L
-private const val SEARCH_RESULT_FINE_SCROLL_DURATION_MS = 320
+private const val SEARCH_RESULT_CENTER_SCROLL_DURATION_MS = 820
 private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
+private const val SEARCH_RESULT_PRE_SCROLL_ITEM_COUNT = 5
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 58.dp
 private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
