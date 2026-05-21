@@ -837,6 +837,17 @@ private struct HomeSearchResultsOverlay: View {
 
     @Environment(\.tdayColors) private var colors
     private let maxResultsHeight: CGFloat = 320
+    private let resultRowHeight: CGFloat = 66
+    private let resultVerticalPadding: CGFloat = 8
+    private let resultSeparatorHeight: CGFloat = 1
+
+    private var resultsHeight: CGFloat {
+        let separatorCount = max(todos.count - 1, 0)
+        let contentHeight = (CGFloat(todos.count) * resultRowHeight) +
+            (CGFloat(separatorCount) * resultSeparatorHeight) +
+            resultVerticalPadding
+        return min(contentHeight, maxResultsHeight)
+    }
 
     private let dueFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -901,7 +912,7 @@ private struct HomeSearchResultsOverlay: View {
                     }
                     .padding(.vertical, 4)
                 }
-                .frame(maxHeight: maxResultsHeight)
+                .frame(height: resultsHeight)
                 .scrollBounceBehavior(.basedOnSize, axes: .vertical)
             }
         }
