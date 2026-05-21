@@ -124,6 +124,8 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
+import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -307,16 +309,30 @@ fun CalendarScreen(
             )
         },
     ) { padding ->
-        CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .nestedScroll(nestedScrollConnection),
-                state = listState,
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            if (selectedDatePendingTasks.isEmpty() && !uiState.isLoading) {
+                EmptyTaskWatermark(
+                    imageVector = Icons.Rounded.CalendarMonth,
+                    accentColor = CalendarAccentPurple,
+                )
+                EmptyTaskBackgroundMessage(
+                    message = stringResource(R.string.calendar_no_pending),
+                )
+            }
+
+            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(nestedScrollConnection),
+                    state = listState,
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
                 item {
                     CalendarViewModeTabs(
                         selectedMode = selectedViewMode,
@@ -417,16 +433,7 @@ fun CalendarScreen(
                     )
                 }
 
-                if (selectedDatePendingTasks.isEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.calendar_no_pending),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                        )
-                    }
-                } else {
+                    if (selectedDatePendingTasks.isNotEmpty()) {
                     item {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             selectedDatePendingTasks.forEach { todo ->
@@ -453,7 +460,8 @@ fun CalendarScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(96.dp)) }
+                    item { Spacer(modifier = Modifier.height(96.dp)) }
+                }
             }
         }
     }
@@ -1919,23 +1927,6 @@ private fun CalendarCompletionToggleIcon(
             contentDescription = contentDescription,
             tint = tint,
             modifier = Modifier.size(24.dp),
-        )
-    }
-}
-
-@Composable
-private fun EmptyCalendarState(message: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 70.dp, bottom = 90.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = message,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.ExtraBold,
         )
     }
 }
