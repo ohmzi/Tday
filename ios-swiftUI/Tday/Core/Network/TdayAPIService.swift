@@ -61,6 +61,15 @@ final class TdayAPIService {
         )
     }
 
+    func probeConfiguredServer(timeoutInterval: TimeInterval? = nil) async throws -> MobileProbeResponse {
+        try await request(
+            path: "/api/mobile/probe",
+            method: "GET",
+            timeoutInterval: timeoutInterval,
+            responseType: MobileProbeResponse.self
+        )
+    }
+
     func getCsrfToken() async throws -> CsrfResponse {
         try await request(path: "/api/auth/csrf", method: "GET", responseType: CsrfResponse.self)
     }
@@ -339,6 +348,7 @@ final class TdayAPIService {
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
         session: URLSession? = nil,
+        timeoutInterval: TimeInterval? = nil,
         responseType: Response.Type
     ) async throws -> Response {
         let response = try await requestRaw(
@@ -347,7 +357,8 @@ final class TdayAPIService {
             queryItems: queryItems,
             extraHeaders: extraHeaders,
             allowRewrite: allowRewrite,
-            session: session
+            session: session,
+            timeoutInterval: timeoutInterval
         )
         return try decode(response.data, as: responseType)
     }
@@ -360,7 +371,8 @@ final class TdayAPIService {
         contentType: String? = nil,
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
-        session: URLSession? = nil
+        session: URLSession? = nil,
+        timeoutInterval: TimeInterval? = nil
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         try await performRequestRaw(
             path: path,
@@ -371,6 +383,7 @@ final class TdayAPIService {
             extraHeaders: extraHeaders,
             allowRewrite: allowRewrite,
             session: session,
+            timeoutInterval: timeoutInterval,
             validateStatus: true
         )
     }
@@ -383,7 +396,8 @@ final class TdayAPIService {
         contentType: String? = nil,
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
-        session: URLSession? = nil
+        session: URLSession? = nil,
+        timeoutInterval: TimeInterval? = nil
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         try await performRequestRaw(
             path: path,
@@ -394,6 +408,7 @@ final class TdayAPIService {
             extraHeaders: extraHeaders,
             allowRewrite: allowRewrite,
             session: session,
+            timeoutInterval: timeoutInterval,
             validateStatus: false
         )
     }
@@ -407,6 +422,7 @@ final class TdayAPIService {
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
         session: URLSession? = nil,
+        timeoutInterval: TimeInterval? = nil,
         validateStatus: Bool
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         var url = try configuration.makeURL(path: path, allowRewrite: allowRewrite)
@@ -423,6 +439,9 @@ final class TdayAPIService {
         }
 
         var request = URLRequest(url: url)
+        if let timeoutInterval {
+            request.timeoutInterval = timeoutInterval
+        }
         request.httpMethod = method
         request.httpBody = body
         for (key, value) in configuration.defaultHeaders(extraHeaders: extraHeaders, allowRewrite: allowRewrite) {

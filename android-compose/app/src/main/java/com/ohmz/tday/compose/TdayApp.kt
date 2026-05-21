@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -49,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -603,6 +605,7 @@ fun TdayApp() {
             OfflineBanner(
                 visible = appUiState.isOffline && appUiState.authenticated,
                 pendingMutationCount = appUiState.pendingMutationCount,
+                noticeKey = appUiState.offlineNoticeId,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
 
@@ -870,6 +873,26 @@ private val splashTaglines = listOf(
     "Organizing your life, no landlord required",
     "Zero trust\u2026 except your own server",
     "Syncing your tasks, judging your priorities",
+    "Today called. It wants a plan.",
+    "Making later file a formal request",
+    "Turning chaos into checkboxes",
+    "Your tasks are lining up nicely",
+    "A private server with opinions about your priorities",
+    "For when your brain opens too many tabs",
+    "Scheduling the chaos before it schedules you",
+    "Your lists have entered their productive era",
+    "A tiny operations desk for future you",
+    "Because vibes are not a task strategy",
+    "Private tasks. Better mornings.",
+    "Making your backlog feel seen, then sorted",
+    "Where scattered thoughts get assigned seating",
+    "Your priorities just got a home address",
+    "Sync first, panic later",
+    "Calendar drama, now with containment",
+    "Deadlines hate this one self-hosted trick",
+    "Helping your day stop freelancing",
+    "Your reminders came prepared",
+    "Turning I should into scheduled",
 )
 
 @Composable
@@ -882,7 +905,13 @@ private fun SplashScreen() {
             .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
             Image(
                 painter = painterResource(id = R.drawable.splash_icon),
                 contentDescription = "T'Day",
@@ -897,8 +926,10 @@ private fun SplashScreen() {
             )
             Text(
                 text = tagline,
+                modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
         }
     }
