@@ -17,7 +17,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -313,9 +312,9 @@ fun TodoListScreen(
     val isCollapsibleTimelineMode =
         uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
-    var collapsedSectionKeys by rememberSaveable(uiState.mode) {
+    var collapsedSectionKeys by rememberSaveable(uiState.mode, highlightedTodoId) {
         mutableStateOf(
-            if (isCollapsibleTimelineMode) {
+            if (isCollapsibleTimelineMode && highlightedTodoId.isNullOrBlank()) {
                 setOf("earlier")
             } else {
                 emptySet()
@@ -382,50 +381,18 @@ fun TodoListScreen(
     }
     LaunchedEffect(highlightedTodoId, uiState.mode, timelineSections) {
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
-        if (collapsedSectionKeys.isNotEmpty()) {
-            collapsedSectionKeys = emptySet()
-            delay(SEARCH_RESULT_SECTION_EXPAND_DELAY_MS)
-        }
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
-            val preScrollIndex =
-                (target.first - SEARCH_RESULT_PRE_SCROLL_ITEM_COUNT).coerceAtLeast(0)
-            listState.scrollToItem(preScrollIndex)
-            delay(SEARCH_RESULT_SCROLL_START_DELAY_MS)
-            var visibleTarget = listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
-                item.key == target.second
-            }
-            if (visibleTarget == null) {
-                val viewportHeight =
-                    listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
-                val estimatedRowHeight =
-                    with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
-                val centeredScrollOffset =
-                    -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
-                listState.animateScrollToItem(
-                    index = target.first,
-                    scrollOffset = centeredScrollOffset,
-                )
-                delay(SEARCH_RESULT_ROW_LAYOUT_DELAY_MS)
-                visibleTarget = listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
-                    item.key == target.second
-                }
-            }
-            if (visibleTarget != null) {
-                val viewportCenter =
-                    (listState.layoutInfo.viewportStartOffset + listState.layoutInfo.viewportEndOffset) / 2
-                val itemCenter = visibleTarget.offset + (visibleTarget.size / 2)
-                val centerDelta = (itemCenter - viewportCenter).toFloat()
-                if (centerDelta != 0f) {
-                    listState.animateScrollBy(
-                        value = centerDelta,
-                        animationSpec = tween(
-                            durationMillis = SEARCH_RESULT_CENTER_SCROLL_DURATION_MS,
-                            easing = FastOutSlowInEasing,
-                        ),
-                    )
-                }
-            }
+            val viewportHeight =
+                listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
+            val estimatedRowHeight =
+                with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
+            val centeredScrollOffset =
+                -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
+            listState.scrollToItem(
+                index = target.first,
+                scrollOffset = centeredScrollOffset,
+            )
             flashTodoId = highlightedTodoId
             delay(2300)
             if (flashTodoId == highlightedTodoId) {
@@ -2138,12 +2105,7 @@ private fun createMovedTaskPayload(
 }
 
 private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
-private const val SEARCH_RESULT_SECTION_EXPAND_DELAY_MS = 80L
-private const val SEARCH_RESULT_SCROLL_START_DELAY_MS = 440L
-private const val SEARCH_RESULT_ROW_LAYOUT_DELAY_MS = 70L
-private const val SEARCH_RESULT_CENTER_SCROLL_DURATION_MS = 820
 private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
-private const val SEARCH_RESULT_PRE_SCROLL_ITEM_COUNT = 5
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 58.dp
 private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
