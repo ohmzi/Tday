@@ -207,12 +207,6 @@ struct HomeScreen: View {
                                 }
                             }
 
-                            if viewModel.isLoading && viewModel.summary.allCount == 0 {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.top, 10)
-                            }
-
                         }
                         .padding(.horizontal, HomeMetrics.screenPadding)
                         .padding(.top, HomeMetrics.screenPadding)

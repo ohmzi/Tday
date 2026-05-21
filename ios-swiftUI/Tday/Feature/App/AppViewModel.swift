@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import Observation
 
 struct GitHubRelease: Codable, Equatable, Identifiable {
@@ -70,6 +71,9 @@ final class AppViewModel {
     @ObservationIgnored nonisolated(unsafe) private var cacheObservationTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var syncLoopTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var offlineSyncFailureTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var offlineSyncSuccessTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var networkMonitor: NWPathMonitor?
+    @ObservationIgnored private let networkMonitorQueue = DispatchQueue(label: "tday.network-monitor")
 
     init(container: AppContainer) {
         self.container = container
@@ -77,12 +81,16 @@ final class AppViewModel {
         selectedReminder = container.reminderPreferenceStore.getDefaultReminder()
         observeCacheChanges()
         observeOfflineSyncFailures()
+        observeOfflineSyncSuccesses()
+        startNetworkMonitor()
     }
 
     deinit {
         cacheObservationTask?.cancel()
         syncLoopTask?.cancel()
         offlineSyncFailureTask?.cancel()
+        offlineSyncSuccessTask?.cancel()
+        networkMonitor?.cancel()
     }
 
     func bootstrap() async {
@@ -422,6 +430,55 @@ final class AppViewModel {
                 }
             }
         }
+    }
+
+    private func observeOfflineSyncSuccesses() {
+        offlineSyncSuccessTask = Task {
+            for await _ in NotificationCenter.default.notifications(named: .offlineSyncAttemptSucceeded) {
+                await MainActor.run {
+                    guard self.authenticated else {
+                        return
+                    }
+                    self.isOffline = false
+                    self.refreshPendingMutationCount()
+                }
+            }
+        }
+    }
+
+    private func startNetworkMonitor() {
+        guard networkMonitor == nil else {
+            return
+        }
+
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                guard let self, self.authenticated else {
+                    return
+                }
+
+                if path.status == .satisfied {
+                    guard self.isOffline else {
+                        return
+                    }
+                    let result = await self.container.syncAndRefresh(
+                        force: true,
+                        replayPendingMutations: true,
+                        notifyOfflineFailure: false,
+                        connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+                    )
+                    self.applySyncResult(result)
+                    await self.rescheduleReminders()
+                } else if !self.isOffline {
+                    self.isOffline = true
+                    self.refreshPendingMutationCount()
+                    self.offlineNoticeID += 1
+                }
+            }
+        }
+        monitor.start(queue: networkMonitorQueue)
+        networkMonitor = monitor
     }
 
     private func isAdmin(_ user: SessionUser?) -> Bool {
