@@ -89,6 +89,7 @@ class AppViewModel @Inject constructor(
     private var resyncJob: Job? = null
     private var realtimeJob: Job? = null
     private var connectivityJob: Job? = null
+    private var foregroundReconnectJob: Job? = null
 
     init {
         _uiState.update {
@@ -513,6 +514,19 @@ class AppViewModel @Inject constructor(
         }
     }
 
+    fun reconnectAfterForeground() {
+        if (!_uiState.value.authenticated) return
+        if (foregroundReconnectJob?.isActive == true) return
+
+        foregroundReconnectJob = viewModelScope.launch {
+            syncAndUpdateOfflineState(
+                replayPending = true,
+                showOfflineNotice = true,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        }
+    }
+
     fun setThemeMode(mode: AppThemeMode) {
         themePreferenceStore.setThemeMode(mode)
         _uiState.update { it.copy(themeMode = mode) }
@@ -544,6 +558,8 @@ class AppViewModel @Inject constructor(
             realtimeJob = null
             connectivityJob?.cancel()
             connectivityJob = null
+            foregroundReconnectJob?.cancel()
+            foregroundReconnectJob = null
             realtimeClient.disconnect()
             return
         }
@@ -569,16 +585,27 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    private suspend fun syncAndUpdateOfflineState(replayPending: Boolean) {
+    private suspend fun syncAndUpdateOfflineState(
+        replayPending: Boolean,
+        showOfflineNotice: Boolean = false,
+        connectionProbeTimeoutMs: Long? = null,
+    ) {
         val result = syncManager.syncCachedData(
             force = true,
             replayPendingMutations = replayPending,
             notifyOfflineFailure = false,
+            connectionProbeTimeoutMs = connectionProbeTimeoutMs,
         )
         val syncError = result.exceptionOrNull()
         _uiState.update {
+            val isOffline = syncError != null && isLikelyConnectivityIssue(syncError)
             it.copy(
-                isOffline = syncError != null && isLikelyConnectivityIssue(syncError),
+                isOffline = isOffline,
+                offlineNoticeId = if (isOffline && showOfflineNotice) {
+                    it.offlineNoticeId + 1L
+                } else {
+                    it.offlineNoticeId
+                },
                 pendingMutationCount = runCatching {
                     cacheManager.loadOfflineState().pendingMutations.size
                 }.getOrDefault(it.pendingMutationCount),
@@ -586,6 +613,8 @@ class AppViewModel @Inject constructor(
         }
         if (syncError != null) {
             classifyAndShowError(syncError)
+        } else if (!realtimeClient.isConnected && _uiState.value.authenticated) {
+            realtimeClient.connect()
         }
         viewModelScope.launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
     }
@@ -632,17 +661,12 @@ class AppViewModel @Inject constructor(
             connectivityObserver.connectivityChanges.collectLatest { isConnected ->
                 if (isConnected && _uiState.value.isOffline && _uiState.value.authenticated) {
                     delay(CONNECTIVITY_RESTORED_DEBOUNCE_MS)
-                    syncAndUpdateOfflineState(replayPending = true)
+                    syncAndUpdateOfflineState(
+                        replayPending = true,
+                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                    )
                     if (!realtimeClient.isConnected) {
                         realtimeClient.connect()
-                    }
-                }
-                if (!isConnected && _uiState.value.authenticated) {
-                    _uiState.update {
-                        it.copy(
-                            isOffline = true,
-                            offlineNoticeId = if (it.isOffline) it.offlineNoticeId else it.offlineNoticeId + 1L,
-                        )
                     }
                 }
             }
@@ -652,19 +676,12 @@ class AppViewModel @Inject constructor(
     private fun observeOfflineSyncFailures() {
         viewModelScope.launch {
             syncManager.offlineSyncFailures.collect {
-                val pendingCount = runCatching {
-                    cacheManager.loadOfflineState().pendingMutations.size
-                }.getOrDefault(_uiState.value.pendingMutationCount)
-                _uiState.update {
-                    if (!it.authenticated) {
-                        it
-                    } else {
-                        it.copy(
-                            isOffline = true,
-                            pendingMutationCount = pendingCount,
-                            offlineNoticeId = it.offlineNoticeId + 1L,
-                        )
-                    }
+                if (_uiState.value.authenticated) {
+                    syncAndUpdateOfflineState(
+                        replayPending = true,
+                        showOfflineNotice = true,
+                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                    )
                 }
             }
         }
