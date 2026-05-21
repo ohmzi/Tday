@@ -247,3 +247,113 @@ extension View {
         font(.tdayRounded(.body, weight: .bold))
     }
 }
+
+enum TdayNativeSegmentedControlMetrics {
+    static let height: CGFloat = 52
+}
+
+struct TdayNativeSegmentedControl: UIViewRepresentable {
+    let labels: [String]
+    let selectedIndex: Int
+    let accentColor: Color
+    let onSelect: (Int) -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
+    }
+
+    func makeUIView(context: Context) -> ThickSegmentedControl {
+        let control = ThickSegmentedControl(items: labels)
+        control.selectedSegmentIndex = boundedSelectedIndex
+        control.apportionsSegmentWidthsByContent = false
+        control.addTarget(context.coordinator, action: #selector(Coordinator.didChange(_:)), for: .valueChanged)
+        applySizingAndTint(to: control)
+        return control
+    }
+
+    func updateUIView(_ control: ThickSegmentedControl, context: Context) {
+        context.coordinator.onSelect = onSelect
+        updateLabels(on: control)
+        if control.selectedSegmentIndex != boundedSelectedIndex {
+            control.selectedSegmentIndex = boundedSelectedIndex
+        }
+        applySizingAndTint(to: control)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: ThickSegmentedControl, context: Context) -> CGSize? {
+        CGSize(
+            width: proposal.width ?? uiView.intrinsicContentSize.width,
+            height: TdayNativeSegmentedControlMetrics.height
+        )
+    }
+
+    private var boundedSelectedIndex: Int {
+        guard labels.indices.contains(selectedIndex) else {
+            return UISegmentedControl.noSegment
+        }
+        return selectedIndex
+    }
+
+    private func updateLabels(on control: ThickSegmentedControl) {
+        guard control.numberOfSegments == labels.count else {
+            control.removeAllSegments()
+            for (index, label) in labels.enumerated() {
+                control.insertSegment(withTitle: label, at: index, animated: false)
+            }
+            return
+        }
+
+        for (index, label) in labels.enumerated() where control.titleForSegment(at: index) != label {
+            control.setTitle(label, forSegmentAt: index)
+        }
+    }
+
+    private func applySizingAndTint(to control: ThickSegmentedControl) {
+        control.overrideUserInterfaceStyle = colors.isDark ? .dark : .light
+        control.backgroundColor = UIColor(colors.surfaceVariant.opacity(0.76))
+        control.selectedSegmentTintColor = UIColor(colors.surface)
+        control.tintColor = UIColor(accentColor)
+        control.setTitleTextAttributes(
+            [
+                .foregroundColor: UIColor(colors.onSurfaceVariant),
+                .font: TdayFont.uiFont(size: 13, weight: .bold)
+            ],
+            for: .normal
+        )
+        control.setTitleTextAttributes(
+            [
+                .foregroundColor: UIColor(colors.onSurface),
+                .font: TdayFont.uiFont(size: 13, weight: .bold)
+            ],
+            for: .selected
+        )
+        control.invalidateIntrinsicContentSize()
+    }
+
+    final class Coordinator: NSObject {
+        var onSelect: (Int) -> Void
+
+        init(onSelect: @escaping (Int) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        @objc func didChange(_ sender: UISegmentedControl) {
+            onSelect(sender.selectedSegmentIndex)
+        }
+    }
+
+    final class ThickSegmentedControl: UISegmentedControl {
+        override var intrinsicContentSize: CGSize {
+            let baseSize = super.intrinsicContentSize
+            return CGSize(width: baseSize.width, height: TdayNativeSegmentedControlMetrics.height)
+        }
+
+        override func sizeThatFits(_ size: CGSize) -> CGSize {
+            var fittingSize = super.sizeThatFits(size)
+            fittingSize.height = TdayNativeSegmentedControlMetrics.height
+            return fittingSize
+        }
+    }
+}
