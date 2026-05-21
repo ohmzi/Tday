@@ -72,6 +72,7 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
+import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 
@@ -594,63 +595,12 @@ private fun ThemeModeSelector(
     selectedThemeMode: AppThemeMode,
     onThemeModeSelected: (AppThemeMode) -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = colorScheme.surfaceVariant.copy(alpha = 0.76f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AppThemeMode.entries.forEach { mode ->
-                val selected = mode == selectedThemeMode
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            color = if (selected) {
-                                colorScheme.surface
-                            } else {
-                                Color.Transparent
-                            },
-                        )
-                        .clickable {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK
-                            )
-                            onThemeModeSelected(mode)
-                        },
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = mode.label,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (selected) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.58f),
-                        )
-                    }
-                }
-            }
-        }
-    }
+    TdaySegmentedSlider(
+        options = AppThemeMode.entries,
+        selectedOption = selectedThemeMode,
+        onOptionSelected = onThemeModeSelected,
+        label = { mode -> mode.label },
+    )
 }
 
 @Composable
