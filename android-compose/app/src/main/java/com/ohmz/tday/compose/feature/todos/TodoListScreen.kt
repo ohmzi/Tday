@@ -663,6 +663,8 @@ fun TodoListScreen(
                     item {
                         EmptyTimelineState(
                             message = emptyStateMessageForMode(uiState.mode),
+                            icon = emptyStateIconForMode(uiState.mode),
+                            accentColor = titleColor,
                             useMinimalStyle = usesTodayStyle,
                         )
                     }
@@ -1693,27 +1695,47 @@ private fun Modifier.timelineSectionDropTarget(
 @Composable
 private fun EmptyTimelineState(
     message: String,
+    icon: ImageVector,
+    accentColor: Color,
     useMinimalStyle: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(
-                top = if (useMinimalStyle) 110.dp else 88.dp,
+                top = if (useMinimalStyle) 92.dp else 76.dp,
                 bottom = if (useMinimalStyle) 180.dp else 140.dp,
             ),
-        contentAlignment = Alignment.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
+        Box(
+            modifier = Modifier
+                .size(if (useMinimalStyle) 76.dp else 68.dp)
+                .clip(CircleShape)
+                .background(accentColor.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor.copy(alpha = 0.9f),
+                modifier = Modifier.size(if (useMinimalStyle) 34.dp else 30.dp),
+            )
+        }
+        Spacer(modifier = Modifier.height(14.dp))
         Text(
             text = message,
-            color = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.52f else 0.85f),
+            color = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.66f else 0.85f),
             style = if (useMinimalStyle) {
                 MaterialTheme.typography.displaySmall
             } else {
                 MaterialTheme.typography.headlineSmall
             },
             fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 24.dp),
         )
     }
 }
@@ -2010,6 +2032,17 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
         TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
         TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
         TodoListMode.LIST -> stringResource(R.string.todos_empty_list)
+    }
+}
+
+private fun emptyStateIconForMode(mode: TodoListMode): ImageVector {
+    return when (mode) {
+        TodoListMode.TODAY -> Icons.Rounded.WbSunny
+        TodoListMode.OVERDUE -> Icons.Rounded.Schedule
+        TodoListMode.SCHEDULED -> Icons.Rounded.CalendarToday
+        TodoListMode.ALL -> Icons.Rounded.Inbox
+        TodoListMode.PRIORITY -> Icons.Rounded.Flag
+        TodoListMode.LIST -> Icons.AutoMirrored.Rounded.List
     }
 }
 
