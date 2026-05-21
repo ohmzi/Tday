@@ -145,6 +145,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -193,6 +194,7 @@ import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalTime
 import java.util.Locale
@@ -217,6 +219,9 @@ fun HomeScreen(
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val searchNavigationScope = rememberCoroutineScope()
     val fabInteractionSource = remember { MutableInteractionSource() }
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
@@ -244,13 +249,27 @@ fun HomeScreen(
     var lastListStructureSignature by rememberSaveable { mutableStateOf("") }
     var visibleListStage by rememberSaveable { mutableIntStateOf(0) }
     var animateListCascade by rememberSaveable { mutableStateOf(false) }
+    var searchResultOpening by remember { mutableStateOf(false) }
     val closeSearch = {
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
         searchExpanded = false
         searchQuery = ""
         searchBarBounds = null
         searchResultsBounds = null
         rootInRoot = Offset.Zero
         searchImeWasVisible = false
+    }
+    val openTaskFromSearch: (String) -> Unit = { todoId ->
+        if (!searchResultOpening) {
+            searchResultOpening = true
+            searchNavigationScope.launch {
+                closeSearch()
+                delay(SEARCH_RESULT_NAVIGATION_DELAY_MS)
+                onOpenTaskFromSearch(todoId)
+                searchResultOpening = false
+            }
+        }
     }
     BackHandler(enabled = searchExpanded) {
         closeSearch()
@@ -623,8 +642,7 @@ fun HomeScreen(
                                                 .semantics(mergeDescendants = true) {}
                                                 .heightIn(min = 48.dp)
                                                 .clickable {
-                                                    closeSearch()
-                                                    onOpenTaskFromSearch(todo.id)
+                                                    openTaskFromSearch(todo.id)
                                                 }
                                                 .padding(horizontal = 12.dp, vertical = 9.dp),
                                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1922,6 +1940,7 @@ private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_MOTION_MS = 320
+private const val SEARCH_RESULT_NAVIGATION_DELAY_MS = 140L
 
 private fun performGentleHaptic(view: android.view.View) {
     ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
