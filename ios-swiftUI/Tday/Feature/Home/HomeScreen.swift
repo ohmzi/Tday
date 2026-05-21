@@ -725,12 +725,14 @@ private struct HomeListRow: View {
     }
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+
         Button(action: action) {
             ZStack {
-                RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+                shape
                     .fill(containerColor)
 
-                RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+                shape
                     .fill(
                         RadialGradient(
                             colors: [
@@ -744,7 +746,7 @@ private struct HomeListRow: View {
                         )
                     )
 
-                RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+                shape
                     .fill(
                         LinearGradient(
                             colors: [
@@ -788,6 +790,8 @@ private struct HomeListRow: View {
                 .padding(.vertical, 12)
             }
             .frame(maxWidth: .infinity, minHeight: HomeMetrics.listRowHeight, maxHeight: HomeMetrics.listRowHeight)
+            .clipShape(shape)
+            .contentShape(shape)
         }
         .buttonStyle(HomeListButtonStyle())
     }
