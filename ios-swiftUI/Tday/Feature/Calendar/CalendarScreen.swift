@@ -7,10 +7,6 @@ private enum CalendarTitleHandoff {
     static let titleRowHeight: CGFloat = TodoTimelineMetrics.titleCollapseDistance
 }
 
-private enum CalendarModeControlMetrics {
-    static let height: CGFloat = 52
-}
-
 private enum CalendarPeriodCardMetrics {
     static let contentSpacing: CGFloat = 14
     static let horizontalPadding: CGFloat = 16
@@ -391,104 +387,21 @@ private struct CalendarViewModeTabs: View {
     let onSelect: (CalendarDisplayMode) -> Void
 
     var body: some View {
-        CalendarThickNativeSegmentedControl(
-            selectedMode: selectedMode,
+        let modes = CalendarDisplayMode.allCases
+
+        TdayNativeSegmentedControl(
+            labels: modes.map { $0.rawValue.capitalized },
+            selectedIndex: modes.firstIndex(of: selectedMode) ?? 0,
             accentColor: accentColor,
-            onSelect: onSelect
+            onSelect: { index in
+                guard modes.indices.contains(index) else {
+                    return
+                }
+                onSelect(modes[index])
+            }
         )
         .frame(maxWidth: .infinity)
-        .frame(height: CalendarModeControlMetrics.height)
-    }
-}
-
-private struct CalendarThickNativeSegmentedControl: UIViewRepresentable {
-    let selectedMode: CalendarDisplayMode
-    let accentColor: Color
-    let onSelect: (CalendarDisplayMode) -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onSelect: onSelect)
-    }
-
-    func makeUIView(context: Context) -> ThickSegmentedControl {
-        let control = ThickSegmentedControl(items: CalendarDisplayMode.allCases.map { $0.rawValue.capitalized })
-        control.selectedSegmentIndex = selectedModeIndex
-        control.apportionsSegmentWidthsByContent = false
-        control.addTarget(context.coordinator, action: #selector(Coordinator.didChange(_:)), for: .valueChanged)
-        applySizingAndTint(to: control)
-        return control
-    }
-
-    func updateUIView(_ control: ThickSegmentedControl, context: Context) {
-        context.coordinator.onSelect = onSelect
-        if control.selectedSegmentIndex != selectedModeIndex {
-            control.selectedSegmentIndex = selectedModeIndex
-        }
-        applySizingAndTint(to: control)
-    }
-
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: ThickSegmentedControl, context: Context) -> CGSize? {
-        CGSize(
-            width: proposal.width ?? uiView.intrinsicContentSize.width,
-            height: CalendarModeControlMetrics.height
-        )
-    }
-
-    private var selectedModeIndex: Int {
-        CalendarDisplayMode.allCases.firstIndex(of: selectedMode) ?? 0
-    }
-
-    private func applySizingAndTint(to control: ThickSegmentedControl) {
-        control.overrideUserInterfaceStyle = colors.isDark ? .dark : .light
-        control.backgroundColor = UIColor(colors.surfaceVariant.opacity(0.76))
-        control.selectedSegmentTintColor = UIColor(colors.surface)
-        control.tintColor = UIColor(accentColor)
-        control.setTitleTextAttributes(
-            [
-                .foregroundColor: UIColor(colors.onSurfaceVariant),
-                .font: TdayFont.uiFont(size: 13, weight: .bold)
-            ],
-            for: .normal
-        )
-        control.setTitleTextAttributes(
-            [
-                .foregroundColor: UIColor(colors.onSurface),
-                .font: TdayFont.uiFont(size: 13, weight: .bold)
-            ],
-            for: .selected
-        )
-        control.invalidateIntrinsicContentSize()
-    }
-
-    final class Coordinator: NSObject {
-        var onSelect: (CalendarDisplayMode) -> Void
-
-        init(onSelect: @escaping (CalendarDisplayMode) -> Void) {
-            self.onSelect = onSelect
-        }
-
-        @objc func didChange(_ sender: UISegmentedControl) {
-            let modes = CalendarDisplayMode.allCases
-            guard modes.indices.contains(sender.selectedSegmentIndex) else {
-                return
-            }
-            onSelect(modes[sender.selectedSegmentIndex])
-        }
-    }
-
-    final class ThickSegmentedControl: UISegmentedControl {
-        override var intrinsicContentSize: CGSize {
-            let baseSize = super.intrinsicContentSize
-            return CGSize(width: baseSize.width, height: CalendarModeControlMetrics.height)
-        }
-
-        override func sizeThatFits(_ size: CGSize) -> CGSize {
-            var fittingSize = super.sizeThatFits(size)
-            fittingSize.height = CalendarModeControlMetrics.height
-            return fittingSize
-        }
+        .frame(height: TdayNativeSegmentedControlMetrics.height)
     }
 }
 
