@@ -193,10 +193,99 @@ fun CompletedScreen(
         },
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize(),
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(nestedScrollConnection),
+                    state = listState,
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                ) {
+                    timelineSections.forEachIndexed { sectionIndex, section ->
+                        val isCollapsed = collapsedSectionKeys.contains(section.key)
+                        item(key = "completed-header-${section.key}") {
+                            CompletedTimelineSectionHeader(
+                                modifier = Modifier
+                                    .animateItem(
+                                        fadeInSpec = null,
+                                        placementSpec = tween(
+                                            durationMillis = 320,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                        fadeOutSpec = null,
+                                    )
+                                    .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
+                                section = section,
+                                isCollapsed = isCollapsed,
+                                onHeaderClick = {
+                                    collapsedSectionKeys =
+                                        if (isCollapsed) {
+                                            collapsedSectionKeys - section.key
+                                        } else {
+                                            collapsedSectionKeys + section.key
+                                        }
+                                },
+                            )
+                        }
+                        if (!isCollapsed) {
+                            section.items.forEachIndexed { itemIndex, completed ->
+                                item(key = "completed-row-${section.key}-${completed.id}") {
+                                    CompletedSwipeRow(
+                                        modifier = Modifier
+                                            .animateItem(
+                                                fadeInSpec = tween(
+                                                    durationMillis = 190,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                placementSpec = tween(
+                                                    durationMillis = 320,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                fadeOutSpec = tween(
+                                                    durationMillis = 150,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                            )
+                                            .padding(top = 4.dp),
+                                        item = completed,
+                                        lists = uiState.lists,
+                                        onInfo = { editTargetId = completed.id },
+                                        onDelete = { onDelete(completed) },
+                                        onUncomplete = { onUncomplete(completed) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (uiState.items.isEmpty() && uiState.isLoading) {
+                        item {
+                            EmptyCompletedState(
+                                message = stringResource(R.string.label_loading),
+                            )
+                        }
+                    }
+
+                    uiState.errorMessage?.let { message ->
+                        item {
+                            com.ohmz.tday.compose.core.ui.ErrorRetryCard(
+                                message = message,
+                                onRetry = onRefresh,
+                            )
+                        }
+                    }
+
+                    item { Spacer(modifier = Modifier.height(96.dp)) }
+                }
+            }
+
             if (uiState.items.isEmpty() && !uiState.isLoading) {
                 EmptyTaskWatermark(
                     imageVector = Icons.Rounded.Check,
@@ -205,91 +294,6 @@ fun CompletedScreen(
                 EmptyTaskBackgroundMessage(
                     message = stringResource(R.string.completed_empty),
                 )
-            }
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(nestedScrollConnection),
-                state = listState,
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp),
-            ) {
-            timelineSections.forEachIndexed { sectionIndex, section ->
-                val isCollapsed = collapsedSectionKeys.contains(section.key)
-                item(key = "completed-header-${section.key}") {
-                    CompletedTimelineSectionHeader(
-                        modifier = Modifier
-                            .animateItem(
-                                fadeInSpec = null,
-                                placementSpec = tween(
-                                    durationMillis = 320,
-                                    easing = FastOutSlowInEasing,
-                                ),
-                                fadeOutSpec = null,
-                            )
-                            .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
-                        section = section,
-                        isCollapsed = isCollapsed,
-                        onHeaderClick = {
-                            collapsedSectionKeys =
-                                if (isCollapsed) {
-                                    collapsedSectionKeys - section.key
-                                } else {
-                                    collapsedSectionKeys + section.key
-                                }
-                        },
-                    )
-                }
-                if (!isCollapsed) {
-                    section.items.forEachIndexed { itemIndex, completed ->
-                        item(key = "completed-row-${section.key}-${completed.id}") {
-                            CompletedSwipeRow(
-                                modifier = Modifier
-                                    .animateItem(
-                                        fadeInSpec = tween(
-                                            durationMillis = 190,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                        placementSpec = tween(
-                                            durationMillis = 320,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                        fadeOutSpec = tween(
-                                            durationMillis = 150,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
-                                    .padding(top = 4.dp),
-                                item = completed,
-                                lists = uiState.lists,
-                                onInfo = { editTargetId = completed.id },
-                                onDelete = { onDelete(completed) },
-                                onUncomplete = { onUncomplete(completed) },
-                            )
-                        }
-                    }
-                }
-            }
-
-                if (uiState.items.isEmpty() && uiState.isLoading) {
-                item {
-                    EmptyCompletedState(
-                        message = stringResource(R.string.label_loading),
-                    )
-                }
-            }
-
-            uiState.errorMessage?.let { message ->
-                item {
-                    com.ohmz.tday.compose.core.ui.ErrorRetryCard(
-                        message = message,
-                        onRetry = onRefresh,
-                    )
-                }
-            }
-
-                item { Spacer(modifier = Modifier.height(96.dp)) }
             }
         }
     }
