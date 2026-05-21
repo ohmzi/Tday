@@ -48,6 +48,7 @@ final class AppViewModel {
     var selectedReminder: ReminderOption
     var isOffline = false
     var pendingMutationCount = 0
+    var offlineNoticeID = 0
     var navigationPath: [AppRoute] = []
     var latestVersionName: String?
     var latestRelease: GitHubRelease?
@@ -68,17 +69,20 @@ final class AppViewModel {
 
     @ObservationIgnored nonisolated(unsafe) private var cacheObservationTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var syncLoopTask: Task<Void, Never>?
+    @ObservationIgnored nonisolated(unsafe) private var offlineSyncFailureTask: Task<Void, Never>?
 
     init(container: AppContainer) {
         self.container = container
         themeMode = container.themeStore.load()
         selectedReminder = container.reminderPreferenceStore.getDefaultReminder()
         observeCacheChanges()
+        observeOfflineSyncFailures()
     }
 
     deinit {
         cacheObservationTask?.cancel()
         syncLoopTask?.cancel()
+        offlineSyncFailureTask?.cancel()
     }
 
     func bootstrap() async {
@@ -109,8 +113,9 @@ final class AppViewModel {
         }
 
         serverURL = container.serverConfigRepository.getServerURL()?.absoluteString
-        let session = await container.bootstrapSession()
-        if let session, session.id != nil {
+        let sessionResult = await container.bootstrapSession()
+        if let sessionResult, sessionResult.user.id != nil {
+            let session = sessionResult.user
             let versionResult = await container.serverConfigRepository.recheckVersion()
             versionCheckResult = versionResult
             switch versionResult {
@@ -128,7 +133,10 @@ final class AppViewModel {
             error = nil
             pendingApprovalMessage = nil
             canResetServerTrust = true
-            isOffline = false
+            isOffline = sessionResult.isOffline
+            if sessionResult.isOffline {
+                offlineNoticeID += 1
+            }
             finishBootstrap()
             await refreshAdminAiSummarySetting()
             refreshPendingMutationCount()
@@ -273,9 +281,14 @@ final class AppViewModel {
 
     func manualSync() async {
         isManualSyncing = true
-        let result = await container.syncAndRefresh(force: true, replayPendingMutations: true)
+        let result = await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
         isManualSyncing = false
-        applySyncResult(result)
+        applySyncResult(result, showOfflineNotice: true)
         await rescheduleReminders()
     }
 
@@ -332,7 +345,11 @@ final class AppViewModel {
                 guard await MainActor.run(body: { self.authenticated }) else {
                     continue
                 }
-                let result = await self.container.syncAndRefresh(force: false, replayPendingMutations: true)
+                let result = await self.container.syncAndRefresh(
+                    force: false,
+                    replayPendingMutations: true,
+                    notifyOfflineFailure: false
+                )
                 await MainActor.run {
                     self.applySyncResult(result)
                 }
@@ -355,7 +372,11 @@ final class AppViewModel {
                 guard event.requiresRefresh, let self else {
                     return
                 }
-                let result = await self.container.syncAndRefresh(force: true, replayPendingMutations: true)
+                let result = await self.container.syncAndRefresh(
+                    force: true,
+                    replayPendingMutations: true,
+                    notifyOfflineFailure: false
+                )
                 await MainActor.run {
                     self.applySyncResult(result)
                 }
@@ -371,17 +392,35 @@ final class AppViewModel {
         }
     }
 
-    private func applySyncResult(_ result: Result<Void, Error>) {
+    private func applySyncResult(_ result: Result<Void, Error>, showOfflineNotice: Bool = false) {
         switch result {
         case .success:
             isOffline = false
             refreshPendingMutationCount()
         case let .failure(error):
             isOffline = isLikelyConnectivityIssue(error)
+            if isOffline && showOfflineNotice {
+                offlineNoticeID += 1
+            }
             if !isOffline {
                 container.snackbarManager.show(message: userFacingMessage(for: error))
             }
             refreshPendingMutationCount()
+        }
+    }
+
+    private func observeOfflineSyncFailures() {
+        offlineSyncFailureTask = Task {
+            for await _ in NotificationCenter.default.notifications(named: .offlineSyncAttemptFailed) {
+                await MainActor.run {
+                    guard self.authenticated else {
+                        return
+                    }
+                    self.isOffline = true
+                    self.refreshPendingMutationCount()
+                    self.offlineNoticeID += 1
+                }
+            }
         }
     }
 

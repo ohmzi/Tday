@@ -11,7 +11,7 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         let configuration = URLSessionConfiguration.default
         configuration.httpCookieStorage = HTTPCookieStorage.shared
         configuration.httpShouldSetCookies = true
-        configuration.waitsForConnectivity = true
+        configuration.waitsForConnectivity = false
         configuration.timeoutIntervalForRequest = 30
         configuration.timeoutIntervalForResource = 60
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
