@@ -29,6 +29,8 @@ private struct RefreshContainerBody<Content: View>: View {
     private let content: Content
 
     @State private var pullDistance: CGFloat = 0
+    @State private var localRefreshInFlight = false
+    @State private var hasTriggeredForCurrentPull = false
 
     init(
         isRefreshing: Bool,
@@ -44,11 +46,12 @@ private struct RefreshContainerBody<Content: View>: View {
         min(max(pullDistance / TdayRefreshIndicatorMetrics.triggerDistance, 0), 1)
     }
 
+    private var effectiveRefreshing: Bool {
+        isRefreshing || localRefreshInFlight
+    }
+
     var body: some View {
         content
-            .refreshable {
-                await action()
-            }
             .background(
                 PullRefreshOffsetObserver { distance in
                     pullDistance = distance
@@ -56,24 +59,53 @@ private struct RefreshContainerBody<Content: View>: View {
             )
             .overlay(alignment: .top) {
                 TdayPullRefreshIndicator(
-                    isRefreshing: isRefreshing,
+                    isRefreshing: effectiveRefreshing,
                     pullProgress: pullProgress
                 )
-                .padding(.top, 8)
+                .padding(.top, 10)
                 .allowsHitTesting(false)
             }
+            .onChange(of: pullProgress) { _, progress in
+                handlePullProgressChange(progress)
+            }
+            .onChange(of: effectiveRefreshing) { _, refreshing in
+                if !refreshing && pullProgress < 0.1 {
+                    hasTriggeredForCurrentPull = false
+                }
+            }
+    }
+
+    private func handlePullProgressChange(_ progress: CGFloat) {
+        if progress < 0.1 && !effectiveRefreshing {
+            hasTriggeredForCurrentPull = false
+        }
+
+        guard progress >= 1,
+              !effectiveRefreshing,
+              !hasTriggeredForCurrentPull else {
+            return
+        }
+
+        hasTriggeredForCurrentPull = true
+        localRefreshInFlight = true
+        Task {
+            await action()
+            await MainActor.run {
+                localRefreshInFlight = false
+            }
+        }
     }
 }
 
 private enum TdayRefreshIndicatorMetrics {
-    static let triggerDistance: CGFloat = 86
-    static let containerWidth: CGFloat = 58
-    static let containerHeight: CGFloat = 42
-    static let dotWidth: CGFloat = 7
-    static let dotMinHeight: CGFloat = 7
-    static let dotMaxHeight: CGFloat = 19
-    static let dotSpacing: CGFloat = 8
-    static let cornerRadius: CGFloat = 21
+    static let triggerDistance: CGFloat = 92
+    static let containerWidth: CGFloat = 72
+    static let containerHeight: CGFloat = 50
+    static let dotWidth: CGFloat = 9
+    static let dotMinHeight: CGFloat = 9
+    static let dotMaxHeight: CGFloat = 28
+    static let dotSpacing: CGFloat = 10
+    static let cornerRadius: CGFloat = 25
 }
 
 private struct TdayPullRefreshIndicator: View {
@@ -121,7 +153,7 @@ private struct TdayPullRefreshIndicator: View {
             .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
             .opacity(visible ? 1 : 0)
             .scaleEffect(visible ? 1 : 0.78)
-            .offset(y: visible ? 0 : -12)
+            .offset(y: visible ? 0 : -14)
             .animation(.easeOut(duration: 0.22), value: visible)
         }
     }
@@ -185,7 +217,7 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
         }
 
         func attach(to view: UIView) {
-            guard let scrollView = view.enclosingScrollView() else {
+            guard let scrollView = view.nearestScrollView() else {
                 return
             }
 
@@ -614,6 +646,21 @@ private struct TopPartialScrollSnapObserver: UIViewRepresentable {
 }
 
 private extension UIView {
+    func nearestScrollView() -> UIScrollView? {
+        if let enclosing = enclosingScrollView() {
+            return enclosing
+        }
+
+        var current = superview
+        while let view = current {
+            if let scrollView = view.firstDescendantScrollView() {
+                return scrollView
+            }
+            current = view.superview
+        }
+        return nil
+    }
+
     func enclosingScrollView() -> UIScrollView? {
         var current: UIView? = self
         while let view = current {
@@ -621,6 +668,18 @@ private extension UIView {
                 return scrollView
             }
             current = view.superview
+        }
+        return nil
+    }
+
+    private func firstDescendantScrollView() -> UIScrollView? {
+        for subview in subviews {
+            if let scrollView = subview as? UIScrollView {
+                return scrollView
+            }
+            if let scrollView = subview.firstDescendantScrollView() {
+                return scrollView
+            }
         }
         return nil
     }
