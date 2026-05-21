@@ -98,6 +98,7 @@ private const val NAV_EXIT_DURATION_MS = 320
 private const val NAV_FADE_IN_DURATION_MS = 360
 private const val NAV_FADE_OUT_DURATION_MS = 240
 private const val NAV_SLIDE_FRACTION = 0.18f
+private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
 private const val SETTINGS_ENTER_DURATION_MS = 380
 private const val SETTINGS_EXIT_DURATION_MS = 260
 private const val SETTINGS_VERTICAL_FRACTION = 0.22f
@@ -140,6 +141,9 @@ fun TdayApp() {
         appViewModel = appViewModel,
         snackbarHostState = snackbarHostState,
     )
+    OnAppForegroundResume {
+        appViewModel.reconnectAfterForeground()
+    }
 
     fun showTaskDeletedToast() {
         showSystemToast(context, taskDeletedToastMessage)
@@ -295,7 +299,10 @@ fun TdayApp() {
                                     onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
                                     onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
                                     onOpenTaskFromSearch = { todoId ->
-                                        navController.navigate(AppRoute.AllTodos.create(highlightTodoId = todoId))
+                                        navController.currentBackStackEntry
+                                            ?.savedStateHandle
+                                            ?.set(PENDING_SEARCH_HIGHLIGHT_TODO_ID, todoId)
+                                        navController.navigate(AppRoute.AllTodos.create())
                                     },
                                     onOpenList = { id, name ->
                                         navController.navigate(AppRoute.ListTodos.create(id, name))
@@ -455,9 +462,15 @@ fun TdayApp() {
                         navDeepLink { uriPattern = "tday://todos/all?highlightTodoId={highlightTodoId}" },
                     ),
                 ) { entry ->
-                    val highlightTodoId = Uri.decode(
+                    val pendingSearchHighlightTodoId = remember(entry) {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.remove<String>(PENDING_SEARCH_HIGHLIGHT_TODO_ID)
+                    }
+                    val argumentHighlightTodoId = Uri.decode(
                         entry.arguments?.getString("highlightTodoId").orEmpty(),
                     ).ifBlank { null }
+                    val highlightTodoId = pendingSearchHighlightTodoId ?: argumentHighlightTodoId
                     TodosRoute(
                         mode = TodoListMode.ALL,
                         highlightTodoId = highlightTodoId,
@@ -802,6 +815,37 @@ private fun OnRouteResume(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 currentAction()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+}
+
+@Composable
+private fun OnAppForegroundResume(
+    action: () -> Unit,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentAction by rememberUpdatedState(action)
+    DisposableEffect(lifecycleOwner) {
+        var hasPaused = false
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> {
+                    hasPaused = true
+                }
+
+                Lifecycle.Event.ON_RESUME -> {
+                    if (hasPaused) {
+                        hasPaused = false
+                        currentAction()
+                    }
+                }
+
+                else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

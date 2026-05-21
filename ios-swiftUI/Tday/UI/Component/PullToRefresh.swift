@@ -98,14 +98,17 @@ private struct RefreshContainerBody<Content: View>: View {
 }
 
 private enum TdayRefreshIndicatorMetrics {
-    static let triggerDistance: CGFloat = 92
-    static let containerWidth: CGFloat = 72
+    static let triggerDistance: CGFloat = 98
+    static let containerWidth: CGFloat = 116
     static let containerHeight: CGFloat = 50
-    static let dotWidth: CGFloat = 9
-    static let dotMinHeight: CGFloat = 9
-    static let dotMaxHeight: CGFloat = 28
-    static let dotSpacing: CGFloat = 10
+    static let barCount = 5
+    static let dotWidth: CGFloat = 8
+    static let dotMinHeight: CGFloat = 8
+    static let dotMaxHeight: CGFloat = 29
+    static let dotSpacing: CGFloat = 9
     static let cornerRadius: CGFloat = 25
+    static let sweepInset: CGFloat = 8
+    static let sweepHeight: CGFloat = 34
 }
 
 private struct TdayPullRefreshIndicator: View {
@@ -121,24 +124,40 @@ private struct TdayPullRefreshIndicator: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !isRefreshing)) { context in
             let clampedProgress = min(max(pullProgress, 0), 1)
-            let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 0.9) / 0.9
+            let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.05) / 1.05
+            let sweepTrackWidth = TdayRefreshIndicatorMetrics.containerWidth - (TdayRefreshIndicatorMetrics.sweepInset * 2)
+            let sweepWidth = isRefreshing ? sweepTrackWidth * 0.48 : sweepTrackWidth * clampedProgress
+            let sweepOffset = isRefreshing ? (sweepTrackWidth - sweepWidth) * CGFloat(cycle) : 0
 
-            HStack(spacing: TdayRefreshIndicatorMetrics.dotSpacing) {
-                ForEach(0..<3, id: \.self) { index in
-                    let metrics = barMetrics(
-                        index: index,
-                        pullProgress: clampedProgress,
-                        cycle: cycle
-                    )
-
-                    RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.dotWidth / 2, style: .continuous)
-                        .fill(colors.primary.opacity(metrics.opacity))
+            ZStack(alignment: .center) {
+                if visible {
+                    RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
+                        .fill(colors.primary.opacity(isRefreshing ? 0.18 : 0.10 + (Double(clampedProgress) * 0.08)))
                         .frame(
-                            width: TdayRefreshIndicatorMetrics.dotWidth,
-                            height: metrics.height
+                            width: max(sweepWidth, TdayRefreshIndicatorMetrics.dotWidth),
+                            height: TdayRefreshIndicatorMetrics.sweepHeight
                         )
-                        .shadow(color: colors.primary.opacity(metrics.shadowOpacity), radius: 5, x: 0, y: 0)
-                        .offset(y: metrics.verticalOffset)
+                        .offset(x: -(TdayRefreshIndicatorMetrics.containerWidth / 2) + TdayRefreshIndicatorMetrics.sweepInset + (sweepWidth / 2) + sweepOffset)
+                        .animation(.easeOut(duration: 0.16), value: clampedProgress)
+                }
+
+                HStack(spacing: TdayRefreshIndicatorMetrics.dotSpacing) {
+                    ForEach(0..<TdayRefreshIndicatorMetrics.barCount, id: \.self) { index in
+                        let metrics = barMetrics(
+                            index: index,
+                            pullProgress: clampedProgress,
+                            cycle: cycle
+                        )
+
+                        RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.dotWidth / 2, style: .continuous)
+                            .fill(colors.primary.opacity(metrics.opacity))
+                            .frame(
+                                width: TdayRefreshIndicatorMetrics.dotWidth,
+                                height: metrics.height
+                            )
+                            .shadow(color: colors.primary.opacity(metrics.shadowOpacity), radius: 6, x: 0, y: 0)
+                            .offset(y: metrics.verticalOffset)
+                    }
                 }
             }
             .frame(
@@ -150,17 +169,18 @@ private struct TdayPullRefreshIndicator: View {
                 RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
                     .stroke(colors.onSurface.opacity(0.12), lineWidth: 1)
             }
-            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+            .shadow(color: colors.primary.opacity(0.10), radius: 10, x: 0, y: 0)
+            .shadow(color: Color.black.opacity(0.14), radius: 14, x: 0, y: 7)
             .opacity(visible ? 1 : 0)
-            .scaleEffect(visible ? 1 : 0.78)
-            .offset(y: visible ? 0 : -14)
+            .scaleEffect(visible ? 1 : 0.82)
+            .offset(y: visible ? 0 : -16)
             .animation(.easeOut(duration: 0.22), value: visible)
         }
     }
 
     private func barMetrics(index: Int, pullProgress: CGFloat, cycle: TimeInterval) -> (height: CGFloat, opacity: Double, shadowOpacity: Double, verticalOffset: CGFloat) {
         if isRefreshing {
-            let phasedCycle = (cycle + (Double(index) * 0.18)).truncatingRemainder(dividingBy: 1)
+            let phasedCycle = (cycle + (Double(index) * 0.11)).truncatingRemainder(dividingBy: 1)
             let wave = (sin(phasedCycle * .pi * 2) + 1) / 2
             let easedWave = CGFloat(wave * wave * (3 - (2 * wave)))
             let height = TdayRefreshIndicatorMetrics.dotMinHeight +
@@ -173,8 +193,8 @@ private struct TdayPullRefreshIndicator: View {
             )
         }
 
-        let staggerStart = CGFloat(index) * 0.16
-        let progress = min(max((pullProgress - staggerStart) / 0.68, 0), 1)
+        let staggerStart = CGFloat(index) * 0.11
+        let progress = min(max((pullProgress - staggerStart) / 0.56, 0), 1)
         let easedProgress = progress * progress * (3 - (2 * progress))
         let height = TdayRefreshIndicatorMetrics.dotMinHeight +
             ((TdayRefreshIndicatorMetrics.dotMaxHeight - TdayRefreshIndicatorMetrics.dotMinHeight) * easedProgress)

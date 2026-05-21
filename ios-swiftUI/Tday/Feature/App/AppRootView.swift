@@ -5,6 +5,8 @@ struct AppRootView: View {
 
     @State private var appViewModel: AppViewModel
     @State private var authViewModel: AuthViewModel
+    @State private var hasLeftActiveScene = false
+    @Environment(\.scenePhase) private var scenePhase
 
     init(container: AppContainer) {
         self.container = container
@@ -154,6 +156,22 @@ struct AppRootView: View {
         }
         .onOpenURL { url in
             handleDeepLink(url)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                guard hasLeftActiveScene else {
+                    return
+                }
+                hasLeftActiveScene = false
+                Task {
+                    await appViewModel.reconnectAfterForeground()
+                }
+            case .inactive, .background:
+                hasLeftActiveScene = true
+            @unknown default:
+                break
+            }
         }
     }
 
