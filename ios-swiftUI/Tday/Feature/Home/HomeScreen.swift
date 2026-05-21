@@ -27,6 +27,10 @@ private func homeSearchText(_ value: String) -> String {
     value.lowercased(with: .current)
 }
 
+private enum HomeSearchMotion {
+    static let resultNavigationDelay: TimeInterval = 0.14
+}
+
 private struct HomeSearchBarFrameKey: PreferenceKey {
     static var defaultValue: CGRect = .zero
 
@@ -86,6 +90,7 @@ struct HomeScreen: View {
     @State private var searchQuery = ""
     @State private var searchBarFrame: CGRect = .zero
     @State private var searchResultsFrame: CGRect = .zero
+    @State private var openingSearchResultID: String?
     @State private var showingCreateTask = false
     @State private var showingCreateList = false
 
@@ -252,8 +257,7 @@ struct HomeScreen: View {
                         todos: filteredTodos,
                         listsByID: listByID,
                         onOpenTodo: { todo in
-                            closeSearch()
-                            onNavigate(.allTodos(highlightTodoId: todo.id))
+                            openSearchResult(todo)
                         }
                     )
                     .frame(width: activeSearchBarFrame.width)
@@ -326,11 +330,24 @@ struct HomeScreen: View {
     }
 
     private func closeSearch() {
+        searchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = false
         }
         searchQuery = ""
         searchResultsFrame = .zero
+    }
+
+    private func openSearchResult(_ todo: TodoItem) {
+        guard openingSearchResultID == nil else {
+            return
+        }
+        openingSearchResultID = todo.id
+        closeSearch()
+        DispatchQueue.main.asyncAfter(deadline: .now() + HomeSearchMotion.resultNavigationDelay) {
+            onNavigate(.allTodos(highlightTodoId: todo.id))
+            openingSearchResultID = nil
+        }
     }
 
     private func handleSearchTap(at location: CGPoint) {
@@ -848,40 +865,35 @@ private struct HomeSearchResultsOverlay: View {
                             let tint = homeListAccentColor(for: list?.color)
                             let symbolName = homeListSymbolName(for: list?.iconKey)
 
-                            Button {
-                                onOpenTodo(todo)
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Image(systemName: symbolName)
-                                        .font(.system(size: 17, weight: .semibold))
-                                        .foregroundStyle(tint.opacity(0.92))
-                                        .frame(width: 18)
+                            HStack(spacing: 10) {
+                                Image(systemName: symbolName)
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(tint.opacity(0.92))
+                                    .frame(width: 18)
 
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(todo.title)
-                                            .font(.tdayRounded(size: 15, weight: .bold))
-                                            .foregroundStyle(colors.onSurface)
-                                            .lineLimit(1)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(todo.title)
+                                        .font(.tdayRounded(size: 15, weight: .bold))
+                                        .foregroundStyle(colors.onSurface)
+                                        .lineLimit(1)
 
-                                        Text(dueFormatter.string(from: todo.due))
-                                            .font(.tdayRounded(size: 12, weight: .bold))
-                                            .foregroundStyle(colors.onSurfaceVariant)
-                                            .lineLimit(1)
-                                    }
-
-                                    Spacer(minLength: 0)
+                                    Text(dueFormatter.string(from: todo.due))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(colors.onSurfaceVariant)
+                                        .lineLimit(1)
                                 }
-                                .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 9)
+
+                                Spacer(minLength: 0)
                             }
-                            .buttonStyle(
-                                TdayPressButtonStyle(
-                                    shadowColor: Color.black,
-                                    pressedShadowOpacity: 0.04,
-                                    normalShadowOpacity: 0.08
-                                )
-                            )
+                            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onOpenTodo(todo)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(.isButton)
 
                             if index < todos.count - 1 {
                                 Rectangle()

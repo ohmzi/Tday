@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -359,6 +360,21 @@ fun TodoListScreen(
     )
     val timelineItemSpacing = if (usesTodayStyle) 4.dp else 8.dp
     val timelineHeaderBodySpacing = if (usesTodayStyle) 2.dp else 8.dp
+    fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
+        var itemIndex = 0
+        timelineSections.forEach { section ->
+            itemIndex += 1
+            val todoIndex = section.items.indexOfFirst { item ->
+                item.id == todoId || item.canonicalId == todoId
+            }
+            if (todoIndex >= 0) {
+                val todo = section.items[todoIndex]
+                return itemIndex + todoIndex to "timeline-todo-${section.key}-${todo.id}"
+            }
+            itemIndex += section.items.size
+        }
+        return null
+    }
     LaunchedEffect(showSummarySheet, canSummarizeCurrentMode) {
         if (showSummarySheet && canSummarizeCurrentMode) {
             onSummarize()
@@ -369,13 +385,38 @@ fun TodoListScreen(
         if (collapsedSectionKeys.isNotEmpty()) {
             collapsedSectionKeys = emptySet()
         }
-        val targetSectionIndex = timelineSections.indexOfFirst { section ->
-            section.items.any { item ->
-                item.id == highlightedTodoId || item.canonicalId == highlightedTodoId
+        delay(SEARCH_RESULT_SCROLL_START_DELAY_MS)
+        val target = highlightedTodoListTarget(highlightedTodoId)
+        if (target != null) {
+            val viewportHeight =
+                listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
+            val estimatedRowHeight =
+                with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
+            val centeredScrollOffset =
+                -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
+            listState.animateScrollToItem(
+                index = target.first,
+                scrollOffset = centeredScrollOffset,
+            )
+            delay(SEARCH_RESULT_ROW_LAYOUT_DELAY_MS)
+            val visibleTarget = listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+                item.key == target.second
             }
-        }
-        if (targetSectionIndex >= 0) {
-            listState.animateScrollToItem(targetSectionIndex * 2)
+            if (visibleTarget != null) {
+                val viewportCenter =
+                    (listState.layoutInfo.viewportStartOffset + listState.layoutInfo.viewportEndOffset) / 2
+                val itemCenter = visibleTarget.offset + (visibleTarget.size / 2)
+                val centerDelta = (itemCenter - viewportCenter).toFloat()
+                if (centerDelta != 0f) {
+                    listState.animateScrollBy(
+                        value = centerDelta,
+                        animationSpec = tween(
+                            durationMillis = SEARCH_RESULT_FINE_SCROLL_DURATION_MS,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    )
+                }
+            }
             flashTodoId = highlightedTodoId
             delay(2300)
             if (flashTodoId == highlightedTodoId) {
@@ -2088,6 +2129,10 @@ private fun createMovedTaskPayload(
 }
 
 private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
+private const val SEARCH_RESULT_SCROLL_START_DELAY_MS = 260L
+private const val SEARCH_RESULT_ROW_LAYOUT_DELAY_MS = 70L
+private const val SEARCH_RESULT_FINE_SCROLL_DURATION_MS = 320
+private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 58.dp
 private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)

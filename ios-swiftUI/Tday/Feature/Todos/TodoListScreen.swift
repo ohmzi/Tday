@@ -32,6 +32,9 @@ enum TodoTimelineMetrics {
     static let collapsedTitleRevealDistance: CGFloat = 10
     static let collapsedTitleRevealStart: CGFloat = 0.68
     static let collapsedTitleRevealEnd: CGFloat = 1
+    static let searchResultScrollDelay: TimeInterval = 0.30
+    static let searchResultScrollDuration: TimeInterval = 0.52
+    static let searchResultFlashDelay: TimeInterval = 0.18
 
     static func smoothstep(_ value: CGFloat) -> CGFloat {
         let clamped = min(max(value, 0), 1)
@@ -156,6 +159,7 @@ struct TodoListScreen: View {
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var completingTodoIDs: Set<String> = []
     @State private var flashTodoId: String?
+    @State private var highlightedScrollRequestID = 0
 
     init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?, highlightedTodoId: String?) {
         self.highlightedTodoId = highlightedTodoId
@@ -421,16 +425,21 @@ struct TodoListScreen: View {
         todo.id == id || todo.canonicalId == id
     }
 
-    private func highlightedTodoSectionID(for id: String) -> String? {
-        groupedSections.first { section in
-            section.items.contains { todo in
-                matchesHighlightedTodo(todo, id: id)
+    private func highlightedTodoTarget(for id: String) -> TodoItem? {
+        for section in groupedSections {
+            if let todo = section.items.first(where: { matchesHighlightedTodo($0, id: id) }) {
+                return todo
             }
-        }?.id
+        }
+        return nil
     }
 
     private func timelineSectionScrollID(_ sectionID: String) -> String {
         "timeline-section-\(sectionID)"
+    }
+
+    private func timelineTodoScrollID(_ todoID: String) -> String {
+        "timeline-todo-\(todoID)"
     }
 
     private func shouldFlashTodo(_ todo: TodoItem) -> Bool {
@@ -444,7 +453,7 @@ struct TodoListScreen: View {
         guard viewModel.mode == .all,
               let highlightedTodoId,
               !highlightedTodoId.isEmpty,
-              let sectionID = highlightedTodoSectionID(for: highlightedTodoId) else {
+              let targetTodo = highlightedTodoTarget(for: highlightedTodoId) else {
             return
         }
 
@@ -454,13 +463,30 @@ struct TodoListScreen: View {
             }
         }
 
-        DispatchQueue.main.async {
-            withAnimation(.easeInOut(duration: 0.32)) {
-                proxy.scrollTo(timelineSectionScrollID(sectionID), anchor: .top)
+        highlightedScrollRequestID += 1
+        let requestID = highlightedScrollRequestID
+        let targetScrollID = timelineTodoScrollID(targetTodo.id)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + TodoTimelineMetrics.searchResultScrollDelay) {
+            guard requestID == highlightedScrollRequestID else {
+                return
             }
-            flashTodoId = highlightedTodoId
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 2_300_000_000)
+
+            withAnimation(.easeInOut(duration: TodoTimelineMetrics.searchResultScrollDuration)) {
+                proxy.scrollTo(targetScrollID, anchor: .center)
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + TodoTimelineMetrics.searchResultFlashDelay) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                flashTodoId = highlightedTodoId
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
                 if flashTodoId == highlightedTodoId {
                     flashTodoId = nil
                 }
@@ -876,6 +902,7 @@ struct TodoListScreen: View {
             if !isCollapsed {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                     minimalTimelineRow(todo, in: section, flashHighlight: shouldFlashTodo(todo))
+                        .id(timelineTodoScrollID(todo.id))
                         .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(colors.background)
