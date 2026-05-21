@@ -7,6 +7,7 @@ extension Color {
     static let tdayDarkAccent = Color(red: 0.37, green: 0.64, blue: 0.95)
     static let tdayDarkSecondary = Color(red: 0.44, green: 0.68, blue: 0.97)
     static let tdayDarkWarm = Color(red: 0.87, green: 0.70, blue: 0.49)
+    static let tdayDarkOnPrimary = Color(red: 0.96, green: 0.97, blue: 1.0)
     static let tdayDarkForeground = Color(red: 0.96, green: 0.96, blue: 0.99)
     static let tdayDarkMuted = Color(red: 0.63, green: 0.66, blue: 0.74)
     static let tdayDarkError = Color(red: 0.89, green: 0.49, blue: 0.49)
@@ -17,6 +18,7 @@ extension Color {
     static let tdayLightAccent = Color(red: 0.16, green: 0.43, blue: 0.76)
     static let tdayLightSecondary = Color(red: 0.29, green: 0.53, blue: 0.86)
     static let tdayLightWarm = Color(red: 0.72, green: 0.53, blue: 0.27)
+    static let tdayLightOnPrimary = Color.white
     static let tdayLightForeground = Color(red: 0.11, green: 0.14, blue: 0.20)
     static let tdayLightMuted = Color(red: 0.36, green: 0.40, blue: 0.49)
     static let tdayLightError = Color(red: 0.73, green: 0.10, blue: 0.10)
