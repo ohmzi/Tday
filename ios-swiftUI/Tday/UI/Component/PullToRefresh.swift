@@ -2,14 +2,171 @@ import SwiftUI
 import UIKit
 
 struct PullToRefreshContainer<Content: View>: View {
+    let isRefreshing: Bool
     let action: @Sendable () async -> Void
-    @ViewBuilder let content: Content
+    private let content: Content
+
+    init(
+        isRefreshing: Bool,
+        action: @escaping @Sendable () async -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isRefreshing = isRefreshing
+        self.action = action
+        self.content = content()
+    }
+
+    var body: some View {
+        RefreshContainerBody(isRefreshing: isRefreshing, action: action) {
+            content
+        }
+    }
+}
+
+private struct RefreshContainerBody<Content: View>: View {
+    let isRefreshing: Bool
+    let action: @Sendable () async -> Void
+    private let content: Content
+
+    @State private var pullDistance: CGFloat = 0
+
+    init(
+        isRefreshing: Bool,
+        action: @escaping @Sendable () async -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isRefreshing = isRefreshing
+        self.action = action
+        self.content = content()
+    }
+
+    private var pullProgress: CGFloat {
+        min(max(pullDistance / TdayRefreshIndicatorMetrics.triggerDistance, 0), 1)
+    }
 
     var body: some View {
         content
             .refreshable {
                 await action()
             }
+            .background(
+                PullRefreshOffsetObserver { distance in
+                    pullDistance = distance
+                }
+            )
+            .overlay(alignment: .top) {
+                TdayPullRefreshIndicator(
+                    isRefreshing: isRefreshing,
+                    pullProgress: pullProgress
+                )
+                .padding(.top, 8)
+                .allowsHitTesting(false)
+            }
+    }
+}
+
+private enum TdayRefreshIndicatorMetrics {
+    static let triggerDistance: CGFloat = 82
+    static let containerSize: CGFloat = 48
+    static let iconSize: CGFloat = 23
+    static let cornerRadius: CGFloat = 18
+}
+
+private struct TdayPullRefreshIndicator: View {
+    let isRefreshing: Bool
+    let pullProgress: CGFloat
+
+    @Environment(\.tdayColors) private var colors
+
+    private var visible: Bool {
+        isRefreshing || pullProgress > 0.02
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !isRefreshing)) { context in
+            let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 0.9) / 0.9
+            let rotation = isRefreshing ? cycle * 360 : Double(pullProgress * 160)
+
+            Image(systemName: "arrow.clockwise")
+                .font(.system(size: TdayRefreshIndicatorMetrics.iconSize, weight: .bold, design: .rounded))
+                .foregroundStyle(colors.primary)
+                .rotationEffect(.degrees(rotation))
+                .frame(
+                    width: TdayRefreshIndicatorMetrics.containerSize,
+                    height: TdayRefreshIndicatorMetrics.containerSize
+                )
+                .background(colors.surface, in: RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
+                        .stroke(colors.onSurface.opacity(0.12), lineWidth: 1)
+                }
+                .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+                .opacity(visible ? 1 : 0)
+                .scaleEffect(visible ? 1 : 0.78)
+                .offset(y: visible ? 0 : -12)
+                .animation(.easeOut(duration: 0.22), value: visible)
+        }
+    }
+}
+
+private struct PullRefreshOffsetObserver: UIViewRepresentable {
+    let onChange: (CGFloat) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onChange: onChange)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onChange = onChange
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator {
+        var onChange: (CGFloat) -> Void
+        private weak var observedScrollView: UIScrollView?
+        private var observation: NSKeyValueObservation?
+
+        init(onChange: @escaping (CGFloat) -> Void) {
+            self.onChange = onChange
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.enclosingScrollView() else {
+                return
+            }
+
+            hideNativeRefreshControl(in: scrollView)
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
+                self?.hideNativeRefreshControl(in: scrollView)
+                let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
+                let pullDistance = max(-normalizedOffset, 0)
+                DispatchQueue.main.async {
+                    self?.onChange(pullDistance)
+                }
+            }
+        }
+
+        private func hideNativeRefreshControl(in scrollView: UIScrollView) {
+            guard let refreshControl = scrollView.refreshControl else {
+                return
+            }
+            refreshControl.tintColor = .clear
+            refreshControl.subviews.forEach { $0.alpha = 0 }
+        }
     }
 }
 

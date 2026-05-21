@@ -26,7 +26,11 @@ final class CalendarViewModel {
 
     func refresh() async {
         isLoading = true
-        let result = await container.syncAndRefresh(force: true, replayPendingMutations: false)
+        let result = await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: false,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
         if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {
             errorMessage = userFacingMessage(for: error, fallback: "Failed to load calendar.")
         }
