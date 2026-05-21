@@ -19,6 +19,14 @@ private func isHomeDaytime(_ date: Date) -> Bool {
     return (6..<18).contains(hour)
 }
 
+private func normalizedHomeSearchQuery(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
+}
+
+private func homeSearchText(_ value: String) -> String {
+    value.lowercased(with: .current)
+}
+
 private struct HomeSearchBarFrameKey: PreferenceKey {
     static var defaultValue: CGRect = .zero
 
@@ -87,11 +95,11 @@ struct HomeScreen: View {
     }
 
     private var normalizedSearchQuery: String {
-        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        normalizedHomeSearchQuery(searchQuery)
     }
 
     private var listByID: [String: ListSummary] {
-        Dictionary(uniqueKeysWithValues: viewModel.summary.lists.map { ($0.id, $0) })
+        Dictionary(viewModel.summary.lists.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
     }
 
     private var filteredTodos: [TodoItem] {
@@ -100,9 +108,9 @@ struct HomeScreen: View {
         }
 
         return viewModel.searchableTodos.filter { todo in
-            todo.title.lowercased().contains(normalizedSearchQuery) ||
-                (todo.description?.lowercased().contains(normalizedSearchQuery) ?? false) ||
-                (todo.listId.flatMap { listByID[$0]?.name.lowercased() }?.contains(normalizedSearchQuery) ?? false)
+            homeSearchText(todo.title).contains(normalizedSearchQuery) ||
+                (todo.description.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false) ||
+                (todo.listId.flatMap { listByID[$0]?.name }.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false)
         }
         .sorted { $0.due < $1.due }
         .prefix(20)
@@ -134,6 +142,9 @@ struct HomeScreen: View {
                                 searchExpanded: $searchExpanded,
                                 searchQuery: $searchQuery,
                                 searchFieldFocused: $searchFieldFocused,
+                                onSearchClose: {
+                                    closeSearch()
+                                },
                                 onCreateList: {
                                     closeSearch()
                                     showingCreateList = true
@@ -205,6 +216,12 @@ struct HomeScreen: View {
                                 ErrorRetryView(message: errorMessage) {
                                     Task { await viewModel.refresh() }
                                 }
+                            }
+
+                            if viewModel.isLoading && viewModel.summary.allCount == 0 {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.top, 10)
                             }
 
                         }
@@ -303,6 +320,7 @@ struct HomeScreen: View {
             searchExpanded = false
         }
         searchQuery = ""
+        searchResultsFrame = .zero
     }
 
     private func handleSearchTap(at location: CGPoint) {
@@ -326,6 +344,7 @@ private struct HomeTopBar: View {
     @Binding var searchExpanded: Bool
     @Binding var searchQuery: String
     var searchFieldFocused: FocusState<Bool>.Binding
+    let onSearchClose: () -> Void
     let onCreateList: () -> Void
     let onOpenSettings: () -> Void
 
@@ -402,10 +421,7 @@ private struct HomeTopBar: View {
                         .disabled(!searchExpanded)
 
                     Button {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                            searchExpanded = false
-                        }
-                        searchQuery = ""
+                        onSearchClose()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 18, weight: .semibold))
@@ -797,6 +813,7 @@ private struct HomeSearchResultsOverlay: View {
     let onOpenTodo: (TodoItem) -> Void
 
     @Environment(\.tdayColors) private var colors
+    private let maxResultsHeight: CGFloat = 320
 
     private let dueFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -814,53 +831,60 @@ private struct HomeSearchResultsOverlay: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
             } else {
-                ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
-                    let list = todo.listId.flatMap { listsByID[$0] }
-                    let tint = homeListAccentColor(for: list?.color)
-                    let symbolName = homeListSymbolName(for: list?.iconKey)
+                ScrollView(showsIndicators: true) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
+                            let list = todo.listId.flatMap { listsByID[$0] }
+                            let tint = homeListAccentColor(for: list?.color)
+                            let symbolName = homeListSymbolName(for: list?.iconKey)
 
-                    Button {
-                        onOpenTodo(todo)
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: symbolName)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(tint.opacity(0.92))
-                                .frame(width: 18)
+                            Button {
+                                onOpenTodo(todo)
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: symbolName)
+                                        .font(.system(size: 17, weight: .semibold))
+                                        .foregroundStyle(tint.opacity(0.92))
+                                        .frame(width: 18)
 
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(todo.title)
-                                    .font(.tdayRounded(size: 15, weight: .bold))
-                                    .foregroundStyle(colors.onSurface)
-                                    .lineLimit(1)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(todo.title)
+                                            .font(.tdayRounded(size: 15, weight: .bold))
+                                            .foregroundStyle(colors.onSurface)
+                                            .lineLimit(1)
 
-                                Text(dueFormatter.string(from: todo.due))
-                                    .font(.tdayRounded(size: 12, weight: .bold))
-                                    .foregroundStyle(colors.onSurfaceVariant)
-                                    .lineLimit(1)
+                                        Text(dueFormatter.string(from: todo.due))
+                                            .font(.tdayRounded(size: 12, weight: .bold))
+                                            .foregroundStyle(colors.onSurfaceVariant)
+                                            .lineLimit(1)
+                                    }
+
+                                    Spacer(minLength: 0)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 9)
                             }
+                            .buttonStyle(
+                                TdayPressButtonStyle(
+                                    shadowColor: Color.black,
+                                    pressedShadowOpacity: 0.04,
+                                    normalShadowOpacity: 0.08
+                                )
+                            )
 
-                            Spacer(minLength: 0)
+                            if index < todos.count - 1 {
+                                Rectangle()
+                                    .fill(colors.onSurface.opacity(0.08))
+                                    .frame(height: 1)
+                                    .padding(.horizontal, 12)
+                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
                     }
-                    .buttonStyle(
-                        TdayPressButtonStyle(
-                            shadowColor: Color.black,
-                            pressedShadowOpacity: 0.04,
-                            normalShadowOpacity: 0.08
-                        )
-                    )
-
-                    if index < todos.count - 1 {
-                        Rectangle()
-                            .fill(colors.onSurface.opacity(0.08))
-                            .frame(height: 1)
-                            .padding(.horizontal, 12)
-                    }
+                    .padding(.vertical, 4)
                 }
+                .frame(maxHeight: maxResultsHeight)
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
             }
         }
         .background(colors.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
