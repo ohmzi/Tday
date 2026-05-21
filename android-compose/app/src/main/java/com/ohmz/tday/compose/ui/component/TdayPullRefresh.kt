@@ -30,9 +30,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlin.math.PI
 import kotlin.math.sin
+
+private const val RefreshBarCount = 5
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +112,18 @@ private fun TdayPullToRefreshIndicator(
         label = "pullRefreshWavePhase",
     )
     val pullProgress = state.distanceFraction.coerceIn(0f, 1f)
+    val sweepTrackWidth =
+        TdayDimens.PullRefreshContainerWidth - (TdayDimens.PullRefreshSweepInset * 2)
+    val sweepWidth = if (isRefreshing) {
+        sweepTrackWidth * 0.48f
+    } else {
+        sweepTrackWidth * pullProgress
+    }
+    val sweepOffset = if (isRefreshing) {
+        sweepTrackWidth - sweepWidth
+    } else {
+        0.dp
+    }
 
     Box(
         modifier = modifier
@@ -136,11 +151,34 @@ private fun TdayPullToRefreshIndicator(
             },
         contentAlignment = Alignment.Center,
     ) {
+        if (visible) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .graphicsLayer {
+                        translationX =
+                            TdayDimens.PullRefreshSweepInset.toPx() + (sweepOffset.toPx() * spin)
+                    }
+                    .width(sweepWidth.coerceAtLeast(TdayDimens.PullRefreshDotWidth))
+                    .height(TdayDimens.PullRefreshSweepHeight)
+                    .background(
+                        color = colorScheme.primary.copy(
+                            alpha = if (isRefreshing) {
+                                0.18f
+                            } else {
+                                0.10f + (pullProgress * 0.08f)
+                            },
+                        ),
+                        shape = RoundedCornerShape(TdayDimens.PullRefreshSweepHeight),
+                    ),
+            )
+        }
+
         Row(
             horizontalArrangement = Arrangement.spacedBy(TdayDimens.PullRefreshDotSpacing),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            repeat(3) { index ->
+            repeat(RefreshBarCount) { index ->
                 val metrics = refreshBarMetrics(
                     index = index,
                     pullProgress = pullProgress,
@@ -177,7 +215,7 @@ private fun refreshBarMetrics(
     isRefreshing: Boolean,
 ): RefreshBarMetrics {
     return if (isRefreshing) {
-        val phasedCycle = (cycle + (index * 0.18f)) % 1f
+        val phasedCycle = (cycle + (index * 0.11f)) % 1f
         val wave = ((sin(phasedCycle * PI.toFloat() * 2f) + 1f) / 2f)
             .smoothstep()
         val height = TdayDimens.PullRefreshDotMinHeight +
@@ -188,8 +226,8 @@ private fun refreshBarMetrics(
             verticalOffset = -(height - TdayDimens.PullRefreshDotMinHeight) / 2f,
         )
     } else {
-        val staggerStart = index * 0.16f
-        val progress = ((pullProgress - staggerStart) / 0.68f)
+        val staggerStart = index * 0.11f
+        val progress = ((pullProgress - staggerStart) / 0.56f)
             .coerceIn(0f, 1f)
             .smoothstep()
         val height = TdayDimens.PullRefreshDotMinHeight +
