@@ -67,11 +67,13 @@ private struct RefreshContainerBody<Content: View>: View {
 
 private enum TdayRefreshIndicatorMetrics {
     static let triggerDistance: CGFloat = 86
-    static let containerSize: CGFloat = 52
-    static let orbitSize: CGFloat = 28
-    static let ringLineWidth: CGFloat = 3.2
-    static let dotSize: CGFloat = 6.8
-    static let cornerRadius: CGFloat = 19
+    static let containerWidth: CGFloat = 58
+    static let containerHeight: CGFloat = 42
+    static let dotWidth: CGFloat = 7
+    static let dotMinHeight: CGFloat = 7
+    static let dotMaxHeight: CGFloat = 19
+    static let dotSpacing: CGFloat = 8
+    static let cornerRadius: CGFloat = 21
 }
 
 private struct TdayPullRefreshIndicator: View {
@@ -88,47 +90,28 @@ private struct TdayPullRefreshIndicator: View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !isRefreshing)) { context in
             let clampedProgress = min(max(pullProgress, 0), 1)
             let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 0.9) / 0.9
-            let rotation = isRefreshing ? cycle * 360 : Double(clampedProgress * 210)
-            let arcFraction = isRefreshing ? 0.78 : 0.18 + (clampedProgress * 0.6)
-            let pulse = isRefreshing ? 0.9 + (sin(cycle * .pi * 2) * 0.1) : Double(0.86 + (clampedProgress * 0.14))
 
-            ZStack {
-                Circle()
-                    .stroke(colors.primary.opacity(0.13), lineWidth: TdayRefreshIndicatorMetrics.ringLineWidth)
-                    .frame(
-                        width: TdayRefreshIndicatorMetrics.orbitSize,
-                        height: TdayRefreshIndicatorMetrics.orbitSize
+            HStack(spacing: TdayRefreshIndicatorMetrics.dotSpacing) {
+                ForEach(0..<3, id: \.self) { index in
+                    let metrics = barMetrics(
+                        index: index,
+                        pullProgress: clampedProgress,
+                        cycle: cycle
                     )
 
-                Circle()
-                    .trim(from: 0, to: arcFraction)
-                    .stroke(
-                        colors.primary,
-                        style: StrokeStyle(
-                            lineWidth: TdayRefreshIndicatorMetrics.ringLineWidth,
-                            lineCap: .round
+                    RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.dotWidth / 2, style: .continuous)
+                        .fill(colors.primary.opacity(metrics.opacity))
+                        .frame(
+                            width: TdayRefreshIndicatorMetrics.dotWidth,
+                            height: metrics.height
                         )
-                    )
-                    .frame(
-                        width: TdayRefreshIndicatorMetrics.orbitSize,
-                        height: TdayRefreshIndicatorMetrics.orbitSize
-                    )
-                    .rotationEffect(.degrees(rotation - 90))
-
-                Circle()
-                    .fill(colors.primary)
-                    .frame(
-                        width: TdayRefreshIndicatorMetrics.dotSize,
-                        height: TdayRefreshIndicatorMetrics.dotSize
-                    )
-                    .shadow(color: colors.primary.opacity(0.36), radius: 5, x: 0, y: 0)
-                    .scaleEffect(pulse)
-                    .offset(y: -TdayRefreshIndicatorMetrics.orbitSize / 2)
-                    .rotationEffect(.degrees(rotation + Double(arcFraction * 360)))
+                        .shadow(color: colors.primary.opacity(metrics.shadowOpacity), radius: 5, x: 0, y: 0)
+                        .offset(y: metrics.verticalOffset)
+                }
             }
             .frame(
-                width: TdayRefreshIndicatorMetrics.containerSize,
-                height: TdayRefreshIndicatorMetrics.containerSize
+                width: TdayRefreshIndicatorMetrics.containerWidth,
+                height: TdayRefreshIndicatorMetrics.containerHeight
             )
             .background(colors.surface, in: RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
             .overlay {
@@ -141,6 +124,34 @@ private struct TdayPullRefreshIndicator: View {
             .offset(y: visible ? 0 : -12)
             .animation(.easeOut(duration: 0.22), value: visible)
         }
+    }
+
+    private func barMetrics(index: Int, pullProgress: CGFloat, cycle: TimeInterval) -> (height: CGFloat, opacity: Double, shadowOpacity: Double, verticalOffset: CGFloat) {
+        if isRefreshing {
+            let phasedCycle = (cycle + (Double(index) * 0.18)).truncatingRemainder(dividingBy: 1)
+            let wave = (sin(phasedCycle * .pi * 2) + 1) / 2
+            let easedWave = CGFloat(wave * wave * (3 - (2 * wave)))
+            let height = TdayRefreshIndicatorMetrics.dotMinHeight +
+                ((TdayRefreshIndicatorMetrics.dotMaxHeight - TdayRefreshIndicatorMetrics.dotMinHeight) * easedWave)
+            return (
+                height: height,
+                opacity: 0.42 + (Double(easedWave) * 0.58),
+                shadowOpacity: 0.08 + (Double(easedWave) * 0.28),
+                verticalOffset: -(height - TdayRefreshIndicatorMetrics.dotMinHeight) / 2
+            )
+        }
+
+        let staggerStart = CGFloat(index) * 0.16
+        let progress = min(max((pullProgress - staggerStart) / 0.68, 0), 1)
+        let easedProgress = progress * progress * (3 - (2 * progress))
+        let height = TdayRefreshIndicatorMetrics.dotMinHeight +
+            ((TdayRefreshIndicatorMetrics.dotMaxHeight - TdayRefreshIndicatorMetrics.dotMinHeight) * easedProgress)
+        return (
+            height: height,
+            opacity: 0.32 + (Double(easedProgress) * 0.68),
+            shadowOpacity: Double(easedProgress) * 0.22,
+            verticalOffset: -(height - TdayRefreshIndicatorMetrics.dotMinHeight) / 2
+        )
     }
 }
 
@@ -200,6 +211,8 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
                 return
             }
             refreshControl.tintColor = .clear
+            refreshControl.backgroundColor = .clear
+            refreshControl.alpha = 0
             refreshControl.subviews.forEach { $0.alpha = 0 }
         }
     }
