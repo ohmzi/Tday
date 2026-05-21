@@ -51,6 +51,14 @@ struct CompletedScreen: View {
     var body: some View {
         completedTimelineContent
             .background(colors.background)
+            .overlay {
+                if viewModel.items.isEmpty, !viewModel.isLoading {
+                    EmptyTaskWatermark(
+                        systemName: "checkmark",
+                        accentColor: completedAccentColor
+                    )
+                }
+            }
             .navigationBackButtonBehavior()
             .navigationTitleTypography(
                 largeTitleColor: completedAccentColor,

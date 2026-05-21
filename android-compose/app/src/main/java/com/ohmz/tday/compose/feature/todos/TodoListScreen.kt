@@ -91,6 +91,7 @@ import androidx.compose.material.icons.rounded.DirectionsBoat
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Eco
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FamilyRestroom
 import androidx.compose.material.icons.rounded.Favorite
@@ -196,6 +197,8 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
+import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
@@ -240,6 +243,10 @@ fun TodoListScreen(
     val fabColor = todoFabColorForMode(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
+    )
+    val emptyWatermarkIcon = emptyStateIconForMode(
+        mode = uiState.mode,
+        listIconKey = selectedList?.iconKey,
     )
     val showSectionedTimeline =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
@@ -442,21 +449,34 @@ fun TodoListScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            state = listState,
-            contentPadding = if (usesTodayStyle) {
-                PaddingValues(horizontal = 18.dp, vertical = 2.dp)
-            } else {
-                PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-            },
-            verticalArrangement = Arrangement.spacedBy(
-                if (showSectionedTimeline) 0.dp else timelineItemSpacing,
-            ),
         ) {
-            if (!showSectionedTimeline && uiState.items.isEmpty()) {
+            if (uiState.items.isEmpty() && !uiState.isLoading) {
+                EmptyTaskWatermark(
+                    imageVector = emptyWatermarkIcon,
+                    accentColor = titleColor,
+                )
+                EmptyTaskBackgroundMessage(
+                    message = emptyStateMessageForMode(uiState.mode),
+                )
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                contentPadding = if (usesTodayStyle) {
+                    PaddingValues(horizontal = 18.dp, vertical = 2.dp)
+                } else {
+                    PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                },
+                verticalArrangement = Arrangement.spacedBy(
+                    if (showSectionedTimeline) 0.dp else timelineItemSpacing,
+                ),
+            ) {
+                if (!showSectionedTimeline && uiState.items.isEmpty() && uiState.isLoading) {
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
@@ -464,11 +484,7 @@ fun TodoListScreen(
                     ) {
                         Text(
                             modifier = Modifier.padding(18.dp),
-                            text = if (uiState.isLoading) {
-                                stringResource(R.string.label_loading)
-                            } else {
-                                emptyStateMessageForMode(uiState.mode)
-                            },
+                            text = stringResource(R.string.label_loading),
                             color = colorScheme.onSurfaceVariant,
                         )
                     }
@@ -635,16 +651,6 @@ fun TodoListScreen(
                         }
                     }
                 }
-                if (uiState.items.isEmpty()) {
-                    item {
-                        EmptyTimelineState(
-                            message = emptyStateMessageForMode(uiState.mode),
-                            icon = emptyStateIconForMode(uiState.mode),
-                            accentColor = titleColor,
-                            useMinimalStyle = usesTodayStyle,
-                        )
-                    }
-                }
             } else {
                 items(
                     items = uiState.items,
@@ -676,7 +682,8 @@ fun TodoListScreen(
                 }
             }
 
-            item { Spacer(Modifier.height(96.dp)) }
+                item { Spacer(Modifier.height(96.dp)) }
+            }
         }
     }
 
@@ -1672,54 +1679,6 @@ private fun Modifier.timelineSectionDropTarget(
     )
 }
 
-@Composable
-private fun EmptyTimelineState(
-    message: String,
-    icon: ImageVector,
-    accentColor: Color,
-    useMinimalStyle: Boolean = false,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                top = if (useMinimalStyle) 92.dp else 76.dp,
-                bottom = if (useMinimalStyle) 180.dp else 140.dp,
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(if (useMinimalStyle) 76.dp else 68.dp)
-                .clip(CircleShape)
-                .background(accentColor.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = accentColor.copy(alpha = 0.9f),
-                modifier = Modifier.size(if (useMinimalStyle) 34.dp else 30.dp),
-            )
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-        Text(
-            text = message,
-            color = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.66f else 0.85f),
-            style = if (useMinimalStyle) {
-                MaterialTheme.typography.displaySmall
-            } else {
-                MaterialTheme.typography.headlineSmall
-            },
-            fontWeight = FontWeight.ExtraBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
-    }
-}
-
 private data class TodoSection(
     val key: String,
     val title: String,
@@ -2015,14 +1974,17 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
     }
 }
 
-private fun emptyStateIconForMode(mode: TodoListMode): ImageVector {
+private fun emptyStateIconForMode(
+    mode: TodoListMode,
+    listIconKey: String?,
+): ImageVector {
     return when (mode) {
         TodoListMode.TODAY -> Icons.Rounded.WbSunny
-        TodoListMode.OVERDUE -> Icons.Rounded.Schedule
-        TodoListMode.SCHEDULED -> Icons.Rounded.CalendarToday
-        TodoListMode.ALL -> Icons.Rounded.Inbox
+        TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
         TodoListMode.PRIORITY -> Icons.Rounded.Flag
-        TodoListMode.LIST -> Icons.AutoMirrored.Rounded.List
+        TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
+        TodoListMode.ALL -> Icons.Rounded.Inbox
+        TodoListMode.LIST -> listIconForKey(listIconKey)
     }
 }
 
