@@ -128,6 +128,16 @@ struct HomeScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
+            let fallbackSearchBarFrame = CGRect(
+                x: HomeMetrics.screenPadding,
+                y: HomeMetrics.screenPadding,
+                width: max(HomeMetrics.topBarButtonSize, proxy.size.width - (HomeMetrics.screenPadding * 2)),
+                height: HomeMetrics.topBarButtonSize
+            )
+            let activeSearchBarFrame = searchBarFrame.width > 0 && searchBarFrame.height > 0
+                ? searchBarFrame
+                : fallbackSearchBarFrame
+
             ZStack(alignment: .topLeading) {
                 PullToRefreshContainer(
                     isRefreshing: viewModel.isLoading,
@@ -237,7 +247,7 @@ struct HomeScreen: View {
                     }
                 }
 
-                if showSearchResultsOverlay, searchBarFrame != .zero {
+                if showSearchResultsOverlay {
                     HomeSearchResultsOverlay(
                         todos: filteredTodos,
                         listsByID: listByID,
@@ -246,18 +256,18 @@ struct HomeScreen: View {
                             onNavigate(.allTodos(highlightTodoId: todo.id))
                         }
                     )
-                    .frame(width: searchBarFrame.width)
-                    .offset(x: searchBarFrame.minX, y: searchBarFrame.maxY + 8)
+                    .frame(width: activeSearchBarFrame.width)
+                    .offset(x: activeSearchBarFrame.minX, y: activeSearchBarFrame.maxY + 8)
                     .background(
                         GeometryReader { resultsProxy in
                             Color.clear
                                 .preference(
                                     key: HomeSearchResultsFrameKey.self,
                                     value: resultsProxy.frame(in: .named("home-root"))
-                                )
+                            )
                         }
                     )
-                    .zIndex(5)
+                    .zIndex(100)
                 }
             }
             .coordinateSpace(name: "home-root")
