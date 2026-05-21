@@ -483,7 +483,11 @@ struct TodoListScreen: View {
             .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
             if viewModel.items.isEmpty {
-                TimelineEmptyState(message: "No tasks for today")
+                TimelineCategoryEmptyState(
+                    message: emptyTimelineMessage(for: viewModel.mode),
+                    systemImage: emptyTimelineSystemImage(for: viewModel.mode),
+                    accentColor: modeAccentColor
+                )
                     .allowsHitTesting(false)
             }
         }
@@ -524,7 +528,11 @@ struct TodoListScreen: View {
             .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
             if viewModel.items.isEmpty {
-                TimelineEmptyState(message: emptyTimelineMessage(for: viewModel.mode))
+                TimelineCategoryEmptyState(
+                    message: emptyTimelineMessage(for: viewModel.mode),
+                    systemImage: emptyTimelineSystemImage(for: viewModel.mode),
+                    accentColor: modeAccentColor
+                )
                     .allowsHitTesting(false)
             }
         }
@@ -1310,6 +1318,37 @@ struct TimelineEmptyState: View {
     }
 }
 
+private struct TimelineCategoryEmptyState: View {
+    let message: String
+    let systemImage: String
+    let accentColor: Color
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(accentColor.opacity(0.14))
+                Image(systemName: systemImage)
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(accentColor.opacity(0.9))
+            }
+            .frame(width: 76, height: 76)
+
+            Text(message)
+                .font(.tdayRounded(size: TodoTimelineMetrics.emptyStateSize, weight: .bold))
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.66))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.82)
+                .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .offset(y: TodoTimelineMetrics.emptyStateOffset)
+    }
+}
+
 private struct ListSettingsSheet: View {
     let list: ListSummary?
     let onSubmit: (String, String?, String?) -> Void
@@ -1751,6 +1790,23 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
         return "No priority tasks"
     case .list:
         return "No tasks in this list"
+    }
+}
+
+private func emptyTimelineSystemImage(for mode: TodoListMode) -> String {
+    switch mode {
+    case .today:
+        return "sun.max.fill"
+    case .overdue:
+        return "clock.fill"
+    case .scheduled:
+        return "calendar"
+    case .all:
+        return "tray.fill"
+    case .priority:
+        return "flag.fill"
+    case .list:
+        return "list.bullet"
     }
 }
 
