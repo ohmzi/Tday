@@ -110,6 +110,7 @@ class AppViewModel @Inject constructor(
             }
         }
         observeOfflineSyncFailures()
+        observeOfflineSyncSuccesses()
         bootstrap()
     }
 
@@ -254,6 +255,11 @@ class AppViewModel @Inject constructor(
                     force = true,
                     replayPendingMutations = true,
                     notifyOfflineFailure = false,
+                    connectionProbeTimeoutMs = if (restored.usedCachedSession) {
+                        SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS
+                    } else {
+                        null
+                    },
                 )
             }
             launch { runCatching { authRepository.syncTimezone() } }
@@ -264,8 +270,7 @@ class AppViewModel @Inject constructor(
         val syncError = syncResult.exceptionOrNull()
         return SessionBootstrapResult(
             user = user,
-            isOffline = restored.usedCachedSession ||
-                    (syncError != null && isLikelyConnectivityIssue(syncError)),
+            isOffline = syncError != null && isLikelyConnectivityIssue(syncError),
         )
     }
 
@@ -658,6 +663,26 @@ class AppViewModel @Inject constructor(
                             isOffline = true,
                             pendingMutationCount = pendingCount,
                             offlineNoticeId = it.offlineNoticeId + 1L,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun observeOfflineSyncSuccesses() {
+        viewModelScope.launch {
+            syncManager.offlineSyncSuccesses.collect {
+                val pendingCount = runCatching {
+                    cacheManager.loadOfflineState().pendingMutations.size
+                }.getOrDefault(_uiState.value.pendingMutationCount)
+                _uiState.update {
+                    if (!it.authenticated) {
+                        it
+                    } else {
+                        it.copy(
+                            isOffline = false,
+                            pendingMutationCount = pendingCount,
                         )
                     }
                 }
