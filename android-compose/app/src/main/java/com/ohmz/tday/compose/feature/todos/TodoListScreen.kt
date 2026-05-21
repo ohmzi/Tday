@@ -322,7 +322,7 @@ fun TodoListScreen(
         label = "todoFabOffsetY",
     )
     val timelineItemSpacing = if (usesTodayStyle) 4.dp else 8.dp
-    val timelineHeaderBodySpacing = if (usesTodayStyle) 2.dp else 8.dp
+    val timelineHeaderBodySpacing = if (usesTodayStyle) 4.dp else 8.dp
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
         var itemIndex = 0
         timelineSections.forEach { section ->
@@ -450,167 +450,98 @@ fun TodoListScreen(
         },
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize(),
         ) {
-            if (uiState.items.isEmpty() && !uiState.isLoading) {
-                EmptyTaskWatermark(
-                    imageVector = emptyWatermarkIcon,
-                    accentColor = titleColor,
-                )
-                EmptyTaskBackgroundMessage(
-                    message = emptyStateMessageForMode(uiState.mode),
-                )
-            }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                contentPadding = if (usesTodayStyle) {
-                    PaddingValues(horizontal = 18.dp, vertical = 2.dp)
-                } else {
-                    PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-                },
-                verticalArrangement = Arrangement.spacedBy(
-                    if (showSectionedTimeline) 0.dp else timelineItemSpacing,
-                ),
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
             ) {
-                if (!showSectionedTimeline && uiState.items.isEmpty() && uiState.isLoading) {
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(18.dp),
-                    ) {
-                        Text(
-                            modifier = Modifier.padding(18.dp),
-                            text = stringResource(R.string.label_loading),
-                            color = colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            if (showSectionedTimeline) {
-                timelineSections.forEach { section ->
-                    val sectionHasTasks = section.items.isNotEmpty()
-                    val sectionModeCanCollapse = when (uiState.mode) {
-                        TodoListMode.ALL -> true
-                        TodoListMode.OVERDUE -> true
-                        TodoListMode.SCHEDULED -> true
-                        TodoListMode.PRIORITY -> section.key == "earlier"
-                        else -> false
-                    }
-                    val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
-                    val isCollapsed = sectionCanCollapse && collapsedSectionKeys.contains(section.key)
-                    val sectionDraggedTodo = if (uiState.mode == TodoListMode.SCHEDULED) {
-                        draggedScheduledTodo
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    contentPadding = if (usesTodayStyle) {
+                        PaddingValues(horizontal = 18.dp, vertical = 2.dp)
                     } else {
-                        null
-                    }
-                    val onSectionDropTargetChanged: (Boolean) -> Unit = { active ->
-                        if (active) {
-                            activeDropSectionKey = section.key
-                        } else if (activeDropSectionKey == section.key) {
-                            activeDropSectionKey = null
-                        }
-                    }
-                    val onSectionDragEnd: (() -> Unit)? = if (uiState.mode == TodoListMode.SCHEDULED) {
-                        {
-                            draggedScheduledTodoId = null
-                            activeDropSectionKey = null
-                        }
-                    } else {
-                        null
-                    }
-                    val onMoveTaskToSectionDate: ((TodoItem, LocalDate) -> Unit)? =
-                        if (uiState.mode == TodoListMode.SCHEDULED) {
-                            { todo, targetDate ->
-                                draggedScheduledTodoId = null
-                                activeDropSectionKey = null
-                                onUpdateTask(todo, createMovedTaskPayload(todo, targetDate))
-                            }
-                        } else {
-                            null
-                        }
-
-                    item(
-                        key = "timeline-header-${section.key}",
-                        contentType = "timeline-header",
-                    ) {
-                        TimelineSectionHeader(
-                            modifier = Modifier
-                                .animateItem(
-                                    fadeInSpec = null,
-                                    placementSpec = tween(
-                                        durationMillis = 320,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                    fadeOutSpec = null,
+                        PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                    },
+                    verticalArrangement = Arrangement.spacedBy(
+                        if (showSectionedTimeline) 0.dp else timelineItemSpacing,
+                    ),
+                ) {
+                    if (!showSectionedTimeline && uiState.items.isEmpty() && uiState.isLoading) {
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(18.dp),
+                            ) {
+                                Text(
+                                    modifier = Modifier.padding(18.dp),
+                                    text = stringResource(R.string.label_loading),
+                                    color = colorScheme.onSurfaceVariant,
                                 )
-                                .timelineSectionDropTarget(
-                                    section = section,
-                                    draggedTodo = sectionDraggedTodo,
-                                    onDropTargetChanged = onSectionDropTargetChanged,
-                                    onDragTodoEnd = onSectionDragEnd,
-                                    onMoveTaskToDate = onMoveTaskToSectionDate,
-                                ),
-                            section = section,
-                            useMinimalStyle = usesTodayStyle,
-                            isCollapsed = isCollapsed,
-                            isDropTarget = activeDropSectionKey == section.key,
-                            bottomSpacing = if (isCollapsed) {
-                                timelineItemSpacing
-                            } else {
-                                timelineHeaderBodySpacing
-                            },
-                            onHeaderClick = if (sectionCanCollapse) {
-                                {
-                                    collapsedSectionKeys =
-                                        if (isCollapsed) {
-                                            collapsedSectionKeys - section.key
-                                        } else {
-                                            collapsedSectionKeys + section.key
-                                        }
-                                }
+                            }
+                        }
+                    }
+
+                    if (showSectionedTimeline) {
+                        timelineSections.forEachIndexed { sectionIndex, section ->
+                            val sectionHasTasks = section.items.isNotEmpty()
+                            val sectionModeCanCollapse = when (uiState.mode) {
+                                TodoListMode.ALL -> true
+                                TodoListMode.OVERDUE -> true
+                                TodoListMode.SCHEDULED -> true
+                                TodoListMode.PRIORITY -> section.key == "earlier"
+                                else -> false
+                            }
+                            val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
+                            val isCollapsed =
+                                sectionCanCollapse && collapsedSectionKeys.contains(section.key)
+                            val sectionDraggedTodo = if (uiState.mode == TodoListMode.SCHEDULED) {
+                                draggedScheduledTodo
                             } else {
                                 null
-                            },
-                            onTapForQuickAdd = section.quickAddDefaults
-                                ?.takeUnless { sectionModeCanCollapse }
-                                ?.let { dueEpochMs ->
+                            }
+                            val onSectionDropTargetChanged: (Boolean) -> Unit = { active ->
+                                if (active) {
+                                    activeDropSectionKey = section.key
+                                } else if (activeDropSectionKey == section.key) {
+                                    activeDropSectionKey = null
+                                }
+                            }
+                            val onSectionDragEnd: (() -> Unit)? =
+                                if (uiState.mode == TodoListMode.SCHEDULED) {
                                     {
-                                        quickAddDueEpochMs = dueEpochMs
-                                        showCreateTaskSheet = true
+                                        draggedScheduledTodoId = null
+                                        activeDropSectionKey = null
                                     }
-                                },
-                        )
-                    }
+                                } else {
+                                    null
+                                }
+                            val onMoveTaskToSectionDate: ((TodoItem, LocalDate) -> Unit)? =
+                                if (uiState.mode == TodoListMode.SCHEDULED) {
+                                    { todo, targetDate ->
+                                        draggedScheduledTodoId = null
+                                        activeDropSectionKey = null
+                                        onUpdateTask(todo, createMovedTaskPayload(todo, targetDate))
+                                    }
+                                } else {
+                                    null
+                                }
 
-                    if (!isCollapsed && section.items.isNotEmpty()) {
-                        val showEarlierDateTimeSubtitle =
-                            section.key == "earlier" &&
-                                    (uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY)
-                        section.items.forEachIndexed { itemIndex, todo ->
                             item(
-                                key = "timeline-todo-${section.key}-${todo.id}",
-                                contentType = "timeline-todo",
+                                key = "timeline-header-${section.key}",
+                                contentType = "timeline-header",
                             ) {
-                                TimelineTaskRow(
+                                TimelineSectionHeader(
                                     modifier = Modifier
                                         .animateItem(
-                                            fadeInSpec = tween(
-                                                durationMillis = 190,
-                                                easing = FastOutSlowInEasing,
-                                            ),
+                                            fadeInSpec = null,
                                             placementSpec = tween(
                                                 durationMillis = 320,
                                                 easing = FastOutSlowInEasing,
                                             ),
-                                            fadeOutSpec = tween(
-                                                durationMillis = 150,
-                                                easing = FastOutSlowInEasing,
-                                            ),
+                                            fadeOutSpec = null,
                                         )
                                         .timelineSectionDropTarget(
                                             section = section,
@@ -619,70 +550,146 @@ fun TodoListScreen(
                                             onDragTodoEnd = onSectionDragEnd,
                                             onMoveTaskToDate = onMoveTaskToSectionDate,
                                         )
-                                        .padding(
-                                            bottom = if (itemIndex == section.items.lastIndex) {
-                                                timelineItemSpacing
-                                            } else {
-                                                8.dp
-                                            },
-                                        ),
-                                    todo = todo,
-                                    mode = uiState.mode,
-                                    lists = uiState.lists,
+                                        .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
+                                    section = section,
                                     useMinimalStyle = usesTodayStyle,
-                                    flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
-                                    showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
-                                    onComplete = { onComplete(todo) },
-                                    onDelete = { onDelete(todo) },
-                                    onInfo = {
-                                        editTargetTodoId = todo.id
+                                    isCollapsed = isCollapsed,
+                                    isDropTarget = activeDropSectionKey == section.key,
+                                    bottomSpacing = if (isCollapsed) {
+                                        timelineItemSpacing
+                                    } else {
+                                        timelineHeaderBodySpacing
                                     },
-                                    draggedTodo = sectionDraggedTodo,
-                                    onDragTodoStart = if (uiState.mode == TodoListMode.SCHEDULED) {
+                                    onHeaderClick = if (sectionCanCollapse) {
                                         {
-                                            activeDropSectionKey = null
-                                            draggedScheduledTodoId = todo.id
+                                            collapsedSectionKeys =
+                                                if (isCollapsed) {
+                                                    collapsedSectionKeys - section.key
+                                                } else {
+                                                    collapsedSectionKeys + section.key
+                                                }
                                         }
                                     } else {
                                         null
                                     },
+                                    onTapForQuickAdd = section.quickAddDefaults
+                                        ?.takeUnless { sectionModeCanCollapse }
+                                        ?.let { dueEpochMs ->
+                                            {
+                                                quickAddDueEpochMs = dueEpochMs
+                                                showCreateTaskSheet = true
+                                            }
+                                        },
+                                )
+                            }
+
+                            if (!isCollapsed && section.items.isNotEmpty()) {
+                                val showEarlierDateTimeSubtitle =
+                                    section.key == "earlier" &&
+                                            (uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY)
+                                section.items.forEachIndexed { itemIndex, todo ->
+                                    item(
+                                        key = "timeline-todo-${section.key}-${todo.id}",
+                                        contentType = "timeline-todo",
+                                    ) {
+                                        TimelineTaskRow(
+                                            modifier = Modifier
+                                                .animateItem(
+                                                    fadeInSpec = tween(
+                                                        durationMillis = 190,
+                                                        easing = FastOutSlowInEasing,
+                                                    ),
+                                                    placementSpec = tween(
+                                                        durationMillis = 320,
+                                                        easing = FastOutSlowInEasing,
+                                                    ),
+                                                    fadeOutSpec = tween(
+                                                        durationMillis = 150,
+                                                        easing = FastOutSlowInEasing,
+                                                    ),
+                                                )
+                                                .timelineSectionDropTarget(
+                                                    section = section,
+                                                    draggedTodo = sectionDraggedTodo,
+                                                    onDropTargetChanged = onSectionDropTargetChanged,
+                                                    onDragTodoEnd = onSectionDragEnd,
+                                                    onMoveTaskToDate = onMoveTaskToSectionDate,
+                                                )
+                                                .padding(
+                                                    bottom = if (itemIndex == section.items.lastIndex) {
+                                                        timelineItemSpacing
+                                                    } else {
+                                                        8.dp
+                                                    },
+                                                ),
+                                            todo = todo,
+                                            mode = uiState.mode,
+                                            lists = uiState.lists,
+                                            useMinimalStyle = usesTodayStyle,
+                                            flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
+                                            showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
+                                            onComplete = { onComplete(todo) },
+                                            onDelete = { onDelete(todo) },
+                                            onInfo = {
+                                                editTargetTodoId = todo.id
+                                            },
+                                            draggedTodo = sectionDraggedTodo,
+                                            onDragTodoStart = if (uiState.mode == TodoListMode.SCHEDULED) {
+                                                {
+                                                    activeDropSectionKey = null
+                                                    draggedScheduledTodoId = todo.id
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        items(
+                            items = uiState.items,
+                            key = { it.id },
+                            contentType = { "todo-row" },
+                        ) { todo ->
+                            if (usesTodayStyle) {
+                                TodayTodoRow(
+                                    todo = todo,
+                                    onComplete = { onComplete(todo) },
+                                    onDelete = { onDelete(todo) },
+                                )
+                            } else {
+                                TodoRow(
+                                    todo = todo,
+                                    onComplete = { onComplete(todo) },
+                                    onDelete = { onDelete(todo) },
                                 )
                             }
                         }
                     }
-                }
-            } else {
-                items(
-                    items = uiState.items,
-                    key = { it.id },
-                    contentType = { "todo-row" },
-                ) { todo ->
-                    if (usesTodayStyle) {
-                        TodayTodoRow(
-                            todo = todo,
-                            onComplete = { onComplete(todo) },
-                            onDelete = { onDelete(todo) },
-                        )
-                    } else {
-                        TodoRow(
-                            todo = todo,
-                            onComplete = { onComplete(todo) },
-                            onDelete = { onDelete(todo) },
-                        )
+
+                    uiState.errorMessage?.let { message ->
+                        item {
+                            com.ohmz.tday.compose.core.ui.ErrorRetryCard(
+                                message = message,
+                                onRetry = onRefresh,
+                            )
+                        }
                     }
+
+                    item { Spacer(Modifier.height(96.dp)) }
                 }
             }
 
-            uiState.errorMessage?.let { message ->
-                item {
-                    com.ohmz.tday.compose.core.ui.ErrorRetryCard(
-                        message = message,
-                        onRetry = onRefresh,
-                    )
-                }
-            }
-
-                item { Spacer(Modifier.height(96.dp)) }
+            if (uiState.items.isEmpty() && !uiState.isLoading) {
+                EmptyTaskWatermark(
+                    imageVector = emptyWatermarkIcon,
+                    accentColor = titleColor,
+                )
+                EmptyTaskBackgroundMessage(
+                    message = emptyStateMessageForMode(uiState.mode),
+                )
             }
         }
     }

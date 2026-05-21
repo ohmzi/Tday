@@ -212,18 +212,6 @@ struct CalendarScreen: View {
         .environment(\.defaultMinListRowHeight, 1)
         .disableVerticalScrollBounce()
         .background(colors.background)
-        .overlay {
-            if pendingItems.isEmpty, !viewModel.isLoading {
-                ZStack {
-                    EmptyTaskWatermark(
-                        systemName: "calendar",
-                        accentColor: calendarAccentColor
-                    )
-                    EmptyTaskBackgroundMessage(message: "No pending task due for this day")
-                }
-                .allowsHitTesting(false)
-            }
-        }
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: calendarAccentColor,
