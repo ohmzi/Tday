@@ -1,6 +1,6 @@
 import SwiftUI
 
-private let settingsSegmentedControlAccentColor = Color(red: 125.0 / 255.0, green: 103.0 / 255.0, blue: 182.0 / 255.0)
+private let settingsSegmentedControlAccentColor = Color.tdayTodayBlue
 
 struct SettingsScreen: View {
     let viewModel: AppViewModel
@@ -117,7 +117,7 @@ struct SettingsScreen: View {
                     if viewModel.hasUpdate, let latestVersionName = viewModel.latestVersionName {
                         Text("v\(latestVersionName) available")
                             .font(.tdayRounded(size: 11, weight: .heavy))
-                            .foregroundStyle(colors.primary)
+                            .foregroundStyle(colors.secondary)
                     }
 
                     if let backendVersion = viewModel.backendVersion {
@@ -309,7 +309,7 @@ private struct SettingsReminderSelector: View {
             SettingsRowLabel(
                 title: "Default reminder",
                 value: selectedReminder.label,
-                valueColor: colors.primary,
+                valueColor: colors.secondary,
                 showChevron: true
             )
         }
@@ -346,6 +346,7 @@ private struct SettingsAiSummaryRow: View {
                     )
                     .labelsHidden()
                     .disabled(viewModel.isAdminAiSummaryLoading || viewModel.isAdminAiSummarySaving)
+                    .tint(colors.secondary)
                 }
             }
 

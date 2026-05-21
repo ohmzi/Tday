@@ -34,14 +34,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 
-private val TdaySegmentedSliderAccent = Color(0xFF7D67B6)
+private val TdaySegmentedSliderAccent = TdayTodayBlue
 
 @Composable
 fun <T> TdaySegmentedSlider(
@@ -57,8 +59,25 @@ fun <T> TdaySegmentedSlider(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val selectedIndex = options.indexOf(selectedOption).coerceAtLeast(0)
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
     val containerShape = RoundedCornerShape(22.dp)
     val selectorShape = RoundedCornerShape(18.dp)
+    val trackColor = colorScheme.surfaceVariant.copy(alpha = if (isDarkTheme) 0.76f else 0.68f)
+    val trackBorderColor = if (isDarkTheme) {
+        colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+    } else {
+        colorScheme.surface.copy(alpha = 0.72f)
+    }
+    val selectorContainerColor = if (isDarkTheme) {
+        colorScheme.background.copy(alpha = 0.9f)
+    } else {
+        colorScheme.surface.copy(alpha = 0.98f)
+    }
+    val selectorBorderColor = if (isDarkTheme) {
+        colorScheme.onSurfaceVariant.copy(alpha = 0.24f)
+    } else {
+        colorScheme.onSurface.copy(alpha = 0.1f)
+    }
     val interactionSources = remember(options) {
         List(options.size) { MutableInteractionSource() }
     }
@@ -68,10 +87,10 @@ fun <T> TdaySegmentedSlider(
             .fillMaxWidth()
             .height(58.dp)
             .clip(containerShape)
-            .background(colorScheme.surfaceVariant.copy(alpha = 0.5f), containerShape)
+            .background(trackColor, containerShape)
             .border(
                 width = 1.dp,
-                color = colorScheme.surface.copy(alpha = 0.62f),
+                color = trackBorderColor,
                 shape = containerShape,
             )
             .padding(5.dp),
@@ -100,15 +119,10 @@ fun <T> TdaySegmentedSlider(
                 ),
                 label = "tdaySegmentedSliderSelectorPressScale",
             )
-            val selectorSurfaceAlpha by animateFloatAsState(
-                targetValue = if (pressedOption == selectedOption) 0.98f else 0.92f,
+            val selectorPressOverlayAlpha by animateFloatAsState(
+                targetValue = if (pressedOption == selectedOption) 0.06f else 0f,
                 animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
-                label = "tdaySegmentedSliderSelectorSurfaceAlpha",
-            )
-            val selectorAccentAlpha by animateFloatAsState(
-                targetValue = if (pressedOption == selectedOption) 0.15f else 0.08f,
-                animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
-                label = "tdaySegmentedSliderSelectorAccentAlpha",
+                label = "tdaySegmentedSliderSelectorPressOverlayAlpha",
             )
 
             Box(
@@ -128,17 +142,18 @@ fun <T> TdaySegmentedSlider(
                         spotColor = Color.Black.copy(alpha = 0.14f),
                     )
                     .clip(selectorShape)
+                    .background(selectorContainerColor, selectorShape)
                     .background(
-                        colorScheme.surface.copy(alpha = selectorSurfaceAlpha),
-                        selectorShape,
+                        accentColor.copy(alpha = if (isDarkTheme) 0.04f else 0.06f),
+                        selectorShape
                     )
                     .background(
-                        accentColor.copy(alpha = selectorAccentAlpha),
-                        selectorShape,
+                        colorScheme.onSurface.copy(alpha = selectorPressOverlayAlpha),
+                        selectorShape
                     )
                     .border(
                         width = 1.dp,
-                        color = colorScheme.surface.copy(alpha = 0.82f),
+                        color = selectorBorderColor,
                         shape = selectorShape,
                     )
             )
@@ -178,9 +193,9 @@ fun <T> TdaySegmentedSlider(
                     )
                     val contentColor by animateColorAsState(
                         targetValue = if (selected) {
-                            accentColor
+                            colorScheme.onSurface
                         } else {
-                            colorScheme.onSurfaceVariant.copy(alpha = 0.88f)
+                            colorScheme.onSurfaceVariant.copy(alpha = 0.82f)
                         },
                         label = "tdaySegmentedSliderContentColor",
                     )
@@ -228,7 +243,7 @@ fun <T> TdaySegmentedSlider(
                         Text(
                             text = label(option),
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.ExtraBold,
+                            fontWeight = if (selected) FontWeight.Black else FontWeight.ExtraBold,
                             color = contentColor,
                             modifier = Modifier.graphicsLayer {
                                 scaleX = contentScale
