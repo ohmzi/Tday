@@ -1,4 +1,12 @@
 import SwiftUI
+import UIKit
+
+private enum CompletedRestorePhase {
+    case completed
+    case unchecked
+    case unstruck
+    case fading
+}
 
 struct CompletedScreen: View {
     @State private var viewModel: CompletedViewModel
@@ -209,24 +217,94 @@ struct CompletedScreen: View {
     }
 
     private func completedTimelineRow(_ item: CompletedItem) -> some View {
+        CompletedTimelineRow(
+            item: item,
+            completedCheckmarkColor: completedCheckmarkColor,
+            editTint: colors.secondary,
+            onUncomplete: {
+                await viewModel.uncomplete(item)
+            },
+            onDelete: {
+                await viewModel.delete(item)
+            },
+            onEdit: {
+                editingItem = item
+            }
+        )
+    }
+}
+
+private struct CompletedTimelineRow: View {
+    let item: CompletedItem
+    let completedCheckmarkColor: Color
+    let editTint: Color
+    let onUncomplete: () async -> Void
+    let onDelete: () async -> Void
+    let onEdit: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+    @State private var restorePhase = CompletedRestorePhase.completed
+
+    private var showCompletedCheckmark: Bool {
+        restorePhase == .completed
+    }
+
+    private var showStrikethrough: Bool {
+        restorePhase == .completed || restorePhase == .unchecked
+    }
+
+    private var isRestoring: Bool {
+        restorePhase != .completed
+    }
+
+    private var isFading: Bool {
+        restorePhase == .fading
+    }
+
+    private var toggleColor: Color {
+        showCompletedCheckmark ? completedCheckmarkColor : colors.onSurfaceVariant.opacity(0.78)
+    }
+
+    private var titleColor: Color {
+        showStrikethrough ? colors.onSurface.opacity(0.78) : colors.onSurface
+    }
+
+    var body: some View {
         let completedDate = item.completedAt ?? item.due
         let completedTimeText = completedDate.formatted(date: .omitted, time: .shortened)
         let showListIndicator = item.listName?.isEmpty == false
         let showPriorityFlag = item.priority.lowercased() == "high"
 
-        return VStack(spacing: 0) {
+        VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
-                    .foregroundStyle(completedCheckmarkColor)
-                    .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
+                Button {
+                    startRestore()
+                } label: {
+                    Image(systemName: showCompletedCheckmark ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
+                        .foregroundStyle(toggleColor)
+                        .frame(
+                            width: TodoTimelineMetrics.minimalRowToggleFrame,
+                            height: TodoTimelineMetrics.minimalRowToggleFrame
+                        )
+                }
+                .buttonStyle(
+                    TdayPressButtonStyle(
+                        shadowColor: Color.black,
+                        pressedShadowOpacity: 0,
+                        normalShadowOpacity: 0
+                    )
+                )
+                .disabled(isRestoring)
+                .accessibilityLabel("Undo complete")
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
                         .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold))
-                        .foregroundStyle(colors.onSurface.opacity(0.78))
-                        .strikethrough(true, color: colors.onSurface.opacity(0.65))
+                        .foregroundStyle(titleColor)
+                        .strikethrough(showStrikethrough, color: colors.onSurface.opacity(0.65))
                         .lineLimit(2)
+                        .animation(.easeInOut(duration: 0.16), value: showStrikethrough)
 
                     HStack(spacing: 5) {
                         Image(systemName: "clock")
@@ -258,20 +336,47 @@ struct CompletedScreen: View {
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
             .contentShape(Rectangle())
         }
+        .opacity(isFading ? 0 : 1)
+        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
+        .animation(.easeInOut(duration: 0.22), value: isFading)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
-        .swipeRevealHintOnTap()
+        .allowsHitTesting(!isRestoring)
+        .swipeRevealHintOnTap(enabled: !isRestoring)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
-                Task { await viewModel.delete(item) }
+                Task { await onDelete() }
             } label: {
                 Label("Delete", systemImage: "trash")
             }
             Button {
-                editingItem = item
+                onEdit()
             } label: {
                 Label("Edit", systemImage: "square.and.pencil")
             }
-            .tint(colors.secondary)
+            .tint(editTint)
+        }
+    }
+
+    private func startRestore() {
+        guard restorePhase == .completed else {
+            return
+        }
+
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Task { @MainActor in
+            withAnimation(.easeInOut(duration: 0.16)) {
+                restorePhase = .unchecked
+            }
+            try? await Task.sleep(nanoseconds: 180_000_000)
+            withAnimation(.easeInOut(duration: 0.16)) {
+                restorePhase = .unstruck
+            }
+            try? await Task.sleep(nanoseconds: 180_000_000)
+            withAnimation(.easeInOut(duration: 0.22)) {
+                restorePhase = .fading
+            }
+            try? await Task.sleep(nanoseconds: 220_000_000)
+            await onUncomplete()
         }
     }
 }
