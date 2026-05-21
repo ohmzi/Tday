@@ -172,284 +172,181 @@ struct AppRootView: View {
 }
 
 private struct AppLaunchSplashView: View {
-    var body: some View {
-        Image("LaunchSplashBundle")
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipped()
-            .ignoresSafeArea()
-    }
-}
-
-private struct SplashBackdrop: View {
-    let palette: SplashPalette
-    let animate: Bool
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var tagline = splashTaglines.randomElement() ?? "Running on your server, running your life"
 
     var body: some View {
-        GeometryReader { proxy in
-            let width = proxy.size.width
-            let height = proxy.size.height
+        ZStack {
+            splashBackground
 
-            ZStack {
-                Circle()
-                    .fill(palette.topGlow)
-                    .frame(width: width * 0.72, height: width * 0.72)
-                    .blur(radius: 74)
-                    .offset(x: animate ? width * 0.26 : width * 0.16, y: animate ? -height * 0.19 : -height * 0.24)
-                    .animation(.easeInOut(duration: 7).repeatForever(autoreverses: true), value: animate)
+            VStack(spacing: 0) {
+                SplashTdayLogoMark()
+                    .frame(width: 160, height: 160)
 
-                Circle()
-                    .fill(palette.bottomGlow)
-                    .frame(width: width * 0.82, height: width * 0.82)
-                    .blur(radius: 96)
-                    .offset(x: animate ? -width * 0.24 : -width * 0.14, y: animate ? height * 0.31 : height * 0.24)
-                    .animation(.easeInOut(duration: 8.5).repeatForever(autoreverses: true), value: animate)
+                Spacer()
+                    .frame(height: 24)
 
-                RoundedRectangle(cornerRadius: 54, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: palette.ribbonGradient,
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: width * 0.62, height: height * 0.24)
-                    .rotationEffect(.degrees(animate ? 24 : 12))
-                    .blur(radius: 44)
-                    .offset(x: -width * 0.22, y: -height * 0.08)
-                    .animation(.easeInOut(duration: 6.8).repeatForever(autoreverses: true), value: animate)
+                Text("T\u{2019}Day")
+                    .font(.tdayRounded(size: 32, weight: .heavy))
+                    .foregroundStyle(titleColor)
 
-                RoundedRectangle(cornerRadius: 48, style: .continuous)
-                    .stroke(palette.frameStroke, lineWidth: 1)
-                    .frame(width: width * 0.92, height: height * 0.6)
-                    .rotationEffect(.degrees(animate ? -6 : -2))
-                    .offset(y: height * 0.02)
-                    .opacity(0.35)
-                    .animation(.easeInOut(duration: 9).repeatForever(autoreverses: true), value: animate)
+                Text(tagline)
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(taglineColor)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 32)
         }
-        .allowsHitTesting(false)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(splashBackground)
+        .ignoresSafeArea()
+    }
+
+    private var splashBackground: Color {
+        colorScheme == .dark ? .tdayDarkBackground : .tdayLightBackground
+    }
+
+    private var titleColor: Color {
+        colorScheme == .dark ? .tdayDarkForeground : .tdayLightForeground
+    }
+
+    private var taglineColor: Color {
+        colorScheme == .dark ? .tdayDarkMuted : .tdayLightMuted
     }
 }
 
-private struct SplashLoadingBadge: View {
-    let palette: SplashPalette
-    let animate: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 6) {
-                ForEach(0..<3, id: \.self) { index in
-                    Capsule()
-                        .fill(index == 1 ? palette.accent : palette.loadingDot)
-                        .frame(width: 10, height: 10)
-                        .scaleEffect(animate ? 1 : 0.55)
-                        .opacity(animate ? 1 : 0.45)
-                        .animation(
-                            .easeInOut(duration: 0.95)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(index) * 0.12),
-                            value: animate
-                        )
-                }
-            }
-
-            Text("Restoring your workspace")
-                .font(.tdayRounded(size: 14, weight: .bold))
-                .foregroundStyle(palette.loadingText)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(palette.loadingFill, in: Capsule())
-        .overlay(
-            Capsule()
-                .stroke(palette.loadingBorder, lineWidth: 1)
-        )
-    }
-}
-
-private struct SplashPalette {
-    let backgroundGradient: [Color]
-    let topGlow: Color
-    let bottomGlow: Color
-    let ribbonGradient: [Color]
-    let frameStroke: Color
-    let cardFill: Color
-    let cardBorder: Color
-    let cardShadow: Color
-    let badgeFill: Color
-    let badgeBorder: Color
-    let badgeText: Color
-    let logoPlateGradient: [Color]
-    let logoPlateBorder: Color
-    let logoShadow: Color
-    let orbitColor: Color
-    let accentRing: Color
-    let title: Color
-    let subtitle: Color
-    let accent: Color
-    let loadingDot: Color
-    let loadingFill: Color
-    let loadingBorder: Color
-    let loadingText: Color
-
-    static let light = SplashPalette(
-        backgroundGradient: [
-            Color(hex: 0xF7FBFF),
-            Color(hex: 0xEEF3FF),
-            Color(hex: 0xFFF5EF)
-        ],
-        topGlow: Color(hex: 0x78D4D0, alpha: 0.34),
-        bottomGlow: Color(hex: 0xF6B2BC, alpha: 0.3),
-        ribbonGradient: [
-            Color(hex: 0x8ED7D3, alpha: 0.24),
-            Color(hex: 0x6EA8E1, alpha: 0.18)
-        ],
-        frameStroke: Color.white.opacity(0.42),
-        cardFill: Color.white.opacity(0.72),
-        cardBorder: Color.white.opacity(0.82),
-        cardShadow: Color(hex: 0x5B7C9B, alpha: 0.16),
-        badgeFill: Color.white.opacity(0.74),
-        badgeBorder: Color.white.opacity(0.88),
-        badgeText: Color(hex: 0x2A6177),
-        logoPlateGradient: [
-            Color.white.opacity(0.98),
-            Color(hex: 0xF2F7FF)
-        ],
-        logoPlateBorder: Color.white.opacity(0.94),
-        logoShadow: Color(hex: 0x335B73, alpha: 0.17),
-        orbitColor: Color(hex: 0x2D6B6B, alpha: 0.2),
-        accentRing: Color(hex: 0x6EA8E1, alpha: 0.26),
-        title: Color(hex: 0x1A2233),
-        subtitle: Color(hex: 0x57637B),
-        accent: Color(hex: 0xE85B6F),
-        loadingDot: Color(hex: 0x7DA6D5, alpha: 0.55),
-        loadingFill: Color.white.opacity(0.68),
-        loadingBorder: Color.white.opacity(0.84),
-        loadingText: Color(hex: 0x38536D)
-    )
-
-    static let dark = SplashPalette(
-        backgroundGradient: [
-            Color(hex: 0x08111A),
-            Color(hex: 0x101A28),
-            Color(hex: 0x161528)
-        ],
-        topGlow: Color(hex: 0x2F8E91, alpha: 0.34),
-        bottomGlow: Color(hex: 0xB64A68, alpha: 0.28),
-        ribbonGradient: [
-            Color(hex: 0x225E61, alpha: 0.26),
-            Color(hex: 0x244C74, alpha: 0.22)
-        ],
-        frameStroke: Color.white.opacity(0.08),
-        cardFill: Color.white.opacity(0.07),
-        cardBorder: Color.white.opacity(0.12),
-        cardShadow: Color.black.opacity(0.32),
-        badgeFill: Color.white.opacity(0.08),
-        badgeBorder: Color.white.opacity(0.14),
-        badgeText: Color(hex: 0xA7D8D6),
-        logoPlateGradient: [
-            Color(hex: 0x102433),
-            Color(hex: 0x0C1A27)
-        ],
-        logoPlateBorder: Color.white.opacity(0.08),
-        logoShadow: Color.black.opacity(0.34),
-        orbitColor: Color.white.opacity(0.14),
-        accentRing: Color(hex: 0x73C9CE, alpha: 0.22),
-        title: Color(hex: 0xF4F6FC),
-        subtitle: Color(hex: 0xA6AEC1),
-        accent: Color(hex: 0xF06B80),
-        loadingDot: Color(hex: 0x6FAEF8, alpha: 0.65),
-        loadingFill: Color.white.opacity(0.06),
-        loadingBorder: Color.white.opacity(0.12),
-        loadingText: Color(hex: 0xD5DCEC)
-    )
-}
+private let splashTaglines = [
+    "Your server remembers, so you don\u{2019}t have to",
+    "Hosted by you, haunted by deadlines",
+    "Because \u{2018}I\u{2019}ll remember later\u{2019} is always a lie",
+    "Self-hosted sanity, one task at a time",
+    "Nagging you from your own hardware",
+    "Your data, your server, your no-excuse zone",
+    "Making procrastination slightly harder since v0.1",
+    "Running on your server, running your life",
+    "Because sticky notes don\u{2019}t have push notifications",
+    "Turning \u{2018}I forgot\u{2019} into \u{2018}I got this\u{2019}",
+    "Your personal nudge machine",
+    "Self-hosted, self-organized\u{2026} well, getting there",
+    "Where forgotten tasks go to get found",
+    "Adulting, but make it self-hosted",
+    "Taming chaos from a server near you",
+    "Future you says thanks in advance",
+    "The cloud is just someone else\u{2019}s server. This one\u{2019}s yours.",
+    "Organizing your life, no landlord required",
+    "Zero trust\u{2026} except your own server",
+    "Syncing your tasks, judging your priorities",
+    "Today called. It wants a plan.",
+    "Making later file a formal request",
+    "Turning chaos into checkboxes",
+    "Your tasks are lining up nicely",
+    "A private server with opinions about your priorities",
+    "For when your brain opens too many tabs",
+    "Scheduling the chaos before it schedules you",
+    "Your lists have entered their productive era",
+    "A tiny operations desk for future you",
+    "Because vibes are not a task strategy",
+    "Private tasks. Better mornings.",
+    "Making your backlog feel seen, then sorted",
+    "Where scattered thoughts get assigned seating",
+    "Your priorities just got a home address",
+    "Sync first, panic later",
+    "Calendar drama, now with containment",
+    "Deadlines hate this one self-hosted trick",
+    "Helping your day stop freelancing",
+    "Your reminders came prepared",
+    "Turning I should into scheduled"
+]
 
 private struct SplashTdayLogoMark: View {
     var body: some View {
-        GeometryReader { proxy in
-            let size = min(proxy.size.width, proxy.size.height)
-            let stroke = size * 0.085
-            let ringWidth = size * 0.16
-            let paperWidth = size * 0.64
-            let paperHeight = size * 0.72
-            let paperX = size * 0.18
-            let paperY = size * 0.18
-            let headerHeight = size * 0.2
+        Canvas { context, size in
+            let iconSize = min(size.width, size.height)
+            let scale = iconSize / 108
+            let origin = CGPoint(
+                x: (size.width - iconSize) / 2,
+                y: (size.height - iconSize) / 2
+            )
 
-            ZStack {
-                RoundedRectangle(cornerRadius: size * 0.14, style: .continuous)
-                    .fill(Color(hex: 0x90D5D2))
-                    .frame(width: paperWidth, height: paperHeight)
-                    .offset(x: paperX - (size / 2) + (paperWidth / 2), y: paperY - (size / 2) + (paperHeight / 2))
-
-                RoundedRectangle(cornerRadius: size * 0.14, style: .continuous)
-                    .fill(.white)
-                    .frame(width: paperWidth, height: paperHeight - headerHeight)
-                    .offset(x: paperX - (size / 2) + (paperWidth / 2), y: (paperY + headerHeight) - (size / 2) + ((paperHeight - headerHeight) / 2))
-
-                RoundedRectangle(cornerRadius: size * 0.14, style: .continuous)
-                    .stroke(Color(hex: 0x2D6B6B), lineWidth: stroke)
-                    .frame(width: paperWidth, height: paperHeight)
-                    .offset(x: paperX - (size / 2) + (paperWidth / 2), y: paperY - (size / 2) + (paperHeight / 2))
-
-                Rectangle()
-                    .fill(Color(hex: 0x2D6B6B))
-                    .frame(width: paperWidth, height: stroke * 0.66)
-                    .offset(x: paperX - (size / 2) + (paperWidth / 2), y: (paperY + headerHeight) - (size / 2))
-
-                ForEach([0.28, 0.5, 0.72], id: \.self) { fraction in
-                    Path { path in
-                        let x = size * CGFloat(fraction)
-                        path.move(to: CGPoint(x: x, y: size * 0.16))
-                        path.addLine(to: CGPoint(x: x, y: size * 0.03))
-                        path.addArc(
-                            center: CGPoint(x: x + ringWidth * 0.35, y: size * 0.16),
-                            radius: ringWidth * 0.5,
-                            startAngle: .degrees(180),
-                            endAngle: .degrees(0),
-                            clockwise: false
-                        )
-                        path.addLine(to: CGPoint(x: x + ringWidth * 0.7, y: size * 0.16))
-                    }
-                    .stroke(Color(hex: 0x2D6B6B), style: StrokeStyle(lineWidth: stroke, lineCap: .round))
-                }
-
-                VStack(spacing: size * 0.06) {
-                    ForEach(0..<4, id: \.self) { _ in
-                        HStack(spacing: size * 0.06) {
-                            VStack(alignment: .leading, spacing: size * 0.03) {
-                                Capsule()
-                                    .fill(Color(hex: 0xC4C4C4))
-                                    .frame(width: size * 0.16, height: stroke * 0.55)
-
-                                Capsule()
-                                    .fill(Color(hex: 0xC4C4C4))
-                                    .frame(width: size * 0.11, height: stroke * 0.55)
-                            }
-
-                            HStack(spacing: size * 0.025) {
-                                ForEach(0..<3, id: \.self) { _ in
-                                    RoundedRectangle(cornerRadius: size * 0.018, style: .continuous)
-                                        .fill(Color(hex: 0xE85B6F))
-                                        .frame(width: size * 0.08, height: size * 0.09)
-                                }
-                            }
-                        }
-                    }
-                }
-                .offset(x: size * 0.08, y: size * 0.18)
+            func scaled(_ value: CGFloat) -> CGFloat {
+                value * scale
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            func point(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+                CGPoint(x: origin.x + scaled(x), y: origin.y + scaled(y))
+            }
+
+            func rect(_ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat) -> CGRect {
+                CGRect(x: origin.x + scaled(x), y: origin.y + scaled(y), width: scaled(width), height: scaled(height))
+            }
+
+            func roundedRect(_ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat, _ radius: CGFloat) -> Path {
+                Path(roundedRect: rect(x, y, width, height), cornerRadius: scaled(radius))
+            }
+
+            func strokeLine(_ start: CGPoint, _ end: CGPoint, color: Color, width: CGFloat) {
+                var path = Path()
+                path.move(to: start)
+                path.addLine(to: end)
+                context.stroke(
+                    path,
+                    with: .color(color),
+                    style: StrokeStyle(lineWidth: scaled(width), lineCap: .round)
+                )
+            }
+
+            context.fill(roundedRect(36, 37, 36, 41, 5), with: .color(Color(hex: 0x90D5D2)))
+
+            var contentPath = Path()
+            contentPath.move(to: point(36, 48))
+            contentPath.addLine(to: point(72, 48))
+            contentPath.addLine(to: point(72, 73))
+            contentPath.addQuadCurve(to: point(67, 78), control: point(72, 78))
+            contentPath.addLine(to: point(41, 78))
+            contentPath.addQuadCurve(to: point(36, 73), control: point(36, 78))
+            contentPath.closeSubpath()
+            context.fill(contentPath, with: .color(.white))
+
+            context.stroke(
+                roundedRect(36, 37, 36, 41, 5),
+                with: .color(Color(hex: 0x2D6B6B)),
+                style: StrokeStyle(lineWidth: scaled(3))
+            )
+            strokeLine(point(36, 48), point(72, 48), color: Color(hex: 0x2D6B6B), width: 2)
+
+            for x in [44.0, 52.0, 60.0] {
+                var ringPath = Path()
+                ringPath.move(to: point(x, 40))
+                ringPath.addLine(to: point(x, 33))
+                ringPath.addCurve(
+                    to: point(x + 8, 33),
+                    control1: point(x, 27.5),
+                    control2: point(x + 8, 27.5)
+                )
+                ringPath.addLine(to: point(x + 8, 40))
+                context.stroke(
+                    ringPath,
+                    with: .color(Color(hex: 0x2D6B6B)),
+                    style: StrokeStyle(lineWidth: scaled(3.2), lineCap: .round)
+                )
+            }
+
+            for y in [52.0, 59.0, 66.0, 73.0] {
+                strokeLine(point(41, y), point(50, y), color: Color(hex: 0xC4C4C4), width: 1.8)
+                strokeLine(point(41, y + 3), point(47, y + 3), color: Color(hex: 0xC4C4C4), width: 1.8)
+            }
+
+            for y in [50.0, 57.0, 64.0, 71.0] {
+                for x in [53.0, 59.0, 65.0] {
+                    context.fill(Path(rect(x, y, 4.5, 5)), with: .color(Color(hex: 0xE85B6F)))
+                }
+            }
         }
         .aspectRatio(1, contentMode: .fit)
     }
 }
-
-private let splashLaunchTagline = "Running on your server, running your life"
 
 private extension Color {
     init(hex: UInt, alpha: Double = 1) {

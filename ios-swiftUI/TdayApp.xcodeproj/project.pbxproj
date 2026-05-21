@@ -73,10 +73,8 @@
 		DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */; };
 		DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19AB4B0B909242B323D5ABF /* ListRepository.swift */; };
 		E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DABE0225668571D48D55B96 /* AuthViewModel.swift */; };
-		EA2657129BC8959D8543501E /* LaunchSplashBundle.png in Resources */ = {isa = PBXBuildFile; fileRef = D79494E8119BA69CDDA51597 /* LaunchSplashBundle.png */; };
 		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
 		F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */; };
-		F97A47CE289AE4325670F4E0 /* LaunchScreenShared.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4C3B5EA549D268759EDF91CF /* LaunchScreenShared.storyboard */; };
 		FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */; };
 /* End PBXBuildFile section */
 
@@ -110,7 +108,6 @@
 		37A754219844F42A2230F08B /* SwiftDataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataModels.swift; sourceTree = "<group>"; };
 		39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTheme.swift; sourceTree = "<group>"; };
 		42749601AFF38EAE17BD3213 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
-		4C3B5EA549D268759EDF91CF /* LaunchScreenShared.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreenShared.storyboard; sourceTree = "<group>"; };
 		53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarViewModel.swift; sourceTree = "<group>"; };
 		593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHelpers.swift; sourceTree = "<group>"; };
 		5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReminderScheduler.swift; sourceTree = "<group>"; };
@@ -156,7 +153,6 @@
 		D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappers.swift; sourceTree = "<group>"; };
 		D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWizardOverlay.swift; sourceTree = "<group>"; };
 		D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
-		D79494E8119BA69CDDA51597 /* LaunchSplashBundle.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LaunchSplashBundle.png; sourceTree = "<group>"; };
 		D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Nunito.ttf; sourceTree = "<group>"; };
 		DCE08ADACC8F11CE2113C13B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DF332994A97F93EBE1525BB5 /* Nunito-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Nunito-OFL.txt"; sourceTree = "<group>"; };
@@ -191,7 +187,6 @@
 		04A2B0C78D99EDD01626D5CB /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				D79494E8119BA69CDDA51597 /* LaunchSplashBundle.png */,
 				2D679EC9EE22239446D1DE67 /* Fonts */,
 			);
 			path = Resources;
@@ -351,7 +346,6 @@
 			children = (
 				DCE08ADACC8F11CE2113C13B /* Assets.xcassets */,
 				A64D35F145CD4F1CE4B6C558 /* LaunchScreen.storyboard */,
-				4C3B5EA549D268759EDF91CF /* LaunchScreenShared.storyboard */,
 				B3F7D3043A1EFC1A4EBBDA02 /* Tday.entitlements */,
 				70A4E591B572A2A9980EC6B7 /* TdayApp.swift */,
 				DD5065F404F570ED9397862C /* Core */,
@@ -625,8 +619,6 @@
 			files = (
 				B34A31B1812FC676A3AC1871 /* Assets.xcassets in Resources */,
 				85B5397D25D2A1436CF34394 /* LaunchScreen.storyboard in Resources */,
-				F97A47CE289AE4325670F4E0 /* LaunchScreenShared.storyboard in Resources */,
-				EA2657129BC8959D8543501E /* LaunchSplashBundle.png in Resources */,
 				C4E342DFC88BD5C188893628 /* Nunito-OFL.txt in Resources */,
 				384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */,
 			);
