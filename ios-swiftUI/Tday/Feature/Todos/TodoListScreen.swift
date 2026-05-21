@@ -70,7 +70,7 @@ struct TimelineRowDivider: View {
             .frame(height: 1)
             .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
             .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
+            .listRowBackground(colors.background)
             .listRowSeparator(.hidden)
             .environment(\.defaultMinListRowHeight, 1)
             .allowsHitTesting(false)
@@ -276,7 +276,7 @@ struct TodoListScreen: View {
         }
         .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-        .listRowBackground(Color.clear)
+        .listRowBackground(colors.background)
         .listRowSeparator(.hidden)
     }
 
@@ -385,7 +385,7 @@ struct TodoListScreen: View {
                     ErrorRetryView(message: errorMessage) {
                         Task { await viewModel.refresh() }
                     }
-                    .listRowBackground(Color.clear)
+                    .listRowBackground(colors.background)
                 }
             }
             ForEach(groupedSections) { section in
@@ -423,6 +423,7 @@ struct TodoListScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .background(colors.background)
         .disableVerticalScrollBounce()
         .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
     }
@@ -438,7 +439,7 @@ struct TodoListScreen: View {
                             Task { await viewModel.refresh() }
                         }
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
+                        .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -450,7 +451,7 @@ struct TodoListScreen: View {
                                 minimalTimelineRow(todo, in: section)
                                     .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                                    .listRowBackground(Color.clear)
+                                    .listRowBackground(colors.background)
                                     .listRowSeparator(.hidden)
                                 TimelineRowDivider()
                             }
@@ -460,15 +461,16 @@ struct TodoListScreen: View {
                             title: section.title,
                             isActiveDropTarget: activeDropSectionId == section.id
                         )
+                        .padding(.top, index == 0 ? 0 : 8)
+                        .timelinePinnedSectionHeaderBackground()
                         .listRowInsets(
                             EdgeInsets(
-                                top: index == 0 ? 0 : 8,
+                                top: 0,
                                 leading: 0,
                                 bottom: 0,
                                 trailing: 0
                             )
                         )
-                        .timelinePinnedSectionHeaderBackground()
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -476,13 +478,15 @@ struct TodoListScreen: View {
                 Color.clear
                     .frame(height: 120)
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+                    .listRowBackground(colors.background)
                     .listRowSeparator(.hidden)
                     .disableVerticalScrollBounce()
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .background(colors.background)
             .contentMargins(.top, 0, for: .scrollContent)
+            .listRowSpacing(0)
             .listSectionSpacing(0)
             .environment(\.defaultMinListRowHeight, 1)
             .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
@@ -509,7 +513,7 @@ struct TodoListScreen: View {
                             Task { await viewModel.refresh() }
                         }
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
+                        .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -521,13 +525,15 @@ struct TodoListScreen: View {
                 Color.clear
                     .frame(height: 120)
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+                    .listRowBackground(colors.background)
                     .listRowSeparator(.hidden)
                     .disableVerticalScrollBounce()
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .background(colors.background)
             .contentMargins(.top, 0, for: .scrollContent)
+            .listRowSpacing(0)
             .listSectionSpacing(0)
             .environment(\.defaultMinListRowHeight, 1)
             .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
@@ -763,7 +769,7 @@ struct TodoListScreen: View {
                     minimalTimelineRow(todo, in: section)
                         .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
+                        .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
                         .transition(timelineRowTransition())
                     TimelineRowDivider()
@@ -780,15 +786,16 @@ struct TodoListScreen: View {
                     toggleTimelineSection(section)
                 } : nil
             )
+            .padding(.top, isFirstSection ? 0 : 8)
+            .timelinePinnedSectionHeaderBackground()
             .listRowInsets(
                 EdgeInsets(
-                    top: isFirstSection ? 0 : 8,
+                    top: 0,
                     leading: 0,
                     bottom: 0,
                     trailing: 0
                 )
             )
-            .timelinePinnedSectionHeaderBackground()
             .listRowSeparator(.hidden)
         }
     }
@@ -1173,11 +1180,13 @@ private struct TimelineTopBarButtonStyle: ButtonStyle {
 private struct TimelineScrollOffsetTrackingRow: View {
     let onChange: (CGFloat) -> Void
 
+    @Environment(\.tdayColors) private var colors
+
     var body: some View {
         TimelineScrollOffsetObserver(onChange: onChange)
             .frame(height: 0)
             .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
+            .listRowBackground(colors.background)
             .listRowSeparator(.hidden)
             .allowsHitTesting(false)
     }
