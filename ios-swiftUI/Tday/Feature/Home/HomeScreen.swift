@@ -27,10 +27,6 @@ private func homeSearchText(_ value: String) -> String {
     value.lowercased(with: .current)
 }
 
-private enum HomeSearchMotion {
-    static let resultNavigationDelay: TimeInterval = 0.14
-}
-
 private struct HomeSearchBarFrameKey: PreferenceKey {
     static var defaultValue: CGRect = .zero
 
@@ -344,8 +340,8 @@ struct HomeScreen: View {
         }
         openingSearchResultID = todo.id
         closeSearch()
-        DispatchQueue.main.asyncAfter(deadline: .now() + HomeSearchMotion.resultNavigationDelay) {
-            onNavigate(.allTodos(highlightTodoId: todo.id))
+        onNavigate(.allTodos(highlightTodoId: todo.id))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             openingSearchResultID = nil
         }
     }
