@@ -2,6 +2,7 @@ import Foundation
 
 extension Notification.Name {
     static let offlineSyncAttemptFailed = Notification.Name("tday.offline-sync.attempt-failed")
+    static let offlineSyncAttemptSucceeded = Notification.Name("tday.offline-sync.attempt-succeeded")
 }
 
 private struct RemoteSnapshot {
@@ -49,11 +50,16 @@ final class SyncManager {
         connectionProbeTimeoutSeconds: TimeInterval? = nil
     ) async -> Result<Void, Error> {
         do {
+            var contactedServer = false
             if let connectionProbeTimeoutSeconds {
                 _ = try await api.probeConfiguredServer(timeoutInterval: connectionProbeTimeoutSeconds)
+                contactedServer = true
             }
-            try await cacheManager.withSyncLock {
+            let syncedRemoteData = try await cacheManager.withSyncLock {
                 try await self.syncLocalCache(force: force, replayPendingMutations: replayPendingMutations)
+            }
+            if contactedServer || syncedRemoteData {
+                NotificationCenter.default.post(name: .offlineSyncAttemptSucceeded, object: nil)
             }
             return .success(())
         } catch {
@@ -64,11 +70,11 @@ final class SyncManager {
         }
     }
 
-    private func syncLocalCache(force: Bool, replayPendingMutations: Bool) async throws {
+    private func syncLocalCache(force: Bool, replayPendingMutations: Bool) async throws -> Bool {
         var state = try await cacheManager.loadOfflineState()
         let now = Date().epochMilliseconds
         if force && (now - state.lastSyncAttemptEpochMs) < minForceSyncIntervalMs {
-            return
+            return false
         }
 
         let shouldReplay = replayPendingMutations && !state.pendingMutations.isEmpty
@@ -77,7 +83,7 @@ final class SyncManager {
             state.lastSuccessfulSyncEpochMs == 0 ||
             (now - state.lastSyncAttemptEpochMs) >= offlineResyncIntervalMs
         if !shouldSync {
-            return
+            return false
         }
 
         state.lastSyncAttemptEpochMs = now
@@ -94,6 +100,7 @@ final class SyncManager {
         merged.lastSyncAttemptEpochMs = now
         merged.lastSuccessfulSyncEpochMs = now
         try await cacheManager.saveOfflineState(merged)
+        return true
     }
 
     private func fetchRemoteSnapshot() async throws -> RemoteSnapshot {
