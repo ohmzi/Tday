@@ -121,104 +121,108 @@ struct HomeScreen: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .topLeading) {
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
-                        HomeTopBar(
-                            totalWidth: proxy.size.width - (HomeMetrics.screenPadding * 2),
-                            searchExpanded: $searchExpanded,
-                            searchQuery: $searchQuery,
-                            searchFieldFocused: $searchFieldFocused,
-                            onCreateList: {
-                                closeSearch()
-                                showingCreateList = true
-                            },
-                            onOpenSettings: {
-                                closeSearch()
-                                onNavigate(.settings)
-                            }
-                        )
-                        .onTopPartialScrollSnap(
-                            anchorDistance: HomeMetrics.titleAnchorDistance,
-                            isDisabled: searchExpanded
-                        )
-
-                        HomeCategoryBoard(
-                            todayCount: viewModel.summary.todayCount,
-                            overdueCount: overdueCount,
-                            scheduledCount: viewModel.summary.scheduledCount,
-                            allCount: viewModel.summary.allCount,
-                            priorityCount: viewModel.summary.priorityCount,
-                            completedCount: viewModel.summary.completedCount,
-                            onOpenToday: {
-                                closeSearch()
-                                onNavigate(.todayTodos)
-                            },
-                            onOpenOverdue: {
-                                closeSearch()
-                                onNavigate(.overdueTodos)
-                            },
-                            onOpenScheduled: {
-                                closeSearch()
-                                onNavigate(.scheduledTodos)
-                            },
-                            onOpenAll: {
-                                closeSearch()
-                                onNavigate(.allTodos(highlightTodoId: nil))
-                            },
-                            onOpenPriority: {
-                                closeSearch()
-                                onNavigate(.priorityTodos)
-                            },
-                            onOpenCompleted: {
-                                closeSearch()
-                                onNavigate(.completed)
-                            },
-                            onOpenCalendar: {
-                                closeSearch()
-                                onNavigate(.calendar)
-                            }
-                        )
-
-                        if !viewModel.summary.lists.isEmpty {
-                            HomeListsHeader()
-
-                            ForEach(viewModel.summary.lists) { list in
-                                HomeListRow(
-                                    name: displayName(for: list.name),
-                                    colorKey: list.color,
-                                    iconKey: list.iconKey,
-                                    count: list.todoCount
-                                ) {
+                PullToRefreshContainer(
+                    isRefreshing: viewModel.isLoading,
+                    action: {
+                        await viewModel.refresh()
+                    }
+                ) {
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
+                            HomeTopBar(
+                                totalWidth: proxy.size.width - (HomeMetrics.screenPadding * 2),
+                                searchExpanded: $searchExpanded,
+                                searchQuery: $searchQuery,
+                                searchFieldFocused: $searchFieldFocused,
+                                onCreateList: {
                                     closeSearch()
-                                    onNavigate(.listTodos(listId: list.id, listName: displayName(for: list.name)))
+                                    showingCreateList = true
+                                },
+                                onOpenSettings: {
+                                    closeSearch()
+                                    onNavigate(.settings)
+                                }
+                            )
+                            .onTopPartialScrollSnap(
+                                anchorDistance: HomeMetrics.titleAnchorDistance,
+                                isDisabled: searchExpanded
+                            )
+
+                            HomeCategoryBoard(
+                                todayCount: viewModel.summary.todayCount,
+                                overdueCount: overdueCount,
+                                scheduledCount: viewModel.summary.scheduledCount,
+                                allCount: viewModel.summary.allCount,
+                                priorityCount: viewModel.summary.priorityCount,
+                                completedCount: viewModel.summary.completedCount,
+                                onOpenToday: {
+                                    closeSearch()
+                                    onNavigate(.todayTodos)
+                                },
+                                onOpenOverdue: {
+                                    closeSearch()
+                                    onNavigate(.overdueTodos)
+                                },
+                                onOpenScheduled: {
+                                    closeSearch()
+                                    onNavigate(.scheduledTodos)
+                                },
+                                onOpenAll: {
+                                    closeSearch()
+                                    onNavigate(.allTodos(highlightTodoId: nil))
+                                },
+                                onOpenPriority: {
+                                    closeSearch()
+                                    onNavigate(.priorityTodos)
+                                },
+                                onOpenCompleted: {
+                                    closeSearch()
+                                    onNavigate(.completed)
+                                },
+                                onOpenCalendar: {
+                                    closeSearch()
+                                    onNavigate(.calendar)
+                                }
+                            )
+
+                            if !viewModel.summary.lists.isEmpty {
+                                HomeListsHeader()
+
+                                ForEach(viewModel.summary.lists) { list in
+                                    HomeListRow(
+                                        name: displayName(for: list.name),
+                                        colorKey: list.color,
+                                        iconKey: list.iconKey,
+                                        count: list.todoCount
+                                    ) {
+                                        closeSearch()
+                                        onNavigate(.listTodos(listId: list.id, listName: displayName(for: list.name)))
+                                    }
                                 }
                             }
-                        }
 
-                        if let errorMessage = viewModel.errorMessage {
-                            ErrorRetryView(message: errorMessage) {
-                                Task { await viewModel.refresh() }
+                            if let errorMessage = viewModel.errorMessage {
+                                ErrorRetryView(message: errorMessage) {
+                                    Task { await viewModel.refresh() }
+                                }
                             }
-                        }
 
-                        if viewModel.isLoading && viewModel.summary.allCount == 0 {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .padding(.top, 10)
-                        }
+                            if viewModel.isLoading && viewModel.summary.allCount == 0 {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.top, 10)
+                            }
 
+                        }
+                        .padding(.horizontal, HomeMetrics.screenPadding)
+                        .padding(.top, HomeMetrics.screenPadding)
                     }
-                    .padding(.horizontal, HomeMetrics.screenPadding)
-                    .padding(.top, HomeMetrics.screenPadding)
-                }
-                .refreshable {
-                    await viewModel.refresh()
-                }
-                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-                .safeAreaInset(edge: .bottom) {
-                    TaskFloatingActionButtonDock {
-                        closeSearch()
-                        showingCreateTask = true
+                    .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+                    .safeAreaInset(edge: .bottom) {
+                        TaskFloatingActionButtonDock {
+                            closeSearch()
+                            showingCreateTask = true
+                        }
                     }
                 }
 

@@ -1,5 +1,10 @@
 import Foundation
 
+struct BootstrapSessionResult {
+    let user: SessionUser
+    let isOffline: Bool
+}
+
 struct BootstrapSessionUseCase {
     private let authRepository: AuthRepository
     private let syncManager: SyncManager
@@ -9,12 +14,27 @@ struct BootstrapSessionUseCase {
         self.syncManager = syncManager
     }
 
-    func callAsFunction() async -> SessionUser? {
-        let session = await authRepository.restoreSession()
-        guard session?.id != nil else {
+    func callAsFunction() async -> BootstrapSessionResult? {
+        guard let restored = await authRepository.restoreSessionForBootstrap(),
+              restored.user.id != nil else {
             return nil
         }
-        _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
-        return session
+        let result = await syncManager.syncCachedData(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false
+        )
+        let syncError: Error?
+        switch result {
+        case .success:
+            syncError = nil
+        case .failure(let error):
+            syncError = error
+        }
+        return BootstrapSessionResult(
+            user: restored.user,
+            isOffline: restored.usedCachedSession ||
+                syncError.map(isLikelyConnectivityIssue) == true
+        )
     }
 }
