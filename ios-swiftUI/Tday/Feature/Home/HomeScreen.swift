@@ -1095,7 +1095,7 @@ private struct CreateListSheet: View {
                             .frame(height: 62)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(colors.surfaceVariant)
+                                    .fill(colors.bottomSheetControlSurface)
                             )
                         }
                         .padding(.horizontal, 18)
@@ -1146,7 +1146,7 @@ private struct CreateListSheet: View {
                                         iconKey = option.key
                                     } label: {
                                         Circle()
-                                            .fill(isSelected ? accentColor.opacity(0.2) : colors.surfaceVariant)
+                                            .fill(isSelected ? accentColor.opacity(0.2) : colors.bottomSheetControlSurface)
                                             .frame(width: 48, height: 48)
                                             .overlay(
                                                 Circle()
@@ -1189,12 +1189,12 @@ private struct CreateListSheet: View {
             .scrollDisabled(!contentNeedsScrolling)
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.bottomSheetBackground.ignoresSafeArea())
         .presentationDetents(activeDetents)
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground {
-            colors.background
+            colors.bottomSheetBackground
                 .ignoresSafeArea(.container, edges: .bottom)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -1267,7 +1267,7 @@ private struct CreateListSheetActionButton: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
                 .frame(width: 56, height: 56)
-                .background(colors.surfaceVariant)
+                .background(colors.bottomSheetControlSurface)
                 .clipShape(Circle())
                 .overlay(
                     Circle()
@@ -1309,7 +1309,7 @@ private struct CreateListSheetCard<Content: View>: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(colors.surface)
+                    .fill(colors.bottomSheetSurface)
             )
     }
 }
