@@ -38,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -222,6 +223,11 @@ fun SettingsScreen(
                                 checked = adminAiSummaryEnabled,
                                 onCheckedChange = onToggleAdminAiSummary,
                                 enabled = !isAdminAiSummarySaving,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = colorScheme.secondary,
+                                    checkedBorderColor = Color.Transparent,
+                                ),
                             )
                         }
                     }
@@ -252,7 +258,7 @@ fun SettingsScreen(
                     Text(
                         text = "v$latestVersionName available",
                         style = MaterialTheme.typography.labelSmall,
-                        color = colorScheme.primary,
+                        color = colorScheme.secondary,
                         fontWeight = FontWeight.ExtraBold,
                     )
                 }
@@ -639,7 +645,7 @@ private fun ReminderSelector(
                     text = selectedReminder.label,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.primary,
+                    color = colorScheme.secondary,
                 )
                 Icon(
                     imageVector = Icons.Rounded.ChevronRight,
@@ -676,7 +682,7 @@ private fun ReminderSelector(
                             Icon(
                                 imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
-                                tint = colorScheme.primary,
+                                tint = colorScheme.secondary,
                                 modifier = Modifier.size(18.dp),
                             )
                         }
