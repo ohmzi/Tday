@@ -67,7 +67,8 @@ struct AppRootView: View {
                     .overlay(alignment: .top) {
                         OfflineBanner(
                             visible: appViewModel.authenticated && appViewModel.isOffline,
-                            pendingMutationCount: appViewModel.pendingMutationCount
+                            pendingMutationCount: appViewModel.pendingMutationCount,
+                            noticeID: appViewModel.offlineNoticeID
                         )
                         .padding(.top, 8)
                     }

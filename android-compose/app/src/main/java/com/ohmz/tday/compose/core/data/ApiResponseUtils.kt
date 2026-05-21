@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.core.data
 
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -28,8 +29,7 @@ internal fun extractApiErrorMessage(response: Response<*>, fallback: String): St
     if (raw.isNullOrBlank()) return fallback
 
     return runCatching {
-        val element = Json.parseToJsonElement(raw)
-        when (element) {
+        when (val element = Json.parseToJsonElement(raw)) {
             is JsonObject -> element["message"]?.jsonPrimitive?.contentOrNull ?: fallback
             is JsonPrimitive -> element.content
             else -> fallback
@@ -38,6 +38,10 @@ internal fun extractApiErrorMessage(response: Response<*>, fallback: String): St
 }
 
 internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
+    if (error is TimeoutCancellationException) {
+        return true
+    }
+
     var current: Throwable? = error
     while (current != null) {
         val message = current.message.orEmpty().lowercase()
@@ -46,7 +50,10 @@ internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
             message.contains("econnrefused") ||
             message.contains("timed out") ||
             message.contains("unable to resolve host") ||
+            message.contains("unknownhost") ||
+            message.contains("no address associated with hostname") ||
             message.contains("network is unreachable") ||
+            message.contains("not connected") ||
             message.contains("connection reset") ||
             message.contains("broken pipe") ||
             message.contains("software caused connection abort") ||

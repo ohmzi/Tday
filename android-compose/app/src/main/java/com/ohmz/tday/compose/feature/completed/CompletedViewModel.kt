@@ -99,7 +99,11 @@ class CompletedViewModel @Inject constructor(
             }
             runCatching {
                 if (forceSync) {
-                    syncManager.syncCachedData(force = true, replayPendingMutations = false)
+                    syncManager.syncCachedData(
+                        force = true,
+                        replayPendingMutations = false,
+                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                    )
                         .onFailure { /* fall back to local cache */ }
                 }
                 Pair(

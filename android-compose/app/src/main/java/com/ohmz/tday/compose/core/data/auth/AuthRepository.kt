@@ -4,6 +4,7 @@ import android.util.Base64
 import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.extractApiErrorMessage
+import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.model.AuthSession
@@ -43,16 +44,73 @@ class AuthRepository @Inject constructor(
 ) {
     private val secureRandom = SecureRandom()
 
+    data class RestoredSession(
+        val user: SessionUser,
+        val usedCachedSession: Boolean,
+    )
+
     suspend fun restoreSession(): SessionUser? {
+        return restoreSessionFromServer()?.also(::cacheSessionUser)
+    }
+
+    suspend fun restoreSessionForBootstrap(): RestoredSession? {
+        return runCatching {
+            restoreSessionFromServer()?.also(::cacheSessionUser)?.let { user ->
+                RestoredSession(user = user, usedCachedSession = false)
+            }
+        }.getOrElse { error ->
+            if (!isLikelyConnectivityIssue(error)) return@getOrElse null
+            (loadCachedSessionUser() ?: loadLastKnownOfflineSessionUser())
+                ?.takeIf { it.id != null }
+                ?.let { user ->
+                    RestoredSession(user = user, usedCachedSession = true)
+                }
+        }
+    }
+
+    private suspend fun restoreSessionFromServer(): SessionUser? {
         val response = api.getSession()
-        if (!response.isSuccessful) return null
+        if (!response.isSuccessful) {
+            secureConfigStore.clearCachedSessionUser()
+            return null
+        }
 
         val payload = response.body() ?: return null
-        if (payload is JsonNull) return null
+        if (payload is JsonNull) {
+            secureConfigStore.clearCachedSessionUser()
+            return null
+        }
 
         return runCatching {
             json.decodeFromJsonElement<AuthSession>(payload).user
+        }.getOrNull().also { user ->
+            if (user?.id == null) secureConfigStore.clearCachedSessionUser()
+        }
+    }
+
+    private fun cacheSessionUser(user: SessionUser) {
+        if (user.id == null) return
+        runCatching {
+            secureConfigStore.saveCachedSessionUserRaw(
+                json.encodeToString(
+                    SessionUser.serializer(),
+                    user
+                )
+            )
+        }
+    }
+
+    private fun loadCachedSessionUser(): SessionUser? {
+        val raw = secureConfigStore.getCachedSessionUserRaw() ?: return null
+        return runCatching {
+            json.decodeFromString(SessionUser.serializer(), raw)
         }.getOrNull()
+    }
+
+    private fun loadLastKnownOfflineSessionUser(): SessionUser? {
+        val email = secureConfigStore.getLastEmail() ?: return null
+        if (!cacheManager.hasCachedData()) return null
+        return SessionUser(id = email, email = email)
     }
 
     suspend fun login(email: String, password: String): AuthResult {
@@ -180,10 +238,12 @@ class AuthRepository @Inject constructor(
     }
 
     fun clearSessionOnly() {
+        secureConfigStore.clearCachedSessionUser()
         cacheManager.clearSessionOnly()
     }
 
     fun clearAllLocalUserDataForUnauthenticatedState() {
+        secureConfigStore.clearCachedSessionUser()
         cacheManager.clearAllLocalData()
     }
 
