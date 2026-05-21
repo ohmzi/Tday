@@ -144,11 +144,9 @@ struct AppRootView: View {
                     }
                 }
                 .navigationInteractivePopGesture()
-                .background(TdayTheme.backgroundGradient.ignoresSafeArea())
             }
         }
-        .background(TdayTheme.backgroundGradient.ignoresSafeArea())
-        .preferredColorScheme(appViewModel.themeMode.colorScheme)
+        .tdayAppTheme(themeMode: appViewModel.themeMode)
         .task {
             if !appViewModel.hasCompletedInitialBootstrap {
                 await appViewModel.bootstrap()
