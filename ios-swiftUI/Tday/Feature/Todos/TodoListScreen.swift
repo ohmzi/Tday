@@ -77,6 +77,51 @@ struct TimelineRowDivider: View {
     }
 }
 
+private struct TimelineTaskFlashHighlight: ViewModifier {
+    let active: Bool
+
+    @Environment(\.tdayColors) private var colors
+    @State private var strength: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .background(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                colors.primary.opacity(0.42 * strength),
+                                colors.primary.opacity(0.28 * strength),
+                                .clear
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
+            .onChange(of: active, initial: true) { _, isActive in
+                guard isActive else { return }
+                pulse()
+            }
+    }
+
+    private func pulse() {
+        Task { @MainActor in
+            strength = 0
+            for pulseIndex in 0..<2 {
+                withAnimation(.easeInOut(duration: 0.42)) {
+                    strength = 0.46
+                }
+                try? await Task.sleep(nanoseconds: 420_000_000)
+                withAnimation(.easeInOut(duration: 0.62)) {
+                    strength = 0
+                }
+                try? await Task.sleep(nanoseconds: pulseIndex == 0 ? 770_000_000 : 620_000_000)
+            }
+        }
+    }
+}
+
 struct TimelineTopBarAction {
     let systemName: String
     let tint: Color?
@@ -110,6 +155,7 @@ struct TodoListScreen: View {
     @State private var collapsedSectionIDs: Set<String>
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var completingTodoIDs: Set<String> = []
+    @State private var flashTodoId: String?
 
     init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?, highlightedTodoId: String?) {
         self.highlightedTodoId = highlightedTodoId
@@ -371,6 +417,57 @@ struct TodoListScreen: View {
         }
     }
 
+    private func matchesHighlightedTodo(_ todo: TodoItem, id: String) -> Bool {
+        todo.id == id || todo.canonicalId == id
+    }
+
+    private func highlightedTodoSectionID(for id: String) -> String? {
+        groupedSections.first { section in
+            section.items.contains { todo in
+                matchesHighlightedTodo(todo, id: id)
+            }
+        }?.id
+    }
+
+    private func timelineSectionScrollID(_ sectionID: String) -> String {
+        "timeline-section-\(sectionID)"
+    }
+
+    private func shouldFlashTodo(_ todo: TodoItem) -> Bool {
+        guard let flashTodoId else {
+            return false
+        }
+        return matchesHighlightedTodo(todo, id: flashTodoId)
+    }
+
+    private func scrollToHighlightedTodo(using proxy: ScrollViewProxy) {
+        guard viewModel.mode == .all,
+              let highlightedTodoId,
+              !highlightedTodoId.isEmpty,
+              let sectionID = highlightedTodoSectionID(for: highlightedTodoId) else {
+            return
+        }
+
+        if !collapsedSectionIDs.isEmpty {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                collapsedSectionIDs = []
+            }
+        }
+
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.32)) {
+                proxy.scrollTo(timelineSectionScrollID(sectionID), anchor: .top)
+            }
+            flashTodoId = highlightedTodoId
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_300_000_000)
+                if flashTodoId == highlightedTodoId {
+                    flashTodoId = nil
+                }
+            }
+        }
+    }
+
     private func presentSummary() {
         Task {
             await viewModel.summarizeCurrentMode()
@@ -503,48 +600,59 @@ struct TodoListScreen: View {
     }
 
     private var minimalTimelineModeContent: some View {
-        ZStack {
-            List {
-                timelineHeroTitleRow
+        ScrollViewReader { scrollProxy in
+            ZStack {
+                List {
+                    timelineHeroTitleRow
 
-                if let errorMessage = viewModel.errorMessage {
-                    Section {
-                        ErrorRetryView(message: errorMessage) {
-                            Task { await viewModel.refresh() }
+                    if let errorMessage = viewModel.errorMessage {
+                        Section {
+                            ErrorRetryView(message: errorMessage) {
+                                Task { await viewModel.refresh() }
+                            }
+                            .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
+                            .listRowBackground(colors.background)
+                            .listRowSeparator(.hidden)
                         }
-                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
+                    }
+
+                    ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
+                        minimalTimelineSection(section, isFirstSection: index == 0)
+                    }
+
+                    Color.clear
+                        .frame(height: 120)
+                        .listRowInsets(EdgeInsets())
                         .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
-                    }
+                        .disableVerticalScrollBounce()
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(colors.background)
+                .contentMargins(.top, 0, for: .scrollContent)
+                .listRowSpacing(0)
+                .listSectionSpacing(0)
+                .environment(\.defaultMinListRowHeight, 1)
+                .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
-                ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
-                    minimalTimelineSection(section, isFirstSection: index == 0)
+                if viewModel.items.isEmpty {
+                    TimelineCategoryEmptyState(
+                        message: emptyTimelineMessage(for: viewModel.mode),
+                        systemImage: emptyTimelineSystemImage(for: viewModel.mode),
+                        accentColor: modeAccentColor
+                    )
+                        .allowsHitTesting(false)
                 }
-
-                Color.clear
-                    .frame(height: 120)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(colors.background)
-                    .listRowSeparator(.hidden)
-                    .disableVerticalScrollBounce()
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(colors.background)
-            .contentMargins(.top, 0, for: .scrollContent)
-            .listRowSpacing(0)
-            .listSectionSpacing(0)
-            .environment(\.defaultMinListRowHeight, 1)
-            .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
-
-            if viewModel.items.isEmpty {
-                TimelineCategoryEmptyState(
-                    message: emptyTimelineMessage(for: viewModel.mode),
-                    systemImage: emptyTimelineSystemImage(for: viewModel.mode),
-                    accentColor: modeAccentColor
-                )
-                    .allowsHitTesting(false)
+            .onAppear {
+                scrollToHighlightedTodo(using: scrollProxy)
+            }
+            .onChange(of: highlightedTodoId) {
+                scrollToHighlightedTodo(using: scrollProxy)
+            }
+            .onChange(of: viewModel.items) {
+                scrollToHighlightedTodo(using: scrollProxy)
             }
         }
     }
@@ -636,7 +744,7 @@ struct TodoListScreen: View {
             )
     }
 
-    private func minimalTimelineRow(_ todo: TodoItem, in section: TodoTimelineSection) -> some View {
+    private func minimalTimelineRow(_ todo: TodoItem, in section: TodoTimelineSection, flashHighlight: Bool = false) -> some View {
         let listMeta = todo.listId.flatMap { listId in
             viewModel.lists.first(where: { $0.id == listId })
         }
@@ -702,6 +810,7 @@ struct TodoListScreen: View {
         .animation(.easeInOut(duration: 0.16), value: isCompleting)
         .allowsHitTesting(!isCompleting)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
+        .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
         .swipeRevealHintOnTap(enabled: !isCompleting)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
@@ -766,7 +875,7 @@ struct TodoListScreen: View {
         Section {
             if !isCollapsed {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
-                    minimalTimelineRow(todo, in: section)
+                    minimalTimelineRow(todo, in: section, flashHighlight: shouldFlashTodo(todo))
                         .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(colors.background)
@@ -786,6 +895,7 @@ struct TodoListScreen: View {
                     toggleTimelineSection(section)
                 } : nil
             )
+            .id(timelineSectionScrollID(section.id))
             .padding(.top, isFirstSection ? 0 : 8)
             .timelinePinnedSectionHeaderBackground()
             .listRowInsets(
