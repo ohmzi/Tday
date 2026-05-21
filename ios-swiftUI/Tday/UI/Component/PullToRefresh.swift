@@ -66,10 +66,12 @@ private struct RefreshContainerBody<Content: View>: View {
 }
 
 private enum TdayRefreshIndicatorMetrics {
-    static let triggerDistance: CGFloat = 82
-    static let containerSize: CGFloat = 48
-    static let iconSize: CGFloat = 23
-    static let cornerRadius: CGFloat = 18
+    static let triggerDistance: CGFloat = 86
+    static let containerSize: CGFloat = 52
+    static let orbitSize: CGFloat = 28
+    static let ringLineWidth: CGFloat = 3.2
+    static let dotSize: CGFloat = 6.8
+    static let cornerRadius: CGFloat = 19
 }
 
 private struct TdayPullRefreshIndicator: View {
@@ -84,27 +86,60 @@ private struct TdayPullRefreshIndicator: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !isRefreshing)) { context in
+            let clampedProgress = min(max(pullProgress, 0), 1)
             let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 0.9) / 0.9
-            let rotation = isRefreshing ? cycle * 360 : Double(pullProgress * 160)
+            let rotation = isRefreshing ? cycle * 360 : Double(clampedProgress * 210)
+            let arcFraction = isRefreshing ? 0.78 : 0.18 + (clampedProgress * 0.6)
+            let pulse = isRefreshing ? 0.9 + (sin(cycle * .pi * 2) * 0.1) : Double(0.86 + (clampedProgress * 0.14))
 
-            Image(systemName: "arrow.clockwise")
-                .font(.system(size: TdayRefreshIndicatorMetrics.iconSize, weight: .bold, design: .rounded))
-                .foregroundStyle(colors.primary)
-                .rotationEffect(.degrees(rotation))
-                .frame(
-                    width: TdayRefreshIndicatorMetrics.containerSize,
-                    height: TdayRefreshIndicatorMetrics.containerSize
-                )
-                .background(colors.surface, in: RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
-                        .stroke(colors.onSurface.opacity(0.12), lineWidth: 1)
-                }
-                .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
-                .opacity(visible ? 1 : 0)
-                .scaleEffect(visible ? 1 : 0.78)
-                .offset(y: visible ? 0 : -12)
-                .animation(.easeOut(duration: 0.22), value: visible)
+            ZStack {
+                Circle()
+                    .stroke(colors.primary.opacity(0.13), lineWidth: TdayRefreshIndicatorMetrics.ringLineWidth)
+                    .frame(
+                        width: TdayRefreshIndicatorMetrics.orbitSize,
+                        height: TdayRefreshIndicatorMetrics.orbitSize
+                    )
+
+                Circle()
+                    .trim(from: 0, to: arcFraction)
+                    .stroke(
+                        colors.primary,
+                        style: StrokeStyle(
+                            lineWidth: TdayRefreshIndicatorMetrics.ringLineWidth,
+                            lineCap: .round
+                        )
+                    )
+                    .frame(
+                        width: TdayRefreshIndicatorMetrics.orbitSize,
+                        height: TdayRefreshIndicatorMetrics.orbitSize
+                    )
+                    .rotationEffect(.degrees(rotation - 90))
+
+                Circle()
+                    .fill(colors.primary)
+                    .frame(
+                        width: TdayRefreshIndicatorMetrics.dotSize,
+                        height: TdayRefreshIndicatorMetrics.dotSize
+                    )
+                    .shadow(color: colors.primary.opacity(0.36), radius: 5, x: 0, y: 0)
+                    .scaleEffect(pulse)
+                    .offset(y: -TdayRefreshIndicatorMetrics.orbitSize / 2)
+                    .rotationEffect(.degrees(rotation + Double(arcFraction * 360)))
+            }
+            .frame(
+                width: TdayRefreshIndicatorMetrics.containerSize,
+                height: TdayRefreshIndicatorMetrics.containerSize
+            )
+            .background(colors.surface, in: RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
+                    .stroke(colors.onSurface.opacity(0.12), lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+            .opacity(visible ? 1 : 0)
+            .scaleEffect(visible ? 1 : 0.78)
+            .offset(y: visible ? 0 : -12)
+            .animation(.easeOut(duration: 0.22), value: visible)
         }
     }
 }

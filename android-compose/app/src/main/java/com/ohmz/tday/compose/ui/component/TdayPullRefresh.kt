@@ -6,15 +6,13 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
@@ -24,9 +22,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import kotlin.math.cos
+import kotlin.math.sin
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,17 +78,21 @@ private fun TdayPullToRefreshIndicator(
         animationSpec = tween(durationMillis = 220),
         label = "pullRefreshScale",
     )
-    val spin = if (isRefreshing) {
-        rememberInfiniteTransition(label = "pullRefreshSpin").animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 900, easing = LinearEasing),
-            ),
-            label = "pullRefreshIconRotation",
-        ).value
+    val spin by rememberInfiniteTransition(label = "pullRefreshSpin").animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+        ),
+        label = "pullRefreshOrbitRotation",
+    )
+    val pullProgress = state.distanceFraction.coerceIn(0f, 1f)
+    val rotation = if (isRefreshing) spin else pullProgress * 210f
+    val sweep = if (isRefreshing) 280f else 65f + (pullProgress * 215f)
+    val pulse = if (isRefreshing) {
+        0.9f + (sin(Math.toRadians((spin * 2f).toDouble())).toFloat() * 0.1f)
     } else {
-        0f
+        0.86f + (pullProgress * 0.14f)
     }
 
     Box(
@@ -92,15 +100,15 @@ private fun TdayPullToRefreshIndicator(
             .pullToRefreshIndicator(
                 state = state,
                 isRefreshing = isRefreshing,
-                shape = RoundedCornerShape(TdayDimens.RadiusLg),
+                shape = RoundedCornerShape(19.dp),
                 containerColor = colorScheme.surface,
                 elevation = TdayDimens.PullRefreshElevation,
             )
-            .size(48.dp)
+            .size(52.dp)
             .border(
                 width = TdayDimens.BorderWidth,
                 color = colorScheme.onSurface.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(TdayDimens.RadiusLg),
+                shape = RoundedCornerShape(19.dp),
             )
             .graphicsLayer {
                 this.alpha = alpha
@@ -110,15 +118,39 @@ private fun TdayPullToRefreshIndicator(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = Icons.Rounded.Refresh,
-            contentDescription = "Refreshing",
-            tint = colorScheme.primary,
-            modifier = Modifier
-                .size(TdayDimens.PullRefreshIndicator)
-                .graphicsLayer {
-                    rotationZ = if (isRefreshing) spin else state.distanceFraction * 160f
-                },
-        )
+        Canvas(modifier = Modifier.size(28.dp)) {
+            val strokeWidth = 3.2.dp.toPx()
+            val orbitDiameter = size.minDimension
+            val orbitRadius = orbitDiameter / 2f
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val arcTopLeft = Offset(center.x - orbitRadius, center.y - orbitRadius)
+
+            drawCircle(
+                color = colorScheme.primary.copy(alpha = 0.13f),
+                radius = orbitRadius,
+                center = center,
+                style = Stroke(width = strokeWidth),
+            )
+            drawArc(
+                color = colorScheme.primary,
+                startAngle = rotation - 90f,
+                sweepAngle = sweep,
+                useCenter = false,
+                topLeft = arcTopLeft,
+                size = Size(orbitDiameter, orbitDiameter),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+
+            val dotAngle = Math.toRadians((rotation - 90f + sweep).toDouble())
+            val dotCenter = Offset(
+                x = center.x + (cos(dotAngle).toFloat() * orbitRadius),
+                y = center.y + (sin(dotAngle).toFloat() * orbitRadius),
+            )
+            drawCircle(
+                color = colorScheme.primary,
+                radius = 3.4.dp.toPx() * pulse,
+                center = dotCenter,
+            )
+        }
     }
 }
