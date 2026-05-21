@@ -191,12 +191,12 @@ struct CreateTaskSheet: View {
             .scrollDisabled(!formNeedsScrolling)
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.bottomSheetBackground.ignoresSafeArea())
         .presentationDetents([.height(measuredSheetHeight)])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground {
-            colors.background
+            colors.bottomSheetBackground
                 .ignoresSafeArea(.container, edges: .bottom)
         }
         .overlay {
@@ -271,7 +271,7 @@ struct CreateTaskSheet: View {
     @ViewBuilder
     private func selectorOverlay(for selector: CreateTaskSheetSelector) -> some View {
         ZStack {
-            Color.black.opacity(0.48)
+            colors.bottomSheetScrim
                 .ignoresSafeArea()
                 .onTapGesture {
                     activeSelector = nil
@@ -450,7 +450,7 @@ private struct CreateTaskSheetGroupCard<Content: View>: View {
             content
         }
         .frame(maxWidth: .infinity)
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(colors.bottomSheetSurface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 }
 
@@ -522,7 +522,10 @@ private struct CreateTaskSheetDateTimeControl: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(colors.onSurfaceVariant.opacity(0.24), lineWidth: 1)
             }
-            .background(colors.surfaceVariant.opacity(0.32), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(
+                colors.bottomSheetControlSurface.opacity(0.32),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
 
             HStack(spacing: 0) {
                 DatePicker("", selection: $dueDate, displayedComponents: .date)
@@ -607,7 +610,7 @@ private struct CreateTaskSheetSelectorCard<Content: View>: View {
         }
         .padding(.bottom, 14)
         .frame(maxWidth: 330)
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .background(colors.bottomSheetSurface, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
         .shadow(color: Color.black.opacity(0.18), radius: 24, x: 0, y: 18)
     }
 }
@@ -713,7 +716,7 @@ private struct CreateTaskSheetHeader: View {
         .padding(.horizontal, 18)
         .padding(.top, 14)
         .padding(.bottom, 14)
-        .background(colors.background)
+        .background(colors.bottomSheetBackground)
     }
 }
 
@@ -732,7 +735,7 @@ private struct CreateTaskSheetHeaderButton: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(colors.onSurface.opacity(isEnabled ? 1 : 0.55))
                 .frame(width: 56, height: 56)
-                .background(colors.surfaceVariant, in: Circle())
+                .background(colors.bottomSheetControlSurface, in: Circle())
                 .overlay {
                     Circle()
                         .stroke(accentColor.opacity(isEnabled ? 0.55 : 0.3), lineWidth: 1.5)
