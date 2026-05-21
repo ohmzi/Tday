@@ -228,24 +228,11 @@ fun CalendarScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (available.y < 0f && headerCollapsePx < maxCollapsePx) {
-                    headerCollapsePx = maxCollapsePx
-                    return available
-                }
-                val isListAtTop =
-                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && isListAtTop && headerCollapsePx > 0f) {
-                    headerCollapsePx = 0f
-                    return available
-                }
                 return Velocity.Zero
             }
         }
     }
-    val collapseProgress by animateFloatAsState(
-        targetValue = collapseProgressTarget,
-        label = "calendarTitleCollapseProgress",
-    )
+    val collapseProgress = collapseProgressTarget
     val monthTitleSnapThresholdPx = remember(density) { with(density) { 58.dp.roundToPx() } }
     var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
