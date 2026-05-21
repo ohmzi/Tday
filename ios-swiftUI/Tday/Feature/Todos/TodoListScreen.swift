@@ -341,6 +341,7 @@ struct TodoListScreen: View {
                 }
                 .padding(20)
             }
+            .background(colors.bottomSheetBackground)
             .navigationTitle("AI Summary")
             .disableVerticalScrollBounce()
             .toolbar {
@@ -350,6 +351,10 @@ struct TodoListScreen: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .presentationBackground {
+            colors.bottomSheetBackground
+                .ignoresSafeArea(.container, edges: .bottom)
+        }
     }
 
     private var listSettingsSheetContent: some View {
@@ -1391,8 +1396,9 @@ private struct ListSettingsSheet: View {
                     }
                 }
                 .scrollContentBackground(.hidden)
+                .background(tdayColors.bottomSheetBackground)
             }
-            .background(tdayColors.background)
+            .background(tdayColors.bottomSheetBackground)
             .disableVerticalScrollBounce()
             .toolbar(.hidden, for: .navigationBar)
             .task {
@@ -1400,6 +1406,10 @@ private struct ListSettingsSheet: View {
                 color = list?.color ?? "BLUE"
                 iconKey = list?.iconKey ?? "inbox"
             }
+        }
+        .presentationBackground {
+            tdayColors.bottomSheetBackground
+                .ignoresSafeArea(.container, edges: .bottom)
         }
     }
 }
@@ -1442,7 +1452,7 @@ private struct ListSettingsSheetHeader: View {
         .padding(.horizontal, 18)
         .padding(.top, 14)
         .padding(.bottom, 14)
-        .background(colors.background)
+        .background(colors.bottomSheetBackground)
     }
 }
 
@@ -1461,7 +1471,7 @@ private struct ListSettingsSheetActionButton: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
                 .frame(width: 56, height: 56)
-                .background(colors.surfaceVariant, in: Circle())
+                .background(colors.bottomSheetControlSurface, in: Circle())
                 .overlay {
                     Circle()
                         .stroke(accentColor.opacity(enabled ? 0.55 : 0.3), lineWidth: 1.5)

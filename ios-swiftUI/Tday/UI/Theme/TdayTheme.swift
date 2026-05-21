@@ -59,6 +59,22 @@ struct TdayColors {
     var cardStroke: Color {
         isDark ? Color.white.opacity(0.10) : Color.white.opacity(0.45)
     }
+
+    var bottomSheetBackground: Color {
+        isDark ? background.tdayBlended(with: surfaceVariant, amount: 0.34) : background
+    }
+
+    var bottomSheetSurface: Color {
+        isDark ? surface.tdayBlended(with: surfaceVariant, amount: 0.18) : surface
+    }
+
+    var bottomSheetControlSurface: Color {
+        surfaceVariant
+    }
+
+    var bottomSheetScrim: Color {
+        Color.black.opacity(isDark ? 0.68 : 0.40)
+    }
 }
 
 private struct TdayColorsKey: EnvironmentKey {
@@ -69,6 +85,34 @@ extension EnvironmentValues {
     var tdayColors: TdayColors {
         get { self[TdayColorsKey.self] }
         set { self[TdayColorsKey.self] = newValue }
+    }
+}
+
+private extension Color {
+    func tdayBlended(with other: Color, amount: CGFloat) -> Color {
+        let lhs = UIColor(self)
+        let rhs = UIColor(other)
+        var lhsRed: CGFloat = 0
+        var lhsGreen: CGFloat = 0
+        var lhsBlue: CGFloat = 0
+        var lhsAlpha: CGFloat = 0
+        var rhsRed: CGFloat = 0
+        var rhsGreen: CGFloat = 0
+        var rhsBlue: CGFloat = 0
+        var rhsAlpha: CGFloat = 0
+
+        lhs.getRed(&lhsRed, green: &lhsGreen, blue: &lhsBlue, alpha: &lhsAlpha)
+        rhs.getRed(&rhsRed, green: &rhsGreen, blue: &rhsBlue, alpha: &rhsAlpha)
+
+        let mix = Swift.min(Swift.max(amount, 0), 1)
+        return Color(
+            uiColor: UIColor(
+                red: lhsRed + ((rhsRed - lhsRed) * mix),
+                green: lhsGreen + ((rhsGreen - lhsGreen) * mix),
+                blue: lhsBlue + ((rhsBlue - lhsBlue) * mix),
+                alpha: lhsAlpha + ((rhsAlpha - lhsAlpha) * mix)
+            )
+        )
     }
 }
 
