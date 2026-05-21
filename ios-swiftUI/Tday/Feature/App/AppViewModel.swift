@@ -74,6 +74,7 @@ final class AppViewModel {
     @ObservationIgnored nonisolated(unsafe) private var offlineSyncSuccessTask: Task<Void, Never>?
     @ObservationIgnored nonisolated(unsafe) private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private let networkMonitorQueue = DispatchQueue(label: "tday.network-monitor")
+    @ObservationIgnored private var isForegroundReconnectInFlight = false
 
     init(container: AppContainer) {
         self.container = container
@@ -300,6 +301,16 @@ final class AppViewModel {
         await rescheduleReminders()
     }
 
+    func reconnectAfterForeground() async {
+        guard authenticated, !isForegroundReconnectInFlight else {
+            return
+        }
+
+        isForegroundReconnectInFlight = true
+        await reconnectWithServer(showOfflineNotice: true)
+        isForegroundReconnectInFlight = false
+    }
+
     func logout() async {
         await container.authRepository.logout()
         navigationPath = []
@@ -430,16 +441,7 @@ final class AppViewModel {
             return
         }
 
-        let result = await container.syncAndRefresh(
-            force: true,
-            replayPendingMutations: true,
-            notifyOfflineFailure: false,
-            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
-        )
-        applySyncResult(result, showOfflineNotice: true)
-        if case .success = result {
-            await rescheduleReminders()
-        }
+        await reconnectWithServer(showOfflineNotice: true)
     }
 
     private func observeOfflineSyncSuccesses() {
@@ -472,19 +474,26 @@ final class AppViewModel {
                     guard self.isOffline else {
                         return
                     }
-                    let result = await self.container.syncAndRefresh(
-                        force: true,
-                        replayPendingMutations: true,
-                        notifyOfflineFailure: false,
-                        connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
-                    )
-                    self.applySyncResult(result)
-                    await self.rescheduleReminders()
+                    await self.reconnectWithServer(showOfflineNotice: false)
                 }
             }
         }
         monitor.start(queue: networkMonitorQueue)
         networkMonitor = monitor
+    }
+
+    private func reconnectWithServer(showOfflineNotice: Bool) async {
+        let result = await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
+        applySyncResult(result, showOfflineNotice: showOfflineNotice)
+        if case .success = result {
+            startRealtime()
+            await rescheduleReminders()
+        }
     }
 
     private func isAdmin(_ user: SessionUser?) -> Bool {
