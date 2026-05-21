@@ -98,17 +98,17 @@ private struct RefreshContainerBody<Content: View>: View {
 }
 
 private enum TdayRefreshIndicatorMetrics {
-    static let triggerDistance: CGFloat = 98
-    static let containerWidth: CGFloat = 116
-    static let containerHeight: CGFloat = 50
+    static let triggerDistance: CGFloat = 112
+    static let containerWidth: CGFloat = 152
+    static let containerHeight: CGFloat = 58
     static let barCount = 5
-    static let dotWidth: CGFloat = 8
-    static let dotMinHeight: CGFloat = 8
-    static let dotMaxHeight: CGFloat = 29
-    static let dotSpacing: CGFloat = 9
-    static let cornerRadius: CGFloat = 25
-    static let sweepInset: CGFloat = 8
-    static let sweepHeight: CGFloat = 34
+    static let dotWidth: CGFloat = 9
+    static let dotMinHeight: CGFloat = 12
+    static let dotMaxHeight: CGFloat = 30
+    static let dotSpacing: CGFloat = 10
+    static let cornerRadius: CGFloat = 29
+    static let sweepInset: CGFloat = 11
+    static let sweepHeight: CGFloat = 40
 }
 
 private struct TdayPullRefreshIndicator: View {
@@ -126,38 +126,38 @@ private struct TdayPullRefreshIndicator: View {
             let clampedProgress = min(max(pullProgress, 0), 1)
             let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.05) / 1.05
             let sweepTrackWidth = TdayRefreshIndicatorMetrics.containerWidth - (TdayRefreshIndicatorMetrics.sweepInset * 2)
-            let sweepWidth = isRefreshing ? sweepTrackWidth * 0.48 : sweepTrackWidth * clampedProgress
-            let sweepOffset = isRefreshing ? (sweepTrackWidth - sweepWidth) * CGFloat(cycle) : 0
 
             ZStack(alignment: .center) {
                 if visible {
-                    RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
-                        .fill(colors.primary.opacity(isRefreshing ? 0.18 : 0.10 + (Double(clampedProgress) * 0.08)))
-                        .frame(
-                            width: max(sweepWidth, TdayRefreshIndicatorMetrics.dotWidth),
-                            height: TdayRefreshIndicatorMetrics.sweepHeight
-                        )
-                        .offset(x: -(TdayRefreshIndicatorMetrics.containerWidth / 2) + TdayRefreshIndicatorMetrics.sweepInset + (sweepWidth / 2) + sweepOffset)
-                        .animation(.easeOut(duration: 0.16), value: clampedProgress)
-                }
+                    ZStack {
+                        RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
+                            .fill(colors.primary.opacity(isRefreshing ? 0.18 : 0.08 + (Double(clampedProgress) * 0.10)))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
+                                    .stroke(colors.primary.opacity(0.14 + (Double(clampedProgress) * 0.08)), lineWidth: 1)
+                            }
 
-                HStack(spacing: TdayRefreshIndicatorMetrics.dotSpacing) {
-                    ForEach(0..<TdayRefreshIndicatorMetrics.barCount, id: \.self) { index in
-                        let metrics = barMetrics(
-                            index: index,
-                            pullProgress: clampedProgress,
-                            cycle: cycle
-                        )
+                        HStack(spacing: TdayRefreshIndicatorMetrics.dotSpacing) {
+                            ForEach(0..<TdayRefreshIndicatorMetrics.barCount, id: \.self) { index in
+                                let metrics = barMetrics(
+                                    index: index,
+                                    pullProgress: clampedProgress,
+                                    cycle: cycle
+                                )
 
-                        RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.dotWidth / 2, style: .continuous)
-                            .fill(colors.primary.opacity(metrics.opacity))
-                            .frame(
-                                width: TdayRefreshIndicatorMetrics.dotWidth,
-                                height: metrics.height
-                            )
-                            .shadow(color: colors.primary.opacity(metrics.shadowOpacity), radius: 6, x: 0, y: 0)
-                            .offset(y: metrics.verticalOffset)
+                                RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.dotWidth / 2, style: .continuous)
+                                    .fill(colors.primary.opacity(metrics.opacity))
+                                    .frame(
+                                        width: TdayRefreshIndicatorMetrics.dotWidth,
+                                        height: metrics.height
+                                    )
+                                    .shadow(color: colors.primary.opacity(metrics.shadowOpacity), radius: 6, x: 0, y: 0)
+                            }
+                        }
                     }
+                    .frame(width: sweepTrackWidth, height: TdayRefreshIndicatorMetrics.sweepHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous))
+                    .animation(.easeOut(duration: 0.16), value: clampedProgress)
                 }
             }
             .frame(
@@ -169,11 +169,12 @@ private struct TdayPullRefreshIndicator: View {
                 RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
                     .stroke(colors.onSurface.opacity(0.12), lineWidth: 1)
             }
-            .shadow(color: colors.primary.opacity(0.10), radius: 10, x: 0, y: 0)
-            .shadow(color: Color.black.opacity(0.14), radius: 14, x: 0, y: 7)
+            .clipShape(RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
+            .shadow(color: colors.primary.opacity(0.12), radius: 12, x: 0, y: 0)
+            .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 8)
             .opacity(visible ? 1 : 0)
             .scaleEffect(visible ? 1 : 0.82)
-            .offset(y: visible ? 0 : -16)
+            .offset(y: visible ? 0 : -18)
             .animation(.easeOut(duration: 0.22), value: visible)
         }
     }
@@ -189,7 +190,7 @@ private struct TdayPullRefreshIndicator: View {
                 height: height,
                 opacity: 0.42 + (Double(easedWave) * 0.58),
                 shadowOpacity: 0.08 + (Double(easedWave) * 0.28),
-                verticalOffset: -(height - TdayRefreshIndicatorMetrics.dotMinHeight) / 2
+                verticalOffset: 0
             )
         }
 
@@ -202,7 +203,7 @@ private struct TdayPullRefreshIndicator: View {
             height: height,
             opacity: 0.32 + (Double(easedProgress) * 0.68),
             shadowOpacity: Double(easedProgress) * 0.22,
-            verticalOffset: -(height - TdayRefreshIndicatorMetrics.dotMinHeight) / 2
+            verticalOffset: 0
         )
     }
 }
