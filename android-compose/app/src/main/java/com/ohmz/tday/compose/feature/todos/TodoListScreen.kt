@@ -383,13 +383,14 @@ fun TodoListScreen(
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
+            delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
             val estimatedRowHeight =
                 with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
             val centeredScrollOffset =
                 -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
-            listState.scrollToItem(
+            listState.animateScrollToItem(
                 index = target.first,
                 scrollOffset = centeredScrollOffset,
             )
@@ -2105,6 +2106,7 @@ private fun createMovedTaskPayload(
 }
 
 private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
+private const val SEARCH_RESULT_NAV_SETTLE_DELAY_MS = 480L
 private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 58.dp
