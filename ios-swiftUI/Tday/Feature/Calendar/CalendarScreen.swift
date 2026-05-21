@@ -406,6 +406,8 @@ private struct CalendarThickNativeSegmentedControl: UIViewRepresentable {
     let accentColor: Color
     let onSelect: (CalendarDisplayMode) -> Void
 
+    @Environment(\.tdayColors) private var colors
+
     func makeCoordinator() -> Coordinator {
         Coordinator(onSelect: onSelect)
     }
@@ -439,7 +441,24 @@ private struct CalendarThickNativeSegmentedControl: UIViewRepresentable {
     }
 
     private func applySizingAndTint(to control: ThickSegmentedControl) {
+        control.overrideUserInterfaceStyle = colors.isDark ? .dark : .light
+        control.backgroundColor = UIColor(colors.surfaceVariant.opacity(0.76))
+        control.selectedSegmentTintColor = UIColor(colors.surface)
         control.tintColor = UIColor(accentColor)
+        control.setTitleTextAttributes(
+            [
+                .foregroundColor: UIColor(colors.onSurfaceVariant),
+                .font: TdayFont.uiFont(size: 13, weight: .bold)
+            ],
+            for: .normal
+        )
+        control.setTitleTextAttributes(
+            [
+                .foregroundColor: UIColor(colors.onSurface),
+                .font: TdayFont.uiFont(size: 13, weight: .bold)
+            ],
+            for: .selected
+        )
         control.invalidateIntrinsicContentSize()
     }
 
