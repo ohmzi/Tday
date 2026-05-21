@@ -124,8 +124,6 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
-import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
-import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -314,16 +312,6 @@ fun CalendarScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            if (selectedDatePendingTasks.isEmpty() && !uiState.isLoading) {
-                EmptyTaskWatermark(
-                    imageVector = Icons.Rounded.CalendarMonth,
-                    accentColor = CalendarAccentPurple,
-                )
-                EmptyTaskBackgroundMessage(
-                    message = stringResource(R.string.calendar_no_pending),
-                )
-            }
-
             CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
                 LazyColumn(
                     modifier = Modifier
