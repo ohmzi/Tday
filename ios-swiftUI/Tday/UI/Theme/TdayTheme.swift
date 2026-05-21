@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct TdayColors {
+    let isDark: Bool
     let background: Color
     let surface: Color
     let surfaceVariant: Color
@@ -13,7 +14,8 @@ struct TdayColors {
     let onSurface: Color
     let onSurfaceVariant: Color
 
-    static let `default` = TdayColors(
+    static let light = TdayColors(
+        isDark: false,
         background: .tdayLightBackground,
         surface: .tdayLightSurface,
         surfaceVariant: .tdayLightSurfaceVariant,
@@ -21,10 +23,42 @@ struct TdayColors {
         secondary: .tdayLightSecondary,
         tertiary: .tdayLightWarm,
         error: .tdayLightError,
-        onPrimary: .white,
+        onPrimary: .tdayLightOnPrimary,
         onSurface: .tdayLightForeground,
         onSurfaceVariant: .tdayLightMuted
     )
+
+    static let dark = TdayColors(
+        isDark: true,
+        background: .tdayDarkBackground,
+        surface: .tdayDarkSurface,
+        surfaceVariant: .tdayDarkSurfaceVariant,
+        primary: .tdayDarkAccent,
+        secondary: .tdayDarkSecondary,
+        tertiary: .tdayDarkWarm,
+        error: .tdayDarkError,
+        onPrimary: .tdayDarkOnPrimary,
+        onSurface: .tdayDarkForeground,
+        onSurfaceVariant: .tdayDarkMuted
+    )
+
+    static let `default` = TdayColors.light
+
+    static func palette(for colorScheme: ColorScheme) -> TdayColors {
+        colorScheme == .dark ? .dark : .light
+    }
+
+    var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [background, background, background],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    var cardStroke: Color {
+        isDark ? Color.white.opacity(0.10) : Color.white.opacity(0.45)
+    }
 }
 
 private struct TdayColorsKey: EnvironmentKey {
@@ -36,18 +70,6 @@ extension EnvironmentValues {
         get { self[TdayColorsKey.self] }
         set { self[TdayColorsKey.self] = newValue }
     }
-}
-
-struct TdayTheme {
-    static let backgroundGradient = LinearGradient(
-        colors: [
-            Color.tdayLightBackground,
-            Color.tdayLightBackground,
-            Color.tdayLightBackground
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
 }
 
 enum TdayFont {
@@ -165,31 +187,60 @@ extension Font {
 struct TdayBackground<Content: View>: View {
     @ViewBuilder let content: Content
 
+    @Environment(\.tdayColors) private var colors
+
     var body: some View {
         ZStack {
-            TdayTheme.backgroundGradient
+            colors.backgroundGradient
                 .ignoresSafeArea()
             content
         }
-        .environment(\.tdayColors, .default)
     }
 }
 
 struct TdayCardModifier: ViewModifier {
+    @Environment(\.tdayColors) private var colors
+
     func body(content: Content) -> some View {
         content
             .padding(16)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                    .stroke(colors.cardStroke, lineWidth: 1)
             )
+    }
+}
+
+private struct TdayAppThemeModifier: ViewModifier {
+    let themeMode: AppThemeMode
+
+    @Environment(\.colorScheme) private var systemColorScheme
+
+    private var resolvedColorScheme: ColorScheme {
+        themeMode.colorScheme ?? systemColorScheme
+    }
+
+    private var colors: TdayColors {
+        TdayColors.palette(for: resolvedColorScheme)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.tdayColors, colors)
+            .tint(colors.primary)
+            .background(colors.backgroundGradient.ignoresSafeArea())
+            .preferredColorScheme(themeMode.colorScheme)
     }
 }
 
 extension View {
     func tdayCard() -> some View {
         modifier(TdayCardModifier())
+    }
+
+    func tdayAppTheme(themeMode: AppThemeMode) -> some View {
+        modifier(TdayAppThemeModifier(themeMode: themeMode))
     }
 
     func tdayAppTypography() -> some View {

@@ -710,6 +710,8 @@ private struct HomeListRow: View {
     let count: Int
     let action: () -> Void
 
+    @Environment(\.tdayColors) private var colors
+
     private var accent: Color {
         homeListAccentColor(for: colorKey)
     }
@@ -719,7 +721,7 @@ private struct HomeListRow: View {
     }
 
     private var containerColor: Color {
-        Color.tdayLightSurfaceVariant.blended(with: accent, amount: 0.38)
+        colors.surfaceVariant.blended(with: accent, amount: colors.isDark ? 0.24 : 0.38)
     }
 
     var body: some View {
