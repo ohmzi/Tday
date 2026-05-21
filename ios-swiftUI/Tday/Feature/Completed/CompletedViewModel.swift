@@ -46,6 +46,16 @@ final class CompletedViewModel {
         }
     }
 
+    func uncomplete(_ item: CompletedItem) async {
+        do {
+            try await container.completedRepository.uncomplete(item)
+            hydrateFromCache()
+            await rescheduleReminders()
+        } catch {
+            errorMessage = userFacingMessage(for: error, fallback: "Could not restore task.")
+        }
+    }
+
     func update(_ item: CompletedItem, payload: CreateTaskPayload) async {
         do {
             try await container.completedRepository.updateCompletedTodo(item, payload: payload)
@@ -69,5 +79,11 @@ final class CompletedViewModel {
                 }
             }
         }
+    }
+
+    private func rescheduleReminders() async {
+        let tasks = container.todoRepository.fetchTodosSnapshot(mode: .all)
+        let defaultReminder = container.reminderPreferenceStore.getDefaultReminder()
+        await container.reminderScheduler.reschedule(tasks: tasks, defaultReminder: defaultReminder)
     }
 }
