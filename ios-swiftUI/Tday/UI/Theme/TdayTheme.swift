@@ -247,18 +247,45 @@ struct EmptyTaskWatermark: View {
     let accentColor: Color
 
     @Environment(\.tdayColors) private var colors
+    private let iconSize: CGFloat = 194
+    private let trailingOffset: CGFloat = 26
 
     private var watermarkColor: Color {
         colors.onSurfaceVariant.tdayBlended(with: accentColor, amount: 0.36).opacity(0.10)
     }
 
     var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: 158, weight: .regular))
-            .foregroundStyle(watermarkColor)
-            .rotationEffect(.degrees(-7))
-            .offset(x: 26, y: 22)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        GeometryReader { proxy in
+            Image(systemName: systemName)
+                .font(.system(size: iconSize, weight: .regular))
+                .foregroundStyle(watermarkColor)
+                .rotationEffect(.degrees(-7))
+                .frame(width: iconSize, height: iconSize)
+                .position(
+                    x: proxy.size.width - (iconSize / 2) + trailingOffset,
+                    y: proxy.size.height * (2.0 / 3.0)
+                )
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+struct EmptyTaskBackgroundMessage: View {
+    let message: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Text(message)
+            .font(.tdayRounded(size: 28, weight: .bold))
+            .foregroundStyle(colors.onSurfaceVariant.opacity(0.66))
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.82)
+            .padding(.horizontal, 32)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .offset(x: 24)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
