@@ -32,9 +32,11 @@ enum TodoTimelineMetrics {
     static let collapsedTitleRevealDistance: CGFloat = 10
     static let collapsedTitleRevealStart: CGFloat = 0.68
     static let collapsedTitleRevealEnd: CGFloat = 1
-    static let searchResultScrollDelay: TimeInterval = 0.30
-    static let searchResultScrollDuration: TimeInterval = 0.52
-    static let searchResultFlashDelay: TimeInterval = 0.18
+    static let searchResultSectionExpandDelay: TimeInterval = 0.08
+    static let searchResultScrollDelay: TimeInterval = 0.44
+    static let searchResultScrollDuration: TimeInterval = 0.90
+    static let searchResultFlashDelay: TimeInterval = 0.62
+    static let searchResultPreScrollItemCount = 5
 
     static func smoothstep(_ value: CGFloat) -> CGFloat {
         let clamped = min(max(value, 0), 1)
@@ -425,13 +427,21 @@ struct TodoListScreen: View {
         todo.id == id || todo.canonicalId == id
     }
 
-    private func highlightedTodoTarget(for id: String) -> TodoItem? {
-        for section in groupedSections {
-            if let todo = section.items.first(where: { matchesHighlightedTodo($0, id: id) }) {
-                return todo
-            }
+    private struct HighlightedTodoTarget {
+        let todo: TodoItem
+        let preScrollTodo: TodoItem
+    }
+
+    private func highlightedTodoTarget(for id: String) -> HighlightedTodoTarget? {
+        let orderedTodos = groupedSections.flatMap(\.items)
+        guard let targetIndex = orderedTodos.firstIndex(where: { matchesHighlightedTodo($0, id: id) }) else {
+            return nil
         }
-        return nil
+        let preScrollIndex = max(0, targetIndex - TodoTimelineMetrics.searchResultPreScrollItemCount)
+        return HighlightedTodoTarget(
+            todo: orderedTodos[targetIndex],
+            preScrollTodo: orderedTodos[preScrollIndex]
+        )
     }
 
     private func timelineSectionScrollID(_ sectionID: String) -> String {
@@ -453,10 +463,11 @@ struct TodoListScreen: View {
         guard viewModel.mode == .all,
               let highlightedTodoId,
               !highlightedTodoId.isEmpty,
-              let targetTodo = highlightedTodoTarget(for: highlightedTodoId) else {
+              let target = highlightedTodoTarget(for: highlightedTodoId) else {
             return
         }
 
+        let hadCollapsedSections = !collapsedSectionIDs.isEmpty
         if !collapsedSectionIDs.isEmpty {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
                 collapsedSectionIDs = []
@@ -465,9 +476,18 @@ struct TodoListScreen: View {
 
         highlightedScrollRequestID += 1
         let requestID = highlightedScrollRequestID
-        let targetScrollID = timelineTodoScrollID(targetTodo.id)
+        let preScrollID = timelineTodoScrollID(target.preScrollTodo.id)
+        let targetScrollID = timelineTodoScrollID(target.todo.id)
+        let preScrollDelay = hadCollapsedSections ? TodoTimelineMetrics.searchResultSectionExpandDelay : 0
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + TodoTimelineMetrics.searchResultScrollDelay) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + preScrollDelay) {
+            guard requestID == highlightedScrollRequestID else {
+                return
+            }
+            proxy.scrollTo(preScrollID, anchor: .top)
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + preScrollDelay + TodoTimelineMetrics.searchResultScrollDelay) {
             guard requestID == highlightedScrollRequestID else {
                 return
             }
