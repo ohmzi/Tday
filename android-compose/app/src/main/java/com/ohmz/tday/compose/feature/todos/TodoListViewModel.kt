@@ -3,8 +3,8 @@ package com.ohmz.tday.compose.feature.todos
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
@@ -18,14 +18,13 @@ import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class TodoListUiState(
     val isLoading: Boolean = false,
@@ -209,7 +208,11 @@ class TodoListViewModel @Inject constructor(
 
             runCatching {
                 if (forceSync) {
-                    syncManager.syncCachedData(force = true, replayPendingMutations = true)
+                    syncManager.syncCachedData(
+                        force = true,
+                        replayPendingMutations = true,
+                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                    )
                         .onFailure { /* fall back to local cache */ }
                 }
                 val todos = todoRepository.fetchTodos(mode = mode, listId = listId)

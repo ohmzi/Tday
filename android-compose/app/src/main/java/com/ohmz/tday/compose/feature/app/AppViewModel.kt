@@ -2,32 +2,33 @@ package com.ohmz.tday.compose.feature.app
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.ServerProbeException
+import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.server.AppVersionManager
 import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
-import com.ohmz.tday.compose.feature.release.GitHubRelease
 import com.ohmz.tday.compose.core.data.sync.SyncManager
-import com.ohmz.tday.compose.core.data.ApiCallException
-import com.ohmz.tday.compose.core.data.ThemePreferenceStore
+import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.network.ConnectivityObserver
 import com.ohmz.tday.compose.core.network.RealtimeClient
 import com.ohmz.tday.compose.core.network.RealtimeEvent
-import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
-import com.ohmz.tday.compose.core.ui.SnackbarManager
-import com.ohmz.tday.compose.core.ui.userFacingMessage
-import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.core.ui.userFacingMessage
+import com.ohmz.tday.compose.feature.release.GitHubRelease
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,8 +37,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 import javax.net.ssl.SSLPeerUnverifiedException
 
 data class AppUiState(
@@ -60,6 +61,7 @@ data class AppUiState(
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
     val isOffline: Boolean = false,
     val pendingMutationCount: Int = 0,
+    val offlineNoticeId: Long = 0L,
     val versionCheckResult: VersionCheckResult? = null,
     val backendVersion: String? = null,
     val requiredUpdateRelease: GitHubRelease? = null,
@@ -107,6 +109,7 @@ class AppViewModel @Inject constructor(
                 }
             }
         }
+        observeOfflineSyncFailures()
         bootstrap()
     }
 
@@ -137,15 +140,19 @@ class AppViewModel @Inject constructor(
                 return@launch
             }
 
-            val sessionUser = restoreSessionAndPrimeData()
+            val sessionResult = restoreSessionAndPrimeData()
             appVersionManager.refreshServerCompatibility()
             val vs = appVersionManager.state.value
             val versionResult = vs.versionCheckResult
             val isBlocking = versionResult is VersionCheckResult.AppUpdateRequired ||
                 versionResult is VersionCheckResult.ServerUpdateRequired
 
-            if (sessionUser != null) {
+            if (sessionResult != null) {
+                val sessionUser = sessionResult.user
                 val adminUser = isAdmin(sessionUser)
+                val pendingCount = runCatching {
+                    cacheManager.loadOfflineState().pendingMutations.size
+                }.getOrDefault(_uiState.value.pendingMutationCount)
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -166,6 +173,13 @@ class AppViewModel @Inject constructor(
                         isAdminAiSummaryLoading = adminUser,
                         isAdminAiSummarySaving = false,
                         adminAiSummaryError = null,
+                        isOffline = sessionResult.isOffline,
+                        pendingMutationCount = pendingCount,
+                        offlineNoticeId = if (sessionResult.isOffline) {
+                            it.offlineNoticeId + 1L
+                        } else {
+                            it.offlineNoticeId
+                        },
                         versionCheckResult = vs.versionCheckResult,
                         backendVersion = vs.backendVersion,
                         requiredUpdateRelease = vs.requiredUpdateRelease,
@@ -229,18 +243,30 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    private suspend fun restoreSessionAndPrimeData(): SessionUser? {
-        val user = runCatching { authRepository.restoreSession() }.getOrNull()
-            ?: return null
+    private suspend fun restoreSessionAndPrimeData(): SessionBootstrapResult? {
+        val restored = authRepository.restoreSessionForBootstrap() ?: return null
+        val user = restored.user
         if (user.id == null) return null
 
-        coroutineScope {
-            launch { runCatching { syncManager.syncCachedData(force = true, replayPendingMutations = true) } }
+        val syncResult = coroutineScope {
+            val sync = async {
+                syncManager.syncCachedData(
+                    force = true,
+                    replayPendingMutations = true,
+                    notifyOfflineFailure = false,
+                )
+            }
             launch { runCatching { authRepository.syncTimezone() } }
             launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
+            sync.await()
         }
 
-        return user
+        val syncError = syncResult.exceptionOrNull()
+        return SessionBootstrapResult(
+            user = user,
+            isOffline = restored.usedCachedSession ||
+                    (syncError != null && isLikelyConnectivityIssue(syncError)),
+        )
     }
 
     fun refreshSession() = bootstrap()
@@ -462,12 +488,16 @@ class AppViewModel @Inject constructor(
             val result = syncManager.syncCachedData(
                 force = true,
                 replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
             )
             val syncError = result.exceptionOrNull()
+            val isOffline = syncError != null && isLikelyConnectivityIssue(syncError)
             _uiState.update {
                 it.copy(
                     isManualSyncing = false,
-                    isOffline = syncError != null && isLikelyConnectivityIssue(syncError),
+                    isOffline = isOffline,
+                    offlineNoticeId = if (isOffline) it.offlineNoticeId + 1L else it.offlineNoticeId,
                     pendingMutationCount = runCatching {
                         cacheManager.loadOfflineState().pendingMutations.size
                     }.getOrDefault(it.pendingMutationCount),
@@ -538,6 +568,7 @@ class AppViewModel @Inject constructor(
         val result = syncManager.syncCachedData(
             force = true,
             replayPendingMutations = replayPending,
+            notifyOfflineFailure = false,
         )
         val syncError = result.exceptionOrNull()
         _uiState.update {
@@ -602,7 +633,33 @@ class AppViewModel @Inject constructor(
                     }
                 }
                 if (!isConnected && _uiState.value.authenticated) {
-                    _uiState.update { it.copy(isOffline = true) }
+                    _uiState.update {
+                        it.copy(
+                            isOffline = true,
+                            offlineNoticeId = if (it.isOffline) it.offlineNoticeId else it.offlineNoticeId + 1L,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun observeOfflineSyncFailures() {
+        viewModelScope.launch {
+            syncManager.offlineSyncFailures.collect {
+                val pendingCount = runCatching {
+                    cacheManager.loadOfflineState().pendingMutations.size
+                }.getOrDefault(_uiState.value.pendingMutationCount)
+                _uiState.update {
+                    if (!it.authenticated) {
+                        it
+                    } else {
+                        it.copy(
+                            isOffline = true,
+                            pendingMutationCount = pendingCount,
+                            offlineNoticeId = it.offlineNoticeId + 1L,
+                        )
+                    }
                 }
             }
         }
@@ -682,6 +739,11 @@ class AppViewModel @Inject constructor(
     private class AutomaticTrustRefreshFailedException(
         cause: Throwable?,
     ) : IllegalStateException("Automatic server trust refresh failed.", cause)
+
+    private data class SessionBootstrapResult(
+        val user: SessionUser,
+        val isOffline: Boolean,
+    )
 
     private companion object {
         const val PENDING_RESYNC_INTERVAL_MS = 20 * 1000L

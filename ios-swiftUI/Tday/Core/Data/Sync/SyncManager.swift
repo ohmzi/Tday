@@ -1,5 +1,9 @@
 import Foundation
 
+extension Notification.Name {
+    static let offlineSyncAttemptFailed = Notification.Name("tday.offline-sync.attempt-failed")
+}
+
 private struct RemoteSnapshot {
     let todos: [TodoItem]
     let completedItems: [CompletedItem]
@@ -38,13 +42,24 @@ final class SyncManager {
         !cacheManager.loadOfflineState().pendingMutations.isEmpty
     }
 
-    func syncCachedData(force: Bool = false, replayPendingMutations: Bool = true) async -> Result<Void, Error> {
+    func syncCachedData(
+        force: Bool = false,
+        replayPendingMutations: Bool = true,
+        notifyOfflineFailure: Bool = true,
+        connectionProbeTimeoutSeconds: TimeInterval? = nil
+    ) async -> Result<Void, Error> {
         do {
+            if let connectionProbeTimeoutSeconds {
+                _ = try await api.probeConfiguredServer(timeoutInterval: connectionProbeTimeoutSeconds)
+            }
             try await cacheManager.withSyncLock {
                 try await self.syncLocalCache(force: force, replayPendingMutations: replayPendingMutations)
             }
             return .success(())
         } catch {
+            if notifyOfflineFailure, isLikelyConnectivityIssue(error) {
+                NotificationCenter.default.post(name: .offlineSyncAttemptFailed, object: nil)
+            }
             return .failure(error)
         }
     }
