@@ -420,15 +420,25 @@ final class AppViewModel {
     private func observeOfflineSyncFailures() {
         offlineSyncFailureTask = Task {
             for await _ in NotificationCenter.default.notifications(named: .offlineSyncAttemptFailed) {
-                await MainActor.run {
-                    guard self.authenticated else {
-                        return
-                    }
-                    self.isOffline = true
-                    self.refreshPendingMutationCount()
-                    self.offlineNoticeID += 1
-                }
+                await self.confirmOfflineSyncFailure()
             }
+        }
+    }
+
+    private func confirmOfflineSyncFailure() async {
+        guard authenticated else {
+            return
+        }
+
+        let result = await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
+        applySyncResult(result, showOfflineNotice: true)
+        if case .success = result {
+            await rescheduleReminders()
         }
     }
 
@@ -470,10 +480,6 @@ final class AppViewModel {
                     )
                     self.applySyncResult(result)
                     await self.rescheduleReminders()
-                } else if !self.isOffline {
-                    self.isOffline = true
-                    self.refreshPendingMutationCount()
-                    self.offlineNoticeID += 1
                 }
             }
         }
