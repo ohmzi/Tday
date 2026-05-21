@@ -53,10 +53,14 @@ struct CompletedScreen: View {
             .background(colors.background)
             .overlay {
                 if viewModel.items.isEmpty, !viewModel.isLoading {
-                    EmptyTaskWatermark(
-                        systemName: "checkmark",
-                        accentColor: completedAccentColor
-                    )
+                    ZStack {
+                        EmptyTaskWatermark(
+                            systemName: "checkmark",
+                            accentColor: completedAccentColor
+                        )
+                        EmptyTaskBackgroundMessage(message: "No completed tasks")
+                    }
+                    .allowsHitTesting(false)
                 }
             }
             .navigationBackButtonBehavior()
@@ -127,10 +131,6 @@ struct CompletedScreen: View {
             .disableVerticalScrollBounce()
             .animation(.easeInOut(duration: 0.24), value: completedTimelineAnimationKey)
 
-            if viewModel.items.isEmpty {
-                TimelineEmptyState(message: "No completed tasks")
-                    .allowsHitTesting(false)
-            }
         }
     }
 
