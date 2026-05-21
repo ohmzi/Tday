@@ -140,22 +140,11 @@ fun SettingsScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (available.y < 0f && headerCollapsePx < maxCollapsePx) {
-                    headerCollapsePx = maxCollapsePx
-                    return available
-                }
-                if (available.y > 0f && scrollState.value == 0 && headerCollapsePx > 0f) {
-                    headerCollapsePx = 0f
-                    return available
-                }
                 return Velocity.Zero
             }
         }
     }
-    val collapseProgress by animateFloatAsState(
-        targetValue = collapseProgressTarget,
-        label = "settingsTitleCollapseProgress",
-    )
+    val collapseProgress = collapseProgressTarget
 
     Scaffold(
         containerColor = colorScheme.background,
