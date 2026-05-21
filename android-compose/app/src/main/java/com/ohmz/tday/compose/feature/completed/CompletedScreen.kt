@@ -168,24 +168,11 @@ fun CompletedScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (available.y < 0f && headerCollapsePx < maxCollapsePx) {
-                    headerCollapsePx = maxCollapsePx
-                    return available
-                }
-                val isListAtTop =
-                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && isListAtTop && headerCollapsePx > 0f) {
-                    headerCollapsePx = 0f
-                    return available
-                }
                 return Velocity.Zero
             }
         }
     }
-    val collapseProgress by animateFloatAsState(
-        targetValue = collapseProgressTarget,
-        label = "completedTitleCollapseProgress",
-    )
+    val collapseProgress = collapseProgressTarget
     var collapsedSectionKeys by rememberSaveable {
         mutableStateOf(emptySet<String>())
     }
