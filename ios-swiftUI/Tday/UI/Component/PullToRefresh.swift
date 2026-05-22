@@ -141,15 +141,16 @@ private struct TdayPullRefreshIndicator: View {
             let revealProgress = isRefreshing ? 1 : clampedProgress
             let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.05) / 1.05
             let sweepTrackWidth = TdayRefreshIndicatorMetrics.containerWidth - (TdayRefreshIndicatorMetrics.sweepInset * 2)
+            let refreshAccent = Color.tdayTodayBlue
 
             ZStack(alignment: .center) {
                 if visible {
                     ZStack {
                         RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
-                            .fill(colors.primary.opacity(isRefreshing ? 0.18 : 0.08 + (Double(clampedProgress) * 0.10)))
+                            .fill(refreshAccent.opacity(isRefreshing ? 0.18 : 0.08 + (Double(clampedProgress) * 0.10)))
                             .overlay {
                                 RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
-                                    .stroke(colors.primary.opacity(0.14 + (Double(clampedProgress) * 0.08)), lineWidth: 1)
+                                    .stroke(refreshAccent.opacity(0.14 + (Double(clampedProgress) * 0.08)), lineWidth: 1)
                             }
 
                         HStack(spacing: TdayRefreshIndicatorMetrics.dotSpacing) {
@@ -161,7 +162,7 @@ private struct TdayPullRefreshIndicator: View {
                                 )
 
                                 RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.dotWidth / 2, style: .continuous)
-                                    .fill(colors.primary.opacity(metrics.opacity))
+                                    .fill(refreshAccent.opacity(metrics.opacity))
                                     .frame(
                                         width: TdayRefreshIndicatorMetrics.dotWidth,
                                         height: metrics.height
@@ -183,7 +184,7 @@ private struct TdayPullRefreshIndicator: View {
                     .stroke(colors.onSurface.opacity(0.12), lineWidth: 1)
             }
             .clipShape(RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
-            .shadow(color: colors.primary.opacity(0.12), radius: 12, x: 0, y: 0)
+            .shadow(color: refreshAccent.opacity(0.12), radius: 12, x: 0, y: 0)
             .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 8)
             .opacity(visible ? Double(revealProgress) : 0)
             .offset(y: -18 + (18 * revealProgress))
