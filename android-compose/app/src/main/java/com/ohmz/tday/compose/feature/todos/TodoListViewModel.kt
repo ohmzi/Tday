@@ -3,8 +3,8 @@ package com.ohmz.tday.compose.feature.todos
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
@@ -18,20 +18,20 @@ import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class TodoListUiState(
     val isLoading: Boolean = false,
     val title: String = "Tasks",
     val mode: TodoListMode = TodoListMode.TODAY,
     val listId: String? = null,
+    val hasHydratedSnapshot: Boolean = false,
     val lists: List<ListSummary> = emptyList(),
     val items: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
@@ -77,10 +77,16 @@ class TodoListViewModel @Inject constructor(
 
     fun load(mode: TodoListMode, listId: String? = null, listName: String? = null) {
         hasLoadedMode = true
-        _uiState.update {
-            it.copy(
+        _uiState.update { current ->
+            val isSameTimeline = current.mode == mode && current.listId == listId
+            current.copy(
                 mode = mode,
                 listId = listId,
+                hasHydratedSnapshot = if (isSameTimeline) {
+                    current.hasHydratedSnapshot
+                } else {
+                    false
+                },
                 title = when (mode) {
                     TodoListMode.TODAY -> "Today"
                     TodoListMode.OVERDUE -> "Overdue"
@@ -182,11 +188,16 @@ class TodoListViewModel @Inject constructor(
         }.onSuccess { (todos, lists, aiSummaryEnabled) ->
             _uiState.update { current ->
                 current.copy(
+                    hasHydratedSnapshot = true,
                     lists = if (current.lists == lists) current.lists else lists,
                     items = if (current.items == todos) current.items else todos,
                     aiSummaryEnabled = aiSummaryEnabled,
                     errorMessage = null,
                 )
+            }
+        }.onFailure {
+            _uiState.update { current ->
+                current.copy(hasHydratedSnapshot = true)
             }
         }
     }
@@ -209,7 +220,11 @@ class TodoListViewModel @Inject constructor(
 
             runCatching {
                 if (forceSync) {
-                    syncManager.syncCachedData(force = true, replayPendingMutations = true)
+                    syncManager.syncCachedData(
+                        force = true,
+                        replayPendingMutations = true,
+                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                    )
                         .onFailure { /* fall back to local cache */ }
                 }
                 val todos = todoRepository.fetchTodos(mode = mode, listId = listId)

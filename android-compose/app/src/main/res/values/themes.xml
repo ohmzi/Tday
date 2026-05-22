@@ -5,6 +5,10 @@
         <item name="android:textViewStyle">@style/TdayTextViewStyle</item>
     </style>
 
+    <style name="Theme.Tday.Starting" parent="Theme.Tday">
+        <item name="android:windowBackground">@drawable/window_splash</item>
+    </style>
+
     <style name="TdayTextViewStyle" parent="@android:style/Widget.TextView">
         <item name="android:fontFamily">@font/nunito_app</item>
         <item name="android:textStyle">bold</item>

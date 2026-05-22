@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.core.data
 
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -28,8 +29,7 @@ internal fun extractApiErrorMessage(response: Response<*>, fallback: String): St
     if (raw.isNullOrBlank()) return fallback
 
     return runCatching {
-        val element = Json.parseToJsonElement(raw)
-        when (element) {
+        when (val element = Json.parseToJsonElement(raw)) {
             is JsonObject -> element["message"]?.jsonPrimitive?.contentOrNull ?: fallback
             is JsonPrimitive -> element.content
             else -> fallback
@@ -38,26 +38,50 @@ internal fun extractApiErrorMessage(response: Response<*>, fallback: String): St
 }
 
 internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
+    if (error is TimeoutCancellationException) {
+        return true
+    }
+
     var current: Throwable? = error
     while (current != null) {
+        if (current is ApiCallException && isLikelyServerUnavailableStatus(current.statusCode)) {
+            return true
+        }
+
         val message = current.message.orEmpty().lowercase()
         if (
             message.contains("failed to connect") ||
             message.contains("econnrefused") ||
             message.contains("timed out") ||
             message.contains("unable to resolve host") ||
+            message.contains("unknownhost") ||
+            message.contains("no address associated with hostname") ||
             message.contains("network is unreachable") ||
+            message.contains("not connected") ||
             message.contains("connection reset") ||
             message.contains("broken pipe") ||
             message.contains("software caused connection abort") ||
             message.contains("no route to host") ||
-            message.contains("connection refused")
+            message.contains("connection refused") ||
+            message.contains("bad gateway") ||
+            message.contains("service unavailable") ||
+            message.contains("gateway timeout") ||
+            message.contains("origin unreachable") ||
+            message.contains("web server is down")
         ) {
             return true
         }
         current = current.cause?.takeIf { it !== current }
     }
     return false
+}
+
+internal fun isLikelyServerUnavailableStatus(statusCode: Int): Boolean {
+    return statusCode == 408 ||
+            statusCode == 502 ||
+            statusCode == 503 ||
+            statusCode == 504 ||
+            statusCode in 520..524
 }
 
 internal fun isLikelyUnrecoverableMutationError(

@@ -38,6 +38,10 @@ import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidget
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.withTimeout
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
@@ -50,30 +54,62 @@ class SyncManager @Inject constructor(
     private val cacheManager: OfflineCacheManager,
     private val secureConfigStore: SecureConfigStore,
 ) {
+    private val offlineSyncFailureMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+    val offlineSyncFailures: SharedFlow<Unit> = offlineSyncFailureMutable.asSharedFlow()
+    private val offlineSyncSuccessMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
+    val offlineSyncSuccesses: SharedFlow<Unit> = offlineSyncSuccessMutable.asSharedFlow()
+
     fun hasPendingMutations(): Boolean =
         cacheManager.loadOfflineState().pendingMutations.isNotEmpty()
 
     suspend fun syncCachedData(
         force: Boolean = false,
         replayPendingMutations: Boolean = true,
-    ): Result<Unit> = runCatching {
-        cacheManager.withSyncLock {
-            syncLocalCache(
-                force = force,
-                replayPendingMutations = replayPendingMutations,
+        notifyOfflineFailure: Boolean = true,
+        connectionProbeTimeoutMs: Long? = null,
+    ): Result<Unit> {
+        val result = runCatching {
+            var contactedServer = false
+            if (connectionProbeTimeoutMs != null) {
+                verifyServerConnection(connectionProbeTimeoutMs)
+                contactedServer = true
+            }
+            val syncedRemoteData = cacheManager.withSyncLock {
+                syncLocalCache(
+                    force = force,
+                    replayPendingMutations = replayPendingMutations,
+                )
+            }
+            runCatching { TodayTasksWidget().updateAll(context) }
+            if (contactedServer || syncedRemoteData) {
+                offlineSyncSuccessMutable.tryEmit(Unit)
+            }
+            Unit
+        }
+        val error = result.exceptionOrNull()
+        if (notifyOfflineFailure && error != null && isLikelyConnectivityIssue(error)) {
+            offlineSyncFailureMutable.tryEmit(Unit)
+        }
+        return result
+    }
+
+    private suspend fun verifyServerConnection(timeoutMs: Long) {
+        withTimeout(timeoutMs) {
+            requireApiBody(
+                api.probeConfiguredServer(),
+                "Could not connect to server",
             )
         }
-        runCatching { TodayTasksWidget().updateAll(context) }
     }
 
     private suspend fun syncLocalCache(
         force: Boolean,
         replayPendingMutations: Boolean,
-    ) {
+    ): Boolean {
         var state = cacheManager.loadOfflineState()
         val now = System.currentTimeMillis()
         if (force && (now - state.lastSyncAttemptEpochMs) < MIN_FORCE_SYNC_INTERVAL_MS) {
-            return
+            return false
         }
 
         val shouldReplayPendingMutations = replayPendingMutations &&
@@ -83,7 +119,7 @@ class SyncManager @Inject constructor(
             state.lastSuccessfulSyncEpochMs == 0L ||
             (now - state.lastSyncAttemptEpochMs) >= OFFLINE_RESYNC_INTERVAL_MS
 
-        if (!shouldSync) return
+        if (!shouldSync) return false
 
         state = state.copy(lastSyncAttemptEpochMs = now)
         cacheManager.saveOfflineState(state)
@@ -115,7 +151,7 @@ class SyncManager @Inject constructor(
                     lastSuccessfulSyncEpochMs = now,
                 ),
             )
-            return
+            return true
         }
 
         val afterPending = applyPendingMutations(state, firstRemote)
@@ -131,6 +167,7 @@ class SyncManager @Inject constructor(
         )
 
         cacheManager.saveOfflineState(mergedState)
+        return true
     }
 
     private suspend fun fetchRemoteSnapshot(): RemoteSnapshot {
@@ -872,9 +909,10 @@ class SyncManager @Inject constructor(
             }
     }
 
-    private companion object {
-        const val LOG_TAG = "SyncManager"
-        const val OFFLINE_RESYNC_INTERVAL_MS = 5 * 60 * 1000L
-        const val MIN_FORCE_SYNC_INTERVAL_MS = 1_200L
+    companion object {
+        const val USER_REFRESH_CONNECTION_TIMEOUT_MS = 2_000L
+        private const val LOG_TAG = "SyncManager"
+        private const val OFFLINE_RESYNC_INTERVAL_MS = 5 * 60 * 1000L
+        private const val MIN_FORCE_SYNC_INTERVAL_MS = 1_200L
     }
 }

@@ -15,11 +15,13 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -42,13 +44,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -96,12 +101,34 @@ private const val NAV_EXIT_DURATION_MS = 320
 private const val NAV_FADE_IN_DURATION_MS = 360
 private const val NAV_FADE_OUT_DURATION_MS = 240
 private const val NAV_SLIDE_FRACTION = 0.18f
+private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
 private const val SETTINGS_ENTER_DURATION_MS = 380
 private const val SETTINGS_EXIT_DURATION_MS = 260
 private const val SETTINGS_VERTICAL_FRACTION = 0.22f
 
 @Composable
-fun TdayApp() {
+fun TdayApp(
+    onFirstFrameDrawn: () -> Unit = {},
+) {
+    val startupTagline = rememberSaveable { splashTaglines.random() }
+    var hasDrawnStartupFrame by remember { mutableStateOf(false) }
+    val currentOnFirstFrameDrawn by rememberUpdatedState(onFirstFrameDrawn)
+
+    if (!hasDrawnStartupFrame) {
+        TdayTheme {
+            SplashScreen(
+                tagline = startupTagline,
+                onHoldChanged = {},
+            )
+        }
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            hasDrawnStartupFrame = true
+            currentOnFirstFrameDrawn()
+        }
+        return
+    }
+
     val navController = rememberNavController()
 
     DisposableEffect(navController) {
@@ -122,6 +149,7 @@ fun TdayApp() {
     val taskDeletedToastMessage = stringResource(R.string.task_deleted_toast)
     var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
+    var isStartupSplashHeld by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -138,6 +166,9 @@ fun TdayApp() {
         appViewModel = appViewModel,
         snackbarHostState = snackbarHostState,
     )
+    OnAppForegroundResume {
+        appViewModel.reconnectAfterForeground()
+    }
 
     fun showTaskDeletedToast() {
         showSystemToast(context, taskDeletedToastMessage)
@@ -147,6 +178,7 @@ fun TdayApp() {
         appUiState = appUiState,
         currentRoute = currentRoute,
         navController = navController,
+        isStartupSplashHeld = isStartupSplashHeld,
     )
 
     HandleLaunchUpdateToast(
@@ -235,7 +267,7 @@ fun TdayApp() {
                     enterTransition = { fadeIn(tween(300)) },
                     exitTransition = { fadeOut(tween(300)) },
                 ) {
-                    SplashScreen()
+                    SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
                 }
 
                 composable(
@@ -243,7 +275,7 @@ fun TdayApp() {
                     enterTransition = { fadeIn(tween(300)) },
                     exitTransition = { fadeOut(tween(300)) },
                 ) {
-                    SplashScreen()
+                    SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
                 }
 
                 composable(
@@ -251,7 +283,7 @@ fun TdayApp() {
                     enterTransition = { fadeIn(tween(300)) },
                     exitTransition = { fadeOut(tween(300)) },
                 ) {
-                    SplashScreen()
+                    SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
                 }
 
                 composable(
@@ -293,7 +325,10 @@ fun TdayApp() {
                                     onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
                                     onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
                                     onOpenTaskFromSearch = { todoId ->
-                                        navController.navigate(AppRoute.AllTodos.create(highlightTodoId = todoId))
+                                        navController.currentBackStackEntry
+                                            ?.savedStateHandle
+                                            ?.set(PENDING_SEARCH_HIGHLIGHT_TODO_ID, todoId)
+                                        navController.navigate(AppRoute.AllTodos.create())
                                     },
                                     onOpenList = { id, name ->
                                         navController.navigate(AppRoute.ListTodos.create(id, name))
@@ -367,8 +402,13 @@ fun TdayApp() {
                                                 },
                                             )
                                         },
-                                        onLogin = { email, password ->
-                                            authViewModel.login(email, password) {
+                                        onLogin = { email, password, source ->
+                                            authViewModel.login(
+                                                email = email,
+                                                password = password,
+                                                credentialContext = context,
+                                                source = source,
+                                            ) {
                                                 appViewModel.refreshSession()
                                             }
                                         },
@@ -378,11 +418,13 @@ fun TdayApp() {
                                                 lastName = "",
                                                 email = email,
                                                 password = password,
+                                                credentialContext = context,
                                             ) {
                                                 onSuccess()
                                                 appViewModel.refreshSession()
                                             }
                                         },
+                                        onRequestSavedCredential = authViewModel::requestSavedCredential,
                                         onClearAuthStatus = {
                                             authViewModel.clearStatus()
                                             appViewModel.clearPendingApprovalNotice()
@@ -453,9 +495,15 @@ fun TdayApp() {
                         navDeepLink { uriPattern = "tday://todos/all?highlightTodoId={highlightTodoId}" },
                     ),
                 ) { entry ->
-                    val highlightTodoId = Uri.decode(
+                    val pendingSearchHighlightTodoId = remember(entry) {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.remove<String>(PENDING_SEARCH_HIGHLIGHT_TODO_ID)
+                    }
+                    val argumentHighlightTodoId = Uri.decode(
                         entry.arguments?.getString("highlightTodoId").orEmpty(),
                     ).ifBlank { null }
+                    val highlightTodoId = pendingSearchHighlightTodoId ?: argumentHighlightTodoId
                     TodosRoute(
                         mode = TodoListMode.ALL,
                         highlightTodoId = highlightTodoId,
@@ -507,6 +555,7 @@ fun TdayApp() {
                         uiState = uiState,
                         onBack = { navController.popBackStack() },
                         onRefresh = viewModel::refresh,
+                        onUncomplete = viewModel::uncomplete,
                         onDelete = { item ->
                             viewModel.delete(item) {
                                 showTaskDeletedToast()
@@ -603,6 +652,7 @@ fun TdayApp() {
             OfflineBanner(
                 visible = appUiState.isOffline && appUiState.authenticated,
                 pendingMutationCount = appUiState.pendingMutationCount,
+                noticeKey = appUiState.offlineNoticeId,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
 
@@ -653,13 +703,16 @@ private fun HandleStartupNavigation(
     appUiState: AppUiState,
     currentRoute: String?,
     navController: NavHostController,
+    isStartupSplashHeld: Boolean,
 ) {
     LaunchedEffect(
         appUiState.loading,
         appUiState.authenticated,
         currentRoute,
+        isStartupSplashHeld,
     ) {
         if (appUiState.loading) return@LaunchedEffect
+        if (isStartupSplashHeld) return@LaunchedEffect
 
         if (appUiState.authenticated) {
             val unauthenticatedRoutes = setOf(
@@ -807,6 +860,37 @@ private fun OnRouteResume(
     }
 }
 
+@Composable
+private fun OnAppForegroundResume(
+    action: () -> Unit,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentAction by rememberUpdatedState(action)
+    DisposableEffect(lifecycleOwner) {
+        var hasPaused = false
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_PAUSE, Lifecycle.Event.ON_STOP -> {
+                    hasPaused = true
+                }
+
+                Lifecycle.Event.ON_RESUME -> {
+                    if (hasPaused) {
+                        hasPaused = false
+                        currentAction()
+                    }
+                }
+
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+}
+
 private fun navigationSlideOffset(fullDistance: Int): Int =
     (fullDistance * NAV_SLIDE_FRACTION).roundToInt()
 
@@ -870,19 +954,64 @@ private val splashTaglines = listOf(
     "Organizing your life, no landlord required",
     "Zero trust\u2026 except your own server",
     "Syncing your tasks, judging your priorities",
+    "Today called. It wants a plan.",
+    "Making later file a formal request",
+    "Turning chaos into checkboxes",
+    "Your tasks are lining up nicely",
+    "A private server with opinions about your priorities",
+    "For when your brain opens too many tabs",
+    "Scheduling the chaos before it schedules you",
+    "Your lists have entered their productive era",
+    "A tiny operations desk for future you",
+    "Because vibes are not a task strategy",
+    "Private tasks. Better mornings.",
+    "Making your backlog feel seen, then sorted",
+    "Where scattered thoughts get assigned seating",
+    "Your priorities just got a home address",
+    "Sync first, panic later",
+    "Calendar drama, now with containment",
+    "Deadlines hate this one self-hosted trick",
+    "Helping your day stop freelancing",
+    "Your reminders came prepared",
+    "Turning I should into scheduled",
 )
 
 @Composable
-private fun SplashScreen() {
-    val tagline = remember { splashTaglines.random() }
+private fun SplashScreen(
+    onHoldChanged: (Boolean) -> Unit,
+    tagline: String? = null,
+) {
+    val resolvedTagline = tagline ?: remember { splashTaglines.random() }
+
+    DisposableEffect(onHoldChanged) {
+        onDispose { onHoldChanged(false) }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .pointerInput(onHoldChanged) {
+                detectTapGestures(
+                    onPress = {
+                        onHoldChanged(true)
+                        try {
+                            awaitRelease()
+                        } finally {
+                            onHoldChanged(false)
+                        }
+                    },
+                )
+            }
             .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
             Image(
                 painter = painterResource(id = R.drawable.splash_icon),
                 contentDescription = "T'Day",
@@ -896,9 +1025,11 @@ private fun SplashScreen() {
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                text = tagline,
+                text = resolvedTagline,
+                modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
         }
     }
