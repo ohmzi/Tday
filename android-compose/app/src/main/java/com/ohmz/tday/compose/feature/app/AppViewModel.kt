@@ -519,6 +519,17 @@ class AppViewModel @Inject constructor(
         if (foregroundReconnectJob?.isActive == true) return
 
         foregroundReconnectJob = viewModelScope.launch {
+            val result = syncAndUpdateOfflineState(
+                replayPending = true,
+                markOfflineOnConnectivityFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+            val syncError = result.exceptionOrNull()
+            if (syncError == null || !isLikelyConnectivityIssue(syncError)) return@launch
+
+            delay(FOREGROUND_RECONNECT_OFFLINE_GRACE_MS)
+            if (!_uiState.value.authenticated) return@launch
+
             syncAndUpdateOfflineState(
                 replayPending = true,
                 showOfflineNotice = true,
@@ -589,7 +600,8 @@ class AppViewModel @Inject constructor(
         replayPending: Boolean,
         showOfflineNotice: Boolean = false,
         connectionProbeTimeoutMs: Long? = null,
-    ) {
+        markOfflineOnConnectivityFailure: Boolean = true,
+    ): Result<Unit> {
         val result = syncManager.syncCachedData(
             force = true,
             replayPendingMutations = replayPending,
@@ -599,9 +611,15 @@ class AppViewModel @Inject constructor(
         val syncError = result.exceptionOrNull()
         _uiState.update {
             val isOffline = syncError != null && isLikelyConnectivityIssue(syncError)
+            val shouldMarkOffline = isOffline && markOfflineOnConnectivityFailure
             it.copy(
-                isOffline = isOffline,
-                offlineNoticeId = if (isOffline && showOfflineNotice) {
+                isOffline = when {
+                    syncError == null -> false
+                    shouldMarkOffline -> true
+                    isOffline -> it.isOffline
+                    else -> false
+                },
+                offlineNoticeId = if (shouldMarkOffline && showOfflineNotice) {
                     it.offlineNoticeId + 1L
                 } else {
                     it.offlineNoticeId
@@ -617,6 +635,7 @@ class AppViewModel @Inject constructor(
             realtimeClient.connect()
         }
         viewModelScope.launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
+        return result
     }
 
     private fun classifyAndShowError(error: Throwable) {
@@ -792,5 +811,6 @@ class AppViewModel @Inject constructor(
         const val RESYNC_INTERVAL_MS = 5 * 60 * 1000L
         const val REALTIME_RECONNECT_DELAY_MS = 5_000L
         const val CONNECTIVITY_RESTORED_DEBOUNCE_MS = 1_500L
+        const val FOREGROUND_RECONNECT_OFFLINE_GRACE_MS = 3_000L
     }
 }
