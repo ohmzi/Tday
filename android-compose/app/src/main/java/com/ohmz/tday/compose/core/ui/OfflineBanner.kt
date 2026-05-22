@@ -69,13 +69,16 @@ fun OfflineBanner(
     modifier: Modifier = Modifier,
 ) {
     var isPresented by remember { mutableStateOf(false) }
+    var lastPresentedNoticeKey by remember { mutableStateOf(0L) }
 
     LaunchedEffect(visible, noticeKey) {
         if (!visible) {
             isPresented = false
             return@LaunchedEffect
         }
+        if (noticeKey <= lastPresentedNoticeKey) return@LaunchedEffect
 
+        lastPresentedNoticeKey = noticeKey
         isPresented = true
         delay(OFFLINE_NOTICE_AUTO_DISMISS_MS)
         isPresented = false
