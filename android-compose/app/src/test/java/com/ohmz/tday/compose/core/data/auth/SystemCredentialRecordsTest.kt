@@ -28,4 +28,24 @@ class SystemCredentialRecordsTest {
         )
     }
 
+    @Test
+    fun `server url credential ignores login records`() {
+        val serverUrl = SystemCredentialRecords.serverUrl(
+            id = "user@example.com",
+            password = "Password!1",
+        )
+
+        assertNull(serverUrl)
+    }
+
+    @Test
+    fun `server url credential trims saved url`() {
+        val serverUrl = SystemCredentialRecords.serverUrl(
+            id = SystemCredentialRecords.SERVER_URL_CREDENTIAL_ID,
+            password = " https://tday.example.com ",
+        )
+
+        assertEquals("https://tday.example.com", serverUrl)
+    }
+
 }

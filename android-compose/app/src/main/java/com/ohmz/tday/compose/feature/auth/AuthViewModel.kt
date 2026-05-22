@@ -192,8 +192,32 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    suspend fun requestSavedCredential(context: Context): SystemCredential? =
-        systemCredentialService.requestSavedCredential(context)
+    suspend fun requestSavedCredential(
+        context: Context,
+        preferredEmail: String?,
+    ): SystemCredential? =
+        systemCredentialService.requestSavedCredential(
+            context = context,
+            preferredEmail = preferredEmail,
+        )
+
+    suspend fun requestSavedServerUrl(context: Context): String? =
+        systemCredentialService.requestSavedServerUrl(context)
+
+    suspend fun offerSaveOrUpdateServerUrl(
+        context: Context,
+        serverUrl: String,
+    ) {
+        val result = systemCredentialService.offerSaveOrUpdateServerUrl(
+            context = context,
+            serverUrl = serverUrl,
+        )
+        if (result == SystemCredentialSaveResult.FAILED) {
+            snackbarManager.showError(
+                "Android Password Manager could not save this server URL. Check that a password manager is enabled.",
+            )
+        }
+    }
 
     private fun handleCredentialSaveResult(result: SystemCredentialSaveResult) {
         if (result == SystemCredentialSaveResult.FAILED) {
