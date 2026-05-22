@@ -34,12 +34,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FitnessCenter
@@ -47,7 +48,6 @@ import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalBar
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
@@ -65,6 +65,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -100,6 +101,8 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
@@ -170,11 +173,40 @@ fun CompletedScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                return Velocity.Zero
+                val isListAtTop =
+                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                if (available.y > 0f && !isListAtTop) return Velocity.Zero
+                val snapped = snapTitleCollapsePx(
+                    currentPx = headerCollapsePx,
+                    maxPx = maxCollapsePx,
+                    velocityY = available.y,
+                )
+                if (snapped == headerCollapsePx) return Velocity.Zero
+                headerCollapsePx = snapped
+                return if (available.y == 0f) Velocity.Zero else available
             }
         }
     }
-    val collapseProgress = collapseProgressTarget
+    val collapseProgress by animateFloatAsState(
+        targetValue = collapseProgressTarget,
+        label = "completedTitleCollapseProgress",
+    )
+    LaunchedEffect(
+        listState.isScrollInProgress,
+        headerCollapsePx,
+        maxCollapsePx,
+    ) {
+        if (listState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
+            return@LaunchedEffect
+        }
+        val isListAtTop =
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        headerCollapsePx = if (isListAtTop) {
+            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
+        } else {
+            maxCollapsePx
+        }
+    }
     var collapsedSectionKeys by rememberSaveable {
         mutableStateOf(emptySet<String>())
     }
@@ -518,9 +550,9 @@ private fun CompletedSwipeRow(
     val view = LocalView.current
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 130.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 36.dp.toPx() }.coerceAtMost(actionRevealPx * 0.28f)
-    val maxElasticDragPx = actionRevealPx * 1.22f
+    val actionRevealPx = with(density) { 176.dp.toPx() }
+    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
+    val maxElasticDragPx = actionRevealPx * 1.14f
     var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(item.id) { mutableStateOf(false) }
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
@@ -529,6 +561,7 @@ private fun CompletedSwipeRow(
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "completedSwipeOffset",
     )
+    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
     val showCompletedCheckmark = restorePhase == CompletedRestorePhase.Completed
     val showStrikethrough =
         restorePhase == CompletedRestorePhase.Completed || restorePhase == CompletedRestorePhase.Unchecked
@@ -563,8 +596,6 @@ private fun CompletedSwipeRow(
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
     val showPriorityFlag = isHighPriority(item.priority)
     val rowShape = RoundedCornerShape(16.dp)
-    val actionContainerColor =
-        colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
     val foregroundColor = colorScheme.background
 
     Column(
@@ -580,21 +611,23 @@ private fun CompletedSwipeRow(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(74.dp)
-                    .background(actionContainerColor, rowShape),
+                    .height(58.dp),
             ) {
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(end = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SwipeActionCircle(
-                        icon = Icons.Rounded.Info,
+                    TaskSwipeActionButton(
+                        icon = Icons.Rounded.BorderColor,
                         contentDescription = stringResource(R.string.action_edit_task),
-                        tint = colorScheme.onSurface,
-                        background = colorScheme.surface,
+                        label = stringResource(R.string.action_edit),
+                        tint = Color.White,
+                        background = Color(0xFF4C7DDE),
+                        revealProgress = actionRevealProgress,
+                        revealDelay = 0.62f,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
@@ -604,11 +637,14 @@ private fun CompletedSwipeRow(
                             targetOffsetX = 0f
                         },
                     )
-                    SwipeActionCircle(
-                        icon = Icons.Rounded.DeleteSweep,
+                    TaskSwipeActionButton(
+                        icon = Icons.Rounded.DeleteOutline,
                         contentDescription = stringResource(R.string.action_delete_task),
-                        tint = colorScheme.error,
-                        background = colorScheme.surface,
+                        label = stringResource(R.string.action_delete),
+                        tint = Color.White,
+                        background = Color(0xFFFF453A),
+                        revealProgress = actionRevealProgress,
+                        revealDelay = 0.04f,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
@@ -804,47 +840,6 @@ private fun CompletedCircularToggleIcon(
             tint = tint,
             modifier = Modifier.size(24.dp),
         )
-    }
-}
-
-@Composable
-private fun SwipeActionCircle(
-    icon: ImageVector,
-    contentDescription: String,
-    tint: Color,
-    background: Color,
-    onClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.92f else 1f,
-        label = "completedSwipeActionScale",
-    )
-    Card(
-        modifier = Modifier
-            .size(42.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        onClick = onClick,
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        colors = CardDefaults.cardColors(containerColor = background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(22.dp),
-            )
-        }
     }
 }
 
