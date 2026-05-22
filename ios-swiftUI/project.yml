@@ -26,6 +26,7 @@ targets:
       base:
         PRODUCT_NAME: Tday
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios
+        DEVELOPMENT_TEAM: THT5Z8K3TF
         INFOPLIST_FILE: Tday/Info.plist
         CODE_SIGN_ENTITLEMENTS: Tday/Tday.entitlements
         GENERATE_INFOPLIST_FILE: NO
