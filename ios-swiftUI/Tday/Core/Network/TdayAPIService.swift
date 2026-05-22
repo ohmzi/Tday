@@ -267,7 +267,7 @@ final class TdayAPIService {
         try await request(path: "/api/list", method: "GET", responseType: ListsResponse.self)
     }
 
-    func getListTodos(listID: String, start: Int64, end: Int64) async throws -> TodosResponse {
+    func getListTodos(listID: String, start: Int64, end: Int64) async throws -> ListDetailResponse {
         try await request(
             path: "/api/list/\(listID)",
             method: "GET",
@@ -275,7 +275,7 @@ final class TdayAPIService {
                 URLQueryItem(name: "start", value: String(start)),
                 URLQueryItem(name: "end", value: String(end)),
             ],
-            responseType: TodosResponse.self
+            responseType: ListDetailResponse.self
         )
     }
 
@@ -291,11 +291,11 @@ final class TdayAPIService {
         try await patchListByBody(payload: payload)
     }
 
-    func deleteListByBody(payload: DeleteListRequest) async throws -> MessageResponse {
-        try await request(path: "/api/list", method: "DELETE", body: payload, responseType: MessageResponse.self)
+    func deleteListByBody(payload: DeleteListRequest) async throws -> DeleteListResponse {
+        try await request(path: "/api/list", method: "DELETE", body: payload, responseType: DeleteListResponse.self)
     }
 
-    func deleteList(payload: DeleteListRequest) async throws -> MessageResponse {
+    func deleteList(payload: DeleteListRequest) async throws -> DeleteListResponse {
         try await deleteListByBody(payload: payload)
     }
 
