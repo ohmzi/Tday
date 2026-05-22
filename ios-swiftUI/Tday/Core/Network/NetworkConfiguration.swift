@@ -11,6 +11,8 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         let configuration = URLSessionConfiguration.default
         configuration.httpCookieStorage = HTTPCookieStorage.shared
         configuration.httpShouldSetCookies = true
+        configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        configuration.urlCache = nil
         configuration.waitsForConnectivity = false
         configuration.timeoutIntervalForRequest = 30
         configuration.timeoutIntervalForResource = 60
@@ -21,6 +23,8 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpCookieStorage = HTTPCookieStorage.shared
         configuration.httpShouldSetCookies = true
+        configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        configuration.urlCache = nil
         configuration.waitsForConnectivity = false
         configuration.timeoutIntervalForRequest = 5
         configuration.timeoutIntervalForResource = 8
@@ -59,6 +63,8 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
     func defaultHeaders(extraHeaders: [String: String] = [:], allowRewrite: Bool = true) -> [String: String] {
         var headers: [String: String] = [
             "Accept": "application/json",
+            "Cache-Control": "no-store",
+            "Pragma": "no-cache",
             "X-User-Timezone": TimeZone.current.identifier,
             "X-Tday-Client": "ios",
             "X-Tday-App-Version": appVersion,
