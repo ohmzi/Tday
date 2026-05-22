@@ -44,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -106,7 +107,28 @@ private const val SETTINGS_EXIT_DURATION_MS = 260
 private const val SETTINGS_VERTICAL_FRACTION = 0.22f
 
 @Composable
-fun TdayApp() {
+fun TdayApp(
+    onFirstFrameDrawn: () -> Unit = {},
+) {
+    val startupTagline = rememberSaveable { splashTaglines.random() }
+    var hasDrawnStartupFrame by remember { mutableStateOf(false) }
+    val currentOnFirstFrameDrawn by rememberUpdatedState(onFirstFrameDrawn)
+
+    if (!hasDrawnStartupFrame) {
+        TdayTheme {
+            SplashScreen(
+                tagline = startupTagline,
+                onHoldChanged = {},
+            )
+        }
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            hasDrawnStartupFrame = true
+            currentOnFirstFrameDrawn()
+        }
+        return
+    }
+
     val navController = rememberNavController()
 
     DisposableEffect(navController) {
@@ -950,8 +972,9 @@ private val splashTaglines = listOf(
 @Composable
 private fun SplashScreen(
     onHoldChanged: (Boolean) -> Unit,
+    tagline: String? = null,
 ) {
-    val tagline = remember { splashTaglines.random() }
+    val resolvedTagline = tagline ?: remember { splashTaglines.random() }
 
     DisposableEffect(onHoldChanged) {
         onDispose { onHoldChanged(false) }
@@ -995,7 +1018,7 @@ private fun SplashScreen(
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                text = tagline,
+                text = resolvedTagline,
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

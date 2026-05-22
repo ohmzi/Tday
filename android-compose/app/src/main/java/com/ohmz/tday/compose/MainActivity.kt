@@ -1,8 +1,8 @@
 package com.ohmz.tday.compose
 
 import android.Manifest
-import android.content.Intent
 import android.app.NotificationManager
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -26,13 +26,18 @@ class MainActivity : ComponentActivity() {
     val deepLinkIntent = _deepLinkIntent.asStateFlow()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_Tday)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        dismissUpdateReadyNotification()
-        requestNotificationPermissionIfNeeded()
         _deepLinkIntent.value = intent
         setContent {
-            TdayApp()
+            TdayApp(
+                onFirstFrameDrawn = {
+                    (application as? TdayApplication)?.runDeferredStartup()
+                    dismissUpdateReadyNotification()
+                    requestNotificationPermissionIfNeeded()
+                },
+            )
         }
     }
 
