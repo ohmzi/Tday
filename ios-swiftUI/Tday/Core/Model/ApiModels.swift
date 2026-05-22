@@ -178,18 +178,18 @@ struct TodoInstanceDeleteRequest: Codable {
 
 struct TodoCompleteRequest: Codable {
     let id: String
-    let instanceDate: Int64?
+    let instanceDate: String?
 }
 
 struct TodoUncompleteRequest: Codable {
     let id: String
-    let instanceDate: Int64?
+    let instanceDate: String?
 }
 
 struct TodoPrioritizeRequest: Codable {
     let id: String
     let priority: String
-    let instanceDate: Int64?
+    let instanceDate: String?
 }
 
 struct ReorderItemRequest: Codable {

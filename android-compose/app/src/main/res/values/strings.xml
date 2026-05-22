@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">T\'Day</string>
+    <string name="asset_statements" translatable="false">[{\"include\":\"https://tday.ohmz.cloud/.well-known/assetlinks.json\"}]</string>
 
     <!-- Shared / reusable -->
     <string name="action_back">Back</string>
@@ -145,8 +146,10 @@
 
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Retry</string>
-    <string name="offline_banner">You are offline</string>
-    <string name="offline_banner_with_pending">Offline — %1$d pending change(s)</string>
+    <string name="offline_banner_title">Offline mode</string>
+    <string name="offline_banner">App is in offline mode. Changes will sync when connection returns.</string>
+    <string name="offline_banner_pending_one">1 change waiting to sync</string>
+    <string name="offline_banner_pending_many">%1$d changes waiting to sync</string>
     <string name="error_auth_expired">Session expired. Please sign in again.</string>
     <string name="error_server">Server error. Please try again later.</string>
     <string name="error_connectivity_title">No Internet Connection</string>

@@ -3,5 +3,10 @@
     <color name="tday_orange">#FFE67E4A</color>
     <color name="tday_white">#FFFFFFFF</color>
     <color name="ic_launcher_background">#FFFFFFFF</color>
+    <color name="ic_launcher_surface">#FFFFFFFF</color>
+    <color name="ic_launcher_outline">#FF387D7E</color>
+    <color name="ic_launcher_header">#FF9FDCDB</color>
+    <color name="ic_launcher_task">#FFEF7382</color>
+    <color name="ic_launcher_detail">#FFCFCFCF</color>
     <color name="splash_background">#FFFFFFFF</color>
 </resources>

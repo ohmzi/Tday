@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.view.View
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -42,6 +44,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -88,6 +91,7 @@ import androidx.compose.material.icons.rounded.DirectionsBoat
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Eco
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FamilyRestroom
 import androidx.compose.material.icons.rounded.Favorite
@@ -154,6 +158,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -197,6 +202,10 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
+import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
@@ -210,6 +219,8 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -240,14 +251,41 @@ fun TodoListScreen(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
     )
+    val emptyWatermarkIcon = emptyStateIconForMode(
+        mode = uiState.mode,
+        listIconKey = selectedList?.iconKey,
+    )
     val showSectionedTimeline =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
+    val suppressInitialTodayTimeline =
+        uiState.mode == TodoListMode.TODAY &&
+                !uiState.hasHydratedSnapshot &&
+                uiState.items.isEmpty()
     val timelineSections = remember(uiState.mode, uiState.items) {
         buildTimelineSections(
             mode = uiState.mode,
             items = uiState.items,
         )
     }
+    var timelineAnimationsReady by remember(uiState.mode, uiState.listId) {
+        mutableStateOf(uiState.mode != TodoListMode.TODAY)
+    }
+    LaunchedEffect(uiState.mode, uiState.listId, uiState.hasHydratedSnapshot) {
+        if (uiState.mode != TodoListMode.TODAY) {
+            timelineAnimationsReady = true
+            return@LaunchedEffect
+        }
+        if (!uiState.hasHydratedSnapshot) {
+            timelineAnimationsReady = false
+            return@LaunchedEffect
+        }
+        if (!timelineAnimationsReady) {
+            withFrameNanos { }
+            timelineAnimationsReady = true
+        }
+    }
+    val timelineAnimationsEnabled =
+        uiState.mode != TodoListMode.TODAY || timelineAnimationsReady
     val listState = rememberLazyListState()
     val density = LocalDensity.current
     val maxTodayCollapsePx = with(density) { TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
@@ -291,17 +329,17 @@ fun TodoListScreen(
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 if (!usesTodayStyle) return Velocity.Zero
-                if (available.y < 0f && todayHeaderCollapsePx < maxTodayCollapsePx) {
-                    todayHeaderCollapsePx = maxTodayCollapsePx
-                    return available
-                }
                 val isListAtTop =
                     listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && isListAtTop && todayHeaderCollapsePx > 0f) {
-                    todayHeaderCollapsePx = 0f
-                    return available
-                }
-                return Velocity.Zero
+                if (available.y > 0f && !isListAtTop) return Velocity.Zero
+                val snapped = snapTitleCollapsePx(
+                    currentPx = todayHeaderCollapsePx,
+                    maxPx = maxTodayCollapsePx,
+                    velocityY = available.y,
+                )
+                if (snapped == todayHeaderCollapsePx) return Velocity.Zero
+                todayHeaderCollapsePx = snapped
+                return if (available.y == 0f) Velocity.Zero else available
             }
         }
     }
@@ -309,12 +347,33 @@ fun TodoListScreen(
         targetValue = todayCollapseProgressTarget,
         label = "todayTitleCollapseProgress",
     )
+    LaunchedEffect(
+        usesTodayStyle,
+        listState.isScrollInProgress,
+        todayHeaderCollapsePx,
+        maxTodayCollapsePx,
+    ) {
+        if (!usesTodayStyle ||
+            listState.isScrollInProgress ||
+            todayHeaderCollapsePx <= 0f ||
+            todayHeaderCollapsePx >= maxTodayCollapsePx
+        ) {
+            return@LaunchedEffect
+        }
+        val isListAtTop =
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        todayHeaderCollapsePx = if (isListAtTop) {
+            snapTitleCollapsePx(todayHeaderCollapsePx, maxTodayCollapsePx)
+        } else {
+            maxTodayCollapsePx
+        }
+    }
     val isCollapsibleTimelineMode =
         uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
-    var collapsedSectionKeys by rememberSaveable(uiState.mode) {
+    var collapsedSectionKeys by rememberSaveable(uiState.mode, highlightedTodoId) {
         mutableStateOf(
-            if (isCollapsibleTimelineMode) {
+            if (isCollapsibleTimelineMode && highlightedTodoId.isNullOrBlank()) {
                 setOf("earlier")
             } else {
                 emptySet()
@@ -358,7 +417,22 @@ fun TodoListScreen(
         label = "todoFabOffsetY",
     )
     val timelineItemSpacing = if (usesTodayStyle) 4.dp else 8.dp
-    val timelineHeaderBodySpacing = if (usesTodayStyle) 2.dp else 8.dp
+    val timelineHeaderBodySpacing = if (usesTodayStyle) 4.dp else 8.dp
+    fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
+        var itemIndex = 0
+        timelineSections.forEach { section ->
+            itemIndex += 1
+            val todoIndex = section.items.indexOfFirst { item ->
+                item.id == todoId || item.canonicalId == todoId
+            }
+            if (todoIndex >= 0) {
+                val todo = section.items[todoIndex]
+                return itemIndex + todoIndex to "timeline-todo-${section.key}-${todo.id}"
+            }
+            itemIndex += section.items.size
+        }
+        return null
+    }
     LaunchedEffect(showSummarySheet, canSummarizeCurrentMode) {
         if (showSummarySheet && canSummarizeCurrentMode) {
             onSummarize()
@@ -366,16 +440,22 @@ fun TodoListScreen(
     }
     LaunchedEffect(highlightedTodoId, uiState.mode, timelineSections) {
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
-        if (collapsedSectionKeys.isNotEmpty()) {
-            collapsedSectionKeys = emptySet()
-        }
-        val targetSectionIndex = timelineSections.indexOfFirst { section ->
-            section.items.any { item ->
-                item.id == highlightedTodoId || item.canonicalId == highlightedTodoId
-            }
-        }
-        if (targetSectionIndex >= 0) {
-            listState.animateScrollToItem(targetSectionIndex * 2)
+        val target = highlightedTodoListTarget(highlightedTodoId)
+        if (target != null) {
+            todayHeaderCollapsePx = maxTodayCollapsePx
+            delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
+            val viewportHeight =
+                listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
+            val estimatedRowHeight =
+                with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
+            val centeredScrollOffset =
+                -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
+            listState.animateSearchResultScrollToItem(
+                targetIndex = target.first,
+                targetKey = target.second,
+                centeredScrollOffset = centeredScrollOffset,
+                estimatedItemSizePx = estimatedRowHeight,
+            )
             flashTodoId = highlightedTodoId
             delay(2300)
             if (flashTodoId == highlightedTodoId) {
@@ -465,161 +545,111 @@ fun TodoListScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .then(
-                    if (usesTodayStyle) {
-                        Modifier.nestedScroll(todayNestedScrollConnection)
-                    } else {
-                        Modifier
-                    },
-                ),
-            state = listState,
-            contentPadding = if (usesTodayStyle) {
-                PaddingValues(horizontal = 18.dp, vertical = 2.dp)
-            } else {
-                PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-            },
-            verticalArrangement = Arrangement.spacedBy(
-                if (showSectionedTimeline) 0.dp else timelineItemSpacing,
-            ),
+        Box(
+            modifier = Modifier.fillMaxSize(),
         ) {
-            if (!showSectionedTimeline && uiState.items.isEmpty()) {
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(18.dp),
-                    ) {
-                        Text(
-                            modifier = Modifier.padding(18.dp),
-                            text = if (uiState.isLoading) {
-                                stringResource(R.string.label_loading)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (usesTodayStyle) {
+                                Modifier.nestedScroll(todayNestedScrollConnection)
                             } else {
-                                emptyStateMessageForMode(uiState.mode)
+                                Modifier
                             },
-                            color = colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            if (showSectionedTimeline) {
-                timelineSections.forEach { section ->
-                    val sectionHasTasks = section.items.isNotEmpty()
-                    val sectionModeCanCollapse = when (uiState.mode) {
-                        TodoListMode.ALL -> true
-                        TodoListMode.OVERDUE -> true
-                        TodoListMode.SCHEDULED -> true
-                        TodoListMode.PRIORITY -> section.key == "earlier"
-                        else -> false
-                    }
-                    val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
-                    val isCollapsed = sectionCanCollapse && collapsedSectionKeys.contains(section.key)
-                    val sectionDraggedTodo = if (uiState.mode == TodoListMode.SCHEDULED) {
-                        draggedScheduledTodo
+                        ),
+                    state = listState,
+                    contentPadding = if (usesTodayStyle) {
+                        PaddingValues(horizontal = 18.dp, vertical = 2.dp)
                     } else {
-                        null
-                    }
-                    val onSectionDropTargetChanged: (Boolean) -> Unit = { active ->
-                        if (active) {
-                            activeDropSectionKey = section.key
-                        } else if (activeDropSectionKey == section.key) {
-                            activeDropSectionKey = null
-                        }
-                    }
-                    val onSectionDragEnd: (() -> Unit)? = if (uiState.mode == TodoListMode.SCHEDULED) {
-                        {
-                            draggedScheduledTodoId = null
-                            activeDropSectionKey = null
-                        }
-                    } else {
-                        null
-                    }
-                    val onMoveTaskToSectionDate: ((TodoItem, LocalDate) -> Unit)? =
-                        if (uiState.mode == TodoListMode.SCHEDULED) {
-                            { todo, targetDate ->
-                                draggedScheduledTodoId = null
-                                activeDropSectionKey = null
-                                onUpdateTask(todo, createMovedTaskPayload(todo, targetDate))
-                            }
-                        } else {
-                            null
-                        }
-
-                    item(key = "timeline-header-${section.key}") {
-                        TimelineSectionHeader(
-                            modifier = Modifier
-                                .animateItem(
-                                    fadeInSpec = null,
-                                    placementSpec = tween(
-                                        durationMillis = 320,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                    fadeOutSpec = null,
+                        PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                    },
+                    verticalArrangement = Arrangement.spacedBy(
+                        if (showSectionedTimeline) 0.dp else timelineItemSpacing,
+                    ),
+                ) {
+                    if (!showSectionedTimeline && uiState.items.isEmpty() && uiState.isLoading) {
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+                                shape = RoundedCornerShape(18.dp),
+                            ) {
+                                Text(
+                                    modifier = Modifier.padding(18.dp),
+                                    text = stringResource(R.string.label_loading),
+                                    color = colorScheme.onSurfaceVariant,
                                 )
-                                .timelineSectionDropTarget(
-                                    section = section,
-                                    draggedTodo = sectionDraggedTodo,
-                                    onDropTargetChanged = onSectionDropTargetChanged,
-                                    onDragTodoEnd = onSectionDragEnd,
-                                    onMoveTaskToDate = onMoveTaskToSectionDate,
-                                ),
-                            section = section,
-                            useMinimalStyle = usesTodayStyle,
-                            isCollapsed = isCollapsed,
-                            isDropTarget = activeDropSectionKey == section.key,
-                            bottomSpacing = if (isCollapsed) {
-                                timelineItemSpacing
-                            } else {
-                                timelineHeaderBodySpacing
-                            },
-                            onHeaderClick = if (sectionCanCollapse) {
-                                {
-                                    collapsedSectionKeys =
-                                        if (isCollapsed) {
-                                            collapsedSectionKeys - section.key
-                                        } else {
-                                            collapsedSectionKeys + section.key
-                                        }
-                                }
+                            }
+                        }
+                    }
+
+                    if (showSectionedTimeline && !suppressInitialTodayTimeline) {
+                        timelineSections.forEachIndexed { sectionIndex, section ->
+                            val sectionHasTasks = section.items.isNotEmpty()
+                            val sectionModeCanCollapse = when (uiState.mode) {
+                                TodoListMode.ALL -> true
+                                TodoListMode.OVERDUE -> true
+                                TodoListMode.SCHEDULED -> true
+                                TodoListMode.PRIORITY -> section.key == "earlier"
+                                else -> false
+                            }
+                            val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
+                            val isCollapsed =
+                                sectionCanCollapse && collapsedSectionKeys.contains(section.key)
+                            val sectionDraggedTodo = if (uiState.mode == TodoListMode.SCHEDULED) {
+                                draggedScheduledTodo
                             } else {
                                 null
-                            },
-                            onTapForQuickAdd = section.quickAddDefaults
-                                ?.takeUnless { sectionModeCanCollapse }
-                                ?.let { dueEpochMs ->
+                            }
+                            val onSectionDropTargetChanged: (Boolean) -> Unit = { active ->
+                                if (active) {
+                                    activeDropSectionKey = section.key
+                                } else if (activeDropSectionKey == section.key) {
+                                    activeDropSectionKey = null
+                                }
+                            }
+                            val onSectionDragEnd: (() -> Unit)? =
+                                if (uiState.mode == TodoListMode.SCHEDULED) {
                                     {
-                                        quickAddDueEpochMs = dueEpochMs
-                                        showCreateTaskSheet = true
+                                        draggedScheduledTodoId = null
+                                        activeDropSectionKey = null
                                     }
-                                },
-                        )
-                    }
+                                } else {
+                                    null
+                                }
+                            val onMoveTaskToSectionDate: ((TodoItem, LocalDate) -> Unit)? =
+                                if (uiState.mode == TodoListMode.SCHEDULED) {
+                                    { todo, targetDate ->
+                                        draggedScheduledTodoId = null
+                                        activeDropSectionKey = null
+                                        onUpdateTask(todo, createMovedTaskPayload(todo, targetDate))
+                                    }
+                                } else {
+                                    null
+                                }
 
-                    if (!isCollapsed && section.items.isNotEmpty()) {
-                        val showEarlierDateTimeSubtitle =
-                            section.key == "earlier" &&
-                                    (uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY)
-                        section.items.forEachIndexed { itemIndex, todo ->
-                            item(key = "timeline-todo-${section.key}-${todo.id}") {
-                                TimelineTaskRow(
-                                    modifier = Modifier
-                                        .animateItem(
-                                            fadeInSpec = tween(
-                                                durationMillis = 190,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                            placementSpec = tween(
-                                                durationMillis = 320,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                            fadeOutSpec = tween(
-                                                durationMillis = 150,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                        )
+                            item(
+                                key = "timeline-header-${section.key}",
+                                contentType = "timeline-header",
+                            ) {
+                                var headerModifier: Modifier = Modifier
+                                if (timelineAnimationsEnabled) {
+                                    headerModifier = headerModifier.animateItem(
+                                        fadeInSpec = null,
+                                        placementSpec = tween(
+                                            durationMillis = 320,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                        fadeOutSpec = null,
+                                    )
+                                }
+                                TimelineSectionHeader(
+                                    modifier = headerModifier
                                         .timelineSectionDropTarget(
                                             section = section,
                                             draggedTodo = sectionDraggedTodo,
@@ -627,74 +657,150 @@ fun TodoListScreen(
                                             onDragTodoEnd = onSectionDragEnd,
                                             onMoveTaskToDate = onMoveTaskToSectionDate,
                                         )
-                                        .padding(
-                                            bottom = if (itemIndex == section.items.lastIndex) {
-                                                timelineItemSpacing
-                                            } else {
-                                                8.dp
-                                            },
-                                        ),
-                                    todo = todo,
-                                    mode = uiState.mode,
-                                    lists = uiState.lists,
+                                        .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
+                                    section = section,
                                     useMinimalStyle = usesTodayStyle,
-                                    flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
-                                    showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
-                                    onComplete = { onComplete(todo) },
-                                    onDelete = { onDelete(todo) },
-                                    onInfo = {
-                                        editTargetTodoId = todo.id
+                                    isCollapsed = isCollapsed,
+                                    isDropTarget = activeDropSectionKey == section.key,
+                                    bottomSpacing = if (isCollapsed) {
+                                        timelineItemSpacing
+                                    } else {
+                                        timelineHeaderBodySpacing
                                     },
-                                    draggedTodo = sectionDraggedTodo,
-                                    onDragTodoStart = if (uiState.mode == TodoListMode.SCHEDULED) {
+                                    onHeaderClick = if (sectionCanCollapse) {
                                         {
-                                            activeDropSectionKey = null
-                                            draggedScheduledTodoId = todo.id
+                                            collapsedSectionKeys =
+                                                if (isCollapsed) {
+                                                    collapsedSectionKeys - section.key
+                                                } else {
+                                                    collapsedSectionKeys + section.key
+                                                }
                                         }
                                     } else {
                                         null
                                     },
+                                    onTapForQuickAdd = section.quickAddDefaults
+                                        ?.takeUnless { sectionModeCanCollapse }
+                                        ?.let { dueEpochMs ->
+                                            {
+                                                quickAddDueEpochMs = dueEpochMs
+                                                showCreateTaskSheet = true
+                                            }
+                                        },
+                                )
+                            }
+
+                            if (!isCollapsed && section.items.isNotEmpty()) {
+                                val showEarlierDateTimeSubtitle =
+                                    section.key == "earlier" &&
+                                            (uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY)
+                                section.items.forEachIndexed { itemIndex, todo ->
+                                    item(
+                                        key = "timeline-todo-${section.key}-${todo.id}",
+                                        contentType = "timeline-todo",
+                                    ) {
+                                        var rowModifier: Modifier = Modifier
+                                        if (timelineAnimationsEnabled) {
+                                            rowModifier = rowModifier.animateItem(
+                                                fadeInSpec = tween(
+                                                    durationMillis = 190,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                placementSpec = tween(
+                                                    durationMillis = 320,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                fadeOutSpec = tween(
+                                                    durationMillis = 150,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                            )
+                                        }
+                                        TimelineTaskRow(
+                                            modifier = rowModifier
+                                                .timelineSectionDropTarget(
+                                                    section = section,
+                                                    draggedTodo = sectionDraggedTodo,
+                                                    onDropTargetChanged = onSectionDropTargetChanged,
+                                                    onDragTodoEnd = onSectionDragEnd,
+                                                    onMoveTaskToDate = onMoveTaskToSectionDate,
+                                                )
+                                                .padding(
+                                                    bottom = if (itemIndex == section.items.lastIndex) {
+                                                        timelineItemSpacing
+                                                    } else {
+                                                        8.dp
+                                                    },
+                                                ),
+                                            todo = todo,
+                                            mode = uiState.mode,
+                                            lists = uiState.lists,
+                                            useMinimalStyle = usesTodayStyle,
+                                            flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
+                                            showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
+                                            onComplete = { onComplete(todo) },
+                                            onDelete = { onDelete(todo) },
+                                            onInfo = {
+                                                editTargetTodoId = todo.id
+                                            },
+                                            draggedTodo = sectionDraggedTodo,
+                                            onDragTodoStart = if (uiState.mode == TodoListMode.SCHEDULED) {
+                                                {
+                                                    activeDropSectionKey = null
+                                                    draggedScheduledTodoId = todo.id
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else if (!showSectionedTimeline) {
+                        items(
+                            items = uiState.items,
+                            key = { it.id },
+                            contentType = { "todo-row" },
+                        ) { todo ->
+                            if (usesTodayStyle) {
+                                TodayTodoRow(
+                                    todo = todo,
+                                    onComplete = { onComplete(todo) },
+                                    onDelete = { onDelete(todo) },
+                                )
+                            } else {
+                                TodoRow(
+                                    todo = todo,
+                                    onComplete = { onComplete(todo) },
+                                    onDelete = { onDelete(todo) },
                                 )
                             }
                         }
                     }
-                }
-                if (uiState.items.isEmpty()) {
-                    item {
-                        EmptyTimelineState(
-                            message = emptyStateMessageForMode(uiState.mode),
-                            useMinimalStyle = usesTodayStyle,
-                        )
+
+                    uiState.errorMessage?.let { message ->
+                        item {
+                            com.ohmz.tday.compose.core.ui.ErrorRetryCard(
+                                message = message,
+                                onRetry = onRefresh,
+                            )
+                        }
                     }
-                }
-            } else {
-                items(uiState.items, key = { it.id }) { todo ->
-                    if (usesTodayStyle) {
-                        TodayTodoRow(
-                            todo = todo,
-                            onComplete = { onComplete(todo) },
-                            onDelete = { onDelete(todo) },
-                        )
-                    } else {
-                        TodoRow(
-                            todo = todo,
-                            onComplete = { onComplete(todo) },
-                            onDelete = { onDelete(todo) },
-                        )
-                    }
+
+                    item { Spacer(Modifier.height(96.dp)) }
                 }
             }
 
-            uiState.errorMessage?.let { message ->
-                item {
-                    com.ohmz.tday.compose.core.ui.ErrorRetryCard(
-                        message = message,
-                        onRetry = onRefresh,
-                    )
-                }
+            if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline) {
+                EmptyTaskWatermark(
+                    imageVector = emptyWatermarkIcon,
+                    accentColor = titleColor,
+                )
+                EmptyTaskBackgroundMessage(
+                    message = emptyStateMessageForMode(uiState.mode),
+                )
             }
-
-            item { Spacer(Modifier.height(96.dp)) }
         }
     }
 
@@ -897,7 +1003,7 @@ private fun TodayTopBar(
 @Composable
 private fun TodayHeaderButton(
     onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     contentDescription: String,
     isBackButton: Boolean = false,
 ) {
@@ -1690,34 +1796,6 @@ private fun Modifier.timelineSectionDropTarget(
     )
 }
 
-@Composable
-private fun EmptyTimelineState(
-    message: String,
-    useMinimalStyle: Boolean = false,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                top = if (useMinimalStyle) 110.dp else 88.dp,
-                bottom = if (useMinimalStyle) 180.dp else 140.dp,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = message,
-            color = colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.52f else 0.85f),
-            style = if (useMinimalStyle) {
-                MaterialTheme.typography.displaySmall
-            } else {
-                MaterialTheme.typography.headlineSmall
-            },
-            fontWeight = FontWeight.ExtraBold,
-        )
-    }
-}
-
 private data class TodoSection(
     val key: String,
     val title: String,
@@ -1744,10 +1822,18 @@ private fun buildTimelineSections(
             futureOnly = true,
         )
 
-        TodoListMode.ALL, TodoListMode.PRIORITY, TodoListMode.LIST -> buildScheduledSections(
+        TodoListMode.ALL -> buildScheduledSections(
             items = items,
             zoneId = zoneId,
             futureOnly = false,
+            placesEarlierBeforeToday = true,
+        )
+
+        TodoListMode.PRIORITY, TodoListMode.LIST -> buildScheduledSections(
+            items = items,
+            zoneId = zoneId,
+            futureOnly = false,
+            placesEarlierBeforeToday = false,
         )
     }
 }
@@ -1851,6 +1937,7 @@ private fun buildScheduledSections(
     items: List<TodoItem>,
     zoneId: ZoneId,
     futureOnly: Boolean,
+    placesEarlierBeforeToday: Boolean = true,
 ): List<TodoSection> {
     val now = Instant.now()
     val sorted = items.asSequence().filter { todo ->
@@ -1891,23 +1978,32 @@ private fun buildScheduledSections(
             .toList()
     }
 
-    if (!futureOnly) {
+    val earlierSection = if (!futureOnly) {
         val earlierItems = groupedByDate.asSequence().filter { (date, _) -> date < today }
             .flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
-        if (earlierItems.isNotEmpty()) {
-            sections += TodoSection(
+        earlierItems.takeIf { it.isNotEmpty() }?.let {
+            TodoSection(
                 key = "earlier",
                 title = "Earlier",
-                items = earlierItems,
+                items = it,
                 quickAddDefaults = quickAddDefaultsForDate(
                     date = today,
                     zoneId = zoneId,
                 ),
             )
         }
+    } else {
+        null
+    }
+
+    if (placesEarlierBeforeToday) {
+        earlierSection?.let { sections += it }
     }
 
     sections += daySection(today, "Today")
+    if (!placesEarlierBeforeToday) {
+        earlierSection?.let { sections += it }
+    }
     sections += daySection(today.plusDays(1), "Tomorrow")
     for (offset in 2..6) {
         val date = today.plusDays(offset.toLong())
@@ -2013,6 +2109,20 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
     }
 }
 
+private fun emptyStateIconForMode(
+    mode: TodoListMode,
+    listIconKey: String?,
+): ImageVector {
+    return when (mode) {
+        TodoListMode.TODAY -> Icons.Rounded.WbSunny
+        TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
+        TodoListMode.PRIORITY -> Icons.Rounded.Flag
+        TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
+        TodoListMode.ALL -> Icons.Rounded.Inbox
+        TodoListMode.LIST -> listIconForKey(listIconKey)
+    }
+}
+
 private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE MMM d")
 
 private fun quickAddDefaultsForDate(
@@ -2054,10 +2164,98 @@ private fun createMovedTaskPayload(
     )
 }
 
+private suspend fun LazyListState.animateSearchResultScrollToItem(
+    targetIndex: Int,
+    targetKey: String,
+    centeredScrollOffset: Int,
+    estimatedItemSizePx: Int,
+) {
+    repeat(SEARCH_RESULT_SCROLL_CORRECTION_PASSES) {
+        val visibleTarget =
+            layoutInfo.visibleItemsInfo.firstOrNull { item -> item.key == targetKey }
+        if (visibleTarget != null) {
+            animateVisibleSearchResultToCenter(
+                itemOffset = visibleTarget.offset,
+                itemSize = visibleTarget.size,
+            )
+            return
+        }
+
+        val visibleItems = layoutInfo.visibleItemsInfo
+        val averageItemSizePx = visibleItems
+            .takeIf { it.isNotEmpty() }
+            ?.map { item -> item.size }
+            ?.average()
+            ?.toFloat()
+            ?.takeIf { it > 0f }
+            ?: estimatedItemSizePx.toFloat()
+        val estimatedDistance =
+            ((targetIndex - firstVisibleItemIndex) * averageItemSizePx) +
+                    centeredScrollOffset -
+                    firstVisibleItemScrollOffset
+        if (abs(estimatedDistance) < SEARCH_RESULT_SCROLL_MIN_DISTANCE_PX) return
+        animateScrollBy(
+            value = estimatedDistance,
+            animationSpec = tween(
+                durationMillis = searchResultScrollDurationMillis(estimatedDistance),
+                easing = LinearOutSlowInEasing,
+            ),
+        )
+    }
+
+    val visibleTarget = layoutInfo.visibleItemsInfo.firstOrNull { item -> item.key == targetKey }
+    if (visibleTarget != null) {
+        animateVisibleSearchResultToCenter(
+            itemOffset = visibleTarget.offset,
+            itemSize = visibleTarget.size,
+        )
+    } else {
+        scrollToItem(targetIndex, centeredScrollOffset)
+    }
+}
+
+private suspend fun LazyListState.animateVisibleSearchResultToCenter(
+    itemOffset: Int,
+    itemSize: Int,
+) {
+    val viewportCenter =
+        (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+    val itemCenter = itemOffset + (itemSize / 2)
+    val centerDelta = (itemCenter - viewportCenter).toFloat()
+    if (abs(centerDelta) < SEARCH_RESULT_SCROLL_MIN_DISTANCE_PX) return
+    animateScrollBy(
+        value = centerDelta,
+        animationSpec = tween(
+            durationMillis = SEARCH_RESULT_CENTER_SCROLL_DURATION_MS,
+            easing = FastOutSlowInEasing,
+        ),
+    )
+}
+
+private fun searchResultScrollDurationMillis(distancePx: Float): Int =
+    (abs(distancePx) / SEARCH_RESULT_SCROLL_PX_PER_MS)
+        .roundToInt()
+        .coerceIn(
+            SEARCH_RESULT_SCROLL_MIN_DURATION_MS,
+            SEARCH_RESULT_SCROLL_MAX_DURATION_MS,
+        )
+
 private const val TODAY_TITLE_COLLAPSE_DISTANCE_DP = 180f
+private const val SEARCH_RESULT_NAV_SETTLE_DELAY_MS = 380L
+private const val SEARCH_RESULT_SCROLL_CORRECTION_PASSES = 2
+private const val SEARCH_RESULT_SCROLL_MIN_DISTANCE_PX = 2f
+private const val SEARCH_RESULT_SCROLL_PX_PER_MS = 1.15f
+private const val SEARCH_RESULT_SCROLL_MIN_DURATION_MS = 720
+private const val SEARCH_RESULT_SCROLL_MAX_DURATION_MS = 2400
+private const val SEARCH_RESULT_CENTER_SCROLL_DURATION_MS = 520
+private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 58.dp
 private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
+private val TODO_DUE_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+private val TODO_DUE_DATE_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault())
 
 @Composable
 private fun AllTaskSwipeRow(
@@ -2084,72 +2282,6 @@ private fun AllTaskSwipeRow(
         showDueDateInSubtitle = showDueDateInSubtitle,
         useDelayedFadeCompletion = false,
     )
-}
-
-@Composable
-private fun SwipeActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    label: String,
-    tint: Color,
-    background: Color,
-    revealProgress: Float,
-    revealDelay: Float,
-    onClick: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val pressedScale by animateFloatAsState(
-        targetValue = if (pressed) 0.92f else 1f,
-        label = "swipeActionScale",
-    )
-    val normalizedReveal = ((revealProgress - revealDelay) / (1f - revealDelay))
-        .coerceIn(0f, 1f)
-    val easedReveal = FastOutSlowInEasing.transform(normalizedReveal)
-    Column(
-        modifier = Modifier
-            .sizeIn(minWidth = 60.dp)
-            .graphicsLayer {
-                alpha = easedReveal
-                val revealScale = 0.38f + (0.62f * easedReveal)
-                scaleX = pressedScale * revealScale
-                scaleY = pressedScale * revealScale
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Card(
-            modifier = Modifier.size(width = 56.dp, height = 34.dp),
-            onClick = onClick,
-            interactionSource = interactionSource,
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = background),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = 0.dp,
-                pressedElevation = 0.dp
-            ),
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = contentDescription,
-                    tint = tint,
-                    modifier = Modifier.size(21.dp),
-                )
-            }
-        }
-        Text(
-            text = label,
-            color = colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-        )
-    }
 }
 
 @Composable
@@ -2231,10 +2363,8 @@ private fun SwipeTaskRow(
         animationSpec = tween(durationMillis = 220),
         label = "swipeTaskCompletionAlpha",
     )
-    val dueTimeText =
-        DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
-    val dueDateTimeText =
-        DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
+    val dueTimeText = TODO_DUE_TIME_FORMATTER.format(todo.due)
+    val dueDateTimeText = TODO_DUE_DATE_TIME_FORMATTER.format(todo.due)
     val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
     val dueSubtitleText = if (isOverdue) {
@@ -2326,7 +2456,7 @@ private fun SwipeTaskRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SwipeActionButton(
+                    TaskSwipeActionButton(
                         icon = Icons.Rounded.BorderColor,
                         contentDescription = stringResource(R.string.action_edit_task),
                         label = stringResource(R.string.action_edit),
@@ -2343,7 +2473,7 @@ private fun SwipeTaskRow(
                             targetOffsetX = 0f
                         },
                     )
-                    SwipeActionButton(
+                    TaskSwipeActionButton(
                         icon = Icons.Rounded.DeleteOutline,
                         contentDescription = stringResource(R.string.action_delete_task),
                         label = stringResource(R.string.action_delete),
@@ -2561,8 +2691,7 @@ private fun TodayTodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val dueText =
-        DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(todo.due)
+    val dueText = TODO_DUE_TIME_FORMATTER.format(todo.due)
     val isDetailOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val detailDueText = if (isDetailOverdue) {
         stringResource(R.string.todos_due_overdue_text, dueText)
@@ -2636,8 +2765,7 @@ private fun TodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = DateTimeFormatter.ofPattern("MMM d, h:mm a").withZone(ZoneId.systemDefault())
-        .format(todo.due)
+    val due = TODO_DUE_DATE_TIME_FORMATTER.format(todo.due)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),

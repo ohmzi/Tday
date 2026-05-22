@@ -38,9 +38,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +74,8 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
+import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
+import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 
@@ -138,15 +142,15 @@ fun SettingsScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (available.y < 0f && headerCollapsePx < maxCollapsePx) {
-                    headerCollapsePx = maxCollapsePx
-                    return available
-                }
-                if (available.y > 0f && scrollState.value == 0 && headerCollapsePx > 0f) {
-                    headerCollapsePx = 0f
-                    return available
-                }
-                return Velocity.Zero
+                if (available.y > 0f && scrollState.value > 0) return Velocity.Zero
+                val snapped = snapTitleCollapsePx(
+                    currentPx = headerCollapsePx,
+                    maxPx = maxCollapsePx,
+                    velocityY = available.y,
+                )
+                if (snapped == headerCollapsePx) return Velocity.Zero
+                headerCollapsePx = snapped
+                return if (available.y == 0f) Velocity.Zero else available
             }
         }
     }
@@ -154,6 +158,21 @@ fun SettingsScreen(
         targetValue = collapseProgressTarget,
         label = "settingsTitleCollapseProgress",
     )
+    LaunchedEffect(
+        scrollState.isScrollInProgress,
+        headerCollapsePx,
+        maxCollapsePx,
+        scrollState.value,
+    ) {
+        if (scrollState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
+            return@LaunchedEffect
+        }
+        headerCollapsePx = if (scrollState.value == 0) {
+            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
+        } else {
+            maxCollapsePx
+        }
+    }
 
     Scaffold(
         containerColor = colorScheme.background,
@@ -221,6 +240,11 @@ fun SettingsScreen(
                                 checked = adminAiSummaryEnabled,
                                 onCheckedChange = onToggleAdminAiSummary,
                                 enabled = !isAdminAiSummarySaving,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = colorScheme.secondary,
+                                    checkedBorderColor = Color.Transparent,
+                                ),
                             )
                         }
                     }
@@ -251,7 +275,7 @@ fun SettingsScreen(
                     Text(
                         text = "v$latestVersionName available",
                         style = MaterialTheme.typography.labelSmall,
-                        color = colorScheme.primary,
+                        color = colorScheme.secondary,
                         fontWeight = FontWeight.ExtraBold,
                     )
                 }
@@ -594,63 +618,12 @@ private fun ThemeModeSelector(
     selectedThemeMode: AppThemeMode,
     onThemeModeSelected: (AppThemeMode) -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = colorScheme.surfaceVariant.copy(alpha = 0.76f),
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AppThemeMode.entries.forEach { mode ->
-                val selected = mode == selectedThemeMode
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            color = if (selected) {
-                                colorScheme.surface
-                            } else {
-                                Color.Transparent
-                            },
-                        )
-                        .clickable {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK
-                            )
-                            onThemeModeSelected(mode)
-                        },
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = mode.label,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (selected) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.58f),
-                        )
-                    }
-                }
-            }
-        }
-    }
+    TdaySegmentedSlider(
+        options = AppThemeMode.entries,
+        selectedOption = selectedThemeMode,
+        onOptionSelected = onThemeModeSelected,
+        label = { mode -> mode.label },
+    )
 }
 
 @Composable
@@ -689,7 +662,7 @@ private fun ReminderSelector(
                     text = selectedReminder.label,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.primary,
+                    color = colorScheme.secondary,
                 )
                 Icon(
                     imageVector = Icons.Rounded.ChevronRight,
@@ -726,7 +699,7 @@ private fun ReminderSelector(
                             Icon(
                                 imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
-                                tint = colorScheme.primary,
+                                tint = colorScheme.secondary,
                                 modifier = Modifier.size(18.dp),
                             )
                         }
