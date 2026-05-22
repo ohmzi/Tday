@@ -450,6 +450,7 @@ final class TdayAPIService {
         }
 
         var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         if let timeoutInterval {
             request.timeoutInterval = timeoutInterval
         }
