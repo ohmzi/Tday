@@ -34,7 +34,6 @@ final class AppContainer {
 
     private init() {
         secureStore = SecureStore()
-        secureStore.clearInstallScopedKeychainValuesIfAppReinstalled()
         themeStore = ThemeStore()
         reminderPreferenceStore = ReminderPreferenceStore()
         serverURLState = ServerURLState(currentURL: secureStore.loadPersistedServerURL())

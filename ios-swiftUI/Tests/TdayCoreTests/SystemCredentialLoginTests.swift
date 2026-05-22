@@ -48,25 +48,6 @@ final class SystemCredentialLoginTests: XCTestCase {
         XCTAssertEqual(submittedCredentials, [credential])
     }
 
-    func testSavedCredentialRequestUsesCurrentEmailAsPreferredAccount() async {
-        let credential = SystemCredential(email: "user@example.com", password: "Password!1")
-        let service = FakeSystemCredentialService(nextCredential: credential)
-        let coordinator = LoginCredentialCoordinator()
-
-        let didSubmit = await coordinator.requestSavedCredentialIfAvailable(
-            currentEmail: " user@example.com ",
-            currentPassword: "",
-            isCreatingAccount: false,
-            isAuthLoading: false,
-            credentialService: service
-        ) { _ in
-            true
-        }
-
-        XCTAssertTrue(didSubmit)
-        XCTAssertEqual(service.requestedPreferredEmails, [" user@example.com "])
-    }
-
     func testUserCancelLeavesManualFormUntouched() async {
         let service = FakeSystemCredentialService(nextCredential: nil)
         let coordinator = LoginCredentialCoordinator()
@@ -187,43 +168,13 @@ final class SystemCredentialLoginTests: XCTestCase {
         XCTAssertTrue(service.offeredCredentials.isEmpty)
     }
 
-    func testLoginCredentialRecordIgnoresServerURLRecord() {
-        let credential = SystemCredentialRecord.loginCredential(
-            user: SystemCredentialRecord.serverURLUser,
-            password: "https://tday.example.com"
-        )
-
-        XCTAssertNil(credential)
-    }
-
-    func testServerURLRecordIgnoresLoginCredentialRecord() {
-        let serverURL = SystemCredentialRecord.serverURL(
-            user: "user@example.com",
-            password: "Password!1"
-        )
-
-        XCTAssertNil(serverURL)
-    }
-
-    func testServerURLRecordTrimsSavedURL() {
-        let serverURL = SystemCredentialRecord.serverURL(
-            user: SystemCredentialRecord.serverURLUser,
-            password: " https://tday.example.com "
-        )
-
-        XCTAssertEqual(serverURL, "https://tday.example.com")
-    }
-
 }
 
 @MainActor
 private final class FakeSystemCredentialService: SystemCredentialServicing {
     var requestCount = 0
-    var requestedPreferredEmails: [String?] = []
     var offeredCredentials: [SystemCredential] = []
-    var offeredServerURLs: [String] = []
     var nextCredential: SystemCredential?
-    var nextServerURL: String?
     var saveResult: SystemCredentialSaveResult
 
     init(nextCredential: SystemCredential? = nil, saveResult: SystemCredentialSaveResult = .saved) {
@@ -231,9 +182,8 @@ private final class FakeSystemCredentialService: SystemCredentialServicing {
         self.saveResult = saveResult
     }
 
-    func requestSavedCredential(preferredEmail: String?) async -> SystemCredential? {
+    func requestSavedCredential() async -> SystemCredential? {
         requestCount += 1
-        requestedPreferredEmails.append(preferredEmail)
         return nextCredential
     }
 
@@ -242,14 +192,6 @@ private final class FakeSystemCredentialService: SystemCredentialServicing {
         return saveResult
     }
 
-    func requestSavedServerURL() async -> String? {
-        nextServerURL
-    }
-
-    func offerSaveOrUpdateServerURL(_ serverURL: String) async -> SystemCredentialSaveResult {
-        offeredServerURLs.append(serverURL)
-        return saveResult
-    }
 }
 
 private final class FakeAuthRepository: AuthRepositoryServicing {
