@@ -5,6 +5,7 @@ struct AppRootView: View {
 
     @State private var appViewModel: AppViewModel
     @State private var authViewModel: AuthViewModel
+    @State private var notificationDeepLinkRouter = NotificationDeepLinkRouter.shared
     @State private var hasLeftActiveScene = false
     @State private var isLaunchSplashHeld = false
     @Environment(\.scenePhase) private var scenePhase
@@ -154,9 +155,13 @@ struct AppRootView: View {
             if !appViewModel.hasCompletedInitialBootstrap {
                 await appViewModel.bootstrap()
             }
+            routePendingNotificationDeepLink()
         }
         .onOpenURL { url in
             handleDeepLink(url)
+        }
+        .onChange(of: notificationDeepLinkRouter.pendingURL) { _, _ in
+            routePendingNotificationDeepLink()
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -185,6 +190,14 @@ struct AppRootView: View {
             return
         }
         handleRoute(route)
+    }
+
+    private func routePendingNotificationDeepLink() {
+        guard let url = notificationDeepLinkRouter.pendingURL else {
+            return
+        }
+        handleDeepLink(url)
+        notificationDeepLinkRouter.clearPendingURL()
     }
 }
 
