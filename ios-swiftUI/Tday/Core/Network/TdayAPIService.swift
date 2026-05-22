@@ -25,10 +25,21 @@ func isLikelyConnectivityIssue(_ error: Error) -> Bool {
     }
 
     if let apiError = error as? APIError {
-        return apiError.statusCode == nil
+        guard let statusCode = apiError.statusCode else {
+            return true
+        }
+        return isLikelyServerUnavailableStatus(statusCode)
     }
 
     return false
+}
+
+private func isLikelyServerUnavailableStatus(_ statusCode: Int) -> Bool {
+    statusCode == 408 ||
+        statusCode == 502 ||
+        statusCode == 503 ||
+        statusCode == 504 ||
+        (520 ... 524).contains(statusCode)
 }
 
 func isLikelyUnrecoverableMutationError(_ error: Error) -> Bool {
