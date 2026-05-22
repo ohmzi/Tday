@@ -154,16 +154,38 @@ class AuthViewModel @Inject constructor(
 
     private fun toFriendlyMessage(message: String?): String {
         val raw = message.orEmpty()
+        val lower = raw.lowercase()
         return when {
-            raw.contains("127.0.0.1") || raw.contains("localhost") || raw.contains("ECONNREFUSED") ->
-                "Cannot reach server. Check your server URL and try again."
-            raw.contains("serial name") || raw.contains("SerializationException") ||
-                raw.contains("required for type") ->
+            lower.contains("invalid email or password") ||
+                    lower.contains("incorrect email or password") ||
+                    lower.contains("invalid credentials") ->
+                "Incorrect email or password"
+
+            lower.contains("127.0.0.1") ||
+                    lower.contains("localhost") ||
+                    lower.contains("econnrefused") ||
+                    lower.contains("failed to connect") ||
+                    lower.contains("unable to resolve host") ||
+                    lower.contains("timed out") ||
+                    lower.contains("network is unreachable") ||
+                    lower.contains("not connected") ||
+                    lower.contains("connection refused") ||
+                    lower.contains("bad gateway") ||
+                    lower.contains("service unavailable") ||
+                    lower.contains("gateway timeout") ||
+                    lower.contains("origin unreachable") ||
+                    lower.contains("web server is down") ->
+                SERVER_UNREACHABLE_MESSAGE
+
+            lower.contains("serial name") || lower.contains("serializationexception") ||
+                    lower.contains("required for type") ->
                 "This version of the app is out of date. Please update to continue."
-            raw.contains("failed to connect") || raw.contains("unable to resolve host") ||
-                raw.contains("timed out") || raw.contains("network is unreachable") ->
-                "Connection error. Check your internet and try again."
             else -> "Something went wrong. Please try again."
         }
+    }
+
+    private companion object {
+        const val SERVER_UNREACHABLE_MESSAGE =
+            "Cannot reach server. Check your server URL and try again."
     }
 }
