@@ -146,6 +146,7 @@ fun OnboardingWizardOverlay(
     var isResettingTrust by rememberSaveable { mutableStateOf(false) }
     var isRegisterInFlight by rememberSaveable { mutableStateOf(false) }
     var hasRequestedSavedServerUrl by rememberSaveable { mutableStateOf(false) }
+    var serverUrlLoadedFromSystemCredential by rememberSaveable { mutableStateOf(false) }
     var canRequestSavedLoginCredential by rememberSaveable(initialServerUrl) {
         mutableStateOf(!initialServerUrl.isNullOrBlank())
     }
@@ -155,9 +156,12 @@ fun OnboardingWizardOverlay(
 
     val finishServerConnection: (String) -> Unit = { savedServerUrl ->
         coroutineScope.launch {
-            onSaveServerUrlCredential(context, savedServerUrl)
-            delay(CREDENTIAL_PROMPT_SETTLE_DELAY_MS)
+            if (!serverUrlLoadedFromSystemCredential) {
+                onSaveServerUrlCredential(context, savedServerUrl)
+                delay(CREDENTIAL_PROMPT_SETTLE_DELAY_MS)
+            }
             serverUrl = savedServerUrl
+            serverUrlLoadedFromSystemCredential = false
             isConnecting = false
             canRequestSavedLoginCredential = true
             step = WizardStep.LOGIN
@@ -299,6 +303,7 @@ fun OnboardingWizardOverlay(
         hasRequestedSavedServerUrl = true
         onRequestSavedServerUrl(context)?.let { savedServerUrl ->
             serverUrl = savedServerUrl
+            serverUrlLoadedFromSystemCredential = true
             serverError = null
         }
     }
@@ -325,6 +330,7 @@ fun OnboardingWizardOverlay(
             focusManager.clearFocus(force = true)
             localAuthError = null
             onClearAuthStatus()
+            delay(CREDENTIAL_PROMPT_SETTLE_DELAY_MS)
             onLogin(
                 credential.email,
                 credential.password,
@@ -440,6 +446,7 @@ fun OnboardingWizardOverlay(
                                         value = serverUrl,
                                         onValueChange = {
                                             serverUrl = it
+                                            serverUrlLoadedFromSystemCredential = false
                                             serverError = null
                                         },
                                         label = { Text(stringResource(R.string.onboarding_server_url_label)) },
