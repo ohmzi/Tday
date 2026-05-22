@@ -113,11 +113,6 @@ private fun TdayPullToRefreshIndicator(
         animationSpec = tween(durationMillis = 220),
         label = "pullRefreshAlpha",
     )
-    val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.78f,
-        animationSpec = tween(durationMillis = 220),
-        label = "pullRefreshScale",
-    )
     val refreshingBottomOffset by animateDpAsState(
         targetValue = if (isRefreshing) TdayDimens.PullRefreshRefreshingOffset else 0.dp,
         animationSpec = tween(durationMillis = 220),
@@ -170,8 +165,6 @@ private fun TdayPullToRefreshIndicator(
                 shape = indicatorShape
                 clip = true
                 this.alpha = alpha
-                scaleX = scale
-                scaleY = scale
             }
             .background(
                 color = colorScheme.surface,

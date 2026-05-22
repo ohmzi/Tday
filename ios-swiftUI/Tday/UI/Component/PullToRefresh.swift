@@ -186,7 +186,6 @@ private struct TdayPullRefreshIndicator: View {
             .shadow(color: colors.primary.opacity(0.12), radius: 12, x: 0, y: 0)
             .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 8)
             .opacity(visible ? Double(revealProgress) : 0)
-            .scaleEffect(0.84 + (0.16 * revealProgress))
             .offset(y: -18 + (18 * revealProgress))
             .animation(.easeOut(duration: 0.22), value: visible)
         }
