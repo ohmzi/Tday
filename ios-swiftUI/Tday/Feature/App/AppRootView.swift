@@ -6,6 +6,7 @@ struct AppRootView: View {
     @State private var appViewModel: AppViewModel
     @State private var authViewModel: AuthViewModel
     @State private var hasLeftActiveScene = false
+    @State private var hasMetLaunchSplashMinimum = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(container: AppContainer) {
@@ -19,7 +20,7 @@ struct AppRootView: View {
 
     var body: some View {
         Group {
-            if !appViewModel.hasCompletedInitialBootstrap {
+            if !appViewModel.hasCompletedInitialBootstrap || !hasMetLaunchSplashMinimum {
                 AppLaunchSplashView()
             } else {
                 let showOnboardingOverlay = !appViewModel.authenticated && appViewModel.versionCheckResult == .compatible
@@ -149,6 +150,13 @@ struct AppRootView: View {
             }
         }
         .tdayAppTheme(themeMode: appViewModel.themeMode)
+        .task {
+            guard !hasMetLaunchSplashMinimum else {
+                return
+            }
+            try? await Task.sleep(for: .seconds(1))
+            hasMetLaunchSplashMinimum = true
+        }
         .task {
             if !appViewModel.hasCompletedInitialBootstrap {
                 await appViewModel.bootstrap()
