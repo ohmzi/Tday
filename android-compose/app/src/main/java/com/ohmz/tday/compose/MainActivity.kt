@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -29,7 +30,9 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_Tday)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        _deepLinkIntent.value = intent
+        val launchIntent = intent.withTdayDeepLinkData()
+        setIntent(launchIntent)
+        dispatchDeepLinkIntent(launchIntent)
         setContent {
             TdayApp(
                 onFirstFrameDrawn = {
@@ -43,9 +46,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent)
+        val deepLinkIntent = intent.withTdayDeepLinkData()
+        setIntent(deepLinkIntent)
         dismissUpdateReadyNotification()
-        _deepLinkIntent.value = intent
+        dispatchDeepLinkIntent(deepLinkIntent)
+    }
+
+    private fun dispatchDeepLinkIntent(intent: Intent) {
+        _deepLinkIntent.value = intent.withTdayDeepLinkData()
     }
 
     private fun dismissUpdateReadyNotification() {
@@ -61,3 +69,13 @@ class MainActivity : ComponentActivity() {
         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }
+
+internal fun Intent.withTdayDeepLinkData(): Intent {
+    if (data != null) return this
+    val deepLink = getStringExtra(EXTRA_DEEP_LINK)?.takeIf { it.isNotBlank() } ?: return this
+    return Intent(this).apply {
+        data = Uri.parse(deepLink)
+    }
+}
+
+private const val EXTRA_DEEP_LINK = "deepLink"
