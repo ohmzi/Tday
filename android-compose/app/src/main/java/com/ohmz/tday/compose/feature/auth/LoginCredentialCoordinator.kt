@@ -9,10 +9,11 @@ class LoginCredentialCoordinator {
 
     suspend fun requestSavedCredentialIfAvailable(
         context: Context,
+        currentEmail: String,
         currentPassword: String,
         isCreatingAccount: Boolean,
         isAuthLoading: Boolean,
-        requestSavedCredential: suspend (Context) -> SystemCredential?,
+        requestSavedCredential: suspend (Context, String?) -> SystemCredential?,
         login: suspend (SystemCredential) -> Boolean,
     ): Boolean {
         if (isCreatingAccount ||
@@ -27,7 +28,10 @@ class LoginCredentialCoordinator {
         hasRequestedSystemCredential = true
         isRequestingSystemCredential = true
         try {
-            val credential = requestSavedCredential(context) ?: return false
+            val credential = requestSavedCredential(
+                context,
+                currentEmail.takeIf { it.isNotBlank() },
+            ) ?: return false
             return login(credential)
         } finally {
             isRequestingSystemCredential = false

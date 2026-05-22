@@ -427,6 +427,8 @@ fun TdayApp(
                                             }
                                         },
                                         onRequestSavedCredential = authViewModel::requestSavedCredential,
+                                        onRequestSavedServerUrl = authViewModel::requestSavedServerUrl,
+                                        onSaveServerUrlCredential = authViewModel::offerSaveOrUpdateServerUrl,
                                         onClearAuthStatus = {
                                             authViewModel.clearStatus()
                                             appViewModel.clearPendingApprovalNotice()
