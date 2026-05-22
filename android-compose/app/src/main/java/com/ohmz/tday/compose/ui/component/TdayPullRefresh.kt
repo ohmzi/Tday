@@ -25,6 +25,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,11 +40,15 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
+import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.sin
 
 private const val RefreshBarCount = 5
+private const val RefreshHandoffHoldMillis = 1_500L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,15 +64,39 @@ fun TdayPullToRefreshBox(
     val contentPullProgress = state.distanceFraction.coerceIn(0f, 1.25f)
     val pullContentOffset = TdayDimens.PullRefreshContentOffset * contentPullProgress
     var isPointerDown by remember { mutableStateOf(false) }
-    val isUserPulling = isPointerDown && !isRefreshing && !state.isAnimating && pullProgress > 0f
+    var localRefreshInFlight by remember { mutableStateOf(false) }
+    var hasSeenExternalRefresh by remember { mutableStateOf(false) }
+    val effectiveRefreshing = isRefreshing || localRefreshInFlight
+    val isUserPulling =
+        isPointerDown && !effectiveRefreshing && !state.isAnimating && pullProgress > 0f
     val contentOffset by animateDpAsState(
         targetValue = if (isUserPulling) pullContentOffset else 0.dp,
         animationSpec = tween(durationMillis = if (isUserPulling) 0 else 220),
         label = "pullRefreshContentOffset",
     )
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            hasSeenExternalRefresh = true
+        } else if (hasSeenExternalRefresh) {
+            localRefreshInFlight = false
+            hasSeenExternalRefresh = false
+        }
+    }
+
+    LaunchedEffect(localRefreshInFlight, isRefreshing, hasSeenExternalRefresh) {
+        if (localRefreshInFlight && !isRefreshing && !hasSeenExternalRefresh) {
+            delay(RefreshHandoffHoldMillis)
+            localRefreshInFlight = false
+        }
+    }
+
     PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
+        isRefreshing = effectiveRefreshing,
+        onRefresh = {
+            localRefreshInFlight = true
+            onRefresh()
+        },
         modifier = modifier.pointerInput(Unit) {
             awaitPointerEventScope {
                 while (true) {
@@ -80,8 +109,10 @@ fun TdayPullToRefreshBox(
         contentAlignment = contentAlignment,
         indicator = {
             TdayPullToRefreshIndicator(
-                modifier = Modifier.align(Alignment.TopCenter),
-                isRefreshing = isRefreshing,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .zIndex(1f),
+                isRefreshing = effectiveRefreshing,
                 state = state,
             )
         },
@@ -107,6 +138,7 @@ private fun TdayPullToRefreshIndicator(
     state: PullToRefreshState,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val refreshAccent = TdayTodayBlue
     val visible = isRefreshing || state.distanceFraction > 0f
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
@@ -185,7 +217,7 @@ private fun TdayPullToRefreshIndicator(
                     .height(TdayDimens.PullRefreshSweepHeight)
                     .clip(RoundedCornerShape(TdayDimens.PullRefreshSweepHeight))
                     .background(
-                        color = colorScheme.primary.copy(
+                        color = refreshAccent.copy(
                             alpha = if (isRefreshing) {
                                 0.18f
                             } else {
@@ -215,7 +247,7 @@ private fun TdayPullToRefreshIndicator(
                                     translationY = metrics.verticalOffset.toPx()
                                 }
                                 .background(
-                                    color = colorScheme.primary.copy(alpha = metrics.alpha),
+                                    color = refreshAccent.copy(alpha = metrics.alpha),
                                     shape = RoundedCornerShape(TdayDimens.PullRefreshDotWidth),
                                 ),
                         )
