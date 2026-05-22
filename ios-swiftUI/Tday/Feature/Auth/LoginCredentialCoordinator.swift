@@ -6,6 +6,7 @@ final class LoginCredentialCoordinator {
     private var isRequestingSystemCredential = false
 
     func requestSavedCredentialIfAvailable(
+        currentEmail: String = "",
         currentPassword: String,
         isCreatingAccount: Bool,
         isAuthLoading: Bool,
@@ -24,7 +25,7 @@ final class LoginCredentialCoordinator {
         isRequestingSystemCredential = true
         defer { isRequestingSystemCredential = false }
 
-        guard let credential = await credentialService.requestSavedCredential() else {
+        guard let credential = await credentialService.requestSavedCredential(preferredEmail: currentEmail) else {
             return false
         }
 

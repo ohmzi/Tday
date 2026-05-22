@@ -48,6 +48,25 @@ final class SystemCredentialLoginTests: XCTestCase {
         XCTAssertEqual(submittedCredentials, [credential])
     }
 
+    func testSavedCredentialRequestUsesCurrentEmailAsPreferredAccount() async {
+        let credential = SystemCredential(email: "user@example.com", password: "Password!1")
+        let service = FakeSystemCredentialService(nextCredential: credential)
+        let coordinator = LoginCredentialCoordinator()
+
+        let didSubmit = await coordinator.requestSavedCredentialIfAvailable(
+            currentEmail: " user@example.com ",
+            currentPassword: "",
+            isCreatingAccount: false,
+            isAuthLoading: false,
+            credentialService: service
+        ) { _ in
+            true
+        }
+
+        XCTAssertTrue(didSubmit)
+        XCTAssertEqual(service.requestedPreferredEmails, [" user@example.com "])
+    }
+
     func testUserCancelLeavesManualFormUntouched() async {
         let service = FakeSystemCredentialService(nextCredential: nil)
         let coordinator = LoginCredentialCoordinator()
@@ -200,6 +219,7 @@ final class SystemCredentialLoginTests: XCTestCase {
 @MainActor
 private final class FakeSystemCredentialService: SystemCredentialServicing {
     var requestCount = 0
+    var requestedPreferredEmails: [String?] = []
     var offeredCredentials: [SystemCredential] = []
     var offeredServerURLs: [String] = []
     var nextCredential: SystemCredential?
@@ -211,8 +231,9 @@ private final class FakeSystemCredentialService: SystemCredentialServicing {
         self.saveResult = saveResult
     }
 
-    func requestSavedCredential() async -> SystemCredential? {
+    func requestSavedCredential(preferredEmail: String?) async -> SystemCredential? {
         requestCount += 1
+        requestedPreferredEmails.append(preferredEmail)
         return nextCredential
     }
 
