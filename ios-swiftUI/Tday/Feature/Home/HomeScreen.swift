@@ -19,6 +19,14 @@ private func isHomeDaytime(_ date: Date) -> Bool {
     return (6..<18).contains(hour)
 }
 
+private func normalizedHomeSearchQuery(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
+}
+
+private func homeSearchText(_ value: String) -> String {
+    value.lowercased(with: .current)
+}
+
 private struct HomeSearchBarFrameKey: PreferenceKey {
     static var defaultValue: CGRect = .zero
 
@@ -78,6 +86,7 @@ struct HomeScreen: View {
     @State private var searchQuery = ""
     @State private var searchBarFrame: CGRect = .zero
     @State private var searchResultsFrame: CGRect = .zero
+    @State private var openingSearchResultID: String?
     @State private var showingCreateTask = false
     @State private var showingCreateList = false
 
@@ -87,11 +96,11 @@ struct HomeScreen: View {
     }
 
     private var normalizedSearchQuery: String {
-        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        normalizedHomeSearchQuery(searchQuery)
     }
 
     private var listByID: [String: ListSummary] {
-        Dictionary(uniqueKeysWithValues: viewModel.summary.lists.map { ($0.id, $0) })
+        Dictionary(viewModel.summary.lists.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
     }
 
     private var filteredTodos: [TodoItem] {
@@ -100,9 +109,9 @@ struct HomeScreen: View {
         }
 
         return viewModel.searchableTodos.filter { todo in
-            todo.title.lowercased().contains(normalizedSearchQuery) ||
-                (todo.description?.lowercased().contains(normalizedSearchQuery) ?? false) ||
-                (todo.listId.flatMap { listByID[$0]?.name.lowercased() }?.contains(normalizedSearchQuery) ?? false)
+            homeSearchText(todo.title).contains(normalizedSearchQuery) ||
+                (todo.description.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false) ||
+                (todo.listId.flatMap { listByID[$0]?.name }.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false)
         }
         .sorted { $0.due < $1.due }
         .prefix(20)
@@ -120,129 +129,139 @@ struct HomeScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
+            let fallbackSearchBarFrame = CGRect(
+                x: HomeMetrics.screenPadding,
+                y: HomeMetrics.screenPadding,
+                width: max(HomeMetrics.topBarButtonSize, proxy.size.width - (HomeMetrics.screenPadding * 2)),
+                height: HomeMetrics.topBarButtonSize
+            )
+            let activeSearchBarFrame = searchBarFrame.width > 0 && searchBarFrame.height > 0
+                ? searchBarFrame
+                : fallbackSearchBarFrame
+
             ZStack(alignment: .topLeading) {
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
-                        HomeTopBar(
-                            totalWidth: proxy.size.width - (HomeMetrics.screenPadding * 2),
-                            searchExpanded: $searchExpanded,
-                            searchQuery: $searchQuery,
-                            searchFieldFocused: $searchFieldFocused,
-                            onCreateList: {
-                                closeSearch()
-                                showingCreateList = true
-                            },
-                            onOpenSettings: {
-                                closeSearch()
-                                onNavigate(.settings)
-                            }
-                        )
-                        .onTopPartialScrollSnap(
-                            anchorDistance: HomeMetrics.titleAnchorDistance,
-                            isDisabled: searchExpanded
-                        )
-
-                        HomeCategoryBoard(
-                            todayCount: viewModel.summary.todayCount,
-                            overdueCount: overdueCount,
-                            scheduledCount: viewModel.summary.scheduledCount,
-                            allCount: viewModel.summary.allCount,
-                            priorityCount: viewModel.summary.priorityCount,
-                            completedCount: viewModel.summary.completedCount,
-                            onOpenToday: {
-                                closeSearch()
-                                onNavigate(.todayTodos)
-                            },
-                            onOpenOverdue: {
-                                closeSearch()
-                                onNavigate(.overdueTodos)
-                            },
-                            onOpenScheduled: {
-                                closeSearch()
-                                onNavigate(.scheduledTodos)
-                            },
-                            onOpenAll: {
-                                closeSearch()
-                                onNavigate(.allTodos(highlightTodoId: nil))
-                            },
-                            onOpenPriority: {
-                                closeSearch()
-                                onNavigate(.priorityTodos)
-                            },
-                            onOpenCompleted: {
-                                closeSearch()
-                                onNavigate(.completed)
-                            },
-                            onOpenCalendar: {
-                                closeSearch()
-                                onNavigate(.calendar)
-                            }
-                        )
-
-                        if !viewModel.summary.lists.isEmpty {
-                            HomeListsHeader()
-
-                            ForEach(viewModel.summary.lists) { list in
-                                HomeListRow(
-                                    name: displayName(for: list.name),
-                                    colorKey: list.color,
-                                    iconKey: list.iconKey,
-                                    count: list.todoCount
-                                ) {
+                PullToRefreshContainer(
+                    isRefreshing: viewModel.isLoading,
+                    action: {
+                        await viewModel.refresh()
+                    }
+                ) {
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
+                            HomeTopBar(
+                                totalWidth: proxy.size.width - (HomeMetrics.screenPadding * 2),
+                                searchExpanded: $searchExpanded,
+                                searchQuery: $searchQuery,
+                                searchFieldFocused: $searchFieldFocused,
+                                onSearchClose: {
                                     closeSearch()
-                                    onNavigate(.listTodos(listId: list.id, listName: displayName(for: list.name)))
+                                },
+                                onCreateList: {
+                                    closeSearch()
+                                    showingCreateList = true
+                                },
+                                onOpenSettings: {
+                                    closeSearch()
+                                    onNavigate(.settings)
+                                }
+                            )
+                            .onTopPartialScrollSnap(
+                                anchorDistance: HomeMetrics.titleAnchorDistance,
+                                isDisabled: searchExpanded
+                            )
+
+                            HomeCategoryBoard(
+                                todayCount: viewModel.summary.todayCount,
+                                overdueCount: overdueCount,
+                                scheduledCount: viewModel.summary.scheduledCount,
+                                allCount: viewModel.summary.allCount,
+                                priorityCount: viewModel.summary.priorityCount,
+                                completedCount: viewModel.summary.completedCount,
+                                onOpenToday: {
+                                    closeSearch()
+                                    onNavigate(.todayTodos)
+                                },
+                                onOpenOverdue: {
+                                    closeSearch()
+                                    onNavigate(.overdueTodos)
+                                },
+                                onOpenScheduled: {
+                                    closeSearch()
+                                    onNavigate(.scheduledTodos)
+                                },
+                                onOpenAll: {
+                                    closeSearch()
+                                    onNavigate(.allTodos(highlightTodoId: nil))
+                                },
+                                onOpenPriority: {
+                                    closeSearch()
+                                    onNavigate(.priorityTodos)
+                                },
+                                onOpenCompleted: {
+                                    closeSearch()
+                                    onNavigate(.completed)
+                                },
+                                onOpenCalendar: {
+                                    closeSearch()
+                                    onNavigate(.calendar)
+                                }
+                            )
+
+                            if !viewModel.summary.lists.isEmpty {
+                                HomeListsHeader()
+
+                                ForEach(viewModel.summary.lists) { list in
+                                    HomeListRow(
+                                        name: displayName(for: list.name),
+                                        colorKey: list.color,
+                                        iconKey: list.iconKey,
+                                        count: list.todoCount
+                                    ) {
+                                        closeSearch()
+                                        onNavigate(.listTodos(listId: list.id, listName: displayName(for: list.name)))
+                                    }
                                 }
                             }
-                        }
 
-                        if let errorMessage = viewModel.errorMessage {
-                            ErrorRetryView(message: errorMessage) {
-                                Task { await viewModel.refresh() }
+                            if let errorMessage = viewModel.errorMessage {
+                                ErrorRetryView(message: errorMessage) {
+                                    Task { await viewModel.refresh() }
+                                }
                             }
-                        }
 
-                        if viewModel.isLoading && viewModel.summary.allCount == 0 {
-                            ProgressView()
-                                .frame(maxWidth: .infinity)
-                                .padding(.top, 10)
                         }
-
+                        .padding(.horizontal, HomeMetrics.screenPadding)
+                        .padding(.top, HomeMetrics.screenPadding)
                     }
-                    .padding(.horizontal, HomeMetrics.screenPadding)
-                    .padding(.top, HomeMetrics.screenPadding)
-                }
-                .refreshable {
-                    await viewModel.refresh()
-                }
-                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-                .safeAreaInset(edge: .bottom) {
-                    TaskFloatingActionButtonDock {
-                        closeSearch()
-                        showingCreateTask = true
+                    .scrollBounceBehavior(.always, axes: .vertical)
+                    .safeAreaInset(edge: .bottom) {
+                        TaskFloatingActionButtonDock {
+                            closeSearch()
+                            showingCreateTask = true
+                        }
                     }
                 }
 
-                if showSearchResultsOverlay, searchBarFrame != .zero {
+                if showSearchResultsOverlay {
                     HomeSearchResultsOverlay(
                         todos: filteredTodos,
                         listsByID: listByID,
                         onOpenTodo: { todo in
-                            closeSearch()
-                            onNavigate(.allTodos(highlightTodoId: todo.id))
+                            openSearchResult(todo)
                         }
                     )
-                    .frame(width: searchBarFrame.width)
-                    .offset(x: searchBarFrame.minX, y: searchBarFrame.maxY + 8)
+                    .frame(width: activeSearchBarFrame.width)
+                    .offset(x: activeSearchBarFrame.minX, y: activeSearchBarFrame.maxY + 8)
                     .background(
                         GeometryReader { resultsProxy in
                             Color.clear
                                 .preference(
                                     key: HomeSearchResultsFrameKey.self,
                                     value: resultsProxy.frame(in: .named("home-root"))
-                                )
+                            )
                         }
                     )
-                    .zIndex(5)
+                    .zIndex(100)
                 }
             }
             .coordinateSpace(name: "home-root")
@@ -301,10 +320,24 @@ struct HomeScreen: View {
     }
 
     private func closeSearch() {
+        searchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = false
         }
         searchQuery = ""
+        searchResultsFrame = .zero
+    }
+
+    private func openSearchResult(_ todo: TodoItem) {
+        guard openingSearchResultID == nil else {
+            return
+        }
+        openingSearchResultID = todo.id
+        closeSearch()
+        onNavigate(.allTodos(highlightTodoId: todo.id))
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            openingSearchResultID = nil
+        }
     }
 
     private func handleSearchTap(at location: CGPoint) {
@@ -328,6 +361,7 @@ private struct HomeTopBar: View {
     @Binding var searchExpanded: Bool
     @Binding var searchQuery: String
     var searchFieldFocused: FocusState<Bool>.Binding
+    let onSearchClose: () -> Void
     let onCreateList: () -> Void
     let onOpenSettings: () -> Void
 
@@ -404,10 +438,7 @@ private struct HomeTopBar: View {
                         .disabled(!searchExpanded)
 
                     Button {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                            searchExpanded = false
-                        }
-                        searchQuery = ""
+                        onSearchClose()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 18, weight: .semibold))
@@ -706,6 +737,8 @@ private struct HomeListRow: View {
     let count: Int
     let action: () -> Void
 
+    @Environment(\.tdayColors) private var colors
+
     private var accent: Color {
         homeListAccentColor(for: colorKey)
     }
@@ -715,16 +748,18 @@ private struct HomeListRow: View {
     }
 
     private var containerColor: Color {
-        Color.tdayLightSurfaceVariant.blended(with: accent, amount: 0.38)
+        colors.surfaceVariant.blended(with: accent, amount: colors.isDark ? 0.24 : 0.38)
     }
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+
         Button(action: action) {
             ZStack {
-                RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+                shape
                     .fill(containerColor)
 
-                RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+                shape
                     .fill(
                         RadialGradient(
                             colors: [
@@ -738,7 +773,7 @@ private struct HomeListRow: View {
                         )
                     )
 
-                RoundedRectangle(cornerRadius: HomeMetrics.tileCornerRadius, style: .continuous)
+                shape
                     .fill(
                         LinearGradient(
                             colors: [
@@ -782,6 +817,8 @@ private struct HomeListRow: View {
                 .padding(.vertical, 12)
             }
             .frame(maxWidth: .infinity, minHeight: HomeMetrics.listRowHeight, maxHeight: HomeMetrics.listRowHeight)
+            .clipShape(shape)
+            .contentShape(shape)
         }
         .buttonStyle(HomeListButtonStyle())
     }
@@ -793,6 +830,18 @@ private struct HomeSearchResultsOverlay: View {
     let onOpenTodo: (TodoItem) -> Void
 
     @Environment(\.tdayColors) private var colors
+    private let maxResultsHeight: CGFloat = 320
+    private let resultRowHeight: CGFloat = 66
+    private let resultVerticalPadding: CGFloat = 8
+    private let resultSeparatorHeight: CGFloat = 1
+
+    private var resultsHeight: CGFloat {
+        let separatorCount = max(todos.count - 1, 0)
+        let contentHeight = (CGFloat(todos.count) * resultRowHeight) +
+            (CGFloat(separatorCount) * resultSeparatorHeight) +
+            resultVerticalPadding
+        return min(contentHeight, maxResultsHeight)
+    }
 
     private let dueFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -810,53 +859,55 @@ private struct HomeSearchResultsOverlay: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
             } else {
-                ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
-                    let list = todo.listId.flatMap { listsByID[$0] }
-                    let tint = homeListAccentColor(for: list?.color)
-                    let symbolName = homeListSymbolName(for: list?.iconKey)
+                ScrollView(showsIndicators: true) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
+                            let list = todo.listId.flatMap { listsByID[$0] }
+                            let tint = homeListAccentColor(for: list?.color)
+                            let symbolName = homeListSymbolName(for: list?.iconKey)
 
-                    Button {
-                        onOpenTodo(todo)
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: symbolName)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(tint.opacity(0.92))
-                                .frame(width: 18)
+                            HStack(spacing: 10) {
+                                Image(systemName: symbolName)
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(tint.opacity(0.92))
+                                    .frame(width: 18)
 
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(todo.title)
-                                    .font(.tdayRounded(size: 15, weight: .bold))
-                                    .foregroundStyle(colors.onSurface)
-                                    .lineLimit(1)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(todo.title)
+                                        .font(.tdayRounded(size: 15, weight: .bold))
+                                        .foregroundStyle(colors.onSurface)
+                                        .lineLimit(1)
 
-                                Text(dueFormatter.string(from: todo.due))
-                                    .font(.tdayRounded(size: 12, weight: .bold))
-                                    .foregroundStyle(colors.onSurfaceVariant)
-                                    .lineLimit(1)
+                                    Text(dueFormatter.string(from: todo.due))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(colors.onSurfaceVariant)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer(minLength: 0)
                             }
-
-                            Spacer(minLength: 0)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                    }
-                    .buttonStyle(
-                        TdayPressButtonStyle(
-                            shadowColor: Color.black,
-                            pressedShadowOpacity: 0.04,
-                            normalShadowOpacity: 0.08
-                        )
-                    )
-
-                    if index < todos.count - 1 {
-                        Rectangle()
-                            .fill(colors.onSurface.opacity(0.08))
-                            .frame(height: 1)
+                            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                             .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onOpenTodo(todo)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(.isButton)
+
+                            if index < todos.count - 1 {
+                                Rectangle()
+                                    .fill(colors.onSurface.opacity(0.08))
+                                    .frame(height: 1)
+                                    .padding(.horizontal, 12)
+                            }
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
+                .frame(height: resultsHeight)
+                .scrollBounceBehavior(.basedOnSize, axes: .vertical)
             }
         }
         .background(colors.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
@@ -1089,7 +1140,7 @@ private struct CreateListSheet: View {
                             .frame(height: 62)
                             .background(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(colors.surfaceVariant)
+                                    .fill(colors.bottomSheetControlSurface)
                             )
                         }
                         .padding(.horizontal, 18)
@@ -1140,7 +1191,7 @@ private struct CreateListSheet: View {
                                         iconKey = option.key
                                     } label: {
                                         Circle()
-                                            .fill(isSelected ? accentColor.opacity(0.2) : colors.surfaceVariant)
+                                            .fill(isSelected ? accentColor.opacity(0.2) : colors.bottomSheetControlSurface)
                                             .frame(width: 48, height: 48)
                                             .overlay(
                                                 Circle()
@@ -1183,12 +1234,12 @@ private struct CreateListSheet: View {
             .scrollDisabled(!contentNeedsScrolling)
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(colors.background.ignoresSafeArea())
+        .background(colors.bottomSheetBackground.ignoresSafeArea())
         .presentationDetents(activeDetents)
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground {
-            colors.background
+            colors.bottomSheetBackground
                 .ignoresSafeArea(.container, edges: .bottom)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -1261,7 +1312,7 @@ private struct CreateListSheetActionButton: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
                 .frame(width: 56, height: 56)
-                .background(colors.surfaceVariant)
+                .background(colors.bottomSheetControlSurface)
                 .clipShape(Circle())
                 .overlay(
                     Circle()
@@ -1303,7 +1354,7 @@ private struct CreateListSheetCard<Content: View>: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(colors.surface)
+                    .fill(colors.bottomSheetSurface)
             )
     }
 }

@@ -25,7 +25,11 @@ final class CompletedViewModel {
 
     func refresh() async {
         isLoading = true
-        let result = await container.syncAndRefresh(force: true, replayPendingMutations: false)
+        let result = await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: false,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
         if case let .failure(error) = result, !isLikelyConnectivityIssue(error) {
             errorMessage = userFacingMessage(for: error, fallback: "Failed to load.")
         }
@@ -39,6 +43,16 @@ final class CompletedViewModel {
             hydrateFromCache()
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not delete task.")
+        }
+    }
+
+    func uncomplete(_ item: CompletedItem) async {
+        do {
+            try await container.completedRepository.uncomplete(item)
+            hydrateFromCache()
+            await rescheduleReminders()
+        } catch {
+            errorMessage = userFacingMessage(for: error, fallback: "Could not restore task.")
         }
     }
 
@@ -65,5 +79,11 @@ final class CompletedViewModel {
                 }
             }
         }
+    }
+
+    private func rescheduleReminders() async {
+        let tasks = container.todoRepository.fetchTodosSnapshot(mode: .all)
+        let defaultReminder = container.reminderPreferenceStore.getDefaultReminder()
+        await container.reminderScheduler.reschedule(tasks: tasks, defaultReminder: defaultReminder)
     }
 }

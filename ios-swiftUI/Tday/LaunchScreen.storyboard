@@ -15,19 +15,22 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchSplashBundle" translatesAutoresizingMaskIntoConstraints="NO" id="7xY-kd-4hf">
-                                <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
-                                <color key="backgroundColor" red="0.96862745099999996" green="0.98431372550000003" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchSplashStack" translatesAutoresizingMaskIntoConstraints="NO" id="PBu-EW-8Yh">
+                                <rect key="frame" x="32" y="303" width="329" height="246"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="246" id="RQS-Dd-1Sf"/>
+                                    <constraint firstAttribute="width" constant="329" id="sWV-8k-FUn"/>
+                                </constraints>
                             </imageView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
+                        <color key="backgroundColor" name="LaunchBackground"/>
                         <constraints>
-                            <constraint firstItem="7xY-kd-4hf" firstAttribute="top" secondItem="Ze5-6b-2t3" secondAttribute="top" id="1Br-0K-g6E"/>
-                            <constraint firstAttribute="trailing" secondItem="7xY-kd-4hf" secondAttribute="trailing" id="SkX-E7-N0U"/>
-                            <constraint firstItem="7xY-kd-4hf" firstAttribute="leading" secondItem="Ze5-6b-2t3" secondAttribute="leading" id="gJO-FK-FNU"/>
-                            <constraint firstAttribute="bottom" secondItem="7xY-kd-4hf" secondAttribute="bottom" id="qT1-1J-B8u"/>
+                            <constraint firstItem="PBu-EW-8Yh" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="Pdq-tV-TgE"/>
+                            <constraint firstItem="PBu-EW-8Yh" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="TTX-n9-GGE"/>
+                            <constraint firstItem="PBu-EW-8Yh" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Bcu-3y-fUS" secondAttribute="leading" constant="32" id="ZqR-4C-pB1"/>
+                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="PBu-EW-8Yh" secondAttribute="trailing" constant="32" id="l2c-Ag-Ixc"/>
                         </constraints>
-                        <color key="backgroundColor" red="0.96862745099999996" green="0.98431372550000003" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -36,6 +39,15 @@
         </scene>
     </scenes>
     <resources>
-        <image name="LaunchSplashBundle" width="1290" height="2796"/>
+        <image name="LaunchSplashStack" width="329" height="246"/>
+        <namedColor name="LaunchBackground">
+            <color red="0.95686274510000002" green="0.96470588239999999" blue="0.98431372550000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+        <namedColor name="LaunchForeground">
+            <color red="0.11" green="0.14" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+        <namedColor name="LaunchMuted">
+            <color red="0.35999999999999999" green="0.40000000000000002" blue="0.48999999999999999" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
     </resources>
 </document>
