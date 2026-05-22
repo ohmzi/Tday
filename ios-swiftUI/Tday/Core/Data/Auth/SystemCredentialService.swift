@@ -31,10 +31,16 @@ enum LoginCredentialSource {
 
 @MainActor
 protocol SystemCredentialServicing: AnyObject {
-    func requestSavedCredential() async -> SystemCredential?
+    func requestSavedCredential(preferredEmail: String?) async -> SystemCredential?
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult
     func requestSavedServerURL() async -> String?
     func offerSaveOrUpdateServerURL(_ serverURL: String) async -> SystemCredentialSaveResult
+}
+
+extension SystemCredentialServicing {
+    func requestSavedCredential() async -> SystemCredential? {
+        await requestSavedCredential(preferredEmail: nil)
+    }
 }
 
 enum SystemCredentialScope {
@@ -69,7 +75,19 @@ enum SystemCredentialRecord {
 final class SystemCredentialService: SystemCredentialServicing {
     private var activeAuthorizationSession: PasswordAuthorizationSession?
 
-    func requestSavedCredential() async -> SystemCredential? {
+    func requestSavedCredential(preferredEmail: String? = nil) async -> SystemCredential? {
+        let normalizedEmail = preferredEmail?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .nilIfEmpty
+
+        if let normalizedEmail,
+           let credential = await requestSharedWebLoginCredential(
+            host: SystemCredentialScope.appCredentialHost,
+            account: normalizedEmail
+           ) {
+            return credential
+        }
+
         let session = PasswordAuthorizationSession()
         activeAuthorizationSession = session
         let credential = await session.requestSavedCredential()
@@ -241,6 +259,12 @@ final class SystemCredentialService: SystemCredentialServicing {
                 continuation.resume(returning: nil)
             }
         }
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }
 
