@@ -22,6 +22,9 @@
         android:usesCleartextTraffic="${usesCleartextTraffic}">
 
         <meta-data android:name="io.sentry.auto-init" android:value="false" />
+        <meta-data
+            android:name="asset_statements"
+            android:resource="@string/asset_statements" />
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
