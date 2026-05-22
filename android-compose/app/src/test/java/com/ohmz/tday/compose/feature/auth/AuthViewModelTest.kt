@@ -154,18 +154,6 @@ class AuthViewModelTest {
         )
     }
 
-    @Test
-    fun `server url save delegates to system credential service`() = runTest {
-        val viewModel = makeViewModel()
-
-        viewModel.offerSaveOrUpdateServerUrl(
-            context = credentialContext,
-            serverUrl = "https://tday.example.com",
-        )
-
-        assertEquals(listOf("https://tday.example.com"), credentialService.savedServerUrls)
-    }
-
     private fun makeViewModel(): AuthViewModel =
         AuthViewModel(
             authRepository = authRepository,
@@ -189,8 +177,6 @@ class MainDispatcherRule(
 
 private class FakeSystemCredentialService : SystemCredentialServicing {
     val savedCredentials = mutableListOf<SystemCredential>()
-    val savedServerUrls = mutableListOf<String>()
-    var savedServerUrl: String? = null
 
     override suspend fun requestSavedCredential(context: Context): SystemCredential? = null
 
@@ -202,21 +188,9 @@ private class FakeSystemCredentialService : SystemCredentialServicing {
         return SystemCredentialSaveResult.SAVED
     }
 
-    override suspend fun requestSavedServerUrl(context: Context): String? = savedServerUrl
-
-    override suspend fun offerSaveOrUpdateServerUrl(
-        context: Context,
-        serverUrl: String,
-    ): SystemCredentialSaveResult {
-        savedServerUrls += serverUrl
-        return SystemCredentialSaveResult.SAVED
-    }
-
     override suspend fun clearCredentialState() = Unit
 
     fun reset() {
         savedCredentials.clear()
-        savedServerUrls.clear()
-        savedServerUrl = null
     }
 }
