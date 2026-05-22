@@ -402,8 +402,13 @@ fun TdayApp(
                                                 },
                                             )
                                         },
-                                        onLogin = { email, password ->
-                                            authViewModel.login(email, password) {
+                                        onLogin = { email, password, source ->
+                                            authViewModel.login(
+                                                email = email,
+                                                password = password,
+                                                credentialContext = context,
+                                                source = source,
+                                            ) {
                                                 appViewModel.refreshSession()
                                             }
                                         },
@@ -413,11 +418,13 @@ fun TdayApp(
                                                 lastName = "",
                                                 email = email,
                                                 password = password,
+                                                credentialContext = context,
                                             ) {
                                                 onSuccess()
                                                 appViewModel.refreshSession()
                                             }
                                         },
+                                        onRequestSavedCredential = authViewModel::requestSavedCredential,
                                         onClearAuthStatus = {
                                             authViewModel.clearStatus()
                                             appViewModel.clearPendingApprovalNotice()
