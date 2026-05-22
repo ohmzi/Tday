@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -79,6 +80,7 @@ import com.ohmz.tday.compose.core.data.auth.LoginCredentialSource
 import com.ohmz.tday.compose.core.data.auth.SystemCredential
 import com.ohmz.tday.compose.feature.auth.AuthUiState
 import com.ohmz.tday.compose.feature.auth.LoginCredentialCoordinator
+import kotlinx.coroutines.launch
 
 private enum class WizardStep {
     SERVER,
@@ -114,7 +116,9 @@ fun OnboardingWizardOverlay(
         password: String,
         onSuccess: () -> Unit,
     ) -> Unit,
-    onRequestSavedCredential: suspend (Context) -> SystemCredential?,
+    onRequestSavedCredential: suspend (Context, String?) -> SystemCredential?,
+    onRequestSavedServerUrl: suspend (Context) -> String?,
+    onSaveServerUrlCredential: suspend (Context, String) -> Unit,
     onClearAuthStatus: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -122,6 +126,7 @@ fun OnboardingWizardOverlay(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val coroutineScope = rememberCoroutineScope()
     val credentialCoordinator = remember { LoginCredentialCoordinator() }
 
     var step by rememberSaveable(initialServerUrl) {
@@ -139,6 +144,7 @@ fun OnboardingWizardOverlay(
     var isConnecting by rememberSaveable { mutableStateOf(false) }
     var isResettingTrust by rememberSaveable { mutableStateOf(false) }
     var isRegisterInFlight by rememberSaveable { mutableStateOf(false) }
+    var hasRequestedSavedServerUrl by rememberSaveable { mutableStateOf(false) }
     val passwordFocusRequester = remember { FocusRequester() }
     val registerPasswordFocusRequester = remember { FocusRequester() }
     val registerConfirmFocusRequester = remember { FocusRequester() }
@@ -154,10 +160,13 @@ fun OnboardingWizardOverlay(
         onConnectServer(value) { result ->
             result.onSuccess {
                 serverUrl = it
-                isConnecting = false
-                step = WizardStep.LOGIN
-                authMode = AuthPanelMode.SIGN_IN
-                onClearAuthStatus()
+                coroutineScope.launch {
+                    onSaveServerUrlCredential(context, it)
+                    isConnecting = false
+                    step = WizardStep.LOGIN
+                    authMode = AuthPanelMode.SIGN_IN
+                    onClearAuthStatus()
+                }
             }.onFailure { error ->
                 isConnecting = false
                 step = WizardStep.SERVER
@@ -263,10 +272,27 @@ fun OnboardingWizardOverlay(
         }
     }
 
+    LaunchedEffect(step, isConnecting, serverUrl) {
+        if (step != WizardStep.SERVER ||
+            isConnecting ||
+            serverUrl.isNotBlank() ||
+            hasRequestedSavedServerUrl
+        ) {
+            return@LaunchedEffect
+        }
+
+        hasRequestedSavedServerUrl = true
+        onRequestSavedServerUrl(context)?.let { savedServerUrl ->
+            serverUrl = savedServerUrl
+            serverError = null
+        }
+    }
+
     LaunchedEffect(step, authMode, authUiState.isLoading) {
         if (step != WizardStep.LOGIN || authMode != AuthPanelMode.SIGN_IN) return@LaunchedEffect
         credentialCoordinator.requestSavedCredentialIfAvailable(
             context = context,
+            currentEmail = email,
             currentPassword = password,
             isCreatingAccount = false,
             isAuthLoading = authUiState.isLoading,
@@ -429,9 +455,12 @@ fun OnboardingWizardOverlay(
                                                             onConnectServer(value) { connectResult ->
                                                                 connectResult.onSuccess {
                                                                     serverUrl = it
-                                                                    isConnecting = false
-                                                                    step = WizardStep.LOGIN
-                                                                    onClearAuthStatus()
+                                                                    coroutineScope.launch {
+                                                                        onSaveServerUrlCredential(context, it)
+                                                                        isConnecting = false
+                                                                        step = WizardStep.LOGIN
+                                                                        onClearAuthStatus()
+                                                                    }
                                                                 }.onFailure { error ->
                                                                     isConnecting = false
                                                                     step = WizardStep.SERVER
