@@ -1143,7 +1143,7 @@ struct TimelineExpandedTitleRow: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack(alignment: .bottomLeading) {
             Text(title)
                 .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
                 .foregroundStyle(accentColor)
@@ -1152,7 +1152,7 @@ struct TimelineExpandedTitleRow: View {
                     maxWidth: .infinity,
                     minHeight: TodoTimelineMetrics.expandedTitleHeight,
                     maxHeight: TodoTimelineMetrics.expandedTitleHeight,
-                    alignment: .topLeading
+                    alignment: .bottomLeading
                 )
                 .opacity(titleOpacity)
                 .offset(y: titleOffsetY)
@@ -1161,7 +1161,7 @@ struct TimelineExpandedTitleRow: View {
             maxWidth: .infinity,
             minHeight: TodoTimelineMetrics.titleCollapseDistance,
             maxHeight: TodoTimelineMetrics.titleCollapseDistance,
-            alignment: .topLeading
+            alignment: .bottomLeading
         )
         .clipped()
         .allowsHitTesting(false)
