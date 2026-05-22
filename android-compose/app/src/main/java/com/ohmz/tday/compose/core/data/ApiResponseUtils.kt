@@ -44,6 +44,10 @@ internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
 
     var current: Throwable? = error
     while (current != null) {
+        if (current is ApiCallException && isLikelyServerUnavailableStatus(current.statusCode)) {
+            return true
+        }
+
         val message = current.message.orEmpty().lowercase()
         if (
             message.contains("failed to connect") ||
@@ -58,13 +62,26 @@ internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
             message.contains("broken pipe") ||
             message.contains("software caused connection abort") ||
             message.contains("no route to host") ||
-            message.contains("connection refused")
+            message.contains("connection refused") ||
+            message.contains("bad gateway") ||
+            message.contains("service unavailable") ||
+            message.contains("gateway timeout") ||
+            message.contains("origin unreachable") ||
+            message.contains("web server is down")
         ) {
             return true
         }
         current = current.cause?.takeIf { it !== current }
     }
     return false
+}
+
+private fun isLikelyServerUnavailableStatus(statusCode: Int): Boolean {
+    return statusCode == 408 ||
+            statusCode == 502 ||
+            statusCode == 503 ||
+            statusCode == 504 ||
+            statusCode in 520..524
 }
 
 internal fun isLikelyUnrecoverableMutationError(
