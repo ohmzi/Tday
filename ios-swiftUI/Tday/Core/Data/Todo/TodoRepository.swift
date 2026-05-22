@@ -286,7 +286,13 @@ final class TodoRepository {
     }
 
     func summarizeTodos(mode: TodoListMode, listId: String? = nil) async throws -> TodoSummaryResponse {
-        try await api.summarizeTodos(payload: TodoSummaryRequest(mode: mode.rawValue, listId: listId))
+        try await api.summarizeTodos(
+            payload: TodoSummaryRequest(
+                mode: mode.rawValue,
+                listId: listId,
+                timeZone: TimeZone.current.identifier
+            )
+        )
     }
 
     func parseTodoTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
