@@ -27,8 +27,8 @@ struct OnboardingWizardOverlay: View {
     let pendingApprovalMessage: String?
     let authViewModel: AuthViewModel
     let systemCredentialService: SystemCredentialServicing
-    let onConnectServer: (String) async -> Result<String, MessageError>
-    let onResetServerTrust: (String) async -> Result<String, MessageError>
+    let onConnectServer: (String) async -> Result<Void, MessageError>
+    let onResetServerTrust: (String) async -> Result<Void, MessageError>
     let onLogin: (String, String, LoginCredentialSource) async -> Bool
     let onRegister: (String, String, String) async -> Bool
     let onClearAuthStatus: () -> Void
@@ -46,7 +46,6 @@ struct OnboardingWizardOverlay: View {
     @State private var isConnecting = false
     @State private var isCompletingAuthentication = false
     @State private var credentialCoordinator = LoginCredentialCoordinator()
-    @State private var hasRequestedSavedServerURL = false
 
     var body: some View {
         ZStack {
@@ -70,14 +69,11 @@ struct OnboardingWizardOverlay: View {
             serverURL = initialServerURL ?? ""
             email = authViewModel.savedEmail
             step = (initialServerURL?.isEmpty == false) ? .login : .server
-            requestSavedServerURLIfAvailable()
             requestSavedCredentialIfAvailable()
         }
         .onChange(of: step) { _, newStep in
             if newStep == .login {
                 requestSavedCredentialIfAvailable()
-            } else {
-                requestSavedServerURLIfAvailable()
             }
         }
         .onChange(of: isCreatingAccount) { _, creatingAccount in
@@ -199,7 +195,6 @@ struct OnboardingWizardOverlay: View {
                 title: "Server URL",
                 text: $serverURL,
                 keyboardType: .URL,
-                textContentType: .URL,
                 autocapitalization: .never,
                 disableAutocorrection: true,
                 submitLabel: .go,
@@ -392,9 +387,7 @@ struct OnboardingWizardOverlay: View {
         let result = await onConnectServer(serverURL)
         isConnecting = false
         switch result {
-        case let .success(savedServerURL):
-            serverURL = savedServerURL
-            await saveServerURLCredential(savedServerURL)
+        case .success:
             step = .login
         case let .failure(error):
             localError = error.message
@@ -408,35 +401,11 @@ struct OnboardingWizardOverlay: View {
         let result = await onResetServerTrust(serverURL)
         isConnecting = false
         switch result {
-        case let .success(savedServerURL):
-            serverURL = savedServerURL
-            await saveServerURLCredential(savedServerURL)
+        case .success:
             step = .login
         case let .failure(error):
             localError = error.message
         }
-    }
-
-    private func requestSavedServerURLIfAvailable() {
-        guard step == .server,
-              serverURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !isConnecting,
-              !hasRequestedSavedServerURL else {
-            return
-        }
-
-        hasRequestedSavedServerURL = true
-        Task { @MainActor in
-            guard let savedServerURL = await systemCredentialService.requestSavedServerURL() else {
-                return
-            }
-            serverURL = savedServerURL
-            localError = nil
-        }
-    }
-
-    private func saveServerURLCredential(_ savedServerURL: String) async {
-        _ = await systemCredentialService.offerSaveOrUpdateServerURL(savedServerURL)
     }
 
     private func requestSavedCredentialIfAvailable() {
@@ -446,7 +415,6 @@ struct OnboardingWizardOverlay: View {
 
         Task { @MainActor in
             _ = await credentialCoordinator.requestSavedCredentialIfAvailable(
-                currentEmail: email,
                 currentPassword: password,
                 isCreatingAccount: isCreatingAccount,
                 isAuthLoading: isAuthInFlight,

@@ -179,7 +179,7 @@ final class AppViewModel {
         await bootstrap()
     }
 
-    func connectServer(rawURL: String) async -> Result<String, MessageError> {
+    func connectServer(rawURL: String) async -> Result<Void, MessageError> {
         do {
             let probeResult = try await container.serverConfigRepository.probeAndSave(rawURL)
             serverURL = probeResult.serverURL
@@ -190,7 +190,7 @@ final class AppViewModel {
             requiresLogin = !isBlocking
             error = nil
             canResetServerTrust = true
-            return .success(probeResult.serverURL)
+            return .success(())
         } catch {
             let msg = serverConnectionMessage(for: error)
             self.error = msg
@@ -212,7 +212,7 @@ final class AppViewModel {
         }
     }
 
-    func resetTrustedServer(rawURL: String) async -> Result<String, MessageError> {
+    func resetTrustedServer(rawURL: String) async -> Result<Void, MessageError> {
         do {
             _ = try await container.serverConfigRepository.resetTrustedServer(rawURL: rawURL)
             let savedServerURL = container.serverConfigRepository.getServerURL()?.absoluteString ?? rawURL
@@ -220,7 +220,7 @@ final class AppViewModel {
             requiresServerSetup = false
             requiresLogin = true
             error = nil
-            return .success(savedServerURL)
+            return .success(())
         } catch {
             let msg = serverConnectionMessage(for: error)
             self.error = msg
