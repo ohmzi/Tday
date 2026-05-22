@@ -602,6 +602,7 @@
 				EE513C8DAF31C33B310B4E38 /* Sources */,
 				32A3CADD0462E89BFAB9B2DA /* Resources */,
 				3FDD7DCF0206921E0210DA60 /* Frameworks */,
+				7D51D73A93C443F785B61790 /* Generate Sentry dSYM */,
 			);
 			buildRules = (
 			);
@@ -661,6 +662,32 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		7D51D73A93C443F785B61790 /* Generate Sentry dSYM */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Sentry.framework/Sentry",
+			);
+			name = "Generate Sentry dSYM";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DWARF_DSYM_FOLDER_PATH)/Sentry.framework.dSYM/Contents/Info.plist",
+				"$(DWARF_DSYM_FOLDER_PATH)/Sentry.framework.dSYM/Contents/Resources/DWARF/Sentry",
+				"$(DWARF_DSYM_FOLDER_PATH)/Sentry.framework.dSYM/Contents/Resources/Relocations/aarch64/Sentry.yml",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "set -euo pipefail\n\nif [[ \"${CONFIGURATION:-}\" != \"Release\" || \"${PLATFORM_NAME:-}\" != \"iphoneos\" ]]; then\n  exit 0\nfi\n\nsentry_binary=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Sentry.framework/Sentry\"\nsentry_dsym=\"${DWARF_DSYM_FOLDER_PATH}/Sentry.framework.dSYM\"\n\nif [[ ! -f \"${sentry_binary}\" ]]; then\n  echo \"warning: Sentry.framework binary not found at ${sentry_binary}\"\n  exit 0\nfi\n\nmkdir -p \"$(dirname \"${sentry_dsym}\")\"\n\"$(xcrun --find dsymutil)\" \"${sentry_binary}\" -o \"${sentry_dsym}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		64E975FE272A463522F716BE /* Sources */ = {
