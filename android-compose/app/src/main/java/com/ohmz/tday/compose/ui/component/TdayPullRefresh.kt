@@ -118,6 +118,11 @@ private fun TdayPullToRefreshIndicator(
         animationSpec = tween(durationMillis = 220),
         label = "pullRefreshScale",
     )
+    val refreshingBottomOffset by animateDpAsState(
+        targetValue = if (isRefreshing) TdayDimens.PullRefreshRefreshingOffset else 0.dp,
+        animationSpec = tween(durationMillis = 220),
+        label = "pullRefreshRefreshingOffset",
+    )
     val spin = if (isRefreshing) {
         val refreshTransition = rememberInfiniteTransition(label = "pullRefreshSpin")
         val refreshSpin by refreshTransition.animateFloat(
@@ -155,9 +160,12 @@ private fun TdayPullToRefreshIndicator(
             }
             .graphicsLayer {
                 val showElevation = state.distanceFraction > 0f || isRefreshing
-                translationY =
-                    (state.distanceFraction * PullToRefreshDefaults.PositionalThreshold.roundToPx()) -
-                            size.height
+                val pullBottomOffset =
+                    state.distanceFraction * PullToRefreshDefaults.PositionalThreshold.roundToPx()
+                translationY = maxOf(
+                    pullBottomOffset,
+                    refreshingBottomOffset.toPx(),
+                ) - size.height
                 shadowElevation = if (showElevation) TdayDimens.PullRefreshElevation.toPx() else 0f
                 shape = indicatorShape
                 clip = true
