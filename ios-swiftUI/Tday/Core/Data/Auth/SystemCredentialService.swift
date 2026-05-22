@@ -74,7 +74,14 @@ final class SystemCredentialService: SystemCredentialServicing {
         activeAuthorizationSession = session
         let credential = await session.requestSavedCredential()
         activeAuthorizationSession = nil
-        return credential
+        if let credential {
+            return credential
+        }
+
+        return await requestSharedWebLoginCredential(
+            host: SystemCredentialScope.appCredentialHost,
+            account: nil
+        )
     }
 
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult {
@@ -105,10 +112,9 @@ final class SystemCredentialService: SystemCredentialServicing {
             return .skipped
         }
 
-        return await savePasswordRecord(
+        return await saveWithSharedWebCredential(
             user: SystemCredentialRecord.serverURLUser,
             password: normalizedServerURL,
-            title: "T'Day Server URL",
             failurePurpose: "server URL"
         )
     }
@@ -209,6 +215,26 @@ final class SystemCredentialService: SystemCredentialServicing {
                     let password = record[kSecSharedPassword as String] as? String ?? ""
                     if let serverURL = SystemCredentialRecord.serverURL(user: user, password: password) {
                         continuation.resume(returning: serverURL)
+                        return
+                    }
+                }
+                continuation.resume(returning: nil)
+            }
+        }
+    }
+
+    private func requestSharedWebLoginCredential(host: String, account: String?) async -> SystemCredential? {
+        await withCheckedContinuation { (continuation: CheckedContinuation<SystemCredential?, Never>) in
+            SecRequestSharedWebCredential(
+                host as CFString,
+                account as CFString?
+            ) { credentials, _ in
+                let records = (credentials as? [[String: Any]]) ?? []
+                for record in records {
+                    let user = record[kSecAttrAccount as String] as? String ?? ""
+                    let password = record[kSecSharedPassword as String] as? String ?? ""
+                    if let credential = SystemCredentialRecord.loginCredential(user: user, password: password) {
+                        continuation.resume(returning: credential)
                         return
                     }
                 }
