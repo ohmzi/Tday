@@ -14,8 +14,33 @@
                     <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" alignment="center" spacing="6" translatesAutoresizingMaskIntoConstraints="NO" id="rmz-Nm-fXf">
+                                <rect key="frame" x="32" y="383" width="329" height="86"/>
+                                <subviews>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="T'Day" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" translatesAutoresizingMaskIntoConstraints="NO" id="Urk-0J-z6O">
+                                        <rect key="frame" x="121.66666666666669" y="0.0" width="86" height="39"/>
+                                        <fontDescription key="fontDescription" type="boldSystem" pointSize="32"/>
+                                        <color key="textColor" name="LaunchForeground"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Your server remembers, so you don't have to" textAlignment="center" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" translatesAutoresizingMaskIntoConstraints="NO" id="uBp-q6-hhd">
+                                        <rect key="frame" x="0.0" y="45" width="329" height="41"/>
+                                        <fontDescription key="fontDescription" type="boldSystem" pointSize="14"/>
+                                        <color key="textColor" name="LaunchMuted"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                </subviews>
+                            </stackView>
+                        </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
                         <color key="backgroundColor" name="LaunchBackground"/>
+                        <constraints>
+                            <constraint firstItem="rmz-Nm-fXf" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="Pdq-tV-TgE"/>
+                            <constraint firstItem="rmz-Nm-fXf" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="TTX-n9-GGE"/>
+                            <constraint firstItem="rmz-Nm-fXf" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="Bcu-3y-fUS" secondAttribute="leading" constant="32" id="ZqR-4C-pB1"/>
+                            <constraint firstItem="Bcu-3y-fUS" firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="rmz-Nm-fXf" secondAttribute="trailing" constant="32" id="l2c-Ag-Ixc"/>
+                        </constraints>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -26,6 +51,12 @@
     <resources>
         <namedColor name="LaunchBackground">
             <color red="0.95686274510000002" green="0.96470588239999999" blue="0.98431372550000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+        <namedColor name="LaunchForeground">
+            <color red="0.11" green="0.14" blue="0.20000000000000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+        <namedColor name="LaunchMuted">
+            <color red="0.35999999999999999" green="0.40000000000000002" blue="0.48999999999999999" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
     </resources>
 </document>
