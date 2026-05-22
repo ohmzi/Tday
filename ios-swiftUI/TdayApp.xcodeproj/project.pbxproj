@@ -62,6 +62,7 @@
 		A03B553E316CEEDFAB8EBA69 /* OfflineSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB49A43AFEE66EEDB3315F86 /* OfflineSyncModels.swift */; };
 		A316B4B3BB1AEA5FDF9998DF /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BFFE8167D3639FF09C033A2 /* AppRootView.swift */; };
 		A7319C922AE54DC944A9ECC5 /* AuthRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */; };
+		B4995200636F408E4296FF0D /* ApiModelContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 629820F1BA29236313992076 /* ApiModelContractTests.swift */; };
 		B34A31B1812FC676A3AC1871 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DCE08ADACC8F11CE2113C13B /* Assets.xcassets */; };
 		B5D28682AD0623E39CCD4F8E /* CompleteTodoUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F09E74879D0AAABCF70E20 /* CompleteTodoUseCase.swift */; };
 		B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6049166B683EE082F8C551DD /* ApiModels.swift */; };
@@ -124,6 +125,7 @@
 		593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHelpers.swift; sourceTree = "<group>"; };
 		5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReminderScheduler.swift; sourceTree = "<group>"; };
 		6049166B683EE082F8C551DD /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
+		629820F1BA29236313992076 /* ApiModelContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModelContractTests.swift; sourceTree = "<group>"; };
 		62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListScreen.swift; sourceTree = "<group>"; };
 		6CF6FD5D2845A10D7052467D /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
 		6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncAndRefreshUseCase.swift; sourceTree = "<group>"; };
@@ -220,6 +222,7 @@
 		0887DFEE17FD8E0DCDABDD10 /* TdayCoreTests */ = {
 			isa = PBXGroup;
 			children = (
+				629820F1BA29236313992076 /* ApiModelContractTests.swift */,
 				4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */,
 				4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */,
 				4F52544D434C49454E543032 /* RealtimeClientTests.swift */,
@@ -664,6 +667,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B4995200636F408E4296FF0D /* ApiModelContractTests.swift in Sources */,
 				4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */,
 				4D2A9B7E2CE3424C9D111001 /* ConnectivityClassificationTests.swift in Sources */,
 				4F52544D434C49454E543031 /* RealtimeClientTests.swift in Sources */,
