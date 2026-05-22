@@ -219,9 +219,20 @@ final class TodoRepository {
 
     func completeTodo(_ todo: TodoItem) async throws {
         let now = Date().epochMilliseconds
+        let mutationID = UUID().uuidString
+        let instanceDateEpochMs = todo.instanceDateEpochMilliseconds
+        let mutationKind: MutationKind = todo.isRecurring && instanceDateEpochMs != nil ? .completeTodoInstance : .completeTodo
         _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
-            nextState.todos.removeAll { $0.canonicalId == todo.canonicalId && $0.instanceDateEpochMs == todo.instanceDateEpochMilliseconds }
+            nextState.todos = state.todos.map { current in
+                guard current.canonicalId == todo.canonicalId else {
+                    return current
+                }
+                if todo.isRecurring && instanceDateEpochMs != nil && current.instanceDateEpochMs != instanceDateEpochMs {
+                    return current
+                }
+                return self.withCompletion(current, completed: true, updatedAtEpochMs: now)
+            }
             nextState.completedItems.insert(
                 CachedCompletedRecord(
                     id: LOCAL_COMPLETED_PREFIX + UUID().uuidString.lowercased(),
@@ -238,29 +249,26 @@ final class TodoRepository {
                 ),
                 at: 0
             )
-            nextState.pendingMutations.removeAll { $0.targetId == todo.canonicalId && $0.kind == .createTodo }
-            if !todo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX) {
-                nextState.pendingMutations.append(
-                    PendingMutationRecord(
-                        mutationId: UUID().uuidString,
-                        kind: todo.instanceDate == nil ? .completeTodo : .completeTodoInstance,
-                        targetId: todo.canonicalId,
-                        timestampEpochMs: now,
-                        title: nil,
-                        description: nil,
-                        priority: nil,
-                        dueEpochMs: nil,
-                        rrule: nil,
-                        listId: nil,
-                        pinned: nil,
-                        completed: true,
-                        instanceDateEpochMs: todo.instanceDateEpochMilliseconds,
-                        name: nil,
-                        color: nil,
-                        iconKey: nil
-                    )
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: mutationID,
+                    kind: mutationKind,
+                    targetId: todo.canonicalId,
+                    timestampEpochMs: now,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: true,
+                    instanceDateEpochMs: instanceDateEpochMs,
+                    name: nil,
+                    color: nil,
+                    iconKey: nil
                 )
-            }
+            )
             return nextState
         }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
@@ -291,6 +299,23 @@ final class TodoRepository {
                 timezoneOffsetMinutes: timezoneOffsetMinutes,
                 defaultDurationMinutes: 60
             )
+        )
+    }
+
+    private func withCompletion(_ record: CachedTodoRecord, completed: Bool, updatedAtEpochMs: Int64) -> CachedTodoRecord {
+        CachedTodoRecord(
+            id: record.id,
+            canonicalId: record.canonicalId,
+            title: record.title,
+            description: record.description,
+            priority: record.priority,
+            dueEpochMs: record.dueEpochMs,
+            rrule: record.rrule,
+            instanceDateEpochMs: record.instanceDateEpochMs,
+            pinned: record.pinned,
+            completed: completed,
+            listId: record.listId,
+            updatedAtEpochMs: updatedAtEpochMs
         )
     }
 
