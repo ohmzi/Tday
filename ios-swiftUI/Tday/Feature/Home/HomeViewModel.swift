@@ -12,6 +12,7 @@ final class HomeViewModel {
     var errorMessage: String?
 
     @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
+    @ObservationIgnored private var activeLoadingRefreshes = 0
 
     init(container: AppContainer) {
         self.container = container
@@ -24,7 +25,14 @@ final class HomeViewModel {
     }
 
     func refresh() async {
+        activeLoadingRefreshes += 1
         isLoading = true
+        defer {
+            activeLoadingRefreshes = max(activeLoadingRefreshes - 1, 0)
+            if activeLoadingRefreshes == 0 {
+                isLoading = false
+            }
+        }
         let result = await container.syncAndRefresh(
             force: true,
             replayPendingMutations: true,
@@ -39,7 +47,7 @@ final class HomeViewModel {
     func refreshFromCache() {
         summary = container.todoRepository.fetchDashboardSummarySnapshot()
         searchableTodos = container.todoRepository.fetchTodosSnapshot(mode: .all)
-        isLoading = false
+        isLoading = activeLoadingRefreshes > 0
         errorMessage = nil
     }
 
