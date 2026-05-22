@@ -33,6 +33,8 @@ enum LoginCredentialSource {
 protocol SystemCredentialServicing: AnyObject {
     func requestSavedCredential() async -> SystemCredential?
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult
+    func requestSavedServerURL() async -> String?
+    func offerSaveOrUpdateServerURL(_ serverURL: String) async -> SystemCredentialSaveResult
 }
 
 enum SystemCredentialScope {
@@ -51,6 +53,15 @@ enum SystemCredentialRecord {
         }
 
         return SystemCredential(email: normalizedUser, password: password)
+    }
+
+    static func serverURL(user: String, password: String) -> String? {
+        guard user.trimmingCharacters(in: .whitespacesAndNewlines) == serverURLUser else {
+            return nil
+        }
+
+        let normalizedURL = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        return normalizedURL.isEmpty ? nil : normalizedURL
     }
 }
 
@@ -78,6 +89,27 @@ final class SystemCredentialService: SystemCredentialServicing {
             password: credential.password,
             title: "Tday",
             failurePurpose: "login"
+        )
+    }
+
+    func requestSavedServerURL() async -> String? {
+        await requestSharedWebCredential(
+            host: SystemCredentialScope.appCredentialHost,
+            account: SystemCredentialRecord.serverURLUser
+        )
+    }
+
+    func offerSaveOrUpdateServerURL(_ serverURL: String) async -> SystemCredentialSaveResult {
+        let normalizedServerURL = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedServerURL.isEmpty else {
+            return .skipped
+        }
+
+        return await savePasswordRecord(
+            user: SystemCredentialRecord.serverURLUser,
+            password: normalizedServerURL,
+            title: "T'Day Server URL",
+            failurePurpose: "server URL"
         )
     }
 
@@ -164,6 +196,26 @@ final class SystemCredentialService: SystemCredentialServicing {
             }
         }
     }
+
+    private func requestSharedWebCredential(host: String, account: String) async -> String? {
+        await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
+            SecRequestSharedWebCredential(
+                host as CFString,
+                account as CFString
+            ) { credentials, _ in
+                let records = (credentials as? [[String: Any]]) ?? []
+                for record in records {
+                    let user = record[kSecAttrAccount as String] as? String ?? ""
+                    let password = record[kSecSharedPassword as String] as? String ?? ""
+                    if let serverURL = SystemCredentialRecord.serverURL(user: user, password: password) {
+                        continuation.resume(returning: serverURL)
+                        return
+                    }
+                }
+                continuation.resume(returning: nil)
+            }
+        }
+    }
 }
 
 @MainActor
@@ -181,7 +233,7 @@ private final class PasswordAuthorizationSession: NSObject, ASAuthorizationContr
             self.controller = controller
             controller.delegate = self
             controller.presentationContextProvider = self
-            controller.performRequests()
+            controller.performRequests(options: [.preferImmediatelyAvailableCredentials])
         }
     }
 
