@@ -124,6 +124,7 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -228,11 +229,40 @@ fun CalendarScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                return Velocity.Zero
+                val isListAtTop =
+                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                if (available.y > 0f && !isListAtTop) return Velocity.Zero
+                val snapped = snapTitleCollapsePx(
+                    currentPx = headerCollapsePx,
+                    maxPx = maxCollapsePx,
+                    velocityY = available.y,
+                )
+                if (snapped == headerCollapsePx) return Velocity.Zero
+                headerCollapsePx = snapped
+                return if (available.y == 0f) Velocity.Zero else available
             }
         }
     }
-    val collapseProgress = collapseProgressTarget
+    val collapseProgress by animateFloatAsState(
+        targetValue = collapseProgressTarget,
+        label = "calendarTitleCollapseProgress",
+    )
+    LaunchedEffect(
+        listState.isScrollInProgress,
+        headerCollapsePx,
+        maxCollapsePx,
+    ) {
+        if (listState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
+            return@LaunchedEffect
+        }
+        val isListAtTop =
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        headerCollapsePx = if (isListAtTop) {
+            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
+        } else {
+            maxCollapsePx
+        }
+    }
     val monthTitleSnapThresholdPx = remember(density) { with(density) { 58.dp.roundToPx() } }
     var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
