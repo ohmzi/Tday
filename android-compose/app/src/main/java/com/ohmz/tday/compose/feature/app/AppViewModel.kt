@@ -373,7 +373,7 @@ class AppViewModel @Inject constructor(
 
     fun saveServerUrl(
         rawUrl: String,
-        onSuccess: () -> Unit,
+        onSuccess: (String) -> Unit,
         onFailure: (String) -> Unit = {},
     ) {
         viewModelScope.launch {
@@ -394,7 +394,7 @@ class AppViewModel @Inject constructor(
                         backendVersion = probeResult.backendVersion,
                     )
                 }
-                onSuccess()
+                onSuccess(probeResult.serverUrl)
             }.onFailure { error ->
                 val message = toServerSetupMessage(error)
                 _uiState.update {
