@@ -15,6 +15,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -91,7 +93,6 @@ import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import io.sentry.android.navigation.SentryNavigationListener
-import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private const val NAV_ENTER_DURATION_MS = 440
@@ -99,7 +100,6 @@ private const val NAV_EXIT_DURATION_MS = 320
 private const val NAV_FADE_IN_DURATION_MS = 360
 private const val NAV_FADE_OUT_DURATION_MS = 240
 private const val NAV_SLIDE_FRACTION = 0.18f
-private const val SPLASH_MIN_DISPLAY_MS = 1_500L
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
 private const val SETTINGS_ENTER_DURATION_MS = 380
 private const val SETTINGS_EXIT_DURATION_MS = 260
@@ -127,6 +127,7 @@ fun TdayApp() {
     val taskDeletedToastMessage = stringResource(R.string.task_deleted_toast)
     var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
+    var isStartupSplashHeld by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -155,6 +156,7 @@ fun TdayApp() {
         appUiState = appUiState,
         currentRoute = currentRoute,
         navController = navController,
+        isStartupSplashHeld = isStartupSplashHeld,
     )
 
     HandleLaunchUpdateToast(
@@ -243,7 +245,7 @@ fun TdayApp() {
                     enterTransition = { fadeIn(tween(300)) },
                     exitTransition = { fadeOut(tween(300)) },
                 ) {
-                    SplashScreen()
+                    SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
                 }
 
                 composable(
@@ -251,7 +253,7 @@ fun TdayApp() {
                     enterTransition = { fadeIn(tween(300)) },
                     exitTransition = { fadeOut(tween(300)) },
                 ) {
-                    SplashScreen()
+                    SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
                 }
 
                 composable(
@@ -259,7 +261,7 @@ fun TdayApp() {
                     enterTransition = { fadeIn(tween(300)) },
                     exitTransition = { fadeOut(tween(300)) },
                 ) {
-                    SplashScreen()
+                    SplashScreen(onHoldChanged = { isStartupSplashHeld = it })
                 }
 
                 composable(
@@ -672,22 +674,16 @@ private fun HandleStartupNavigation(
     appUiState: AppUiState,
     currentRoute: String?,
     navController: NavHostController,
+    isStartupSplashHeld: Boolean,
 ) {
-    val splashStartedAtMs = remember { System.currentTimeMillis() }
-
     LaunchedEffect(
         appUiState.loading,
         appUiState.authenticated,
         currentRoute,
+        isStartupSplashHeld,
     ) {
         if (appUiState.loading) return@LaunchedEffect
-        if (currentRoute.isStartupSplashRoute()) {
-            val remainingMs =
-                SPLASH_MIN_DISPLAY_MS - (System.currentTimeMillis() - splashStartedAtMs)
-            if (remainingMs > 0) {
-                delay(remainingMs)
-            }
-        }
+        if (isStartupSplashHeld) return@LaunchedEffect
 
         if (appUiState.authenticated) {
             val unauthenticatedRoutes = setOf(
@@ -705,12 +701,6 @@ private fun HandleStartupNavigation(
             navigateHome(navController, currentRoute)
         }
     }
-}
-
-private fun String?.isStartupSplashRoute(): Boolean {
-    return this == AppRoute.Splash.route ||
-            this == AppRoute.Login.route ||
-            this == AppRoute.ServerSetup.route
 }
 
 private fun navigateHome(
@@ -958,12 +948,30 @@ private val splashTaglines = listOf(
 )
 
 @Composable
-private fun SplashScreen() {
+private fun SplashScreen(
+    onHoldChanged: (Boolean) -> Unit,
+) {
     val tagline = remember { splashTaglines.random() }
+
+    DisposableEffect(onHoldChanged) {
+        onDispose { onHoldChanged(false) }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .pointerInput(onHoldChanged) {
+                detectTapGestures(
+                    onPress = {
+                        onHoldChanged(true)
+                        try {
+                            awaitRelease()
+                        } finally {
+                            onHoldChanged(false)
+                        }
+                    },
+                )
+            }
             .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center,
     ) {
