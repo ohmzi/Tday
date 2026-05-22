@@ -158,6 +158,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -256,12 +257,35 @@ fun TodoListScreen(
     )
     val showSectionedTimeline =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
+    val suppressInitialTodayTimeline =
+        uiState.mode == TodoListMode.TODAY &&
+                !uiState.hasHydratedSnapshot &&
+                uiState.items.isEmpty()
     val timelineSections = remember(uiState.mode, uiState.items) {
         buildTimelineSections(
             mode = uiState.mode,
             items = uiState.items,
         )
     }
+    var timelineAnimationsReady by remember(uiState.mode, uiState.listId) {
+        mutableStateOf(uiState.mode != TodoListMode.TODAY)
+    }
+    LaunchedEffect(uiState.mode, uiState.listId, uiState.hasHydratedSnapshot) {
+        if (uiState.mode != TodoListMode.TODAY) {
+            timelineAnimationsReady = true
+            return@LaunchedEffect
+        }
+        if (!uiState.hasHydratedSnapshot) {
+            timelineAnimationsReady = false
+            return@LaunchedEffect
+        }
+        if (!timelineAnimationsReady) {
+            withFrameNanos { }
+            timelineAnimationsReady = true
+        }
+    }
+    val timelineAnimationsEnabled =
+        uiState.mode != TodoListMode.TODAY || timelineAnimationsReady
     val listState = rememberLazyListState()
     val density = LocalDensity.current
     val maxTodayCollapsePx = with(density) { TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
@@ -564,7 +588,7 @@ fun TodoListScreen(
                         }
                     }
 
-                    if (showSectionedTimeline) {
+                    if (showSectionedTimeline && !suppressInitialTodayTimeline) {
                         timelineSections.forEachIndexed { sectionIndex, section ->
                             val sectionHasTasks = section.items.isNotEmpty()
                             val sectionModeCanCollapse = when (uiState.mode) {
@@ -613,16 +637,19 @@ fun TodoListScreen(
                                 key = "timeline-header-${section.key}",
                                 contentType = "timeline-header",
                             ) {
+                                var headerModifier: Modifier = Modifier
+                                if (timelineAnimationsEnabled) {
+                                    headerModifier = headerModifier.animateItem(
+                                        fadeInSpec = null,
+                                        placementSpec = tween(
+                                            durationMillis = 320,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                        fadeOutSpec = null,
+                                    )
+                                }
                                 TimelineSectionHeader(
-                                    modifier = Modifier
-                                        .animateItem(
-                                            fadeInSpec = null,
-                                            placementSpec = tween(
-                                                durationMillis = 320,
-                                                easing = FastOutSlowInEasing,
-                                            ),
-                                            fadeOutSpec = null,
-                                        )
+                                    modifier = headerModifier
                                         .timelineSectionDropTarget(
                                             section = section,
                                             draggedTodo = sectionDraggedTodo,
@@ -672,22 +699,25 @@ fun TodoListScreen(
                                         key = "timeline-todo-${section.key}-${todo.id}",
                                         contentType = "timeline-todo",
                                     ) {
+                                        var rowModifier: Modifier = Modifier
+                                        if (timelineAnimationsEnabled) {
+                                            rowModifier = rowModifier.animateItem(
+                                                fadeInSpec = tween(
+                                                    durationMillis = 190,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                placementSpec = tween(
+                                                    durationMillis = 320,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                fadeOutSpec = tween(
+                                                    durationMillis = 150,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                            )
+                                        }
                                         TimelineTaskRow(
-                                            modifier = Modifier
-                                                .animateItem(
-                                                    fadeInSpec = tween(
-                                                        durationMillis = 190,
-                                                        easing = FastOutSlowInEasing,
-                                                    ),
-                                                    placementSpec = tween(
-                                                        durationMillis = 320,
-                                                        easing = FastOutSlowInEasing,
-                                                    ),
-                                                    fadeOutSpec = tween(
-                                                        durationMillis = 150,
-                                                        easing = FastOutSlowInEasing,
-                                                    ),
-                                                )
+                                            modifier = rowModifier
                                                 .timelineSectionDropTarget(
                                                     section = section,
                                                     draggedTodo = sectionDraggedTodo,
@@ -727,7 +757,7 @@ fun TodoListScreen(
                                 }
                             }
                         }
-                    } else {
+                    } else if (!showSectionedTimeline) {
                         items(
                             items = uiState.items,
                             key = { it.id },
@@ -762,7 +792,7 @@ fun TodoListScreen(
                 }
             }
 
-            if (uiState.items.isEmpty() && !uiState.isLoading) {
+            if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline) {
                 EmptyTaskWatermark(
                     imageVector = emptyWatermarkIcon,
                     accentColor = titleColor,
@@ -973,7 +1003,7 @@ private fun TodayTopBar(
 @Composable
 private fun TodayHeaderButton(
     onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     contentDescription: String,
     isBackButton: Boolean = false,
 ) {
