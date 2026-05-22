@@ -428,10 +428,15 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
         private var lastDragDelta: CGFloat = 0
         private var releaseVelocityY: CGFloat = 0
         private var settledTargetOffset: CGFloat = 0
+        private var snapTimer: Timer?
         private var isSnapping = false
 
         init(collapseDistance: CGFloat) {
             self.collapseDistance = collapseDistance
+        }
+
+        deinit {
+            snapTimer?.invalidate()
         }
 
         func attach(to view: UIView) {
@@ -453,6 +458,7 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
 
             switch gesture.state {
             case .began:
+                snapTimer?.invalidate()
                 isSnapping = false
                 releaseVelocityY = 0
                 lastDragDelta = 0
@@ -466,12 +472,27 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
                 lastObservedOffset = offset
             case .ended, .cancelled, .failed:
                 releaseVelocityY = gesture.velocity(in: scrollView).y
-                DispatchQueue.main.async { [weak self, weak scrollView] in
-                    guard let self, let scrollView else { return }
-                    self.maybeSnap(scrollView: scrollView)
-                }
+                scheduleSnapCheck()
             default:
                 break
+            }
+        }
+
+        private func scheduleSnapCheck() {
+            snapTimer?.invalidate()
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard let scrollView = self.observedScrollView else {
+                    timer.invalidate()
+                    return
+                }
+                if !scrollView.isTracking && !scrollView.isDragging && !scrollView.isDecelerating {
+                    timer.invalidate()
+                    self.maybeSnap(scrollView: scrollView)
+                }
             }
         }
 
@@ -479,6 +500,14 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
             let distance = collapseDistance
             guard distance > 0 else { return }
             let currentOffset = normalizedOffset(for: scrollView)
+            guard maxScrollableOffset(for: scrollView) >= distance - 0.5 else {
+                guard currentOffset > 0.5 else {
+                    settledTargetOffset = 0
+                    return
+                }
+                animate(scrollView: scrollView, toNormalizedOffset: 0, target: 0)
+                return
+            }
             guard currentOffset > 0.5 else {
                 settledTargetOffset = 0
                 return
@@ -495,6 +524,13 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
 
         private func normalizedOffset(for scrollView: UIScrollView) -> CGFloat {
             max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+        }
+
+        private func maxScrollableOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(
+                scrollView.contentSize.height + scrollView.adjustedContentInset.top + scrollView.adjustedContentInset.bottom - scrollView.bounds.height,
+                0
+            )
         }
 
         private func targetOffset(for currentOffset: CGFloat, distance: CGFloat) -> CGFloat {
@@ -515,6 +551,11 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
             }
 
             return settledTargetOffset
+        }
+
+        private func animate(scrollView: UIScrollView, toNormalizedOffset normalizedOffset: CGFloat, target: CGFloat) {
+            let newContentY = normalizedOffset - scrollView.adjustedContentInset.top
+            animate(scrollView: scrollView, to: CGPoint(x: scrollView.contentOffset.x, y: newContentY), target: target)
         }
 
         private func animate(scrollView: UIScrollView, to offset: CGPoint, target: CGFloat) {
