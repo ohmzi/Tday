@@ -151,7 +151,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -166,6 +165,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -176,6 +176,9 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -186,6 +189,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -199,6 +203,8 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
@@ -259,18 +265,83 @@ fun TodoListScreen(
     val listState = rememberLazyListState()
     val density = LocalDensity.current
     val maxTodayCollapsePx = with(density) { TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    val todayCollapseProgress by remember(usesTodayStyle, listState, maxTodayCollapsePx) {
-        derivedStateOf {
-            if (!usesTodayStyle || maxTodayCollapsePx <= 0f) {
-                0f
-            } else {
-                val scrolledPx = if (listState.firstVisibleItemIndex > 0) {
-                    maxTodayCollapsePx
-                } else {
-                    listState.firstVisibleItemScrollOffset.toFloat()
+    var todayHeaderCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
+    val todayCollapseProgressTarget = if (usesTodayStyle && maxTodayCollapsePx > 0f) {
+        (todayHeaderCollapsePx / maxTodayCollapsePx).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val todayNestedScrollConnection = remember(usesTodayStyle, listState, maxTodayCollapsePx) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (!usesTodayStyle) return Offset.Zero
+                val deltaY = available.y
+                if (deltaY < 0f) {
+                    val previous = todayHeaderCollapsePx
+                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
+                    val consumed = next - previous
+                    if (consumed > 0f) {
+                        todayHeaderCollapsePx = next
+                        return Offset(0f, -consumed)
+                    }
+                    return Offset.Zero
                 }
-                (scrolledPx / maxTodayCollapsePx).coerceIn(0f, 1f)
+
+                if (deltaY > 0f) {
+                    val isListAtTop =
+                        listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                    if (!isListAtTop) return Offset.Zero
+                    val previous = todayHeaderCollapsePx
+                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
+                    val consumed = previous - next
+                    if (consumed > 0f) {
+                        todayHeaderCollapsePx = next
+                        return Offset(0f, consumed)
+                    }
+                }
+
+                return Offset.Zero
             }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (!usesTodayStyle) return Velocity.Zero
+                val isListAtTop =
+                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                if (available.y > 0f && !isListAtTop) return Velocity.Zero
+                val snapped = snapTitleCollapsePx(
+                    currentPx = todayHeaderCollapsePx,
+                    maxPx = maxTodayCollapsePx,
+                    velocityY = available.y,
+                )
+                if (snapped == todayHeaderCollapsePx) return Velocity.Zero
+                todayHeaderCollapsePx = snapped
+                return if (available.y == 0f) Velocity.Zero else available
+            }
+        }
+    }
+    val todayCollapseProgress by animateFloatAsState(
+        targetValue = todayCollapseProgressTarget,
+        label = "todayTitleCollapseProgress",
+    )
+    LaunchedEffect(
+        usesTodayStyle,
+        listState.isScrollInProgress,
+        todayHeaderCollapsePx,
+        maxTodayCollapsePx,
+    ) {
+        if (!usesTodayStyle ||
+            listState.isScrollInProgress ||
+            todayHeaderCollapsePx <= 0f ||
+            todayHeaderCollapsePx >= maxTodayCollapsePx
+        ) {
+            return@LaunchedEffect
+        }
+        val isListAtTop =
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        todayHeaderCollapsePx = if (isListAtTop) {
+            snapTitleCollapsePx(todayHeaderCollapsePx, maxTodayCollapsePx)
+        } else {
+            maxTodayCollapsePx
         }
     }
     val isCollapsibleTimelineMode =
@@ -347,6 +418,7 @@ fun TodoListScreen(
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
+            todayHeaderCollapsePx = maxTodayCollapsePx
             delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
@@ -458,7 +530,15 @@ fun TodoListScreen(
                     .padding(padding),
             ) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(
+                            if (usesTodayStyle) {
+                                Modifier.nestedScroll(todayNestedScrollConnection)
+                            } else {
+                                Modifier
+                            },
+                        ),
                     state = listState,
                     contentPadding = if (usesTodayStyle) {
                         PaddingValues(horizontal = 18.dp, vertical = 2.dp)
@@ -1712,10 +1792,18 @@ private fun buildTimelineSections(
             futureOnly = true,
         )
 
-        TodoListMode.ALL, TodoListMode.PRIORITY, TodoListMode.LIST -> buildScheduledSections(
+        TodoListMode.ALL -> buildScheduledSections(
             items = items,
             zoneId = zoneId,
             futureOnly = false,
+            placesEarlierBeforeToday = true,
+        )
+
+        TodoListMode.PRIORITY, TodoListMode.LIST -> buildScheduledSections(
+            items = items,
+            zoneId = zoneId,
+            futureOnly = false,
+            placesEarlierBeforeToday = false,
         )
     }
 }
@@ -1819,6 +1907,7 @@ private fun buildScheduledSections(
     items: List<TodoItem>,
     zoneId: ZoneId,
     futureOnly: Boolean,
+    placesEarlierBeforeToday: Boolean = true,
 ): List<TodoSection> {
     val now = Instant.now()
     val sorted = items.asSequence().filter { todo ->
@@ -1859,23 +1948,32 @@ private fun buildScheduledSections(
             .toList()
     }
 
-    if (!futureOnly) {
+    val earlierSection = if (!futureOnly) {
         val earlierItems = groupedByDate.asSequence().filter { (date, _) -> date < today }
             .flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
-        if (earlierItems.isNotEmpty()) {
-            sections += TodoSection(
+        earlierItems.takeIf { it.isNotEmpty() }?.let {
+            TodoSection(
                 key = "earlier",
                 title = "Earlier",
-                items = earlierItems,
+                items = it,
                 quickAddDefaults = quickAddDefaultsForDate(
                     date = today,
                     zoneId = zoneId,
                 ),
             )
         }
+    } else {
+        null
+    }
+
+    if (placesEarlierBeforeToday) {
+        earlierSection?.let { sections += it }
     }
 
     sections += daySection(today, "Today")
+    if (!placesEarlierBeforeToday) {
+        earlierSection?.let { sections += it }
+    }
     sections += daySection(today.plusDays(1), "Tomorrow")
     for (offset in 2..6) {
         val date = today.plusDays(offset.toLong())
@@ -2157,72 +2255,6 @@ private fun AllTaskSwipeRow(
 }
 
 @Composable
-private fun SwipeActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    label: String,
-    tint: Color,
-    background: Color,
-    revealProgress: Float,
-    revealDelay: Float,
-    onClick: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val pressedScale by animateFloatAsState(
-        targetValue = if (pressed) 0.92f else 1f,
-        label = "swipeActionScale",
-    )
-    val normalizedReveal = ((revealProgress - revealDelay) / (1f - revealDelay))
-        .coerceIn(0f, 1f)
-    val easedReveal = FastOutSlowInEasing.transform(normalizedReveal)
-    Column(
-        modifier = Modifier
-            .sizeIn(minWidth = 60.dp)
-            .graphicsLayer {
-                alpha = easedReveal
-                val revealScale = 0.38f + (0.62f * easedReveal)
-                scaleX = pressedScale * revealScale
-                scaleY = pressedScale * revealScale
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Card(
-            modifier = Modifier.size(width = 56.dp, height = 34.dp),
-            onClick = onClick,
-            interactionSource = interactionSource,
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = background),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = 0.dp,
-                pressedElevation = 0.dp
-            ),
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = contentDescription,
-                    tint = tint,
-                    modifier = Modifier.size(21.dp),
-                )
-            }
-        }
-        Text(
-            text = label,
-            color = colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
 private fun TodayTaskSwipeRow(
     todo: TodoItem,
     mode: TodoListMode,
@@ -2394,7 +2426,7 @@ private fun SwipeTaskRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SwipeActionButton(
+                    TaskSwipeActionButton(
                         icon = Icons.Rounded.BorderColor,
                         contentDescription = stringResource(R.string.action_edit_task),
                         label = stringResource(R.string.action_edit),
@@ -2411,7 +2443,7 @@ private fun SwipeTaskRow(
                             targetOffsetX = 0f
                         },
                     )
-                    SwipeActionButton(
+                    TaskSwipeActionButton(
                         icon = Icons.Rounded.DeleteOutline,
                         contentDescription = stringResource(R.string.action_delete_task),
                         label = stringResource(R.string.action_delete),
