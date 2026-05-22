@@ -7,9 +7,6 @@ enum TodoTimelineMetrics {
     static let sectionTitleSize: CGFloat = 22
     static let sectionChevronSize: CGFloat = 14
     static let sectionSpacing: CGFloat = 10
-    static let firstPinnedRowElasticClearance: CGFloat = 34
-    static let firstPinnedRowElasticStart: CGFloat = 0.42
-    static let firstPinnedRowElasticEnd: CGFloat = 1
     static let minimalRowToggleSize: CGFloat = 24
     static let minimalRowToggleFrame: CGFloat = 38
     static let minimalRowTitleSize: CGFloat = 18
@@ -25,8 +22,6 @@ enum TodoTimelineMetrics {
     static let expandedTitleLiftDistance: CGFloat = 14
     static let expandedTitleFadeStart: CGFloat = 0.08
     static let expandedTitleFadeEnd: CGFloat = 0.44
-    static let expandedTitleCollapseStart: CGFloat = 0.18
-    static let expandedTitleCollapseEnd: CGFloat = 0.82
     static let collapsedTitleRevealDistance: CGFloat = 10
     static let collapsedTitleRevealStart: CGFloat = 0.68
     static let collapsedTitleRevealEnd: CGFloat = 1
@@ -208,12 +203,6 @@ struct TodoListScreen: View {
         let itemIDs = viewModel.items.map(\.id).joined(separator: "|")
         let completingIDs = completingTodoIDs.sorted().joined(separator: "|")
         return "\(itemIDs)::\(completingIDs)"
-    }
-
-    private var firstVisibleExpandedTimelineSectionID: String? {
-        groupedSections.first { section in
-            !section.items.isEmpty && !isTimelineSectionCollapsed(section)
-        }?.id
     }
 
     private var canSummarizeCurrentMode: Bool {
@@ -609,9 +598,8 @@ struct TodoListScreen: View {
                 ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
                     Section {
                         if !section.items.isEmpty {
-                            ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
+                            ForEach(Array(section.items.enumerated()), id: \.element.id) { _, todo in
                                 minimalTimelineRow(todo, in: section)
-                                    .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                                     .listRowBackground(colors.background)
                                     .listRowSeparator(.hidden)
@@ -927,10 +915,9 @@ struct TodoListScreen: View {
 
         Section {
             if !isCollapsed {
-                ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { _, todo in
                     minimalTimelineRow(todo, in: section, flashHighlight: shouldFlashTodo(todo))
                         .id(timelineTodoScrollID(todo.id))
-                        .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
@@ -962,42 +949,6 @@ struct TodoListScreen: View {
             )
             .listRowSeparator(.hidden)
         }
-    }
-
-    private func firstPinnedRowElasticTopInset(section: TodoTimelineSection, isFirstVisibleExpandedSection: Bool, itemIndex: Int) -> CGFloat {
-        guard isFirstVisibleExpandedSection, itemIndex == 0 else {
-            return 0
-        }
-
-        guard shouldApplyFirstPinnedRowElasticClearance(to: section) else {
-            return 0
-        }
-
-        return firstPinnedRowElasticClearance()
-    }
-
-    private func shouldApplyFirstPinnedRowElasticClearance(to section: TodoTimelineSection) -> Bool {
-        let isOverdueFirstSection = viewModel.mode == .overdue
-        let isTodayFirstSection = viewModel.mode == .today
-        let isPriorityFirstSection = viewModel.mode == .priority
-        let isExpandedAllTasksEarlier = viewModel.mode == .all && section.id == "earlier"
-        let isScheduledFirstSection = viewModel.mode == .scheduled
-        let isListFirstSection = viewModel.mode == .list
-        return isOverdueFirstSection ||
-            isTodayFirstSection ||
-            isPriorityFirstSection ||
-            isExpandedAllTasksEarlier ||
-            isScheduledFirstSection ||
-            isListFirstSection
-    }
-
-    private func firstPinnedRowElasticClearance() -> CGFloat {
-        let elasticProgress = TodoTimelineMetrics.progress(
-            titleCollapseProgress,
-            from: TodoTimelineMetrics.firstPinnedRowElasticStart,
-            to: TodoTimelineMetrics.firstPinnedRowElasticEnd
-        )
-        return TodoTimelineMetrics.firstPinnedRowElasticClearance * elasticProgress
     }
 
     private func canCollapseTimelineSection(_ section: TodoTimelineSection) -> Bool {
@@ -1183,20 +1134,8 @@ struct TimelineExpandedTitleRow: View {
         )
     }
 
-    private var rowCollapseProgress: CGFloat {
-        TodoTimelineMetrics.progress(
-            progress,
-            from: TodoTimelineMetrics.expandedTitleCollapseStart,
-            to: TodoTimelineMetrics.expandedTitleCollapseEnd
-        )
-    }
-
     private var titleOffsetY: CGFloat {
         -TodoTimelineMetrics.expandedTitleLiftDistance * fadeProgress
-    }
-
-    private var rowHeight: CGFloat {
-        TodoTimelineMetrics.expandedTitleHeight * (1 - rowCollapseProgress)
     }
 
     private var titleOpacity: Double {
@@ -1218,7 +1157,12 @@ struct TimelineExpandedTitleRow: View {
                 .opacity(titleOpacity)
                 .offset(y: titleOffsetY)
         }
-        .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight, alignment: .topLeading)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: TodoTimelineMetrics.titleCollapseDistance,
+            maxHeight: TodoTimelineMetrics.titleCollapseDistance,
+            alignment: .topLeading
+        )
         .clipped()
         .allowsHitTesting(false)
     }

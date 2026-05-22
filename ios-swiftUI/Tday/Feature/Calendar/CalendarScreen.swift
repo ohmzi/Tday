@@ -4,7 +4,7 @@ import UIKit
 private enum CalendarTitleHandoff {
     static let pinnedRevealStart: CGFloat = 0.18
     static let pinnedRevealEnd: CGFloat = 0.62
-    static let titleRowHeight: CGFloat = TodoTimelineMetrics.expandedTitleHeight
+    static let titleRowHeight: CGFloat = TodoTimelineMetrics.titleCollapseDistance
 }
 
 private enum CalendarPeriodCardMetrics {
@@ -1489,18 +1489,6 @@ private struct CalendarExpandedTitleRow: View {
         -TodoTimelineMetrics.expandedTitleLiftDistance * fadeProgress
     }
 
-    private var rowCollapseProgress: CGFloat {
-        TodoTimelineMetrics.progress(
-            progress,
-            from: TodoTimelineMetrics.expandedTitleCollapseStart,
-            to: TodoTimelineMetrics.expandedTitleCollapseEnd
-        )
-    }
-
-    private var rowHeight: CGFloat {
-        CalendarTitleHandoff.titleRowHeight * (1 - rowCollapseProgress)
-    }
-
     var body: some View {
         ZStack(alignment: .topLeading) {
             Text(title)
@@ -1516,7 +1504,12 @@ private struct CalendarExpandedTitleRow: View {
                 .opacity(Double(1 - fadeProgress))
                 .offset(y: titleOffsetY)
         }
-        .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight, alignment: .topLeading)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: CalendarTitleHandoff.titleRowHeight,
+            maxHeight: CalendarTitleHandoff.titleRowHeight,
+            alignment: .topLeading
+        )
         .clipped()
         .allowsHitTesting(false)
     }
