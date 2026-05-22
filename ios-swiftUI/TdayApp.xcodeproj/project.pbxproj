@@ -74,7 +74,6 @@
 		D34840EBE7C4C90D2525F0DA /* VersionCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */; };
 		DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */; };
 		DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19AB4B0B909242B323D5ABF /* ListRepository.swift */; };
-		EAFB2C3D4E5F678901ABCDEE /* LaunchSplashLogoUpright.png in Resources */ = {isa = PBXBuildFile; fileRef = EAFB2C3D4E5F678901ABCDEF /* LaunchSplashLogoUpright.png */; };
 		E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DABE0225668571D48D55B96 /* AuthViewModel.swift */; };
 		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
 		F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */; };
@@ -164,7 +163,6 @@
 		E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialEnvelope.swift; sourceTree = "<group>"; };
 		E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRepository.swift; sourceTree = "<group>"; };
 		E867FA22FEB66EDCE837CF6D /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
-		EAFB2C3D4E5F678901ABCDEF /* LaunchSplashLogoUpright.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = LaunchSplashLogoUpright.png; sourceTree = "<group>"; };
 		FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -194,7 +192,6 @@
 			isa = PBXGroup;
 			children = (
 				2D679EC9EE22239446D1DE67 /* Fonts */,
-				EAFB2C3D4E5F678901ABCDEF /* LaunchSplashLogoUpright.png */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -628,7 +625,6 @@
 			files = (
 				B34A31B1812FC676A3AC1871 /* Assets.xcassets in Resources */,
 				85B5397D25D2A1436CF34394 /* LaunchScreen.storyboard in Resources */,
-				EAFB2C3D4E5F678901ABCDEE /* LaunchSplashLogoUpright.png in Resources */,
 				C4E342DFC88BD5C188893628 /* Nunito-OFL.txt in Resources */,
 				384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */,
 			);
