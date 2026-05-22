@@ -446,6 +446,7 @@ struct OnboardingWizardOverlay: View {
 
         Task { @MainActor in
             _ = await credentialCoordinator.requestSavedCredentialIfAvailable(
+                currentEmail: email,
                 currentPassword: password,
                 isCreatingAccount: isCreatingAccount,
                 isAuthLoading: isAuthInFlight,
