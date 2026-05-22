@@ -80,6 +80,7 @@ import com.ohmz.tday.compose.core.data.auth.LoginCredentialSource
 import com.ohmz.tday.compose.core.data.auth.SystemCredential
 import com.ohmz.tday.compose.feature.auth.AuthUiState
 import com.ohmz.tday.compose.feature.auth.LoginCredentialCoordinator
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private enum class WizardStep {
@@ -145,9 +146,25 @@ fun OnboardingWizardOverlay(
     var isResettingTrust by rememberSaveable { mutableStateOf(false) }
     var isRegisterInFlight by rememberSaveable { mutableStateOf(false) }
     var hasRequestedSavedServerUrl by rememberSaveable { mutableStateOf(false) }
+    var canRequestSavedLoginCredential by rememberSaveable(initialServerUrl) {
+        mutableStateOf(!initialServerUrl.isNullOrBlank())
+    }
     val passwordFocusRequester = remember { FocusRequester() }
     val registerPasswordFocusRequester = remember { FocusRequester() }
     val registerConfirmFocusRequester = remember { FocusRequester() }
+
+    val finishServerConnection: (String) -> Unit = { savedServerUrl ->
+        coroutineScope.launch {
+            onSaveServerUrlCredential(context, savedServerUrl)
+            delay(CREDENTIAL_PROMPT_SETTLE_DELAY_MS)
+            serverUrl = savedServerUrl
+            isConnecting = false
+            canRequestSavedLoginCredential = true
+            step = WizardStep.LOGIN
+            authMode = AuthPanelMode.SIGN_IN
+            onClearAuthStatus()
+        }
+    }
 
     val connectToServer: () -> Unit = connect@{
         if (isResettingTrust) return@connect
@@ -157,18 +174,13 @@ fun OnboardingWizardOverlay(
         focusManager.clearFocus(force = true)
         serverError = null
         isConnecting = true
+        canRequestSavedLoginCredential = false
         onConnectServer(value) { result ->
             result.onSuccess {
-                serverUrl = it
-                coroutineScope.launch {
-                    onSaveServerUrlCredential(context, it)
-                    isConnecting = false
-                    step = WizardStep.LOGIN
-                    authMode = AuthPanelMode.SIGN_IN
-                    onClearAuthStatus()
-                }
+                finishServerConnection(it)
             }.onFailure { error ->
                 isConnecting = false
+                canRequestSavedLoginCredential = false
                 step = WizardStep.SERVER
                 serverError = onboardingServerErrorMessage(
                     error = error,
@@ -250,7 +262,10 @@ fun OnboardingWizardOverlay(
     LaunchedEffect(initialServerUrl) {
         if (!initialServerUrl.isNullOrBlank()) {
             if (serverUrl.isBlank()) serverUrl = initialServerUrl
-            if (!isConnecting) step = WizardStep.LOGIN
+            if (!isConnecting) {
+                canRequestSavedLoginCredential = true
+                step = WizardStep.LOGIN
+            }
         }
     }
 
@@ -288,8 +303,14 @@ fun OnboardingWizardOverlay(
         }
     }
 
-    LaunchedEffect(step, authMode, authUiState.isLoading) {
-        if (step != WizardStep.LOGIN || authMode != AuthPanelMode.SIGN_IN) return@LaunchedEffect
+    LaunchedEffect(step, authMode, authUiState.isLoading, canRequestSavedLoginCredential) {
+        if (step != WizardStep.LOGIN ||
+            authMode != AuthPanelMode.SIGN_IN ||
+            !canRequestSavedLoginCredential
+        ) {
+            return@LaunchedEffect
+        }
+
         credentialCoordinator.requestSavedCredentialIfAvailable(
             context = context,
             currentEmail = email,
@@ -452,17 +473,13 @@ fun OnboardingWizardOverlay(
                                                         resetResult.onSuccess {
                                                             serverError = null
                                                             isConnecting = true
+                                                            canRequestSavedLoginCredential = false
                                                             onConnectServer(value) { connectResult ->
                                                                 connectResult.onSuccess {
-                                                                    serverUrl = it
-                                                                    coroutineScope.launch {
-                                                                        onSaveServerUrlCredential(context, it)
-                                                                        isConnecting = false
-                                                                        step = WizardStep.LOGIN
-                                                                        onClearAuthStatus()
-                                                                    }
+                                                                    finishServerConnection(it)
                                                                 }.onFailure { error ->
                                                                     isConnecting = false
+                                                                    canRequestSavedLoginCredential = false
                                                                     step = WizardStep.SERVER
                                                                     serverError = onboardingServerErrorMessage(
                                                                         error = error,
@@ -638,6 +655,7 @@ fun OnboardingWizardOverlay(
                                                 TextButton(
                                                     onClick = {
                                                         step = WizardStep.SERVER
+                                                        canRequestSavedLoginCredential = false
                                                         localAuthError = null
                                                         onClearAuthStatus()
                                                     },
@@ -816,6 +834,7 @@ fun OnboardingWizardOverlay(
                                                     onClick = {
                                                         step = WizardStep.SERVER
                                                         authMode = AuthPanelMode.SIGN_IN
+                                                        canRequestSavedLoginCredential = false
                                                         localAuthError = null
                                                         onClearAuthStatus()
                                                     },
@@ -992,4 +1011,5 @@ private fun WizardStepChip(
     }
 }
 
+private const val CREDENTIAL_PROMPT_SETTLE_DELAY_MS = 600L
 private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
