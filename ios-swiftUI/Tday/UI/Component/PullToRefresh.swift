@@ -54,7 +54,7 @@ private struct RefreshContainerBody<Content: View>: View {
         content
             .background(
                 PullRefreshOffsetObserver { distance in
-                    pullDistance = distance
+                    updatePullDistance(distance)
                 }
             )
             .overlay(alignment: .top) {
@@ -95,6 +95,20 @@ private struct RefreshContainerBody<Content: View>: View {
             }
         }
     }
+
+    private func updatePullDistance(_ distance: CGFloat) {
+        let nextDistance = max(distance, 0)
+        guard abs(pullDistance - nextDistance) > 0.5 ||
+            (nextDistance == 0 && pullDistance != 0) else {
+            return
+        }
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            pullDistance = nextDistance
+        }
+    }
 }
 
 private enum TdayRefreshIndicatorMetrics {
@@ -124,6 +138,7 @@ private struct TdayPullRefreshIndicator: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !isRefreshing)) { context in
             let clampedProgress = min(max(pullProgress, 0), 1)
+            let revealProgress = isRefreshing ? 1 : clampedProgress
             let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.05) / 1.05
             let sweepTrackWidth = TdayRefreshIndicatorMetrics.containerWidth - (TdayRefreshIndicatorMetrics.sweepInset * 2)
 
@@ -151,13 +166,11 @@ private struct TdayPullRefreshIndicator: View {
                                         width: TdayRefreshIndicatorMetrics.dotWidth,
                                         height: metrics.height
                                     )
-                                    .shadow(color: colors.primary.opacity(metrics.shadowOpacity), radius: 6, x: 0, y: 0)
                             }
                         }
                     }
                     .frame(width: sweepTrackWidth, height: TdayRefreshIndicatorMetrics.sweepHeight)
                     .clipShape(RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous))
-                    .animation(.easeOut(duration: 0.16), value: clampedProgress)
                 }
             }
             .frame(
@@ -172,14 +185,14 @@ private struct TdayPullRefreshIndicator: View {
             .clipShape(RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
             .shadow(color: colors.primary.opacity(0.12), radius: 12, x: 0, y: 0)
             .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 8)
-            .opacity(visible ? 1 : 0)
-            .scaleEffect(visible ? 1 : 0.82)
-            .offset(y: visible ? 0 : -18)
+            .opacity(visible ? Double(revealProgress) : 0)
+            .scaleEffect(0.84 + (0.16 * revealProgress))
+            .offset(y: -18 + (18 * revealProgress))
             .animation(.easeOut(duration: 0.22), value: visible)
         }
     }
 
-    private func barMetrics(index: Int, pullProgress: CGFloat, cycle: TimeInterval) -> (height: CGFloat, opacity: Double, shadowOpacity: Double, verticalOffset: CGFloat) {
+    private func barMetrics(index: Int, pullProgress: CGFloat, cycle: TimeInterval) -> (height: CGFloat, opacity: Double) {
         if isRefreshing {
             let phasedCycle = (cycle + (Double(index) * 0.11)).truncatingRemainder(dividingBy: 1)
             let wave = (sin(phasedCycle * .pi * 2) + 1) / 2
@@ -188,9 +201,7 @@ private struct TdayPullRefreshIndicator: View {
                 ((TdayRefreshIndicatorMetrics.dotMaxHeight - TdayRefreshIndicatorMetrics.dotMinHeight) * easedWave)
             return (
                 height: height,
-                opacity: 0.42 + (Double(easedWave) * 0.58),
-                shadowOpacity: 0.08 + (Double(easedWave) * 0.28),
-                verticalOffset: 0
+                opacity: 0.42 + (Double(easedWave) * 0.58)
             )
         }
 
@@ -201,9 +212,7 @@ private struct TdayPullRefreshIndicator: View {
             ((TdayRefreshIndicatorMetrics.dotMaxHeight - TdayRefreshIndicatorMetrics.dotMinHeight) * easedProgress)
         return (
             height: height,
-            opacity: 0.32 + (Double(easedProgress) * 0.68),
-            shadowOpacity: Double(easedProgress) * 0.22,
-            verticalOffset: 0
+            opacity: 0.32 + (Double(easedProgress) * 0.68)
         )
     }
 }
@@ -253,8 +262,12 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
                 self?.hideNativeRefreshControl(in: scrollView)
                 let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
                 let pullDistance = max(-normalizedOffset, 0)
-                DispatchQueue.main.async {
+                if Thread.isMainThread {
                     self?.onChange(pullDistance)
+                } else {
+                    DispatchQueue.main.async {
+                        self?.onChange(pullDistance)
+                    }
                 }
             }
         }
