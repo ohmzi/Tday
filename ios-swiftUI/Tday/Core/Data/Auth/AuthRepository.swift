@@ -125,6 +125,9 @@ final class AuthRepository: AuthRepositoryServicing {
                 return .error(mapAuthError(errorCode))
             }
             if !(200 ..< 300).contains(callback.statusCode) && !(300 ..< 400).contains(callback.statusCode) {
+                if isLikelyServerUnavailableStatusCode(callback.statusCode) {
+                    return .error(Self.serverUnreachableMessage)
+                }
                 let responseMessage = callback.response.message?.trimmingCharacters(in: .whitespacesAndNewlines)
                 if let responseMessage, !responseMessage.isEmpty {
                     return .error(mapAuthError(responseMessage))
@@ -140,6 +143,9 @@ final class AuthRepository: AuthRepositoryServicing {
             }
             return .error("Sign in failed. Please check backend URL and credentials.")
         } catch {
+            if isLikelyConnectivityIssue(error) {
+                return .error(Self.serverUnreachableMessage)
+            }
             return .error(error.localizedDescription)
         }
     }
@@ -256,4 +262,6 @@ final class AuthRepository: AuthRepositoryServicing {
             return value
         }
     }
+
+    private static let serverUnreachableMessage = "Cannot reach server. Check your server URL and try again."
 }

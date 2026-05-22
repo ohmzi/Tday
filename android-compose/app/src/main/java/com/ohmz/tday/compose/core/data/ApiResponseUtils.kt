@@ -76,7 +76,7 @@ internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
     return false
 }
 
-private fun isLikelyServerUnavailableStatus(statusCode: Int): Boolean {
+internal fun isLikelyServerUnavailableStatus(statusCode: Int): Boolean {
     return statusCode == 408 ||
             statusCode == 502 ||
             statusCode == 503 ||
