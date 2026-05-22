@@ -6,6 +6,10 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -61,7 +65,7 @@ class RealtimeClient @Inject constructor(
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                val event = parseEvent(text)
+                val event = parseRealtimeEvent(text)
                 if (event != null) _events.tryEmit(event)
             }
 
@@ -94,19 +98,38 @@ class RealtimeClient @Inject constructor(
         }
     }
 
-    private fun parseEvent(raw: String): RealtimeEvent? {
-        val type = raw.trim().lowercase()
-        return when {
-            type.startsWith("todo.") -> RealtimeEvent.TodoChanged
-            type.startsWith("list.") -> RealtimeEvent.ListChanged
-            type.startsWith("completed.") || type.startsWith("completedtodo.") ->
-                RealtimeEvent.CompletedChanged
-            type.isNotBlank() -> RealtimeEvent.Unknown(type)
-            else -> null
-        }
-    }
-
     private companion object {
         const val LOG_TAG = "RealtimeClient"
     }
+}
+
+internal fun parseRealtimeEvent(raw: String): RealtimeEvent? {
+    val type = extractRealtimeEventName(raw).trim().lowercase()
+    return when {
+        type.startsWith("todo.") ||
+            type.contains("todocreated") ||
+            type.contains("todoupdated") ||
+            type.contains("tododeleted") -> RealtimeEvent.TodoChanged
+        type.startsWith("list.") ||
+            type.contains("listchanged") -> RealtimeEvent.ListChanged
+        type.startsWith("completed.") ||
+            type.startsWith("completedtodo.") ||
+            type.contains("completedchanged") ||
+            type.contains("completedtodo") -> RealtimeEvent.CompletedChanged
+        type.isNotBlank() -> RealtimeEvent.Unknown(type)
+        else -> null
+    }
+}
+
+private fun extractRealtimeEventName(raw: String): String {
+    val trimmed = raw.trim()
+    if (trimmed.isBlank()) return trimmed
+
+    return runCatching {
+        val jsonObject = Json.parseToJsonElement(trimmed) as? JsonObject
+        jsonObject?.let { eventObject ->
+            eventObject["event"]?.jsonPrimitive?.contentOrNull
+                ?: eventObject["type"]?.jsonPrimitive?.contentOrNull
+        } ?: trimmed
+    }.getOrDefault(trimmed)
 }
