@@ -177,13 +177,33 @@ final class SystemCredentialLoginTests: XCTestCase {
         XCTAssertNil(credential)
     }
 
+    func testServerURLRecordIgnoresLoginCredentialRecord() {
+        let serverURL = SystemCredentialRecord.serverURL(
+            user: "user@example.com",
+            password: "Password!1"
+        )
+
+        XCTAssertNil(serverURL)
+    }
+
+    func testServerURLRecordTrimsSavedURL() {
+        let serverURL = SystemCredentialRecord.serverURL(
+            user: SystemCredentialRecord.serverURLUser,
+            password: " https://tday.example.com "
+        )
+
+        XCTAssertEqual(serverURL, "https://tday.example.com")
+    }
+
 }
 
 @MainActor
 private final class FakeSystemCredentialService: SystemCredentialServicing {
     var requestCount = 0
     var offeredCredentials: [SystemCredential] = []
+    var offeredServerURLs: [String] = []
     var nextCredential: SystemCredential?
+    var nextServerURL: String?
     var saveResult: SystemCredentialSaveResult
 
     init(nextCredential: SystemCredential? = nil, saveResult: SystemCredentialSaveResult = .saved) {
@@ -198,6 +218,15 @@ private final class FakeSystemCredentialService: SystemCredentialServicing {
 
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult {
         offeredCredentials.append(credential)
+        return saveResult
+    }
+
+    func requestSavedServerURL() async -> String? {
+        nextServerURL
+    }
+
+    func offerSaveOrUpdateServerURL(_ serverURL: String) async -> SystemCredentialSaveResult {
+        offeredServerURLs.append(serverURL)
         return saveResult
     }
 }
