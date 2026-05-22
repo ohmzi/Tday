@@ -22,6 +22,7 @@ final class SecureStore {
         case deviceID = "device-id"
         case lastEmail = "last-email"
         case persistedAuthSessionCookie = "persisted-auth-session-cookie"
+        case cachedSessionUser = "cached-session-user"
     }
 
     func loadPersistedServerURL() -> URL? {
@@ -59,6 +60,18 @@ final class SecureStore {
 
     func clearLastEmail() {
         deleteValue(for: .lastEmail)
+    }
+
+    func loadCachedSessionUserData() -> Data? {
+        loadData(for: .cachedSessionUser)
+    }
+
+    func saveCachedSessionUserData(_ data: Data) {
+        saveData(data, for: .cachedSessionUser)
+    }
+
+    func clearCachedSessionUser() {
+        deleteValue(for: .cachedSessionUser)
     }
 
     func trustedFingerprint(for host: String) -> String? {
@@ -102,6 +115,7 @@ final class SecureStore {
             clearPersistedServerURL()
         }
         clearPersistedAuthSessionCookie()
+        clearCachedSessionUser()
         clearLastEmail()
         clearAllTrustedFingerprints()
         defaults.removeObject(forKey: runtimeServerURLKey)

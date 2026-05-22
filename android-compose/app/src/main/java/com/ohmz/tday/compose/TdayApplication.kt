@@ -14,12 +14,14 @@ import com.ohmz.tday.compose.core.notification.TaskReminderReceiver
 import dagger.hilt.android.HiltAndroidApp
 import io.sentry.android.core.SentryAndroid
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 @HiltAndroidApp
 class TdayApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+    private val deferredStartupRan = AtomicBoolean(false)
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -28,6 +30,10 @@ class TdayApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+    }
+
+    fun runDeferredStartup() {
+        if (!deferredStartupRan.compareAndSet(false, true)) return
 
         SentryAndroid.init(this) { options ->
             options.dsn = BuildConfig.SENTRY_DSN

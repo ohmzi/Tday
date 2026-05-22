@@ -5,11 +5,11 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.ohmz.tday.compose.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONObject
 import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class SecureConfigStore @Inject constructor(
@@ -173,6 +173,17 @@ class SecureConfigStore @Inject constructor(
             .apply()
     }
 
+    fun getCachedSessionUserRaw(): String? =
+        prefs.getString(KEY_CACHED_SESSION_USER, null)?.takeIf { it.isNotBlank() }
+
+    fun saveCachedSessionUserRaw(raw: String) {
+        prefs.edit().putString(KEY_CACHED_SESSION_USER, raw).apply()
+    }
+
+    fun clearCachedSessionUser() {
+        prefs.edit().remove(KEY_CACHED_SESSION_USER).apply()
+    }
+
     fun clearListIconCache() {
         prefs.edit().remove(KEY_LIST_ICON_MAP).apply()
     }
@@ -242,5 +253,6 @@ class SecureConfigStore @Inject constructor(
         const val KEY_CERT_FINGERPRINT_PREFIX = "cert_fp_"
         const val KEY_LIST_ICON_MAP = "list_icon_map"
         const val KEY_OFFLINE_SYNC_STATE = "offline_sync_state_v1"
+        const val KEY_CACHED_SESSION_USER = "cached_session_user_v1"
     }
 }

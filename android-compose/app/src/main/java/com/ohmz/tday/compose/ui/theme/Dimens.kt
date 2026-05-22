@@ -40,8 +40,18 @@ object TdayDimens {
     val FabPressedElevation: Dp = 8.dp
     val BottomSheetTonalElevationDark: Dp = 10.dp
     val CardElevationDefault: Dp = 0.dp
-    val PullRefreshIndicator: Dp = 26.dp
-    val PullRefreshElevation: Dp = 12.dp
+    val PullRefreshContainerWidth: Dp = 152.dp
+    val PullRefreshContainerHeight: Dp = 58.dp
+    val PullRefreshDotWidth: Dp = 9.dp
+    val PullRefreshDotMinHeight: Dp = 12.dp
+    val PullRefreshDotMaxHeight: Dp = 30.dp
+    val PullRefreshDotSpacing: Dp = 10.dp
+    val PullRefreshContainerCornerRadius: Dp = 29.dp
+    val PullRefreshContentOffset: Dp = 132.dp
+    val PullRefreshRefreshingOffset: Dp = 78.dp
+    val PullRefreshElevation: Dp = 18.dp
+    val PullRefreshSweepInset: Dp = 11.dp
+    val PullRefreshSweepHeight: Dp = 40.dp
     val BorderWidth: Dp = 1.dp
     val BorderWidthThick: Dp = 1.5.dp
 

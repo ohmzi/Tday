@@ -1,5 +1,7 @@
 import SwiftUI
 
+private let settingsSegmentedControlAccentColor = Color.tdayTodayBlue
+
 struct SettingsScreen: View {
     let viewModel: AppViewModel
 
@@ -12,17 +14,13 @@ struct SettingsScreen: View {
     }
 
     private var titleCollapseProgress: CGFloat {
-        utilitySnappedTitleCollapseProgress(rawProgress: rawTitleCollapseProgress)
+        rawTitleCollapseProgress
     }
 
     private var rawTitleCollapseProgress: CGFloat {
         let distance = TodoTimelineMetrics.titleCollapseDistance
         guard distance > 0 else { return 0 }
         return min(max(settingsScrollOffset / distance, 0), 1)
-    }
-
-    private var firstContentTopInset: CGFloat {
-        utilityFirstContentTopInset(collapseProgress: rawTitleCollapseProgress)
     }
 
     var body: some View {
@@ -73,7 +71,7 @@ struct SettingsScreen: View {
         List {
             settingsHeroTitleRow
 
-            settingsListRow(topInset: firstContentTopInset) {
+            settingsListRow {
                 SettingsProfileCard(user: viewModel.user)
             }
 
@@ -115,7 +113,7 @@ struct SettingsScreen: View {
                     if viewModel.hasUpdate, let latestVersionName = viewModel.latestVersionName {
                         Text("v\(latestVersionName) available")
                             .font(.tdayRounded(size: 11, weight: .heavy))
-                            .foregroundStyle(colors.primary)
+                            .foregroundStyle(colors.secondary)
                     }
 
                     if let backendVersion = viewModel.backendVersion {
@@ -188,19 +186,6 @@ struct SettingsScreen: View {
     }
 }
 
-private func utilityFirstContentTopInset(collapseProgress: CGFloat) -> CGFloat {
-    let elasticProgress = TodoTimelineMetrics.progress(
-        collapseProgress,
-        from: TodoTimelineMetrics.firstPinnedRowElasticStart,
-        to: TodoTimelineMetrics.firstPinnedRowElasticEnd
-    )
-    return TodoTimelineMetrics.firstPinnedRowElasticClearance * elasticProgress
-}
-
-private func utilitySnappedTitleCollapseProgress(rawProgress: CGFloat) -> CGFloat {
-    rawProgress >= 0.5 ? 1 : 0
-}
-
 private struct SettingsProfileCard: View {
     let user: SessionUser?
 
@@ -265,32 +250,22 @@ private struct SettingsThemeSelector: View {
     let selectedMode: AppThemeMode
     let onSelect: (AppThemeMode) -> Void
 
-    @Environment(\.tdayColors) private var colors
-
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(AppThemeMode.allCases, id: \.self) { mode in
-                let selected = selectedMode == mode
-                Button {
-                    onSelect(mode)
-                } label: {
-                    Text(mode.label)
-                        .font(.tdayRounded(size: 13, weight: .heavy))
-                        .foregroundStyle(selected ? colors.onSurface : colors.onSurface.opacity(0.58))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(
-                            selected ? colors.surface : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        )
+        let modes = AppThemeMode.allCases
+
+        TdayNativeSegmentedControl(
+            labels: modes.map(\.label),
+            selectedIndex: modes.firstIndex(of: selectedMode) ?? 0,
+            accentColor: settingsSegmentedControlAccentColor,
+            onSelect: { index in
+                guard modes.indices.contains(index) else {
+                    return
                 }
-                .buttonStyle(.plain)
+                onSelect(modes[index])
             }
-        }
-        .padding(4)
-        .background(
-            colors.surfaceVariant.opacity(0.76),
-            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
         )
+        .frame(maxWidth: .infinity)
+        .frame(height: TdayNativeSegmentedControlMetrics.height)
     }
 }
 
@@ -317,7 +292,7 @@ private struct SettingsReminderSelector: View {
             SettingsRowLabel(
                 title: "Default reminder",
                 value: selectedReminder.label,
-                valueColor: colors.primary,
+                valueColor: colors.secondary,
                 showChevron: true
             )
         }
@@ -354,6 +329,7 @@ private struct SettingsAiSummaryRow: View {
                     )
                     .labelsHidden()
                     .disabled(viewModel.isAdminAiSummaryLoading || viewModel.isAdminAiSummarySaving)
+                    .tint(colors.secondary)
                 }
             }
 
@@ -491,17 +467,13 @@ struct LatestReleaseScreen: View {
     @State private var releaseScrollOffset: CGFloat = 0
 
     private var titleCollapseProgress: CGFloat {
-        utilitySnappedTitleCollapseProgress(rawProgress: rawTitleCollapseProgress)
+        rawTitleCollapseProgress
     }
 
     private var rawTitleCollapseProgress: CGFloat {
         let distance = TodoTimelineMetrics.titleCollapseDistance
         guard distance > 0 else { return 0 }
         return min(max(releaseScrollOffset / distance, 0), 1)
-    }
-
-    private var firstContentTopInset: CGFloat {
-        utilityFirstContentTopInset(collapseProgress: rawTitleCollapseProgress)
     }
 
     var body: some View {
@@ -535,7 +507,7 @@ struct LatestReleaseScreen: View {
             releaseHeroTitleRow
 
             if viewModel.isReleaseLoading && viewModel.currentRelease == nil && viewModel.latestRelease == nil {
-                releaseListRow(topInset: firstContentTopInset) {
+                releaseListRow {
                     HStack {
                         Spacer()
                         ProgressView()
@@ -550,14 +522,14 @@ struct LatestReleaseScreen: View {
                     viewModel.latestRelease == nil
 
                 if hasInitialReleaseError {
-                    releaseListRow(topInset: firstContentTopInset) {
+                    releaseListRow {
                         ReleaseErrorCard {
                             Task { await viewModel.refreshVersionInfo() }
                         }
                     }
                 }
 
-                releaseListRow(topInset: hasInitialReleaseError ? 0 : firstContentTopInset) {
+                releaseListRow {
                     ReleaseOverviewCard(viewModel: viewModel)
                 }
 

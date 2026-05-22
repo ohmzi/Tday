@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum TaskSwipeActionTint {
+    static let edit = Color(.sRGB, red: 76.0 / 255.0, green: 125.0 / 255.0, blue: 222.0 / 255.0, opacity: 1)
+    static let delete = Color(.sRGB, red: 255.0 / 255.0, green: 69.0 / 255.0, blue: 58.0 / 255.0, opacity: 1)
+}
+
 struct TodoRowAction {
     let title: String
     let systemImage: String

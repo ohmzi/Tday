@@ -5,11 +5,22 @@ import com.ohmz.tday.config.DatabaseConfig
 import com.ohmz.tday.di.configModule
 import com.ohmz.tday.di.securityModule
 import com.ohmz.tday.di.serviceModule
-import com.ohmz.tday.plugins.*
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.websocket.*
+import com.ohmz.tday.plugins.SentryRequestPlugin
+import com.ohmz.tday.plugins.configureCallLogging
+import com.ohmz.tday.plugins.configureCors
+import com.ohmz.tday.plugins.configureRateLimiting
+import com.ohmz.tday.plugins.configureRouting
+import com.ohmz.tday.plugins.configureSecurity
+import com.ohmz.tday.plugins.configureSecurityHeaders
+import com.ohmz.tday.plugins.configureSerialization
+import com.ohmz.tday.plugins.configureStatusPages
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.websocket.WebSockets
+import io.ktor.server.websocket.pingPeriod
+import io.ktor.server.websocket.timeout
 import io.sentry.Sentry
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
@@ -84,5 +95,9 @@ private fun logStartupSecurityWarnings(config: AppConfig) {
 
     if (config.appleTeamId.isNullOrBlank()) {
         logger.warn("APPLE_TEAM_ID is unset in production; iOS webcredentials association will be incomplete")
+    }
+
+    if (config.androidSha256CertFingerprints.isEmpty()) {
+        logger.warn("ANDROID_SHA256_CERT_FINGERPRINTS is unset in production; Android web credential sharing will be incomplete")
     }
 }

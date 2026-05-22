@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct TdayColors {
+    let isDark: Bool
     let background: Color
     let surface: Color
     let surfaceVariant: Color
@@ -13,7 +14,8 @@ struct TdayColors {
     let onSurface: Color
     let onSurfaceVariant: Color
 
-    static let `default` = TdayColors(
+    static let light = TdayColors(
+        isDark: false,
         background: .tdayLightBackground,
         surface: .tdayLightSurface,
         surfaceVariant: .tdayLightSurfaceVariant,
@@ -21,10 +23,58 @@ struct TdayColors {
         secondary: .tdayLightSecondary,
         tertiary: .tdayLightWarm,
         error: .tdayLightError,
-        onPrimary: .white,
+        onPrimary: .tdayLightOnPrimary,
         onSurface: .tdayLightForeground,
         onSurfaceVariant: .tdayLightMuted
     )
+
+    static let dark = TdayColors(
+        isDark: true,
+        background: .tdayDarkBackground,
+        surface: .tdayDarkSurface,
+        surfaceVariant: .tdayDarkSurfaceVariant,
+        primary: .tdayDarkAccent,
+        secondary: .tdayDarkSecondary,
+        tertiary: .tdayDarkWarm,
+        error: .tdayDarkError,
+        onPrimary: .tdayDarkOnPrimary,
+        onSurface: .tdayDarkForeground,
+        onSurfaceVariant: .tdayDarkMuted
+    )
+
+    static let `default` = TdayColors.light
+
+    static func palette(for colorScheme: ColorScheme) -> TdayColors {
+        colorScheme == .dark ? .dark : .light
+    }
+
+    var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [background, background, background],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    var cardStroke: Color {
+        isDark ? Color.white.opacity(0.10) : Color.white.opacity(0.45)
+    }
+
+    var bottomSheetBackground: Color {
+        isDark ? background.tdayBlended(with: surfaceVariant, amount: 0.34) : background
+    }
+
+    var bottomSheetSurface: Color {
+        isDark ? surface.tdayBlended(with: surfaceVariant, amount: 0.18) : surface
+    }
+
+    var bottomSheetControlSurface: Color {
+        surfaceVariant
+    }
+
+    var bottomSheetScrim: Color {
+        Color.black.opacity(isDark ? 0.68 : 0.40)
+    }
 }
 
 private struct TdayColorsKey: EnvironmentKey {
@@ -38,16 +88,32 @@ extension EnvironmentValues {
     }
 }
 
-struct TdayTheme {
-    static let backgroundGradient = LinearGradient(
-        colors: [
-            Color.tdayLightBackground,
-            Color.tdayLightBackground,
-            Color.tdayLightBackground
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+private extension Color {
+    func tdayBlended(with other: Color, amount: CGFloat) -> Color {
+        let lhs = UIColor(self)
+        let rhs = UIColor(other)
+        var lhsRed: CGFloat = 0
+        var lhsGreen: CGFloat = 0
+        var lhsBlue: CGFloat = 0
+        var lhsAlpha: CGFloat = 0
+        var rhsRed: CGFloat = 0
+        var rhsGreen: CGFloat = 0
+        var rhsBlue: CGFloat = 0
+        var rhsAlpha: CGFloat = 0
+
+        lhs.getRed(&lhsRed, green: &lhsGreen, blue: &lhsBlue, alpha: &lhsAlpha)
+        rhs.getRed(&rhsRed, green: &rhsGreen, blue: &rhsBlue, alpha: &rhsAlpha)
+
+        let mix = Swift.min(Swift.max(amount, 0), 1)
+        return Color(
+            uiColor: UIColor(
+                red: lhsRed + ((rhsRed - lhsRed) * mix),
+                green: lhsGreen + ((rhsGreen - lhsGreen) * mix),
+                blue: lhsBlue + ((rhsBlue - lhsBlue) * mix),
+                alpha: lhsAlpha + ((rhsAlpha - lhsAlpha) * mix)
+            )
+        )
+    }
 }
 
 enum TdayFont {
@@ -165,25 +231,99 @@ extension Font {
 struct TdayBackground<Content: View>: View {
     @ViewBuilder let content: Content
 
+    @Environment(\.tdayColors) private var colors
+
     var body: some View {
         ZStack {
-            TdayTheme.backgroundGradient
+            colors.backgroundGradient
                 .ignoresSafeArea()
             content
         }
-        .environment(\.tdayColors, .default)
+    }
+}
+
+struct EmptyTaskWatermark: View {
+    let systemName: String
+    let accentColor: Color
+
+    @Environment(\.tdayColors) private var colors
+    private let iconSize: CGFloat = 194
+    private let trailingOffset: CGFloat = 26
+
+    private var watermarkColor: Color {
+        colors.onSurfaceVariant.tdayBlended(with: accentColor, amount: 0.36).opacity(0.10)
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            Image(systemName: systemName)
+                .font(.system(size: iconSize, weight: .regular))
+                .foregroundStyle(watermarkColor)
+                .rotationEffect(.degrees(-7))
+                .frame(width: iconSize, height: iconSize)
+                .position(
+                    x: proxy.size.width - (iconSize / 2) + trailingOffset,
+                    y: proxy.size.height * (2.0 / 3.0)
+                )
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+struct EmptyTaskBackgroundMessage: View {
+    let message: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Text(message)
+            .font(.tdayRounded(size: 28, weight: .bold))
+            .foregroundStyle(colors.onSurfaceVariant.opacity(0.66))
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.82)
+            .padding(.horizontal, 32)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .offset(x: 24)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 
 struct TdayCardModifier: ViewModifier {
+    @Environment(\.tdayColors) private var colors
+
     func body(content: Content) -> some View {
         content
             .padding(16)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                    .stroke(colors.cardStroke, lineWidth: 1)
             )
+    }
+}
+
+private struct TdayAppThemeModifier: ViewModifier {
+    let themeMode: AppThemeMode
+
+    @Environment(\.colorScheme) private var systemColorScheme
+
+    private var resolvedColorScheme: ColorScheme {
+        themeMode.colorScheme ?? systemColorScheme
+    }
+
+    private var colors: TdayColors {
+        TdayColors.palette(for: resolvedColorScheme)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.tdayColors, colors)
+            .tint(colors.primary)
+            .background(colors.backgroundGradient.ignoresSafeArea())
+            .preferredColorScheme(themeMode.colorScheme)
     }
 }
 
@@ -192,7 +332,121 @@ extension View {
         modifier(TdayCardModifier())
     }
 
+    func tdayAppTheme(themeMode: AppThemeMode) -> some View {
+        modifier(TdayAppThemeModifier(themeMode: themeMode))
+    }
+
     func tdayAppTypography() -> some View {
         font(.tdayRounded(.body, weight: .bold))
+    }
+}
+
+enum TdayNativeSegmentedControlMetrics {
+    static let height: CGFloat = 52
+}
+
+struct TdayNativeSegmentedControl: UIViewRepresentable {
+    let labels: [String]
+    let selectedIndex: Int
+    let accentColor: Color
+    let onSelect: (Int) -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
+    }
+
+    func makeUIView(context: Context) -> ThickSegmentedControl {
+        let control = ThickSegmentedControl(items: labels)
+        control.selectedSegmentIndex = boundedSelectedIndex
+        control.apportionsSegmentWidthsByContent = false
+        control.addTarget(context.coordinator, action: #selector(Coordinator.didChange(_:)), for: .valueChanged)
+        applySizingAndTint(to: control)
+        return control
+    }
+
+    func updateUIView(_ control: ThickSegmentedControl, context: Context) {
+        context.coordinator.onSelect = onSelect
+        updateLabels(on: control)
+        if control.selectedSegmentIndex != boundedSelectedIndex {
+            control.selectedSegmentIndex = boundedSelectedIndex
+        }
+        applySizingAndTint(to: control)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: ThickSegmentedControl, context: Context) -> CGSize? {
+        CGSize(
+            width: proposal.width ?? uiView.intrinsicContentSize.width,
+            height: TdayNativeSegmentedControlMetrics.height
+        )
+    }
+
+    private var boundedSelectedIndex: Int {
+        guard labels.indices.contains(selectedIndex) else {
+            return UISegmentedControl.noSegment
+        }
+        return selectedIndex
+    }
+
+    private func updateLabels(on control: ThickSegmentedControl) {
+        guard control.numberOfSegments == labels.count else {
+            control.removeAllSegments()
+            for (index, label) in labels.enumerated() {
+                control.insertSegment(withTitle: label, at: index, animated: false)
+            }
+            return
+        }
+
+        for (index, label) in labels.enumerated() where control.titleForSegment(at: index) != label {
+            control.setTitle(label, forSegmentAt: index)
+        }
+    }
+
+    private func applySizingAndTint(to control: ThickSegmentedControl) {
+        control.overrideUserInterfaceStyle = colors.isDark ? .dark : .light
+        control.backgroundColor = UIColor(colors.surfaceVariant.opacity(0.76))
+        control.selectedSegmentTintColor = UIColor(colors.surface)
+        control.tintColor = UIColor(accentColor)
+        control.setTitleTextAttributes(
+            [
+                .foregroundColor: UIColor(colors.onSurfaceVariant),
+                .font: TdayFont.uiFont(size: 13, weight: .bold)
+            ],
+            for: .normal
+        )
+        control.setTitleTextAttributes(
+            [
+                .foregroundColor: UIColor(colors.onSurface),
+                .font: TdayFont.uiFont(size: 13, weight: .bold)
+            ],
+            for: .selected
+        )
+        control.invalidateIntrinsicContentSize()
+    }
+
+    final class Coordinator: NSObject {
+        var onSelect: (Int) -> Void
+
+        init(onSelect: @escaping (Int) -> Void) {
+            self.onSelect = onSelect
+        }
+
+        @objc func didChange(_ sender: UISegmentedControl) {
+            onSelect(sender.selectedSegmentIndex)
+        }
+    }
+
+    final class ThickSegmentedControl: UISegmentedControl {
+        override var intrinsicContentSize: CGSize {
+            let baseSize = super.intrinsicContentSize
+            return CGSize(width: baseSize.width, height: TdayNativeSegmentedControlMetrics.height)
+        }
+
+        override func sizeThatFits(_ size: CGSize) -> CGSize {
+            var fittingSize = super.sizeThatFits(size)
+            fittingSize.height = TdayNativeSegmentedControlMetrics.height
+            return fittingSize
+        }
     }
 }
