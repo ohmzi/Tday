@@ -43,6 +43,7 @@
 		58BD5E982FB87AE6986E3E79 /* CreateTodoUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 718528F64C339E527223D93F /* CreateTodoUseCase.swift */; };
 		58EB6EF803693EB982E331E4 /* SyncAndRefreshUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */; };
 		5B82443B89507719EDD7215C /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF6FD5D2845A10D7052467D /* AppContainer.swift */; };
+		5DB03218BE341B7C186F01AE /* CalendarPagingScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E5A511171F96ABDEC46926 /* CalendarPagingScrollView.swift */; };
 		5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */; };
 		64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */; };
 		701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */; };
@@ -140,6 +141,7 @@
 		8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFacingError.swift; sourceTree = "<group>"; };
 		8E76499BCA95FB33B03366C1 /* CompletedRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedRepository.swift; sourceTree = "<group>"; };
 		91CFC3C0B9ADD376389DF63C /* NetworkConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkConfiguration.swift; sourceTree = "<group>"; };
+		95E5A511171F96ABDEC46926 /* CalendarPagingScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarPagingScrollView.swift; sourceTree = "<group>"; };
 		9BA781886DCE6963CA364F6F /* CompletedScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedScreen.swift; sourceTree = "<group>"; };
 		9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeClient.swift; sourceTree = "<group>"; };
 		A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginCredentialCoordinator.swift; sourceTree = "<group>"; };
@@ -387,6 +389,7 @@
 		867DC72A3F5B3C04E5C36879 /* Calendar */ = {
 			isa = PBXGroup;
 			children = (
+				95E5A511171F96ABDEC46926 /* CalendarPagingScrollView.swift */,
 				25A90A443440754855071C9D /* CalendarScreen.swift */,
 				53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */,
 			);
@@ -696,6 +699,7 @@
 				535CABAC18AD47FEF15D2C11 /* CredentialEnvelope.swift in Sources */,
 				765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */,
 				FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */,
+				5DB03218BE341B7C186F01AE /* CalendarPagingScrollView.swift in Sources */,
 				C0768A60B1B807FCA7A6D37F /* HomeScreen.swift in Sources */,
 				9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */,
 				DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */,
