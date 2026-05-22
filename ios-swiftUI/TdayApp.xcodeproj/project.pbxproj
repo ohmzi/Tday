@@ -19,7 +19,7 @@
 		1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */; };
 		17A2E96F8BEA64247551A742 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22BFAB0C2FA0BB186AEBFC5F /* AppViewModel.swift */; };
 		1AC138341BE3A2841CF05908 /* StringHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */; };
-		1FE50ED779CB252C73B0A496 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = A8BC3C28FBC8E4D5C38307DB /* Sentry */; };
+		1FE50ED779CB252C73B0A496 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = A8BC3C28FBC8E4D5C38307DB /* Sentry-Dynamic */; };
 		222184A155C5A7B9F178007B /* SwiftDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A754219844F42A2230F08B /* SwiftDataModels.swift */; };
 		271C111B35309CA229AC1400 /* CompletedRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E76499BCA95FB33B03366C1 /* CompletedRepository.swift */; };
 		2C1549AFC2F29218C879306C /* SwipeActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84798381A9E2DF3C9468ED8F /* SwipeActions.swift */; };
@@ -185,7 +185,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1FE50ED779CB252C73B0A496 /* Sentry in Frameworks */,
+				1FE50ED779CB252C73B0A496 /* Sentry-Dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -602,7 +602,6 @@
 				EE513C8DAF31C33B310B4E38 /* Sources */,
 				32A3CADD0462E89BFAB9B2DA /* Resources */,
 				3FDD7DCF0206921E0210DA60 /* Frameworks */,
-				7D51D73A93C443F785B61790 /* Generate Sentry dSYM */,
 			);
 			buildRules = (
 			);
@@ -610,7 +609,7 @@
 			);
 			name = Tday;
 			packageProductDependencies = (
-				A8BC3C28FBC8E4D5C38307DB /* Sentry */,
+				A8BC3C28FBC8E4D5C38307DB /* Sentry-Dynamic */,
 			);
 			productName = Tday;
 			productReference = 2A80E8562326D2BB4FF7E8C7 /* Tday.app */;
@@ -663,31 +662,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		7D51D73A93C443F785B61790 /* Generate Sentry dSYM */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(TARGET_BUILD_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Sentry.framework/Sentry",
-			);
-			name = "Generate Sentry dSYM";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DWARF_DSYM_FOLDER_PATH)/Sentry.framework.dSYM/Contents/Info.plist",
-				"$(DWARF_DSYM_FOLDER_PATH)/Sentry.framework.dSYM/Contents/Resources/DWARF/Sentry",
-				"$(DWARF_DSYM_FOLDER_PATH)/Sentry.framework.dSYM/Contents/Resources/Relocations/aarch64/Sentry.yml",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/bash;
-			shellScript = "set -euo pipefail\n\nif [[ \"${CONFIGURATION:-}\" != \"Release\" || \"${PLATFORM_NAME:-}\" != \"iphoneos\" ]]; then\n  exit 0\nfi\n\nsentry_binary=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Sentry.framework/Sentry\"\nsentry_dsym=\"${DWARF_DSYM_FOLDER_PATH}/Sentry.framework.dSYM\"\n\nif [[ ! -f \"${sentry_binary}\" ]]; then\n  echo \"warning: Sentry.framework binary not found at ${sentry_binary}\"\n  exit 0\nfi\n\nmkdir -p \"$(dirname \"${sentry_dsym}\")\"\n\"$(xcrun --find dsymutil)\" \"${sentry_binary}\" -o \"${sentry_dsym}\"\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		64E975FE272A463522F716BE /* Sources */ = {
@@ -852,7 +826,7 @@
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
@@ -879,7 +853,7 @@
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
@@ -1044,10 +1018,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		A8BC3C28FBC8E4D5C38307DB /* Sentry */ = {
+		A8BC3C28FBC8E4D5C38307DB /* Sentry-Dynamic */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 25F077B213506555FEDF5480 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
+			productName = "Sentry-Dynamic";
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
