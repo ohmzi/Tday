@@ -24,7 +24,7 @@ ios/
 - Shared models, URLSession API layer, Keychain-backed secure store, cookie handling, and CryptoKit credential envelope login.
 - SwiftData-backed offline cache plus pending mutation replay and remote merge logic.
 - Home, todo list, calendar, completed history, and settings screens.
-- Reminder scheduling and a WidgetKit placeholder entry point for the future app extension target.
+- Reminder scheduling and a WidgetKit today-tasks snapshot entry point for the future app extension target.
 
 ## Environment Notes
 
