@@ -6,134 +6,134 @@
 
     <path
         android:fillColor="@color/ic_launcher_header"
-        android:pathData="M31.8,24.2 H76.2 A8.9,8.9 0,0,1 85.1,33.1 V85.7 A8.9,8.9 0,0,1 76.2,94.6 H31.8 A8.9,8.9 0,0,1 22.9,85.7 V33.1 A8.9,8.9 0,0,1 31.8,24.2 Z" />
+        android:pathData="M41,37 L67,37 A5,5 0,0,1 72,42 L72,73 A5,5 0,0,1 67,78 L41,78 A5,5 0,0,1 36,73 L36,42 A5,5 0,0,1 41,37 Z" />
 
     <path
         android:fillColor="@color/ic_launcher_surface"
-        android:pathData="M25.5,44.7 H82.5 V85.7 A6.3,6.3 0,0,1 76.2,92 H31.8 A6.3,6.3 0,0,1 25.5,85.7 Z" />
+        android:pathData="M36,48 L72,48 L72,73 A5,5 0,0,1 67,78 L41,78 A5,5 0,0,1 36,73 Z" />
 
     <path
         android:fillColor="#00000000"
-        android:pathData="M31.8,24.2 H76.2 A8.9,8.9 0,0,1 85.1,33.1 V85.7 A8.9,8.9 0,0,1 76.2,94.6 H31.8 A8.9,8.9 0,0,1 22.9,85.7 V33.1 A8.9,8.9 0,0,1 31.8,24.2 Z"
-        android:strokeWidth="5.2"
+        android:pathData="M41,37 L67,37 A5,5 0,0,1 72,42 L72,73 A5,5 0,0,1 67,78 L41,78 A5,5 0,0,1 36,73 L36,42 A5,5 0,0,1 41,37 Z"
         android:strokeColor="@color/ic_launcher_outline"
+        android:strokeWidth="3"
         android:strokeLineJoin="round" />
 
     <path
         android:fillColor="#00000000"
-        android:pathData="M22.9,42.9 H85.1"
-        android:strokeWidth="3.5"
+        android:pathData="M36,48 L72,48"
+        android:strokeWidth="2"
         android:strokeColor="@color/ic_launcher_outline" />
 
     <path
         android:fillColor="#00000000"
-        android:pathData="M36.9,31.3 V18 A7,7 0,0,1 50.9,18 V31.3"
-        android:strokeWidth="5.6"
+        android:pathData="M44,40 V33 A4,5 0,0,1 52,33 V40"
+        android:strokeWidth="3.2"
         android:strokeLineCap="round"
         android:strokeColor="@color/ic_launcher_outline" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M50.9,31.3 V18 A7,7 0,0,1 64.9,18 V31.3"
-        android:strokeWidth="5.6"
+        android:pathData="M52,40 V33 A4,5 0,0,1 60,33 V40"
         android:strokeColor="@color/ic_launcher_outline"
+        android:strokeWidth="3.2"
         android:strokeLineCap="round" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M64.9,31.3 V18 A7,7 0,0,1 78.9,18 V31.3"
-        android:strokeWidth="5.6"
+        android:pathData="M60,40 V33 A4,5 0,0,1 68,33 V40"
+        android:strokeWidth="3.2"
         android:strokeLineCap="round"
         android:strokeColor="@color/ic_launcher_outline" />
 
     <path
         android:fillColor="#00000000"
-        android:pathData="M31.5,50 H47.3"
-        android:strokeWidth="3.1"
+        android:pathData="M41,52 L50,52"
         android:strokeColor="@color/ic_launcher_detail"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M31.5,55.2 H42.9"
-        android:strokeWidth="3.1"
+        android:pathData="M41,55 L47,55"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round"
         android:strokeColor="@color/ic_launcher_detail" />
 
     <path
         android:fillColor="#00000000"
-        android:pathData="M31.5,62.2 H47.3"
-        android:strokeWidth="3.1"
+        android:pathData="M41,59 L50,59"
         android:strokeColor="@color/ic_launcher_detail"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M31.5,67.4 H42.9"
-        android:strokeWidth="3.1"
+        android:pathData="M41,62 L47,62"
         android:strokeColor="@color/ic_launcher_detail"
-        android:strokeLineCap="round" />
-
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M31.5,74.3 H47.3"
-        android:strokeWidth="3.1"
-        android:strokeColor="@color/ic_launcher_detail"
-        android:strokeLineCap="round" />
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M31.5,79.5 H42.9"
-        android:strokeWidth="3.1"
-        android:strokeColor="@color/ic_launcher_detail"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round" />
 
     <path
         android:fillColor="#00000000"
-        android:pathData="M31.5,86.4 H47.3"
-        android:strokeWidth="3.1"
+        android:pathData="M41,66 L50,66"
         android:strokeColor="@color/ic_launcher_detail"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M31.5,91.6 H42.9"
-        android:strokeWidth="3.1"
+        android:pathData="M41,69 L47,69"
         android:strokeColor="@color/ic_launcher_detail"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M41,73 L50,73"
+        android:strokeColor="@color/ic_launcher_detail"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M41,76 L47,76"
+        android:strokeColor="@color/ic_launcher_detail"
+        android:strokeWidth="1.8"
         android:strokeLineCap="round" />
 
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M52.3,46.4 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M53,50 h4.5 v5 h-4.5 Z" />
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M62.6,46.4 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M59,50 h4.5 v5 h-4.5 Z" />
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M72.9,46.4 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M65,50 h4.5 v5 h-4.5 Z" />
 
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M52.3,58.4 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M53,57 h4.5 v5 h-4.5 Z" />
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M62.6,58.4 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M59,57 h4.5 v5 h-4.5 Z" />
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M72.9,58.4 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M65,57 h4.5 v5 h-4.5 Z" />
 
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M52.3,70.5 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M53,64 h4.5 v5 h-4.5 Z" />
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M62.6,70.5 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M59,64 h4.5 v5 h-4.5 Z" />
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M72.9,70.5 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M65,64 h4.5 v5 h-4.5 Z" />
 
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M52.3,82.6 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M53,71 h4.5 v5 h-4.5 Z" />
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M62.6,82.6 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M59,71 h4.5 v5 h-4.5 Z" />
     <path
         android:fillColor="@color/ic_launcher_task"
-        android:pathData="M72.9,82.6 h7.7 v8.6 h-7.7 Z" />
+        android:pathData="M65,71 h4.5 v5 h-4.5 Z" />
 
 </vector>
