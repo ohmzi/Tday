@@ -228,7 +228,6 @@ struct CompletedScreen: View {
         CompletedTimelineRow(
             item: item,
             completedCheckmarkColor: completedCheckmarkColor,
-            editTint: colors.secondary,
             onUncomplete: {
                 await viewModel.uncomplete(item)
             },
@@ -245,7 +244,6 @@ struct CompletedScreen: View {
 private struct CompletedTimelineRow: View {
     let item: CompletedItem
     let completedCheckmarkColor: Color
-    let editTint: Color
     let onUncomplete: () async -> Void
     let onDelete: () async -> Void
     let onEdit: () -> Void
@@ -351,17 +349,19 @@ private struct CompletedTimelineRow: View {
         .allowsHitTesting(!isRestoring)
         .swipeRevealHintOnTap(enabled: !isRestoring)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
+            Button {
                 Task { await onDelete() }
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+            .tint(TaskSwipeActionTint.delete)
+
             Button {
                 onEdit()
             } label: {
                 Label("Edit", systemImage: "square.and.pencil")
             }
-            .tint(editTint)
+            .tint(TaskSwipeActionTint.edit)
         }
     }
 

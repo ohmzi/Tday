@@ -4,7 +4,7 @@ import UIKit
 private enum CalendarTitleHandoff {
     static let pinnedRevealStart: CGFloat = 0.18
     static let pinnedRevealEnd: CGFloat = 0.62
-    static let titleRowHeight: CGFloat = TodoTimelineMetrics.titleCollapseDistance
+    static let titleRowHeight: CGFloat = TodoTimelineMetrics.expandedTitleHeight
 }
 
 private enum CalendarPeriodCardMetrics {
@@ -181,17 +181,19 @@ struct CalendarScreen: View {
                             .tint(.green)
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
+                            Button {
                                 Task { await viewModel.delete(todo) }
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
+                            .tint(TaskSwipeActionTint.delete)
+
                             Button {
                                 editingTodo = todo
                             } label: {
                                 Label("Edit", systemImage: "square.and.pencil")
                             }
-                            .tint(colors.secondary)
+                            .tint(TaskSwipeActionTint.edit)
                         }
                         TimelineRowDivider()
                     }
@@ -1487,21 +1489,36 @@ private struct CalendarExpandedTitleRow: View {
         -TodoTimelineMetrics.expandedTitleLiftDistance * fadeProgress
     }
 
+    private var rowCollapseProgress: CGFloat {
+        TodoTimelineMetrics.progress(
+            progress,
+            from: TodoTimelineMetrics.expandedTitleCollapseStart,
+            to: TodoTimelineMetrics.expandedTitleCollapseEnd
+        )
+    }
+
+    private var rowHeight: CGFloat {
+        CalendarTitleHandoff.titleRowHeight * (1 - rowCollapseProgress)
+    }
+
     var body: some View {
-        Text(title)
-            .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
-            .foregroundStyle(accentColor)
-            .lineLimit(1)
-            .frame(
-                maxWidth: .infinity,
-                minHeight: CalendarTitleHandoff.titleRowHeight,
-                maxHeight: CalendarTitleHandoff.titleRowHeight,
-                alignment: .topLeading
-            )
-            .opacity(Double(1 - fadeProgress))
-            .offset(y: titleOffsetY)
-            .clipped()
-            .allowsHitTesting(false)
+        ZStack(alignment: .topLeading) {
+            Text(title)
+                .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
+                .foregroundStyle(accentColor)
+                .lineLimit(1)
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: CalendarTitleHandoff.titleRowHeight,
+                    maxHeight: CalendarTitleHandoff.titleRowHeight,
+                    alignment: .topLeading
+                )
+                .opacity(Double(1 - fadeProgress))
+                .offset(y: titleOffsetY)
+        }
+        .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight, alignment: .topLeading)
+        .clipped()
+        .allowsHitTesting(false)
     }
 }
 
