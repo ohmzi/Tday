@@ -6,7 +6,7 @@ struct AppRootView: View {
     @State private var appViewModel: AppViewModel
     @State private var authViewModel: AuthViewModel
     @State private var hasLeftActiveScene = false
-    @State private var hasMetLaunchSplashMinimum = false
+    @State private var isLaunchSplashHeld = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(container: AppContainer) {
@@ -20,8 +20,8 @@ struct AppRootView: View {
 
     var body: some View {
         Group {
-            if !appViewModel.hasCompletedInitialBootstrap || !hasMetLaunchSplashMinimum {
-                AppLaunchSplashView()
+            if !appViewModel.hasCompletedInitialBootstrap || isLaunchSplashHeld {
+                AppLaunchSplashView(isHeld: $isLaunchSplashHeld)
             } else {
                 let showOnboardingOverlay = !appViewModel.authenticated && appViewModel.versionCheckResult == .compatible
 
@@ -151,13 +151,6 @@ struct AppRootView: View {
         }
         .tdayAppTheme(themeMode: appViewModel.themeMode)
         .task {
-            guard !hasMetLaunchSplashMinimum else {
-                return
-            }
-            try? await Task.sleep(for: .milliseconds(1_500))
-            hasMetLaunchSplashMinimum = true
-        }
-        .task {
             if !appViewModel.hasCompletedInitialBootstrap {
                 await appViewModel.bootstrap()
             }
@@ -196,6 +189,7 @@ struct AppRootView: View {
 }
 
 private struct AppLaunchSplashView: View {
+    @Binding var isHeld: Bool
     @Environment(\.colorScheme) private var colorScheme
     @State private var tagline = splashTaglines.randomElement() ?? "Running on your server, running your life"
 
@@ -224,6 +218,19 @@ private struct AppLaunchSplashView: View {
             .padding(.horizontal, 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in
+                    isHeld = true
+                }
+                .onEnded { _ in
+                    isHeld = false
+                }
+        )
+        .onDisappear {
+            isHeld = false
+        }
         .background(splashBackground)
         .ignoresSafeArea()
     }
