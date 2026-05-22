@@ -6,6 +6,11 @@
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
+    <customFonts key="customFonts">
+        <array key="Nunito.ttf">
+            <string>Nunito-ExtraBold</string>
+        </array>
+    </customFonts>
     <scenes>
         <!--View Controller-->
         <scene sceneID="EHf-IW-A2E">
@@ -15,18 +20,32 @@
                         <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" alignment="center" spacing="6" translatesAutoresizingMaskIntoConstraints="NO" id="rmz-Nm-fXf">
-                                <rect key="frame" x="32" y="383" width="329" height="86"/>
+                            <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" alignment="center" spacing="0.0" translatesAutoresizingMaskIntoConstraints="NO" id="rmz-Nm-fXf">
+                                <rect key="frame" x="32" y="306" width="329" height="241"/>
                                 <subviews>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="T'Day" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" translatesAutoresizingMaskIntoConstraints="NO" id="Urk-0J-z6O">
-                                        <rect key="frame" x="121.66666666666669" y="0.0" width="86" height="39"/>
-                                        <fontDescription key="fontDescription" type="boldSystem" pointSize="32"/>
+                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchSplashLogoUpright" translatesAutoresizingMaskIntoConstraints="NO" id="tKg-8Y-o1u">
+                                        <rect key="frame" x="84.5" y="0.0" width="160" height="160"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="160" id="7QP-Od-V07"/>
+                                            <constraint firstAttribute="width" constant="160" id="PZF-vi-NbC"/>
+                                        </constraints>
+                                    </imageView>
+                                    <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="3cA-2R-vBi">
+                                        <rect key="frame" x="164" y="160" width="1" height="24"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="24" id="4my-Zk-i2W"/>
+                                            <constraint firstAttribute="width" constant="1" id="q0d-fA-9i9"/>
+                                        </constraints>
+                                    </view>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="T&#x2019;Day" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" translatesAutoresizingMaskIntoConstraints="NO" id="Urk-0J-z6O">
+                                        <rect key="frame" x="121.66666666666669" y="184" width="86" height="39"/>
+                                        <fontDescription key="fontDescription" name="Nunito-ExtraBold" family="Nunito" pointSize="32"/>
                                         <color key="textColor" name="LaunchForeground"/>
                                         <nil key="highlightedColor"/>
                                     </label>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Your server remembers, so you don't have to" textAlignment="center" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" translatesAutoresizingMaskIntoConstraints="NO" id="uBp-q6-hhd">
-                                        <rect key="frame" x="0.0" y="45" width="329" height="41"/>
-                                        <fontDescription key="fontDescription" type="boldSystem" pointSize="14"/>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Your server remembers, so you don&#x2019;t have to" textAlignment="center" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" translatesAutoresizingMaskIntoConstraints="NO" id="uBp-q6-hhd">
+                                        <rect key="frame" x="0.0" y="223" width="329" height="18"/>
+                                        <fontDescription key="fontDescription" name="Nunito-ExtraBold" family="Nunito" pointSize="14"/>
                                         <color key="textColor" name="LaunchMuted"/>
                                         <nil key="highlightedColor"/>
                                     </label>
@@ -49,6 +68,7 @@
         </scene>
     </scenes>
     <resources>
+        <image name="LaunchSplashLogoUpright" width="324" height="324"/>
         <namedColor name="LaunchBackground">
             <color red="0.95686274510000002" green="0.96470588239999999" blue="0.98431372550000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>
