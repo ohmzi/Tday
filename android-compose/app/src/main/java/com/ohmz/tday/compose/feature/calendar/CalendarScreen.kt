@@ -41,8 +41,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -566,22 +564,6 @@ private enum class CalendarViewMode {
     DAY,
 }
 
-private data class CalendarTodayJumpRequest(
-    val id: Int,
-    val targetDate: LocalDate,
-)
-
-private enum class CalendarPagerSlot {
-    PREVIOUS,
-    CURRENT,
-    NEXT,
-}
-
-private data class CalendarPagerPage<T>(
-    val slot: CalendarPagerSlot,
-    val value: T,
-)
-
 @Composable
 private fun CalendarViewModeTabs(
     selectedMode: CalendarViewMode,
@@ -598,48 +580,6 @@ private fun CalendarViewModeTabs(
         },
     )
 }
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun <T> CalendarPagingContent(
-    pages: List<CalendarPagerPage<T>>,
-    pagerState: PagerState,
-    centerPageIndex: Int,
-    onSettledAwayFromCenter: (CalendarPagerSlot) -> Unit,
-    modifier: Modifier = Modifier,
-    pageContent: @Composable (T) -> Unit,
-) {
-    var handledSettledPage by remember { mutableStateOf<Int?>(null) }
-
-    LaunchedEffect(centerPageIndex, pages) {
-        handledSettledPage = null
-        if (pagerState.currentPage != centerPageIndex) {
-            pagerState.scrollToPage(centerPageIndex)
-        }
-    }
-
-    LaunchedEffect(pagerState.settledPage, centerPageIndex, pages) {
-        val settledPage = pagerState.settledPage
-        if (settledPage == centerPageIndex || handledSettledPage == settledPage) return@LaunchedEffect
-        val settledSlot = pages.getOrNull(settledPage)?.slot ?: return@LaunchedEffect
-        handledSettledPage = settledPage
-        onSettledAwayFromCenter(settledSlot)
-    }
-
-    HorizontalPager(
-        state = pagerState,
-        modifier = modifier,
-        key = { page -> pages.getOrNull(page)?.slot ?: page },
-        beyondViewportPageCount = 1,
-    ) { page ->
-        pages.getOrNull(page)?.let { calendarPage ->
-            pageContent(calendarPage.value)
-        }
-    }
-}
-
-private fun <T> List<CalendarPagerPage<T>>.indexOfSlot(slot: CalendarPagerSlot): Int =
-    indexOfFirst { it.slot == slot }
 
 @Composable
 private fun CalendarWeekCard(
