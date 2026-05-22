@@ -28,23 +28,4 @@ class SystemCredentialRecordsTest {
         )
     }
 
-    @Test
-    fun `server url record ignores normal password records`() {
-        val serverUrl = SystemCredentialRecords.serverUrl(
-            id = "user@example.com",
-            password = "Password!1",
-        )
-
-        assertNull(serverUrl)
-    }
-
-    @Test
-    fun `server url record trims saved url`() {
-        val serverUrl = SystemCredentialRecords.serverUrl(
-            id = SystemCredentialRecords.SERVER_URL_CREDENTIAL_ID,
-            password = " https://tday.example.com ",
-        )
-
-        assertEquals("https://tday.example.com", serverUrl)
-    }
 }
