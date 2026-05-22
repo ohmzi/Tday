@@ -6,6 +6,7 @@ import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
+import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.server.AppVersionManager
@@ -82,6 +83,7 @@ class AppViewModel @Inject constructor(
     private val realtimeClient: RealtimeClient,
     private val connectivityObserver: ConnectivityObserver,
     private val appVersionManager: AppVersionManager,
+    private val systemCredentialService: SystemCredentialServicing,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -462,6 +464,7 @@ class AppViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             runCatching { authRepository.logout() }
+            runCatching { systemCredentialService.clearCredentialState() }
             runCatching { reminderScheduler.cancelAll() }
             ensureResyncLoop(authenticated = false)
             _uiState.update {

@@ -56,6 +56,8 @@ data class AppConfig(
     val probeEncryptionKey: String?,
     val appleTeamId: String?,
     val iosBundleId: String,
+    val androidPackageName: String,
+    val androidSha256CertFingerprints: List<String>,
     val sentryDsn: String?,
 ) {
     companion object {
@@ -125,6 +127,8 @@ data class AppConfig(
                 probeEncryptionKey = secret("TDAY_PROBE_ENCRYPTION_KEY", "TDAY_PROBE_ENCRYPTION_KEY_FILE"),
                 appleTeamId = env("APPLE_TEAM_ID"),
                 iosBundleId = env("IOS_BUNDLE_ID", "com.ohmz.tday.ios"),
+                androidPackageName = env("ANDROID_PACKAGE_NAME", "com.ohmz.tday.compose"),
+                androidSha256CertFingerprints = envCsv("ANDROID_SHA256_CERT_FINGERPRINTS"),
                 sentryDsn = env("SENTRY_DSN"),
             )
         }
