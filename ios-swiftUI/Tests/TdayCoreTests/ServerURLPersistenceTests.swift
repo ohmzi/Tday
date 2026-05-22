@@ -50,4 +50,30 @@ final class ServerURLPersistenceTests: XCTestCase {
         XCTAssertEqual(secureStore.loadPersistedServerURL(), url)
         XCTAssertNil(secureStore.loadLastEmail())
     }
+
+    func testReinstallCleanupClearsPersistedServerURL() {
+        let url = URL(string: "https://tday.ohmz.cloud")!
+        secureStore.savePersistedServerURL(url)
+        secureStore.saveLastEmail("user@example.com")
+        secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
+
+        secureStore.clearInstallScopedKeychainValuesIfAppReinstalled()
+
+        XCTAssertNil(secureStore.loadPersistedServerURL())
+        XCTAssertNil(secureStore.loadLastEmail())
+        XCTAssertNil(secureStore.loadPersistedAuthSessionCookieData())
+    }
+
+    func testReinstallCleanupRunsOnlyOncePerInstall() {
+        let url = URL(string: "https://tday.ohmz.cloud")!
+
+        secureStore.clearInstallScopedKeychainValuesIfAppReinstalled()
+        secureStore.savePersistedServerURL(url)
+        secureStore.saveLastEmail("user@example.com")
+
+        secureStore.clearInstallScopedKeychainValuesIfAppReinstalled()
+
+        XCTAssertEqual(secureStore.loadPersistedServerURL(), url)
+        XCTAssertEqual(secureStore.loadLastEmail(), "user@example.com")
+    }
 }
