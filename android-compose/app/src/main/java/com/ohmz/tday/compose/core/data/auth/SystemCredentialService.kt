@@ -76,7 +76,7 @@ class SystemCredentialService @Inject constructor(
             credentialOptions = listOf(
                 GetPasswordOption(
                     allowedUserIds = allowedUserIds,
-                    isAutoSelectAllowed = true,
+                    isAutoSelectAllowed = false,
                 ),
             ),
         )
@@ -140,7 +140,7 @@ class SystemCredentialService @Inject constructor(
             credentialOptions = listOf(
                 GetPasswordOption(
                     allowedUserIds = setOf(SystemCredentialRecords.SERVER_URL_CREDENTIAL_ID),
-                    isAutoSelectAllowed = true,
+                    isAutoSelectAllowed = false,
                 ),
             ),
         )
