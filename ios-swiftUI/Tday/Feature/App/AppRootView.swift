@@ -188,7 +188,7 @@ struct AppRootView: View {
     }
 }
 
-private struct AppLaunchSplashView: View {
+struct AppLaunchSplashView: View {
     @Binding var isHeld: Bool
     @Environment(\.colorScheme) private var colorScheme
     @State private var tagline = splashTaglines.randomElement() ?? "Running on your server, running your life"
