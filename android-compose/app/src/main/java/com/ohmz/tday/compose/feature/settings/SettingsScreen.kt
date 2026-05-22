@@ -42,6 +42,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -73,6 +74,7 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
+import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -140,11 +142,37 @@ fun SettingsScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                return Velocity.Zero
+                if (available.y > 0f && scrollState.value > 0) return Velocity.Zero
+                val snapped = snapTitleCollapsePx(
+                    currentPx = headerCollapsePx,
+                    maxPx = maxCollapsePx,
+                    velocityY = available.y,
+                )
+                if (snapped == headerCollapsePx) return Velocity.Zero
+                headerCollapsePx = snapped
+                return if (available.y == 0f) Velocity.Zero else available
             }
         }
     }
-    val collapseProgress = collapseProgressTarget
+    val collapseProgress by animateFloatAsState(
+        targetValue = collapseProgressTarget,
+        label = "settingsTitleCollapseProgress",
+    )
+    LaunchedEffect(
+        scrollState.isScrollInProgress,
+        headerCollapsePx,
+        maxCollapsePx,
+        scrollState.value,
+    ) {
+        if (scrollState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
+            return@LaunchedEffect
+        }
+        headerCollapsePx = if (scrollState.value == 0) {
+            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
+        } else {
+            maxCollapsePx
+        }
+    }
 
     Scaffold(
         containerColor = colorScheme.background,

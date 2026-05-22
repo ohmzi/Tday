@@ -83,6 +83,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
+import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -139,11 +140,37 @@ fun LatestReleaseScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                return Velocity.Zero
+                if (available.y > 0f && scrollState.value > 0) return Velocity.Zero
+                val snapped = snapTitleCollapsePx(
+                    currentPx = headerCollapsePx,
+                    maxPx = maxCollapsePx,
+                    velocityY = available.y,
+                )
+                if (snapped == headerCollapsePx) return Velocity.Zero
+                headerCollapsePx = snapped
+                return if (available.y == 0f) Velocity.Zero else available
             }
         }
     }
-    val collapseProgress = collapseProgressTarget
+    val collapseProgress by animateFloatAsState(
+        targetValue = collapseProgressTarget,
+        label = "releaseTitleCollapseProgress",
+    )
+    LaunchedEffect(
+        scrollState.isScrollInProgress,
+        headerCollapsePx,
+        maxCollapsePx,
+        scrollState.value,
+    ) {
+        if (scrollState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
+            return@LaunchedEffect
+        }
+        headerCollapsePx = if (scrollState.value == 0) {
+            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
+        } else {
+            maxCollapsePx
+        }
+    }
     val installScope = rememberCoroutineScope()
     val installerEvent by InAppApkUpdater.installEvent.collectAsStateWithLifecycle()
     var installUiState by remember { mutableStateOf<ApkInstallUiState>(ApkInstallUiState.Idle) }
