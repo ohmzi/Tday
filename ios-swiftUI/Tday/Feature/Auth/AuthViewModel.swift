@@ -83,18 +83,22 @@ final class AuthViewModel {
         if lower.contains("pending admin approval") || lower.contains("approval required") || lower.contains("pending_approval") {
             return "Account pending admin approval."
         }
-        if lower.contains("127.0.0.1") || lower.contains("localhost") || lower.contains("econnrefused") {
-            return "Cannot reach server. Check your server URL and try again."
+        if lower.contains("127.0.0.1") || lower.contains("localhost") || lower.contains("econnrefused") ||
+           lower.contains("timed out") || lower.contains("network") || lower.contains("cannot connect") ||
+           lower.contains("could not connect") || lower.contains("not connected") ||
+           lower.contains("connection refused") || lower.contains("bad gateway") ||
+           lower.contains("service unavailable") || lower.contains("gateway timeout") ||
+           lower.contains("origin unreachable") || lower.contains("web server is down") {
+            return Self.serverUnreachableMessage
         }
         if lower.contains("serial name") || lower.contains("codingkeys") ||
            lower.contains("decodingerror") || lower.contains("no value associated with key") ||
            lower.contains("unsupported secure sign-in version") {
             return "This version of the app is out of date. Please update to continue."
         }
-        if lower.contains("timed out") || lower.contains("network") || lower.contains("cannot connect") {
-            return "Connection error. Check your internet and try again."
-        }
         let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "Something went wrong. Please try again." : trimmed
     }
+
+    private static let serverUnreachableMessage = "Cannot reach server. Check your server URL and try again."
 }
