@@ -33,10 +33,35 @@ enum LoginCredentialSource {
 protocol SystemCredentialServicing: AnyObject {
     func requestSavedCredential() async -> SystemCredential?
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult
+    func requestSavedServerURL() async -> String?
+    func offerSaveOrUpdateServerURL(_ serverURL: String) async -> SystemCredentialSaveResult
 }
 
 enum SystemCredentialScope {
     static let appCredentialHost = "tday.ohmz.cloud"
+}
+
+enum SystemCredentialRecord {
+    static let serverURLUser = "T'Day Server URL"
+
+    static func loginCredential(user: String, password: String) -> SystemCredential? {
+        let normalizedUser = user.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalizedUser != serverURLUser,
+              !normalizedUser.isEmpty,
+              !password.isEmpty else {
+            return nil
+        }
+
+        return SystemCredential(email: normalizedUser, password: password)
+    }
+
+    static func serverURL(user: String, password: String) -> String? {
+        guard user.trimmingCharacters(in: .whitespacesAndNewlines) == serverURLUser else {
+            return nil
+        }
+
+        return password.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
 }
 
 @MainActor
@@ -52,20 +77,71 @@ final class SystemCredentialService: SystemCredentialServicing {
     }
 
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult {
-        guard !credential.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+        let normalizedEmail = credential.email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedEmail.isEmpty,
               !credential.password.isEmpty else {
             return .skipped
         }
 
-        if #available(iOS 26.2, *) {
-            return await saveWithCredentialDataManager(credential)
-        } else {
-            return await saveWithSharedWebCredential(credential)
+        return await savePasswordRecord(
+            user: normalizedEmail,
+            password: credential.password,
+            title: "Tday",
+            failurePurpose: "login"
+        )
+    }
+
+    func requestSavedServerURL() async -> String? {
+        let session = PasswordAuthorizationSession()
+        activeAuthorizationSession = session
+        let serverURL = await session.requestSavedServerURL()
+        activeAuthorizationSession = nil
+        return serverURL
+    }
+
+    func offerSaveOrUpdateServerURL(_ serverURL: String) async -> SystemCredentialSaveResult {
+        let normalizedServerURL = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedServerURL.isEmpty else {
+            return .skipped
         }
+
+        return await savePasswordRecord(
+            user: SystemCredentialRecord.serverURLUser,
+            password: normalizedServerURL,
+            title: "Tday Server",
+            failurePurpose: "server URL"
+        )
+    }
+
+    private func savePasswordRecord(
+        user: String,
+        password: String,
+        title: String,
+        failurePurpose: String
+    ) async -> SystemCredentialSaveResult {
+        if #available(iOS 26.2, *) {
+            return await saveWithCredentialDataManager(
+                user: user,
+                password: password,
+                title: title,
+                failurePurpose: failurePurpose
+            )
+        }
+
+        return await saveWithSharedWebCredential(
+            user: user,
+            password: password,
+            failurePurpose: failurePurpose
+        )
     }
 
     @available(iOS 26.2, *)
-    private func saveWithCredentialDataManager(_ credential: SystemCredential) async -> SystemCredentialSaveResult {
+    private func saveWithCredentialDataManager(
+        user: String,
+        password: String,
+        title: String,
+        failurePurpose: String
+    ) async -> SystemCredentialSaveResult {
         let host = SystemCredentialScope.appCredentialHost
         let scope = ASAutoFillURLScope(
             scheme: .https,
@@ -73,13 +149,13 @@ final class SystemCredentialService: SystemCredentialServicing {
             port: nil,
             path: ""
         )
-        let passwordCredential = ASPasswordCredential(user: credential.email, password: credential.password)
+        let passwordCredential = ASPasswordCredential(user: user, password: password)
 
         do {
             try await ASCredentialDataManager().save(
                 password: passwordCredential,
                 for: scope,
-                title: "Tday",
+                title: title,
                 anchor: PasswordAuthorizationSession.presentationAnchor()
             )
             return .saved
@@ -89,17 +165,21 @@ final class SystemCredentialService: SystemCredentialServicing {
                nsError.code == ASAuthorizationError.canceled.rawValue {
                 return .cancelled
             }
-            return .failed("Apple Passwords could not save this Tday login. Check that \(host) is associated with the Tday iOS app.")
+            return .failed("Apple Passwords could not save this Tday \(failurePurpose). Check that \(host) is associated with the Tday iOS app.")
         }
     }
 
-    private func saveWithSharedWebCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult {
+    private func saveWithSharedWebCredential(
+        user: String,
+        password: String,
+        failurePurpose: String
+    ) async -> SystemCredentialSaveResult {
         let host = SystemCredentialScope.appCredentialHost
         return await withCheckedContinuation { (continuation: CheckedContinuation<SystemCredentialSaveResult, Never>) in
             SecAddSharedWebCredential(
                 host as CFString,
-                credential.email as CFString,
-                credential.password as CFString
+                user as CFString,
+                password as CFString
             ) { error in
                 guard let error else {
                     continuation.resume(returning: .saved)
@@ -112,7 +192,7 @@ final class SystemCredentialService: SystemCredentialServicing {
                     return
                 }
 
-                continuation.resume(returning: .failed("Apple Passwords could not save this Tday login. Check that \(host) is associated with the Tday iOS app."))
+                continuation.resume(returning: .failed("Apple Passwords could not save this Tday \(failurePurpose). Check that \(host) is associated with the Tday iOS app."))
             }
         }
     }
@@ -121,6 +201,7 @@ final class SystemCredentialService: SystemCredentialServicing {
 @MainActor
 private final class PasswordAuthorizationSession: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     private var continuation: CheckedContinuation<SystemCredential?, Never>?
+    private var serverURLContinuation: CheckedContinuation<String?, Never>?
     private var controller: ASAuthorizationController?
 
     func requestSavedCredential() async -> SystemCredential? {
@@ -137,17 +218,34 @@ private final class PasswordAuthorizationSession: NSObject, ASAuthorizationContr
         }
     }
 
+    func requestSavedServerURL() async -> String? {
+        await withCheckedContinuation { continuation in
+            self.serverURLContinuation = continuation
+
+            let provider = ASAuthorizationPasswordProvider()
+            let request = provider.createRequest()
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            self.controller = controller
+            controller.delegate = self
+            controller.presentationContextProvider = self
+            controller.performRequests(options: [.preferImmediatelyAvailableCredentials])
+        }
+    }
+
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         let credential = authorization.credential as? ASPasswordCredential
         finish(
-            credential.map {
-                SystemCredential(email: $0.user, password: $0.password)
+            loginCredential: credential.flatMap {
+                SystemCredentialRecord.loginCredential(user: $0.user, password: $0.password)
+            },
+            serverURL: credential.flatMap {
+                SystemCredentialRecord.serverURL(user: $0.user, password: $0.password)
             }
         )
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        finish(nil)
+        finish(loginCredential: nil, serverURL: nil)
     }
 
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
@@ -165,9 +263,17 @@ private final class PasswordAuthorizationSession: NSObject, ASAuthorizationContr
         return UIWindow(frame: UIScreen.main.bounds)
     }
 
-    private func finish(_ credential: SystemCredential?) {
+    private func finish(loginCredential: SystemCredential?, serverURL: String?) {
         controller = nil
-        continuation?.resume(returning: credential)
+        continuation?.resume(returning: loginCredential)
         continuation = nil
+        serverURLContinuation?.resume(returning: serverURL)
+        serverURLContinuation = nil
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }
