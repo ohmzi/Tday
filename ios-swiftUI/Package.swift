@@ -21,7 +21,7 @@ let package = Package(
         .target(
             name: "TdayCore",
             dependencies: [
-                .product(name: "Sentry", package: "sentry-cocoa"),
+                .product(name: "Sentry-Dynamic", package: "sentry-cocoa"),
             ],
             path: "Tday",
             exclude: [

@@ -21,7 +21,7 @@ targets:
           - Info.plist
     dependencies:
       - package: sentry-cocoa
-        product: Sentry
+        product: Sentry-Dynamic
     settings:
       base:
         PRODUCT_NAME: Tday
@@ -30,7 +30,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Tday/Tday.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 5
+        CURRENT_PROJECT_VERSION: 6
         MARKETING_VERSION: 1.23.0
         TARGETED_DEVICE_FAMILY: 1
         SUPPORTS_MACCATALYST: NO
