@@ -46,6 +46,7 @@ class HomeViewModel @Inject constructor(
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
 ) : ViewModel() {
+    private var activeLoadingRefreshes = 0
 
     private val _uiState = MutableStateFlow(
         runCatching {
@@ -78,7 +79,7 @@ class HomeViewModel @Inject constructor(
         }.onSuccess { (summary, todos) ->
             _uiState.update { current ->
                 current.copy(
-                    isLoading = false,
+                    isLoading = activeLoadingRefreshes > 0,
                     summary = if (current.summary == summary) current.summary else summary,
                     searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
                     errorMessage = null,
@@ -87,7 +88,7 @@ class HomeViewModel @Inject constructor(
         }.onFailure { error ->
             _uiState.update { current ->
                 current.copy(
-                    isLoading = false,
+                    isLoading = activeLoadingRefreshes > 0,
                     errorMessage = error.userFacingMessage("Failed to load dashboard."),
                 )
             }
@@ -100,42 +101,49 @@ class HomeViewModel @Inject constructor(
 
     private fun refreshInternal(forceSync: Boolean, showLoading: Boolean) {
         viewModelScope.launch {
-            if (showLoading) {
-                _uiState.update { current ->
-                    if (current.isLoading && current.errorMessage == null) current
-                    else current.copy(isLoading = true, errorMessage = null)
+            if (showLoading) activeLoadingRefreshes += 1
+            try {
+                if (showLoading) {
+                    _uiState.update { current ->
+                        if (current.isLoading && current.errorMessage == null) current
+                        else current.copy(isLoading = true, errorMessage = null)
+                    }
+                } else {
+                    _uiState.update { current ->
+                        if (current.errorMessage == null) current else current.copy(errorMessage = null)
+                    }
                 }
-            } else {
-                _uiState.update { current ->
-                    if (current.errorMessage == null) current else current.copy(errorMessage = null)
+                runCatching {
+                    if (forceSync) {
+                        syncManager.syncCachedData(
+                            force = true,
+                            replayPendingMutations = true,
+                            connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                        )
+                            .onFailure { /* fall back to local cache */ }
+                    }
+                    todoRepository.fetchDashboardSummary() to todoRepository.fetchTodos(mode = TodoListMode.ALL)
+                }.onSuccess { (summary, todos) ->
+                    _uiState.update { current ->
+                        val keepLoading = activeLoadingRefreshes > if (showLoading) 1 else 0
+                        current.copy(
+                            isLoading = keepLoading,
+                            summary = if (current.summary == summary) current.summary else summary,
+                            searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
+                            errorMessage = null,
+                        )
+                    }
+                }.onFailure { error ->
+                    _uiState.update { current ->
+                        val keepLoading = activeLoadingRefreshes > if (showLoading) 1 else 0
+                        current.copy(
+                            isLoading = keepLoading,
+                            errorMessage = error.userFacingMessage("Failed to load dashboard."),
+                        )
+                    }
                 }
-            }
-            runCatching {
-                if (forceSync) {
-                    syncManager.syncCachedData(
-                        force = true,
-                        replayPendingMutations = true,
-                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
-                    )
-                        .onFailure { /* fall back to local cache */ }
-                }
-                todoRepository.fetchDashboardSummary() to todoRepository.fetchTodos(mode = TodoListMode.ALL)
-            }.onSuccess { (summary, todos) ->
-                _uiState.update { current ->
-                    current.copy(
-                        isLoading = false,
-                        summary = if (current.summary == summary) current.summary else summary,
-                        searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
-                        errorMessage = null,
-                    )
-                }
-            }.onFailure { error ->
-                _uiState.update { current ->
-                    current.copy(
-                        isLoading = false,
-                        errorMessage = error.userFacingMessage("Failed to load dashboard."),
-                    )
-                }
+            } finally {
+                if (showLoading) activeLoadingRefreshes = maxOf(activeLoadingRefreshes - 1, 0)
             }
         }
     }
