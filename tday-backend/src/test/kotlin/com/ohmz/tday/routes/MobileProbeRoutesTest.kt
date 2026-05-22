@@ -5,6 +5,7 @@ import com.ohmz.tday.security.testAppConfig
 import com.ohmz.tday.shared.model.MobileProbeResponse
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
@@ -33,6 +34,8 @@ class MobileProbeRoutesTest {
         val response = client.get("/api/mobile/probe")
 
         assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("no-store", response.headers[HttpHeaders.CacheControl])
+        assertEquals("no-cache", response.headers[HttpHeaders.Pragma])
 
         val payload = json.decodeFromString<MobileProbeResponse>(response.bodyAsText())
         assertEquals("tday", payload.service)

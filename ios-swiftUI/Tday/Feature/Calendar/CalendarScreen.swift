@@ -2,13 +2,16 @@ import SwiftUI
 import UIKit
 
 private enum CalendarTitleHandoff {
-    static let pinnedRevealStart: CGFloat = 0.18
-    static let pinnedRevealEnd: CGFloat = 0.62
-    static let titleRowHeight: CGFloat = TodoTimelineMetrics.titleCollapseDistance
-}
-
-private enum CalendarModeControlMetrics {
-    static let height: CGFloat = 52
+    static let collapseDistance: CGFloat = 180
+    static let expandedTitleHeight: CGFloat = 56
+    static let expandedTitleSpacerHeight: CGFloat = 14
+    static let expandedFadeStart: CGFloat = 0.62
+    static let expandedFadeEnd: CGFloat = 0.86
+    static let collapsedFadeStart: CGFloat = 0.72
+    static let collapsedFadeEnd: CGFloat = 0.96
+    static let collapsedTitleRevealDistance: CGFloat = 10
+    static let expandedTitleLiftDistance: CGFloat = 18
+    static let sliderPartialSnapDistance: CGFloat = 58
 }
 
 private enum CalendarPeriodCardMetrics {
@@ -70,7 +73,7 @@ struct CalendarScreen: View {
     @State private var displayMode: CalendarDisplayMode = .month
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
-    @State private var calendarScrollOffset: CGFloat = 0
+    @State private var calendarTitleCollapseOffset: CGFloat = 0
     @State private var todayJumpRequestID = 0
     @State private var todayJumpRequest: CalendarTodayJumpRequest?
 
@@ -95,9 +98,9 @@ struct CalendarScreen: View {
     }
 
     private var titleCollapseProgress: CGFloat {
-        let distance = TodoTimelineMetrics.titleCollapseDistance
+        let distance = CalendarTitleHandoff.collapseDistance
         guard distance > 0 else { return 0 }
-        return min(max(calendarScrollOffset / distance, 0), 1)
+        return min(max(calendarTitleCollapseOffset / distance, 0), 1)
     }
 
     private var minimumNavigableMonth: Date {
@@ -124,8 +127,6 @@ struct CalendarScreen: View {
 
     var body: some View {
         List {
-            calendarHeroTitleRow
-
             Section {
                 CalendarViewModeTabs(
                     selectedMode: displayMode,
@@ -139,6 +140,14 @@ struct CalendarScreen: View {
                         }
                     }
                 )
+                .background {
+                    CalendarTitleCollapseScrollObserver(
+                        collapseOffset: $calendarTitleCollapseOffset,
+                        collapseDistance: CalendarTitleHandoff.collapseDistance,
+                        sliderPartialSnapDistance: CalendarTitleHandoff.sliderPartialSnapDistance
+                    )
+                    .frame(width: 0, height: 0)
+                }
                 .listRowInsets(
                     EdgeInsets(
                         top: 0,
@@ -166,14 +175,7 @@ struct CalendarScreen: View {
             }
 
             Section {
-                if pendingItems.isEmpty {
-                    Text("No pending task due for this day")
-                        .font(.tdayRounded(size: 13, weight: .bold))
-                        .foregroundStyle(colors.onSurfaceVariant)
-                        .listRowInsets(EdgeInsets(top: 4, leading: TodoTimelineMetrics.horizontalPadding, bottom: 12, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                } else {
+                if !pendingItems.isEmpty {
                     ForEach(pendingItems) { todo in
                         CalendarPendingTaskRow(
                             todo: todo,
@@ -192,17 +194,19 @@ struct CalendarScreen: View {
                             .tint(.green)
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
+                            Button {
                                 Task { await viewModel.delete(todo) }
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
+                            .tint(TaskSwipeActionTint.delete)
+
                             Button {
                                 editingTodo = todo
                             } label: {
                                 Label("Edit", systemImage: "square.and.pencil")
                             }
-                            .tint(colors.secondary)
+                            .tint(TaskSwipeActionTint.edit)
                         }
                         TimelineRowDivider()
                     }
@@ -273,7 +277,7 @@ struct CalendarScreen: View {
     }
 
     private var calendarTopInset: some View {
-        TimelineTopBar(
+        CalendarElasticTopBar(
             title: "Calendar",
             accentColor: calendarAccentColor,
             collapseProgress: titleCollapseProgress,
@@ -284,25 +288,7 @@ struct CalendarScreen: View {
                 usesCircularChrome: true,
                 action: jumpToToday
             ),
-            titleRevealStart: CalendarTitleHandoff.pinnedRevealStart,
-            titleRevealEnd: CalendarTitleHandoff.pinnedRevealEnd
         )
-    }
-
-    private var calendarHeroTitleRow: some View {
-        CalendarExpandedTitleRow(
-            title: "Calendar",
-            accentColor: calendarAccentColor,
-            collapseProgress: titleCollapseProgress
-        )
-        .background {
-            TimelineScrollOffsetObserver { calendarScrollOffset = $0 }
-                .frame(width: 0, height: 0)
-        }
-        .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
-        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
     }
 
     private func isSelectedDay(_ date: Date) -> Bool {
@@ -391,85 +377,21 @@ private struct CalendarViewModeTabs: View {
     let onSelect: (CalendarDisplayMode) -> Void
 
     var body: some View {
-        CalendarThickNativeSegmentedControl(
-            selectedMode: selectedMode,
+        let modes = CalendarDisplayMode.allCases
+
+        TdayNativeSegmentedControl(
+            labels: modes.map { $0.rawValue.capitalized },
+            selectedIndex: modes.firstIndex(of: selectedMode) ?? 0,
             accentColor: accentColor,
-            onSelect: onSelect
+            onSelect: { index in
+                guard modes.indices.contains(index) else {
+                    return
+                }
+                onSelect(modes[index])
+            }
         )
         .frame(maxWidth: .infinity)
-        .frame(height: CalendarModeControlMetrics.height)
-    }
-}
-
-private struct CalendarThickNativeSegmentedControl: UIViewRepresentable {
-    let selectedMode: CalendarDisplayMode
-    let accentColor: Color
-    let onSelect: (CalendarDisplayMode) -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onSelect: onSelect)
-    }
-
-    func makeUIView(context: Context) -> ThickSegmentedControl {
-        let control = ThickSegmentedControl(items: CalendarDisplayMode.allCases.map { $0.rawValue.capitalized })
-        control.selectedSegmentIndex = selectedModeIndex
-        control.apportionsSegmentWidthsByContent = false
-        control.addTarget(context.coordinator, action: #selector(Coordinator.didChange(_:)), for: .valueChanged)
-        applySizingAndTint(to: control)
-        return control
-    }
-
-    func updateUIView(_ control: ThickSegmentedControl, context: Context) {
-        context.coordinator.onSelect = onSelect
-        if control.selectedSegmentIndex != selectedModeIndex {
-            control.selectedSegmentIndex = selectedModeIndex
-        }
-        applySizingAndTint(to: control)
-    }
-
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: ThickSegmentedControl, context: Context) -> CGSize? {
-        CGSize(
-            width: proposal.width ?? uiView.intrinsicContentSize.width,
-            height: CalendarModeControlMetrics.height
-        )
-    }
-
-    private var selectedModeIndex: Int {
-        CalendarDisplayMode.allCases.firstIndex(of: selectedMode) ?? 0
-    }
-
-    private func applySizingAndTint(to control: ThickSegmentedControl) {
-        control.tintColor = UIColor(accentColor)
-        control.invalidateIntrinsicContentSize()
-    }
-
-    final class Coordinator: NSObject {
-        var onSelect: (CalendarDisplayMode) -> Void
-
-        init(onSelect: @escaping (CalendarDisplayMode) -> Void) {
-            self.onSelect = onSelect
-        }
-
-        @objc func didChange(_ sender: UISegmentedControl) {
-            let modes = CalendarDisplayMode.allCases
-            guard modes.indices.contains(sender.selectedSegmentIndex) else {
-                return
-            }
-            onSelect(modes[sender.selectedSegmentIndex])
-        }
-    }
-
-    final class ThickSegmentedControl: UISegmentedControl {
-        override var intrinsicContentSize: CGSize {
-            let baseSize = super.intrinsicContentSize
-            return CGSize(width: baseSize.width, height: CalendarModeControlMetrics.height)
-        }
-
-        override func sizeThatFits(_ size: CGSize) -> CGSize {
-            var fittingSize = super.sizeThatFits(size)
-            fittingSize.height = CalendarModeControlMetrics.height
-            return fittingSize
-        }
+        .frame(height: TdayNativeSegmentedControlMetrics.height)
     }
 }
 
@@ -1541,42 +1463,475 @@ private extension Optional where Wrapped == [TodoItem] {
     }
 }
 
-private struct CalendarExpandedTitleRow: View {
+private struct CalendarElasticTopBar: View {
     let title: String
     let accentColor: Color
     let collapseProgress: CGFloat
+    let onBack: () -> Void
+    let action: TimelineTopBarAction?
 
     private var progress: CGFloat {
         min(max(collapseProgress, 0), 1)
     }
 
-    private var fadeProgress: CGFloat {
-        TodoTimelineMetrics.progress(
+    private var expandedTitleHeight: CGFloat {
+        CalendarTitleHandoff.expandedTitleHeight * (1 - progress)
+    }
+
+    private var expandedSpacerHeight: CGFloat {
+        CalendarTitleHandoff.expandedTitleSpacerHeight * (1 - progress)
+    }
+
+    private var expandedTitleOpacity: Double {
+        let fade = linearProgress(
             progress,
-            from: TodoTimelineMetrics.expandedTitleFadeStart,
-            to: TodoTimelineMetrics.expandedTitleFadeEnd
+            from: CalendarTitleHandoff.expandedFadeStart,
+            to: CalendarTitleHandoff.expandedFadeEnd
+        )
+        return Double(1 - fade)
+    }
+
+    private var collapsedTitleOpacity: Double {
+        Double(
+            linearProgress(
+                progress,
+                from: CalendarTitleHandoff.collapsedFadeStart,
+                to: CalendarTitleHandoff.collapsedFadeEnd
+            )
         )
     }
 
-    private var titleOffsetY: CGFloat {
-        -TodoTimelineMetrics.expandedTitleLiftDistance * fadeProgress
+    private var collapsedTitleOffsetY: CGFloat {
+        CalendarTitleHandoff.collapsedTitleRevealDistance * (1 - CGFloat(collapsedTitleOpacity))
+    }
+
+    private var expandedTitleOffsetY: CGFloat {
+        -CalendarTitleHandoff.expandedTitleLiftDistance * progress
     }
 
     var body: some View {
-        Text(title)
-            .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
-            .foregroundStyle(accentColor)
-            .lineLimit(1)
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack {
+                HStack(spacing: 0) {
+                    CalendarTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
+                    Spacer(minLength: 0)
+                    if let action {
+                        CalendarTopBarButton(
+                            systemName: action.systemName,
+                            chrome: action.usesCircularChrome ? .outlined : .plain,
+                            tint: action.tint,
+                            action: action.action
+                        )
+                    } else {
+                        Color.clear
+                            .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                    }
+                }
+
+                Text(title)
+                    .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
+                    .foregroundStyle(accentColor)
+                    .lineLimit(1)
+                    .opacity(collapsedTitleOpacity)
+                    .offset(y: collapsedTitleOffsetY)
+                    .scaleEffect(0.985 + (0.015 * CGFloat(collapsedTitleOpacity)))
+                    .padding(.horizontal, TodoTimelineMetrics.topBarButtonFrame + 12)
+                    .frame(maxWidth: .infinity)
+                    .allowsHitTesting(false)
+            }
+            .frame(height: TodoTimelineMetrics.topBarRowHeight)
+
+            Color.clear
+                .frame(height: expandedSpacerHeight)
+
+            ZStack(alignment: .bottomLeading) {
+                Text(title)
+                    .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
+                    .foregroundStyle(accentColor)
+                    .lineLimit(1)
+                    .opacity(expandedTitleOpacity)
+                    .offset(y: expandedTitleOffsetY)
+            }
             .frame(
                 maxWidth: .infinity,
-                minHeight: CalendarTitleHandoff.titleRowHeight,
-                maxHeight: CalendarTitleHandoff.titleRowHeight,
-                alignment: .topLeading
+                minHeight: expandedTitleHeight,
+                maxHeight: expandedTitleHeight,
+                alignment: .bottomLeading
             )
-            .opacity(Double(1 - fadeProgress))
-            .offset(y: titleOffsetY)
             .clipped()
-            .allowsHitTesting(false)
+        }
+        .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
+        .padding(.top, 2)
+        .padding(.bottom, 2)
+        .background(colors.background)
+    }
+
+    @Environment(\.tdayColors) private var colors
+
+    private func linearProgress(_ value: CGFloat, from start: CGFloat, to end: CGFloat) -> CGFloat {
+        guard end > start else { return value >= end ? 1 : 0 }
+        return min(max((value - start) / (end - start), 0), 1)
+    }
+}
+
+private struct CalendarTopBarButton: View {
+    enum Chrome {
+        case plain
+        case filled
+        case outlined
+    }
+
+    let systemName: String
+    let chrome: Chrome
+    let tint: Color?
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    init(systemName: String, chrome: Chrome, tint: Color? = nil, action: @escaping () -> Void) {
+        self.systemName = systemName
+        self.chrome = chrome
+        self.tint = tint
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: iconSize, weight: .semibold))
+                .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                .background {
+                    if chrome == .filled {
+                        Circle()
+                            .fill(colors.surface)
+                    } else if chrome == .outlined {
+                        Circle()
+                            .fill(outlinedFillColor)
+                            .overlay {
+                                Circle()
+                                    .stroke(outlinedBorderColor, lineWidth: 1)
+                            }
+                    }
+                }
+                .contentShape(Circle())
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: .black,
+                pressedShadowOpacity: chrome == .filled ? 0.14 : 0,
+                normalShadowOpacity: chrome == .filled ? 0.24 : 0
+            )
+        )
+        .foregroundStyle(foregroundColor)
+    }
+
+    private var iconSize: CGFloat {
+        chrome == .filled ? TodoTimelineMetrics.topBarButtonIconSize : 28
+    }
+
+    private var foregroundColor: Color {
+        switch chrome {
+        case .filled:
+            return colors.onSurface
+        case .outlined:
+            return tint ?? colors.onSurface
+        case .plain:
+            return tint ?? Color.accentColor
+        }
+    }
+
+    private var outlinedFillColor: Color {
+        if let tint {
+            return tint.opacity(0.12)
+        }
+        return colors.background
+    }
+
+    private var outlinedBorderColor: Color {
+        if let tint {
+            return tint.opacity(0.48)
+        }
+        return colors.onSurface.opacity(0.2)
+    }
+}
+
+private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
+    @Binding var collapseOffset: CGFloat
+    let collapseDistance: CGFloat
+    let sliderPartialSnapDistance: CGFloat
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(collapseOffset: collapseOffset)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.update(
+            collapseOffset: collapseOffset,
+            collapseDistance: collapseDistance,
+            sliderPartialSnapDistance: sliderPartialSnapDistance,
+            onChange: { value, animated in
+                if animated {
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                        collapseOffset = value
+                    }
+                } else {
+                    collapseOffset = value
+                }
+            }
+        )
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator: NSObject {
+        private var collapseOffset: CGFloat
+        private var collapseDistance: CGFloat = 0
+        private var sliderPartialSnapDistance: CGFloat = 0
+        private var onChange: ((CGFloat, Bool) -> Void)?
+        private weak var observedScrollView: UIScrollView?
+        private var offsetObservation: NSKeyValueObservation?
+        private var snapTimer: Timer?
+        private var lastTranslationY: CGFloat = 0
+        private var releaseVelocityY: CGFloat = 0
+        private var isAdjustingScrollOffset = false
+
+        init(collapseOffset: CGFloat) {
+            self.collapseOffset = collapseOffset
+        }
+
+        deinit {
+            snapTimer?.invalidate()
+        }
+
+        func update(
+            collapseOffset: CGFloat,
+            collapseDistance: CGFloat,
+            sliderPartialSnapDistance: CGFloat,
+            onChange: @escaping (CGFloat, Bool) -> Void
+        ) {
+            self.collapseOffset = collapseOffset
+            self.collapseDistance = collapseDistance
+            self.sliderPartialSnapDistance = sliderPartialSnapDistance
+            self.onChange = onChange
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.calendarEnclosingScrollView() else {
+                return
+            }
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
+            offsetObservation = scrollView.observe(\.contentOffset, options: .new) { [weak self] scrollView, _ in
+                self?.clampListScrollIfTitleIsConsuming(scrollView)
+            }
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let scrollView = observedScrollView else {
+                return
+            }
+
+            let translationY = gesture.translation(in: scrollView).y
+
+            switch gesture.state {
+            case .began:
+                snapTimer?.invalidate()
+                lastTranslationY = translationY
+                releaseVelocityY = 0
+            case .changed:
+                let deltaY = translationY - lastTranslationY
+                lastTranslationY = translationY
+                consume(deltaY: deltaY, in: scrollView)
+            case .ended, .cancelled, .failed:
+                releaseVelocityY = gesture.velocity(in: scrollView).y
+                scheduleSnapCheck(for: scrollView)
+            default:
+                break
+            }
+        }
+
+        private func consume(deltaY: CGFloat, in scrollView: UIScrollView) {
+            guard collapseDistance > 0 else {
+                return
+            }
+
+            if deltaY < 0 {
+                let previous = collapseOffset
+                let next = min(max(previous - deltaY, 0), collapseDistance)
+                if next > previous {
+                    setCollapseOffset(next, animated: false)
+                    holdListAtTop(scrollView)
+                }
+                return
+            }
+
+            if deltaY > 0 {
+                guard isListAtTop(scrollView), collapseOffset > 0 else {
+                    return
+                }
+                let previous = collapseOffset
+                let next = min(max(previous - deltaY, 0), collapseDistance)
+                if next < previous {
+                    setCollapseOffset(next, animated: false)
+                    holdListAtTop(scrollView)
+                }
+            }
+        }
+
+        private func scheduleSnapCheck(for scrollView: UIScrollView) {
+            snapTimer?.invalidate()
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self, weak scrollView] timer in
+                guard let self, let scrollView else {
+                    timer.invalidate()
+                    return
+                }
+                if !scrollView.isTracking && !scrollView.isDragging && !scrollView.isDecelerating {
+                    timer.invalidate()
+                    self.snapTitleCollapseAndSlider(in: scrollView)
+                }
+            }
+        }
+
+        private func snapTitleCollapseAndSlider(in scrollView: UIScrollView) {
+            snapTitleCollapse(in: scrollView)
+            snapSliderIfPartiallyVisible(in: scrollView)
+        }
+
+        private func snapTitleCollapse(in scrollView: UIScrollView) {
+            guard collapseDistance > 0 else {
+                return
+            }
+            let bounded = min(max(collapseOffset, 0), collapseDistance)
+            guard bounded > 0, bounded < collapseDistance else {
+                return
+            }
+
+            let target: CGFloat
+            if !isListAtTop(scrollView) {
+                target = collapseDistance
+            } else if releaseVelocityY < -1 {
+                target = collapseDistance
+            } else if releaseVelocityY > 1 {
+                target = 0
+            } else {
+                target = (bounded / collapseDistance) >= 0.5 ? collapseDistance : 0
+            }
+
+            if isListAtTop(scrollView) {
+                stopScrollMotion(scrollView)
+                holdListAtTop(scrollView)
+            }
+            setCollapseOffset(target, animated: true)
+        }
+
+        private func snapSliderIfPartiallyVisible(in scrollView: UIScrollView) {
+            guard sliderPartialSnapDistance > 0 else {
+                return
+            }
+            guard collapseOffset >= collapseDistance - 0.5 else {
+                return
+            }
+
+            let offset = normalizedOffset(for: scrollView)
+            guard offset > 0.5, offset < sliderPartialSnapDistance else {
+                return
+            }
+
+            animateListToTop(scrollView)
+        }
+
+        private func clampListScrollIfTitleIsConsuming(_ scrollView: UIScrollView) {
+            guard !isAdjustingScrollOffset else {
+                return
+            }
+            guard collapseDistance > 0 else {
+                return
+            }
+            guard collapseOffset < collapseDistance - 0.5 else {
+                return
+            }
+            guard normalizedOffset(for: scrollView) > 0.5 else {
+                return
+            }
+            holdListAtTop(scrollView)
+        }
+
+        private func setCollapseOffset(_ offset: CGFloat, animated: Bool) {
+            let bounded = min(max(offset, 0), collapseDistance)
+            guard abs(collapseOffset - bounded) > 0.1 else {
+                return
+            }
+            collapseOffset = bounded
+            onChange?(bounded, animated)
+        }
+
+        private func isListAtTop(_ scrollView: UIScrollView) -> Bool {
+            normalizedOffset(for: scrollView) <= 0.5
+        }
+
+        private func normalizedOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+        }
+
+        private func holdListAtTop(_ scrollView: UIScrollView) {
+            let topY = -scrollView.adjustedContentInset.top
+            guard abs(scrollView.contentOffset.y - topY) > 0.1 else {
+                return
+            }
+            isAdjustingScrollOffset = true
+            scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: topY), animated: false)
+            isAdjustingScrollOffset = false
+        }
+
+        private func animateListToTop(_ scrollView: UIScrollView) {
+            let topY = -scrollView.adjustedContentInset.top
+            guard abs(scrollView.contentOffset.y - topY) > 0.5 else {
+                return
+            }
+
+            isAdjustingScrollOffset = true
+            UIView.animate(
+                withDuration: 0.24,
+                delay: 0,
+                options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut]
+            ) {
+                scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: topY), animated: false)
+            } completion: { [weak self] _ in
+                self?.isAdjustingScrollOffset = false
+            }
+        }
+
+        private func stopScrollMotion(_ scrollView: UIScrollView) {
+            scrollView.setContentOffset(scrollView.contentOffset, animated: false)
+            let wasScrollEnabled = scrollView.isScrollEnabled
+            scrollView.isScrollEnabled = false
+            scrollView.isScrollEnabled = wasScrollEnabled
+        }
+    }
+}
+
+private extension UIView {
+    func calendarEnclosingScrollView() -> UIScrollView? {
+        var current: UIView? = self
+        while let view = current {
+            if let scrollView = view as? UIScrollView {
+                return scrollView
+            }
+            current = view.superview
+        }
+        return nil
     }
 }
 

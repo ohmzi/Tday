@@ -2,14 +2,285 @@ import SwiftUI
 import UIKit
 
 struct PullToRefreshContainer<Content: View>: View {
+    let isRefreshing: Bool
     let action: @Sendable () async -> Void
-    @ViewBuilder let content: Content
+    private let content: Content
+
+    init(
+        isRefreshing: Bool,
+        action: @escaping @Sendable () async -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isRefreshing = isRefreshing
+        self.action = action
+        self.content = content()
+    }
+
+    var body: some View {
+        RefreshContainerBody(isRefreshing: isRefreshing, action: action) {
+            content
+        }
+    }
+}
+
+private struct RefreshContainerBody<Content: View>: View {
+    let isRefreshing: Bool
+    let action: @Sendable () async -> Void
+    private let content: Content
+
+    @State private var pullDistance: CGFloat = 0
+    @State private var localRefreshInFlight = false
+    @State private var hasTriggeredForCurrentPull = false
+
+    init(
+        isRefreshing: Bool,
+        action: @escaping @Sendable () async -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.isRefreshing = isRefreshing
+        self.action = action
+        self.content = content()
+    }
+
+    private var pullProgress: CGFloat {
+        min(max(pullDistance / TdayRefreshIndicatorMetrics.triggerDistance, 0), 1)
+    }
+
+    private var effectiveRefreshing: Bool {
+        isRefreshing || localRefreshInFlight
+    }
 
     var body: some View {
         content
-            .refreshable {
-                await action()
+            .background(
+                PullRefreshOffsetObserver { distance in
+                    updatePullDistance(distance)
+                }
+            )
+            .overlay(alignment: .top) {
+                TdayPullRefreshIndicator(
+                    isRefreshing: effectiveRefreshing,
+                    pullProgress: pullProgress
+                )
+                .padding(.top, 10)
+                .allowsHitTesting(false)
             }
+            .onChange(of: pullProgress) { _, progress in
+                handlePullProgressChange(progress)
+            }
+            .onChange(of: effectiveRefreshing) { _, refreshing in
+                if !refreshing && pullProgress < 0.1 {
+                    hasTriggeredForCurrentPull = false
+                }
+            }
+    }
+
+    private func handlePullProgressChange(_ progress: CGFloat) {
+        if progress < 0.1 && !effectiveRefreshing {
+            hasTriggeredForCurrentPull = false
+        }
+
+        guard progress >= 1,
+              !effectiveRefreshing,
+              !hasTriggeredForCurrentPull else {
+            return
+        }
+
+        hasTriggeredForCurrentPull = true
+        localRefreshInFlight = true
+        Task {
+            await action()
+            await MainActor.run {
+                localRefreshInFlight = false
+            }
+        }
+    }
+
+    private func updatePullDistance(_ distance: CGFloat) {
+        let nextDistance = max(distance, 0)
+        guard abs(pullDistance - nextDistance) > 0.5 ||
+            (nextDistance == 0 && pullDistance != 0) else {
+            return
+        }
+
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            pullDistance = nextDistance
+        }
+    }
+}
+
+private enum TdayRefreshIndicatorMetrics {
+    static let triggerDistance: CGFloat = 112
+    static let containerWidth: CGFloat = 152
+    static let containerHeight: CGFloat = 58
+    static let barCount = 5
+    static let dotWidth: CGFloat = 9
+    static let dotMinHeight: CGFloat = 12
+    static let dotMaxHeight: CGFloat = 30
+    static let dotSpacing: CGFloat = 10
+    static let cornerRadius: CGFloat = 29
+    static let sweepInset: CGFloat = 11
+    static let sweepHeight: CGFloat = 40
+}
+
+private struct TdayPullRefreshIndicator: View {
+    let isRefreshing: Bool
+    let pullProgress: CGFloat
+
+    @Environment(\.tdayColors) private var colors
+
+    private var visible: Bool {
+        isRefreshing || pullProgress > 0.02
+    }
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !isRefreshing)) { context in
+            let clampedProgress = min(max(pullProgress, 0), 1)
+            let revealProgress = isRefreshing ? 1 : clampedProgress
+            let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.05) / 1.05
+            let sweepTrackWidth = TdayRefreshIndicatorMetrics.containerWidth - (TdayRefreshIndicatorMetrics.sweepInset * 2)
+            let refreshAccent = Color.tdayTodayBlue
+
+            ZStack(alignment: .center) {
+                if visible {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
+                            .fill(refreshAccent.opacity(isRefreshing ? 0.18 : 0.08 + (Double(clampedProgress) * 0.10)))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous)
+                                    .stroke(refreshAccent.opacity(0.14 + (Double(clampedProgress) * 0.08)), lineWidth: 1)
+                            }
+
+                        HStack(spacing: TdayRefreshIndicatorMetrics.dotSpacing) {
+                            ForEach(0..<TdayRefreshIndicatorMetrics.barCount, id: \.self) { index in
+                                let metrics = barMetrics(
+                                    index: index,
+                                    pullProgress: clampedProgress,
+                                    cycle: cycle
+                                )
+
+                                RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.dotWidth / 2, style: .continuous)
+                                    .fill(refreshAccent.opacity(metrics.opacity))
+                                    .frame(
+                                        width: TdayRefreshIndicatorMetrics.dotWidth,
+                                        height: metrics.height
+                                    )
+                            }
+                        }
+                    }
+                    .frame(width: sweepTrackWidth, height: TdayRefreshIndicatorMetrics.sweepHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.sweepHeight / 2, style: .continuous))
+                }
+            }
+            .frame(
+                width: TdayRefreshIndicatorMetrics.containerWidth,
+                height: TdayRefreshIndicatorMetrics.containerHeight
+            )
+            .background(colors.surface, in: RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous)
+                    .stroke(colors.onSurface.opacity(0.12), lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: TdayRefreshIndicatorMetrics.cornerRadius, style: .continuous))
+            .shadow(color: refreshAccent.opacity(0.12), radius: 12, x: 0, y: 0)
+            .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 8)
+            .opacity(visible ? Double(revealProgress) : 0)
+            .offset(y: -18 + (18 * revealProgress))
+            .animation(.easeOut(duration: 0.22), value: visible)
+        }
+    }
+
+    private func barMetrics(index: Int, pullProgress: CGFloat, cycle: TimeInterval) -> (height: CGFloat, opacity: Double) {
+        if isRefreshing {
+            let phasedCycle = (cycle + (Double(index) * 0.11)).truncatingRemainder(dividingBy: 1)
+            let wave = (sin(phasedCycle * .pi * 2) + 1) / 2
+            let easedWave = CGFloat(wave * wave * (3 - (2 * wave)))
+            let height = TdayRefreshIndicatorMetrics.dotMinHeight +
+                ((TdayRefreshIndicatorMetrics.dotMaxHeight - TdayRefreshIndicatorMetrics.dotMinHeight) * easedWave)
+            return (
+                height: height,
+                opacity: 0.42 + (Double(easedWave) * 0.58)
+            )
+        }
+
+        let staggerStart = CGFloat(index) * 0.11
+        let progress = min(max((pullProgress - staggerStart) / 0.56, 0), 1)
+        let easedProgress = progress * progress * (3 - (2 * progress))
+        let height = TdayRefreshIndicatorMetrics.dotMinHeight +
+            ((TdayRefreshIndicatorMetrics.dotMaxHeight - TdayRefreshIndicatorMetrics.dotMinHeight) * easedProgress)
+        return (
+            height: height,
+            opacity: 0.32 + (Double(easedProgress) * 0.68)
+        )
+    }
+}
+
+private struct PullRefreshOffsetObserver: UIViewRepresentable {
+    let onChange: (CGFloat) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onChange: onChange)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.onChange = onChange
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator {
+        var onChange: (CGFloat) -> Void
+        private weak var observedScrollView: UIScrollView?
+        private var observation: NSKeyValueObservation?
+
+        init(onChange: @escaping (CGFloat) -> Void) {
+            self.onChange = onChange
+        }
+
+        func attach(to view: UIView) {
+            guard let scrollView = view.nearestScrollView() else {
+                return
+            }
+
+            hideNativeRefreshControl(in: scrollView)
+
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView = scrollView
+            observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
+                self?.hideNativeRefreshControl(in: scrollView)
+                let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
+                let pullDistance = max(-normalizedOffset, 0)
+                if Thread.isMainThread {
+                    self?.onChange(pullDistance)
+                } else {
+                    DispatchQueue.main.async {
+                        self?.onChange(pullDistance)
+                    }
+                }
+            }
+        }
+
+        private func hideNativeRefreshControl(in scrollView: UIScrollView) {
+            guard let refreshControl = scrollView.refreshControl else {
+                return
+            }
+            refreshControl.tintColor = .clear
+            refreshControl.backgroundColor = .clear
+            refreshControl.alpha = 0
+            refreshControl.subviews.forEach { $0.alpha = 0 }
+        }
     }
 }
 
@@ -170,10 +441,15 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
         private var lastDragDelta: CGFloat = 0
         private var releaseVelocityY: CGFloat = 0
         private var settledTargetOffset: CGFloat = 0
+        private var snapTimer: Timer?
         private var isSnapping = false
 
         init(collapseDistance: CGFloat) {
             self.collapseDistance = collapseDistance
+        }
+
+        deinit {
+            snapTimer?.invalidate()
         }
 
         func attach(to view: UIView) {
@@ -195,6 +471,7 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
 
             switch gesture.state {
             case .began:
+                snapTimer?.invalidate()
                 isSnapping = false
                 releaseVelocityY = 0
                 lastDragDelta = 0
@@ -208,12 +485,27 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
                 lastObservedOffset = offset
             case .ended, .cancelled, .failed:
                 releaseVelocityY = gesture.velocity(in: scrollView).y
-                DispatchQueue.main.async { [weak self, weak scrollView] in
-                    guard let self, let scrollView else { return }
-                    self.maybeSnap(scrollView: scrollView)
-                }
+                scheduleSnapCheck()
             default:
                 break
+            }
+        }
+
+        private func scheduleSnapCheck() {
+            snapTimer?.invalidate()
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard let scrollView = self.observedScrollView else {
+                    timer.invalidate()
+                    return
+                }
+                if !scrollView.isTracking && !scrollView.isDragging && !scrollView.isDecelerating {
+                    timer.invalidate()
+                    self.maybeSnap(scrollView: scrollView)
+                }
             }
         }
 
@@ -221,6 +513,14 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
             let distance = collapseDistance
             guard distance > 0 else { return }
             let currentOffset = normalizedOffset(for: scrollView)
+            guard maxScrollableOffset(for: scrollView) >= distance - 0.5 else {
+                guard currentOffset > 0.5 else {
+                    settledTargetOffset = 0
+                    return
+                }
+                animate(scrollView: scrollView, toNormalizedOffset: 0, target: 0)
+                return
+            }
             guard currentOffset > 0.5 else {
                 settledTargetOffset = 0
                 return
@@ -237,6 +537,13 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
 
         private func normalizedOffset(for scrollView: UIScrollView) -> CGFloat {
             max(scrollView.contentOffset.y + scrollView.adjustedContentInset.top, 0)
+        }
+
+        private func maxScrollableOffset(for scrollView: UIScrollView) -> CGFloat {
+            max(
+                scrollView.contentSize.height + scrollView.adjustedContentInset.top + scrollView.adjustedContentInset.bottom - scrollView.bounds.height,
+                0
+            )
         }
 
         private func targetOffset(for currentOffset: CGFloat, distance: CGFloat) -> CGFloat {
@@ -257,6 +564,11 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
             }
 
             return settledTargetOffset
+        }
+
+        private func animate(scrollView: UIScrollView, toNormalizedOffset normalizedOffset: CGFloat, target: CGFloat) {
+            let newContentY = normalizedOffset - scrollView.adjustedContentInset.top
+            animate(scrollView: scrollView, to: CGPoint(x: scrollView.contentOffset.x, y: newContentY), target: target)
         }
 
         private func animate(scrollView: UIScrollView, to offset: CGPoint, target: CGFloat) {
@@ -409,6 +721,21 @@ private struct TopPartialScrollSnapObserver: UIViewRepresentable {
 }
 
 private extension UIView {
+    func nearestScrollView() -> UIScrollView? {
+        if let enclosing = enclosingScrollView() {
+            return enclosing
+        }
+
+        var current = superview
+        while let view = current {
+            if let scrollView = view.firstDescendantScrollView() {
+                return scrollView
+            }
+            current = view.superview
+        }
+        return nil
+    }
+
     func enclosingScrollView() -> UIScrollView? {
         var current: UIView? = self
         while let view = current {
@@ -416,6 +743,18 @@ private extension UIView {
                 return scrollView
             }
             current = view.superview
+        }
+        return nil
+    }
+
+    private func firstDescendantScrollView() -> UIScrollView? {
+        for subview in subviews {
+            if let scrollView = subview as? UIScrollView {
+                return scrollView
+            }
+            if let scrollView = subview.firstDescendantScrollView() {
+                return scrollView
+            }
         }
         return nil
     }

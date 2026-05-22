@@ -161,16 +161,16 @@ struct OnboardingWizardOverlay: View {
                     .fill(colors.surface.opacity(1))
                     .overlay(
                         RoundedRectangle(cornerRadius: Metrics.cardCornerRadius, style: .continuous)
-                            .fill(Color.white.opacity(0.18))
+                            .fill(Color.white.opacity(colors.isDark ? 0.045 : 0.18))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: Metrics.cardCornerRadius, style: .continuous)
-                            .stroke(Color.white.opacity(0.88), lineWidth: 1)
+                            .stroke(Color.white.opacity(colors.isDark ? 0.11 : 0.88), lineWidth: 1)
                     )
 
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(0.2),
+                        Color.white.opacity(colors.isDark ? 0.06 : 0.2),
                         colors.onSurface.opacity(0.025),
                         .clear,
                     ],
@@ -186,7 +186,7 @@ struct OnboardingWizardOverlay: View {
                     .padding(.bottom, isLoginStep ? 18 : 10)
             }
         }
-        .shadow(color: Color.black.opacity(0.16), radius: 10, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.16), radius: 10, x: 0, y: 8)
     }
 
     private var serverStepContent: some View {

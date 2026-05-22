@@ -12,6 +12,11 @@ protocol AuthRepositoryServicing: AnyObject {
     func lastEmail() -> String?
 }
 
+struct RestoredSession {
+    let user: SessionUser
+    let usedCachedSession: Bool
+}
+
 final class AuthRepository: AuthRepositoryServicing {
     private let api: TdayAPIService
     private let secureStore: SecureStore
@@ -41,10 +46,41 @@ final class AuthRepository: AuthRepositoryServicing {
 
     func restoreSession() async -> SessionUser? {
         do {
-            return try await api.getSession()?.user
+            let user = try await restoreSessionFromServer()
+            cacheSessionUser(user)
+            return user
         } catch {
             return nil
         }
+    }
+
+    func restoreSessionForBootstrap() async -> RestoredSession? {
+        do {
+            guard let user = try await restoreSessionFromServer(), user.id != nil else {
+                return nil
+            }
+            cacheSessionUser(user)
+            return RestoredSession(user: user, usedCachedSession: false)
+        } catch {
+            guard isLikelyConnectivityIssue(error) else {
+                return nil
+            }
+            if let cached = loadCachedSessionUser(), cached.id != nil {
+                return RestoredSession(user: cached, usedCachedSession: true)
+            }
+            guard let fallback = await loadLastKnownOfflineSessionUser(), fallback.id != nil else {
+                return nil
+            }
+            return RestoredSession(user: fallback, usedCachedSession: true)
+        }
+    }
+
+    private func restoreSessionFromServer() async throws -> SessionUser? {
+        let user = try await api.getSession()?.user
+        if user?.id == nil {
+            secureStore.clearCachedSessionUser()
+        }
+        return user
     }
 
     func login(email: String, password: String) async -> AuthResult {
@@ -89,6 +125,9 @@ final class AuthRepository: AuthRepositoryServicing {
                 return .error(mapAuthError(errorCode))
             }
             if !(200 ..< 300).contains(callback.statusCode) && !(300 ..< 400).contains(callback.statusCode) {
+                if isLikelyServerUnavailableStatusCode(callback.statusCode) {
+                    return .error(Self.serverUnreachableMessage)
+                }
                 let responseMessage = callback.response.message?.trimmingCharacters(in: .whitespacesAndNewlines)
                 if let responseMessage, !responseMessage.isEmpty {
                     return .error(mapAuthError(responseMessage))
@@ -104,6 +143,9 @@ final class AuthRepository: AuthRepositoryServicing {
             }
             return .error("Sign in failed. Please check backend URL and credentials.")
         } catch {
+            if isLikelyConnectivityIssue(error) {
+                return .error(Self.serverUnreachableMessage)
+            }
             return .error(error.localizedDescription)
         }
     }
@@ -139,6 +181,7 @@ final class AuthRepository: AuthRepositoryServicing {
 
     @MainActor
     func clearSessionOnly() {
+        secureStore.clearCachedSessionUser()
         cacheManager.clearSessionOnly()
         cookieStore.clearAll()
     }
@@ -168,6 +211,41 @@ final class AuthRepository: AuthRepositoryServicing {
         getLastEmail()
     }
 
+    private func cacheSessionUser(_ user: SessionUser?) {
+        guard let user, user.id != nil, let data = try? JSONEncoder().encode(user) else {
+            return
+        }
+        secureStore.saveCachedSessionUserData(data)
+    }
+
+    private func loadCachedSessionUser() -> SessionUser? {
+        guard let data = secureStore.loadCachedSessionUserData() else {
+            return nil
+        }
+        return try? JSONDecoder().decode(SessionUser.self, from: data)
+    }
+
+    private func loadLastKnownOfflineSessionUser() async -> SessionUser? {
+        guard let email = secureStore.loadLastEmail() else {
+            return nil
+        }
+        let hasCachedData = await MainActor.run {
+            cacheManager.hasCachedData()
+        }
+        guard hasCachedData else {
+            return nil
+        }
+        return SessionUser(
+            id: email,
+            name: nil,
+            email: email,
+            image: nil,
+            timeZone: nil,
+            role: nil,
+            approvalStatus: nil
+        )
+    }
+
     private func mapAuthError(_ value: String) -> String {
         switch value {
         case "CredentialsSignin":
@@ -184,4 +262,6 @@ final class AuthRepository: AuthRepositoryServicing {
             return value
         }
     }
+
+    private static let serverUnreachableMessage = "Cannot reach server. Check your server URL and try again."
 }

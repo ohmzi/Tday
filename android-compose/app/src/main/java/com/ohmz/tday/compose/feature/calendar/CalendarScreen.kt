@@ -27,7 +27,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -43,8 +42,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -110,7 +107,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -128,7 +124,9 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -231,17 +229,17 @@ fun CalendarScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (available.y < 0f && headerCollapsePx < maxCollapsePx) {
-                    headerCollapsePx = maxCollapsePx
-                    return available
-                }
                 val isListAtTop =
                     listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && isListAtTop && headerCollapsePx > 0f) {
-                    headerCollapsePx = 0f
-                    return available
-                }
-                return Velocity.Zero
+                if (available.y > 0f && !isListAtTop) return Velocity.Zero
+                val snapped = snapTitleCollapsePx(
+                    currentPx = headerCollapsePx,
+                    maxPx = maxCollapsePx,
+                    velocityY = available.y,
+                )
+                if (snapped == headerCollapsePx) return Velocity.Zero
+                headerCollapsePx = snapped
+                return if (available.y == 0f) Velocity.Zero else available
             }
         }
     }
@@ -249,6 +247,22 @@ fun CalendarScreen(
         targetValue = collapseProgressTarget,
         label = "calendarTitleCollapseProgress",
     )
+    LaunchedEffect(
+        listState.isScrollInProgress,
+        headerCollapsePx,
+        maxCollapsePx,
+    ) {
+        if (listState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
+            return@LaunchedEffect
+        }
+        val isListAtTop =
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        headerCollapsePx = if (isListAtTop) {
+            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
+        } else {
+            maxCollapsePx
+        }
+    }
     val monthTitleSnapThresholdPx = remember(density) { with(density) { 58.dp.roundToPx() } }
     var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
@@ -323,16 +337,20 @@ fun CalendarScreen(
             )
         },
     ) { padding ->
-        CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .nestedScroll(nestedScrollConnection),
-                state = listState,
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(nestedScrollConnection),
+                    state = listState,
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
                 item {
                     CalendarViewModeTabs(
                         selectedMode = selectedViewMode,
@@ -433,16 +451,7 @@ fun CalendarScreen(
                     )
                 }
 
-                if (selectedDatePendingTasks.isEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.calendar_no_pending),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
-                            modifier = Modifier.padding(horizontal = 4.dp),
-                        )
-                    }
-                } else {
+                    if (selectedDatePendingTasks.isNotEmpty()) {
                     item {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             selectedDatePendingTasks.forEach { todo ->
@@ -469,7 +478,8 @@ fun CalendarScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(96.dp)) }
+                    item { Spacer(modifier = Modifier.height(96.dp)) }
+                }
             }
         }
     }
@@ -547,203 +557,16 @@ private fun CalendarViewModeTabs(
     selectedMode: CalendarViewMode,
     onModeSelected: (CalendarViewMode) -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
-    val modes = CalendarViewMode.entries
-    val selectedIndex = modes.indexOf(selectedMode).coerceAtLeast(0)
-    val containerShape = RoundedCornerShape(22.dp)
-    val selectorShape = RoundedCornerShape(18.dp)
-    val interactionSources = remember {
-        modes.associateWith { MutableInteractionSource() }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(58.dp)
-            .clip(containerShape)
-            .background(colorScheme.surfaceVariant.copy(alpha = 0.5f), containerShape)
-            .border(
-                width = 1.dp,
-                color = colorScheme.surface.copy(alpha = 0.62f),
-                shape = containerShape,
-            )
-            .padding(5.dp),
-    ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val segmentWidth = maxWidth / modes.size
-            val monthPressed by interactionSources
-                .getValue(CalendarViewMode.MONTH)
-                .collectIsPressedAsState()
-            val weekPressed by interactionSources
-                .getValue(CalendarViewMode.WEEK)
-                .collectIsPressedAsState()
-            val dayPressed by interactionSources
-                .getValue(CalendarViewMode.DAY)
-                .collectIsPressedAsState()
-            val pressedMode = when {
-                monthPressed -> CalendarViewMode.MONTH
-                weekPressed -> CalendarViewMode.WEEK
-                dayPressed -> CalendarViewMode.DAY
-                else -> null
-            }
-            val selectedOffset by animateDpAsState(
-                targetValue = segmentWidth * selectedIndex,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessLow,
-                ),
-                label = "calendarViewModeSelectorOffset",
-            )
-            val selectorScale by animateFloatAsState(
-                targetValue = if (pressedMode == selectedMode) 0.985f else 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow,
-                ),
-                label = "calendarViewModeSelectorPressScale",
-            )
-            val selectorSurfaceAlpha by animateFloatAsState(
-                targetValue = if (pressedMode == selectedMode) 0.98f else 0.92f,
-                animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
-                label = "calendarViewModeSelectorSurfaceAlpha",
-            )
-            val selectorAccentAlpha by animateFloatAsState(
-                targetValue = if (pressedMode == selectedMode) 0.15f else 0.08f,
-                animationSpec = tween(durationMillis = 140, easing = FastOutSlowInEasing),
-                label = "calendarViewModeSelectorAccentAlpha",
-            )
-
-            Box(
-                modifier = Modifier
-                    .offset(x = selectedOffset)
-                    .width(segmentWidth)
-                    .fillMaxSize()
-                    .padding(2.dp)
-                    .graphicsLayer {
-                        scaleX = selectorScale
-                        scaleY = selectorScale
-                    }
-                    .shadow(
-                        elevation = 12.dp,
-                        shape = selectorShape,
-                        ambientColor = CalendarAccentPurple.copy(alpha = 0.16f),
-                        spotColor = Color.Black.copy(alpha = 0.14f),
-                    )
-                    .clip(selectorShape)
-                    .background(
-                        colorScheme.surface.copy(alpha = selectorSurfaceAlpha),
-                        selectorShape
-                    )
-                    .background(
-                        CalendarAccentPurple.copy(alpha = selectorAccentAlpha),
-                        selectorShape
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = colorScheme.surface.copy(alpha = 0.82f),
-                        shape = selectorShape,
-                    )
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .selectableGroup(),
-            ) {
-                modes.forEach { mode ->
-                    val selected = mode == selectedMode
-                    val interactionSource = interactionSources.getValue(mode)
-                    val isPressed by interactionSource.collectIsPressedAsState()
-                    val contentScale by animateFloatAsState(
-                        targetValue = if (isPressed) 0.98f else 1f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow,
-                        ),
-                        label = "calendarViewModeContentPressScale",
-                    )
-                    val pressHaloAlpha by animateFloatAsState(
-                        targetValue = if (isPressed && !selected) 1f else 0f,
-                        animationSpec = tween(
-                            durationMillis = if (isPressed && !selected) 90 else 190,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        label = "calendarViewModePressHaloAlpha",
-                    )
-                    val pressHaloScale by animateFloatAsState(
-                        targetValue = if (isPressed && !selected) 1f else 0.92f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow,
-                        ),
-                        label = "calendarViewModePressHaloScale",
-                    )
-                    val contentColor by animateColorAsState(
-                        targetValue = if (selected) {
-                            CalendarAccentPurple
-                        } else {
-                            colorScheme.onSurfaceVariant.copy(alpha = 0.88f)
-                        },
-                        label = "calendarViewModeContentColor",
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxSize()
-                            .clip(selectorShape)
-                            .selectable(
-                                selected = selected,
-                                onClick = {
-                                    if (!selected) {
-                                        ViewCompat.performHapticFeedback(
-                                            view,
-                                            HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                        )
-                                    }
-                                    onModeSelected(mode)
-                                },
-                                role = Role.RadioButton,
-                                interactionSource = interactionSource,
-                                indication = null,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                                .graphicsLayer {
-                                    alpha = pressHaloAlpha
-                                    scaleX = pressHaloScale
-                                    scaleY = pressHaloScale
-                                }
-                                .clip(selectorShape)
-                                .background(colorScheme.surface.copy(alpha = 0.62f), selectorShape)
-                                .background(CalendarAccentPurple.copy(alpha = 0.10f), selectorShape)
-                                .border(
-                                    width = 1.dp,
-                                    color = colorScheme.surface.copy(alpha = 0.76f),
-                                    shape = selectorShape,
-                                )
-                        )
-                        Text(
-                            text = mode.name.lowercase(Locale.getDefault())
-                                .replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = contentColor,
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = contentScale
-                                scaleY = contentScale
-                            },
-                        )
-                    }
-                }
-            }
-        }
-    }
+    TdaySegmentedSlider(
+        options = CalendarViewMode.entries,
+        selectedOption = selectedMode,
+        onOptionSelected = onModeSelected,
+        accentColor = CalendarAccentPurple,
+        label = { mode ->
+            mode.name.lowercase(Locale.getDefault())
+                .replaceFirstChar { it.uppercase() }
+        },
+    )
 }
 
 @Composable
@@ -1244,14 +1067,14 @@ private fun CalendarTopBar(
 
 @Composable
 private fun CalendarCircleButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
     isBackButton: Boolean = false,
     isAccentButton: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val view = androidx.compose.ui.platform.LocalView.current
+    val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
@@ -1296,7 +1119,7 @@ private fun CalendarCircleButton(
             onClick()
         },
         interactionSource = interactionSource,
-        shape = androidx.compose.foundation.shape.CircleShape,
+        shape = CircleShape,
         border = buttonBorder,
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
@@ -1496,7 +1319,7 @@ private const val CALENDAR_TITLE_COLLAPSE_DISTANCE_DP = 180f
 
 @Composable
 private fun MiniCalendarNavButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     contentDescription: String,
     enabled: Boolean = true,
     iconTint: Color? = null,
@@ -2122,23 +1945,6 @@ private fun CalendarCompletionToggleIcon(
             contentDescription = contentDescription,
             tint = tint,
             modifier = Modifier.size(24.dp),
-        )
-    }
-}
-
-@Composable
-private fun EmptyCalendarState(message: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 70.dp, bottom = 90.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = message,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.ExtraBold,
         )
     }
 }

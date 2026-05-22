@@ -7,9 +7,6 @@ enum TodoTimelineMetrics {
     static let sectionTitleSize: CGFloat = 22
     static let sectionChevronSize: CGFloat = 14
     static let sectionSpacing: CGFloat = 10
-    static let firstPinnedRowElasticClearance: CGFloat = 34
-    static let firstPinnedRowElasticStart: CGFloat = 0.42
-    static let firstPinnedRowElasticEnd: CGFloat = 1
     static let minimalRowToggleSize: CGFloat = 24
     static let minimalRowToggleFrame: CGFloat = 38
     static let minimalRowTitleSize: CGFloat = 18
@@ -17,21 +14,22 @@ enum TodoTimelineMetrics {
     static let minimalRowIndicatorSize: CGFloat = 14
     static let minimalRowTrailingIndicatorPadding: CGFloat = 24
     static let minimalRowVerticalPadding: CGFloat = 10
-    static let emptyStateSize: CGFloat = 28
-    static let emptyStateOffset: CGFloat = 78
     static let titleCollapseDistance: CGFloat = 64
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
     static let topBarButtonIconSize: CGFloat = 24
-    static let expandedTitleHeight: CGFloat = 42
+    static let expandedTitleHeight: CGFloat = 56
     static let expandedTitleLiftDistance: CGFloat = 14
     static let expandedTitleFadeStart: CGFloat = 0.08
     static let expandedTitleFadeEnd: CGFloat = 0.44
-    static let expandedTitleCollapseStart: CGFloat = 0.18
-    static let expandedTitleCollapseEnd: CGFloat = 0.82
     static let collapsedTitleRevealDistance: CGFloat = 10
     static let collapsedTitleRevealStart: CGFloat = 0.68
     static let collapsedTitleRevealEnd: CGFloat = 1
+    static let searchResultSectionExpandDelay: TimeInterval = 0.08
+    static let searchResultScrollDelay: TimeInterval = 0.44
+    static let searchResultScrollDuration: TimeInterval = 0.90
+    static let searchResultFlashDelay: TimeInterval = 0.62
+    static let searchResultPreScrollItemCount = 5
 
     static func smoothstep(_ value: CGFloat) -> CGFloat {
         let clamped = min(max(value, 0), 1)
@@ -70,10 +68,55 @@ struct TimelineRowDivider: View {
             .frame(height: 1)
             .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
             .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
+            .listRowBackground(colors.background)
             .listRowSeparator(.hidden)
             .environment(\.defaultMinListRowHeight, 1)
             .allowsHitTesting(false)
+    }
+}
+
+private struct TimelineTaskFlashHighlight: ViewModifier {
+    let active: Bool
+
+    @Environment(\.tdayColors) private var colors
+    @State private var strength: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .background(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                colors.primary.opacity(0.42 * strength),
+                                colors.primary.opacity(0.28 * strength),
+                                .clear
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+            }
+            .onChange(of: active, initial: true) { _, isActive in
+                guard isActive else { return }
+                pulse()
+            }
+    }
+
+    private func pulse() {
+        Task { @MainActor in
+            strength = 0
+            for pulseIndex in 0..<2 {
+                withAnimation(.easeInOut(duration: 0.42)) {
+                    strength = 0.46
+                }
+                try? await Task.sleep(nanoseconds: 420_000_000)
+                withAnimation(.easeInOut(duration: 0.62)) {
+                    strength = 0
+                }
+                try? await Task.sleep(nanoseconds: pulseIndex == 0 ? 770_000_000 : 620_000_000)
+            }
+        }
     }
 }
 
@@ -110,6 +153,8 @@ struct TodoListScreen: View {
     @State private var collapsedSectionIDs: Set<String>
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var completingTodoIDs: Set<String> = []
+    @State private var flashTodoId: String?
+    @State private var highlightedScrollRequestID = 0
 
     init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?, highlightedTodoId: String?) {
         self.highlightedTodoId = highlightedTodoId
@@ -141,6 +186,13 @@ struct TodoListScreen: View {
         todoModeAccentColor(viewModel.mode, listColorKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.color)
     }
 
+    private var emptyWatermarkSystemName: String {
+        emptyTimelineSystemImage(
+            for: viewModel.mode,
+            listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
+        )
+    }
+
     private var titleCollapseProgress: CGFloat {
         let distance = TodoTimelineMetrics.titleCollapseDistance
         guard distance > 0 else { return 0 }
@@ -151,12 +203,6 @@ struct TodoListScreen: View {
         let itemIDs = viewModel.items.map(\.id).joined(separator: "|")
         let completingIDs = completingTodoIDs.sorted().joined(separator: "|")
         return "\(itemIDs)::\(completingIDs)"
-    }
-
-    private var firstVisibleExpandedTimelineSectionID: String? {
-        groupedSections.first { section in
-            !section.items.isEmpty && !isTimelineSectionCollapsed(section)
-        }?.id
     }
 
     private var canSummarizeCurrentMode: Bool {
@@ -194,6 +240,20 @@ struct TodoListScreen: View {
     var body: some View {
         modeContent
         .background(colors.background)
+        .overlay {
+            if viewModel.items.isEmpty, !viewModel.isLoading {
+                ZStack {
+                    EmptyTaskWatermark(
+                        systemName: emptyWatermarkSystemName,
+                        accentColor: modeAccentColor
+                    )
+                    EmptyTaskBackgroundMessage(
+                        message: emptyTimelineMessage(for: viewModel.mode)
+                    )
+                }
+                .allowsHitTesting(false)
+            }
+        }
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: modeAccentColor,
@@ -276,7 +336,7 @@ struct TodoListScreen: View {
         }
         .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-        .listRowBackground(Color.clear)
+        .listRowBackground(colors.background)
         .listRowSeparator(.hidden)
     }
 
@@ -341,6 +401,7 @@ struct TodoListScreen: View {
                 }
                 .padding(20)
             }
+            .background(colors.bottomSheetBackground)
             .navigationTitle("AI Summary")
             .disableVerticalScrollBounce()
             .toolbar {
@@ -350,6 +411,10 @@ struct TodoListScreen: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .presentationBackground {
+            colors.bottomSheetBackground
+                .ignoresSafeArea(.container, edges: .bottom)
+        }
     }
 
     private var listSettingsSheetContent: some View {
@@ -363,6 +428,97 @@ struct TodoListScreen: View {
         draggedTodo = nil
         if viewModel.mode == .all, highlightedTodoId != nil {
             collapsedSectionIDs = []
+        }
+    }
+
+    private func matchesHighlightedTodo(_ todo: TodoItem, id: String) -> Bool {
+        todo.id == id || todo.canonicalId == id
+    }
+
+    private struct HighlightedTodoTarget {
+        let todo: TodoItem
+        let preScrollTodo: TodoItem
+    }
+
+    private func highlightedTodoTarget(for id: String) -> HighlightedTodoTarget? {
+        let orderedTodos = groupedSections.flatMap(\.items)
+        guard let targetIndex = orderedTodos.firstIndex(where: { matchesHighlightedTodo($0, id: id) }) else {
+            return nil
+        }
+        let preScrollIndex = max(0, targetIndex - TodoTimelineMetrics.searchResultPreScrollItemCount)
+        return HighlightedTodoTarget(
+            todo: orderedTodos[targetIndex],
+            preScrollTodo: orderedTodos[preScrollIndex]
+        )
+    }
+
+    private func timelineSectionScrollID(_ sectionID: String) -> String {
+        "timeline-section-\(sectionID)"
+    }
+
+    private func timelineTodoScrollID(_ todoID: String) -> String {
+        "timeline-todo-\(todoID)"
+    }
+
+    private func shouldFlashTodo(_ todo: TodoItem) -> Bool {
+        guard let flashTodoId else {
+            return false
+        }
+        return matchesHighlightedTodo(todo, id: flashTodoId)
+    }
+
+    private func scrollToHighlightedTodo(using proxy: ScrollViewProxy) {
+        guard viewModel.mode == .all,
+              let highlightedTodoId,
+              !highlightedTodoId.isEmpty,
+              let target = highlightedTodoTarget(for: highlightedTodoId) else {
+            return
+        }
+
+        let hadCollapsedSections = !collapsedSectionIDs.isEmpty
+        if !collapsedSectionIDs.isEmpty {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                collapsedSectionIDs = []
+            }
+        }
+
+        highlightedScrollRequestID += 1
+        let requestID = highlightedScrollRequestID
+        let preScrollID = timelineTodoScrollID(target.preScrollTodo.id)
+        let targetScrollID = timelineTodoScrollID(target.todo.id)
+        let preScrollDelay = hadCollapsedSections ? TodoTimelineMetrics.searchResultSectionExpandDelay : 0
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + preScrollDelay) {
+            guard requestID == highlightedScrollRequestID else {
+                return
+            }
+            proxy.scrollTo(preScrollID, anchor: .top)
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + preScrollDelay + TodoTimelineMetrics.searchResultScrollDelay) {
+            guard requestID == highlightedScrollRequestID else {
+                return
+            }
+
+            withAnimation(.easeInOut(duration: TodoTimelineMetrics.searchResultScrollDuration)) {
+                proxy.scrollTo(targetScrollID, anchor: .center)
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + TodoTimelineMetrics.searchResultFlashDelay) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                flashTodoId = highlightedTodoId
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                if flashTodoId == highlightedTodoId {
+                    flashTodoId = nil
+                }
+            }
         }
     }
 
@@ -380,7 +536,7 @@ struct TodoListScreen: View {
                     ErrorRetryView(message: errorMessage) {
                         Task { await viewModel.refresh() }
                     }
-                    .listRowBackground(Color.clear)
+                    .listRowBackground(colors.background)
                 }
             }
             ForEach(groupedSections) { section in
@@ -418,6 +574,7 @@ struct TodoListScreen: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .background(colors.background)
         .disableVerticalScrollBounce()
         .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
     }
@@ -433,7 +590,7 @@ struct TodoListScreen: View {
                             Task { await viewModel.refresh() }
                         }
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
+                        .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -441,11 +598,10 @@ struct TodoListScreen: View {
                 ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
                     Section {
                         if !section.items.isEmpty {
-                            ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
+                            ForEach(Array(section.items.enumerated()), id: \.element.id) { _, todo in
                                 minimalTimelineRow(todo, in: section)
-                                    .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
                                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                                    .listRowBackground(Color.clear)
+                                    .listRowBackground(colors.background)
                                     .listRowSeparator(.hidden)
                                 TimelineRowDivider()
                             }
@@ -455,15 +611,16 @@ struct TodoListScreen: View {
                             title: section.title,
                             isActiveDropTarget: activeDropSectionId == section.id
                         )
+                        .padding(.top, index == 0 ? 0 : 8)
+                        .timelinePinnedSectionHeaderBackground()
                         .listRowInsets(
                             EdgeInsets(
-                                top: index == 0 ? 0 : 8,
+                                top: 0,
                                 leading: 0,
                                 bottom: 0,
                                 trailing: 0
                             )
                         )
-                        .timelinePinnedSectionHeaderBackground()
                         .listRowSeparator(.hidden)
                     }
                 }
@@ -471,61 +628,68 @@ struct TodoListScreen: View {
                 Color.clear
                     .frame(height: 120)
                     .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+                    .listRowBackground(colors.background)
                     .listRowSeparator(.hidden)
                     .disableVerticalScrollBounce()
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .background(colors.background)
             .contentMargins(.top, 0, for: .scrollContent)
+            .listRowSpacing(0)
             .listSectionSpacing(0)
             .environment(\.defaultMinListRowHeight, 1)
             .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
-            if viewModel.items.isEmpty {
-                TimelineEmptyState(message: "No tasks for today")
-                    .allowsHitTesting(false)
-            }
         }
     }
 
     private var minimalTimelineModeContent: some View {
-        ZStack {
-            List {
-                timelineHeroTitleRow
+        ScrollViewReader { scrollProxy in
+            ZStack {
+                List {
+                    timelineHeroTitleRow
 
-                if let errorMessage = viewModel.errorMessage {
-                    Section {
-                        ErrorRetryView(message: errorMessage) {
-                            Task { await viewModel.refresh() }
+                    if let errorMessage = viewModel.errorMessage {
+                        Section {
+                            ErrorRetryView(message: errorMessage) {
+                                Task { await viewModel.refresh() }
+                            }
+                            .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
+                            .listRowBackground(colors.background)
+                            .listRowSeparator(.hidden)
                         }
-                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
                     }
-                }
 
-                ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
-                    minimalTimelineSection(section, isFirstSection: index == 0)
-                }
+                    ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
+                        minimalTimelineSection(section, isFirstSection: index == 0)
+                    }
 
-                Color.clear
-                    .frame(height: 120)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .disableVerticalScrollBounce()
+                    Color.clear
+                        .frame(height: 120)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(colors.background)
+                        .listRowSeparator(.hidden)
+                        .disableVerticalScrollBounce()
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(colors.background)
+                .contentMargins(.top, 0, for: .scrollContent)
+                .listRowSpacing(0)
+                .listSectionSpacing(0)
+                .environment(\.defaultMinListRowHeight, 1)
+                .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
+
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .contentMargins(.top, 0, for: .scrollContent)
-            .listSectionSpacing(0)
-            .environment(\.defaultMinListRowHeight, 1)
-            .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
-
-            if viewModel.items.isEmpty {
-                TimelineEmptyState(message: emptyTimelineMessage(for: viewModel.mode))
-                    .allowsHitTesting(false)
+            .onAppear {
+                scrollToHighlightedTodo(using: scrollProxy)
+            }
+            .onChange(of: highlightedTodoId) {
+                scrollToHighlightedTodo(using: scrollProxy)
+            }
+            .onChange(of: viewModel.items) {
+                scrollToHighlightedTodo(using: scrollProxy)
             }
         }
     }
@@ -568,17 +732,19 @@ struct TodoListScreen: View {
         .allowsHitTesting(!isCompleting)
         .swipeRevealHintOnTap(enabled: !isCompleting)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
+            Button {
                 Task { await viewModel.delete(todo) }
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+            .tint(TaskSwipeActionTint.delete)
+
             Button {
                 editingTodo = todo
             } label: {
                 Label("Edit", systemImage: "square.and.pencil")
             }
-            .tint(colors.secondary)
+            .tint(TaskSwipeActionTint.edit)
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
@@ -617,7 +783,7 @@ struct TodoListScreen: View {
             )
     }
 
-    private func minimalTimelineRow(_ todo: TodoItem, in section: TodoTimelineSection) -> some View {
+    private func minimalTimelineRow(_ todo: TodoItem, in section: TodoTimelineSection, flashHighlight: Bool = false) -> some View {
         let listMeta = todo.listId.flatMap { listId in
             viewModel.lists.first(where: { $0.id == listId })
         }
@@ -683,19 +849,22 @@ struct TodoListScreen: View {
         .animation(.easeInOut(duration: 0.16), value: isCompleting)
         .allowsHitTesting(!isCompleting)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
+        .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
         .swipeRevealHintOnTap(enabled: !isCompleting)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
+            Button {
                 Task { await viewModel.delete(todo) }
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+            .tint(TaskSwipeActionTint.delete)
+
             Button {
                 editingTodo = todo
             } label: {
                 Label("Edit", systemImage: "square.and.pencil")
             }
-            .tint(colors.secondary)
+            .tint(TaskSwipeActionTint.edit)
         }
         .onDrop(
             of: [UTType.plainText.identifier],
@@ -746,11 +915,11 @@ struct TodoListScreen: View {
 
         Section {
             if !isCollapsed {
-                ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
-                    minimalTimelineRow(todo, in: section)
-                        .padding(.top, firstPinnedRowElasticTopInset(section: section, isFirstVisibleExpandedSection: section.id == firstVisibleExpandedTimelineSectionID, itemIndex: itemIndex))
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { _, todo in
+                    minimalTimelineRow(todo, in: section, flashHighlight: shouldFlashTodo(todo))
+                        .id(timelineTodoScrollID(todo.id))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
+                        .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
                         .transition(timelineRowTransition())
                     TimelineRowDivider()
@@ -767,53 +936,19 @@ struct TodoListScreen: View {
                     toggleTimelineSection(section)
                 } : nil
             )
+            .id(timelineSectionScrollID(section.id))
+            .padding(.top, isFirstSection ? 0 : 8)
+            .timelinePinnedSectionHeaderBackground()
             .listRowInsets(
                 EdgeInsets(
-                    top: isFirstSection ? 0 : 8,
+                    top: 0,
                     leading: 0,
                     bottom: 0,
                     trailing: 0
                 )
             )
-            .timelinePinnedSectionHeaderBackground()
             .listRowSeparator(.hidden)
         }
-    }
-
-    private func firstPinnedRowElasticTopInset(section: TodoTimelineSection, isFirstVisibleExpandedSection: Bool, itemIndex: Int) -> CGFloat {
-        guard isFirstVisibleExpandedSection, itemIndex == 0 else {
-            return 0
-        }
-
-        guard shouldApplyFirstPinnedRowElasticClearance(to: section) else {
-            return 0
-        }
-
-        return firstPinnedRowElasticClearance()
-    }
-
-    private func shouldApplyFirstPinnedRowElasticClearance(to section: TodoTimelineSection) -> Bool {
-        let isOverdueFirstSection = viewModel.mode == .overdue
-        let isTodayFirstSection = viewModel.mode == .today
-        let isExpandedPriorityEarlier = viewModel.mode == .priority && section.id == "earlier"
-        let isExpandedAllTasksEarlier = viewModel.mode == .all && section.id == "earlier"
-        let isScheduledFirstSection = viewModel.mode == .scheduled
-        let isListFirstSection = viewModel.mode == .list
-        return isOverdueFirstSection ||
-            isTodayFirstSection ||
-            isExpandedPriorityEarlier ||
-            isExpandedAllTasksEarlier ||
-            isScheduledFirstSection ||
-            isListFirstSection
-    }
-
-    private func firstPinnedRowElasticClearance() -> CGFloat {
-        let elasticProgress = TodoTimelineMetrics.progress(
-            titleCollapseProgress,
-            from: TodoTimelineMetrics.firstPinnedRowElasticStart,
-            to: TodoTimelineMetrics.firstPinnedRowElasticEnd
-        )
-        return TodoTimelineMetrics.firstPinnedRowElasticClearance * elasticProgress
     }
 
     private func canCollapseTimelineSection(_ section: TodoTimelineSection) -> Bool {
@@ -999,20 +1134,8 @@ struct TimelineExpandedTitleRow: View {
         )
     }
 
-    private var rowCollapseProgress: CGFloat {
-        TodoTimelineMetrics.progress(
-            progress,
-            from: TodoTimelineMetrics.expandedTitleCollapseStart,
-            to: TodoTimelineMetrics.expandedTitleCollapseEnd
-        )
-    }
-
     private var titleOffsetY: CGFloat {
         -TodoTimelineMetrics.expandedTitleLiftDistance * fadeProgress
-    }
-
-    private var rowHeight: CGFloat {
-        TodoTimelineMetrics.expandedTitleHeight * (1 - rowCollapseProgress)
     }
 
     private var titleOpacity: Double {
@@ -1020,7 +1143,7 @@ struct TimelineExpandedTitleRow: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack(alignment: .bottomLeading) {
             Text(title)
                 .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
                 .foregroundStyle(accentColor)
@@ -1029,12 +1152,17 @@ struct TimelineExpandedTitleRow: View {
                     maxWidth: .infinity,
                     minHeight: TodoTimelineMetrics.expandedTitleHeight,
                     maxHeight: TodoTimelineMetrics.expandedTitleHeight,
-                    alignment: .topLeading
+                    alignment: .bottomLeading
                 )
                 .opacity(titleOpacity)
                 .offset(y: titleOffsetY)
         }
-        .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight, alignment: .topLeading)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: TodoTimelineMetrics.titleCollapseDistance,
+            maxHeight: TodoTimelineMetrics.titleCollapseDistance,
+            alignment: .bottomLeading
+        )
         .clipped()
         .allowsHitTesting(false)
     }
@@ -1160,11 +1288,13 @@ private struct TimelineTopBarButtonStyle: ButtonStyle {
 private struct TimelineScrollOffsetTrackingRow: View {
     let onChange: (CGFloat) -> Void
 
+    @Environment(\.tdayColors) private var colors
+
     var body: some View {
         TimelineScrollOffsetObserver(onChange: onChange)
             .frame(height: 0)
             .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
+            .listRowBackground(colors.background)
             .listRowSeparator(.hidden)
             .allowsHitTesting(false)
     }
@@ -1294,22 +1424,6 @@ private struct TimelineSectionHeaderButtonStyle: ButtonStyle {
     }
 }
 
-struct TimelineEmptyState: View {
-    let message: String
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Text(message)
-            .font(.tdayRounded(size: TodoTimelineMetrics.emptyStateSize, weight: .bold))
-            .foregroundStyle(colors.onSurfaceVariant.opacity(0.54))
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .offset(y: TodoTimelineMetrics.emptyStateOffset)
-            .padding(.horizontal, 32)
-    }
-}
-
 private struct ListSettingsSheet: View {
     let list: ListSummary?
     let onSubmit: (String, String?, String?) -> Void
@@ -1352,8 +1466,9 @@ private struct ListSettingsSheet: View {
                     }
                 }
                 .scrollContentBackground(.hidden)
+                .background(tdayColors.bottomSheetBackground)
             }
-            .background(tdayColors.background)
+            .background(tdayColors.bottomSheetBackground)
             .disableVerticalScrollBounce()
             .toolbar(.hidden, for: .navigationBar)
             .task {
@@ -1361,6 +1476,10 @@ private struct ListSettingsSheet: View {
                 color = list?.color ?? "BLUE"
                 iconKey = list?.iconKey ?? "inbox"
             }
+        }
+        .presentationBackground {
+            tdayColors.bottomSheetBackground
+                .ignoresSafeArea(.container, edges: .bottom)
         }
     }
 }
@@ -1403,7 +1522,7 @@ private struct ListSettingsSheetHeader: View {
         .padding(.horizontal, 18)
         .padding(.top, 14)
         .padding(.bottom, 14)
-        .background(colors.background)
+        .background(colors.bottomSheetBackground)
     }
 }
 
@@ -1422,7 +1541,7 @@ private struct ListSettingsSheetActionButton: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
                 .frame(width: 56, height: 56)
-                .background(colors.surfaceVariant, in: Circle())
+                .background(colors.bottomSheetControlSurface, in: Circle())
                 .overlay {
                     Circle()
                         .stroke(accentColor.opacity(enabled ? 0.55 : 0.3), lineWidth: 1.5)
@@ -1573,8 +1692,10 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
                 targetDate: date
             )
         }
-    case .all, .priority, .list:
-        return buildFutureTimelineSections(items: items, calendar: calendar)
+    case .all:
+        return buildFutureTimelineSections(items: items, calendar: calendar, placesEarlierBeforeToday: true)
+    case .priority, .list:
+        return buildFutureTimelineSections(items: items, calendar: calendar, placesEarlierBeforeToday: false)
     }
 }
 
@@ -1588,7 +1709,11 @@ private func scheduledSectionTitle(for date: Date, calendar: Calendar) -> String
     return timelineDayTitle(for: date)
 }
 
-private func buildFutureTimelineSections(items: [TodoItem], calendar: Calendar) -> [TodoTimelineSection] {
+private func buildFutureTimelineSections(
+    items: [TodoItem],
+    calendar: Calendar,
+    placesEarlierBeforeToday: Bool
+) -> [TodoTimelineSection] {
     let now = Date()
     let today = calendar.startOfDay(for: now)
     let groupedByDate = Dictionary(grouping: items.sorted(by: todoTimelineSortPrecedes)) { item in
@@ -1616,19 +1741,28 @@ private func buildFutureTimelineSections(items: [TodoItem], calendar: Calendar) 
         .sorted()
         .flatMap { groupedByDate[$0] ?? [] }
 
+    let earlierSection: TodoTimelineSection?
     if !earlierItems.isEmpty {
-        sections.append(
-            TodoTimelineSection(
-                id: "earlier",
-                title: "Earlier",
-                items: earlierItems,
-                isCollapsible: true,
-                targetDate: nil
-            )
+        earlierSection = TodoTimelineSection(
+            id: "earlier",
+            title: "Earlier",
+            items: earlierItems,
+            isCollapsible: true,
+            targetDate: nil
         )
+    } else {
+        earlierSection = nil
+    }
+
+    if placesEarlierBeforeToday, let earlierSection {
+        sections.append(earlierSection)
     }
 
     sections.append(daySection(for: today, title: "Today"))
+
+    if !placesEarlierBeforeToday, let earlierSection {
+        sections.append(earlierSection)
+    }
 
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) {
         sections.append(daySection(for: tomorrow, title: "Tomorrow"))
@@ -1751,6 +1885,23 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
         return "No priority tasks"
     case .list:
         return "No tasks in this list"
+    }
+}
+
+private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: String?) -> String {
+    switch mode {
+    case .today:
+        return "sun.max.fill"
+    case .overdue:
+        return "exclamationmark.circle"
+    case .scheduled:
+        return "clock"
+    case .all:
+        return "tray.fill"
+    case .priority:
+        return "flag.fill"
+    case .list:
+        return todoListSymbolName(for: listIconKey)
     }
 }
 

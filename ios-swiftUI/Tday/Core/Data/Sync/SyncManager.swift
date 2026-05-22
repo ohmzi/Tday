@@ -1,5 +1,10 @@
 import Foundation
 
+extension Notification.Name {
+    static let offlineSyncAttemptFailed = Notification.Name("tday.offline-sync.attempt-failed")
+    static let offlineSyncAttemptSucceeded = Notification.Name("tday.offline-sync.attempt-succeeded")
+}
+
 private struct RemoteSnapshot {
     let todos: [TodoItem]
     let completedItems: [CompletedItem]
@@ -21,6 +26,25 @@ private struct RemoteSnapshot {
     }
 }
 
+func mergeCompletedRecordsWithPendingOverrides(
+    localRecords: [CachedCompletedRecord],
+    remoteRecords: [CachedCompletedRecord],
+    pendingTodoTargets: Set<String>
+) -> [CachedCompletedRecord] {
+    var mergedRecords = remoteRecords
+
+    for canonicalID in pendingTodoTargets {
+        let localRecordsForTodo = localRecords.filter { $0.originalTodoId == canonicalID }
+        guard !localRecordsForTodo.isEmpty else {
+            continue
+        }
+        mergedRecords.removeAll { $0.originalTodoId == canonicalID }
+        mergedRecords.append(contentsOf: localRecordsForTodo)
+    }
+
+    return mergedRecords
+}
+
 @MainActor
 final class SyncManager {
     private let api: TdayAPIService
@@ -38,22 +62,38 @@ final class SyncManager {
         !cacheManager.loadOfflineState().pendingMutations.isEmpty
     }
 
-    func syncCachedData(force: Bool = false, replayPendingMutations: Bool = true) async -> Result<Void, Error> {
+    func syncCachedData(
+        force: Bool = false,
+        replayPendingMutations: Bool = true,
+        notifyOfflineFailure: Bool = true,
+        connectionProbeTimeoutSeconds: TimeInterval? = nil
+    ) async -> Result<Void, Error> {
         do {
-            try await cacheManager.withSyncLock {
+            var contactedServer = false
+            if let connectionProbeTimeoutSeconds {
+                _ = try await api.probeConfiguredServer(timeoutInterval: connectionProbeTimeoutSeconds)
+                contactedServer = true
+            }
+            let syncedRemoteData = try await cacheManager.withSyncLock {
                 try await self.syncLocalCache(force: force, replayPendingMutations: replayPendingMutations)
+            }
+            if contactedServer || syncedRemoteData {
+                NotificationCenter.default.post(name: .offlineSyncAttemptSucceeded, object: nil)
             }
             return .success(())
         } catch {
+            if notifyOfflineFailure, isLikelyConnectivityIssue(error) {
+                NotificationCenter.default.post(name: .offlineSyncAttemptFailed, object: nil)
+            }
             return .failure(error)
         }
     }
 
-    private func syncLocalCache(force: Bool, replayPendingMutations: Bool) async throws {
+    private func syncLocalCache(force: Bool, replayPendingMutations: Bool) async throws -> Bool {
         var state = try await cacheManager.loadOfflineState()
         let now = Date().epochMilliseconds
         if force && (now - state.lastSyncAttemptEpochMs) < minForceSyncIntervalMs {
-            return
+            return false
         }
 
         let shouldReplay = replayPendingMutations && !state.pendingMutations.isEmpty
@@ -62,7 +102,7 @@ final class SyncManager {
             state.lastSuccessfulSyncEpochMs == 0 ||
             (now - state.lastSyncAttemptEpochMs) >= offlineResyncIntervalMs
         if !shouldSync {
-            return
+            return false
         }
 
         state.lastSyncAttemptEpochMs = now
@@ -79,6 +119,7 @@ final class SyncManager {
         merged.lastSyncAttemptEpochMs = now
         merged.lastSuccessfulSyncEpochMs = now
         try await cacheManager.saveOfflineState(merged)
+        return true
     }
 
     private func fetchRemoteSnapshot() async throws -> RemoteSnapshot {
@@ -99,7 +140,6 @@ final class SyncManager {
     }
 
     private func mergeRemoteWithLocal(localState: OfflineSyncState, remote: RemoteSnapshot) -> OfflineSyncState {
-        let pendingTargets = Set(localState.pendingMutations.compactMap(\.targetId))
         let pendingTodoTargets = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 mutation.kind.affectsTodo ? mutation.targetId : nil
@@ -157,20 +197,11 @@ final class SyncManager {
         }
         mergedLists.append(contentsOf: remoteListsByID.values)
 
-        var remoteCompletedByID = Dictionary(uniqueKeysWithValues: remote.completedItems.map { ($0.id, completedToCache($0)) })
-        var mergedCompleted: [CachedCompletedRecord] = []
-        for localCompleted in localState.completedItems {
-            let remoteCompleted = remoteCompletedByID[localCompleted.id]
-            let localWins = localCompleted.id.hasPrefix(LOCAL_COMPLETED_PREFIX) ||
-                pendingTargets.contains(localCompleted.originalTodoId ?? "") ||
-                localCompleted.completedAtEpochMs > (remoteCompleted?.completedAtEpochMs ?? 0)
-            if localWins {
-                mergedCompleted.append(localCompleted)
-                remoteCompletedByID.removeValue(forKey: localCompleted.id)
-            }
-        }
-        mergedCompleted.append(contentsOf: remoteCompletedByID.values)
-        let dedupedCompleted = collapseCompletedDuplicates(mergedCompleted, pendingTargets: pendingTargets)
+        let mergedCompleted = mergeCompletedRecordsWithPendingOverrides(
+            localRecords: localState.completedItems,
+            remoteRecords: remote.completedItems.map(completedToCache),
+            pendingTodoTargets: pendingTodoTargets
+        )
 
         let generatedMutations = buildLocalWinsMutations(localState: localState, remote: remote)
         let pendingMutations = dedupePendingMutations(localState.pendingMutations + generatedMutations)
@@ -179,48 +210,11 @@ final class SyncManager {
             lastSuccessfulSyncEpochMs: localState.lastSuccessfulSyncEpochMs,
             lastSyncAttemptEpochMs: localState.lastSyncAttemptEpochMs,
             todos: mergedTodos.sorted(by: cachedTodoSortPrecedes),
-            completedItems: dedupedCompleted.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
+            completedItems: mergedCompleted.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
             lists: orderListsLikeWeb(mergedLists),
             pendingMutations: pendingMutations,
             aiSummaryEnabled: remote.aiSummaryEnabled
         )
-    }
-
-    private func collapseCompletedDuplicates(_ records: [CachedCompletedRecord], pendingTargets: Set<String>) -> [CachedCompletedRecord] {
-        var recordsByKey: [String: CachedCompletedRecord] = [:]
-        for record in records {
-            let key = completedMergeKey(record: record)
-            guard let existing = recordsByKey[key] else {
-                recordsByKey[key] = record
-                continue
-            }
-            recordsByKey[key] = preferredCompletedRecord(existing, record, pendingTargets: pendingTargets)
-        }
-        return Array(recordsByKey.values)
-    }
-
-    private func preferredCompletedRecord(
-        _ lhs: CachedCompletedRecord,
-        _ rhs: CachedCompletedRecord,
-        pendingTargets: Set<String>
-    ) -> CachedCompletedRecord {
-        let lhsIsPendingLocal = lhs.id.hasPrefix(LOCAL_COMPLETED_PREFIX) && lhs.originalTodoId.map(pendingTargets.contains) == true
-        let rhsIsPendingLocal = rhs.id.hasPrefix(LOCAL_COMPLETED_PREFIX) && rhs.originalTodoId.map(pendingTargets.contains) == true
-        if lhsIsPendingLocal != rhsIsPendingLocal {
-            return lhsIsPendingLocal ? lhs : rhs
-        }
-
-        let lhsIsRemote = !lhs.id.hasPrefix(LOCAL_COMPLETED_PREFIX)
-        let rhsIsRemote = !rhs.id.hasPrefix(LOCAL_COMPLETED_PREFIX)
-        if lhsIsRemote != rhsIsRemote {
-            return lhsIsRemote ? lhs : rhs
-        }
-
-        if lhs.completedAtEpochMs != rhs.completedAtEpochMs {
-            return lhs.completedAtEpochMs > rhs.completedAtEpochMs ? lhs : rhs
-        }
-
-        return lhs.id < rhs.id ? lhs : rhs
     }
 
     private func buildLocalWinsMutations(localState: OfflineSyncState, remote: RemoteSnapshot) -> [PendingMutationRecord] {
@@ -442,7 +436,11 @@ final class SyncManager {
         case .setPriority:
             guard let targetID else { return }
             _ = try await api.prioritizeTodoByBody(
-                payload: TodoPrioritizeRequest(id: targetID, priority: mutation.priority ?? "Low", instanceDate: mutation.instanceDateEpochMs)
+                payload: TodoPrioritizeRequest(
+                    id: targetID,
+                    priority: mutation.priority ?? "Low",
+                    instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                )
             )
 
         case .completeTodo, .completeTodoInstance:
@@ -450,14 +448,17 @@ final class SyncManager {
             _ = try await api.completeTodoByBody(
                 payload: TodoCompleteRequest(
                     id: targetID,
-                    instanceDate: mutation.instanceDateEpochMs
+                    instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
                 )
             )
 
         case .uncompleteTodo:
             guard let targetID else { return }
             _ = try await api.uncompleteTodoByBody(
-                payload: TodoUncompleteRequest(id: targetID, instanceDate: mutation.instanceDateEpochMs)
+                payload: TodoUncompleteRequest(
+                    id: targetID,
+                    instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                )
             )
         }
     }

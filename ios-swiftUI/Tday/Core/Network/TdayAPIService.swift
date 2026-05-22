@@ -25,10 +25,21 @@ func isLikelyConnectivityIssue(_ error: Error) -> Bool {
     }
 
     if let apiError = error as? APIError {
-        return apiError.statusCode == nil
+        guard let statusCode = apiError.statusCode else {
+            return true
+        }
+        return isLikelyServerUnavailableStatusCode(statusCode)
     }
 
     return false
+}
+
+func isLikelyServerUnavailableStatusCode(_ statusCode: Int) -> Bool {
+    statusCode == 408 ||
+        statusCode == 502 ||
+        statusCode == 503 ||
+        statusCode == 504 ||
+        (520 ... 524).contains(statusCode)
 }
 
 func isLikelyUnrecoverableMutationError(_ error: Error) -> Bool {
@@ -57,6 +68,15 @@ final class TdayAPIService {
             method: "GET",
             allowRewrite: false,
             session: configuration.probeSession,
+            responseType: MobileProbeResponse.self
+        )
+    }
+
+    func probeConfiguredServer(timeoutInterval: TimeInterval? = nil) async throws -> MobileProbeResponse {
+        try await request(
+            path: "/api/mobile/probe",
+            method: "GET",
+            timeoutInterval: timeoutInterval,
             responseType: MobileProbeResponse.self
         )
     }
@@ -339,6 +359,7 @@ final class TdayAPIService {
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
         session: URLSession? = nil,
+        timeoutInterval: TimeInterval? = nil,
         responseType: Response.Type
     ) async throws -> Response {
         let response = try await requestRaw(
@@ -347,7 +368,8 @@ final class TdayAPIService {
             queryItems: queryItems,
             extraHeaders: extraHeaders,
             allowRewrite: allowRewrite,
-            session: session
+            session: session,
+            timeoutInterval: timeoutInterval
         )
         return try decode(response.data, as: responseType)
     }
@@ -360,7 +382,8 @@ final class TdayAPIService {
         contentType: String? = nil,
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
-        session: URLSession? = nil
+        session: URLSession? = nil,
+        timeoutInterval: TimeInterval? = nil
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         try await performRequestRaw(
             path: path,
@@ -371,6 +394,7 @@ final class TdayAPIService {
             extraHeaders: extraHeaders,
             allowRewrite: allowRewrite,
             session: session,
+            timeoutInterval: timeoutInterval,
             validateStatus: true
         )
     }
@@ -383,7 +407,8 @@ final class TdayAPIService {
         contentType: String? = nil,
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
-        session: URLSession? = nil
+        session: URLSession? = nil,
+        timeoutInterval: TimeInterval? = nil
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         try await performRequestRaw(
             path: path,
@@ -394,6 +419,7 @@ final class TdayAPIService {
             extraHeaders: extraHeaders,
             allowRewrite: allowRewrite,
             session: session,
+            timeoutInterval: timeoutInterval,
             validateStatus: false
         )
     }
@@ -407,6 +433,7 @@ final class TdayAPIService {
         extraHeaders: [String: String] = [:],
         allowRewrite: Bool = true,
         session: URLSession? = nil,
+        timeoutInterval: TimeInterval? = nil,
         validateStatus: Bool
     ) async throws -> (data: String, httpResponse: HTTPURLResponse) {
         var url = try configuration.makeURL(path: path, allowRewrite: allowRewrite)
@@ -423,6 +450,10 @@ final class TdayAPIService {
         }
 
         var request = URLRequest(url: url)
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        if let timeoutInterval {
+            request.timeoutInterval = timeoutInterval
+        }
         request.httpMethod = method
         request.httpBody = body
         for (key, value) in configuration.defaultHeaders(extraHeaders: extraHeaders, allowRewrite: allowRewrite) {
