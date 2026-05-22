@@ -33,8 +33,6 @@ enum LoginCredentialSource {
 protocol SystemCredentialServicing: AnyObject {
     func requestSavedCredential() async -> SystemCredential?
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult
-    func requestSavedServerURL() async -> String?
-    func offerSaveOrUpdateServerURL(_ serverURL: String) async -> SystemCredentialSaveResult
 }
 
 enum SystemCredentialScope {
@@ -53,14 +51,6 @@ enum SystemCredentialRecord {
         }
 
         return SystemCredential(email: normalizedUser, password: password)
-    }
-
-    static func serverURL(user: String, password: String) -> String? {
-        guard user.trimmingCharacters(in: .whitespacesAndNewlines) == serverURLUser else {
-            return nil
-        }
-
-        return password.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     }
 }
 
@@ -88,28 +78,6 @@ final class SystemCredentialService: SystemCredentialServicing {
             password: credential.password,
             title: "Tday",
             failurePurpose: "login"
-        )
-    }
-
-    func requestSavedServerURL() async -> String? {
-        let session = PasswordAuthorizationSession()
-        activeAuthorizationSession = session
-        let serverURL = await session.requestSavedServerURL()
-        activeAuthorizationSession = nil
-        return serverURL
-    }
-
-    func offerSaveOrUpdateServerURL(_ serverURL: String) async -> SystemCredentialSaveResult {
-        let normalizedServerURL = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalizedServerURL.isEmpty else {
-            return .skipped
-        }
-
-        return await savePasswordRecord(
-            user: SystemCredentialRecord.serverURLUser,
-            password: normalizedServerURL,
-            title: "Tday Server",
-            failurePurpose: "server URL"
         )
     }
 
@@ -201,7 +169,6 @@ final class SystemCredentialService: SystemCredentialServicing {
 @MainActor
 private final class PasswordAuthorizationSession: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     private var continuation: CheckedContinuation<SystemCredential?, Never>?
-    private var serverURLContinuation: CheckedContinuation<String?, Never>?
     private var controller: ASAuthorizationController?
 
     func requestSavedCredential() async -> SystemCredential? {
@@ -214,38 +181,21 @@ private final class PasswordAuthorizationSession: NSObject, ASAuthorizationContr
             self.controller = controller
             controller.delegate = self
             controller.presentationContextProvider = self
-            controller.performRequests(options: [.preferImmediatelyAvailableCredentials])
-        }
-    }
-
-    func requestSavedServerURL() async -> String? {
-        await withCheckedContinuation { continuation in
-            self.serverURLContinuation = continuation
-
-            let provider = ASAuthorizationPasswordProvider()
-            let request = provider.createRequest()
-            let controller = ASAuthorizationController(authorizationRequests: [request])
-            self.controller = controller
-            controller.delegate = self
-            controller.presentationContextProvider = self
-            controller.performRequests(options: [.preferImmediatelyAvailableCredentials])
+            controller.performRequests()
         }
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         let credential = authorization.credential as? ASPasswordCredential
         finish(
-            loginCredential: credential.flatMap {
+            credential.flatMap {
                 SystemCredentialRecord.loginCredential(user: $0.user, password: $0.password)
-            },
-            serverURL: credential.flatMap {
-                SystemCredentialRecord.serverURL(user: $0.user, password: $0.password)
             }
         )
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-        finish(loginCredential: nil, serverURL: nil)
+        finish(nil)
     }
 
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
@@ -263,17 +213,9 @@ private final class PasswordAuthorizationSession: NSObject, ASAuthorizationContr
         return UIWindow(frame: UIScreen.main.bounds)
     }
 
-    private func finish(loginCredential: SystemCredential?, serverURL: String?) {
+    private func finish(_ credential: SystemCredential?) {
         controller = nil
-        continuation?.resume(returning: loginCredential)
+        continuation?.resume(returning: credential)
         continuation = nil
-        serverURLContinuation?.resume(returning: serverURL)
-        serverURLContinuation = nil
-    }
-}
-
-private extension String {
-    var nilIfEmpty: String? {
-        isEmpty ? nil : self
     }
 }
