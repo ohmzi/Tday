@@ -226,20 +226,25 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 
 #### Recommended
 
-| Variable | Purpose |
-|----------|---------|
-| `AUTH_PBKDF2_ITERATIONS` | Password hash iterations (default: 310,000) |
-| `AUTH_SESSION_MAX_AGE_SEC` | Rolling web-session inactivity window in seconds (default: 2,592,000) |
-| `AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC` | Absolute session cap from original login time in seconds (default: 7,776,000) |
-| `AUTH_SESSION_RENEW_THRESHOLD_SEC` | Renewal threshold in seconds before expiry (default: 604,800) |
-| `AUTH_CREDENTIALS_PRIVATE_KEY` | RSA key for credential envelope encryption; recommended in production to avoid ephemeral startup keys |
-| `AUTH_CAPTCHA_SECRET` | Cloudflare Turnstile secret; recommended in production so adaptive CAPTCHA does not fail closed when triggered |
-| `APPLE_TEAM_ID` | Apple Developer Team ID used in Tday's canonical `apple-app-site-association` webcredentials payload for iOS Password AutoFill |
-| `IOS_BUNDLE_ID` | iOS app bundle identifier for webcredentials association (default: `com.ohmz.tday.ios`) |
-| `OLLAMA_URL` | Ollama service URL (default: `http://ollama:11434`) |
-| `OLLAMA_MODEL` | AI model for summaries (default: `qwen2.5:0.5b`) |
+| Variable                            | Purpose                                                                                                                        |
+|-------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| `AUTH_PBKDF2_ITERATIONS`            | Password hash iterations (default: 310,000)                                                                                    |
+| `AUTH_SESSION_MAX_AGE_SEC`          | Rolling web-session inactivity window in seconds (default: 2,592,000)                                                          |
+| `AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC` | Absolute session cap from original login time in seconds (default: 7,776,000)                                                  |
+| `AUTH_SESSION_RENEW_THRESHOLD_SEC`  | Renewal threshold in seconds before expiry (default: 604,800)                                                                  |
+| `AUTH_CREDENTIALS_PRIVATE_KEY`      | RSA key for credential envelope encryption; recommended in production to avoid ephemeral startup keys                          |
+| `AUTH_CAPTCHA_SECRET`               | Cloudflare Turnstile secret; recommended in production so adaptive CAPTCHA does not fail closed when triggered                 |
+| `APPLE_TEAM_ID`                     | Apple Developer Team ID used in Tday's canonical `apple-app-site-association` webcredentials payload for iOS Password AutoFill |
+| `IOS_BUNDLE_ID`                     | iOS app bundle identifier for webcredentials association (default: `com.ohmz.tday.ios`)                                        |
+| `ANDROID_PACKAGE_NAME`              | Android app package name for Digital Asset Links credential sharing (default: `com.ohmz.tday.compose`)                         |
+| `ANDROID_SHA256_CERT_FINGERPRINTS`  | Comma-separated SHA-256 signing certificate fingerprints for Android Digital Asset Links credential sharing                    |
+| `OLLAMA_URL`                        | Ollama service URL (default: `http://ollama:11434`)                                                                            |
+| `OLLAMA_MODEL`                      | AI model for summaries (default: `qwen2.5:0.5b`)                                                                               |
 
 The native iOS app saves and retrieves Tday credentials under the canonical `tday.ohmz.cloud` Apple Passwords scope, regardless of the server URL a user connects to.
+The native Android app can save and retrieve app-scoped password credentials immediately. Sharing
+credentials with the canonical `tday.ohmz.cloud` web scope requires
+`ANDROID_SHA256_CERT_FINGERPRINTS` so the backend can serve `/.well-known/assetlinks.json`.
 
 #### Docker Compose (project-root `.env`)
 

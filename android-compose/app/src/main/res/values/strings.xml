@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">T\'Day</string>
+    <string name="asset_statements" translatable="false">[{\"include\":\"https://tday.ohmz.cloud/.well-known/assetlinks.json\"}]</string>
 
     <!-- Shared / reusable -->
     <string name="action_back">Back</string>
