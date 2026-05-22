@@ -91,6 +91,7 @@ import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import io.sentry.android.navigation.SentryNavigationListener
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private const val NAV_ENTER_DURATION_MS = 440
@@ -98,6 +99,7 @@ private const val NAV_EXIT_DURATION_MS = 320
 private const val NAV_FADE_IN_DURATION_MS = 360
 private const val NAV_FADE_OUT_DURATION_MS = 240
 private const val NAV_SLIDE_FRACTION = 0.18f
+private const val SPLASH_MIN_DISPLAY_MS = 1_000L
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
 private const val SETTINGS_ENTER_DURATION_MS = 380
 private const val SETTINGS_EXIT_DURATION_MS = 260
@@ -671,12 +673,21 @@ private fun HandleStartupNavigation(
     currentRoute: String?,
     navController: NavHostController,
 ) {
+    val splashStartedAtMs = remember { System.currentTimeMillis() }
+
     LaunchedEffect(
         appUiState.loading,
         appUiState.authenticated,
         currentRoute,
     ) {
         if (appUiState.loading) return@LaunchedEffect
+        if (currentRoute.isStartupSplashRoute()) {
+            val remainingMs =
+                SPLASH_MIN_DISPLAY_MS - (System.currentTimeMillis() - splashStartedAtMs)
+            if (remainingMs > 0) {
+                delay(remainingMs)
+            }
+        }
 
         if (appUiState.authenticated) {
             val unauthenticatedRoutes = setOf(
@@ -694,6 +705,12 @@ private fun HandleStartupNavigation(
             navigateHome(navController, currentRoute)
         }
     }
+}
+
+private fun String?.isStartupSplashRoute(): Boolean {
+    return this == AppRoute.Splash.route ||
+            this == AppRoute.Login.route ||
+            this == AppRoute.ServerSetup.route
 }
 
 private fun navigateHome(
