@@ -21,6 +21,8 @@ func userFacingMessage(for error: Error, fallback: String = "Something went wron
             return "You don't have permission to do that."
         case 404:
             return "The requested item was not found."
+        case let code where isLikelyServerUnavailableStatusCode(code):
+            return "Connection error. Check your internet and try again."
         case 500...599:
             return "Server error. Please try again later."
         default:

@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.completed
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -33,12 +34,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FitnessCenter
@@ -46,10 +48,10 @@ import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalBar
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.WbSunny
@@ -61,7 +63,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +75,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -94,6 +99,10 @@ import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
+import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
@@ -103,12 +112,20 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private enum class CompletedRestorePhase {
+    Completed,
+    Unchecked,
+    Unstruck,
+    Fading,
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompletedScreen(
     uiState: CompletedUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
+    onUncomplete: (CompletedItem) -> Unit,
     onDelete: (CompletedItem) -> Unit,
     onUpdateTask: (CompletedItem, CreateTaskPayload) -> Unit,
 ) {
@@ -156,17 +173,17 @@ fun CompletedScreen(
             }
 
             override suspend fun onPreFling(available: Velocity): Velocity {
-                if (available.y < 0f && headerCollapsePx < maxCollapsePx) {
-                    headerCollapsePx = maxCollapsePx
-                    return available
-                }
                 val isListAtTop =
                     listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && isListAtTop && headerCollapsePx > 0f) {
-                    headerCollapsePx = 0f
-                    return available
-                }
-                return Velocity.Zero
+                if (available.y > 0f && !isListAtTop) return Velocity.Zero
+                val snapped = snapTitleCollapsePx(
+                    currentPx = headerCollapsePx,
+                    maxPx = maxCollapsePx,
+                    velocityY = available.y,
+                )
+                if (snapped == headerCollapsePx) return Velocity.Zero
+                headerCollapsePx = snapped
+                return if (available.y == 0f) Velocity.Zero else available
             }
         }
     }
@@ -174,6 +191,22 @@ fun CompletedScreen(
         targetValue = collapseProgressTarget,
         label = "completedTitleCollapseProgress",
     )
+    LaunchedEffect(
+        listState.isScrollInProgress,
+        headerCollapsePx,
+        maxCollapsePx,
+    ) {
+        if (listState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
+            return@LaunchedEffect
+        }
+        val isListAtTop =
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        headerCollapsePx = if (isListAtTop) {
+            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
+        } else {
+            maxCollapsePx
+        }
+    }
     var collapsedSectionKeys by rememberSaveable {
         mutableStateOf(emptySet<String>())
     }
@@ -191,93 +224,109 @@ fun CompletedScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .nestedScroll(nestedScrollConnection),
-            state = listState,
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp),
+        Box(
+            modifier = Modifier.fillMaxSize(),
         ) {
-            timelineSections.forEachIndexed { sectionIndex, section ->
-                val isCollapsed = collapsedSectionKeys.contains(section.key)
-                item(key = "completed-header-${section.key}") {
-                    CompletedTimelineSectionHeader(
-                        modifier = Modifier
-                            .animateItem(
-                                fadeInSpec = null,
-                                placementSpec = tween(
-                                    durationMillis = 320,
-                                    easing = FastOutSlowInEasing,
-                                ),
-                                fadeOutSpec = null,
-                            )
-                            .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
-                        section = section,
-                        isCollapsed = isCollapsed,
-                        onHeaderClick = {
-                            collapsedSectionKeys =
-                                if (isCollapsed) {
-                                    collapsedSectionKeys - section.key
-                                } else {
-                                    collapsedSectionKeys + section.key
-                                }
-                        },
-                    )
-                }
-                if (!isCollapsed) {
-                    section.items.forEachIndexed { itemIndex, completed ->
-                        item(key = "completed-row-${section.key}-${completed.id}") {
-                            CompletedSwipeRow(
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(nestedScrollConnection),
+                    state = listState,
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                ) {
+                    timelineSections.forEachIndexed { sectionIndex, section ->
+                        val isCollapsed = collapsedSectionKeys.contains(section.key)
+                        item(key = "completed-header-${section.key}") {
+                            CompletedTimelineSectionHeader(
                                 modifier = Modifier
                                     .animateItem(
-                                        fadeInSpec = tween(
-                                            durationMillis = 190,
-                                            easing = FastOutSlowInEasing,
-                                        ),
+                                        fadeInSpec = null,
                                         placementSpec = tween(
                                             durationMillis = 320,
                                             easing = FastOutSlowInEasing,
                                         ),
-                                        fadeOutSpec = tween(
-                                            durationMillis = 150,
-                                            easing = FastOutSlowInEasing,
-                                        ),
+                                        fadeOutSpec = null,
                                     )
-                                    .padding(top = 4.dp),
-                                item = completed,
-                                lists = uiState.lists,
-                                onInfo = { editTargetId = completed.id },
-                                onDelete = { onDelete(completed) },
+                                    .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
+                                section = section,
+                                isCollapsed = isCollapsed,
+                                onHeaderClick = {
+                                    collapsedSectionKeys =
+                                        if (isCollapsed) {
+                                            collapsedSectionKeys - section.key
+                                        } else {
+                                            collapsedSectionKeys + section.key
+                                        }
+                                },
+                            )
+                        }
+                        if (!isCollapsed) {
+                            section.items.forEachIndexed { itemIndex, completed ->
+                                item(key = "completed-row-${section.key}-${completed.id}") {
+                                    CompletedSwipeRow(
+                                        modifier = Modifier
+                                            .animateItem(
+                                                fadeInSpec = tween(
+                                                    durationMillis = 190,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                placementSpec = tween(
+                                                    durationMillis = 320,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                                fadeOutSpec = tween(
+                                                    durationMillis = 150,
+                                                    easing = FastOutSlowInEasing,
+                                                ),
+                                            )
+                                            .padding(top = 4.dp),
+                                        item = completed,
+                                        lists = uiState.lists,
+                                        onInfo = { editTargetId = completed.id },
+                                        onDelete = { onDelete(completed) },
+                                        onUncomplete = { onUncomplete(completed) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (uiState.items.isEmpty() && uiState.isLoading) {
+                        item {
+                            EmptyCompletedState(
+                                message = stringResource(R.string.label_loading),
                             )
                         }
                     }
+
+                    uiState.errorMessage?.let { message ->
+                        item {
+                            com.ohmz.tday.compose.core.ui.ErrorRetryCard(
+                                message = message,
+                                onRetry = onRefresh,
+                            )
+                        }
+                    }
+
+                    item { Spacer(modifier = Modifier.height(96.dp)) }
                 }
             }
 
-            if (uiState.items.isEmpty()) {
-                item {
-                    EmptyCompletedState(
-                        message = if (uiState.isLoading) {
-                            stringResource(R.string.label_loading)
-                        } else {
-                            stringResource(R.string.completed_empty)
-                        },
-                    )
-                }
+            if (uiState.items.isEmpty() && !uiState.isLoading) {
+                EmptyTaskWatermark(
+                    imageVector = Icons.Rounded.Check,
+                    accentColor = COMPLETED_TITLE_COLOR,
+                )
+                EmptyTaskBackgroundMessage(
+                    message = stringResource(R.string.completed_empty),
+                )
             }
-
-            uiState.errorMessage?.let { message ->
-                item {
-                    com.ohmz.tday.compose.core.ui.ErrorRetryCard(
-                        message = message,
-                        onRetry = onRefresh,
-                    )
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(96.dp)) }
         }
     }
 
@@ -371,7 +420,7 @@ private fun CompletedTopBar(
 private fun CompletedHeaderButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     contentDescription: String,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -390,7 +439,7 @@ private fun CompletedHeaderButton(
         label = "completedHeaderButtonOffsetY",
     )
 
-    androidx.compose.material3.Card(
+    Card(
         modifier = Modifier
             .then(modifier)
             .offset(y = offsetY)
@@ -404,8 +453,8 @@ private fun CompletedHeaderButton(
         },
         interactionSource = interactionSource,
         shape = CircleShape,
-        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = containerColor),
-        elevation = androidx.compose.material3.CardDefaults.cardElevation(
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.FabElevation,
             pressedElevation = TdayDimens.FabPressedElevation,
         ),
@@ -495,20 +544,47 @@ private fun CompletedSwipeRow(
     lists: List<ListSummary>,
     onInfo: () -> Unit,
     onDelete: () -> Unit,
+    onUncomplete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 130.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 36.dp.toPx() }.coerceAtMost(actionRevealPx * 0.28f)
-    val maxElasticDragPx = actionRevealPx * 1.22f
+    val actionRevealPx = with(density) { 176.dp.toPx() }
+    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
+    val maxElasticDragPx = actionRevealPx * 1.14f
     var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(item.id) { mutableStateOf(false) }
+    var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "completedSwipeOffset",
+    )
+    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val showCompletedCheckmark = restorePhase == CompletedRestorePhase.Completed
+    val showStrikethrough =
+        restorePhase == CompletedRestorePhase.Completed || restorePhase == CompletedRestorePhase.Unchecked
+    val isFading = restorePhase == CompletedRestorePhase.Fading
+    val isRestoring = restorePhase != CompletedRestorePhase.Completed
+    val rowAlpha by animateFloatAsState(
+        targetValue = if (isFading) 0f else 1f,
+        animationSpec = tween(durationMillis = 220),
+        label = "completedRestoreRowAlpha",
+    )
+    val rowScale by animateFloatAsState(
+        targetValue = if (isFading) 0.985f else 1f,
+        animationSpec = tween(durationMillis = 220),
+        label = "completedRestoreRowScale",
+    )
+    val titleColor by animateColorAsState(
+        targetValue = if (showStrikethrough) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = tween(durationMillis = 160),
+        label = "completedRestoreTitleColor",
     )
     val completedAtText = COMPLETED_ROW_TIME_FORMATTER
         .withZone(ZoneId.systemDefault())
@@ -520,33 +596,38 @@ private fun CompletedSwipeRow(
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
     val showPriorityFlag = isHighPriority(item.priority)
     val rowShape = RoundedCornerShape(16.dp)
-    val actionContainerColor =
-        colorScheme.surfaceVariant.copy(alpha = if (colorScheme.background.luminance() < 0.5f) 0.62f else 0.92f)
     val foregroundColor = colorScheme.background
 
     Column(
         modifier = modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = rowAlpha
+                scaleX = rowScale
+                scaleY = rowScale
+            },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(74.dp)
-                    .background(actionContainerColor, rowShape),
+                    .height(58.dp),
             ) {
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(end = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SwipeActionCircle(
-                        icon = Icons.Rounded.Info,
+                    TaskSwipeActionButton(
+                        icon = Icons.Rounded.BorderColor,
                         contentDescription = stringResource(R.string.action_edit_task),
-                        tint = colorScheme.onSurface,
-                        background = colorScheme.surface,
+                        label = stringResource(R.string.action_edit),
+                        tint = Color.White,
+                        background = Color(0xFF4C7DDE),
+                        revealProgress = actionRevealProgress,
+                        revealDelay = 0.62f,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
@@ -556,11 +637,14 @@ private fun CompletedSwipeRow(
                             targetOffsetX = 0f
                         },
                     )
-                    SwipeActionCircle(
-                        icon = Icons.Rounded.DeleteSweep,
+                    TaskSwipeActionButton(
+                        icon = Icons.Rounded.DeleteOutline,
                         contentDescription = stringResource(R.string.action_delete_task),
-                        tint = colorScheme.error,
-                        background = colorScheme.surface,
+                        label = stringResource(R.string.action_delete),
+                        tint = Color.White,
+                        background = Color(0xFFFF453A),
+                        revealProgress = actionRevealProgress,
+                        revealDelay = 0.04f,
                         onClick = {
                             ViewCompat.performHapticFeedback(
                                 view,
@@ -596,7 +680,7 @@ private fun CompletedSwipeRow(
                         ) {
                             if (targetOffsetX != 0f) {
                                 targetOffsetX = 0f
-                            } else if (!swipeHinting) {
+                            } else if (!swipeHinting && !isRestoring) {
                                 swipeHinting = true
                                 coroutineScope.launch {
                                     targetOffsetX = -swipeHintOffsetPx
@@ -617,13 +701,35 @@ private fun CompletedSwipeRow(
                             .padding(horizontal = 4.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.CheckCircle,
-                            contentDescription = stringResource(R.string.label_completed),
-                            tint = Color(0xFF6FBF86),
-                            modifier = Modifier
-                                .padding(horizontal = 10.dp)
-                                .size(28.dp),
+                        CompletedCircularToggleIcon(
+                            imageVector = if (showCompletedCheckmark) {
+                                Icons.Rounded.CheckCircle
+                            } else {
+                                Icons.Rounded.RadioButtonUnchecked
+                            },
+                            contentDescription = stringResource(R.string.label_undo_complete),
+                            tint = if (showCompletedCheckmark) {
+                                Color(0xFF6FBF86)
+                            } else {
+                                colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                            },
+                            enabled = !isRestoring,
+                            onClick = {
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                targetOffsetX = 0f
+                                coroutineScope.launch {
+                                    restorePhase = CompletedRestorePhase.Unchecked
+                                    delay(180)
+                                    restorePhase = CompletedRestorePhase.Unstruck
+                                    delay(180)
+                                    restorePhase = CompletedRestorePhase.Fading
+                                    delay(220)
+                                    onUncomplete()
+                                }
+                            },
                         )
 
                         Column(
@@ -633,10 +739,14 @@ private fun CompletedSwipeRow(
                         ) {
                             Text(
                                 text = item.title,
-                                color = colorScheme.onSurface.copy(alpha = 0.78f),
+                                color = titleColor,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                textDecoration = TextDecoration.LineThrough,
+                                textDecoration = if (showStrikethrough) {
+                                    TextDecoration.LineThrough
+                                } else {
+                                    TextDecoration.None
+                                },
                             )
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
@@ -701,43 +811,35 @@ private fun CompletedSwipeRow(
 }
 
 @Composable
-private fun SwipeActionCircle(
-    icon: ImageVector,
+private fun CompletedCircularToggleIcon(
+    imageVector: ImageVector,
     contentDescription: String,
     tint: Color,
-    background: Color,
     onClick: () -> Unit,
+    enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.92f else 1f,
-        label = "completedSwipeActionScale",
-    )
-    Card(
+    Box(
         modifier = Modifier
-            .size(42.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        onClick = onClick,
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        colors = CardDefaults.cardColors(containerColor = background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+            .size(28.dp)
+            .clip(CircleShape)
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = ripple(
+                    bounded = true,
+                    radius = 14.dp,
+                ),
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(22.dp),
-            )
-        }
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(24.dp),
+        )
     }
 }
 

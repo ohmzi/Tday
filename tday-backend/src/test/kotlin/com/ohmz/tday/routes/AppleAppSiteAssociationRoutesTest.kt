@@ -54,4 +54,45 @@ class AppleAppSiteAssociationRoutesTest {
             response.bodyAsText(),
         )
     }
+
+    @Test
+    fun `assetlinks route returns Android credential sharing payload`() = testApplication {
+        application {
+            configureSerialization()
+            routing {
+                appleAppSiteAssociationRoutes(
+                    testAppConfig(
+                        androidPackageName = "com.ohmz.tday.compose",
+                        androidSha256CertFingerprints = listOf("AA:BB", "CC:DD"),
+                    ),
+                )
+            }
+        }
+
+        val response = client.get("/.well-known/assetlinks.json")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertTrue(response.headers["Content-Type"]?.startsWith(ContentType.Application.Json.toString()) == true)
+        assertEquals(
+            """[{"relation":["delegate_permission/common.handle_all_urls","delegate_permission/common.get_login_creds"],"target":{"namespace":"android_app","package_name":"com.ohmz.tday.compose","sha256_cert_fingerprints":["AA:BB","CC:DD"]}}]""",
+            response.bodyAsText(),
+        )
+    }
+
+    @Test
+    fun `assetlinks route returns empty array when fingerprints are unset`() = testApplication {
+        application {
+            configureSerialization()
+            routing {
+                appleAppSiteAssociationRoutes(
+                    testAppConfig(androidSha256CertFingerprints = emptyList()),
+                )
+            }
+        }
+
+        val response = client.get("/.well-known/assetlinks.json")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals("[]", response.bodyAsText())
+    }
 }

@@ -9,8 +9,10 @@ import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +33,7 @@ class CompletedViewModel @Inject constructor(
     private val listRepository: ListRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
+    private val reminderScheduler: TaskReminderScheduler,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -99,7 +102,11 @@ class CompletedViewModel @Inject constructor(
             }
             runCatching {
                 if (forceSync) {
-                    syncManager.syncCachedData(force = true, replayPendingMutations = false)
+                    syncManager.syncCachedData(
+                        force = true,
+                        replayPendingMutations = false,
+                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                    )
                         .onFailure { /* fall back to local cache */ }
                 }
                 Pair(
@@ -139,6 +146,19 @@ class CompletedViewModel @Inject constructor(
         }
     }
 
+    fun uncomplete(item: CompletedItem) {
+        viewModelScope.launch {
+            runCatching { completedRepository.uncomplete(item) }
+                .onSuccess {
+                    rescheduleReminders()
+                    loadInternal(forceSync = false, showLoading = false)
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not restore task.")) }
+                }
+        }
+    }
+
     fun update(item: CompletedItem, payload: CreateTaskPayload) {
         viewModelScope.launch {
             runCatching { completedRepository.updateCompletedTodo(item, payload) }
@@ -146,6 +166,12 @@ class CompletedViewModel @Inject constructor(
                 .onFailure { error ->
                     _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not update task.")) }
                 }
+        }
+    }
+
+    private fun rescheduleReminders() {
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
         }
     }
 }

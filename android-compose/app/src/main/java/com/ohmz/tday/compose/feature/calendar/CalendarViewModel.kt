@@ -16,14 +16,13 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class CalendarUiState(
     val isLoading: Boolean = false,
@@ -129,7 +128,11 @@ class CalendarViewModel @Inject constructor(
 
             runCatching {
                 if (forceSync) {
-                    syncManager.syncCachedData(force = true, replayPendingMutations = false)
+                    syncManager.syncCachedData(
+                        force = true,
+                        replayPendingMutations = false,
+                        connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                    )
                         .onFailure { /* fall back to cache */ }
                 }
                 val todos = todoRepository.fetchTodos(mode = TodoListMode.SCHEDULED)
