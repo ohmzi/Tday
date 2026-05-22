@@ -173,20 +173,13 @@ final class SecureStore {
         deleteValue(for: .persistedAuthSessionCookie)
     }
 
-    func clearInstallScopedKeychainValuesIfAppReinstalled() {
+    func clearPersistedAuthSessionCookieIfAppReinstalled() {
         guard defaults.string(forKey: installSentinelKey) == nil else {
             return
         }
 
-        clearPersistedServerURL()
         clearPersistedAuthSessionCookie()
-        clearCachedSessionUser()
-        clearLastEmail()
         defaults.set(UUID().uuidString.lowercased(), forKey: installSentinelKey)
-    }
-
-    func clearPersistedAuthSessionCookieIfAppReinstalled() {
-        clearInstallScopedKeychainValuesIfAppReinstalled()
     }
 
     func normalizeServerURL(_ rawURL: String) -> URL? {

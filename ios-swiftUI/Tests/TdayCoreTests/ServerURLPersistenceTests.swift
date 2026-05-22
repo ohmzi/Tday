@@ -51,29 +51,31 @@ final class ServerURLPersistenceTests: XCTestCase {
         XCTAssertNil(secureStore.loadLastEmail())
     }
 
-    func testReinstallCleanupClearsPersistedServerURL() {
+    func testReinstallCookieCleanupPreservesServerURLAndLastEmail() {
         let url = URL(string: "https://tday.ohmz.cloud")!
         secureStore.savePersistedServerURL(url)
         secureStore.saveLastEmail("user@example.com")
         secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
 
-        secureStore.clearInstallScopedKeychainValuesIfAppReinstalled()
-
-        XCTAssertNil(secureStore.loadPersistedServerURL())
-        XCTAssertNil(secureStore.loadLastEmail())
-        XCTAssertNil(secureStore.loadPersistedAuthSessionCookieData())
-    }
-
-    func testReinstallCleanupRunsOnlyOncePerInstall() {
-        let url = URL(string: "https://tday.ohmz.cloud")!
-
-        secureStore.clearInstallScopedKeychainValuesIfAppReinstalled()
-        secureStore.savePersistedServerURL(url)
-        secureStore.saveLastEmail("user@example.com")
-
-        secureStore.clearInstallScopedKeychainValuesIfAppReinstalled()
+        secureStore.clearPersistedAuthSessionCookieIfAppReinstalled()
 
         XCTAssertEqual(secureStore.loadPersistedServerURL(), url)
         XCTAssertEqual(secureStore.loadLastEmail(), "user@example.com")
+        XCTAssertNil(secureStore.loadPersistedAuthSessionCookieData())
+    }
+
+    func testReinstallCookieCleanupRunsOnlyOncePerInstall() {
+        let url = URL(string: "https://tday.ohmz.cloud")!
+
+        secureStore.clearPersistedAuthSessionCookieIfAppReinstalled()
+        secureStore.savePersistedServerURL(url)
+        secureStore.saveLastEmail("user@example.com")
+        secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
+
+        secureStore.clearPersistedAuthSessionCookieIfAppReinstalled()
+
+        XCTAssertEqual(secureStore.loadPersistedServerURL(), url)
+        XCTAssertEqual(secureStore.loadLastEmail(), "user@example.com")
+        XCTAssertEqual(secureStore.loadPersistedAuthSessionCookieData(), Data("cookie".utf8))
     }
 }
