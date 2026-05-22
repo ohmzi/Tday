@@ -14,6 +14,8 @@ fun testAppConfig(
     dataEncryptionKey: String? = null,
     dataEncryptionKeys: String? = null,
     dataEncryptionAad: String? = null,
+    androidPackageName: String = "com.ohmz.tday.compose",
+    androidSha256CertFingerprints: List<String> = listOf("AA:BB:CC"),
 ) = AppConfig(
     port = 8080,
     databaseUrl = "postgresql://test:test@localhost:5432/testdb",
@@ -68,5 +70,7 @@ fun testAppConfig(
     probeEncryptionKey = null,
     appleTeamId = "TEAM123456",
     iosBundleId = "com.ohmz.tday.ios",
+    androidPackageName = androidPackageName,
+    androidSha256CertFingerprints = androidSha256CertFingerprints,
     sentryDsn = null,
 )
