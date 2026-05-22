@@ -21,7 +21,7 @@ enum TodoTimelineMetrics {
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
     static let topBarButtonIconSize: CGFloat = 24
-    static let expandedTitleHeight: CGFloat = 42
+    static let expandedTitleHeight: CGFloat = 56
     static let expandedTitleLiftDistance: CGFloat = 14
     static let expandedTitleFadeStart: CGFloat = 0.08
     static let expandedTitleFadeEnd: CGFloat = 0.44
@@ -744,17 +744,19 @@ struct TodoListScreen: View {
         .allowsHitTesting(!isCompleting)
         .swipeRevealHintOnTap(enabled: !isCompleting)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
+            Button {
                 Task { await viewModel.delete(todo) }
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+            .tint(TaskSwipeActionTint.delete)
+
             Button {
                 editingTodo = todo
             } label: {
                 Label("Edit", systemImage: "square.and.pencil")
             }
-            .tint(colors.secondary)
+            .tint(TaskSwipeActionTint.edit)
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
@@ -862,17 +864,19 @@ struct TodoListScreen: View {
         .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
         .swipeRevealHintOnTap(enabled: !isCompleting)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
+            Button {
                 Task { await viewModel.delete(todo) }
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+            .tint(TaskSwipeActionTint.delete)
+
             Button {
                 editingTodo = todo
             } label: {
                 Label("Edit", systemImage: "square.and.pencil")
             }
-            .tint(colors.secondary)
+            .tint(TaskSwipeActionTint.edit)
         }
         .onDrop(
             of: [UTType.plainText.identifier],
@@ -975,13 +979,13 @@ struct TodoListScreen: View {
     private func shouldApplyFirstPinnedRowElasticClearance(to section: TodoTimelineSection) -> Bool {
         let isOverdueFirstSection = viewModel.mode == .overdue
         let isTodayFirstSection = viewModel.mode == .today
-        let isExpandedPriorityEarlier = viewModel.mode == .priority && section.id == "earlier"
+        let isPriorityFirstSection = viewModel.mode == .priority
         let isExpandedAllTasksEarlier = viewModel.mode == .all && section.id == "earlier"
         let isScheduledFirstSection = viewModel.mode == .scheduled
         let isListFirstSection = viewModel.mode == .list
         return isOverdueFirstSection ||
             isTodayFirstSection ||
-            isExpandedPriorityEarlier ||
+            isPriorityFirstSection ||
             isExpandedAllTasksEarlier ||
             isScheduledFirstSection ||
             isListFirstSection
@@ -1744,8 +1748,10 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
                 targetDate: date
             )
         }
-    case .all, .priority, .list:
-        return buildFutureTimelineSections(items: items, calendar: calendar)
+    case .all:
+        return buildFutureTimelineSections(items: items, calendar: calendar, placesEarlierBeforeToday: true)
+    case .priority, .list:
+        return buildFutureTimelineSections(items: items, calendar: calendar, placesEarlierBeforeToday: false)
     }
 }
 
@@ -1759,7 +1765,11 @@ private func scheduledSectionTitle(for date: Date, calendar: Calendar) -> String
     return timelineDayTitle(for: date)
 }
 
-private func buildFutureTimelineSections(items: [TodoItem], calendar: Calendar) -> [TodoTimelineSection] {
+private func buildFutureTimelineSections(
+    items: [TodoItem],
+    calendar: Calendar,
+    placesEarlierBeforeToday: Bool
+) -> [TodoTimelineSection] {
     let now = Date()
     let today = calendar.startOfDay(for: now)
     let groupedByDate = Dictionary(grouping: items.sorted(by: todoTimelineSortPrecedes)) { item in
@@ -1787,19 +1797,28 @@ private func buildFutureTimelineSections(items: [TodoItem], calendar: Calendar) 
         .sorted()
         .flatMap { groupedByDate[$0] ?? [] }
 
+    let earlierSection: TodoTimelineSection?
     if !earlierItems.isEmpty {
-        sections.append(
-            TodoTimelineSection(
-                id: "earlier",
-                title: "Earlier",
-                items: earlierItems,
-                isCollapsible: true,
-                targetDate: nil
-            )
+        earlierSection = TodoTimelineSection(
+            id: "earlier",
+            title: "Earlier",
+            items: earlierItems,
+            isCollapsible: true,
+            targetDate: nil
         )
+    } else {
+        earlierSection = nil
+    }
+
+    if placesEarlierBeforeToday, let earlierSection {
+        sections.append(earlierSection)
     }
 
     sections.append(daySection(for: today, title: "Today"))
+
+    if !placesEarlierBeforeToday, let earlierSection {
+        sections.append(earlierSection)
+    }
 
     if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) {
         sections.append(daySection(for: tomorrow, title: "Tomorrow"))
