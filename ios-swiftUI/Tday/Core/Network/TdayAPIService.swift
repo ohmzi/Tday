@@ -28,13 +28,13 @@ func isLikelyConnectivityIssue(_ error: Error) -> Bool {
         guard let statusCode = apiError.statusCode else {
             return true
         }
-        return isLikelyServerUnavailableStatus(statusCode)
+        return isLikelyServerUnavailableStatusCode(statusCode)
     }
 
     return false
 }
 
-private func isLikelyServerUnavailableStatus(_ statusCode: Int) -> Bool {
+func isLikelyServerUnavailableStatusCode(_ statusCode: Int) -> Bool {
     statusCode == 408 ||
         statusCode == 502 ||
         statusCode == 503 ||
