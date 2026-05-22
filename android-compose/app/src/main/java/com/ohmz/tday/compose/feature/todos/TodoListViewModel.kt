@@ -31,6 +31,7 @@ data class TodoListUiState(
     val title: String = "Tasks",
     val mode: TodoListMode = TodoListMode.TODAY,
     val listId: String? = null,
+    val hasHydratedSnapshot: Boolean = false,
     val lists: List<ListSummary> = emptyList(),
     val items: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
@@ -76,10 +77,16 @@ class TodoListViewModel @Inject constructor(
 
     fun load(mode: TodoListMode, listId: String? = null, listName: String? = null) {
         hasLoadedMode = true
-        _uiState.update {
-            it.copy(
+        _uiState.update { current ->
+            val isSameTimeline = current.mode == mode && current.listId == listId
+            current.copy(
                 mode = mode,
                 listId = listId,
+                hasHydratedSnapshot = if (isSameTimeline) {
+                    current.hasHydratedSnapshot
+                } else {
+                    false
+                },
                 title = when (mode) {
                     TodoListMode.TODAY -> "Today"
                     TodoListMode.OVERDUE -> "Overdue"
@@ -181,11 +188,16 @@ class TodoListViewModel @Inject constructor(
         }.onSuccess { (todos, lists, aiSummaryEnabled) ->
             _uiState.update { current ->
                 current.copy(
+                    hasHydratedSnapshot = true,
                     lists = if (current.lists == lists) current.lists else lists,
                     items = if (current.items == todos) current.items else todos,
                     aiSummaryEnabled = aiSummaryEnabled,
                     errorMessage = null,
                 )
+            }
+        }.onFailure {
+            _uiState.update { current ->
+                current.copy(hasHydratedSnapshot = true)
             }
         }
     }
