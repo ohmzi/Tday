@@ -215,7 +215,8 @@ final class AppViewModel {
     func resetTrustedServer(rawURL: String) async -> Result<Void, MessageError> {
         do {
             _ = try await container.serverConfigRepository.resetTrustedServer(rawURL: rawURL)
-            serverURL = container.serverConfigRepository.getServerURL()?.absoluteString
+            let savedServerURL = container.serverConfigRepository.getServerURL()?.absoluteString ?? rawURL
+            serverURL = savedServerURL
             requiresServerSetup = false
             requiresLogin = true
             error = nil

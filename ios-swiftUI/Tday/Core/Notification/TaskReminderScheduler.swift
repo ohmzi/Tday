@@ -36,7 +36,7 @@ final class TaskReminderScheduler {
             content.title = task.title
             content.body = task.description ?? "Due soon"
             content.sound = .default
-            content.userInfo = ["deepLink": "tday://todos/all?highlightTodoId=\(task.id)"]
+            content.userInfo = ["deepLink": Self.deepLinkURLString(for: task.id)]
 
             let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
@@ -47,6 +47,15 @@ final class TaskReminderScheduler {
 
     private func notificationIdentifier(for task: TodoItem) -> String {
         "tday.todo.\(task.id)"
+    }
+
+    private static func deepLinkURLString(for taskID: String) -> String {
+        var components = URLComponents()
+        components.scheme = "tday"
+        components.host = "todos"
+        components.path = "/all"
+        components.queryItems = [URLQueryItem(name: "highlightTodoId", value: taskID)]
+        return components.url?.absoluteString ?? "tday://todos/all"
     }
 
     private var notificationCenter: UNUserNotificationCenter? {

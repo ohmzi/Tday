@@ -37,10 +37,20 @@ enum class LoginCredentialSource {
 }
 
 interface SystemCredentialServicing {
-    suspend fun requestSavedCredential(context: Context): SystemCredential?
+    suspend fun requestSavedCredential(
+        context: Context,
+        preferredEmail: String? = null,
+    ): SystemCredential?
+
     suspend fun offerSaveOrUpdateCredential(
         context: Context,
         credential: SystemCredential,
+    ): SystemCredentialSaveResult
+
+    suspend fun requestSavedServerUrl(context: Context): String?
+    suspend fun offerSaveOrUpdateServerUrl(
+        context: Context,
+        serverUrl: String,
     ): SystemCredentialSaveResult
 
     suspend fun clearCredentialState()
@@ -50,12 +60,24 @@ interface SystemCredentialServicing {
 class SystemCredentialService @Inject constructor(
     @ApplicationContext private val appContext: Context,
 ) : SystemCredentialServicing {
-    override suspend fun requestSavedCredential(context: Context): SystemCredential? {
+    override suspend fun requestSavedCredential(
+        context: Context,
+        preferredEmail: String?,
+    ): SystemCredential? {
         val activity = context.findActivity() ?: return null
         val credentialManager = CredentialManager.create(activity)
+        val allowedUserIds = preferredEmail
+            ?.trim()
+            ?.lowercase(Locale.US)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { setOf(it) }
+            ?: emptySet()
         val request = GetCredentialRequest(
             credentialOptions = listOf(
-                GetPasswordOption(isAutoSelectAllowed = true),
+                GetPasswordOption(
+                    allowedUserIds = allowedUserIds,
+                    isAutoSelectAllowed = false,
+                ),
             ),
         )
 
@@ -65,8 +87,8 @@ class SystemCredentialService @Inject constructor(
                 request = request,
             ).credential
             when (credential) {
-                is PasswordCredential -> SystemCredential(
-                    email = credential.id,
+                is PasswordCredential -> SystemCredentialRecords.loginCredential(
+                    id = credential.id,
                     password = credential.password,
                 )
 
@@ -111,6 +133,70 @@ class SystemCredentialService @Inject constructor(
         }
     }
 
+    override suspend fun requestSavedServerUrl(context: Context): String? {
+        val activity = context.findActivity() ?: return null
+        val credentialManager = CredentialManager.create(activity)
+        val request = GetCredentialRequest(
+            credentialOptions = listOf(
+                GetPasswordOption(
+                    allowedUserIds = setOf(SystemCredentialRecords.SERVER_URL_CREDENTIAL_ID),
+                    isAutoSelectAllowed = false,
+                ),
+            ),
+        )
+
+        return try {
+            val credential = credentialManager.getCredential(
+                context = activity,
+                request = request,
+            ).credential
+            when (credential) {
+                is PasswordCredential -> SystemCredentialRecords.serverUrl(
+                    id = credential.id,
+                    password = credential.password,
+                )
+
+                else -> null
+            }
+        } catch (_: GetCredentialException) {
+            null
+        }
+    }
+
+    override suspend fun offerSaveOrUpdateServerUrl(
+        context: Context,
+        serverUrl: String,
+    ): SystemCredentialSaveResult {
+        val normalizedServerUrl = serverUrl.trim()
+        if (normalizedServerUrl.isBlank()) {
+            return SystemCredentialSaveResult.SKIPPED
+        }
+
+        val activity = context.findActivity() ?: return SystemCredentialSaveResult.FAILED
+        val credentialManager = CredentialManager.create(activity)
+        val request = CreatePasswordRequest(
+            id = SystemCredentialRecords.SERVER_URL_CREDENTIAL_ID,
+            password = normalizedServerUrl,
+        )
+
+        return try {
+            credentialManager.createCredential(
+                context = activity,
+                request = request,
+            )
+            SystemCredentialSaveResult.SAVED
+        } catch (_: CreateCredentialCancellationException) {
+            SystemCredentialSaveResult.CANCELLED
+        } catch (error: CreateCredentialException) {
+            Log.w(
+                LOG_TAG,
+                "Android Password Manager could not save server URL: ${error.type}",
+                error
+            )
+            SystemCredentialSaveResult.FAILED
+        }
+    }
+
     override suspend fun clearCredentialState() {
         try {
             val credentialManager = CredentialManager.create(appContext)
@@ -122,6 +208,26 @@ class SystemCredentialService @Inject constructor(
 
     private companion object {
         const val LOG_TAG = "TdayCredentials"
+    }
+}
+
+internal object SystemCredentialRecords {
+    const val SERVER_URL_CREDENTIAL_ID = "T'Day Server URL"
+
+    fun loginCredential(id: String, password: String): SystemCredential? {
+        val normalizedId = id.trim()
+        // Older builds briefly saved server URLs as password records; never treat those as logins.
+        if (normalizedId == SERVER_URL_CREDENTIAL_ID) return null
+        if (normalizedId.isBlank() || password.isBlank()) return null
+        return SystemCredential(
+            email = normalizedId,
+            password = password,
+        )
+    }
+
+    fun serverUrl(id: String, password: String): String? {
+        if (id.trim() != SERVER_URL_CREDENTIAL_ID) return null
+        return password.trim().takeIf { it.isNotBlank() }
     }
 }
 

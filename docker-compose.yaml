@@ -41,6 +41,9 @@ services:
       - "${TDAY_HOST_BIND:-127.0.0.1}:${TDAY_HOST_PORT:-2525}:8080"
     env_file:
       - .env.docker
+    environment:
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-THT5Z8K3TF}
+      IOS_BUNDLE_ID: ${IOS_BUNDLE_ID:-com.ohmz.tday.ios}
     security_opt:
       - no-new-privileges:true
     cap_drop:

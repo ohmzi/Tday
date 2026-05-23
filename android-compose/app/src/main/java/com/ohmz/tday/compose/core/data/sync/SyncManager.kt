@@ -38,6 +38,8 @@ import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidget
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -170,36 +172,44 @@ class SyncManager @Inject constructor(
         return true
     }
 
-    private suspend fun fetchRemoteSnapshot(): RemoteSnapshot {
-        val todos = requireApiBody(
-            api.getTodos(timeline = true),
-            "Could not load timeline tasks",
-        ).todos.map(::mapTodoDto)
-
-        val completed = requireApiBody(
-            api.getCompletedTodos(),
-            "Could not load completed tasks",
-        ).completedTodos.map(::mapCompletedDto)
-
-        val lists = requireApiBody(
-            api.getLists(),
-            "Could not load lists",
-        ).lists.map { mapListDto(it, iconFallback = secureConfigStore.getListIcon(it.id)) }
-
-        val aiSummaryEnabled = runCatching {
+    private suspend fun fetchRemoteSnapshot(): RemoteSnapshot = coroutineScope {
+        val todos = async {
             requireApiBody(
-                api.getAppSettings(),
-                "Could not load app settings",
-            ).aiSummaryEnabled
-        }.getOrElse {
-            cacheManager.loadOfflineState().aiSummaryEnabled
+                api.getTodos(timeline = true),
+                "Could not load timeline tasks",
+            ).todos.map(::mapTodoDto)
         }
 
-        return RemoteSnapshot(
-            todos = todos,
-            completedItems = completed,
-            lists = lists,
-            aiSummaryEnabled = aiSummaryEnabled,
+        val completed = async {
+            requireApiBody(
+                api.getCompletedTodos(),
+                "Could not load completed tasks",
+            ).completedTodos.map(::mapCompletedDto)
+        }
+
+        val lists = async {
+            requireApiBody(
+                api.getLists(),
+                "Could not load lists",
+            ).lists.map { mapListDto(it, iconFallback = secureConfigStore.getListIcon(it.id)) }
+        }
+
+        val aiSummaryEnabled = async {
+            runCatching {
+                requireApiBody(
+                    api.getAppSettings(),
+                    "Could not load app settings",
+                ).aiSummaryEnabled
+            }.getOrElse {
+                cacheManager.loadOfflineState().aiSummaryEnabled
+            }
+        }
+
+        RemoteSnapshot(
+            todos = todos.await(),
+            completedItems = completed.await(),
+            lists = lists.await(),
+            aiSummaryEnabled = aiSummaryEnabled.await(),
         )
     }
 
