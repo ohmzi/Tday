@@ -70,10 +70,12 @@ struct CredentialsCallbackRequest: Codable {
 
 struct AppSettingsResponse: Codable, Equatable {
     let aiSummaryEnabled: Bool
+    let updatedAt: String?
 }
 
 struct AdminSettingsResponse: Codable, Equatable {
     let aiSummaryEnabled: Bool
+    let updatedAt: String?
     let validationError: String?
 }
 
@@ -88,15 +90,17 @@ struct TodosResponse: Codable {
 struct TodoSummaryRequest: Codable {
     let mode: String
     let listId: String?
+    let timeZone: String?
 }
 
 struct TodoSummaryResponse: Codable, Equatable {
-    let summary: String
+    let summary: String?
     let source: String?
     let mode: String?
     let taskCount: Int?
     let generatedAt: String?
     let fallbackReason: String?
+    let reason: String?
 }
 
 struct TodoTitleNlpRequest: Codable {
@@ -131,9 +135,12 @@ struct TodoDTO: Codable, Equatable {
     let priority: String
     let due: String
     let rrule: String?
+    let timeZone: String?
     let instanceDate: String?
     let completed: Bool
+    let order: Int?
     let listID: String?
+    let userID: String?
     let updatedAt: String?
     let createdAt: String?
 }
@@ -230,7 +237,64 @@ struct UpdateListRequest: Codable {
 }
 
 struct DeleteListRequest: Codable {
+    let id: String?
+    let ids: [String]
+
+    init(id: String? = nil, ids: [String] = []) {
+        self.id = id
+        self.ids = ids
+    }
+}
+
+struct ListDetailResponse: Codable {
+    let list: ListDTO
+    let todos: [ListTodoDTO]
+
+    init(list: ListDTO, todos: [ListTodoDTO] = []) {
+        self.list = list
+        self.todos = todos
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case list
+        case todos
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        list = try container.decode(ListDTO.self, forKey: .list)
+        todos = try container.decodeIfPresent([ListTodoDTO].self, forKey: .todos) ?? []
+    }
+}
+
+struct DeleteListResponse: Codable {
+    let message: String?
+    let deletedIds: [String]
+
+    init(message: String? = nil, deletedIds: [String] = []) {
+        self.message = message
+        self.deletedIds = deletedIds
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case message
+        case deletedIds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        message = try container.decodeIfPresent(String.self, forKey: .message)
+        deletedIds = try container.decodeIfPresent([String].self, forKey: .deletedIds) ?? []
+    }
+}
+
+struct ListTodoDTO: Codable, Equatable {
     let id: String
+    let title: String
+    let priority: String
+    let due: String
+    let completed: Bool
+    let order: Int
 }
 
 struct CompletedTodosResponse: Codable {
@@ -245,7 +309,10 @@ struct CompletedTodoDTO: Codable, Equatable {
     let priority: String
     let due: String
     let completedAt: String?
+    let completedOnTime: Bool?
+    let daysToComplete: Double?
     let rrule: String?
+    let userID: String?
     let instanceDate: String?
     let listName: String?
     let listColor: String?
