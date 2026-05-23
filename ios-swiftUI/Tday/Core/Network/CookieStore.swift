@@ -25,7 +25,7 @@ final class CookieStore {
         self.secureStore = secureStore
         self.storage = storage
         storage.cookieAcceptPolicy = .always
-        secureStore.clearPersistedAuthSessionCookieIfAppReinstalled()
+        secureStore.clearInstallScopedValuesIfAppReinstalled()
         if currentAuthCookie() == nil {
             restorePersistedAuthCookie()
         }

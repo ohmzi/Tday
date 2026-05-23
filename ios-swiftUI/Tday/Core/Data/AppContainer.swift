@@ -57,7 +57,7 @@ final class AppContainer {
             serverURLState: serverURLState,
             api: apiService
         )
-        systemCredentialService = SystemCredentialService()
+        systemCredentialService = SystemCredentialService(secureStore: secureStore)
         authRepository = AuthRepository(
             api: apiService,
             secureStore: secureStore,
