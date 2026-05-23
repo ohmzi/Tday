@@ -51,28 +51,37 @@ final class ServerURLPersistenceTests: XCTestCase {
         XCTAssertNil(secureStore.loadLastEmail())
     }
 
-    func testReinstallCookieCleanupPreservesServerURLAndLastEmail() {
+    func testSavedServerURLSuggestionSurvivesReinstallCleanup() {
+        let url = URL(string: "https://demo.tday.example")!
+        secureStore.saveServerURLSuggestion(url)
+
+        secureStore.clearInstallScopedValuesIfAppReinstalled()
+
+        XCTAssertEqual(secureStore.loadServerURLSuggestion(), url)
+    }
+
+    func testReinstallCleanupClearsInstallScopedValues() {
         let url = URL(string: "https://tday.ohmz.cloud")!
         secureStore.savePersistedServerURL(url)
         secureStore.saveLastEmail("user@example.com")
         secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
 
-        secureStore.clearPersistedAuthSessionCookieIfAppReinstalled()
+        secureStore.clearInstallScopedValuesIfAppReinstalled()
 
-        XCTAssertEqual(secureStore.loadPersistedServerURL(), url)
-        XCTAssertEqual(secureStore.loadLastEmail(), "user@example.com")
+        XCTAssertNil(secureStore.loadPersistedServerURL())
+        XCTAssertNil(secureStore.loadLastEmail())
         XCTAssertNil(secureStore.loadPersistedAuthSessionCookieData())
     }
 
-    func testReinstallCookieCleanupRunsOnlyOncePerInstall() {
+    func testReinstallCleanupRunsOnlyOncePerInstall() {
         let url = URL(string: "https://tday.ohmz.cloud")!
 
-        secureStore.clearPersistedAuthSessionCookieIfAppReinstalled()
+        secureStore.clearInstallScopedValuesIfAppReinstalled()
         secureStore.savePersistedServerURL(url)
         secureStore.saveLastEmail("user@example.com")
         secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
 
-        secureStore.clearPersistedAuthSessionCookieIfAppReinstalled()
+        secureStore.clearInstallScopedValuesIfAppReinstalled()
 
         XCTAssertEqual(secureStore.loadPersistedServerURL(), url)
         XCTAssertEqual(secureStore.loadLastEmail(), "user@example.com")

@@ -45,6 +45,10 @@ struct OnboardingWizardOverlay: View {
     @State private var localError: String?
     @State private var isConnecting = false
     @State private var isCompletingAuthentication = false
+    @State private var serverURLCameFromSystemCredential = false
+    @State private var hasRequestedSavedServerURL = false
+    @State private var pendingServerURLUsePrompt: String?
+    @State private var pendingServerURLSavePrompt: String?
     @State private var credentialCoordinator = LoginCredentialCoordinator()
 
     var body: some View {
@@ -67,13 +71,18 @@ struct OnboardingWizardOverlay: View {
         }
         .onAppear {
             serverURL = initialServerURL ?? ""
-            email = authViewModel.savedEmail
             step = (initialServerURL?.isEmpty == false) ? .login : .server
-            requestSavedCredentialIfAvailable()
+            if step == .login {
+                requestSavedCredentialIfAvailable()
+            } else {
+                requestSavedServerURLIfAvailable()
+            }
         }
         .onChange(of: step) { _, newStep in
             if newStep == .login {
                 requestSavedCredentialIfAvailable()
+            } else {
+                requestSavedServerURLIfAvailable()
             }
         }
         .onChange(of: isCreatingAccount) { _, creatingAccount in
@@ -86,6 +95,39 @@ struct OnboardingWizardOverlay: View {
         .animation(.easeInOut(duration: 0.2), value: isConnecting)
         .animation(.easeInOut(duration: 0.2), value: authViewModel.isLoading)
         .animation(.easeInOut(duration: 0.2), value: isCompletingAuthentication)
+        .alert("Save server URL?", isPresented: serverURLSavePromptBinding) {
+            Button("Not Now", role: .cancel) {
+                pendingServerURLSavePrompt = nil
+                step = .login
+            }
+            Button("Save") {
+                guard let serverURL = pendingServerURLSavePrompt else {
+                    step = .login
+                    return
+                }
+                pendingServerURLSavePrompt = nil
+                Task {
+                    _ = await systemCredentialService.offerSaveOrUpdateServerURL(serverURL)
+                    step = .login
+                }
+            }
+        } message: {
+            Text("T'Day can save this server URL securely on this device so you can reuse it during setup.")
+        }
+        .alert("Use saved server URL?", isPresented: serverURLUsePromptBinding) {
+            Button("Not Now", role: .cancel) {
+                pendingServerURLUsePrompt = nil
+            }
+            Button("Use") {
+                guard let savedServerURL = pendingServerURLUsePrompt else {
+                    return
+                }
+                pendingServerURLUsePrompt = nil
+                useSavedServerURL(savedServerURL)
+            }
+        } message: {
+            Text("T'Day found a server URL saved on this device.")
+        }
     }
 
     private var stableCardLayout: some View {
@@ -221,6 +263,15 @@ struct OnboardingWizardOverlay: View {
                 .foregroundStyle(colors.primary)
             }
 
+            if serverURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button("Use saved server URL") {
+                    requestSavedServerURL()
+                }
+                .buttonStyle(WizardTextButtonStyle())
+                .font(.tdayRounded(size: 15, weight: .bold))
+                .foregroundStyle(colors.primary)
+            }
+
             WizardPrimaryButton(
                 title: isConnecting ? "Connecting..." : "Connect",
                 enabled: !serverURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isConnecting
@@ -334,6 +385,28 @@ struct OnboardingWizardOverlay: View {
         step == .login
     }
 
+    private var serverURLSavePromptBinding: Binding<Bool> {
+        Binding(
+            get: { pendingServerURLSavePrompt != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingServerURLSavePrompt = nil
+                }
+            }
+        )
+    }
+
+    private var serverURLUsePromptBinding: Binding<Bool> {
+        Binding(
+            get: { pendingServerURLUsePrompt != nil },
+            set: { isPresented in
+                if !isPresented {
+                    pendingServerURLUsePrompt = nil
+                }
+            }
+        )
+    }
+
     private var isAuthInFlight: Bool {
         authViewModel.isLoading || isCompletingAuthentication
     }
@@ -388,8 +461,14 @@ struct OnboardingWizardOverlay: View {
         isConnecting = false
         switch result {
         case .success:
-            step = .login
+            if !serverURLCameFromSystemCredential {
+                pendingServerURLSavePrompt = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
+            } else {
+                step = .login
+            }
+            serverURLCameFromSystemCredential = false
         case let .failure(error):
+            serverURLCameFromSystemCredential = false
             localError = error.message
         }
     }
@@ -402,10 +481,41 @@ struct OnboardingWizardOverlay: View {
         isConnecting = false
         switch result {
         case .success:
-            step = .login
+            pendingServerURLSavePrompt = serverURL.trimmingCharacters(in: .whitespacesAndNewlines)
         case let .failure(error):
             localError = error.message
         }
+    }
+
+    private func requestSavedServerURL() {
+        guard step == .server,
+              serverURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !isConnecting else {
+            return
+        }
+
+        Task { @MainActor in
+            guard let savedServerURL = await systemCredentialService.requestSavedServerURL() else {
+                return
+            }
+
+            pendingServerURLUsePrompt = savedServerURL
+        }
+    }
+
+    private func useSavedServerURL(_ savedServerURL: String) {
+        serverURL = savedServerURL
+        serverURLCameFromSystemCredential = true
+        Task { await connectServer() }
+    }
+
+    private func requestSavedServerURLIfAvailable() {
+        guard !hasRequestedSavedServerURL else {
+            return
+        }
+
+        hasRequestedSavedServerURL = true
+        requestSavedServerURL()
     }
 
     private func requestSavedCredentialIfAvailable() {

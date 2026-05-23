@@ -32,7 +32,9 @@ enum LoginCredentialSource {
 @MainActor
 protocol SystemCredentialServicing: AnyObject {
     func requestSavedCredential() async -> SystemCredential?
+    func requestSavedServerURL() async -> String?
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult
+    func offerSaveOrUpdateServerURL(_ rawURL: String) async -> SystemCredentialSaveResult
 }
 
 enum SystemCredentialScope {
@@ -56,16 +58,24 @@ private func makeLoginCredential(user: String, password: String) -> SystemCreden
 
 @MainActor
 final class SystemCredentialService: SystemCredentialServicing {
+    private let secureStore: SecureStore
     private var activeAuthorizationSession: PasswordAuthorizationSession?
-    private var hasRequestedLegacyServerURLCredentialRemoval = false
+
+    init(secureStore: SecureStore = SecureStore()) {
+        self.secureStore = secureStore
+    }
 
     func requestSavedCredential() async -> SystemCredential? {
-        await removeLegacyServerURLCredentialIfNeeded()
         let session = PasswordAuthorizationSession()
         activeAuthorizationSession = session
-        let credential = await session.requestSavedCredential()
+        let credential = await session.requestPasswordCredential()
+            .flatMap { makeLoginCredential(user: $0.user, password: $0.password) }
         activeAuthorizationSession = nil
         return credential
+    }
+
+    func requestSavedServerURL() async -> String? {
+        secureStore.loadServerURLSuggestion()?.absoluteString
     }
 
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult {
@@ -79,6 +89,15 @@ final class SystemCredentialService: SystemCredentialServicing {
         } else {
             return await saveWithSharedWebCredential(credential)
         }
+    }
+
+    func offerSaveOrUpdateServerURL(_ rawURL: String) async -> SystemCredentialSaveResult {
+        guard let normalizedURL = secureStore.normalizeServerURL(rawURL) else {
+            return .skipped
+        }
+
+        secureStore.saveServerURLSuggestion(normalizedURL)
+        return .saved
     }
 
     @available(iOS 26.2, *)
@@ -133,32 +152,14 @@ final class SystemCredentialService: SystemCredentialServicing {
             }
         }
     }
-
-    private func removeLegacyServerURLCredentialIfNeeded() async {
-        guard !hasRequestedLegacyServerURLCredentialRemoval else {
-            return
-        }
-
-        hasRequestedLegacyServerURLCredentialRemoval = true
-        let host = SystemCredentialScope.appCredentialHost
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            SecAddSharedWebCredential(
-                host as CFString,
-                LegacySystemCredentialRecord.serverURLUser as CFString,
-                nil
-            ) { _ in
-                continuation.resume()
-            }
-        }
-    }
 }
 
 @MainActor
 private final class PasswordAuthorizationSession: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
-    private var continuation: CheckedContinuation<SystemCredential?, Never>?
+    private var continuation: CheckedContinuation<ASPasswordCredential?, Never>?
     private var controller: ASAuthorizationController?
 
-    func requestSavedCredential() async -> SystemCredential? {
+    func requestPasswordCredential() async -> ASPasswordCredential? {
         await withCheckedContinuation { continuation in
             self.continuation = continuation
 
@@ -168,17 +169,13 @@ private final class PasswordAuthorizationSession: NSObject, ASAuthorizationContr
             self.controller = controller
             controller.delegate = self
             controller.presentationContextProvider = self
-            controller.performRequests(options: [.preferImmediatelyAvailableCredentials])
+            controller.performRequests()
         }
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         let credential = authorization.credential as? ASPasswordCredential
-        finish(
-            credential.flatMap {
-                makeLoginCredential(user: $0.user, password: $0.password)
-            }
-        )
+        finish(credential)
     }
 
     func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
@@ -200,7 +197,7 @@ private final class PasswordAuthorizationSession: NSObject, ASAuthorizationContr
         return UIWindow(frame: UIScreen.main.bounds)
     }
 
-    private func finish(_ credential: SystemCredential?) {
+    private func finish(_ credential: ASPasswordCredential?) {
         controller = nil
         continuation?.resume(returning: credential)
         continuation = nil
