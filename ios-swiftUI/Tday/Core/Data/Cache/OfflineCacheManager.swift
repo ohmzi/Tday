@@ -135,6 +135,7 @@ final class OfflineCacheManager {
 
         try? modelContext.save()
         lastState = state
+        TodayTasksWidgetSnapshotStore.saveTodayTasks(from: state)
         cacheDataVersion += 1
         NotificationCenter.default.post(name: .offlineCacheDidChange, object: nil)
     }
