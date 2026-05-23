@@ -387,7 +387,9 @@ fun TdayApp(
                                         onConnectServer = { rawUrl, onResult ->
                                             appViewModel.saveServerUrl(
                                                 rawUrl = rawUrl,
-                                                onSuccess = { onResult(Result.success(Unit)) },
+                                                onSuccess = { serverUrl ->
+                                                    onResult(Result.success(serverUrl))
+                                                },
                                                 onFailure = { message ->
                                                     onResult(Result.failure(IllegalStateException(message)))
                                                 },
@@ -425,6 +427,8 @@ fun TdayApp(
                                             }
                                         },
                                         onRequestSavedCredential = authViewModel::requestSavedCredential,
+                                        onRequestSavedServerUrl = authViewModel::requestSavedServerUrl,
+                                        onSaveServerUrlCredential = authViewModel::offerSaveOrUpdateServerUrl,
                                         onClearAuthStatus = {
                                             authViewModel.clearStatus()
                                             appViewModel.clearPendingApprovalNotice()

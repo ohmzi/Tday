@@ -23,6 +23,7 @@ final class SecureStore {
         case lastEmail = "last-email"
         case persistedAuthSessionCookie = "persisted-auth-session-cookie"
         case cachedSessionUser = "cached-session-user"
+        case savedServerURLSuggestion = "saved-server-url-suggestion"
     }
 
     func loadPersistedServerURL() -> URL? {
@@ -38,6 +39,17 @@ final class SecureStore {
 
     func clearPersistedServerURL() {
         deleteValue(for: .persistedServerURL)
+    }
+
+    func saveServerURLSuggestion(_ url: URL) {
+        saveString(url.absoluteString, for: .savedServerURLSuggestion)
+    }
+
+    func loadServerURLSuggestion() -> URL? {
+        guard let raw = loadString(for: .savedServerURLSuggestion) else {
+            return nil
+        }
+        return URL(string: raw)
     }
 
     func loadOrCreateDeviceID() -> String {
@@ -173,12 +185,18 @@ final class SecureStore {
         deleteValue(for: .persistedAuthSessionCookie)
     }
 
-    func clearPersistedAuthSessionCookieIfAppReinstalled() {
+    func clearInstallScopedValuesIfAppReinstalled() {
         guard defaults.string(forKey: installSentinelKey) == nil else {
             return
         }
 
+        clearPersistedServerURL()
         clearPersistedAuthSessionCookie()
+        clearCachedSessionUser()
+        clearLastEmail()
+        clearAllTrustedFingerprints()
+        defaults.removeObject(forKey: runtimeServerURLKey)
+        defaults.removeObject(forKey: listIconsKey)
         defaults.set(UUID().uuidString.lowercased(), forKey: installSentinelKey)
     }
 

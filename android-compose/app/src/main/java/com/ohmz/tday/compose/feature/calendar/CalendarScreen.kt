@@ -20,7 +20,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -42,6 +41,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -103,7 +103,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -111,7 +110,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
@@ -167,11 +165,6 @@ private val CalendarPeriodCardPageHeight = 78.dp
 private val CalendarPeriodWeekDayCellHeight = 72.dp
 private val CalendarPeriodPageHorizontalGutter = 2.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
-
-private fun calendarPageAnimationSpec() = tween<IntOffset>(
-    durationMillis = 260,
-    easing = FastOutSlowInEasing,
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -267,6 +260,8 @@ fun CalendarScreen(
     var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
     var selectedViewKey by rememberSaveable { mutableStateOf(CalendarViewMode.MONTH.name) }
+    var todayJumpRequestId by rememberSaveable { mutableStateOf(0) }
+    var todayJumpRequest by remember { mutableStateOf<CalendarTodayJumpRequest?>(null) }
 
     val visibleMonth = remember(visibleMonthIso) { YearMonth.parse(visibleMonthIso) }
     val selectedDate = remember(selectedDateIso) { LocalDate.parse(selectedDateIso) }
@@ -284,6 +279,11 @@ fun CalendarScreen(
         if (!canNavigateTo(date)) return
         visibleMonthIso = YearMonth.from(date).toString()
         selectedDateIso = date.toString()
+    }
+    fun clearTodayJumpRequest(requestId: Int) {
+        if (todayJumpRequest?.id == requestId) {
+            todayJumpRequest = null
+        }
     }
 
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -327,7 +327,11 @@ fun CalendarScreen(
                 onBack = onBack,
                 collapseProgress = collapseProgress,
                 onJumpToday = {
-                    selectDate(LocalDate.now(zoneId))
+                    todayJumpRequestId += 1
+                    todayJumpRequest = CalendarTodayJumpRequest(
+                        id = todayJumpRequestId,
+                        targetDate = LocalDate.now(zoneId),
+                    )
                 },
             )
         },
@@ -405,6 +409,8 @@ fun CalendarScreen(
                                     selectedDate = selectedDate,
                                     today = today,
                                     tasksByDate = tasksByDate,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
                                     onPrevMonth = {
                                         if (visibleMonth > minNavigableMonth) {
                                             visibleMonthIso = visibleMonth.minusMonths(1).toString()
@@ -421,6 +427,9 @@ fun CalendarScreen(
                                     today = today,
                                     tasksByDate = tasksByDate,
                                     canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
                                     onPrevWeek = { selectDate(selectedDate.minusWeeks(1)) },
                                     onNextWeek = { selectDate(selectedDate.plusWeeks(1)) },
                                     onSelectDate = ::selectDate,
@@ -431,8 +440,11 @@ fun CalendarScreen(
                                     today = today,
                                     tasksByDate = tasksByDate,
                                     canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
                                     onPrevDay = { selectDate(selectedDate.minusDays(1)) },
                                     onNextDay = { selectDate(selectedDate.plusDays(1)) },
+                                    onSelectDate = ::selectDate,
                                 )
                             }
                         }
@@ -575,54 +587,99 @@ private fun CalendarWeekCard(
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
     canGoPrevWeek: Boolean,
+    canSelectDate: (LocalDate) -> Boolean,
+    todayJumpRequest: CalendarTodayJumpRequest?,
+    onTodayJumpHandled: (Int) -> Unit,
     onPrevWeek: () -> Unit,
     onNextWeek: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val weekStart = remember(selectedDate) { startOfWeek(selectedDate) }
-    val density = LocalDensity.current
-    val swipeThresholdPx = with(density) { 42.dp.toPx() }
-    val maxPreviewDragPx = with(density) { 64.dp.toPx() }
-    var horizontalDragAccumulated by remember(weekStart) { mutableFloatStateOf(0f) }
-    var dragOffsetPx by remember(weekStart) { mutableFloatStateOf(0f) }
-    val dragTranslationX by animateFloatAsState(
-        targetValue = dragOffsetPx,
-        animationSpec = tween(durationMillis = 120),
-        label = "calendarWeekDragTranslationX",
-    )
+    val coroutineScope = rememberCoroutineScope()
+    var pendingTodayJump by remember { mutableStateOf<CalendarTodayJumpRequest?>(null) }
+    val todayJumpDirection = pendingTodayJump?.let { request ->
+        val targetWeek = startOfWeek(request.targetDate)
+        when {
+            targetWeek < weekStart -> CalendarPagerSlot.PREVIOUS
+            targetWeek > weekStart -> CalendarPagerSlot.NEXT
+            else -> null
+        }
+    }
+    val previousPageWeek = if (todayJumpDirection == CalendarPagerSlot.PREVIOUS) {
+        pendingTodayJump?.targetDate?.let(::startOfWeek)
+    } else if (canGoPrevWeek) {
+        weekStart.minusWeeks(1)
+    } else {
+        null
+    }
+    val nextPageWeek = if (todayJumpDirection == CalendarPagerSlot.NEXT) {
+        pendingTodayJump?.targetDate?.let(::startOfWeek) ?: weekStart.plusWeeks(1)
+    } else {
+        weekStart.plusWeeks(1)
+    }
+    val pages = remember(previousPageWeek, weekStart, nextPageWeek) {
+        buildList {
+            previousPageWeek?.let { add(CalendarPagerPage(CalendarPagerSlot.PREVIOUS, it)) }
+            add(CalendarPagerPage(CalendarPagerSlot.CURRENT, weekStart))
+            add(CalendarPagerPage(CalendarPagerSlot.NEXT, nextPageWeek))
+        }
+    }
+    val centerPageIndex = pages.indexOfSlot(CalendarPagerSlot.CURRENT).coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = centerPageIndex) { pages.size }
+    val isPagingAtRest = pagerState.settledPage == centerPageIndex && !pagerState.isScrollInProgress
+
+    fun requestPage(slot: CalendarPagerSlot) {
+        val targetIndex = pages.indexOfSlot(slot)
+        if (targetIndex < 0 || !isPagingAtRest) return
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(targetIndex)
+        }
+    }
+
+    fun settlePage(slot: CalendarPagerSlot) {
+        pendingTodayJump?.let { request ->
+            pendingTodayJump = null
+            onSelectDate(request.targetDate)
+            onTodayJumpHandled(request.id)
+            return
+        }
+
+        when (slot) {
+            CalendarPagerSlot.PREVIOUS -> onPrevWeek()
+            CalendarPagerSlot.NEXT -> onNextWeek()
+            CalendarPagerSlot.CURRENT -> Unit
+        }
+    }
+
+    LaunchedEffect(todayJumpRequest) {
+        val request = todayJumpRequest ?: return@LaunchedEffect
+        if (!isPagingAtRest) {
+            onTodayJumpHandled(request.id)
+            return@LaunchedEffect
+        }
+        val targetWeek = startOfWeek(request.targetDate)
+        if (targetWeek == weekStart) {
+            onSelectDate(request.targetDate)
+            onTodayJumpHandled(request.id)
+        } else {
+            pendingTodayJump = request
+            onTodayJumpHandled(request.id)
+        }
+    }
+
+    LaunchedEffect(pendingTodayJump?.id, pages) {
+        val request = pendingTodayJump ?: return@LaunchedEffect
+        val targetWeek = startOfWeek(request.targetDate)
+        val targetSlot = if (targetWeek < weekStart) CalendarPagerSlot.PREVIOUS else CalendarPagerSlot.NEXT
+        val targetIndex = pages.indexOfSlot(targetSlot)
+        if (targetIndex >= 0 && pagerState.currentPage == centerPageIndex) {
+            pagerState.animateScrollToPage(targetIndex)
+        }
+    }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(weekStart, canGoPrevWeek) {
-                detectHorizontalDragGestures(
-                    onDragStart = {
-                        horizontalDragAccumulated = 0f
-                        dragOffsetPx = 0f
-                    },
-                    onHorizontalDrag = { _, dragAmount ->
-                        horizontalDragAccumulated += dragAmount
-                        val maxRight = if (canGoPrevWeek) maxPreviewDragPx else 0f
-                        dragOffsetPx = (dragOffsetPx + dragAmount).coerceIn(
-                            minimumValue = -maxPreviewDragPx,
-                            maximumValue = maxRight,
-                        )
-                    },
-                    onDragCancel = {
-                        horizontalDragAccumulated = 0f
-                        dragOffsetPx = 0f
-                    },
-                    onDragEnd = {
-                        when {
-                            horizontalDragAccumulated > swipeThresholdPx && canGoPrevWeek -> onPrevWeek()
-                            horizontalDragAccumulated < -swipeThresholdPx -> onNextWeek()
-                        }
-                        horizontalDragAccumulated = 0f
-                        dragOffsetPx = 0f
-                    },
-                )
-            },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -648,8 +705,8 @@ private fun CalendarWeekCard(
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.calendar_prev_week),
-                    enabled = canGoPrevWeek,
-                    onClick = onPrevWeek,
+                    enabled = canGoPrevWeek && isPagingAtRest,
+                    onClick = { requestPage(CalendarPagerSlot.PREVIOUS) },
                 )
                 Box(
                     modifier = Modifier.weight(1f),
@@ -667,33 +724,19 @@ private fun CalendarWeekCard(
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronRight,
                     contentDescription = stringResource(R.string.calendar_next_week),
-                    onClick = onNextWeek,
+                    enabled = isPagingAtRest,
+                    onClick = { requestPage(CalendarPagerSlot.NEXT) },
                 )
             }
 
-            AnimatedContent(
-                targetState = weekStart,
+            CalendarPagingContent(
+                pages = pages,
+                pagerState = pagerState,
+                centerPageIndex = centerPageIndex,
+                onSettledAwayFromCenter = ::settlePage,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(CalendarPeriodCardPageHeight)
-                    .graphicsLayer { translationX = dragTranslationX },
-                transitionSpec = {
-                    val movingToFuture = targetState > initialState
-                    val enter = slideInHorizontally(
-                        animationSpec = calendarPageAnimationSpec(),
-                        initialOffsetX = { fullWidth ->
-                            if (movingToFuture) fullWidth else -fullWidth
-                        },
-                    )
-                    val exit = slideOutHorizontally(
-                        animationSpec = calendarPageAnimationSpec(),
-                        targetOffsetX = { fullWidth ->
-                            if (movingToFuture) -fullWidth else fullWidth
-                        },
-                    )
-                    (enter togetherWith exit).using(SizeTransform(clip = true))
-                },
-                label = "calendarWeekSwipeAnimatedContent",
+                    .height(CalendarPeriodCardPageHeight),
             ) { displayWeekStart ->
                 val weekDays = remember(displayWeekStart) {
                     List(7) { offset -> displayWeekStart.plusDays(offset.toLong()) }
@@ -708,11 +751,13 @@ private fun CalendarWeekCard(
                         val isSelected = day == selectedDate
                         val isToday = day == today
                         val taskCount = tasksByDate[day]?.size ?: 0
+                        val isEnabled = canSelectDate(day)
                         CalendarWeekDayCell(
                             date = day,
                             taskCount = taskCount,
                             isSelected = isSelected,
                             isToday = isToday,
+                            isEnabled = isEnabled,
                             onClick = { onSelectDate(day) },
                             modifier = Modifier.weight(1f),
                         )
@@ -729,6 +774,7 @@ private fun CalendarWeekDayCell(
     taskCount: Int,
     isSelected: Boolean,
     isToday: Boolean,
+    isEnabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -757,7 +803,8 @@ private fun CalendarWeekDayCell(
     Box(
         modifier = modifier
             .height(CalendarPeriodCardPageHeight)
-            .minimumInteractiveComponentSize(),
+            .minimumInteractiveComponentSize()
+            .graphicsLayer { alpha = if (isEnabled) 1f else 0.48f },
         contentAlignment = Alignment.Center,
     ) {
         Card(
@@ -771,6 +818,7 @@ private fun CalendarWeekDayCell(
                 color = borderColor,
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            enabled = isEnabled,
             onClick = onClick,
         ) {
             Column(
@@ -783,7 +831,7 @@ private fun CalendarWeekDayCell(
                 Text(
                     text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
                     style = MaterialTheme.typography.labelMedium,
-                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+                    color = colorScheme.onSurfaceVariant.copy(alpha = if (isEnabled) 0.9f else 0.52f),
                 )
                 Text(
                     text = date.dayOfMonth.toString(),
@@ -814,52 +862,98 @@ private fun CalendarDayCard(
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
     canGoPrevDay: Boolean,
+    todayJumpRequest: CalendarTodayJumpRequest?,
+    onTodayJumpHandled: (Int) -> Unit,
     onPrevDay: () -> Unit,
     onNextDay: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val density = LocalDensity.current
-    val swipeThresholdPx = with(density) { 42.dp.toPx() }
-    val maxPreviewDragPx = with(density) { 64.dp.toPx() }
-    var horizontalDragAccumulated by remember(selectedDate) { mutableFloatStateOf(0f) }
-    var dragOffsetPx by remember(selectedDate) { mutableFloatStateOf(0f) }
-    val dragTranslationX by animateFloatAsState(
-        targetValue = dragOffsetPx,
-        animationSpec = tween(durationMillis = 120),
-        label = "calendarDayDragTranslationX",
-    )
+    val coroutineScope = rememberCoroutineScope()
+    var pendingTodayJump by remember { mutableStateOf<CalendarTodayJumpRequest?>(null) }
+    val todayJumpDirection = pendingTodayJump?.let { request ->
+        when {
+            request.targetDate < selectedDate -> CalendarPagerSlot.PREVIOUS
+            request.targetDate > selectedDate -> CalendarPagerSlot.NEXT
+            else -> null
+        }
+    }
+    val previousPageDay = if (todayJumpDirection == CalendarPagerSlot.PREVIOUS) {
+        pendingTodayJump?.targetDate
+    } else if (canGoPrevDay) {
+        selectedDate.minusDays(1)
+    } else {
+        null
+    }
+    val nextPageDay = if (todayJumpDirection == CalendarPagerSlot.NEXT) {
+        pendingTodayJump?.targetDate ?: selectedDate.plusDays(1)
+    } else {
+        selectedDate.plusDays(1)
+    }
+    val pages = remember(previousPageDay, selectedDate, nextPageDay) {
+        buildList {
+            previousPageDay?.let { add(CalendarPagerPage(CalendarPagerSlot.PREVIOUS, it)) }
+            add(CalendarPagerPage(CalendarPagerSlot.CURRENT, selectedDate))
+            add(CalendarPagerPage(CalendarPagerSlot.NEXT, nextPageDay))
+        }
+    }
+    val centerPageIndex = pages.indexOfSlot(CalendarPagerSlot.CURRENT).coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = centerPageIndex) { pages.size }
+    val isPagingAtRest = pagerState.settledPage == centerPageIndex && !pagerState.isScrollInProgress
+
+    fun requestPage(slot: CalendarPagerSlot) {
+        val targetIndex = pages.indexOfSlot(slot)
+        if (targetIndex < 0 || !isPagingAtRest) return
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(targetIndex)
+        }
+    }
+
+    fun settlePage(slot: CalendarPagerSlot) {
+        pendingTodayJump?.let { request ->
+            pendingTodayJump = null
+            onSelectDate(request.targetDate)
+            onTodayJumpHandled(request.id)
+            return
+        }
+
+        when (slot) {
+            CalendarPagerSlot.PREVIOUS -> onPrevDay()
+            CalendarPagerSlot.NEXT -> onNextDay()
+            CalendarPagerSlot.CURRENT -> Unit
+        }
+    }
+
+    LaunchedEffect(todayJumpRequest) {
+        val request = todayJumpRequest ?: return@LaunchedEffect
+        if (!isPagingAtRest) {
+            onTodayJumpHandled(request.id)
+            return@LaunchedEffect
+        }
+        if (request.targetDate == selectedDate) {
+            onSelectDate(request.targetDate)
+            onTodayJumpHandled(request.id)
+        } else {
+            pendingTodayJump = request
+            onTodayJumpHandled(request.id)
+        }
+    }
+
+    LaunchedEffect(pendingTodayJump?.id, pages) {
+        val request = pendingTodayJump ?: return@LaunchedEffect
+        val targetSlot = if (request.targetDate < selectedDate) {
+            CalendarPagerSlot.PREVIOUS
+        } else {
+            CalendarPagerSlot.NEXT
+        }
+        val targetIndex = pages.indexOfSlot(targetSlot)
+        if (targetIndex >= 0 && pagerState.currentPage == centerPageIndex) {
+            pagerState.animateScrollToPage(targetIndex)
+        }
+    }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(selectedDate, canGoPrevDay) {
-                detectHorizontalDragGestures(
-                    onDragStart = {
-                        horizontalDragAccumulated = 0f
-                        dragOffsetPx = 0f
-                    },
-                    onHorizontalDrag = { _, dragAmount ->
-                        horizontalDragAccumulated += dragAmount
-                        val maxRight = if (canGoPrevDay) maxPreviewDragPx else 0f
-                        dragOffsetPx = (dragOffsetPx + dragAmount).coerceIn(
-                            minimumValue = -maxPreviewDragPx,
-                            maximumValue = maxRight,
-                        )
-                    },
-                    onDragCancel = {
-                        horizontalDragAccumulated = 0f
-                        dragOffsetPx = 0f
-                    },
-                    onDragEnd = {
-                        when {
-                            horizontalDragAccumulated > swipeThresholdPx && canGoPrevDay -> onPrevDay()
-                            horizontalDragAccumulated < -swipeThresholdPx -> onNextDay()
-                        }
-                        horizontalDragAccumulated = 0f
-                        dragOffsetPx = 0f
-                    },
-                )
-            },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -885,8 +979,8 @@ private fun CalendarDayCard(
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.calendar_prev_day),
-                    enabled = canGoPrevDay,
-                    onClick = onPrevDay,
+                    enabled = canGoPrevDay && isPagingAtRest,
+                    onClick = { requestPage(CalendarPagerSlot.PREVIOUS) },
                 )
                 Box(
                     modifier = Modifier.weight(1f),
@@ -904,33 +998,19 @@ private fun CalendarDayCard(
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronRight,
                     contentDescription = stringResource(R.string.calendar_next_day),
-                    onClick = onNextDay,
+                    enabled = isPagingAtRest,
+                    onClick = { requestPage(CalendarPagerSlot.NEXT) },
                 )
             }
 
-            AnimatedContent(
-                targetState = selectedDate,
+            CalendarPagingContent(
+                pages = pages,
+                pagerState = pagerState,
+                centerPageIndex = centerPageIndex,
+                onSettledAwayFromCenter = ::settlePage,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(CalendarPeriodCardPageHeight)
-                    .graphicsLayer { translationX = dragTranslationX },
-                transitionSpec = {
-                    val movingToFuture = targetState > initialState
-                    val enter = slideInHorizontally(
-                        animationSpec = calendarPageAnimationSpec(),
-                        initialOffsetX = { fullWidth ->
-                            if (movingToFuture) fullWidth else -fullWidth
-                        },
-                    )
-                    val exit = slideOutHorizontally(
-                        animationSpec = calendarPageAnimationSpec(),
-                        targetOffsetX = { fullWidth ->
-                            if (movingToFuture) -fullWidth else fullWidth
-                        },
-                    )
-                    (enter togetherWith exit).using(SizeTransform(clip = true))
-                },
-                label = "calendarDaySwipeAnimatedContent",
+                    .height(CalendarPeriodCardPageHeight),
             ) { displayDate ->
                 val taskCount = tasksByDate[displayDate]?.size ?: 0
                 Column(
@@ -1148,53 +1228,101 @@ private fun CalendarMonthCard(
     selectedDate: LocalDate,
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
+    todayJumpRequest: CalendarTodayJumpRequest?,
+    onTodayJumpHandled: (Int) -> Unit,
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val density = LocalDensity.current
-    val swipeThresholdPx = with(density) { 42.dp.toPx() }
-    val maxPreviewDragPx = with(density) { 64.dp.toPx() }
-    var horizontalDragAccumulated by remember(visibleMonth) { mutableFloatStateOf(0f) }
-    var dragOffsetPx by remember(visibleMonth) { mutableFloatStateOf(0f) }
-    val dragTranslationX by animateFloatAsState(
-        targetValue = dragOffsetPx,
-        animationSpec = tween(durationMillis = 120),
-        label = "calendarMonthDragTranslationX",
-    )
+    val coroutineScope = rememberCoroutineScope()
+    var pendingTodayJump by remember { mutableStateOf<CalendarTodayJumpRequest?>(null) }
+    val todayJumpDirection = pendingTodayJump?.let { request ->
+        val targetMonth = YearMonth.from(request.targetDate)
+        when {
+            targetMonth < visibleMonth -> CalendarPagerSlot.PREVIOUS
+            targetMonth > visibleMonth -> CalendarPagerSlot.NEXT
+            else -> null
+        }
+    }
+    val previousPageMonth = if (todayJumpDirection == CalendarPagerSlot.PREVIOUS) {
+        pendingTodayJump?.targetDate?.let(YearMonth::from)
+    } else if (canGoPrevMonth) {
+        visibleMonth.minusMonths(1)
+    } else {
+        null
+    }
+    val nextPageMonth = if (todayJumpDirection == CalendarPagerSlot.NEXT) {
+        pendingTodayJump?.targetDate?.let(YearMonth::from) ?: visibleMonth.plusMonths(1)
+    } else {
+        visibleMonth.plusMonths(1)
+    }
+    val pages = remember(previousPageMonth, visibleMonth, nextPageMonth) {
+        buildList {
+            previousPageMonth?.let { add(CalendarPagerPage(CalendarPagerSlot.PREVIOUS, it)) }
+            add(CalendarPagerPage(CalendarPagerSlot.CURRENT, visibleMonth))
+            add(CalendarPagerPage(CalendarPagerSlot.NEXT, nextPageMonth))
+        }
+    }
+    val centerPageIndex = pages.indexOfSlot(CalendarPagerSlot.CURRENT).coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = centerPageIndex) { pages.size }
+    val isPagingAtRest = pagerState.settledPage == centerPageIndex && !pagerState.isScrollInProgress
+
+    fun requestPage(slot: CalendarPagerSlot) {
+        val targetIndex = pages.indexOfSlot(slot)
+        if (targetIndex < 0 || !isPagingAtRest) return
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(targetIndex)
+        }
+    }
+
+    fun settlePage(slot: CalendarPagerSlot) {
+        pendingTodayJump?.let { request ->
+            pendingTodayJump = null
+            onSelectDate(request.targetDate)
+            onTodayJumpHandled(request.id)
+            return
+        }
+
+        when (slot) {
+            CalendarPagerSlot.PREVIOUS -> onPrevMonth()
+            CalendarPagerSlot.NEXT -> onNextMonth()
+            CalendarPagerSlot.CURRENT -> Unit
+        }
+    }
+
+    LaunchedEffect(todayJumpRequest) {
+        val request = todayJumpRequest ?: return@LaunchedEffect
+        if (!isPagingAtRest) {
+            onTodayJumpHandled(request.id)
+            return@LaunchedEffect
+        }
+        val targetMonth = YearMonth.from(request.targetDate)
+        if (targetMonth == visibleMonth) {
+            onSelectDate(request.targetDate)
+            onTodayJumpHandled(request.id)
+        } else {
+            pendingTodayJump = request
+            onTodayJumpHandled(request.id)
+        }
+    }
+
+    LaunchedEffect(pendingTodayJump?.id, pages) {
+        val request = pendingTodayJump ?: return@LaunchedEffect
+        val targetMonth = YearMonth.from(request.targetDate)
+        val targetSlot = if (targetMonth < visibleMonth) {
+            CalendarPagerSlot.PREVIOUS
+        } else {
+            CalendarPagerSlot.NEXT
+        }
+        val targetIndex = pages.indexOfSlot(targetSlot)
+        if (targetIndex >= 0 && pagerState.currentPage == centerPageIndex) {
+            pagerState.animateScrollToPage(targetIndex)
+        }
+    }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(visibleMonth, canGoPrevMonth) {
-                detectHorizontalDragGestures(
-                    onDragStart = {
-                        horizontalDragAccumulated = 0f
-                        dragOffsetPx = 0f
-                    },
-                    onHorizontalDrag = { _, dragAmount ->
-                        horizontalDragAccumulated += dragAmount
-                        val maxRight = if (canGoPrevMonth) maxPreviewDragPx else 0f
-                        dragOffsetPx = (dragOffsetPx + dragAmount).coerceIn(
-                            minimumValue = -maxPreviewDragPx,
-                            maximumValue = maxRight,
-                        )
-                    },
-                    onDragCancel = {
-                        horizontalDragAccumulated = 0f
-                        dragOffsetPx = 0f
-                    },
-                    onDragEnd = {
-                        when {
-                            horizontalDragAccumulated > swipeThresholdPx && canGoPrevMonth -> onPrevMonth()
-                            horizontalDragAccumulated < -swipeThresholdPx -> onNextMonth()
-                        }
-                        horizontalDragAccumulated = 0f
-                        dragOffsetPx = 0f
-                    },
-                )
-            },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -1220,8 +1348,8 @@ private fun CalendarMonthCard(
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.calendar_prev_month),
-                    enabled = canGoPrevMonth,
-                    onClick = onPrevMonth,
+                    enabled = canGoPrevMonth && isPagingAtRest,
+                    onClick = { requestPage(CalendarPagerSlot.PREVIOUS) },
                 )
                 Box(
                     modifier = Modifier.weight(1f),
@@ -1240,7 +1368,8 @@ private fun CalendarMonthCard(
                 MiniCalendarNavButton(
                     icon = Icons.Rounded.ChevronRight,
                     contentDescription = stringResource(R.string.calendar_next_month),
-                    onClick = onNextMonth,
+                    enabled = isPagingAtRest,
+                    onClick = { requestPage(CalendarPagerSlot.NEXT) },
                 )
             }
 
@@ -1262,29 +1391,14 @@ private fun CalendarMonthCard(
                 }
             }
 
-            AnimatedContent(
-                targetState = visibleMonth,
+            CalendarPagingContent(
+                pages = pages,
+                pagerState = pagerState,
+                centerPageIndex = centerPageIndex,
+                onSettledAwayFromCenter = ::settlePage,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(CalendarMonthGridHeight)
-                    .graphicsLayer { translationX = dragTranslationX },
-                transitionSpec = {
-                    val movingToFuture = targetState > initialState
-                    val enter = slideInHorizontally(
-                        animationSpec = calendarPageAnimationSpec(),
-                        initialOffsetX = { fullWidth ->
-                            if (movingToFuture) fullWidth else -fullWidth
-                        },
-                    )
-                    val exit = slideOutHorizontally(
-                        animationSpec = calendarPageAnimationSpec(),
-                        targetOffsetX = { fullWidth ->
-                            if (movingToFuture) -fullWidth else fullWidth
-                        },
-                    )
-                    (enter togetherWith exit).using(SizeTransform(clip = true))
-                },
-                label = "calendarMonthSwipeAnimatedContent",
+                    .height(CalendarMonthGridHeight),
             ) { displayMonth ->
                 val monthDays = remember(displayMonth) { buildMonthCells(displayMonth) }
                 Column(
