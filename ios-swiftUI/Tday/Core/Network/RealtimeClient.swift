@@ -5,10 +5,17 @@ struct RealtimeEvent: Equatable {
     let rawPayload: String
 
     var requiresRefresh: Bool {
-        name.hasPrefix("todo.") ||
-        name.hasPrefix("list.") ||
-        name.hasPrefix("completed.") ||
-        name.hasPrefix("completedtodo.")
+        let normalizedName = name.lowercased()
+        return normalizedName.hasPrefix("todo.") ||
+            normalizedName.contains("todocreated") ||
+            normalizedName.contains("todoupdated") ||
+            normalizedName.contains("tododeleted") ||
+            normalizedName.hasPrefix("list.") ||
+            normalizedName.contains("listchanged") ||
+            normalizedName.hasPrefix("completed.") ||
+            normalizedName.hasPrefix("completedtodo.") ||
+            normalizedName.contains("completedchanged") ||
+            normalizedName.contains("completedtodo")
     }
 }
 
@@ -51,7 +58,8 @@ actor RealtimeClient {
         }
 
         components.scheme = components.scheme == "http" ? "ws" : "wss"
-        components.path = "/api/realtime"
+        components.path = "/ws"
+        components.query = nil
         guard let url = components.url else {
             return
         }
@@ -87,13 +95,28 @@ actor RealtimeClient {
     }
 
     private func parse(text: String) -> RealtimeEvent? {
-        guard let data = text.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let eventName = json["event"] as? String
-        else {
+        let eventName = Self.eventName(from: text)
+        guard !eventName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return nil
         }
         return RealtimeEvent(name: eventName, rawPayload: text)
+    }
+
+    nonisolated static func eventName(from text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let data = trimmed.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return trimmed
+        }
+
+        if let eventName = json["event"] as? String {
+            return eventName
+        }
+        if let typeName = json["type"] as? String {
+            return typeName
+        }
+        return trimmed
     }
 
     private func scheduleReconnect() {

@@ -12,8 +12,10 @@ import com.ohmz.tday.compose.core.model.CredentialKeyResponse
 import com.ohmz.tday.compose.core.model.CredentialsCallbackRequest
 import com.ohmz.tday.compose.core.model.CsrfResponse
 import com.ohmz.tday.compose.core.model.DeleteCompletedTodoRequest
+import com.ohmz.tday.compose.core.model.DeleteListResponse
 import com.ohmz.tday.compose.core.model.DeleteListRequest
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
+import com.ohmz.tday.compose.core.model.ListDetailResponse
 import com.ohmz.tday.compose.core.model.ListsResponse
 import com.ohmz.tday.compose.core.model.MessageResponse
 import com.ohmz.tday.compose.core.model.MobileProbeResponse
@@ -184,7 +186,7 @@ interface TdayApiService {
         @Path("id") listId: String,
         @Query("start") start: Long,
         @Query("end") end: Long,
-    ): Response<TodosResponse>
+    ): Response<ListDetailResponse>
 
     @POST("/api/list")
     suspend fun createList(
@@ -199,7 +201,7 @@ interface TdayApiService {
     @HTTP(method = "DELETE", path = "/api/list", hasBody = true)
     suspend fun deleteListByBody(
         @Body payload: DeleteListRequest,
-    ): Response<MessageResponse>
+    ): Response<DeleteListResponse>
 
     @GET("/api/preferences")
     suspend fun getPreferences(): Response<PreferencesResponse>

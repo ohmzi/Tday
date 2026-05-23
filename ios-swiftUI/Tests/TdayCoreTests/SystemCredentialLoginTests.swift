@@ -167,17 +167,22 @@ final class SystemCredentialLoginTests: XCTestCase {
         XCTAssertTrue(success)
         XCTAssertTrue(service.offeredCredentials.isEmpty)
     }
+
 }
 
 @MainActor
 private final class FakeSystemCredentialService: SystemCredentialServicing {
     var requestCount = 0
+    var serverURLRequestCount = 0
     var offeredCredentials: [SystemCredential] = []
+    var offeredServerURLs: [String] = []
     var nextCredential: SystemCredential?
+    var nextServerURL: String?
     var saveResult: SystemCredentialSaveResult
 
-    init(nextCredential: SystemCredential? = nil, saveResult: SystemCredentialSaveResult = .saved) {
+    init(nextCredential: SystemCredential? = nil, nextServerURL: String? = nil, saveResult: SystemCredentialSaveResult = .saved) {
         self.nextCredential = nextCredential
+        self.nextServerURL = nextServerURL
         self.saveResult = saveResult
     }
 
@@ -186,10 +191,21 @@ private final class FakeSystemCredentialService: SystemCredentialServicing {
         return nextCredential
     }
 
+    func requestSavedServerURL() async -> String? {
+        serverURLRequestCount += 1
+        return nextServerURL
+    }
+
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult {
         offeredCredentials.append(credential)
         return saveResult
     }
+
+    func offerSaveOrUpdateServerURL(_ rawURL: String) async -> SystemCredentialSaveResult {
+        offeredServerURLs.append(rawURL)
+        return saveResult
+    }
+
 }
 
 private final class FakeAuthRepository: AuthRepositoryServicing {

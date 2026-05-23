@@ -10,6 +10,7 @@ struct TdayApp: App {
     init() {
         TdayFont.applyGlobalAppearances()
         SentryConfiguration.start()
+        NotificationDeepLinkDelegate.shared.install()
     }
 
     var body: some Scene {

@@ -71,7 +71,7 @@ class ServerConfigRepository @Inject constructor(
 
         val saved = secureConfigStore.saveServerUrl(
             rawUrl = normalizedServerUrl,
-            persist = false,
+            persist = true,
         ).getOrThrow()
         secureConfigStore.clearOfflineSyncState()
 
