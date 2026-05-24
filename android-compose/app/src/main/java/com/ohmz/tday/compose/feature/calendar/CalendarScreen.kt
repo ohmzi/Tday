@@ -166,6 +166,16 @@ private val CalendarPeriodWeekDayCellHeight = 72.dp
 private val CalendarPeriodPageHorizontalGutter = 2.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
 
+private fun shouldShowDateDivider(
+    afterItemIndex: Int,
+    items: List<TodoItem>,
+    zoneId: ZoneId,
+): Boolean {
+    val currentTodo = items.getOrNull(afterItemIndex) ?: return false
+    val nextTodo = items.getOrNull(afterItemIndex + 1) ?: return false
+    return LocalDate.ofInstant(currentTodo.due, zoneId) != LocalDate.ofInstant(nextTodo.due, zoneId)
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CalendarScreen(
@@ -466,11 +476,16 @@ fun CalendarScreen(
                     if (selectedDatePendingTasks.isNotEmpty()) {
                     item {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            selectedDatePendingTasks.forEach { todo ->
+                            selectedDatePendingTasks.forEachIndexed { index, todo ->
                                 key(todo.id) {
                                     CalendarTodoRow(
                                         todo = todo,
                                         lists = uiState.lists,
+                                        showDateDivider = shouldShowDateDivider(
+                                            afterItemIndex = index,
+                                            items = selectedDatePendingTasks,
+                                            zoneId = zoneId,
+                                        ),
                                         onComplete = { onCompleteTask(todo) },
                                         onInfo = { editTargetId = todo.id },
                                         onDelete = { onDelete(todo) },
@@ -1610,6 +1625,7 @@ private fun CalendarTodoRow(
     modifier: Modifier = Modifier,
     todo: TodoItem,
     lists: List<ListSummary>,
+    showDateDivider: Boolean,
     onComplete: () -> Unit,
     onInfo: () -> Unit,
     onDelete: () -> Unit,
@@ -1819,12 +1835,14 @@ private fun CalendarTodoRow(
                 }
             }
         }
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        )
+        if (showDateDivider) {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
+            )
+        }
     }
 }
 

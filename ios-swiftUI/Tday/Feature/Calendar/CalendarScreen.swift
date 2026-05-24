@@ -160,7 +160,7 @@ struct CalendarScreen: View {
 
             Section {
                 if !pendingItems.isEmpty {
-                    ForEach(pendingItems) { todo in
+                    ForEach(Array(pendingItems.enumerated()), id: \.element.id) { index, todo in
                         CalendarPendingTaskRow(
                             todo: todo,
                             onComplete: { Task { await viewModel.complete(todo) } }
@@ -184,7 +184,9 @@ struct CalendarScreen: View {
                             }
                             .tint(.green)
                         }
-                        TimelineRowDivider()
+                        if shouldShowDateDivider(after: index, in: pendingItems) {
+                            TimelineRowDivider()
+                        }
                     }
                 }
             } header: {
@@ -269,6 +271,14 @@ struct CalendarScreen: View {
 
     private func isSelectedDay(_ date: Date) -> Bool {
         Calendar.current.isDate(date, inSameDayAs: selectedDate)
+    }
+
+    private func shouldShowDateDivider(after index: Int, in items: [TodoItem]) -> Bool {
+        guard items.indices.contains(index),
+              items.indices.contains(index + 1) else {
+            return false
+        }
+        return !Calendar.current.isDate(items[index].due, inSameDayAs: items[index + 1].due)
     }
 
     @ViewBuilder
