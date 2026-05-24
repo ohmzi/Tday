@@ -467,7 +467,13 @@ private struct HomeTopBar: View {
             .background(
                 GeometryReader { proxy in
                     Color.clear
-                        .preference(key: HomeSearchBarFrameKey.self, value: proxy.frame(in: .named("home-root")))
+                        .preference(
+                            key: HomeSearchBarFrameKey.self,
+                            // Only report the real frame while search is open.
+                            // During normal scrolling this is .zero so the preference never
+                            // fires a state update per scroll-frame and no longer causes jitter.
+                            value: searchExpanded ? proxy.frame(in: .named("home-root")) : .zero
+                        )
                 }
             )
             .zIndex(2)
