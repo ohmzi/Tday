@@ -333,6 +333,14 @@ fun TdayApp(
                                     onOpenList = { id, name ->
                                         navController.navigate(AppRoute.ListTodos.create(id, name))
                                     },
+                                    onCompleteTask = homeViewModel::toggleComplete,
+                                    onDeleteTask = { todo ->
+                                        homeViewModel.delete(
+                                            todo,
+                                            onDeleted = ::showTaskDeletedToast
+                                        )
+                                    },
+                                    onUpdateTask = homeViewModel::updateTask,
                                     onCreateTask = { payload ->
                                         homeViewModel.createTask(payload)
                                     },
@@ -359,6 +367,9 @@ fun TdayApp(
                                     onOpenSettings = {},
                                     onOpenTaskFromSearch = {},
                                     onOpenList = { _, _ -> },
+                                    onCompleteTask = {},
+                                    onDeleteTask = {},
+                                    onUpdateTask = { _, _ -> },
                                     onCreateTask = { _ -> },
                                     onParseTaskTitleNlp = { _, _ -> null },
                                     onCreateList = { _, _, _ -> },
