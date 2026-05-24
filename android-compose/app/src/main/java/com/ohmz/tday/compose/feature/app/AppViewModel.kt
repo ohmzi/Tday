@@ -9,6 +9,7 @@ import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
+import com.ohmz.tday.compose.core.data.isSessionAuthenticationIssue
 import com.ohmz.tday.compose.core.data.server.AppVersionManager
 import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
@@ -494,14 +495,21 @@ class AppViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isManualSyncing = true) }
-            val result = syncManager.syncCachedData(
-                force = true,
-                replayPendingMutations = true,
-                notifyOfflineFailure = false,
+            val result = recoverSessionAndRetrySyncIfNeeded(
+                after = syncManager.syncCachedData(
+                    force = true,
+                    replayPendingMutations = true,
+                    notifyOfflineFailure = false,
+                    connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                ),
                 connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
             )
             val syncError = result.exceptionOrNull()
-            val isOffline = syncError != null && isLikelyConnectivityIssue(syncError)
+            val isOffline = syncError != null &&
+                    shouldTreatSyncFailureAsOffline(
+                        error = syncError,
+                        suppressAuthenticationExpired = true,
+                    )
             _uiState.update {
                 it.copy(
                     isManualSyncing = false,
@@ -512,7 +520,15 @@ class AppViewModel @Inject constructor(
                     }.getOrDefault(it.pendingMutationCount),
                 )
             }
-            syncError?.let(::classifyAndShowError)
+            if (syncError == null && !realtimeClient.isConnected && _uiState.value.authenticated) {
+                realtimeClient.connect()
+            }
+            syncError?.let {
+                classifyAndShowError(
+                    error = it,
+                    suppressAuthenticationExpired = true,
+                )
+            }
             launch(Dispatchers.Default) { runCatching { reminderScheduler.rescheduleAll() } }
         }
     }
@@ -526,6 +542,7 @@ class AppViewModel @Inject constructor(
                 replayPending = true,
                 markOfflineOnConnectivityFailure = false,
                 connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                suppressAuthenticationExpired = true,
             )
             val syncError = result.exceptionOrNull()
             if (syncError == null || !isLikelyConnectivityIssue(syncError)) return@launch
@@ -537,6 +554,7 @@ class AppViewModel @Inject constructor(
                 replayPending = true,
                 showOfflineNotice = true,
                 connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                suppressAuthenticationExpired = true,
             )
         }
     }
@@ -594,7 +612,10 @@ class AppViewModel @Inject constructor(
                 val delayMs = if (hasPending) PENDING_RESYNC_INTERVAL_MS else RESYNC_INTERVAL_MS
                 delay(delayMs)
 
-                syncAndUpdateOfflineState(replayPending = hasPending)
+                syncAndUpdateOfflineState(
+                    replayPending = hasPending,
+                    suppressAuthenticationExpired = true,
+                )
             }
         }
     }
@@ -604,25 +625,35 @@ class AppViewModel @Inject constructor(
         showOfflineNotice: Boolean = false,
         connectionProbeTimeoutMs: Long? = null,
         markOfflineOnConnectivityFailure: Boolean = true,
+        suppressAuthenticationExpired: Boolean = false,
     ): Result<Unit> {
-        val result = syncManager.syncCachedData(
-            force = true,
-            replayPendingMutations = replayPending,
-            notifyOfflineFailure = false,
+        val result = recoverSessionAndRetrySyncIfNeeded(
+            after = syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = replayPending,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = connectionProbeTimeoutMs,
+            ),
             connectionProbeTimeoutMs = connectionProbeTimeoutMs,
         )
         val syncError = result.exceptionOrNull()
         _uiState.update {
-            val isOffline = syncError != null && isLikelyConnectivityIssue(syncError)
-            val shouldMarkOffline = isOffline && markOfflineOnConnectivityFailure
+            val isOffline = syncError != null &&
+                    shouldTreatSyncFailureAsOffline(
+                        error = syncError,
+                        suppressAuthenticationExpired = suppressAuthenticationExpired,
+                    )
+            val shouldDeferOfflineState = syncError != null &&
+                    isLikelyConnectivityIssue(syncError) &&
+                    !markOfflineOnConnectivityFailure
             it.copy(
                 isOffline = when {
                     syncError == null -> false
-                    shouldMarkOffline -> true
-                    isOffline -> it.isOffline
+                    shouldDeferOfflineState -> it.isOffline
+                    isOffline -> true
                     else -> false
                 },
-                offlineNoticeId = if (shouldMarkOffline && showOfflineNotice) {
+                offlineNoticeId = if (isOffline && showOfflineNotice && !shouldDeferOfflineState) {
                     it.offlineNoticeId + 1L
                 } else {
                     it.offlineNoticeId
@@ -633,7 +664,10 @@ class AppViewModel @Inject constructor(
             )
         }
         if (syncError != null) {
-            classifyAndShowError(syncError)
+            classifyAndShowError(
+                error = syncError,
+                suppressAuthenticationExpired = suppressAuthenticationExpired,
+            )
         } else if (!realtimeClient.isConnected && _uiState.value.authenticated) {
             realtimeClient.connect()
         }
@@ -641,8 +675,52 @@ class AppViewModel @Inject constructor(
         return result
     }
 
-    private fun classifyAndShowError(error: Throwable) {
-        if (isLikelyConnectivityIssue(error)) return
+    private suspend fun recoverSessionAndRetrySyncIfNeeded(
+        after: Result<Unit>,
+        connectionProbeTimeoutMs: Long?,
+    ): Result<Unit> {
+        val error = after.exceptionOrNull() ?: return after
+        if (!isSessionAuthenticationIssue(error)) return after
+
+        val restoredSession = authRepository.restoreSessionForBootstrap() ?: return after
+        _uiState.update {
+            it.copy(
+                authenticated = true,
+                requiresServerSetup = false,
+                requiresLogin = false,
+                serverUrl = serverConfigRepository.getServerUrl(),
+                user = restoredSession.user,
+                error = null,
+                pendingApprovalMessage = null,
+                isOffline = restoredSession.usedCachedSession,
+            )
+        }
+
+        if (restoredSession.usedCachedSession) {
+            return after
+        }
+
+        return syncManager.syncCachedData(
+            force = true,
+            replayPendingMutations = true,
+            notifyOfflineFailure = false,
+            connectionProbeTimeoutMs = connectionProbeTimeoutMs,
+        )
+    }
+
+    private fun shouldTreatSyncFailureAsOffline(
+        error: Throwable,
+        suppressAuthenticationExpired: Boolean,
+    ): Boolean {
+        return isLikelyConnectivityIssue(error) ||
+                (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
+    }
+
+    private fun classifyAndShowError(
+        error: Throwable,
+        suppressAuthenticationExpired: Boolean = false,
+    ) {
+        if (shouldTreatSyncFailureAsOffline(error, suppressAuthenticationExpired)) return
         snackbarManager.showError(error.userFacingMessage()) {
             if (error !is ApiCallException || error.statusCode != 401) syncNow()
         }
@@ -657,14 +735,20 @@ class AppViewModel @Inject constructor(
                 when (event) {
                     is RealtimeEvent.Connected -> {
                         if (_uiState.value.isOffline) {
-                            syncAndUpdateOfflineState(replayPending = true)
+                            syncAndUpdateOfflineState(
+                                replayPending = true,
+                                suppressAuthenticationExpired = true,
+                            )
                         }
                     }
                     is RealtimeEvent.TodoChanged,
                     is RealtimeEvent.ListChanged,
                     is RealtimeEvent.CompletedChanged,
                     -> {
-                        syncAndUpdateOfflineState(replayPending = false)
+                        syncAndUpdateOfflineState(
+                            replayPending = false,
+                            suppressAuthenticationExpired = true,
+                        )
                     }
                     is RealtimeEvent.Disconnected -> {
                         delay(REALTIME_RECONNECT_DELAY_MS)
@@ -686,6 +770,7 @@ class AppViewModel @Inject constructor(
                     syncAndUpdateOfflineState(
                         replayPending = true,
                         connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                        suppressAuthenticationExpired = true,
                     )
                     if (!realtimeClient.isConnected) {
                         realtimeClient.connect()
@@ -703,6 +788,7 @@ class AppViewModel @Inject constructor(
                         replayPending = true,
                         showOfflineNotice = true,
                         connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+                        suppressAuthenticationExpired = true,
                     )
                 }
             }
