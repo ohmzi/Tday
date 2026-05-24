@@ -527,7 +527,6 @@ private struct HomeCategoryBoard: View {
                 HomeCategoryTile(
                     color: Color(hex: 0x6EA8E1),
                     icon: "sun.max.fill",
-                    watermark: "sun.max.fill",
                     title: "Today",
                     count: todayCount,
                     action: onOpenToday
@@ -536,7 +535,6 @@ private struct HomeCategoryBoard: View {
                 HomeCategoryTile(
                     color: Color(hex: 0xDA7661),
                     icon: "exclamationmark.circle",
-                    watermark: "exclamationmark.circle",
                     title: "Overdue",
                     count: overdueCount,
                     action: onOpenOverdue
@@ -547,7 +545,6 @@ private struct HomeCategoryBoard: View {
                 HomeCategoryTile(
                     color: Color(hex: 0xDDB37D),
                     icon: "clock",
-                    watermark: "clock",
                     title: "Scheduled",
                     count: scheduledCount,
                     action: onOpenScheduled
@@ -556,7 +553,6 @@ private struct HomeCategoryBoard: View {
                 HomeCategoryTile(
                     color: Color(hex: 0xD48A8C),
                     icon: "flag.fill",
-                    watermark: "flag.fill",
                     title: "Priority",
                     count: priorityCount,
                     action: onOpenPriority
@@ -567,7 +563,6 @@ private struct HomeCategoryBoard: View {
                 HomeCategoryTile(
                     color: Color(hex: 0x4E4E50),
                     icon: "tray.fill",
-                    watermark: "tray.fill",
                     title: "All",
                     count: allCount,
                     action: onOpenAll
@@ -576,7 +571,6 @@ private struct HomeCategoryBoard: View {
                 HomeCategoryTile(
                     color: Color(hex: 0xA8C8B2),
                     icon: "checkmark",
-                    watermark: "checkmark",
                     title: "Completed",
                     count: completedCount,
                     action: onOpenCompleted
@@ -586,7 +580,6 @@ private struct HomeCategoryBoard: View {
             HomeCategoryTile(
                 color: Color(hex: 0xC3B4DF),
                 icon: "calendar",
-                watermark: nil,
                 title: "Calendar",
                 count: scheduledCount,
                 backgroundGrid: true,
@@ -600,7 +593,6 @@ private struct HomeCategoryBoard: View {
 private struct HomeCategoryTile: View {
     let color: Color
     let icon: String
-    let watermark: String?
     let title: String
     let count: Int
     var backgroundGrid = false
@@ -611,69 +603,57 @@ private struct HomeCategoryTile: View {
 
         Button(action: action) {
             ZStack {
-                shape
-                    .fill(color)
+                // Solid base — gradient overlays work on top of this
+                shape.fill(color)
 
-                shape
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                Color.white.opacity(0.22),
-                                Color.white.opacity(0.08),
-                                .clear,
-                            ],
-                            center: .topLeading,
-                            startRadius: 8,
-                            endRadius: 140
-                        )
+                // Diagonal surface lift: same formula as the Today card
+                shape.fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white.opacity(0.26), location: 0),
+                            .init(color: .white.opacity(0.10), location: 0.45),
+                            .init(color: .black.opacity(0.04), location: 1),
+                        ],
+                        startPoint: UnitPoint(x: 0.04, y: 0.06),
+                        endPoint: UnitPoint(x: 0.98, y: 0.92)
                     )
+                )
 
-                shape
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.12),
-                                Color(hex: 0xE7F3FF).opacity(0.1),
-                                Color(hex: 0xFFF2FA).opacity(0.08),
-                                .clear,
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                // Soft radial bloom from top-leading corner
+                shape.fill(
+                    RadialGradient(
+                        colors: [.white.opacity(0.20), .clear],
+                        center: UnitPoint(x: 0.18, y: 0.18),
+                        startRadius: 0,
+                        endRadius: 80
                     )
+                )
 
                 if backgroundGrid {
                     HomeCalendarGridWatermark(baseColor: color)
                         .allowsHitTesting(false)
                 }
 
-                if let watermark {
-                    Image(systemName: watermark)
-                        .font(.system(size: HomeMetrics.tileWatermarkSize, weight: .regular))
-                        .foregroundStyle(color.blended(with: .white, amount: 0.28).opacity(0.4))
-                        .offset(x: HomeMetrics.tileWatermarkTrailingInset, y: 12)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                        .allowsHitTesting(false)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .center, spacing: 0) {
                         Image(systemName: icon)
-                            .font(.system(size: 24, weight: .bold))
+                            .font(.system(size: 22, weight: .semibold))
                             .foregroundStyle(.white)
-                        Spacer()
+                        Spacer(minLength: 8)
                         Text("\(count)")
-                            .font(.tdayRounded(size: 28, weight: .black))
+                            .font(.tdayRounded(size: 22, weight: .bold))
                             .foregroundStyle(.white)
                     }
-
                     Text(title)
                         .font(.tdayRounded(size: 22, weight: .bold))
                         .foregroundStyle(.white)
+                        .lineLimit(1)
                 }
-                .padding(16)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity)
             .frame(height: HomeMetrics.tileHeight)
             .clipShape(shape)
             .contentShape(shape)
