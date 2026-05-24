@@ -378,13 +378,16 @@ fun HomeScreen(
     val showSearchResultsOverlay = searchExpanded && searchQuery.isNotBlank()
     val density = LocalDensity.current
     val listState = rememberLazyListState()
+    val snapThresholdPx = with(density) { 88.dp.roundToPx() }
     LaunchedEffect(listState.isScrollInProgress, searchExpanded) {
         if (searchExpanded || listState.isScrollInProgress) return@LaunchedEffect
-        // Snap only when top header row is partially visible.
-        // If fully off-screen (index > 0), do not force any anchor behavior.
-        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset > 0) {
+        // Only snap when the search bar is partially visible (offset < header height).
+        // The entire home content lives in item 0, so without this threshold the snap
+        // would fire a full reverse-scroll from anywhere inside the card grid or task list.
+        val offset = listState.firstVisibleItemScrollOffset
+        if (listState.firstVisibleItemIndex == 0 && offset in 1 until snapThresholdPx) {
             listState.animateScrollBy(
-                value = -listState.firstVisibleItemScrollOffset.toFloat(),
+                value = -offset.toFloat(),
                 animationSpec = tween(
                     durationMillis = 260,
                     easing = FastOutSlowInEasing,
