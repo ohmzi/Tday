@@ -1,3 +1,7 @@
+type ClearClientUserDataOptions = {
+  preserveLocalStorageKeys?: string[];
+};
+
 async function deleteIndexedDbDatabase(name: string): Promise<void> {
   await new Promise<void>((resolve) => {
     try {
@@ -11,7 +15,9 @@ async function deleteIndexedDbDatabase(name: string): Promise<void> {
   });
 }
 
-export async function clearClientUserData(): Promise<void> {
+export async function clearClientUserData(
+  options: ClearClientUserDataOptions = {},
+): Promise<void> {
   if (typeof window === "undefined") return;
 
   try {
@@ -21,8 +27,10 @@ export async function clearClientUserData(): Promise<void> {
   }
 
   try {
+    const preserveKeys = new Set(options.preserveLocalStorageKeys ?? []);
     const keys = Object.keys(window.localStorage);
     for (const key of keys) {
+      if (preserveKeys.has(key)) continue;
       window.localStorage.removeItem(key);
     }
   } catch {
