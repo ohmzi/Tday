@@ -6,6 +6,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,9 +19,12 @@ import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -45,8 +49,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -74,12 +81,14 @@ import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.ChangeHistory
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChildCare
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.DirectionsBoat
@@ -110,6 +119,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.PriorityHigh
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.School
@@ -142,6 +152,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -188,8 +199,11 @@ import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -197,6 +211,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
@@ -217,6 +233,9 @@ fun HomeScreen(
     onCreateTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
+    onCompleteTask: (todo: com.ohmz.tday.compose.core.model.TodoItem) -> Unit,
+    onDeleteTask: (todo: com.ohmz.tday.compose.core.model.TodoItem) -> Unit,
+    onUpdateTask: (todo: com.ohmz.tday.compose.core.model.TodoItem, payload: CreateTaskPayload) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
@@ -239,6 +258,10 @@ fun HomeScreen(
     var searchResultsBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
+    var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editTargetTodo = remember(editTargetTodoId, uiState.todayTodos) {
+        editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
+    }
     var listName by rememberSaveable { mutableStateOf("") }
     var listColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR) }
     var listIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
@@ -488,19 +511,38 @@ fun HomeScreen(
                             },
                         )
                     }
+                        item {
+                            HomeTodayCard(
+                                count = uiState.summary.todayCount,
+                                onClick = {
+                                    closeSearch()
+                                    onOpenToday()
+                                },
+                            )
+                        }
+
+                        items(
+                            uiState.todayTodos,
+                            key = { it.id },
+                        ) { todo ->
+                            HomeTodayTaskRow(
+                                todo = todo,
+                                lists = uiState.summary.lists,
+                                onComplete = { onCompleteTask(todo) },
+                                onDelete = { onDeleteTask(todo) },
+                                onEdit = { editTargetTodoId = todo.id },
+                            )
+                        }
+
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             CategoryGrid(
-                                todayCount = uiState.summary.todayCount,
                                 overdueCount = overdueCount,
                                 scheduledCount = uiState.summary.scheduledCount,
                                 allCount = uiState.summary.allCount,
                                 priorityCount = uiState.summary.priorityCount,
                                 completedCount = uiState.summary.completedCount,
-                                onOpenToday = {
-                                    closeSearch()
-                                    onOpenToday()
-                                },
+                                calendarCount = uiState.summary.scheduledCount,
                                 onOpenOverdue = {
                                     closeSearch()
                                     onOpenOverdue()
@@ -521,21 +563,11 @@ fun HomeScreen(
                                     closeSearch()
                                     onOpenCompleted()
                                 },
-                            )
-
-                            CategoryCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = calendarTileColor(colorScheme),
-                                icon = Icons.Rounded.CalendarToday,
-                                backgroundGrid = true,
-                                title = "Calendar",
-                                count = uiState.summary.scheduledCount,
-                                onClick = {
+                                onOpenCalendar = {
                                     closeSearch()
                                     onOpenCalendar()
                                 },
                             )
-
                         }
                     }
 
@@ -704,6 +736,20 @@ fun HomeScreen(
             onCreateTask = { payload ->
                 onCreateTask(payload)
                 showCreateTask = false
+            },
+        )
+    }
+
+    editTargetTodo?.let { todo ->
+        CreateTaskBottomSheet(
+            lists = uiState.summary.lists,
+            editingTask = todo,
+            onParseTaskTitleNlp = onParseTaskTitleNlp,
+            onDismiss = { editTargetTodoId = null },
+            onCreateTask = { _ -> },
+            onUpdateTask = { target, payload ->
+                onUpdateTask(target, payload)
+                editTargetTodoId = null
             },
         )
     }
@@ -1476,35 +1522,367 @@ private fun PressableIconButton(
     }
 }
 
+private val HOME_TODAY_DUE_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+private val HOME_TODAY_DATE_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault())
+
+@Composable
+private fun HomeTodayCard(
+    count: Int,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        label = "todayCardScale"
+    )
+    val animatedOffsetY by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 0.dp,
+        label = "todayCardOffsetY"
+    )
+    val animatedElevation by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 9.dp,
+        label = "todayCardElevation"
+    )
+    val dateLabel = remember { HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
+    val color = Color(0xFF6EA8E1)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
+            .offset(y = animatedOffsetY)
+            .graphicsLayer { scaleX = animatedScale; scaleY = animatedScale },
+        onClick = {
+            performGentleHaptic(view)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        colors = CardDefaults.cardColors(containerColor = color),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = animatedElevation,
+            pressedElevation = animatedElevation
+        ),
+        shape = RoundedCornerShape(26.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .drawWithCache {
+                    val glow = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.08f),
+                            Color.Transparent
+                        ),
+                        center = Offset(size.width * 0.22f, size.height * 0.2f),
+                        radius = size.width * 0.72f,
+                    )
+                    val pearl = Brush.radialGradient(
+                        colors = listOf(Color.White.copy(alpha = 0.10f), Color.Transparent),
+                        center = Offset(size.width * 0.9f, size.height * 0.75f),
+                        radius = size.width * 0.55f,
+                    )
+                    onDrawWithContent { drawRect(glow); drawRect(pearl); drawContent() }
+                },
+        ) {
+            Box(modifier = Modifier.matchParentSize()) {
+                Icon(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 22.dp, y = 12.dp)
+                        .size(124.dp),
+                    imageVector = Icons.Rounded.WbSunny,
+                    contentDescription = null,
+                    tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        Icons.Rounded.WbSunny,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
+                    )
+                    Text(
+                        text = dateLabel,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun HomeTodayTaskRow(
+    todo: TodoItem,
+    lists: List<ListSummary>,
+    onComplete: () -> Unit,
+    onDelete: () -> Unit,
+    onEdit: () -> Unit,
+) {
+    val density = LocalDensity.current
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val coroutineScope = rememberCoroutineScope()
+    val actionRevealPx = with(density) { 176.dp.toPx() }
+    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
+    val maxElasticDragPx = actionRevealPx * 1.14f
+    var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
+    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
+    var localCompleted by remember(todo.id) { mutableStateOf(false) }
+    var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = targetOffsetX,
+        animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessLow),
+        label = "homeTodaySwipeOffset",
+    )
+    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val dueText = HOME_TODAY_DUE_FORMATTER.format(todo.due)
+    val rowShape = RoundedCornerShape(16.dp)
+    val foregroundColor = colorScheme.background
+    val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
+    val listIndicatorColor = homeTodayListAccentColor(listMeta?.color)
+    val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
+    val subtitleColor =
+        if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(
+            alpha = 0.8f
+        )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TaskSwipeActionButton(
+                icon = Icons.Rounded.Edit,
+                contentDescription = "Edit",
+                label = "Edit",
+                tint = Color.White,
+                background = Color(0xFF4C7DDE),
+                revealProgress = actionRevealProgress,
+                revealDelay = 0.62f,
+                onClick = {
+                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                    onEdit()
+                    targetOffsetX = 0f
+                },
+            )
+            TaskSwipeActionButton(
+                icon = Icons.Rounded.Delete,
+                contentDescription = "Delete",
+                label = "Delete",
+                tint = Color.White,
+                background = Color(0xFFFF453A),
+                revealProgress = actionRevealProgress,
+                revealDelay = 0.04f,
+                onClick = {
+                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                    onDelete()
+                    targetOffsetX = 0f
+                },
+            )
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { translationX = animatedOffsetX }
+                .draggable(
+                    orientation = Orientation.Horizontal,
+                    state = rememberDraggableState { delta ->
+                        targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
+                    },
+                    onDragStopped = { velocity ->
+                        targetOffsetX =
+                            if (velocity < -1450f || targetOffsetX < -(actionRevealPx * 0.32f)) {
+                                -actionRevealPx
+                            } else {
+                                0f
+                            }
+                    },
+                )
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    if (targetOffsetX != 0f) {
+                        targetOffsetX = 0f
+                    } else if (!swipeHinting && !pendingCompletion) {
+                        swipeHinting = true
+                        coroutineScope.launch {
+                            targetOffsetX = -swipeHintOffsetPx
+                            delay(150)
+                            targetOffsetX = 0f
+                            delay(360)
+                            swipeHinting = false
+                        }
+                    }
+                },
+            shape = rowShape,
+            colors = CardDefaults.cardColors(containerColor = foregroundColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                        .wrapContentSize(Alignment.Center)
+                        .clip(CircleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = ripple(bounded = true, radius = 24.dp),
+                            enabled = !pendingCompletion,
+                        ) {
+                            if (!pendingCompletion) {
+                                localCompleted = true
+                                pendingCompletion = true
+                                coroutineScope.launch {
+                                    delay(180)
+                                    onComplete()
+                                }
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (localCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                        contentDescription = if (localCompleted) "Completed" else "Mark complete",
+                        tint = if (localCompleted) Color(0xFF6FBF86) else colorScheme.onSurfaceVariant.copy(
+                            alpha = 0.78f
+                        ),
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = todo.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "Due $dueText",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = subtitleColor,
+                    )
+                }
+
+                if (listMeta != null) {
+                    Icon(
+                        imageVector = homeTodayListIcon(listMeta.iconKey),
+                        contentDescription = null,
+                        tint = listIndicatorColor,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .padding(end = 0.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
+            }
+        }
+    }
+}
+
+private fun homeTodayListAccentColor(colorKey: String?): Color {
+    return when (colorKey) {
+        "RED" -> Color(0xFFE65E52)
+        "ORANGE" -> Color(0xFFF29F38)
+        "YELLOW" -> Color(0xFFF3D04A)
+        "LIME" -> Color(0xFF8ACF56)
+        "BLUE" -> Color(0xFF5C9FE7)
+        "PURPLE" -> Color(0xFF8D6CE2)
+        "PINK" -> Color(0xFFDF6DAA)
+        "TEAL" -> Color(0xFF4EB5B0)
+        "CORAL" -> Color(0xFFE3876D)
+        "GOLD" -> Color(0xFFCFAB57)
+        "DEEP_BLUE" -> Color(0xFF4B73D6)
+        "ROSE" -> Color(0xFFD9799A)
+        else -> Color(0xFF5C9FE7)
+    }
+}
+
+private fun homeTodayListIcon(iconKey: String?): androidx.compose.ui.graphics.vector.ImageVector {
+    return when (iconKey) {
+        "WORK" -> Icons.Rounded.Work
+        "SCHOOL" -> Icons.Rounded.School
+        "HOME" -> Icons.Rounded.Home
+        "SHOPPING" -> Icons.Rounded.ShoppingCart
+        "HEALTH" -> Icons.Rounded.Favorite
+        "FITNESS" -> Icons.Rounded.FitnessCenter
+        "TRAVEL" -> Icons.Rounded.Flight
+        "FOOD" -> Icons.Rounded.Restaurant
+        "FINANCE" -> Icons.Rounded.Payments
+        "MUSIC" -> Icons.Rounded.MusicNote
+        else -> Icons.AutoMirrored.Rounded.List
+    }
+}
+
 @Composable
 private fun CategoryGrid(
-    todayCount: Int,
     overdueCount: Int,
     scheduledCount: Int,
     allCount: Int,
     priorityCount: Int,
     completedCount: Int,
-    onOpenToday: () -> Unit,
+    calendarCount: Int,
     onOpenOverdue: () -> Unit,
     onOpenScheduled: () -> Unit,
     onOpenAll: () -> Unit,
     onOpenPriority: () -> Unit,
     onOpenCompleted: () -> Unit,
+    onOpenCalendar: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val completedColor = completedTileColor(colorScheme)
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CategoryCard(
-                modifier = Modifier.weight(1f),
-                color = Color(0xFF6EA8E1),
-                icon = Icons.Rounded.WbSunny,
-                backgroundWatermark = Icons.Rounded.WbSunny,
-                title = stringResource(R.string.home_category_today),
-                count = todayCount,
-                onClick = onOpenToday,
-            )
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFDA7661),
@@ -1514,8 +1892,6 @@ private fun CategoryGrid(
                 count = overdueCount,
                 onClick = onOpenOverdue,
             )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFDDB37D),
@@ -1525,6 +1901,8 @@ private fun CategoryGrid(
                 count = scheduledCount,
                 onClick = onOpenScheduled,
             )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFD48A8C),
@@ -1534,8 +1912,6 @@ private fun CategoryGrid(
                 count = priorityCount,
                 onClick = onOpenPriority,
             )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFF4E4E50),
@@ -1545,6 +1921,8 @@ private fun CategoryGrid(
                 count = allCount,
                 onClick = onOpenAll,
             )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = completedColor,
@@ -1553,6 +1931,15 @@ private fun CategoryGrid(
                 title = stringResource(R.string.home_category_completed),
                 count = completedCount,
                 onClick = onOpenCompleted,
+            )
+            CategoryCard(
+                modifier = Modifier.weight(1f),
+                color = calendarTileColor(colorScheme),
+                icon = Icons.Rounded.CalendarToday,
+                backgroundGrid = true,
+                title = "Calendar",
+                count = calendarCount,
+                onClick = onOpenCalendar,
             )
         }
     }
@@ -1745,8 +2132,8 @@ private fun CategoryCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1757,7 +2144,7 @@ private fun CategoryCard(
                         icon,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(26.dp),
                     )
                     if (count != null) {
                         Text(
