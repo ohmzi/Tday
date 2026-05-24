@@ -598,12 +598,14 @@ struct TodoListScreen: View {
                 ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
                     Section {
                         if !section.items.isEmpty {
-                            ForEach(Array(section.items.enumerated()), id: \.element.id) { _, todo in
+                            ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                                 minimalTimelineRow(todo, in: section)
                                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                                     .listRowBackground(colors.background)
                                     .listRowSeparator(.hidden)
-                                TimelineRowDivider()
+                                if shouldShowDateDivider(after: itemIndex, inSectionAt: index, sections: groupedSections) {
+                                    TimelineRowDivider()
+                                }
                             }
                         }
                     } header: {
@@ -662,7 +664,12 @@ struct TodoListScreen: View {
                     }
 
                     ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
-                        minimalTimelineSection(section, isFirstSection: index == 0)
+                        minimalTimelineSection(
+                            section,
+                            sectionIndex: index,
+                            sections: groupedSections,
+                            isFirstSection: index == 0
+                        )
                     }
 
                     Color.clear
@@ -895,21 +902,28 @@ struct TodoListScreen: View {
     }
 
     @ViewBuilder
-    private func minimalTimelineSection(_ section: TodoTimelineSection, isFirstSection: Bool) -> some View {
+    private func minimalTimelineSection(
+        _ section: TodoTimelineSection,
+        sectionIndex: Int,
+        sections: [TodoTimelineSection],
+        isFirstSection: Bool
+    ) -> some View {
         let canCollapseSection = canCollapseTimelineSection(section)
         let isCollapsed = canCollapseSection && collapsedSectionIDs.contains(section.id)
 
         Section {
             if !isCollapsed {
-                ForEach(Array(section.items.enumerated()), id: \.element.id) { _, todo in
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                     minimalTimelineRow(todo, in: section, flashHighlight: shouldFlashTodo(todo))
                         .id(timelineTodoScrollID(todo.id))
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
                         .transition(timelineRowTransition())
-                    TimelineRowDivider()
-                        .transition(timelineRowTransition())
+                    if shouldShowDateDivider(after: itemIndex, inSectionAt: sectionIndex, sections: sections) {
+                        TimelineRowDivider()
+                            .transition(timelineRowTransition())
+                    }
                 }
             }
         } header: {
@@ -963,6 +977,32 @@ struct TodoListScreen: View {
                 collapsedSectionIDs.insert(id)
             }
         }
+    }
+
+    private func shouldShowDateDivider(
+        after itemIndex: Int,
+        inSectionAt sectionIndex: Int,
+        sections: [TodoTimelineSection]
+    ) -> Bool {
+        guard sections.indices.contains(sectionIndex),
+              sections[sectionIndex].items.indices.contains(itemIndex) else {
+            return false
+        }
+
+        let currentTodo = sections[sectionIndex].items[itemIndex]
+        let nextTodoInSection = sections[sectionIndex].items.dropFirst(itemIndex + 1).first
+        if let nextTodoInSection {
+            return !Calendar.current.isDate(currentTodo.due, inSameDayAs: nextTodoInSection.due)
+        }
+
+        let nextVisibleTodo = sections.dropFirst(sectionIndex + 1)
+            .first { !isTimelineSectionCollapsed($0) && !$0.items.isEmpty }?
+            .items.first
+
+        guard let nextVisibleTodo else {
+            return false
+        }
+        return !Calendar.current.isDate(currentTodo.due, inSameDayAs: nextVisibleTodo.due)
     }
 
     private func timelineRowTransition() -> AnyTransition {
