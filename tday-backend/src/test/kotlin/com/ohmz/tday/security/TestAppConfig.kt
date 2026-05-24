@@ -4,6 +4,7 @@ import com.ohmz.tday.config.AppConfig
 
 fun testAppConfig(
     authSecret: String = "test-secret-that-is-at-least-32-chars-long!!",
+    isProduction: Boolean = false,
     pbkdf2Iterations: Int = 120_000,
     sessionMaxAgeSec: Int = 2_592_000,
     sessionAbsoluteMaxAgeSec: Int = 7_776_000,
@@ -20,7 +21,7 @@ fun testAppConfig(
     port = 8080,
     databaseUrl = "postgresql://test:test@localhost:5432/testdb",
     authSecret = authSecret,
-    isProduction = false,
+    isProduction = isProduction,
     corsAllowedOrigins = emptyList(),
     pbkdf2Iterations = pbkdf2Iterations,
     sessionMaxAgeSec = sessionMaxAgeSec,
