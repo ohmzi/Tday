@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { LogOut, Moon, Sun, Monitor, Settings, Shield } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 const railButtonClass =
   "group flex h-10 min-h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors duration-200 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground";
@@ -37,6 +38,7 @@ const UserCard = ({
   const { t: sidebarDict } = useTranslation("sidebar");
   const { setTheme, theme } = useTheme();
   const router = useRouter();
+  const { toast } = useToast();
 
   const themeLabel = theme === "dark" ? "Dark" : theme === "light" ? "Light" : "System";
 
@@ -52,7 +54,17 @@ const UserCard = ({
       .slice(0, 2) || "U";
 
   const handleLogout = async () => {
-    await logout();
+    try {
+      await logout();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description:
+          error instanceof Error && error.message
+            ? error.message
+            : "Unable to log out. Please try again.",
+      });
+    }
   };
 
   return (

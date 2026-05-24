@@ -76,7 +76,10 @@ private const val SESSION_TEST_ISSUED_AT = "2026-04-01T00:00:00Z"
 class SessionAuthFlowTest {
     @Test
     fun `credentials callback sets session cookie with configured max age`() = testApplication {
-        val config = testAppConfig(sessionMaxAgeSec = 2_592_000)
+        val config = testAppConfig(
+            isProduction = true,
+            sessionMaxAgeSec = 2_592_000,
+        )
         val jwtService = JwtServiceImpl(config)
         val userService = FakeUserService(
             loginUser = mapOf(
@@ -107,6 +110,10 @@ class SessionAuthFlowTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val cookieHeader = response.requireCookieHeader(sessionCookieName(config.isProduction))
         assertTrue(cookieHeader.contains("Max-Age=2592000"))
+        assertTrue(cookieHeader.contains("Path=/"))
+        assertTrue(cookieHeader.contains("HttpOnly"))
+        assertTrue(cookieHeader.contains("SameSite=Lax"))
+        assertTrue(cookieHeader.contains("Secure"))
     }
 
     @Test
