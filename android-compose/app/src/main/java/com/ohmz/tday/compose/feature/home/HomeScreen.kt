@@ -53,7 +53,6 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -163,6 +162,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -188,6 +188,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -521,17 +522,20 @@ fun HomeScreen(
                             )
                         }
 
-                        items(
-                            uiState.todayTodos,
-                            key = { it.id },
-                        ) { todo ->
-                            HomeTodayTaskRow(
-                                todo = todo,
-                                lists = uiState.summary.lists,
-                                onComplete = { onCompleteTask(todo) },
-                                onDelete = { onDeleteTask(todo) },
-                                onEdit = { editTargetTodoId = todo.id },
-                            )
+                        if (uiState.todayTodos.isNotEmpty()) {
+                            item {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    uiState.todayTodos.forEach { todo ->
+                                        HomeTodayTaskRow(
+                                            todo = todo,
+                                            lists = uiState.summary.lists,
+                                            onComplete = { onCompleteTask(todo) },
+                                            onDelete = { onDeleteTask(todo) },
+                                            onEdit = { editTargetTodoId = todo.id },
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                     item {
@@ -1655,15 +1659,26 @@ private fun HomeTodayTaskRow(
     var swipeHinting by remember(todo.id) { mutableStateOf(false) }
     var localCompleted by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
+    var completionFading by remember(todo.id) { mutableStateOf(false) }
+    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessLow),
         label = "homeTodaySwipeOffset",
     )
+    val completionAlpha by animateFloatAsState(
+        targetValue = if (completionFading) 0f else 1f,
+        animationSpec = tween(durationMillis = 220),
+        label = "homeTodayCompletionAlpha",
+    )
+    val titleStrikeProgress by animateFloatAsState(
+        targetValue = if (localCompleted) 1f else 0f,
+        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+        label = "homeTodayTitleStrikeProgress",
+    )
     val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
     val dueText = HOME_TODAY_DUE_FORMATTER.format(todo.due)
     val rowShape = RoundedCornerShape(16.dp)
-    val foregroundColor = colorScheme.background
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val listIndicatorColor = homeTodayListAccentColor(listMeta?.color)
     val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
@@ -1671,158 +1686,204 @@ private fun HomeTodayTaskRow(
         if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(
             alpha = 0.8f
         )
+    val subtitleText = if (isOverdue) {
+        stringResource(R.string.todos_due_overdue_text, dueText)
+    } else {
+        stringResource(R.string.todos_due_text, dueText)
+    }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(58.dp),
+            .graphicsLayer { alpha = completionAlpha },
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TaskSwipeActionButton(
-                icon = Icons.Rounded.Edit,
-                contentDescription = "Edit",
-                label = "Edit",
-                tint = Color.White,
-                background = Color(0xFF4C7DDE),
-                revealProgress = actionRevealProgress,
-                revealDelay = 0.62f,
-                onClick = {
-                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                    onEdit()
-                    targetOffsetX = 0f
-                },
-            )
-            TaskSwipeActionButton(
-                icon = Icons.Rounded.Delete,
-                contentDescription = "Delete",
-                label = "Delete",
-                tint = Color.White,
-                background = Color(0xFFFF453A),
-                revealProgress = actionRevealProgress,
-                revealDelay = 0.04f,
-                onClick = {
-                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                    onDelete()
-                    targetOffsetX = 0f
-                },
-            )
-        }
-
-        Card(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { translationX = animatedOffsetX }
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { delta ->
-                        targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
-                    },
-                    onDragStopped = { velocity ->
-                        targetOffsetX =
-                            if (velocity < -1450f || targetOffsetX < -(actionRevealPx * 0.32f)) {
-                                -actionRevealPx
-                            } else {
-                                0f
-                            }
-                    },
-                )
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) {
-                    if (targetOffsetX != 0f) {
-                        targetOffsetX = 0f
-                    } else if (!swipeHinting && !pendingCompletion) {
-                        swipeHinting = true
-                        coroutineScope.launch {
-                            targetOffsetX = -swipeHintOffsetPx
-                            delay(150)
-                            targetOffsetX = 0f
-                            delay(360)
-                            swipeHinting = false
-                        }
-                    }
-                },
-            shape = rowShape,
-            colors = CardDefaults.cardColors(containerColor = foregroundColor),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                .fillMaxWidth()
+                .height(58.dp),
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                    .semantics(mergeDescendants = true) {},
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    modifier = Modifier
-                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                        .wrapContentSize(Alignment.Center)
-                        .clip(CircleShape)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = ripple(bounded = true, radius = 24.dp),
-                            enabled = !pendingCompletion,
-                        ) {
-                            if (!pendingCompletion) {
-                                localCompleted = true
-                                pendingCompletion = true
-                                coroutineScope.launch {
-                                    delay(180)
-                                    onComplete()
-                                }
-                            }
+                TaskSwipeActionButton(
+                    icon = Icons.Rounded.Edit,
+                    contentDescription = stringResource(R.string.action_edit_task),
+                    label = stringResource(R.string.action_edit),
+                    tint = Color.White,
+                    background = Color(0xFF4C7DDE),
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.62f,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK
+                        )
+                        onEdit()
+                        targetOffsetX = 0f
+                    },
+                )
+                TaskSwipeActionButton(
+                    icon = Icons.Rounded.Delete,
+                    contentDescription = stringResource(R.string.action_delete_task),
+                    label = stringResource(R.string.action_delete),
+                    tint = Color.White,
+                    background = Color(0xFFFF453A),
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.04f,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK
+                        )
+                        onDelete()
+                        targetOffsetX = 0f
+                    },
+                )
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = animatedOffsetX }
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
                         },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = if (localCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                        contentDescription = if (localCompleted) "Completed" else "Mark complete",
-                        tint = if (localCompleted) Color(0xFF6FBF86) else colorScheme.onSurfaceVariant.copy(
-                            alpha = 0.78f
-                        ),
-                        modifier = Modifier.size(24.dp),
+                        onDragStopped = { velocity ->
+                            targetOffsetX =
+                                if (velocity < -1450f || targetOffsetX < -(actionRevealPx * 0.32f)) {
+                                    -actionRevealPx
+                                } else {
+                                    0f
+                                }
+                        },
                     )
-                }
-
-                Column(
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        if (targetOffsetX != 0f) {
+                            targetOffsetX = 0f
+                        } else if (!swipeHinting && !pendingCompletion) {
+                            swipeHinting = true
+                            coroutineScope.launch {
+                                targetOffsetX = -swipeHintOffsetPx
+                                delay(150)
+                                targetOffsetX = 0f
+                                delay(360)
+                                swipeHinting = false
+                            }
+                        }
+                    },
+                shape = rowShape,
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .semantics(mergeDescendants = true) {},
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = todo.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = "Due $dueText",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = subtitleColor,
-                    )
-                }
-
-                if (listMeta != null) {
-                    Icon(
-                        imageVector = homeTodayListIcon(listMeta.iconKey),
-                        contentDescription = null,
-                        tint = listIndicatorColor,
+                    Box(
                         modifier = Modifier
-                            .size(18.dp)
-                            .padding(end = 0.dp),
-                    )
-                    Spacer(Modifier.width(12.dp))
+                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                            .wrapContentSize(Alignment.Center)
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(bounded = true, radius = 24.dp),
+                                enabled = !pendingCompletion,
+                            ) {
+                                if (!pendingCompletion) {
+                                    targetOffsetX = 0f
+                                    localCompleted = true
+                                    pendingCompletion = true
+                                    coroutineScope.launch {
+                                        delay(500)
+                                        completionFading = true
+                                        delay(220)
+                                        onComplete()
+                                    }
+                                }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (localCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                            contentDescription = if (localCompleted) {
+                                stringResource(R.string.label_completed)
+                            } else {
+                                stringResource(R.string.label_mark_complete)
+                            },
+                            tint = if (localCompleted) Color(0xFF6FBF86) else colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.78f
+                            ),
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = todo.title,
+                            modifier = Modifier.drawWithContent {
+                                drawContent()
+                                if (titleStrikeProgress > 0f) {
+                                    val lineEnd = (
+                                            titleLayoutResult
+                                                ?.takeIf { it.lineCount > 0 }
+                                                ?.getLineRight(0) ?: size.width
+                                            ).coerceIn(0f, size.width)
+                                    val lineY = size.height * 0.56f
+                                    drawLine(
+                                        color = colorScheme.onSurface.copy(alpha = 0.65f),
+                                        start = Offset(0f, lineY),
+                                        end = Offset(lineEnd * titleStrikeProgress, lineY),
+                                        strokeWidth = TdayDimens.BorderWidthThick.toPx(),
+                                    )
+                                }
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (localCompleted) {
+                                colorScheme.onSurface.copy(alpha = 0.78f)
+                            } else {
+                                colorScheme.onSurface
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            onTextLayout = { titleLayoutResult = it },
+                        )
+                        Text(
+                            text = subtitleText,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = subtitleColor,
+                        )
+                    }
+
+                    if (listMeta != null) {
+                        Icon(
+                            imageVector = homeTodayListIcon(listMeta.iconKey),
+                            contentDescription = null,
+                            tint = listIndicatorColor,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .padding(end = 0.dp),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                    }
                 }
             }
         }
