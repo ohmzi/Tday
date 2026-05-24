@@ -65,6 +65,19 @@ final class ConnectivityClassificationTests: XCTestCase {
         )
     }
 
+    func testUnauthorizedResponsesAreRecoverableSessionIssues() {
+        XCTAssertTrue(
+            isSessionAuthenticationIssue(
+                APIError(message: "Unauthorized", statusCode: 401)
+            )
+        )
+        XCTAssertFalse(
+            isLikelyConnectivityIssue(
+                APIError(message: "Unauthorized", statusCode: 401)
+            )
+        )
+    }
+
     func testGenericServerErrorsUseServerMessage() {
         XCTAssertEqual(
             userFacingMessage(for: APIError(message: "Internal Server Error", statusCode: 500)),
