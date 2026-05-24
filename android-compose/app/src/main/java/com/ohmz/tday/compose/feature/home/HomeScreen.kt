@@ -1703,7 +1703,7 @@ private fun HomeTodayTaskRow(
     val dueText = HOME_TODAY_DUE_FORMATTER.format(todo.due)
     val rowShape = RoundedCornerShape(16.dp)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
-    val listIndicatorColor = homeTodayListAccentColor(listMeta?.color)
+    val listIndicatorColor = listColorAccent(listMeta?.color)
     val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val subtitleColor =
         if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(
@@ -1904,7 +1904,7 @@ private fun HomeTodayTaskRow(
 
                     if (listMeta != null) {
                         Icon(
-                            imageVector = homeTodayListIcon(listMeta.iconKey),
+                            imageVector = listIconForKey(listMeta.iconKey),
                             contentDescription = null,
                             tint = listIndicatorColor,
                             modifier = Modifier
@@ -1916,40 +1916,6 @@ private fun HomeTodayTaskRow(
                 }
             }
         }
-    }
-}
-
-private fun homeTodayListAccentColor(colorKey: String?): Color {
-    return when (colorKey) {
-        "RED" -> Color(0xFFE65E52)
-        "ORANGE" -> Color(0xFFF29F38)
-        "YELLOW" -> Color(0xFFF3D04A)
-        "LIME" -> Color(0xFF8ACF56)
-        "BLUE" -> Color(0xFF5C9FE7)
-        "PURPLE" -> Color(0xFF8D6CE2)
-        "PINK" -> Color(0xFFDF6DAA)
-        "TEAL" -> Color(0xFF4EB5B0)
-        "CORAL" -> Color(0xFFE3876D)
-        "GOLD" -> Color(0xFFCFAB57)
-        "DEEP_BLUE" -> Color(0xFF4B73D6)
-        "ROSE" -> Color(0xFFD9799A)
-        else -> Color(0xFF5C9FE7)
-    }
-}
-
-private fun homeTodayListIcon(iconKey: String?): androidx.compose.ui.graphics.vector.ImageVector {
-    return when (iconKey) {
-        "WORK" -> Icons.Rounded.Work
-        "SCHOOL" -> Icons.Rounded.School
-        "HOME" -> Icons.Rounded.Home
-        "SHOPPING" -> Icons.Rounded.ShoppingCart
-        "HEALTH" -> Icons.Rounded.Favorite
-        "FITNESS" -> Icons.Rounded.FitnessCenter
-        "TRAVEL" -> Icons.Rounded.Flight
-        "FOOD" -> Icons.Rounded.Restaurant
-        "FINANCE" -> Icons.Rounded.Payments
-        "MUSIC" -> Icons.Rounded.MusicNote
-        else -> Icons.AutoMirrored.Rounded.List
     }
 }
 

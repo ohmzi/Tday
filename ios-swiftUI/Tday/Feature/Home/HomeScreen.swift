@@ -683,9 +683,9 @@ private struct HomeTodayTaskRow: View {
             Spacer(minLength: 0)
 
             if let listMeta {
-                Image(systemName: homeTodayListSymbolName(for: listMeta.iconKey))
+                Image(systemName: homeListSymbolName(for: listMeta.iconKey))
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(todoListAccentColor(for: listMeta.color))
+                    .foregroundStyle(homeListAccentColor(for: listMeta.color))
                     .padding(.trailing, 8)
             }
         }
@@ -791,32 +791,6 @@ private struct HomeTodaySwipeActionButton: View {
         .opacity(Double(easedReveal))
         .scaleEffect(0.38 + (0.62 * easedReveal))
         .allowsHitTesting(easedReveal > 0.8)
-    }
-}
-
-private func homeTodayListSymbolName(for key: String?) -> String {
-    switch key {
-    case "sun": return "sun.max.fill"
-    case "calendar": return "calendar"
-    case "schedule": return "clock"
-    case "flag": return "flag.fill"
-    case "check": return "checkmark"
-    case "smile": return "face.smiling"
-    case "star": return "star.fill"
-    case "heart": return "heart.fill"
-    case "book": return "book.fill"
-    case "music": return "music.note"
-    case "camera": return "camera.fill"
-    case "cart": return "cart.fill"
-    case "home": return "house.fill"
-    case "briefcase": return "briefcase.fill"
-    case "dumbbell": return "dumbbell.fill"
-    case "leaf": return "leaf.fill"
-    case "car": return "car.fill"
-    case "airplane": return "airplane"
-    case "person": return "person.fill"
-    case "globe": return "globe"
-    default: return "list.bullet"
     }
 }
 
