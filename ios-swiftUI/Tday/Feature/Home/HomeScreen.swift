@@ -586,33 +586,6 @@ private struct HomeTodayTaskRow: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .trailing) {
-                HStack(spacing: 16) {
-                    Spacer()
-                    HomeTodaySwipeActionButton(
-                        title: "Edit",
-                        systemImage: "square.and.pencil",
-                        tint: TaskSwipeActionTint.edit,
-                        revealProgress: revealProgress,
-                        revealDelay: 0.62
-                    ) {
-                        withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
-                        onEdit()
-                    }
-
-                    HomeTodaySwipeActionButton(
-                        title: "Delete",
-                        systemImage: "trash",
-                        tint: TaskSwipeActionTint.delete,
-                        revealProgress: revealProgress,
-                        revealDelay: 0.04
-                    ) {
-                        withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
-                        onDelete()
-                    }
-                }
-                .padding(.trailing, 2)
-                .frame(maxWidth: .infinity)
-
                 rowContent
                     .offset(x: offsetX)
                     .gesture(
@@ -648,6 +621,33 @@ private struct HomeTodayTaskRow: View {
                             }
                         }
                     }
+
+                HStack(spacing: 16) {
+                    Spacer()
+                    HomeTodaySwipeActionButton(
+                        title: "Edit",
+                        systemImage: "square.and.pencil",
+                        tint: TaskSwipeActionTint.edit,
+                        revealProgress: revealProgress,
+                        revealDelay: 0.62
+                    ) {
+                        withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
+                        onEdit()
+                    }
+
+                    HomeTodaySwipeActionButton(
+                        title: "Delete",
+                        systemImage: "trash",
+                        tint: TaskSwipeActionTint.delete,
+                        revealProgress: revealProgress,
+                        revealDelay: 0.04
+                    ) {
+                        withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
+                        onDelete()
+                    }
+                }
+                .padding(.trailing, 2)
+                .frame(maxWidth: .infinity)
             }
         }
         .opacity(isFading ? 0 : 1)
@@ -790,6 +790,7 @@ private struct HomeTodaySwipeActionButton: View {
         )
         .opacity(Double(easedReveal))
         .scaleEffect(0.38 + (0.62 * easedReveal))
+        .allowsHitTesting(easedReveal > 0.8)
     }
 }
 
