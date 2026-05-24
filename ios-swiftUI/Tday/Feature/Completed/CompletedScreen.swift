@@ -327,22 +327,13 @@ private struct CompletedTimelineRow: View {
         .animation(.easeInOut(duration: 0.22), value: isFading)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .allowsHitTesting(!isRestoring)
-        .swipeRevealHintOnTap(enabled: !isRestoring)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button {
+        .todoTrailingSwipeActions(
+            enabled: !isRestoring,
+            onEdit: onEdit,
+            onDelete: {
                 Task { await onDelete() }
-            } label: {
-                Label("Delete", systemImage: "trash")
             }
-            .tint(TaskSwipeActionTint.delete)
-
-            Button {
-                onEdit()
-            } label: {
-                Label("Edit", systemImage: "square.and.pencil")
-            }
-            .tint(TaskSwipeActionTint.edit)
-        }
+        )
     }
 
     private func startRestore() {

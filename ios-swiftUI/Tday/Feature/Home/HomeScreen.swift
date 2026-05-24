@@ -92,7 +92,6 @@ struct HomeScreen: View {
     @State private var showingCreateTask = false
     @State private var showingCreateList = false
     @State private var editingTodo: TodoItem?
-    @State private var completingTodoIDs: Set<String> = []
 
     init(container: AppContainer, onNavigate: @escaping (AppRoute) -> Void) {
         self.onNavigate = onNavigate
@@ -183,8 +182,10 @@ struct HomeScreen: View {
                             )
 
                             if !viewModel.todayTodos.isEmpty {
-                                ForEach(viewModel.todayTodos) { todo in
-                                    homeTodayTaskRow(todo)
+                                VStack(spacing: 0) {
+                                    ForEach(viewModel.todayTodos) { todo in
+                                        homeTodayTaskRow(todo)
+                                    }
                                 }
                             }
 
@@ -357,27 +358,12 @@ struct HomeScreen: View {
         searchResultsFrame = .zero
     }
 
-    private func completeTodoWithoutReflow(_ todo: TodoItem) {
-        guard !completingTodoIDs.contains(todo.id) else { return }
-        withAnimation(.easeInOut(duration: 0.16)) {
-            _ = completingTodoIDs.insert(todo.id)
-        }
-        Task {
-            try? await Task.sleep(nanoseconds: 190_000_000)
-            await viewModel.complete(todo)
-            await MainActor.run {
-                _ = completingTodoIDs.remove(todo.id)
-            }
-        }
-    }
-
     @ViewBuilder
     private func homeTodayTaskRow(_ todo: TodoItem) -> some View {
         HomeTodayTaskRow(
             todo: todo,
             lists: viewModel.lists,
-            isCompleting: completingTodoIDs.contains(todo.id),
-            onComplete: { completeTodoWithoutReflow(todo) },
+            onComplete: { await viewModel.complete(todo) },
             onDelete: { Task { await viewModel.delete(todo) } },
             onEdit: { editingTodo = todo }
         )
@@ -561,11 +547,16 @@ private struct HomeIconCircleButton: View {
     }
 }
 
+private enum HomeTodayTaskCompletionPhase {
+    case active
+    case checked
+    case fading
+}
+
 private struct HomeTodayTaskRow: View {
     let todo: TodoItem
     let lists: [ListSummary]
-    let isCompleting: Bool
-    let onComplete: () -> Void
+    let onComplete: () async -> Void
     let onDelete: () -> Void
     let onEdit: () -> Void
 
@@ -573,6 +564,7 @@ private struct HomeTodayTaskRow: View {
 
     @State private var offsetX: CGFloat = 0
     @State private var isHinting = false
+    @State private var completionPhase = HomeTodayTaskCompletionPhase.active
 
     private let revealWidth: CGFloat = 152
 
@@ -582,109 +574,108 @@ private struct HomeTodayTaskRow: View {
 
     private var isOverdue: Bool { !todo.completed && todo.due < Date() }
     private var dueText: String { todo.due.formatted(date: .omitted, time: .shortened) }
+    private var subtitleText: String { isOverdue ? "Overdue, \(dueText)" : "Due \(dueText)" }
     private var subtitleColor: Color { isOverdue ? colors.error : colors.onSurfaceVariant.opacity(0.8) }
     private var revealProgress: CGFloat { min(1, max(0, -offsetX / revealWidth)) }
+    private var isCompleting: Bool { completionPhase != .active }
+    private var isFading: Bool { completionPhase == .fading }
+    private var titleColor: Color {
+        isCompleting ? colors.onSurface.opacity(0.78) : colors.onSurface
+    }
 
     var body: some View {
-        ZStack(alignment: .trailing) {
-            HStack(spacing: 0) {
-                Spacer()
-                Button {
-                    withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
-                    onEdit()
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Edit")
-                            .font(.tdayRounded(size: 11, weight: .semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(width: 64)
-                    .frame(maxHeight: .infinity)
-                    .background(TaskSwipeActionTint.edit)
-                }
-                .opacity(Double(min(1, max(0, (revealProgress - 0.3) / 0.7))))
-
-                Button {
-                    withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
-                    onDelete()
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("Delete")
-                            .font(.tdayRounded(size: 11, weight: .semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(width: 64)
-                    .frame(maxHeight: .infinity)
-                    .background(TaskSwipeActionTint.delete)
-                }
-                .opacity(Double(min(1, max(0, (revealProgress - 0.02) / 0.5))))
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .frame(maxWidth: .infinity)
-
-            rowContent
-                .offset(x: offsetX)
-                .gesture(
-                    DragGesture(minimumDistance: 6)
-                        .onChanged { value in
-                            guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                            let proposed = value.translation.width
-                            if proposed < 0 {
-                                offsetX = max(-revealWidth * 1.12, proposed)
-                            } else {
-                                offsetX = min(0, offsetX + proposed * 0.15)
-                            }
-                        }
-                        .onEnded { value in
-                            let velocity = value.predictedEndTranslation.width - value.translation.width
-                            let shouldOpen = offsetX < -(revealWidth * 0.32) || velocity < -200
-                            withAnimation(.spring(response: 0.34, dampingFraction: 0.78)) {
-                                offsetX = shouldOpen ? -revealWidth : 0
-                            }
-                        }
-                )
-                .onTapGesture {
-                    if offsetX != 0 {
+        VStack(spacing: 0) {
+            ZStack(alignment: .trailing) {
+                HStack(spacing: 16) {
+                    Spacer()
+                    HomeTodaySwipeActionButton(
+                        title: "Edit",
+                        systemImage: "square.and.pencil",
+                        tint: TaskSwipeActionTint.edit,
+                        revealProgress: revealProgress,
+                        revealDelay: 0.62
+                    ) {
                         withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
-                    } else if !isHinting && !isCompleting {
-                        isHinting = true
-                        Task { @MainActor in
-                            withAnimation(.spring(response: 0.26, dampingFraction: 0.78)) { offsetX = -28 }
-                            try? await Task.sleep(nanoseconds: 150_000_000)
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) { offsetX = 0 }
-                            try? await Task.sleep(nanoseconds: 340_000_000)
-                            isHinting = false
-                        }
+                        onEdit()
+                    }
+
+                    HomeTodaySwipeActionButton(
+                        title: "Delete",
+                        systemImage: "trash",
+                        tint: TaskSwipeActionTint.delete,
+                        revealProgress: revealProgress,
+                        revealDelay: 0.04
+                    ) {
+                        withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
+                        onDelete()
                     }
                 }
+                .padding(.trailing, 2)
+                .frame(maxWidth: .infinity)
+
+                rowContent
+                    .offset(x: offsetX)
+                    .gesture(
+                        DragGesture(minimumDistance: 6)
+                            .onChanged { value in
+                                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                                let proposed = value.translation.width
+                                if proposed < 0 {
+                                    offsetX = max(-revealWidth * 1.12, proposed)
+                                } else {
+                                    offsetX = min(0, offsetX + proposed * 0.15)
+                                }
+                            }
+                            .onEnded { value in
+                                let velocity = value.predictedEndTranslation.width - value.translation.width
+                                let shouldOpen = offsetX < -(revealWidth * 0.32) || velocity < -200
+                                withAnimation(.spring(response: 0.34, dampingFraction: 0.78)) {
+                                    offsetX = shouldOpen ? -revealWidth : 0
+                                }
+                            }
+                    )
+                    .onTapGesture {
+                        if offsetX != 0 {
+                            withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
+                        } else if !isHinting && !isCompleting {
+                            isHinting = true
+                            Task { @MainActor in
+                                withAnimation(.spring(response: 0.26, dampingFraction: 0.78)) { offsetX = -28 }
+                                try? await Task.sleep(nanoseconds: 150_000_000)
+                                withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) { offsetX = 0 }
+                                try? await Task.sleep(nanoseconds: 340_000_000)
+                                isHinting = false
+                            }
+                        }
+                    }
+            }
         }
-        .opacity(isCompleting ? 0 : 1)
-        .scaleEffect(isCompleting ? 0.985 : 1, anchor: .center)
-        .animation(.easeInOut(duration: 0.16), value: isCompleting)
+        .opacity(isFading ? 0 : 1)
+        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
+        .animation(.easeInOut(duration: 0.22), value: isFading)
         .allowsHitTesting(!isCompleting)
     }
 
     private var rowContent: some View {
         HStack(alignment: .center, spacing: 12) {
-            Button(action: onComplete) {
-                Image(systemName: todo.completed ? "checkmark.circle.fill" : "circle")
+            Button(action: startCompletion) {
+                Image(systemName: isCompleting || todo.completed ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 24, weight: .regular))
-                    .foregroundStyle(todo.completed ? Color.green : colors.onSurfaceVariant.opacity(0.78))
+                    .foregroundStyle(isCompleting || todo.completed ? Color.green : colors.onSurfaceVariant.opacity(0.78))
                     .frame(width: 38, height: 38)
             }
             .buttonStyle(TdayPressButtonStyle(shadowColor: .black, pressedShadowOpacity: 0, normalShadowOpacity: 0))
+            .disabled(isCompleting)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(todo.title)
-                    .font(.tdayRounded(size: 18, weight: .bold))
-                    .foregroundStyle(colors.onSurface)
-                    .lineLimit(1)
+                HomeTodayTaskTitle(
+                    text: todo.title,
+                    isCompleted: isCompleting,
+                    titleColor: titleColor,
+                    strikeColor: colors.onSurface.opacity(0.65)
+                )
 
-                Text("Due \(dueText)")
+                Text(subtitleText)
                     .font(.tdayRounded(size: 13, weight: .semibold))
                     .foregroundStyle(subtitleColor)
             }
@@ -700,9 +691,105 @@ private struct HomeTodayTaskRow: View {
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 4)
-        .background(Color(uiColor: .systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .contentShape(Rectangle())
+    }
+
+    private func startCompletion() {
+        guard completionPhase == .active else { return }
+
+        withAnimation(.easeInOut(duration: 0.18)) {
+            offsetX = 0
+            completionPhase = .checked
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            withAnimation(.easeInOut(duration: 0.22)) {
+                completionPhase = .fading
+            }
+            try? await Task.sleep(nanoseconds: 220_000_000)
+            await onComplete()
+            if completionPhase == .fading {
+                withAnimation(.easeInOut(duration: 0.16)) {
+                    completionPhase = .active
+                }
+            }
+        }
+    }
+}
+
+private struct HomeTodayTaskTitle: View {
+    let text: String
+    let isCompleted: Bool
+    let titleColor: Color
+    let strikeColor: Color
+
+    private var strikeProgress: CGFloat {
+        isCompleted ? 1 : 0
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.tdayRounded(size: 18, weight: .bold))
+            .foregroundStyle(titleColor)
+            .lineLimit(1)
+            .overlay {
+                GeometryReader { proxy in
+                    Rectangle()
+                        .fill(strikeColor)
+                        .frame(width: proxy.size.width * strikeProgress, height: 1.4)
+                        .position(
+                            x: (proxy.size.width * strikeProgress) / 2,
+                            y: proxy.size.height * 0.55
+                        )
+                }
+                .allowsHitTesting(false)
+            }
+            .animation(.easeInOut(duration: 0.32), value: isCompleted)
+    }
+}
+
+private struct HomeTodaySwipeActionButton: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    let revealProgress: CGFloat
+    let revealDelay: CGFloat
+    let action: () -> Void
+
+    private var easedReveal: CGFloat {
+        let normalized = max(0, min(1, (revealProgress - revealDelay) / (1 - revealDelay)))
+        return normalized * normalized * (3 - (2 * normalized))
+    }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 17, style: .continuous)
+                        .fill(tint)
+                    Image(systemName: systemImage)
+                        .font(.system(size: 21, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 56, height: 34)
+
+                Text(title)
+                    .font(.tdayRounded(size: 12, weight: .bold))
+                    .foregroundStyle(Color(uiColor: .secondaryLabel).opacity(0.82))
+                    .lineLimit(1)
+            }
+            .frame(minWidth: 60)
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0,
+                normalShadowOpacity: 0
+            )
+        )
+        .opacity(Double(easedReveal))
+        .scaleEffect(0.38 + (0.62 * easedReveal))
     }
 }
 
