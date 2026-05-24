@@ -63,33 +63,6 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         ZStack(alignment: .trailing) {
-            HStack(spacing: 16) {
-                Spacer()
-                TodoSwipePillActionButton(
-                    title: "Edit",
-                    systemImage: "square.and.pencil",
-                    tint: TaskSwipeActionTint.edit,
-                    revealProgress: revealProgress,
-                    revealDelay: 0.62
-                ) {
-                    closeActions()
-                    onEdit()
-                }
-
-                TodoSwipePillActionButton(
-                    title: "Delete",
-                    systemImage: "trash",
-                    tint: TaskSwipeActionTint.delete,
-                    revealProgress: revealProgress,
-                    revealDelay: 0.04
-                ) {
-                    closeActions()
-                    onDelete()
-                }
-            }
-            .padding(.trailing, 2)
-            .frame(maxWidth: .infinity)
-
             content
                 .offset(x: offsetX)
                 .contentShape(Rectangle())
@@ -130,6 +103,33 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         revealHint()
                     }
                 }
+
+            HStack(spacing: 16) {
+                Spacer()
+                TodoSwipePillActionButton(
+                    title: "Edit",
+                    systemImage: "square.and.pencil",
+                    tint: TaskSwipeActionTint.edit,
+                    revealProgress: revealProgress,
+                    revealDelay: 0.62
+                ) {
+                    closeActions()
+                    onEdit()
+                }
+
+                TodoSwipePillActionButton(
+                    title: "Delete",
+                    systemImage: "trash",
+                    tint: TaskSwipeActionTint.delete,
+                    revealProgress: revealProgress,
+                    revealDelay: 0.04
+                ) {
+                    closeActions()
+                    onDelete()
+                }
+            }
+            .padding(.trailing, 2)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -198,6 +198,7 @@ private struct TodoSwipePillActionButton: View {
         )
         .opacity(Double(easedReveal))
         .scaleEffect(0.38 + (0.62 * easedReveal))
+        .allowsHitTesting(easedReveal > 0.8)
     }
 }
 
