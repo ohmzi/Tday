@@ -211,6 +211,7 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -708,7 +709,11 @@ fun HomeScreen(
                                                 )
                                             }
                                         }
-                                        if (index < searchResults.lastIndex) {
+                                        if (shouldShowDateDivider(
+                                                afterItemIndex = index,
+                                                items = searchResults,
+                                            )
+                                        ) {
                                             Spacer(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -779,6 +784,16 @@ fun HomeScreen(
             },
         )
     }
+}
+
+private fun shouldShowDateDivider(
+    afterItemIndex: Int,
+    items: List<TodoItem>,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Boolean {
+    val currentTodo = items.getOrNull(afterItemIndex) ?: return false
+    val nextTodo = items.getOrNull(afterItemIndex + 1) ?: return false
+    return LocalDate.ofInstant(currentTodo.due, zoneId) != LocalDate.ofInstant(nextTodo.due, zoneId)
 }
 
 @Composable

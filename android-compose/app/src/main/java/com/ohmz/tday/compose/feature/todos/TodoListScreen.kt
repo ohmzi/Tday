@@ -738,6 +738,12 @@ fun TodoListScreen(
                                             useMinimalStyle = usesTodayStyle,
                                             flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
                                             showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
+                                            showDateDivider = shouldShowDateDivider(
+                                                afterItemIndex = itemIndex,
+                                                inSectionIndex = sectionIndex,
+                                                sections = timelineSections,
+                                                collapsedSectionKeys = collapsedSectionKeys,
+                                            ),
                                             onComplete = { onComplete(todo) },
                                             onDelete = { onDelete(todo) },
                                             onInfo = {
@@ -1696,6 +1702,7 @@ private fun TimelineTaskRow(
     useMinimalStyle: Boolean,
     flashHighlight: Boolean,
     showEarlierDateTimeSubtitle: Boolean,
+    showDateDivider: Boolean,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
@@ -1715,6 +1722,7 @@ private fun TimelineTaskRow(
                 onInfo = onInfo,
                 showDuePrefix = true,
                 showDueDateInSubtitle = showEarlierDateTimeSubtitle,
+                showDateDivider = showDateDivider,
             )
         } else if (
             useMinimalStyle &&
@@ -1736,6 +1744,7 @@ private fun TimelineTaskRow(
                 onInfo = onInfo,
                 showDuePrefix = true,
                 showDueDateInSubtitle = showEarlierDateTimeSubtitle,
+                showDateDivider = showDateDivider,
                 dragEnabled = onDragTodoStart != null,
                 dragging = draggedTodo?.id == todo.id,
                 onDragStart = { onDragTodoStart?.invoke() },
@@ -1803,6 +1812,34 @@ private data class TodoSection(
     val quickAddDefaults: Long? = null,
     val targetDate: LocalDate? = null,
 )
+
+private fun shouldShowDateDivider(
+    afterItemIndex: Int,
+    inSectionIndex: Int,
+    sections: List<TodoSection>,
+    collapsedSectionKeys: Set<String>,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Boolean {
+    val section = sections.getOrNull(inSectionIndex) ?: return false
+    val currentTodo = section.items.getOrNull(afterItemIndex) ?: return false
+    val nextTodoInSection = section.items.getOrNull(afterItemIndex + 1)
+    if (nextTodoInSection != null) {
+        return !currentTodo.due.isSameLocalDayAs(nextTodoInSection.due, zoneId)
+    }
+
+    val nextVisibleTodo = sections
+        .asSequence()
+        .drop(inSectionIndex + 1)
+        .filter { it.key !in collapsedSectionKeys }
+        .flatMap { it.items.asSequence() }
+        .firstOrNull()
+        ?: return false
+
+    return !currentTodo.due.isSameLocalDayAs(nextVisibleTodo.due, zoneId)
+}
+
+private fun Instant.isSameLocalDayAs(other: Instant, zoneId: ZoneId): Boolean =
+    LocalDate.ofInstant(this, zoneId) == LocalDate.ofInstant(other, zoneId)
 
 private enum class TodaySectionSlot {
     MORNING, AFTERNOON, TONIGHT,
@@ -2267,6 +2304,7 @@ private fun AllTaskSwipeRow(
     onInfo: () -> Unit,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
+    showDateDivider: Boolean,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -2280,6 +2318,7 @@ private fun AllTaskSwipeRow(
         showDueText = true,
         showDuePrefix = showDuePrefix,
         showDueDateInSubtitle = showDueDateInSubtitle,
+        showDateDivider = showDateDivider,
         useDelayedFadeCompletion = false,
     )
 }
@@ -2295,6 +2334,7 @@ private fun TodayTaskSwipeRow(
     onInfo: () -> Unit,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
+    showDateDivider: Boolean,
     dragEnabled: Boolean = false,
     dragging: Boolean = false,
     onDragStart: (() -> Unit)? = null,
@@ -2311,6 +2351,7 @@ private fun TodayTaskSwipeRow(
         showDueText = true,
         showDuePrefix = showDuePrefix,
         showDueDateInSubtitle = showDueDateInSubtitle,
+        showDateDivider = showDateDivider,
         useDelayedFadeCompletion = mode != TodoListMode.TODAY,
         dragEnabled = dragEnabled,
         dragging = dragging,
@@ -2332,6 +2373,7 @@ private fun SwipeTaskRow(
     showDueText: Boolean,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
+    showDateDivider: Boolean = false,
     useDelayedFadeCompletion: Boolean = false,
     useFadeOnCompletion: Boolean = false,
     dragEnabled: Boolean = false,
@@ -2675,12 +2717,14 @@ private fun SwipeTaskRow(
                     }
                 }
             }
+        if (showDateDivider) {
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
+        }
     }
 }
 

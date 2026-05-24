@@ -107,7 +107,12 @@ struct CompletedScreen: View {
                 }
 
                 ForEach(Array(groupedItems.enumerated()), id: \.element.id) { index, section in
-                    completedTimelineSection(section, isFirstSection: index == 0)
+                    completedTimelineSection(
+                        section,
+                        sectionIndex: index,
+                        sections: groupedItems,
+                        isFirstSection: index == 0
+                    )
                 }
 
                 Color.clear
@@ -145,19 +150,26 @@ struct CompletedScreen: View {
     }
 
     @ViewBuilder
-    private func completedTimelineSection(_ section: TimelineSection<CompletedItem>, isFirstSection: Bool) -> some View {
+    private func completedTimelineSection(
+        _ section: TimelineSection<CompletedItem>,
+        sectionIndex: Int,
+        sections: [TimelineSection<CompletedItem>],
+        isFirstSection: Bool
+    ) -> some View {
         let isCollapsed = collapsedSectionIDs.contains(section.id)
 
         Section {
             if !isCollapsed {
-                ForEach(Array(section.items.enumerated()), id: \.element.id) { _, item in
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, item in
                     completedTimelineRow(item)
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .transition(completedRowTransition())
-                    TimelineRowDivider()
-                        .transition(completedRowTransition())
+                    if shouldShowDateDivider(after: itemIndex, inSectionAt: sectionIndex, sections: sections) {
+                        TimelineRowDivider()
+                            .transition(completedRowTransition())
+                    }
                 }
             }
         } header: {
@@ -192,6 +204,35 @@ struct CompletedScreen: View {
                 collapsedSectionIDs.insert(id)
             }
         }
+    }
+
+    private func shouldShowDateDivider(
+        after itemIndex: Int,
+        inSectionAt sectionIndex: Int,
+        sections: [TimelineSection<CompletedItem>]
+    ) -> Bool {
+        guard sections.indices.contains(sectionIndex),
+              sections[sectionIndex].items.indices.contains(itemIndex) else {
+            return false
+        }
+
+        let currentItem = sections[sectionIndex].items[itemIndex]
+        let currentDate = currentItem.completedAt ?? currentItem.due
+        let nextItemInSection = sections[sectionIndex].items.dropFirst(itemIndex + 1).first
+        if let nextItemInSection {
+            let nextDate = nextItemInSection.completedAt ?? nextItemInSection.due
+            return !Calendar.current.isDate(currentDate, inSameDayAs: nextDate)
+        }
+
+        let nextVisibleItem = sections.dropFirst(sectionIndex + 1)
+            .first { !collapsedSectionIDs.contains($0.id) && !$0.items.isEmpty }?
+            .items.first
+
+        guard let nextVisibleItem else {
+            return false
+        }
+        let nextDate = nextVisibleItem.completedAt ?? nextVisibleItem.due
+        return !Calendar.current.isDate(currentDate, inSameDayAs: nextDate)
     }
 
     private func completedRowTransition() -> AnyTransition {
