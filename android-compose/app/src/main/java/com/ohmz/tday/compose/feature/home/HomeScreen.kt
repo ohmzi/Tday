@@ -193,6 +193,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
@@ -208,6 +209,7 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayFontFamily
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -1640,14 +1642,20 @@ private fun HomeTodayCard(
                         text = dateLabel,
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
-                        fontWeight = FontWeight.Bold,
+                        fontFamily = TdayFontFamily,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 28.sp,
                     )
                 }
                 Text(
                     text = count.toString(),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineLarge,
                     color = Color.White,
+                    fontFamily = TdayFontFamily,
+                    fontSize = 34.sp,
                     fontWeight = FontWeight.Black,
+                    lineHeight = 40.sp,
                 )
             }
         }
@@ -1869,8 +1877,11 @@ private fun HomeTodayTaskRow(
                                     )
                                 }
                             },
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = TdayFontFamily,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            lineHeight = 22.sp,
                             color = if (localCompleted) {
                                 colorScheme.onSurface.copy(alpha = 0.78f)
                             } else {
@@ -1883,7 +1894,10 @@ private fun HomeTodayTaskRow(
                         Text(
                             text = subtitleText,
                             style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = TdayFontFamily,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 18.sp,
                             color = subtitleColor,
                         )
                     }
