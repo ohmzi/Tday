@@ -36,8 +36,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -60,20 +58,9 @@ fun TdayPullToRefreshBox(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val state = rememberPullToRefreshState()
-    val pullProgress = state.distanceFraction.coerceIn(0f, 1f)
-    val contentPullProgress = state.distanceFraction.coerceIn(0f, 1.25f)
-    val pullContentOffset = TdayDimens.PullRefreshContentOffset * contentPullProgress
-    var isPointerDown by remember { mutableStateOf(false) }
     var localRefreshInFlight by remember { mutableStateOf(false) }
     var hasSeenExternalRefresh by remember { mutableStateOf(false) }
     val effectiveRefreshing = isRefreshing || localRefreshInFlight
-    val isUserPulling =
-        isPointerDown && !effectiveRefreshing && !state.isAnimating && pullProgress > 0f
-    val contentOffset by animateDpAsState(
-        targetValue = if (isUserPulling) pullContentOffset else 0.dp,
-        animationSpec = tween(durationMillis = if (isUserPulling) 0 else 220),
-        label = "pullRefreshContentOffset",
-    )
 
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
@@ -97,14 +84,7 @@ fun TdayPullToRefreshBox(
             localRefreshInFlight = true
             onRefresh()
         },
-        modifier = modifier.pointerInput(Unit) {
-            awaitPointerEventScope {
-                while (true) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                    isPointerDown = event.changes.any { it.pressed }
-                }
-            }
-        },
+        modifier = modifier,
         state = state,
         contentAlignment = contentAlignment,
         indicator = {
@@ -118,11 +98,7 @@ fun TdayPullToRefreshBox(
         },
         content = {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        translationY = contentOffset.toPx()
-                    },
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = contentAlignment,
                 content = content,
             )

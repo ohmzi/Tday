@@ -161,6 +161,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -179,6 +180,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
@@ -378,22 +382,44 @@ fun HomeScreen(
     val showSearchResultsOverlay = searchExpanded && searchQuery.isNotBlank()
     val density = LocalDensity.current
     val listState = rememberLazyListState()
-    val snapThresholdPx = with(density) { 88.dp.roundToPx() }
-    LaunchedEffect(listState.isScrollInProgress, searchExpanded) {
-        if (searchExpanded || listState.isScrollInProgress) return@LaunchedEffect
-        // Only snap when the search bar is partially visible (offset < header height).
-        // The entire home content lives in item 0, so without this threshold the snap
-        // would fire a full reverse-scroll from anywhere inside the card grid or task list.
-        val offset = listState.firstVisibleItemScrollOffset
-        if (listState.firstVisibleItemIndex == 0 && offset in 1 until snapThresholdPx) {
-            listState.animateScrollBy(
-                value = -offset.toFloat(),
-                animationSpec = tween(
-                    durationMillis = 260,
-                    easing = FastOutSlowInEasing,
-                ),
-            )
+    // NestedScrollConnection — intercepts scroll while the title bar (item 0) is partially
+    // visible and consumes half of the input, creating elastic resistance during the gesture.
+    // The LazyColumn receives the other half, so both the title and content move at half speed
+    // in the title zone, requiring deliberate effort to scroll the title away.
+    val elasticTitleConnection = remember(listState) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y >= 0f) return Offset.Zero
+                if (listState.firstVisibleItemIndex != 0) return Offset.Zero
+                val barHeight = listState.layoutInfo.visibleItemsInfo
+                    .firstOrNull { it.index == 0 }?.size ?: return Offset.Zero
+                if (listState.firstVisibleItemScrollOffset >= barHeight) return Offset.Zero
+                return Offset(0f, available.y * 0.5f)
+            }
         }
+    }
+    // Spring snap after the gesture settles: reads item height directly from layoutInfo
+    // so it works on the very first scroll without needing a separate measurement pass.
+    // < 60 % through → spring back (title stays); ≥ 60 % → spring forward (Today card at top).
+    LaunchedEffect(Unit) {
+        snapshotFlow { !listState.isScrollInProgress && !searchExpanded }
+            .collect { canSnap ->
+                if (!canSnap) return@collect
+                if (listState.firstVisibleItemIndex != 0) return@collect
+                val offset = listState.firstVisibleItemScrollOffset
+                val zoneEnd = listState.layoutInfo.visibleItemsInfo
+                    .firstOrNull { it.index == 0 }?.size ?: return@collect
+                if (offset !in 1 until zoneEnd) return@collect
+                val snapForward = offset >= zoneEnd * 0.60f
+                val delta = if (snapForward) (zoneEnd - offset).toFloat() else -offset.toFloat()
+                listState.animateScrollBy(
+                    value = delta,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                )
+            }
     }
 
     LaunchedEffect(listStructureSignature) {
@@ -481,6 +507,7 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .nestedScroll(elasticTitleConnection)
                         .then(
                             if (searchExpanded) {
                                 Modifier
@@ -1706,7 +1733,7 @@ private fun HomeCategoryPill(
         label = "homeCategoryPillOffsetY",
     )
     val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 9.dp,
+        targetValue = if (isPressed) 1.dp else 3.dp,
         label = "homeCategoryPillElevation",
     )
     val pillHeight = if (emphasized) HOME_TODAY_PILL_HEIGHT else HOME_CATEGORY_PILL_HEIGHT
@@ -1793,14 +1820,8 @@ private fun HomeCategoryPill(
                                 start = Offset(x = size.width * 0.04f, y = size.height * 0.06f),
                                 end = Offset(x = size.width * 0.98f, y = size.height * 0.92f),
                             )
-                            val softBloom = Brush.radialGradient(
-                                colors = listOf(Color.White.copy(alpha = 0.20f), Color.Transparent),
-                                center = Offset(x = size.width * 0.18f, y = size.height * 0.18f),
-                                radius = size.maxDimension * 0.82f,
-                            )
                             onDrawWithContent {
                                 drawRect(surfaceLift)
-                                drawRect(softBloom)
                                 drawContent()
                             }
                         }
