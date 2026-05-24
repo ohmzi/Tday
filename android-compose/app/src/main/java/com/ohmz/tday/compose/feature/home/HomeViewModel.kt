@@ -35,6 +35,7 @@ data class HomeUiState(
         lists = emptyList(),
     ),
     val searchableTodos: List<TodoItem> = emptyList(),
+    val todayTodos: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
 )
 
@@ -54,6 +55,7 @@ class HomeViewModel @Inject constructor(
                 isLoading = false,
                 summary = todoRepository.fetchDashboardSummarySnapshot(),
                 searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
+                todayTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
                 errorMessage = null,
             )
         }.getOrElse { HomeUiState() },
@@ -75,13 +77,18 @@ class HomeViewModel @Inject constructor(
 
     fun refreshFromCache() {
         runCatching {
-            todoRepository.fetchDashboardSummarySnapshot() to todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
-        }.onSuccess { (summary, todos) ->
+            Triple(
+                todoRepository.fetchDashboardSummarySnapshot(),
+                todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
+                todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
+            )
+        }.onSuccess { (summary, todos, todayTodos) ->
             _uiState.update { current ->
                 current.copy(
                     isLoading = activeLoadingRefreshes > 0,
                     summary = if (current.summary == summary) current.summary else summary,
                     searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
+                    todayTodos = if (current.todayTodos == todayTodos) current.todayTodos else todayTodos,
                     errorMessage = null,
                 )
             }
@@ -122,14 +129,19 @@ class HomeViewModel @Inject constructor(
                         )
                             .onFailure { /* fall back to local cache */ }
                     }
-                    todoRepository.fetchDashboardSummary() to todoRepository.fetchTodos(mode = TodoListMode.ALL)
-                }.onSuccess { (summary, todos) ->
+                    Triple(
+                        todoRepository.fetchDashboardSummary(),
+                        todoRepository.fetchTodos(mode = TodoListMode.ALL),
+                        todoRepository.fetchTodos(mode = TodoListMode.TODAY),
+                    )
+                }.onSuccess { (summary, todos, todayTodos) ->
                     _uiState.update { current ->
                         val keepLoading = activeLoadingRefreshes > if (showLoading) 1 else 0
                         current.copy(
                             isLoading = keepLoading,
                             summary = if (current.summary == summary) current.summary else summary,
                             searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
+                            todayTodos = if (current.todayTodos == todayTodos) current.todayTodos else todayTodos,
                             errorMessage = null,
                         )
                     }
@@ -205,6 +217,44 @@ class HomeViewModel @Inject constructor(
             text = text,
             referenceDueEpochMs = referenceDueEpochMs,
         )
+    }
+
+    fun completeTodo(todo: TodoItem) {
+        _uiState.update { current ->
+            current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
+        }
+        viewModelScope.launch {
+            runCatching { todoRepository.completeTodo(todo) }
+                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
+                .onFailure { error ->
+                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not complete task.")) }
+                    refreshFromCache()
+                }
+        }
+    }
+
+    fun deleteTodo(todo: TodoItem) {
+        _uiState.update { current ->
+            current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
+        }
+        viewModelScope.launch {
+            runCatching { todoRepository.deleteTodo(todo) }
+                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
+                .onFailure { error ->
+                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not delete task.")) }
+                    refreshFromCache()
+                }
+        }
+    }
+
+    fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        viewModelScope.launch {
+            runCatching { todoRepository.updateTodo(todo, payload) }
+                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
+                .onFailure { error ->
+                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not update task.")) }
+                }
+        }
     }
 
     val lists: List<ListSummary>
