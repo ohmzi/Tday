@@ -107,6 +107,7 @@ import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -288,6 +289,12 @@ fun CompletedScreen(
                                             .padding(top = 4.dp),
                                         item = completed,
                                         lists = uiState.lists,
+                                        showDateDivider = shouldShowDateDivider(
+                                            afterItemIndex = itemIndex,
+                                            inSectionIndex = sectionIndex,
+                                            sections = timelineSections,
+                                            collapsedSectionKeys = collapsedSectionKeys,
+                                        ),
                                         onInfo = { editTargetId = completed.id },
                                         onDelete = { onDelete(completed) },
                                         onUncomplete = { onUncomplete(completed) },
@@ -542,6 +549,7 @@ private fun CompletedSwipeRow(
     modifier: Modifier = Modifier,
     item: CompletedItem,
     lists: List<ListSummary>,
+    showDateDivider: Boolean,
     onInfo: () -> Unit,
     onDelete: () -> Unit,
     onUncomplete: () -> Unit,
@@ -801,12 +809,14 @@ private fun CompletedSwipeRow(
                     }
                 }
             }
+        if (showDateDivider) {
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
+        }
     }
 }
 
@@ -955,6 +965,37 @@ private data class CompletedSection(
     val title: String,
     val items: List<CompletedItem>,
 )
+
+private fun shouldShowDateDivider(
+    afterItemIndex: Int,
+    inSectionIndex: Int,
+    sections: List<CompletedSection>,
+    collapsedSectionKeys: Set<String>,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Boolean {
+    val section = sections.getOrNull(inSectionIndex) ?: return false
+    val currentItem = section.items.getOrNull(afterItemIndex) ?: return false
+    val nextItemInSection = section.items.getOrNull(afterItemIndex + 1)
+    if (nextItemInSection != null) {
+        return !currentItem.completedDate()
+            .isSameLocalDayAs(nextItemInSection.completedDate(), zoneId)
+    }
+
+    val nextVisibleItem = sections
+        .asSequence()
+        .drop(inSectionIndex + 1)
+        .filter { it.key !in collapsedSectionKeys }
+        .flatMap { it.items.asSequence() }
+        .firstOrNull()
+        ?: return false
+
+    return !currentItem.completedDate().isSameLocalDayAs(nextVisibleItem.completedDate(), zoneId)
+}
+
+private fun CompletedItem.completedDate() = completedAt ?: due
+
+private fun Instant.isSameLocalDayAs(other: Instant, zoneId: ZoneId): Boolean =
+    LocalDate.ofInstant(this, zoneId) == LocalDate.ofInstant(other, zoneId)
 
 private fun buildCompletedTimelineSections(
     items: List<CompletedItem>,
