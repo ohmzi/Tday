@@ -15,13 +15,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -359,7 +360,7 @@ fun OnboardingWizardOverlay(
         unfocusedPlaceholderColor = colorScheme.onSurface.copy(alpha = 0.4f),
     )
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.25f))
@@ -370,11 +371,19 @@ fun OnboardingWizardOverlay(
             ),
         contentAlignment = Alignment.Center,
     ) {
+        val targetCardWidth = if (maxWidth >= WIZARD_WIDE_LAYOUT_BREAKPOINT) {
+            WIZARD_WIDE_CARD_WIDTH
+        } else {
+            WIZARD_CARD_MAX_WIDTH
+        }
+        val cardWidth = minOf(
+            targetCardWidth,
+            maxWidth - (WIZARD_SCREEN_EDGE_PADDING * 2),
+        )
+
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 460.dp)
-                .padding(horizontal = 18.dp),
+                .width(cardWidth),
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
@@ -396,7 +405,7 @@ fun OnboardingWizardOverlay(
                             drawContent()
                         }
                     }
-                    .padding(18.dp),
+                    .padding(WIZARD_CARD_CONTENT_PADDING),
             ) {
                 Icon(
                     imageVector = if (step == WizardStep.SERVER) Icons.Rounded.Language else Icons.Rounded.Lock,
@@ -404,10 +413,13 @@ fun OnboardingWizardOverlay(
                     tint = lerp(colorScheme.surface, colorScheme.primary, 0.3f).copy(alpha = 0.25f),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .size(130.dp),
+                        .size(WIZARD_WATERMARK_SIZE),
                 )
 
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     Text(
                         text = stringResource(R.string.onboarding_title),
                         style = MaterialTheme.typography.headlineSmall,
@@ -1020,3 +1032,9 @@ private fun WizardStepChip(
 
 private const val CREDENTIAL_PROMPT_SETTLE_DELAY_MS = 600L
 private val EMAIL_REGEX = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
+private val WIZARD_CARD_MAX_WIDTH = 440.dp
+private val WIZARD_CARD_CONTENT_PADDING = 18.dp
+private val WIZARD_SCREEN_EDGE_PADDING = 20.dp
+private val WIZARD_WIDE_LAYOUT_BREAKPOINT = 600.dp
+private val WIZARD_WIDE_CARD_WIDTH = 360.dp
+private val WIZARD_WATERMARK_SIZE = 130.dp
