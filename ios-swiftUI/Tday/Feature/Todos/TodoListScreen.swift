@@ -730,22 +730,15 @@ struct TodoListScreen: View {
         .animation(.easeInOut(duration: 0.16), value: isCompleting)
         .opacity(draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1)
         .allowsHitTesting(!isCompleting)
-        .swipeRevealHintOnTap(enabled: !isCompleting)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button {
-                Task { await viewModel.delete(todo) }
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-            .tint(TaskSwipeActionTint.delete)
-
-            Button {
+        .todoTrailingSwipeActions(
+            enabled: !isCompleting,
+            onEdit: {
                 editingTodo = todo
-            } label: {
-                Label("Edit", systemImage: "square.and.pencil")
+            },
+            onDelete: {
+                Task { await viewModel.delete(todo) }
             }
-            .tint(TaskSwipeActionTint.edit)
-        }
+        )
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
                 completeTodoWithoutReflow(todo)
@@ -850,22 +843,15 @@ struct TodoListScreen: View {
         .allowsHitTesting(!isCompleting)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
-        .swipeRevealHintOnTap(enabled: !isCompleting)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button {
-                Task { await viewModel.delete(todo) }
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-            .tint(TaskSwipeActionTint.delete)
-
-            Button {
+        .todoTrailingSwipeActions(
+            enabled: !isCompleting,
+            onEdit: {
                 editingTodo = todo
-            } label: {
-                Label("Edit", systemImage: "square.and.pencil")
+            },
+            onDelete: {
+                Task { await viewModel.delete(todo) }
             }
-            .tint(TaskSwipeActionTint.edit)
-        }
+        )
         .onDrop(
             of: [UTType.plainText.identifier],
             delegate: ScheduledTodoDropDelegate(

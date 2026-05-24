@@ -168,7 +168,14 @@ struct CalendarScreen: View {
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
-                        .swipeRevealHintOnTap()
+                        .todoTrailingSwipeActions(
+                            onEdit: {
+                                editingTodo = todo
+                            },
+                            onDelete: {
+                                Task { await viewModel.delete(todo) }
+                            }
+                        )
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
                                 Task { await viewModel.complete(todo) }
@@ -176,21 +183,6 @@ struct CalendarScreen: View {
                                 Label("Complete", systemImage: "checkmark")
                             }
                             .tint(.green)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button {
-                                Task { await viewModel.delete(todo) }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                            .tint(TaskSwipeActionTint.delete)
-
-                            Button {
-                                editingTodo = todo
-                            } label: {
-                                Label("Edit", systemImage: "square.and.pencil")
-                            }
-                            .tint(TaskSwipeActionTint.edit)
                         }
                         TimelineRowDivider()
                     }
