@@ -76,6 +76,17 @@ internal fun isLikelyConnectivityIssue(error: Throwable): Boolean {
     return false
 }
 
+internal fun isSessionAuthenticationIssue(error: Throwable): Boolean {
+    var current: Throwable? = error
+    while (current != null) {
+        if (current is ApiCallException && current.statusCode == 401) {
+            return true
+        }
+        current = current.cause?.takeIf { it !== current }
+    }
+    return false
+}
+
 internal fun isLikelyServerUnavailableStatus(statusCode: Int): Boolean {
     return statusCode == 408 ||
             statusCode == 502 ||
