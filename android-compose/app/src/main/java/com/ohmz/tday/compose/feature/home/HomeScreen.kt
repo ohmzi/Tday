@@ -2,10 +2,13 @@ package com.ohmz.tday.compose.feature.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,9 +21,12 @@ import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -35,6 +41,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -45,7 +52,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -66,6 +76,7 @@ import androidx.compose.material.icons.rounded.Architecture
 import androidx.compose.material.icons.rounded.Backpack
 import androidx.compose.material.icons.rounded.BeachAccess
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Cake
 import androidx.compose.material.icons.rounded.CalendarToday
@@ -74,12 +85,14 @@ import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.ChangeHistory
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChildCare
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.DirectionsBoat
@@ -110,6 +123,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.PriorityHigh
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.School
@@ -131,7 +145,6 @@ import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -179,6 +192,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -188,15 +202,21 @@ import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
+import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
@@ -214,6 +234,9 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onOpenTaskFromSearch: (todoId: String) -> Unit,
     onOpenList: (listId: String, listName: String) -> Unit,
+    onCompleteTask: (TodoItem) -> Unit,
+    onDeleteTask: (TodoItem) -> Unit,
+    onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
     onCreateTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
@@ -249,6 +272,7 @@ fun HomeScreen(
     var visibleListStage by rememberSaveable { mutableIntStateOf(0) }
     var animateListCascade by rememberSaveable { mutableStateOf(false) }
     var searchResultOpening by rememberSaveable { mutableStateOf(false) }
+    var editingTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     val searchResultScope = rememberCoroutineScope()
     val closeSearch = {
         keyboardController?.hide()
@@ -312,6 +336,12 @@ fun HomeScreen(
         java.time.format.DateTimeFormatter.ofPattern("EEE h:mm a")
             .withZone(java.time.ZoneId.systemDefault())
     }
+    val todayHeaderFormatter = remember {
+        DateTimeFormatter.ofPattern("EEE, MMM d")
+    }
+    val todayHeaderLabel = remember(todayHeaderFormatter) {
+        todayHeaderFormatter.format(LocalDate.now())
+    }
     val searchResults = remember(normalizedSearchQuery, uiState.searchableTodos, listById) {
         if (normalizedSearchQuery.isBlank()) {
             emptyList()
@@ -327,6 +357,22 @@ fun HomeScreen(
                 .sortedBy { it.due }
                 .take(20)
                 .toList()
+        }
+    }
+    val todayTasks = remember(uiState.searchableTodos) {
+        val zoneId = ZoneId.systemDefault()
+        val today = LocalDate.now(zoneId)
+        uiState.searchableTodos
+            .asSequence()
+            .filter { todo ->
+                !todo.completed && todo.due.atZone(zoneId).toLocalDate() == today
+            }
+            .sortedBy { it.due }
+            .toList()
+    }
+    val editingTask = remember(editingTaskId, uiState.searchableTodos) {
+        editingTaskId?.let { targetId ->
+            uiState.searchableTodos.firstOrNull { it.id == targetId }
         }
     }
     val showSearchResultsOverlay = searchExpanded && searchQuery.isNotBlank()
@@ -396,6 +442,11 @@ fun HomeScreen(
     LaunchedEffect(showSearchResultsOverlay) {
         if (!showSearchResultsOverlay) {
             searchResultsBounds = null
+        }
+    }
+    LaunchedEffect(editingTaskId, editingTask) {
+        if (editingTaskId != null && editingTask == null) {
+            editingTaskId = null
         }
     }
 
@@ -489,18 +540,44 @@ fun HomeScreen(
                         )
                     }
                     item {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            CategoryGrid(
-                                todayCount = uiState.summary.todayCount,
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            HomeCategoryPill(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = Color(0xFF6EA8E1),
+                                icon = Icons.Rounded.WbSunny,
+                                backgroundWatermark = Icons.Rounded.WbSunny,
+                                title = todayHeaderLabel,
+                                count = uiState.summary.todayCount,
+                                emphasized = true,
+                                onClick = {
+                                    closeSearch()
+                                    onOpenToday()
+                                },
+                            )
+
+                            TodayTaskPreview(
+                                tasks = todayTasks,
+                                lists = uiState.summary.lists,
+                                onCompleteTask = { todo ->
+                                    closeSearch()
+                                    onCompleteTask(todo)
+                                },
+                                onDeleteTask = { todo ->
+                                    closeSearch()
+                                    onDeleteTask(todo)
+                                },
+                                onEditTask = { todo ->
+                                    closeSearch()
+                                    editingTaskId = todo.id
+                                },
+                            )
+
+                            HomeCategoryPillRow(
                                 overdueCount = overdueCount,
                                 scheduledCount = uiState.summary.scheduledCount,
                                 allCount = uiState.summary.allCount,
                                 priorityCount = uiState.summary.priorityCount,
                                 completedCount = uiState.summary.completedCount,
-                                onOpenToday = {
-                                    closeSearch()
-                                    onOpenToday()
-                                },
                                 onOpenOverdue = {
                                     closeSearch()
                                     onOpenOverdue()
@@ -521,21 +598,11 @@ fun HomeScreen(
                                     closeSearch()
                                     onOpenCompleted()
                                 },
-                            )
-
-                            CategoryCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = calendarTileColor(colorScheme),
-                                icon = Icons.Rounded.CalendarToday,
-                                backgroundGrid = true,
-                                title = "Calendar",
-                                count = uiState.summary.scheduledCount,
-                                onClick = {
+                                onOpenCalendar = {
                                     closeSearch()
                                     onOpenCalendar()
                                 },
                             )
-
                         }
                     }
 
@@ -704,6 +771,20 @@ fun HomeScreen(
             onCreateTask = { payload ->
                 onCreateTask(payload)
                 showCreateTask = false
+            },
+        )
+    }
+
+    if (editingTask != null) {
+        CreateTaskBottomSheet(
+            lists = uiState.summary.lists,
+            editingTask = editingTask,
+            onParseTaskTitleNlp = onParseTaskTitleNlp,
+            onDismiss = { editingTaskId = null },
+            onCreateTask = {},
+            onUpdateTask = { target, payload ->
+                onUpdateTask(target, payload)
+                editingTaskId = null
             },
         )
     }
@@ -1477,92 +1558,92 @@ private fun PressableIconButton(
 }
 
 @Composable
-private fun CategoryGrid(
-    todayCount: Int,
+private fun HomeCategoryPillRow(
     overdueCount: Int,
     scheduledCount: Int,
     allCount: Int,
     priorityCount: Int,
     completedCount: Int,
-    onOpenToday: () -> Unit,
     onOpenOverdue: () -> Unit,
     onOpenScheduled: () -> Unit,
     onOpenAll: () -> Unit,
     onOpenPriority: () -> Unit,
     onOpenCompleted: () -> Unit,
+    onOpenCalendar: () -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    val completedColor = completedTileColor(colorScheme)
-
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CategoryCard(
-                modifier = Modifier.weight(1f),
-                color = Color(0xFF6EA8E1),
-                icon = Icons.Rounded.WbSunny,
-                backgroundWatermark = Icons.Rounded.WbSunny,
-                title = stringResource(R.string.home_category_today),
-                count = todayCount,
-                onClick = onOpenToday,
-            )
-            CategoryCard(
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            HomeCategoryPill(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFDA7661),
                 icon = Icons.Rounded.ErrorOutline,
-                backgroundWatermark = Icons.Rounded.ErrorOutline,
                 title = stringResource(R.string.home_category_overdue),
                 count = overdueCount,
                 onClick = onOpenOverdue,
             )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CategoryCard(
+            HomeCategoryPill(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFDDB37D),
                 icon = Icons.Rounded.Schedule,
-                backgroundWatermark = Icons.Rounded.Schedule,
                 title = stringResource(R.string.home_category_scheduled),
                 count = scheduledCount,
                 onClick = onOpenScheduled,
             )
-            CategoryCard(
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            HomeCategoryPill(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFD48A8C),
                 icon = Icons.Rounded.Flag,
-                backgroundWatermark = Icons.Rounded.Flag,
                 title = stringResource(R.string.home_category_priority),
                 count = priorityCount,
                 onClick = onOpenPriority,
             )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CategoryCard(
+            HomeCategoryPill(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFF4E4E50),
                 icon = Icons.Rounded.Inbox,
-                backgroundWatermark = Icons.Rounded.Inbox,
                 title = stringResource(R.string.home_category_all),
                 count = allCount,
                 onClick = onOpenAll,
             )
-            CategoryCard(
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            HomeCategoryPill(
                 modifier = Modifier.weight(1f),
-                color = completedColor,
+                color = completedTileColor(),
                 icon = Icons.Rounded.Check,
-                backgroundWatermark = Icons.Rounded.Check,
                 title = stringResource(R.string.home_category_completed),
                 count = completedCount,
                 onClick = onOpenCompleted,
+            )
+            HomeCategoryPill(
+                modifier = Modifier.weight(1f),
+                color = calendarTileColor(),
+                icon = Icons.Rounded.CalendarToday,
+                backgroundGrid = true,
+                title = stringResource(R.string.home_category_calendar),
+                count = scheduledCount,
+                onClick = onOpenCalendar,
             )
         }
     }
 }
 
-private fun completedTileColor(colorScheme: ColorScheme): Color {
+private fun completedTileColor(): Color {
     return Color(0xFFA8C8B2)
 }
 
-private fun calendarTileColor(colorScheme: ColorScheme): Color {
+private fun calendarTileColor(): Color {
     return Color(0xFFC3B4DF)
 }
 
@@ -1599,7 +1680,7 @@ private fun TopDownCascadeReveal(
 }
 
 @Composable
-private fun CategoryCard(
+private fun HomeCategoryPill(
     modifier: Modifier,
     color: Color,
     icon: ImageVector,
@@ -1607,6 +1688,7 @@ private fun CategoryCard(
     backgroundGrid: Boolean = false,
     title: String,
     count: Int? = null,
+    emphasized: Boolean = false,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
@@ -1614,19 +1696,33 @@ private fun CategoryCard(
     val isPressed by interactionSource.collectIsPressedAsState()
     val animatedScale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
-        label = "categoryCardScale",
+        label = "homeCategoryPillScale",
     )
     val animatedOffsetY by animateDpAsState(
         targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "categoryCardOffsetY",
+        label = "homeCategoryPillOffsetY",
     )
     val animatedElevation by animateDpAsState(
         targetValue = if (isPressed) 2.dp else 9.dp,
-        label = "categoryCardElevation",
+        label = "homeCategoryPillElevation",
     )
+    val pillHeight = if (emphasized) HOME_TODAY_PILL_HEIGHT else HOME_CATEGORY_PILL_HEIGHT
+    val titleTextStyle = if (emphasized) {
+        MaterialTheme.typography.titleLarge
+    } else {
+        MaterialTheme.typography.titleSmall
+    }
+    val countTextStyle = if (emphasized) {
+        MaterialTheme.typography.headlineLarge
+    } else {
+        MaterialTheme.typography.titleLarge
+    }
+    val iconSize = if (emphasized) 24.dp else 22.dp
+    val watermarkSize = if (emphasized) 108.dp else 70.dp
 
     Card(
         modifier = modifier
+            .height(pillHeight)
             .semantics(mergeDescendants = true) {}
             .offset(y = animatedOffsetY)
             .graphicsLayer {
@@ -1647,42 +1743,66 @@ private fun CategoryCard(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .drawWithCache {
-                    val iconSideGlow = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.White.copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(
-                            x = size.width * 0.22f,
-                            y = size.height * 0.2f,
-                        ),
-                        radius = size.maxDimension * 0.9f,
-                    )
-                    val pearlWash = Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.12f),
-                            Color(0xFFE7F3FF).copy(alpha = 0.1f),
-                            Color(0xFFFFF2FA).copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        start = Offset(
-                            x = size.width * 0.05f,
-                            y = size.height * 0.04f,
-                        ),
-                        end = Offset(
-                            x = size.width * 0.9f,
-                            y = size.height * 0.75f,
-                        ),
-                    )
-                    onDrawWithContent {
-                        drawRect(iconSideGlow)
-                        drawRect(pearlWash)
-                        drawContent()
+                .fillMaxSize()
+                .then(
+                    if (emphasized) {
+                        Modifier.drawWithCache {
+                            val surfaceLift = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.18f),
+                                    Color.White.copy(alpha = 0.08f),
+                                    Color.Black.copy(alpha = 0.03f),
+                                ),
+                                start = Offset(
+                                    x = size.width * 0.04f,
+                                    y = size.height * 0.06f,
+                                ),
+                                end = Offset(
+                                    x = size.width * 0.98f,
+                                    y = size.height * 0.92f,
+                                ),
+                            )
+                            val softBloom = Brush.radialGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.16f),
+                                    Color.Transparent,
+                                ),
+                                center = Offset(
+                                    x = size.width * 0.18f,
+                                    y = size.height * 0.18f,
+                                ),
+                                radius = size.maxDimension * 0.82f,
+                            )
+                            onDrawWithContent {
+                                drawRect(surfaceLift)
+                                drawRect(softBloom)
+                                drawContent()
+                            }
+                        }
+                    } else {
+                        Modifier.drawWithCache {
+                            val surfaceLift = Brush.linearGradient(
+                                colorStops = arrayOf(
+                                    0f to Color.White.copy(alpha = 0.26f),
+                                    0.45f to Color.White.copy(alpha = 0.10f),
+                                    1f to Color.Black.copy(alpha = 0.04f),
+                                ),
+                                start = Offset(x = size.width * 0.04f, y = size.height * 0.06f),
+                                end = Offset(x = size.width * 0.98f, y = size.height * 0.92f),
+                            )
+                            val softBloom = Brush.radialGradient(
+                                colors = listOf(Color.White.copy(alpha = 0.20f), Color.Transparent),
+                                center = Offset(x = size.width * 0.18f, y = size.height * 0.18f),
+                                radius = size.maxDimension * 0.82f,
+                            )
+                            onDrawWithContent {
+                                drawRect(surfaceLift)
+                                drawRect(softBloom)
+                                drawContent()
+                            }
+                        }
                     }
-                }
+                ),
         ) {
             if (backgroundGrid) {
                 val gridTint = lerp(color, Color.White, 0.32f)
@@ -1690,9 +1810,9 @@ private fun CategoryCard(
                     Canvas(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .offset(x = 28.dp, y = 14.dp)
-                            .size(width = 172.dp, height = 116.dp)
-                            .graphicsLayer { alpha = 0.42f },
+                            .offset(x = 30.dp, y = 10.dp)
+                            .size(width = 132.dp, height = 88.dp)
+                            .graphicsLayer { alpha = if (emphasized) 0.16f else 0.09f },
                     ) {
                         val cols = 6
                         val rows = 4
@@ -1728,13 +1848,13 @@ private fun CategoryCard(
                 }
             }
 
-            if (backgroundWatermark != null) {
+            if (backgroundWatermark != null && emphasized) {
                 Box(modifier = Modifier.matchParentSize()) {
                     Icon(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .offset(x = 22.dp, y = 12.dp)
-                            .size(124.dp),
+                            .offset(x = 12.dp, y = 8.dp)
+                            .size(watermarkSize),
                         imageVector = backgroundWatermark,
                         contentDescription = null,
                         tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
@@ -1742,41 +1862,468 @@ private fun CategoryCard(
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            if (emphasized) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier.size(42.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                icon,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(iconSize),
+                            )
+                        }
+                        Text(
+                            text = title,
+                            style = titleTextStyle,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+
+                    if (count != null) {
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 12.dp)
+                                .widthIn(min = 30.dp),
+                            contentAlignment = Alignment.CenterEnd,
+                        ) {
+                            Text(
+                                text = count.toString(),
+                                style = countTextStyle,
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxSize()) {
                     Icon(
                         icon,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = 14.dp, top = 12.dp)
+                            .size(iconSize),
                     )
                     if (count != null) {
                         Text(
                             text = count.toString(),
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 12.dp, end = 14.dp),
                         )
                     }
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                    )
                 }
+            }
+        }
+    }
+}
 
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
+@Composable
+private fun TodayTaskPreview(
+    tasks: List<TodoItem>,
+    lists: List<ListSummary>,
+    onCompleteTask: (TodoItem) -> Unit,
+    onDeleteTask: (TodoItem) -> Unit,
+    onEditTask: (TodoItem) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (tasks.isEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 58.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = stringResource(R.string.todos_empty_today),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        } else {
+            tasks.forEach { todo ->
+                TodayTaskRow(
+                    todo = todo,
+                    lists = lists,
+                    onComplete = { onCompleteTask(todo) },
+                    onDelete = { onDeleteTask(todo) },
+                    onInfo = { onEditTask(todo) },
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TodayTaskRow(
+    todo: TodoItem,
+    lists: List<ListSummary>,
+    onComplete: () -> Unit,
+    onDelete: () -> Unit,
+    onInfo: () -> Unit,
+) {
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val colorScheme = MaterialTheme.colorScheme
+    val coroutineScope = rememberCoroutineScope()
+    val actionRevealPx = with(density) { HOME_TASK_ACTION_REVEAL_WIDTH.toPx() }
+    val swipeHintOffsetPx = with(density) { HOME_TASK_SWIPE_HINT_OFFSET.toPx() }
+        .coerceAtMost(actionRevealPx * 0.24f)
+    val maxElasticDragPx = actionRevealPx * 1.14f
+    var targetOffsetX by remember(todo.id) { mutableStateOf(0f) }
+    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
+    var localCompleted by remember(todo.id) { mutableStateOf(false) }
+    var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
+    var completionFading by remember(todo.id) { mutableStateOf(false) }
+    val highlightAnim = remember(todo.id) { Animatable(0f) }
+    val visuallyCompleted = localCompleted
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = targetOffsetX,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "homeTodayTaskOffset",
+    )
+    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val completionAlpha by animateFloatAsState(
+        targetValue = if (completionFading) 0f else 1f,
+        animationSpec = tween(durationMillis = 220),
+        label = "homeTodayTaskCompletionAlpha",
+    )
+    val dueTimeText = HOME_TODO_DUE_TIME_FORMATTER.format(todo.due)
+    val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
+    val dueSubtitleText = if (isOverdue) {
+        stringResource(R.string.todos_due_overdue_text, dueTimeText)
+    } else {
+        stringResource(R.string.todos_due_text, dueTimeText)
+    }
+    val rowShape = RoundedCornerShape(16.dp)
+    val foregroundColor = colorScheme.background
+    val highlightStrength = highlightAnim.value.coerceIn(0f, 1f)
+    val contentGlowBrush = Brush.horizontalGradient(
+        colors = listOf(
+            colorScheme.primary.copy(
+                alpha = if (colorScheme.background.luminance() < 0.5f) {
+                    0.50f * highlightStrength
+                } else {
+                    0.40f * highlightStrength
+                },
+            ),
+            colorScheme.primary.copy(
+                alpha = if (colorScheme.background.luminance() < 0.5f) {
+                    0.30f * highlightStrength
+                } else {
+                    0.20f * highlightStrength
+                },
+            ),
+            Color.Transparent,
+        ),
+    )
+    val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
+    val showListIndicator = listMeta != null
+    val showPriorityFlag = isHighPriority(todo.priority)
+    val listIndicatorColor = listColorAccent(listMeta?.color)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { alpha = completionAlpha },
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(HOME_TASK_ROW_HEIGHT),
+        ) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TaskSwipeActionButton(
+                    icon = Icons.Rounded.BorderColor,
+                    contentDescription = stringResource(R.string.action_edit_task),
+                    label = stringResource(R.string.action_edit),
+                    tint = Color.White,
+                    background = Color(0xFF4C7DDE),
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.62f,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK,
+                        )
+                        onInfo()
+                        targetOffsetX = 0f
+                    },
+                )
+                TaskSwipeActionButton(
+                    icon = Icons.Rounded.DeleteOutline,
+                    contentDescription = stringResource(R.string.action_delete_task),
+                    label = stringResource(R.string.action_delete),
+                    tint = Color.White,
+                    background = Color(0xFFFF453A),
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.04f,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK,
+                        )
+                        onDelete()
+                        targetOffsetX = 0f
+                    },
+                )
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = animatedOffsetX }
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
+                        },
+                        onDragStopped = { velocity ->
+                            val flingOpen = velocity < -1450f
+                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
+                            targetOffsetX = if (flingOpen || dragOpen) -actionRevealPx else 0f
+                        },
+                    )
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                    ) {
+                        if (targetOffsetX != 0f) {
+                            targetOffsetX = 0f
+                        } else if (!swipeHinting && !pendingCompletion) {
+                            swipeHinting = true
+                            coroutineScope.launch {
+                                targetOffsetX = -swipeHintOffsetPx
+                                delay(150)
+                                targetOffsetX = 0f
+                                delay(360)
+                                swipeHinting = false
+                            }
+                        }
+                    },
+                shape = rowShape,
+                colors = CardDefaults.cardColors(containerColor = foregroundColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            horizontal = 4.dp,
+                            vertical = HOME_SWIPE_ROW_CONTENT_VERTICAL_PADDING,
+                        )
+                        .semantics(mergeDescendants = true) {},
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(vertical = 2.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(foregroundColor, RoundedCornerShape(18.dp))
+                            .background(contentGlowBrush, RoundedCornerShape(18.dp)),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularCheckToggleIcon(
+                            imageVector = if (!visuallyCompleted) {
+                                Icons.Rounded.RadioButtonUnchecked
+                            } else {
+                                Icons.Rounded.CheckCircle
+                            },
+                            contentDescription = if (visuallyCompleted) {
+                                stringResource(R.string.label_completed)
+                            } else {
+                                stringResource(R.string.label_mark_complete)
+                            },
+                            tint = if (!visuallyCompleted) {
+                                colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+                            } else {
+                                TASK_CHECKMARK_GREEN
+                            },
+                            enabled = !visuallyCompleted && !pendingCompletion,
+                            onClick = {
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                targetOffsetX = 0f
+                                localCompleted = true
+                                pendingCompletion = true
+                                coroutineScope.launch {
+                                    delay(180)
+                                    onComplete()
+                                }
+                            },
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .padding(start = 10.dp, end = 8.dp)
+                                .weight(1f),
+                        ) {
+                            Text(
+                                text = todo.title,
+                                color = if (visuallyCompleted) {
+                                    colorScheme.onSurface.copy(alpha = 0.78f)
+                                } else {
+                                    colorScheme.onSurface
+                                },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                textDecoration = if (visuallyCompleted) {
+                                    TextDecoration.LineThrough
+                                } else {
+                                    TextDecoration.None
+                                },
+                                maxLines = 2,
+                            )
+                            Text(
+                                text = dueSubtitleText,
+                                color = if (isOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.8f
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                    if (showListIndicator || showPriorityFlag) {
+                        Row(
+                            modifier = Modifier.padding(start = 8.dp, end = 24.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (showListIndicator) {
+                                Icon(
+                                    imageVector = listIconForKey(listMeta?.iconKey),
+                                    contentDescription = stringResource(R.string.label_task_list),
+                                    tint = listIndicatorColor,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            if (showPriorityFlag) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Flag,
+                                    contentDescription = stringResource(R.string.label_priority_task),
+                                    tint = priorityColor(todo.priority),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+        )
+    }
+}
+
+@Composable
+private fun CircularCheckToggleIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(
+        modifier = Modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .wrapContentSize(Alignment.Center)
+            .clip(CircleShape)
+            .clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = ripple(
+                    bounded = true,
+                    radius = 24.dp,
+                ),
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(24.dp),
+        )
+    }
+}
+
+@Composable
+private fun priorityColor(priority: String): Color {
+    return when (priority.lowercase()) {
+        "high", "urgent", "important" -> Color(0xFFE56A6A)
+        "medium" -> Color(0xFFE3B368)
+        else -> Color(0xFF6FBF86)
+    }
+}
+
+private fun isHighPriority(priority: String): Boolean {
+    return when (priority.trim().lowercase()) {
+        "medium", "high", "urgent", "important" -> true
+        else -> false
     }
 }
 
@@ -1942,6 +2489,17 @@ private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_MOTION_MS = 320
 private const val SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS = 260L
+private val HOME_TASK_ACTION_REVEAL_WIDTH = 176.dp
+private val HOME_TASK_SWIPE_HINT_OFFSET = 42.dp
+private val HOME_TASK_ROW_HEIGHT = 58.dp
+private val HOME_SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
+private val HOME_CATEGORY_PILL_MIN_WIDTH = 176.dp
+private val HOME_CATEGORY_PILL_WIDE_MIN_WIDTH = 188.dp
+private val HOME_CATEGORY_PILL_HEIGHT = 82.dp
+private val HOME_TODAY_PILL_HEIGHT = 88.dp
+private val HOME_TODO_DUE_TIME_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
 
 private fun performGentleHaptic(view: android.view.View) {
     ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)

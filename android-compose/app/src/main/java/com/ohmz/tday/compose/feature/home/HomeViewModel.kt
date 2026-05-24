@@ -191,6 +191,105 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        val normalizedTitle = payload.title.trim()
+        if (normalizedTitle.isBlank()) return
+
+        val normalizedPriority = when (payload.priority.trim()) {
+            "Medium" -> "Medium"
+            "High" -> "High"
+            else -> "Low"
+        }
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+        val normalizedPayload = CreateTaskPayload(
+            title = normalizedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            due = payload.due,
+            rrule = payload.rrule,
+            listId = normalizedListId,
+        )
+
+        val previousState = _uiState.value
+        val updatedTodo = todo.copy(
+            title = normalizedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            due = payload.due,
+            rrule = payload.rrule,
+            listId = normalizedListId,
+        )
+
+        _uiState.update { current ->
+            current.copy(
+                searchableTodos = current.searchableTodos.map { item ->
+                    if (item.id == todo.id) updatedTodo else item
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.updateTodo(todo = todo, payload = normalizedPayload)
+            }.onSuccess {
+                refreshAfterMutation()
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = error.userFacingMessage("Could not update task."),
+                )
+            }
+        }
+    }
+
+    fun toggleComplete(todo: TodoItem) {
+        val previousState = _uiState.value
+        _uiState.update { current ->
+            current.copy(
+                searchableTodos = current.searchableTodos.filterNot { it.id == todo.id },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.completeTodo(todo)
+            }.onSuccess {
+                rescheduleReminders()
+                refreshAfterMutation()
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = error.userFacingMessage("Could not complete task."),
+                )
+            }
+        }
+    }
+
+    fun delete(todo: TodoItem, onDeleted: (() -> Unit)? = null) {
+        val previousState = _uiState.value
+        _uiState.update { current ->
+            current.copy(
+                searchableTodos = current.searchableTodos.filterNot { it.id == todo.id },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.deleteTodo(todo)
+            }.onSuccess {
+                onDeleted?.invoke()
+                rescheduleReminders()
+                refreshAfterMutation()
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = error.userFacingMessage("Could not delete task."),
+                )
+            }
+        }
+    }
+
     private fun rescheduleReminders() {
         viewModelScope.launch(Dispatchers.Default) {
             runCatching { reminderScheduler.rescheduleAll() }
@@ -209,4 +308,22 @@ class HomeViewModel @Inject constructor(
 
     val lists: List<ListSummary>
         get() = _uiState.value.summary.lists
+
+    private fun refreshAfterMutation() {
+        runCatching {
+            val summary = todoRepository.fetchDashboardSummarySnapshot()
+            val todos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+            summary to todos
+        }.onSuccess { (summary, todos) ->
+            _uiState.update { current ->
+                current.copy(
+                    summary = if (current.summary == summary) current.summary else summary,
+                    searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
+                    errorMessage = null,
+                )
+            }
+        }.onFailure {
+            refreshInternal(forceSync = false, showLoading = false)
+        }
+    }
 }
