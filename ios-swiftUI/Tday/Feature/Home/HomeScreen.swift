@@ -1194,10 +1194,13 @@ private struct HomeSearchResultsOverlay: View {
     private let resultVerticalPadding: CGFloat = 8
     private let resultSeparatorHeight: CGFloat = 1
 
+    private var resultSeparatorCount: Int {
+        todos.indices.filter { shouldShowDateDivider(after: $0) }.count
+    }
+
     private var resultsHeight: CGFloat {
-        let separatorCount = max(todos.count - 1, 0)
         let contentHeight = (CGFloat(todos.count) * resultRowHeight) +
-            (CGFloat(separatorCount) * resultSeparatorHeight) +
+            (CGFloat(resultSeparatorCount) * resultSeparatorHeight) +
             resultVerticalPadding
         return min(contentHeight, maxResultsHeight)
     }
@@ -1255,7 +1258,7 @@ private struct HomeSearchResultsOverlay: View {
                             .accessibilityElement(children: .combine)
                             .accessibilityAddTraits(.isButton)
 
-                            if index < todos.count - 1 {
+                            if shouldShowDateDivider(after: index) {
                                 Rectangle()
                                     .fill(colors.onSurface.opacity(0.08))
                                     .frame(height: 1)
@@ -1275,6 +1278,14 @@ private struct HomeSearchResultsOverlay: View {
                 .stroke(colors.onSurface.opacity(0.2), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 8)
+    }
+
+    private func shouldShowDateDivider(after index: Int) -> Bool {
+        guard todos.indices.contains(index),
+              todos.indices.contains(index + 1) else {
+            return false
+        }
+        return !Calendar.current.isDate(todos[index].due, inSameDayAs: todos[index + 1].due)
     }
 }
 
@@ -1851,6 +1862,7 @@ private extension Color {
             )
         )
     }
+
 }
 
 private extension CGFloat {
