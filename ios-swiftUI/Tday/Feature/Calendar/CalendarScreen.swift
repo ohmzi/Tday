@@ -68,6 +68,10 @@ private enum CalendarMonthGridMetrics {
     static let cellCornerRadius: CGFloat = 16
 }
 
+private enum CalendarTaskListMetrics {
+    static let rowVerticalPadding: CGFloat = 6
+}
+
 private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
 
 private struct CalendarTodayJumpRequest: Equatable {
@@ -260,6 +264,7 @@ struct CalendarScreen: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .contentMargins(.top, 0, for: .scrollContent)
+        .listRowSpacing(0)
         .listSectionSpacing(0)
         .environment(\.defaultMinListRowHeight, 1)
         .disableVerticalScrollBounce()
@@ -631,9 +636,6 @@ private struct CalendarMonthGrid: View {
         let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
         let isPreviousEnabled = canGoPrevious && isPagingAtRest
         let isNextEnabled = isPagingAtRest
-        let isMonthDropTarget = activeDropDate
-            .map { calendarMonthStart(for: $0) == calendarMonthStart(for: displayMonth) } ?? false
-
         return VStack(spacing: CalendarPeriodCardMetrics.contentSpacing) {
             HStack {
                 CalendarNavButton(
@@ -647,7 +649,7 @@ private struct CalendarMonthGrid: View {
 
                 Text(monthTitle(for: displayMonth))
                     .font(.tdayRounded(size: 21, weight: .heavy))
-                    .foregroundStyle(isMonthDropTarget ? colors.error : colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
 
                 Spacer(minLength: 0)
 
@@ -853,12 +855,6 @@ private struct CalendarWeekCard: View {
         let previousPageWeekDate = jumpDirection == .previous ? pendingTodayJump?.targetDate : previousWeekDate
         let nextPageWeekDate = jumpDirection == .next ? pendingTodayJump?.targetDate : nextWeekDate
         let isPagingAtRest = pageSelection == calendarNativePagerCenterIndex
-        let weekEnd = Calendar.current.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
-        let isWeekDropTarget = activeDropDate.map { activeDate in
-            let activeDay = Calendar.current.startOfDay(for: activeDate)
-            return activeDay >= weekStart && activeDay <= weekEnd
-        } ?? false
-
         return VStack(spacing: CalendarPeriodCardMetrics.contentSpacing) {
             HStack {
                 CalendarNavButton(
@@ -872,7 +868,7 @@ private struct CalendarWeekCard: View {
 
                 Text(calendarWeekRangeText(from: weekStart))
                     .font(.tdayRounded(size: 21, weight: .heavy))
-                    .foregroundStyle(isWeekDropTarget ? colors.error : colors.onSurface)
+                    .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
                     .minimumScaleFactor(0.82)
 
@@ -2478,7 +2474,7 @@ private struct CalendarPendingTaskRow: View {
                     .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
                 }
             }
-            .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
+            .padding(.vertical, CalendarTaskListMetrics.rowVerticalPadding)
             .contentShape(Rectangle())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
