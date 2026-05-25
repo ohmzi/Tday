@@ -370,8 +370,12 @@ final class AppViewModel {
                     replayPendingMutations: true,
                     notifyOfflineFailure: false
                 )
+                let recoveredResult = await self.recoverSessionAndRetrySyncIfNeeded(
+                    after: result,
+                    connectionProbeTimeoutSeconds: nil
+                )
                 await MainActor.run {
-                    self.applySyncResult(result)
+                    self.applySyncResult(recoveredResult, suppressAuthenticationExpired: true)
                 }
                 await self.rescheduleReminders()
             }
@@ -397,8 +401,12 @@ final class AppViewModel {
                     replayPendingMutations: true,
                     notifyOfflineFailure: false
                 )
+                let recoveredResult = await self.recoverSessionAndRetrySyncIfNeeded(
+                    after: result,
+                    connectionProbeTimeoutSeconds: nil
+                )
                 await MainActor.run {
-                    self.applySyncResult(result)
+                    self.applySyncResult(recoveredResult, suppressAuthenticationExpired: true)
                 }
                 await self.rescheduleReminders()
             }
@@ -412,13 +420,18 @@ final class AppViewModel {
         }
     }
 
-    private func applySyncResult(_ result: Result<Void, Error>, showOfflineNotice: Bool = false) {
+    private func applySyncResult(
+        _ result: Result<Void, Error>,
+        showOfflineNotice: Bool = false,
+        suppressAuthenticationExpired: Bool = false
+    ) {
         switch result {
         case .success:
             isOffline = false
             refreshPendingMutationCount()
         case let .failure(error):
-            isOffline = isLikelyConnectivityIssue(error)
+            isOffline = isLikelyConnectivityIssue(error) ||
+                (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
             if isOffline && showOfflineNotice {
                 offlineNoticeID += 1
             }
@@ -490,11 +503,47 @@ final class AppViewModel {
             notifyOfflineFailure: false,
             connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
         )
-        applySyncResult(result, showOfflineNotice: showOfflineNotice)
-        if case .success = result {
+        let recoveredResult = await recoverSessionAndRetrySyncIfNeeded(
+            after: result,
+            connectionProbeTimeoutSeconds: SyncAndRefreshUseCase.userRefreshConnectionTimeoutSeconds
+        )
+        applySyncResult(
+            recoveredResult,
+            showOfflineNotice: showOfflineNotice,
+            suppressAuthenticationExpired: true
+        )
+        if case .success = recoveredResult {
             startRealtime()
             await rescheduleReminders()
         }
+    }
+
+    private func recoverSessionAndRetrySyncIfNeeded(
+        after result: Result<Void, Error>,
+        connectionProbeTimeoutSeconds: TimeInterval?
+    ) async -> Result<Void, Error> {
+        guard case let .failure(error) = result, isSessionAuthenticationIssue(error) else {
+            return result
+        }
+
+        guard let restoredSession = await container.authRepository.restoreSessionForBootstrap() else {
+            return result
+        }
+
+        user = restoredSession.user
+        authenticated = true
+        isOffline = restoredSession.usedCachedSession
+
+        guard !restoredSession.usedCachedSession else {
+            return .failure(APIError(message: "Unable to refresh session while offline", statusCode: nil))
+        }
+
+        return await container.syncAndRefresh(
+            force: true,
+            replayPendingMutations: true,
+            notifyOfflineFailure: false,
+            connectionProbeTimeoutSeconds: connectionProbeTimeoutSeconds
+        )
     }
 
     private func isAdmin(_ user: SessionUser?) -> Bool {

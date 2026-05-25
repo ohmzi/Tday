@@ -1,25 +1,23 @@
 package com.ohmz.tday.compose.feature.calendar
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -41,34 +39,86 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.rounded.AcUnit
+import androidx.compose.material.icons.rounded.AccountBalance
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Architecture
+import androidx.compose.material.icons.rounded.Backpack
+import androidx.compose.material.icons.rounded.BeachAccess
+import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BorderColor
+import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Cake
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.CalendarToday
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.material.icons.rounded.ChangeHistory
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.ChildCare
+import androidx.compose.material.icons.rounded.Circle
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Computer
+import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.DesktopWindows
+import androidx.compose.material.icons.rounded.DirectionsBoat
 import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.Eco
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FamilyRestroom
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Flight
+import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
+import androidx.compose.material.icons.rounded.Inventory
+import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.LocalHospital
+import androidx.compose.material.icons.rounded.LocalMall
+import androidx.compose.material.icons.rounded.LocationCity
+import androidx.compose.material.icons.rounded.Medication
+import androidx.compose.material.icons.rounded.Mood
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material.icons.rounded.Pets
+import androidx.compose.material.icons.rounded.PriorityHigh
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.ShoppingBasket
+import androidx.compose.material.icons.rounded.ShoppingCart
+import androidx.compose.material.icons.rounded.SportsBaseball
+import androidx.compose.material.icons.rounded.SportsBasketball
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.SportsFootball
+import androidx.compose.material.icons.rounded.SportsSoccer
+import androidx.compose.material.icons.rounded.SportsTennis
+import androidx.compose.material.icons.rounded.Square
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Train
+import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material.icons.rounded.Work
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -78,14 +128,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -93,9 +146,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -103,6 +162,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -110,16 +172,19 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
@@ -133,7 +198,9 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import java.time.temporal.ChronoUnit
 import java.util.Locale
+import kotlin.math.roundToInt
 
 private val CalendarAccentPurple = Color(0xFF7D67B6)
 private val CalendarTodayBlue = Color(0xFF509AE6)
@@ -165,6 +232,36 @@ private val CalendarPeriodCardPageHeight = 78.dp
 private val CalendarPeriodWeekDayCellHeight = 72.dp
 private val CalendarPeriodPageHorizontalGutter = 2.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
+private val CalendarTaskDragDueTimeFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+private const val CalendarMonthPagerPageCount = 240
+private const val CalendarWeekPagerPageCount = 1040
+private const val CalendarDayPagerPageCount = 3650
+
+private fun shouldShowDateDivider(
+    afterItemIndex: Int,
+    items: List<TodoItem>,
+    zoneId: ZoneId,
+): Boolean {
+    val currentTodo = items.getOrNull(afterItemIndex) ?: return false
+    val nextTodo = items.getOrNull(afterItemIndex + 1) ?: return false
+    return LocalDate.ofInstant(currentTodo.due, zoneId) != LocalDate.ofInstant(nextTodo.due, zoneId)
+}
+
+private data class CalendarTaskRescheduleDrop(
+    val todo: TodoItem,
+    val targetDate: LocalDate,
+)
+
+private data class CalendarTaskDragState(
+    val todo: TodoItem,
+    val position: Offset,
+)
+
+private data class CalendarDateDropTargetBounds(
+    val date: LocalDate,
+    val bounds: Rect,
+)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -176,9 +273,11 @@ fun CalendarScreen(
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCompleteTask: (TodoItem) -> Unit,
     onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
+    onMoveTask: (todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) -> Unit,
     onDelete: (TodoItem) -> Unit,
 ) {
     val zoneId = remember { ZoneId.systemDefault() }
+    val view = LocalView.current
     val today = remember { LocalDate.now(zoneId) }
     val minNavigableMonth = remember(zoneId) { YearMonth.now(zoneId) }
     val listState = rememberLazyListState()
@@ -268,6 +367,7 @@ fun CalendarScreen(
     val selectedViewMode = remember(selectedViewKey) {
         CalendarViewMode.entries.firstOrNull { it.name == selectedViewKey } ?: CalendarViewMode.MONTH
     }
+    val calendarTaskRescheduleEnabled = selectedViewMode != CalendarViewMode.DAY
     val tasksByDate = remember(uiState.items, zoneId) {
         uiState.items
             .groupBy { LocalDate.ofInstant(it.due, zoneId) }
@@ -289,10 +389,36 @@ fun CalendarScreen(
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
     var createDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
+    var draggedCalendarTodoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var activeCalendarDrag by remember { mutableStateOf<CalendarTaskDragState?>(null) }
+    var calendarDragContainerOrigin by remember { mutableStateOf(Offset.Zero) }
+    val calendarDropTargetBounds =
+        remember { mutableStateMapOf<String, CalendarDateDropTargetBounds>() }
+    var activeDropDateIso by remember { mutableStateOf<String?>(null) }
+    var pendingRescheduleDrop by remember { mutableStateOf<CalendarTaskRescheduleDrop?>(null) }
+    LaunchedEffect(selectedViewMode) {
+        if (selectedViewMode == CalendarViewMode.DAY) {
+            draggedCalendarTodoId = null
+            activeCalendarDrag = null
+            activeDropDateIso = null
+            calendarDropTargetBounds.clear()
+        }
+    }
     val editTarget = remember(editTargetId, uiState.items) {
         editTargetId?.let { targetId ->
             uiState.items.firstOrNull { it.id == targetId }
         }
+    }
+    val draggedCalendarTodo = remember(draggedCalendarTodoId, uiState.items) {
+        draggedCalendarTodoId?.let { targetId ->
+            uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
+        }
+    }
+    val resolveTodoForDrop: (String) -> TodoItem? = { targetId ->
+        uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
+    }
+    val activeDropDate = remember(activeDropDateIso) {
+        activeDropDateIso?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
     }
     fun openCreateTaskSheetForSelectedDate() {
         val currentDate = LocalDate.now(zoneId)
@@ -304,6 +430,59 @@ fun CalendarScreen(
         }
         createDueEpochMs = prefillDue.toInstant().toEpochMilli()
         showCreateTaskSheet = true
+    }
+    fun requestTaskReschedule(todo: TodoItem, targetDate: LocalDate) {
+        draggedCalendarTodoId = null
+        activeCalendarDrag = null
+        activeDropDateIso = null
+        calendarDropTargetBounds.clear()
+        val currentDate = LocalDate.ofInstant(todo.due, zoneId)
+        if (currentDate == targetDate) return
+        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+        if (todo.isRecurring) {
+            pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo = todo, targetDate = targetDate)
+        } else {
+            onMoveTask(todo, targetDate, TaskRescheduleScope.OCCURRENCE)
+            selectDate(targetDate)
+        }
+    }
+
+    fun activeCalendarDropDate(position: Offset): LocalDate? {
+        return calendarDropTargetBounds.values
+            .asSequence()
+            .filter { target -> target.bounds.contains(position) }
+            .minByOrNull { target -> target.bounds.width * target.bounds.height }
+            ?.date
+    }
+
+    fun updateActiveCalendarDropTarget(position: Offset) {
+        activeDropDateIso = activeCalendarDropDate(position)?.toString()
+    }
+
+    fun finishCalendarDrag(position: Offset?) {
+        val drag = activeCalendarDrag
+        val targetDate = position?.let(::activeCalendarDropDate)
+            ?: activeDropDate
+        activeCalendarDrag = null
+        draggedCalendarTodoId = null
+        activeDropDateIso = null
+        calendarDropTargetBounds.clear()
+        if (drag != null && targetDate != null) {
+            requestTaskReschedule(drag.todo, targetDate)
+        }
+    }
+
+    fun cancelCalendarDrag() {
+        activeCalendarDrag = null
+        draggedCalendarTodoId = null
+        activeDropDateIso = null
+        calendarDropTargetBounds.clear()
+    }
+
+    LaunchedEffect(draggedCalendarTodoId) {
+        if (draggedCalendarTodoId == null) {
+            calendarDropTargetBounds.clear()
+        }
     }
     LaunchedEffect(listState.isScrollInProgress, monthTitleSnapThresholdPx) {
         if (listState.isScrollInProgress) return@LaunchedEffect
@@ -344,7 +523,10 @@ fun CalendarScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .onGloballyPositioned { coordinates ->
+                    calendarDragContainerOrigin = coordinates.positionInRoot()
+                },
         ) {
             CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
                 LazyColumn(
@@ -371,6 +553,12 @@ fun CalendarScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                            )
                             .shadow(
                                 elevation = 2.dp,
                                 shape = RoundedCornerShape(CalendarCardCornerRadius),
@@ -382,71 +570,64 @@ fun CalendarScreen(
                                 shape = RoundedCornerShape(CalendarCardCornerRadius),
                             ),
                     ) {
-                        AnimatedContent(
-                            targetState = selectedViewMode,
-                            transitionSpec = {
-                                val enteringForward = targetState.ordinal > initialState.ordinal
-                                val enter = slideInHorizontally(
-                                    animationSpec = tween(durationMillis = 200),
-                                    initialOffsetX = { fullWidth ->
-                                        if (enteringForward) fullWidth / 4 else -fullWidth / 4
-                                    },
-                                )
-                                val exit = slideOutHorizontally(
-                                    animationSpec = tween(durationMillis = 180),
-                                    targetOffsetX = { fullWidth ->
-                                        if (enteringForward) -fullWidth / 4 else fullWidth / 4
-                                    },
-                                )
-                                (enter togetherWith exit).using(SizeTransform(clip = true))
-                            },
-                            label = "calendarViewModeAnimatedContent",
-                        ) { mode ->
-                            when (mode) {
-                                CalendarViewMode.MONTH -> CalendarMonthCard(
-                                    visibleMonth = visibleMonth,
-                                    canGoPrevMonth = visibleMonth > minNavigableMonth,
-                                    selectedDate = selectedDate,
-                                    today = today,
-                                    tasksByDate = tasksByDate,
-                                    todayJumpRequest = todayJumpRequest,
-                                    onTodayJumpHandled = ::clearTodayJumpRequest,
-                                    onPrevMonth = {
-                                        if (visibleMonth > minNavigableMonth) {
-                                            visibleMonthIso = visibleMonth.minusMonths(1).toString()
-                                        }
-                                    },
-                                    onNextMonth = {
-                                        visibleMonthIso = visibleMonth.plusMonths(1).toString()
-                                    },
-                                    onSelectDate = ::selectDate,
-                                )
+                        when (selectedViewMode) {
+                            CalendarViewMode.MONTH -> CalendarMonthCard(
+                                visibleMonth = visibleMonth,
+                                minNavigableMonth = minNavigableMonth,
+                                canGoPrevMonth = visibleMonth > minNavigableMonth,
+                                selectedDate = selectedDate,
+                                today = today,
+                                tasksByDate = tasksByDate,
+                                draggedTodo = draggedCalendarTodo,
+                                activeDropDate = activeDropDate,
+                                dropTargets = calendarDropTargetBounds,
+                                canSelectDate = ::canNavigateTo,
+                                todayJumpRequest = todayJumpRequest,
+                                onTodayJumpHandled = ::clearTodayJumpRequest,
+                                onVisibleMonthChanged = { targetMonth ->
+                                    if (targetMonth >= minNavigableMonth) {
+                                        visibleMonthIso = targetMonth.toString()
+                                    }
+                                },
+                                onSelectDate = ::selectDate,
+                                onDropDateChanged = { date ->
+                                    activeDropDateIso = date?.toString()
+                                },
+                                onMoveTaskToDate = ::requestTaskReschedule,
+                                resolveTodo = resolveTodoForDrop,
+                            )
 
-                                CalendarViewMode.WEEK -> CalendarWeekCard(
-                                    selectedDate = selectedDate,
-                                    today = today,
-                                    tasksByDate = tasksByDate,
-                                    canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
-                                    canSelectDate = ::canNavigateTo,
-                                    todayJumpRequest = todayJumpRequest,
-                                    onTodayJumpHandled = ::clearTodayJumpRequest,
-                                    onPrevWeek = { selectDate(selectedDate.minusWeeks(1)) },
-                                    onNextWeek = { selectDate(selectedDate.plusWeeks(1)) },
-                                    onSelectDate = ::selectDate,
-                                )
+                            CalendarViewMode.WEEK -> CalendarWeekCard(
+                                selectedDate = selectedDate,
+                                minNavigableMonth = minNavigableMonth,
+                                today = today,
+                                tasksByDate = tasksByDate,
+                                draggedTodo = draggedCalendarTodo,
+                                activeDropDate = activeDropDate,
+                                dropTargets = calendarDropTargetBounds,
+                                canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
+                                canSelectDate = ::canNavigateTo,
+                                todayJumpRequest = todayJumpRequest,
+                                onTodayJumpHandled = ::clearTodayJumpRequest,
+                                onSelectDate = ::selectDate,
+                                onDropDateChanged = { date ->
+                                    activeDropDateIso = date?.toString()
+                                },
+                                onMoveTaskToDate = ::requestTaskReschedule,
+                                resolveTodo = resolveTodoForDrop,
+                            )
 
-                                CalendarViewMode.DAY -> CalendarDayCard(
-                                    selectedDate = selectedDate,
-                                    today = today,
-                                    tasksByDate = tasksByDate,
-                                    canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
-                                    todayJumpRequest = todayJumpRequest,
-                                    onTodayJumpHandled = ::clearTodayJumpRequest,
-                                    onPrevDay = { selectDate(selectedDate.minusDays(1)) },
-                                    onNextDay = { selectDate(selectedDate.plusDays(1)) },
-                                    onSelectDate = ::selectDate,
-                                )
-                            }
+                            CalendarViewMode.DAY -> CalendarDayCard(
+                                selectedDate = selectedDate,
+                                minNavigableMonth = minNavigableMonth,
+                                today = today,
+                                tasksByDate = tasksByDate,
+                                canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
+                                canSelectDate = ::canNavigateTo,
+                                todayJumpRequest = todayJumpRequest,
+                                onTodayJumpHandled = ::clearTodayJumpRequest,
+                                onSelectDate = ::selectDate,
+                            )
                         }
                     }
                 }
@@ -466,14 +647,39 @@ fun CalendarScreen(
                     if (selectedDatePendingTasks.isNotEmpty()) {
                     item {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            selectedDatePendingTasks.forEach { todo ->
+                            selectedDatePendingTasks.forEachIndexed { index, todo ->
                                 key(todo.id) {
                                     CalendarTodoRow(
                                         todo = todo,
                                         lists = uiState.lists,
+                                        showDateDivider = shouldShowDateDivider(
+                                            afterItemIndex = index,
+                                            items = selectedDatePendingTasks,
+                                            zoneId = zoneId,
+                                        ),
+                                        dragEnabled = calendarTaskRescheduleEnabled,
                                         onComplete = { onCompleteTask(todo) },
                                         onInfo = { editTargetId = todo.id },
                                         onDelete = { onDelete(todo) },
+                                        dragging = calendarTaskRescheduleEnabled && draggedCalendarTodo?.id == todo.id,
+                                        onDragStart = { position ->
+                                            activeDropDateIso = null
+                                            draggedCalendarTodoId = todo.id
+                                            activeCalendarDrag = CalendarTaskDragState(
+                                                todo = todo,
+                                                position = position,
+                                            )
+                                            updateActiveCalendarDropTarget(position)
+                                        },
+                                        onDragMove = { position ->
+                                            activeCalendarDrag = CalendarTaskDragState(
+                                                todo = todo,
+                                                position = position,
+                                            )
+                                            updateActiveCalendarDropTarget(position)
+                                        },
+                                        onDragEnd = ::finishCalendarDrag,
+                                        onDragCancel = ::cancelCalendarDrag,
                                     )
                                 }
                             }
@@ -493,6 +699,22 @@ fun CalendarScreen(
                     item { Spacer(modifier = Modifier.height(96.dp)) }
                 }
             }
+
+            activeCalendarDrag?.let { drag ->
+                CalendarTaskDragPreview(
+                    modifier = Modifier
+                        .offset {
+                            val localPosition = drag.position - calendarDragContainerOrigin
+                            IntOffset(
+                                x = (localPosition.x - with(density) { 130.dp.toPx() }).roundToInt(),
+                                y = (localPosition.y - with(density) { 34.dp.toPx() }).roundToInt(),
+                            )
+                        }
+                        .zIndex(20f),
+                    todo = drag.todo,
+                    lists = uiState.lists,
+                )
+            }
         }
     }
 
@@ -509,6 +731,44 @@ fun CalendarScreen(
                 onCreateTask(payload)
                 showCreateTaskSheet = false
                 createDueEpochMs = null
+            },
+        )
+    }
+
+    pendingRescheduleDrop?.let { drop ->
+        AlertDialog(
+            onDismissRequest = { pendingRescheduleDrop = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.todos_reschedule_recurring_title),
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            },
+            text = {
+                Text(text = stringResource(R.string.todos_reschedule_recurring_message))
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRescheduleDrop = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = {
+                        pendingRescheduleDrop = null
+                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.OCCURRENCE)
+                        selectDate(drop.targetDate)
+                    }) {
+                        Text(stringResource(R.string.todos_reschedule_this_occurrence))
+                    }
+                    TextButton(onClick = {
+                        pendingRescheduleDrop = null
+                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.SERIES)
+                        selectDate(drop.targetDate)
+                    }) {
+                        Text(stringResource(R.string.todos_reschedule_entire_series))
+                    }
+                }
             },
         )
     }
@@ -584,97 +844,70 @@ private fun CalendarViewModeTabs(
 @Composable
 private fun CalendarWeekCard(
     selectedDate: LocalDate,
+    minNavigableMonth: YearMonth,
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
+    draggedTodo: TodoItem?,
+    activeDropDate: LocalDate?,
+    dropTargets: MutableMap<String, CalendarDateDropTargetBounds>,
     canGoPrevWeek: Boolean,
     canSelectDate: (LocalDate) -> Boolean,
     todayJumpRequest: CalendarTodayJumpRequest?,
     onTodayJumpHandled: (Int) -> Unit,
-    onPrevWeek: () -> Unit,
-    onNextWeek: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val minWeekStart = remember(minNavigableMonth) { startOfWeek(minNavigableMonth.atDay(1)) }
     val weekStart = remember(selectedDate) { startOfWeek(selectedDate) }
     val coroutineScope = rememberCoroutineScope()
-    var pendingTodayJump by remember { mutableStateOf<CalendarTodayJumpRequest?>(null) }
-    val todayJumpDirection = pendingTodayJump?.let { request ->
-        val targetWeek = startOfWeek(request.targetDate)
-        when {
-            targetWeek < weekStart -> CalendarPagerSlot.PREVIOUS
-            targetWeek > weekStart -> CalendarPagerSlot.NEXT
-            else -> null
-        }
+    val selectedDayOffset = remember(selectedDate) {
+        (selectedDate.dayOfWeek.value % 7).toLong()
     }
-    val previousPageWeek = if (todayJumpDirection == CalendarPagerSlot.PREVIOUS) {
-        pendingTodayJump?.targetDate?.let(::startOfWeek)
-    } else if (canGoPrevWeek) {
-        weekStart.minusWeeks(1)
-    } else {
-        null
+    val currentPage = remember(minWeekStart, weekStart) {
+        ChronoUnit.WEEKS.between(minWeekStart, weekStart)
+            .toInt()
+            .coerceIn(0, CalendarWeekPagerPageCount - 1)
     }
-    val nextPageWeek = if (todayJumpDirection == CalendarPagerSlot.NEXT) {
-        pendingTodayJump?.targetDate?.let(::startOfWeek) ?: weekStart.plusWeeks(1)
-    } else {
-        weekStart.plusWeeks(1)
-    }
-    val pages = remember(previousPageWeek, weekStart, nextPageWeek) {
-        buildList {
-            previousPageWeek?.let { add(CalendarPagerPage(CalendarPagerSlot.PREVIOUS, it)) }
-            add(CalendarPagerPage(CalendarPagerSlot.CURRENT, weekStart))
-            add(CalendarPagerPage(CalendarPagerSlot.NEXT, nextPageWeek))
-        }
-    }
-    val centerPageIndex = pages.indexOfSlot(CalendarPagerSlot.CURRENT).coerceAtLeast(0)
-    val pagerState = rememberPagerState(initialPage = centerPageIndex) { pages.size }
-    val isPagingAtRest = pagerState.settledPage == centerPageIndex && !pagerState.isScrollInProgress
+    var scrollRequest by remember { mutableStateOf<CalendarPagerScrollRequest?>(null) }
+    val isPagingAtRest = scrollRequest == null
 
-    fun requestPage(slot: CalendarPagerSlot) {
-        val targetIndex = pages.indexOfSlot(slot)
-        if (targetIndex < 0 || !isPagingAtRest) return
+    fun requestPage(offset: Int) {
+        val targetIndex = (currentPage + offset).coerceIn(0, CalendarWeekPagerPageCount - 1)
+        if (targetIndex == currentPage || !isPagingAtRest) return
         coroutineScope.launch {
-            pagerState.animateScrollToPage(targetIndex)
+            scrollRequest = CalendarPagerScrollRequest(
+                id = System.nanoTime().toInt(),
+                page = targetIndex,
+            )
         }
     }
 
-    fun settlePage(slot: CalendarPagerSlot) {
-        pendingTodayJump?.let { request ->
-            pendingTodayJump = null
-            onSelectDate(request.targetDate)
-            onTodayJumpHandled(request.id)
-            return
-        }
+    fun dateForPage(page: Int): LocalDate {
+        return minWeekStart.plusWeeks(page.toLong()).plusDays(selectedDayOffset)
+    }
 
-        when (slot) {
-            CalendarPagerSlot.PREVIOUS -> onPrevWeek()
-            CalendarPagerSlot.NEXT -> onNextWeek()
-            CalendarPagerSlot.CURRENT -> Unit
+    fun settlePage(page: Int) {
+        val targetDate = dateForPage(page)
+        if (canSelectDate(targetDate)) {
+            onSelectDate(targetDate)
         }
     }
 
     LaunchedEffect(todayJumpRequest) {
         val request = todayJumpRequest ?: return@LaunchedEffect
-        if (!isPagingAtRest) {
-            onTodayJumpHandled(request.id)
-            return@LaunchedEffect
-        }
         val targetWeek = startOfWeek(request.targetDate)
         if (targetWeek == weekStart) {
             onSelectDate(request.targetDate)
             onTodayJumpHandled(request.id)
         } else {
-            pendingTodayJump = request
+            val targetPage = ChronoUnit.WEEKS.between(minWeekStart, targetWeek)
+                .toInt()
+                .coerceIn(0, CalendarWeekPagerPageCount - 1)
+            scrollRequest = CalendarPagerScrollRequest(request.id, targetPage)
             onTodayJumpHandled(request.id)
-        }
-    }
-
-    LaunchedEffect(pendingTodayJump?.id, pages) {
-        val request = pendingTodayJump ?: return@LaunchedEffect
-        val targetWeek = startOfWeek(request.targetDate)
-        val targetSlot = if (targetWeek < weekStart) CalendarPagerSlot.PREVIOUS else CalendarPagerSlot.NEXT
-        val targetIndex = pages.indexOfSlot(targetSlot)
-        if (targetIndex >= 0 && pagerState.currentPage == centerPageIndex) {
-            pagerState.animateScrollToPage(targetIndex)
         }
     }
 
@@ -706,7 +939,7 @@ private fun CalendarWeekCard(
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.calendar_prev_week),
                     enabled = canGoPrevWeek && isPagingAtRest,
-                    onClick = { requestPage(CalendarPagerSlot.PREVIOUS) },
+                    onClick = { requestPage(-1) },
                 )
                 Box(
                     modifier = Modifier.weight(1f),
@@ -725,19 +958,28 @@ private fun CalendarWeekCard(
                     icon = Icons.Rounded.ChevronRight,
                     contentDescription = stringResource(R.string.calendar_next_week),
                     enabled = isPagingAtRest,
-                    onClick = { requestPage(CalendarPagerSlot.NEXT) },
+                    onClick = { requestPage(1) },
                 )
             }
 
             CalendarPagingContent(
-                pages = pages,
-                pagerState = pagerState,
-                centerPageIndex = centerPageIndex,
-                onSettledAwayFromCenter = ::settlePage,
+                pageCount = CalendarWeekPagerPageCount,
+                currentPage = currentPage,
+                onPageSettled = ::settlePage,
+                scrollRequest = scrollRequest,
+                onScrollRequestHandled = { requestId ->
+                    if (scrollRequest?.id == requestId) {
+                        scrollRequest = null
+                    }
+                },
+                pageKey = { page -> "week-${minWeekStart.plusWeeks(page.toLong())}" },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(CalendarPeriodCardPageHeight),
-            ) { displayWeekStart ->
+            ) { page ->
+                val displayWeekStart = remember(minWeekStart, page) {
+                    minWeekStart.plusWeeks(page.toLong())
+                }
                 val weekDays = remember(displayWeekStart) {
                     List(7) { offset -> displayWeekStart.plusDays(offset.toLong()) }
                 }
@@ -758,7 +1000,13 @@ private fun CalendarWeekCard(
                             isSelected = isSelected,
                             isToday = isToday,
                             isEnabled = isEnabled,
+                            isDropTarget = activeDropDate == day,
+                            draggedTodo = draggedTodo.takeIf { isEnabled },
+                            dropTargets = dropTargets,
                             onClick = { onSelectDate(day) },
+                            onDropDateChanged = onDropDateChanged,
+                            onMoveTaskToDate = onMoveTaskToDate,
+                            resolveTodo = resolveTodo,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -775,26 +1023,36 @@ private fun CalendarWeekDayCell(
     isSelected: Boolean,
     isToday: Boolean,
     isEnabled: Boolean,
+    isDropTarget: Boolean,
+    draggedTodo: TodoItem?,
+    dropTargets: MutableMap<String, CalendarDateDropTargetBounds>,
     onClick: () -> Unit,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val containerColor = when {
+        isDropTarget -> colorScheme.error.copy(alpha = 0.20f)
         isSelected -> CalendarAccentPurple.copy(alpha = 0.24f)
         isToday -> CalendarTodayBlue.copy(alpha = 0.16f)
         else -> colorScheme.background
     }
     val borderColor = when {
+        isDropTarget -> colorScheme.error
         isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
         isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
         else -> Color.Transparent
     }
     val borderWidth = when {
+        isDropTarget -> 2.dp
         isSelected -> 1.6.dp
         isToday -> 1.4.dp
         else -> 0.dp
     }
     val stateTint = when {
+        isDropTarget -> colorScheme.error
         isSelected -> CalendarAccentPurple
         isToday -> CalendarTodayBlue
         else -> CalendarAccentPurple
@@ -804,6 +1062,20 @@ private fun CalendarWeekDayCell(
         modifier = modifier
             .height(CalendarPeriodCardPageHeight)
             .minimumInteractiveComponentSize()
+            .calendarDateDropTarget(
+                date = date,
+                draggedTodo = draggedTodo,
+                enabled = isEnabled,
+                onDropDateChanged = onDropDateChanged,
+                onMoveTaskToDate = onMoveTaskToDate,
+                resolveTodo = resolveTodo,
+            )
+            .calendarInAppDateDropTarget(
+                targetId = "week-$date",
+                date = date,
+                enabled = isEnabled && draggedTodo != null,
+                dropTargets = dropTargets,
+            )
             .graphicsLayer { alpha = if (isEnabled) 1f else 0.48f },
         contentAlignment = Alignment.Center,
     ) {
@@ -836,7 +1108,7 @@ private fun CalendarWeekDayCell(
                 Text(
                     text = date.dayOfMonth.toString(),
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isSelected || isToday) stateTint else colorScheme.onSurface,
+                    color = if (isDropTarget || isSelected || isToday) stateTint else colorScheme.onSurface,
                     fontWeight = FontWeight.ExtraBold,
                 )
                 Text(
@@ -856,99 +1128,138 @@ private fun CalendarWeekDayCell(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.calendarDateDropTarget(
+    date: LocalDate,
+    draggedTodo: TodoItem?,
+    enabled: Boolean,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
+): Modifier {
+    if (!enabled) return this
+
+    return dragAndDropTarget(
+        shouldStartDragAndDrop = { event ->
+            event.mimeTypes().any { mimeType -> mimeType.startsWith("text/") }
+        },
+        target = object : DragAndDropTarget {
+            override fun onEntered(event: DragAndDropEvent) {
+                onDropDateChanged(date)
+            }
+
+            override fun onExited(event: DragAndDropEvent) {
+                onDropDateChanged(null)
+            }
+
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                val todo = draggedTodo ?: event.todoIdText()?.let(resolveTodo) ?: return false
+                onDropDateChanged(null)
+                onMoveTaskToDate(todo, date)
+                return true
+            }
+
+            override fun onEnded(event: DragAndDropEvent) {
+                onDropDateChanged(null)
+            }
+        },
+    )
+}
+
+private fun DragAndDropEvent.todoIdText(): String? {
+    val clipData = toAndroidDragEvent().clipData ?: return null
+    for (index in 0 until clipData.itemCount) {
+        val text = clipData.getItemAt(index).text?.toString()?.trim()
+        if (!text.isNullOrBlank()) {
+            return text
+        }
+    }
+    return null
+}
+
+private fun Modifier.calendarInAppDateDropTarget(
+    targetId: String,
+    date: LocalDate,
+    enabled: Boolean,
+    dropTargets: MutableMap<String, CalendarDateDropTargetBounds>,
+): Modifier {
+    if (!enabled) return this
+
+    return composed {
+        DisposableEffect(targetId) {
+            onDispose {
+                dropTargets.remove(targetId)
+            }
+        }
+        onGloballyPositioned { coordinates ->
+            val position = coordinates.positionInRoot()
+            val size = coordinates.size
+            dropTargets[targetId] = CalendarDateDropTargetBounds(
+                date = date,
+                bounds = Rect(
+                    left = position.x,
+                    top = position.y,
+                    right = position.x + size.width,
+                    bottom = position.y + size.height,
+                ),
+            )
+        }
+    }
+}
+
 @Composable
 private fun CalendarDayCard(
     selectedDate: LocalDate,
+    minNavigableMonth: YearMonth,
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
     canGoPrevDay: Boolean,
+    canSelectDate: (LocalDate) -> Boolean,
     todayJumpRequest: CalendarTodayJumpRequest?,
     onTodayJumpHandled: (Int) -> Unit,
-    onPrevDay: () -> Unit,
-    onNextDay: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
-    var pendingTodayJump by remember { mutableStateOf<CalendarTodayJumpRequest?>(null) }
-    val todayJumpDirection = pendingTodayJump?.let { request ->
-        when {
-            request.targetDate < selectedDate -> CalendarPagerSlot.PREVIOUS
-            request.targetDate > selectedDate -> CalendarPagerSlot.NEXT
-            else -> null
-        }
+    val minDate = remember(minNavigableMonth) { minNavigableMonth.atDay(1) }
+    val currentPage = remember(minDate, selectedDate) {
+        ChronoUnit.DAYS.between(minDate, selectedDate)
+            .toInt()
+            .coerceIn(0, CalendarDayPagerPageCount - 1)
     }
-    val previousPageDay = if (todayJumpDirection == CalendarPagerSlot.PREVIOUS) {
-        pendingTodayJump?.targetDate
-    } else if (canGoPrevDay) {
-        selectedDate.minusDays(1)
-    } else {
-        null
-    }
-    val nextPageDay = if (todayJumpDirection == CalendarPagerSlot.NEXT) {
-        pendingTodayJump?.targetDate ?: selectedDate.plusDays(1)
-    } else {
-        selectedDate.plusDays(1)
-    }
-    val pages = remember(previousPageDay, selectedDate, nextPageDay) {
-        buildList {
-            previousPageDay?.let { add(CalendarPagerPage(CalendarPagerSlot.PREVIOUS, it)) }
-            add(CalendarPagerPage(CalendarPagerSlot.CURRENT, selectedDate))
-            add(CalendarPagerPage(CalendarPagerSlot.NEXT, nextPageDay))
-        }
-    }
-    val centerPageIndex = pages.indexOfSlot(CalendarPagerSlot.CURRENT).coerceAtLeast(0)
-    val pagerState = rememberPagerState(initialPage = centerPageIndex) { pages.size }
-    val isPagingAtRest = pagerState.settledPage == centerPageIndex && !pagerState.isScrollInProgress
+    var scrollRequest by remember { mutableStateOf<CalendarPagerScrollRequest?>(null) }
+    val isPagingAtRest = scrollRequest == null
 
-    fun requestPage(slot: CalendarPagerSlot) {
-        val targetIndex = pages.indexOfSlot(slot)
-        if (targetIndex < 0 || !isPagingAtRest) return
+    fun requestPage(offset: Int) {
+        val targetIndex = (currentPage + offset).coerceIn(0, CalendarDayPagerPageCount - 1)
+        if (targetIndex == currentPage || !isPagingAtRest) return
         coroutineScope.launch {
-            pagerState.animateScrollToPage(targetIndex)
+            scrollRequest = CalendarPagerScrollRequest(
+                id = System.nanoTime().toInt(),
+                page = targetIndex,
+            )
         }
     }
 
-    fun settlePage(slot: CalendarPagerSlot) {
-        pendingTodayJump?.let { request ->
-            pendingTodayJump = null
-            onSelectDate(request.targetDate)
-            onTodayJumpHandled(request.id)
-            return
-        }
+    fun dateForPage(page: Int): LocalDate {
+        return minDate.plusDays(page.toLong())
+    }
 
-        when (slot) {
-            CalendarPagerSlot.PREVIOUS -> onPrevDay()
-            CalendarPagerSlot.NEXT -> onNextDay()
-            CalendarPagerSlot.CURRENT -> Unit
-        }
+    fun settlePage(page: Int) {
+        onSelectDate(dateForPage(page))
     }
 
     LaunchedEffect(todayJumpRequest) {
         val request = todayJumpRequest ?: return@LaunchedEffect
-        if (!isPagingAtRest) {
-            onTodayJumpHandled(request.id)
-            return@LaunchedEffect
-        }
         if (request.targetDate == selectedDate) {
             onSelectDate(request.targetDate)
             onTodayJumpHandled(request.id)
         } else {
-            pendingTodayJump = request
+            val targetPage = ChronoUnit.DAYS.between(minDate, request.targetDate)
+                .toInt()
+                .coerceIn(0, CalendarDayPagerPageCount - 1)
+            scrollRequest = CalendarPagerScrollRequest(request.id, targetPage)
             onTodayJumpHandled(request.id)
-        }
-    }
-
-    LaunchedEffect(pendingTodayJump?.id, pages) {
-        val request = pendingTodayJump ?: return@LaunchedEffect
-        val targetSlot = if (request.targetDate < selectedDate) {
-            CalendarPagerSlot.PREVIOUS
-        } else {
-            CalendarPagerSlot.NEXT
-        }
-        val targetIndex = pages.indexOfSlot(targetSlot)
-        if (targetIndex >= 0 && pagerState.currentPage == centerPageIndex) {
-            pagerState.animateScrollToPage(targetIndex)
         }
     }
 
@@ -980,7 +1291,7 @@ private fun CalendarDayCard(
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.calendar_prev_day),
                     enabled = canGoPrevDay && isPagingAtRest,
-                    onClick = { requestPage(CalendarPagerSlot.PREVIOUS) },
+                    onClick = { requestPage(-1) },
                 )
                 Box(
                     modifier = Modifier.weight(1f),
@@ -999,22 +1310,33 @@ private fun CalendarDayCard(
                     icon = Icons.Rounded.ChevronRight,
                     contentDescription = stringResource(R.string.calendar_next_day),
                     enabled = isPagingAtRest,
-                    onClick = { requestPage(CalendarPagerSlot.NEXT) },
+                    onClick = { requestPage(1) },
                 )
             }
 
             CalendarPagingContent(
-                pages = pages,
-                pagerState = pagerState,
-                centerPageIndex = centerPageIndex,
-                onSettledAwayFromCenter = ::settlePage,
+                pageCount = CalendarDayPagerPageCount,
+                currentPage = currentPage,
+                onPageSettled = ::settlePage,
+                scrollRequest = scrollRequest,
+                onScrollRequestHandled = { requestId ->
+                    if (scrollRequest?.id == requestId) {
+                        scrollRequest = null
+                    }
+                },
+                pageKey = { page -> "day-${dateForPage(page)}" },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(CalendarPeriodCardPageHeight),
-            ) { displayDate ->
+            ) { page ->
+                val displayDate = remember(minDate, page) { dateForPage(page) }
                 val taskCount = tasksByDate[displayDate]?.size ?: 0
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Transparent)
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text(
@@ -1022,7 +1344,10 @@ private fun CalendarDayCard(
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontSize = CalendarDaySummaryTitleSize,
                         ),
-                        color = if (displayDate == today) CalendarAccentPurple else colorScheme.onSurface,
+                        color = when {
+                            displayDate == today -> CalendarAccentPurple
+                            else -> colorScheme.onSurface
+                        },
                         fontWeight = FontWeight.ExtraBold,
                     )
                     Text(
@@ -1224,100 +1549,64 @@ private fun CalendarCircleButton(
 @Composable
 private fun CalendarMonthCard(
     visibleMonth: YearMonth,
+    minNavigableMonth: YearMonth,
     canGoPrevMonth: Boolean,
     selectedDate: LocalDate,
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
+    draggedTodo: TodoItem?,
+    activeDropDate: LocalDate?,
+    dropTargets: MutableMap<String, CalendarDateDropTargetBounds>,
+    canSelectDate: (LocalDate) -> Boolean,
     todayJumpRequest: CalendarTodayJumpRequest?,
     onTodayJumpHandled: (Int) -> Unit,
-    onPrevMonth: () -> Unit,
-    onNextMonth: () -> Unit,
+    onVisibleMonthChanged: (YearMonth) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
-    var pendingTodayJump by remember { mutableStateOf<CalendarTodayJumpRequest?>(null) }
-    val todayJumpDirection = pendingTodayJump?.let { request ->
-        val targetMonth = YearMonth.from(request.targetDate)
-        when {
-            targetMonth < visibleMonth -> CalendarPagerSlot.PREVIOUS
-            targetMonth > visibleMonth -> CalendarPagerSlot.NEXT
-            else -> null
-        }
+    val currentPage = remember(minNavigableMonth, visibleMonth) {
+        ChronoUnit.MONTHS.between(minNavigableMonth, visibleMonth)
+            .toInt()
+            .coerceIn(0, CalendarMonthPagerPageCount - 1)
     }
-    val previousPageMonth = if (todayJumpDirection == CalendarPagerSlot.PREVIOUS) {
-        pendingTodayJump?.targetDate?.let(YearMonth::from)
-    } else if (canGoPrevMonth) {
-        visibleMonth.minusMonths(1)
-    } else {
-        null
-    }
-    val nextPageMonth = if (todayJumpDirection == CalendarPagerSlot.NEXT) {
-        pendingTodayJump?.targetDate?.let(YearMonth::from) ?: visibleMonth.plusMonths(1)
-    } else {
-        visibleMonth.plusMonths(1)
-    }
-    val pages = remember(previousPageMonth, visibleMonth, nextPageMonth) {
-        buildList {
-            previousPageMonth?.let { add(CalendarPagerPage(CalendarPagerSlot.PREVIOUS, it)) }
-            add(CalendarPagerPage(CalendarPagerSlot.CURRENT, visibleMonth))
-            add(CalendarPagerPage(CalendarPagerSlot.NEXT, nextPageMonth))
-        }
-    }
-    val centerPageIndex = pages.indexOfSlot(CalendarPagerSlot.CURRENT).coerceAtLeast(0)
-    val pagerState = rememberPagerState(initialPage = centerPageIndex) { pages.size }
-    val isPagingAtRest = pagerState.settledPage == centerPageIndex && !pagerState.isScrollInProgress
+    var scrollRequest by remember { mutableStateOf<CalendarPagerScrollRequest?>(null) }
+    val isPagingAtRest = scrollRequest == null
 
-    fun requestPage(slot: CalendarPagerSlot) {
-        val targetIndex = pages.indexOfSlot(slot)
-        if (targetIndex < 0 || !isPagingAtRest) return
+    fun requestPage(offset: Int) {
+        val targetIndex = (currentPage + offset).coerceIn(0, CalendarMonthPagerPageCount - 1)
+        if (targetIndex == currentPage || !isPagingAtRest) return
         coroutineScope.launch {
-            pagerState.animateScrollToPage(targetIndex)
+            scrollRequest = CalendarPagerScrollRequest(
+                id = System.nanoTime().toInt(),
+                page = targetIndex,
+            )
         }
     }
 
-    fun settlePage(slot: CalendarPagerSlot) {
-        pendingTodayJump?.let { request ->
-            pendingTodayJump = null
-            onSelectDate(request.targetDate)
-            onTodayJumpHandled(request.id)
-            return
-        }
+    fun monthForPage(page: Int): YearMonth {
+        return minNavigableMonth.plusMonths(page.toLong())
+    }
 
-        when (slot) {
-            CalendarPagerSlot.PREVIOUS -> onPrevMonth()
-            CalendarPagerSlot.NEXT -> onNextMonth()
-            CalendarPagerSlot.CURRENT -> Unit
-        }
+    fun settlePage(page: Int) {
+        onVisibleMonthChanged(monthForPage(page))
     }
 
     LaunchedEffect(todayJumpRequest) {
         val request = todayJumpRequest ?: return@LaunchedEffect
-        if (!isPagingAtRest) {
-            onTodayJumpHandled(request.id)
-            return@LaunchedEffect
-        }
         val targetMonth = YearMonth.from(request.targetDate)
         if (targetMonth == visibleMonth) {
             onSelectDate(request.targetDate)
             onTodayJumpHandled(request.id)
         } else {
-            pendingTodayJump = request
+            val targetPage = ChronoUnit.MONTHS.between(minNavigableMonth, targetMonth)
+                .toInt()
+                .coerceIn(0, CalendarMonthPagerPageCount - 1)
+            scrollRequest = CalendarPagerScrollRequest(request.id, targetPage)
             onTodayJumpHandled(request.id)
-        }
-    }
-
-    LaunchedEffect(pendingTodayJump?.id, pages) {
-        val request = pendingTodayJump ?: return@LaunchedEffect
-        val targetMonth = YearMonth.from(request.targetDate)
-        val targetSlot = if (targetMonth < visibleMonth) {
-            CalendarPagerSlot.PREVIOUS
-        } else {
-            CalendarPagerSlot.NEXT
-        }
-        val targetIndex = pages.indexOfSlot(targetSlot)
-        if (targetIndex >= 0 && pagerState.currentPage == centerPageIndex) {
-            pagerState.animateScrollToPage(targetIndex)
         }
     }
 
@@ -1349,7 +1638,7 @@ private fun CalendarMonthCard(
                     icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.calendar_prev_month),
                     enabled = canGoPrevMonth && isPagingAtRest,
-                    onClick = { requestPage(CalendarPagerSlot.PREVIOUS) },
+                    onClick = { requestPage(-1) },
                 )
                 Box(
                     modifier = Modifier.weight(1f),
@@ -1369,7 +1658,7 @@ private fun CalendarMonthCard(
                     icon = Icons.Rounded.ChevronRight,
                     contentDescription = stringResource(R.string.calendar_next_month),
                     enabled = isPagingAtRest,
-                    onClick = { requestPage(CalendarPagerSlot.NEXT) },
+                    onClick = { requestPage(1) },
                 )
             }
 
@@ -1392,14 +1681,21 @@ private fun CalendarMonthCard(
             }
 
             CalendarPagingContent(
-                pages = pages,
-                pagerState = pagerState,
-                centerPageIndex = centerPageIndex,
-                onSettledAwayFromCenter = ::settlePage,
+                pageCount = CalendarMonthPagerPageCount,
+                currentPage = currentPage,
+                onPageSettled = ::settlePage,
+                scrollRequest = scrollRequest,
+                onScrollRequestHandled = { requestId ->
+                    if (scrollRequest?.id == requestId) {
+                        scrollRequest = null
+                    }
+                },
+                pageKey = { page -> "month-${monthForPage(page)}" },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(CalendarMonthGridHeight),
-            ) { displayMonth ->
+            ) { page ->
+                val displayMonth = remember(minNavigableMonth, page) { monthForPage(page) }
                 val monthDays = remember(displayMonth) { buildMonthCells(displayMonth) }
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -1412,12 +1708,20 @@ private fun CalendarMonthCard(
                         ) {
                             week.forEach { cell ->
                                 val taskCount = tasksByDate[cell.date]?.size ?: 0
+                                val isEnabled = canSelectDate(cell.date)
                                 CalendarDayCell(
                                     cell = cell,
                                     taskCount = taskCount,
                                     isSelected = cell.date == selectedDate,
                                     isToday = cell.date == today,
+                                    isEnabled = isEnabled,
+                                    isDropTarget = activeDropDate == cell.date,
+                                    draggedTodo = draggedTodo.takeIf { isEnabled },
+                                    dropTargets = dropTargets,
                                     onClick = { onSelectDate(cell.date) },
+                                    onDropDateChanged = onDropDateChanged,
+                                    onMoveTaskToDate = onMoveTaskToDate,
+                                    resolveTodo = resolveTodo,
                                     modifier = Modifier.weight(1f),
                                 )
                             }
@@ -1485,16 +1789,24 @@ private fun CalendarDayCell(
     taskCount: Int,
     isSelected: Boolean,
     isToday: Boolean,
+    isEnabled: Boolean,
+    isDropTarget: Boolean,
+    draggedTodo: TodoItem?,
+    dropTargets: MutableMap<String, CalendarDateDropTargetBounds>,
     onClick: () -> Unit,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val targetCellBackground = when {
+        isDropTarget -> colorScheme.error.copy(alpha = 0.20f)
         isSelected -> CalendarAccentPurple.copy(alpha = if (isPressed) 0.32f else 0.24f)
         isToday -> CalendarTodayBlue.copy(alpha = if (isPressed) 0.24f else 0.16f)
-        isPressed && cell.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+        isPressed && isEnabled -> colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
         else -> Color.Transparent
     }
     val cellBackground by animateColorAsState(
@@ -1502,9 +1814,10 @@ private fun CalendarDayCell(
         label = "calendarMonthDateCellBackground",
     )
     val targetCellBorderColor = when {
+        isDropTarget -> colorScheme.error
         isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
         isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
-        isPressed && cell.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
+        isPressed && isEnabled -> colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
         else -> Color.Transparent
     }
     val cellBorderColor by animateColorAsState(
@@ -1512,9 +1825,10 @@ private fun CalendarDayCell(
         label = "calendarMonthDateCellBorder",
     )
     val targetCellBorderWidth = when {
+        isDropTarget -> 2.dp
         isSelected -> 1.6.dp
         isToday -> 1.4.dp
-        isPressed && cell.isCurrentMonth -> 1.2.dp
+        isPressed && isEnabled -> 1.2.dp
         else -> 0.dp
     }
     val cellBorderWidth by animateDpAsState(
@@ -1522,13 +1836,14 @@ private fun CalendarDayCell(
         label = "calendarMonthDateCellBorderWidth",
     )
     val stateTint = when {
+        isDropTarget -> colorScheme.error
         isSelected -> CalendarAccentPurple
         isToday -> CalendarTodayBlue
         else -> CalendarAccentPurple
     }
     val cellShape = RoundedCornerShape(16.dp)
     val dayTextColor = when {
-        isSelected || isToday -> stateTint
+        isDropTarget || isSelected || isToday -> stateTint
         cell.isCurrentMonth -> colorScheme.onSurface
         else -> colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     }
@@ -1538,8 +1853,22 @@ private fun CalendarDayCell(
             .fillMaxWidth()
             .height(CalendarMonthDayCellHeight)
             .graphicsLayer { alpha = if (cell.isCurrentMonth) 1f else 0.45f }
+            .calendarDateDropTarget(
+                date = cell.date,
+                draggedTodo = draggedTodo,
+                enabled = isEnabled,
+                onDropDateChanged = onDropDateChanged,
+                onMoveTaskToDate = onMoveTaskToDate,
+                resolveTodo = resolveTodo,
+            )
+            .calendarInAppDateDropTarget(
+                targetId = "month-${cell.date}",
+                date = cell.date,
+                enabled = isEnabled && draggedTodo != null,
+                dropTargets = dropTargets,
+            )
             .clickable(
-                enabled = cell.isCurrentMonth,
+                enabled = isEnabled,
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
@@ -1580,7 +1909,7 @@ private fun CalendarDayCell(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                if (taskCount > 0 && cell.isCurrentMonth) {
+                if (taskCount > 0 && isEnabled) {
                     Box(
                         modifier = Modifier
                             .size(CalendarMonthTaskDotSize)
@@ -1606,13 +1935,88 @@ private fun CalendarDayCell(
 }
 
 @Composable
+private fun CalendarTaskDragPreview(
+    modifier: Modifier = Modifier,
+    todo: TodoItem,
+    lists: List<ListSummary>,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
+    val previewShape = RoundedCornerShape(18.dp)
+    Card(
+        modifier = modifier
+            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp),
+        shape = previewShape,
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface.copy(alpha = 0.88f)),
+        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                modifier = Modifier.size(22.dp),
+            )
+            Column(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = todo.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.onSurface,
+                    maxLines = 1,
+                )
+                Text(
+                    text = CalendarTaskDragDueTimeFormatter.format(todo.due),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            if (listMeta != null) {
+                Icon(
+                    imageVector = listIconForKey(listMeta.iconKey),
+                    contentDescription = null,
+                    tint = listAccentColor(listMeta.color),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            if (isHighPriority(todo.priority)) {
+                Icon(
+                    imageVector = Icons.Rounded.Flag,
+                    contentDescription = null,
+                    tint = priorityColor(todo.priority),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
 private fun CalendarTodoRow(
     modifier: Modifier = Modifier,
     todo: TodoItem,
     lists: List<ListSummary>,
+    showDateDivider: Boolean,
+    dragEnabled: Boolean,
     onComplete: () -> Unit,
     onInfo: () -> Unit,
     onDelete: () -> Unit,
+    dragging: Boolean,
+    onDragStart: (Offset) -> Unit,
+    onDragMove: (Offset) -> Unit,
+    onDragEnd: (Offset?) -> Unit,
+    onDragCancel: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -1624,6 +2028,8 @@ private fun CalendarTodoRow(
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
+    var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
+    var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -1644,6 +2050,7 @@ private fun CalendarTodoRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer { alpha = if (dragging) 0.55f else 1f }
             .semantics(mergeDescendants = true) { },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -1692,7 +2099,46 @@ private fun CalendarTodoRow(
             Card(
                 modifier = Modifier
                     .fillMaxSize()
+                    .onGloballyPositioned { coordinates ->
+                        rowOriginInRoot = coordinates.positionInRoot()
+                    }
                     .graphicsLayer { translationX = animatedOffsetX }
+                    .then(
+                        if (dragEnabled) {
+                            Modifier.pointerInput(todo.id) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = { localOffset ->
+                                        targetOffsetX = 0f
+                                        val startPosition = rowOriginInRoot + localOffset
+                                        dragPointerPosition = startPosition
+                                        onDragStart(startPosition)
+                                        onDragMove(startPosition)
+                                        ViewCompat.performHapticFeedback(
+                                            view,
+                                            HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                        )
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        val nextPosition =
+                                            (dragPointerPosition ?: rowOriginInRoot) + dragAmount
+                                        dragPointerPosition = nextPosition
+                                        onDragMove(nextPosition)
+                                    },
+                                    onDragEnd = {
+                                        onDragEnd(dragPointerPosition)
+                                        dragPointerPosition = null
+                                    },
+                                    onDragCancel = {
+                                        dragPointerPosition = null
+                                        onDragCancel()
+                                    },
+                                )
+                            }
+                        } else {
+                            Modifier
+                        },
+                    )
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
@@ -1819,12 +2265,14 @@ private fun CalendarTodoRow(
                 }
             }
         }
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        )
+        if (showDateDivider) {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
+            )
+        }
     }
 }
 
@@ -2147,22 +2595,74 @@ private fun listAccentColor(colorKey: String?): Color {
 private fun listIconForKey(iconKey: String?): ImageVector {
     return when (iconKey?.trim()?.lowercase(Locale.getDefault())) {
         "sun" -> Icons.Rounded.WbSunny
-        "calendar" -> Icons.Rounded.CalendarMonth
+        "calendar" -> Icons.Rounded.CalendarToday
         "schedule" -> Icons.Rounded.Schedule
         "flag" -> Icons.Rounded.Flag
         "check" -> Icons.Rounded.Check
+        "smile" -> Icons.Rounded.Mood
+        "list" -> Icons.AutoMirrored.Rounded.List
+        "bookmark" -> Icons.Rounded.Bookmark
+        "key" -> Icons.Rounded.Key
+        "gift" -> Icons.Rounded.CardGiftcard
+        "cake" -> Icons.Rounded.Cake
+        "school" -> Icons.Rounded.School
+        "bag" -> Icons.Rounded.Backpack
+        "edit" -> Icons.Rounded.Edit
+        "document" -> Icons.Rounded.Description
         "inbox" -> Icons.Rounded.Inbox
         "book" -> Icons.AutoMirrored.Rounded.MenuBook
-        "briefcase" -> Icons.Rounded.Work
-        "health" -> Icons.Rounded.LocalHospital
+        "work", "briefcase" -> Icons.Rounded.Work
+        "wallet" -> Icons.Rounded.AccountBalanceWallet
+        "money" -> Icons.Rounded.Payments
+        "health" -> Icons.Rounded.Medication
         "fitness" -> Icons.Rounded.FitnessCenter
+        "run" -> Icons.AutoMirrored.Rounded.DirectionsRun
         "food" -> Icons.Rounded.Restaurant
-        "cocktail" -> Icons.Rounded.LocalBar
+        "drink", "cocktail" -> Icons.Rounded.LocalBar
+        "monitor" -> Icons.Rounded.DesktopWindows
         "music" -> Icons.Rounded.MusicNote
-        "travel" -> Icons.Rounded.Flight
+        "computer" -> Icons.Rounded.Computer
+        "game" -> Icons.Rounded.SportsEsports
+        "headphones" -> Icons.Rounded.Headphones
+        "eco" -> Icons.Rounded.Eco
+        "pets" -> Icons.Rounded.Pets
+        "child" -> Icons.Rounded.ChildCare
+        "family" -> Icons.Rounded.FamilyRestroom
+        "basket" -> Icons.Rounded.ShoppingBasket
+        "cart" -> Icons.Rounded.ShoppingCart
+        "mall" -> Icons.Rounded.LocalMall
+        "inventory" -> Icons.Rounded.Inventory
+        "soccer" -> Icons.Rounded.SportsSoccer
+        "baseball" -> Icons.Rounded.SportsBaseball
+        "basketball" -> Icons.Rounded.SportsBasketball
+        "football" -> Icons.Rounded.SportsFootball
+        "tennis" -> Icons.Rounded.SportsTennis
+        "train" -> Icons.Rounded.Train
+        "flight", "travel" -> Icons.Rounded.Flight
+        "boat" -> Icons.Rounded.DirectionsBoat
         "car" -> Icons.Rounded.DirectionsCar
+        "umbrella" -> Icons.Rounded.BeachAccess
+        "drop" -> Icons.Rounded.WaterDrop
+        "snow" -> Icons.Rounded.AcUnit
+        "fire" -> Icons.Rounded.Whatshot
+        "tools" -> Icons.Rounded.Build
+        "scissors" -> Icons.Rounded.ContentCut
+        "architecture" -> Icons.Rounded.Architecture
+        "bank" -> Icons.Rounded.AccountBalance
+        "code" -> Icons.Rounded.Code
+        "idea" -> Icons.Rounded.Lightbulb
+        "chat" -> Icons.Rounded.ChatBubbleOutline
+        "alert" -> Icons.Rounded.PriorityHigh
+        "star" -> Icons.Rounded.Star
+        "heart" -> Icons.Rounded.Favorite
+        "circle" -> Icons.Rounded.Circle
+        "square" -> Icons.Rounded.Square
+        "triangle" -> Icons.Rounded.ChangeHistory
         "home" -> Icons.Rounded.Home
-        else -> Icons.AutoMirrored.Rounded.List
+        "city" -> Icons.Rounded.LocationCity
+        "camera" -> Icons.Rounded.CameraAlt
+        "palette" -> Icons.Rounded.Palette
+        else -> Icons.Rounded.Inbox
     }
 }
 

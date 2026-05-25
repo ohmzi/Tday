@@ -34,4 +34,15 @@ class ApiResponseUtilsTest {
             ),
         )
     }
+
+    @Test
+    fun `unauthorized responses are treated as session auth issues not connectivity`() {
+        val error = ApiCallException(
+            statusCode = 401,
+            message = "Unauthorized",
+        )
+
+        assertTrue(isSessionAuthenticationIssue(error))
+        assertFalse(isLikelyConnectivityIssue(error))
+    }
 }

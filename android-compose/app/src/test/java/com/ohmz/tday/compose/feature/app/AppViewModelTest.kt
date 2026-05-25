@@ -1,0 +1,205 @@
+package com.ohmz.tday.compose.feature.app
+
+import app.cash.turbine.test
+import com.ohmz.tday.compose.core.data.ApiCallException
+import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.core.data.ThemePreferenceStore
+import com.ohmz.tday.compose.core.data.auth.AuthRepository
+import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
+import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.server.AppVersionManager
+import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
+import com.ohmz.tday.compose.core.data.settings.SettingsRepository
+import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.model.SessionUser
+import com.ohmz.tday.compose.core.network.ConnectivityObserver
+import com.ohmz.tday.compose.core.network.RealtimeClient
+import com.ohmz.tday.compose.core.network.RealtimeEvent
+import com.ohmz.tday.compose.core.notification.ReminderOption
+import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
+import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.feature.auth.MainDispatcherRule
+import com.ohmz.tday.compose.ui.theme.AppThemeMode
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class AppViewModelTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
+    private val authRepository = mockk<AuthRepository>()
+    private val serverConfigRepository = mockk<ServerConfigRepository>()
+    private val syncManager = mockk<SyncManager>()
+    private val settingsRepository = mockk<SettingsRepository>()
+    private val cacheManager = mockk<OfflineCacheManager>()
+    private val themePreferenceStore = mockk<ThemePreferenceStore>()
+    private val reminderScheduler = mockk<TaskReminderScheduler>()
+    private val reminderPreferenceStore = mockk<ReminderPreferenceStore>()
+    private val realtimeClient = mockk<RealtimeClient>()
+    private val connectivityObserver = mockk<ConnectivityObserver>()
+    private val appVersionManager = mockk<AppVersionManager>()
+    private val systemCredentialService = mockk<SystemCredentialServicing>()
+    private val snackbarManager = SnackbarManager()
+
+    private val versionState = MutableStateFlow(
+        AppVersionManager.VersionState(isLoadingReleases = false),
+    )
+    private val realtimeEvents = MutableSharedFlow<RealtimeEvent>()
+    private val offlineSyncFailures = MutableSharedFlow<Unit>()
+    private val offlineSyncSuccesses = MutableSharedFlow<Unit>()
+    private val restoredUser = SessionUser(
+        id = "user-1",
+        name = "Taylor",
+        email = "user@example.com",
+        role = "USER",
+    )
+
+    @Before
+    fun setUp() {
+        every { themePreferenceStore.getThemeMode() } returns AppThemeMode.SYSTEM
+        every { reminderPreferenceStore.getDefaultReminder() } returns ReminderOption.DEFAULT
+        every { appVersionManager.state } returns versionState
+        coEvery { appVersionManager.refreshServerCompatibility() } returns Unit
+        every { serverConfigRepository.hasServerConfigured() } returns true
+        every { serverConfigRepository.getServerUrl() } returns "https://tday.example.com"
+        every { cacheManager.loadOfflineState() } returns OfflineSyncState()
+        every { syncManager.offlineSyncFailures } returns offlineSyncFailures
+        every { syncManager.offlineSyncSuccesses } returns offlineSyncSuccesses
+        every { syncManager.hasPendingMutations() } returns false
+        every { realtimeClient.events } returns realtimeEvents
+        every { realtimeClient.isConnected } returns false
+        every { realtimeClient.connect() } returns Unit
+        every { realtimeClient.disconnect() } returns Unit
+        every { connectivityObserver.connectivityChanges } returns emptyFlow()
+        every { settingsRepository.isAiSummaryEnabledSnapshot() } returns true
+        coEvery { authRepository.syncTimezone() } returns Unit
+        every { reminderScheduler.rescheduleAll() } returns Unit
+        every { reminderScheduler.cancelAll() } returns Unit
+    }
+
+    @Test
+    fun `foreground reconnect retries sync after restoring session`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returnsMany listOf(
+            restoredSession,
+            restoredSession,
+        )
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } returnsMany listOf(
+            Result.failure(ApiCallException(statusCode = 401, message = "Unauthorized")),
+            Result.success(Unit),
+        )
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        snackbarManager.events.test {
+            viewModel.reconnectAfterForeground()
+            runCurrent()
+            runCurrent()
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertTrue(viewModel.uiState.value.authenticated)
+        assertFalse(viewModel.uiState.value.isOffline)
+        assertEquals(restoredUser, viewModel.uiState.value.user)
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    @Test
+    fun `foreground reconnect marks app offline when session cannot be restored`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returnsMany listOf(
+            restoredSession,
+            null,
+        )
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } returns Result.failure(ApiCallException(statusCode = 401, message = "Unauthorized"))
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        snackbarManager.events.test {
+            viewModel.reconnectAfterForeground()
+            runCurrent()
+            expectNoEvents()
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        assertTrue(viewModel.uiState.value.authenticated)
+        assertTrue(viewModel.uiState.value.isOffline)
+        assertEquals(restoredUser, viewModel.uiState.value.user)
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    private fun makeViewModel(): AppViewModel =
+        AppViewModel(
+            authRepository = authRepository,
+            serverConfigRepository = serverConfigRepository,
+            syncManager = syncManager,
+            settingsRepository = settingsRepository,
+            cacheManager = cacheManager,
+            themePreferenceStore = themePreferenceStore,
+            reminderScheduler = reminderScheduler,
+            reminderPreferenceStore = reminderPreferenceStore,
+            snackbarManager = snackbarManager,
+            realtimeClient = realtimeClient,
+            connectivityObserver = connectivityObserver,
+            appVersionManager = appVersionManager,
+            systemCredentialService = systemCredentialService,
+        )
+}
