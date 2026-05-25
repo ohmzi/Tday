@@ -547,20 +547,32 @@ fun HomeScreen(
                             )
                         }
 
-                        if (uiState.todayTodos.isNotEmpty()) {
-                            item {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    uiState.todayTodos.forEach { todo ->
-                                        HomeTodayTaskRow(
-                                            todo = todo,
-                                            lists = uiState.summary.lists,
-                                            onComplete = { onCompleteTask(todo) },
-                                            onDelete = { onDeleteTask(todo) },
-                                            onEdit = { editTargetTodoId = todo.id },
-                                        )
-                                    }
-                                }
-                            }
+                        itemsIndexed(
+                            items = uiState.todayTodos,
+                            key = { _, todo -> "home-today-${todo.id}" },
+                            contentType = { _, _ -> "home_today_task" },
+                        ) { _, todo ->
+                            HomeTodayTaskRow(
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = tween(
+                                        durationMillis = 180,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                    placementSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    ),
+                                    fadeOutSpec = tween(
+                                        durationMillis = 140,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                ),
+                                todo = todo,
+                                lists = uiState.summary.lists,
+                                onComplete = { onCompleteTask(todo) },
+                                onDelete = { onDeleteTask(todo) },
+                                onEdit = { editTargetTodoId = todo.id },
+                            )
                         }
 
                     item {
@@ -1696,6 +1708,7 @@ private fun HomeTodayCard(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HomeTodayTaskRow(
+    modifier: Modifier = Modifier,
     todo: TodoItem,
     lists: List<ListSummary>,
     onComplete: () -> Unit,
@@ -1711,7 +1724,8 @@ private fun HomeTodayTaskRow(
     val maxElasticDragPx = actionRevealPx * 1.14f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(todo.id) { mutableStateOf(false) }
-    var localCompleted by remember(todo.id) { mutableStateOf(false) }
+    var localChecked by remember(todo.id) { mutableStateOf(false) }
+    var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
     var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
@@ -1722,11 +1736,16 @@ private fun HomeTodayTaskRow(
     )
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
         label = "homeTodayCompletionAlpha",
     )
+    val completionOffsetY by animateDpAsState(
+        targetValue = if (completionFading) (-10).dp else 0.dp,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "homeTodayCompletionOffsetY",
+    )
     val titleStrikeProgress by animateFloatAsState(
-        targetValue = if (localCompleted) 1f else 0f,
+        targetValue = if (localStruck) 1f else 0f,
         animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
         label = "homeTodayTitleStrikeProgress",
     )
@@ -1748,9 +1767,12 @@ private fun HomeTodayTaskRow(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .graphicsLayer { alpha = completionAlpha },
+            .graphicsLayer {
+                alpha = completionAlpha
+                translationY = completionOffsetY.toPx()
+            },
     ) {
         Box(
             modifier = Modifier
@@ -1858,12 +1880,14 @@ private fun HomeTodayTaskRow(
                             ) {
                                 if (!pendingCompletion) {
                                     targetOffsetX = 0f
-                                    localCompleted = true
+                                    localChecked = true
                                     pendingCompletion = true
                                     coroutineScope.launch {
-                                        delay(500)
+                                        delay(160)
+                                        localStruck = true
+                                        delay(360)
                                         completionFading = true
-                                        delay(220)
+                                        delay(260)
                                         onComplete()
                                     }
                                 }
@@ -1871,13 +1895,13 @@ private fun HomeTodayTaskRow(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            imageVector = if (localCompleted) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                            contentDescription = if (localCompleted) {
+                            imageVector = if (localChecked) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                            contentDescription = if (localChecked) {
                                 stringResource(R.string.label_completed)
                             } else {
                                 stringResource(R.string.label_mark_complete)
                             },
-                            tint = if (localCompleted) Color(0xFF6FBF86) else colorScheme.onSurfaceVariant.copy(
+                            tint = if (localChecked) Color(0xFF6FBF86) else colorScheme.onSurfaceVariant.copy(
                                 alpha = 0.78f
                             ),
                             modifier = Modifier.size(24.dp),
@@ -1914,7 +1938,7 @@ private fun HomeTodayTaskRow(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
                             lineHeight = 22.sp,
-                            color = if (localCompleted) {
+                            color = if (localStruck) {
                                 colorScheme.onSurface.copy(alpha = 0.78f)
                             } else {
                                 colorScheme.onSurface

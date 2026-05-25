@@ -327,12 +327,12 @@ private struct CompletedTimelineRow: View {
                 .accessibilityLabel("Undo complete")
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(item.title)
-                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold))
-                        .foregroundStyle(titleColor)
-                        .strikethrough(showStrikethrough, color: colors.onSurface.opacity(0.65))
-                        .lineLimit(2)
-                        .animation(.easeInOut(duration: 0.16), value: showStrikethrough)
+                    TodoTimelineTaskTitle(
+                        text: item.title,
+                        isCompleted: showStrikethrough,
+                        titleColor: titleColor,
+                        strikeColor: colors.onSurface.opacity(0.65)
+                    )
 
                     HStack(spacing: 5) {
                         Image(systemName: "clock")
@@ -366,7 +366,8 @@ private struct CompletedTimelineRow: View {
         }
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
-        .animation(.easeInOut(duration: 0.22), value: isFading)
+        .offset(y: isFading ? -10 : 0)
+        .animation(.easeInOut(duration: 0.26), value: isFading)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .allowsHitTesting(!isRestoring)
         .todoTrailingSwipeActions(
@@ -393,10 +394,10 @@ private struct CompletedTimelineRow: View {
                 restorePhase = .unstruck
             }
             try? await Task.sleep(nanoseconds: 180_000_000)
-            withAnimation(.easeInOut(duration: 0.22)) {
+            withAnimation(.easeInOut(duration: 0.26)) {
                 restorePhase = .fading
             }
-            try? await Task.sleep(nanoseconds: 220_000_000)
+            try? await Task.sleep(nanoseconds: 260_000_000)
             await onUncomplete()
         }
     }
