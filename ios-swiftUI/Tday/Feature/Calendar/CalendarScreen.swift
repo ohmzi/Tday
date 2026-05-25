@@ -152,6 +152,7 @@ struct CalendarScreen: View {
     @State private var selectedDate = Date()
     @State private var visibleMonth = calendarMonthStart(for: Date())
     @State private var displayMode: CalendarDisplayMode = .month
+    @State private var calendarCardHeight: CGFloat = CalendarModeCardMetrics.monthHeight
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
     @State private var calendarTitleCollapseOffset: CGFloat = 0
@@ -185,10 +186,6 @@ struct CalendarScreen: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE, MMM d"
         return formatter.string(from: selectedDate)
-    }
-
-    private var calendarModeCardHeight: CGFloat {
-        calendarModeCardHeight(for: displayMode)
     }
 
     private func calendarModeCardHeight(for mode: CalendarDisplayMode) -> CGFloat {
@@ -331,7 +328,6 @@ struct CalendarScreen: View {
         .listRowSpacing(0)
         .listSectionSpacing(0)
         .environment(\.defaultMinListRowHeight, 1)
-        .animation(calendarModeResizeAnimation, value: calendarModeCardHeight)
         .disableVerticalScrollBounce()
         .background(colors.background)
         .onPreferenceChange(CalendarDateDropTargetFramePreferenceKey.self) { frames in
@@ -454,20 +450,28 @@ struct CalendarScreen: View {
         calendarModeContent(for: displayMode)
             .transaction { transaction in
                 transaction.animation = nil
+                transaction.disablesAnimations = true
             }
             .frame(maxWidth: .infinity)
-            .frame(height: calendarModeCardHeight, alignment: .top)
+            .frame(height: calendarCardHeight, alignment: .top)
             .clipped()
             .modifier(CalendarCardChromeModifier())
-            .animation(calendarModeResizeAnimation, value: calendarModeCardHeight)
     }
 
     private func selectCalendarMode(_ mode: CalendarDisplayMode) {
         guard mode != displayMode else { return }
 
-        displayMode = mode
-        if mode != .month {
-            visibleMonth = calendarMonthStart(for: selectedDate)
+        var contentTransaction = Transaction()
+        contentTransaction.disablesAnimations = true
+        withTransaction(contentTransaction) {
+            displayMode = mode
+            if mode != .month {
+                visibleMonth = calendarMonthStart(for: selectedDate)
+            }
+        }
+
+        withAnimation(calendarModeResizeAnimation) {
+            calendarCardHeight = calendarModeCardHeight(for: mode)
         }
     }
 
