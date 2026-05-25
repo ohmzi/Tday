@@ -53,7 +53,8 @@ final class CacheMappersDateParsingTests: XCTestCase {
         XCTAssertEqual(calendar.component(.month, from: monthTarget), 7)
         XCTAssertEqual(calendar.component(.day, from: monthTarget), 1)
 
-        XCTAssertNil(timelineRescheduleTargetDate(sectionId: "earlier", today: today, calendar: calendar))
+        let earlierTarget = try XCTUnwrap(timelineRescheduleTargetDate(sectionId: "earlier", today: today, calendar: calendar))
+        XCTAssertEqual(calendar.component(.day, from: earlierTarget), 23)
         XCTAssertNil(timelineRescheduleTargetDate(sectionId: "month-24316", today: today, calendar: calendar))
     }
 }

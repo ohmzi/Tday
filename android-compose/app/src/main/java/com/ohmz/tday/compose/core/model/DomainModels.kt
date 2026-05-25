@@ -100,6 +100,10 @@ fun timelineRescheduleTargetDate(
     today: LocalDate = LocalDate.now(),
 ): LocalDate? {
     val currentMonth = YearMonth.from(today)
+    if (sectionKey == "earlier") {
+        return today.minusDays(1)
+    }
+
     if (sectionKey.startsWith("day-")) {
         val date = runCatching { LocalDate.parse(sectionKey.removePrefix("day-")) }.getOrNull()
             ?: return null

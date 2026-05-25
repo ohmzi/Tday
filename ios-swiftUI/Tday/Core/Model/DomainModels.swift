@@ -161,6 +161,10 @@ func timelineRescheduleTargetDate(
     let startOfToday = calendar.startOfDay(for: today)
     let currentMonthStart = rescheduleMonthStart(for: startOfToday, calendar: calendar)
 
+    if sectionId == "earlier" {
+        return calendar.date(byAdding: .day, value: -1, to: startOfToday)
+    }
+
     if sectionId.hasPrefix("scheduled-") || sectionId.hasPrefix("priority-") {
         guard let suffix = sectionId.split(separator: "-").last,
               let interval = TimeInterval(String(suffix)) else {
