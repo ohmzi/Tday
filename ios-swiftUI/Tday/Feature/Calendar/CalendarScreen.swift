@@ -17,6 +17,13 @@ private struct CalendarInAppDrag: Equatable {
     var location: CGPoint
 }
 
+private enum CalendarTaskCompletionPhase {
+    case active
+    case checked
+    case struck
+    case fading
+}
+
 private struct CalendarDateDropTargetFrame: Equatable {
     let date: Date
     let frame: CGRect
@@ -309,8 +316,13 @@ struct CalendarScreen: View {
                                 Task { await viewModel.delete(todo) }
                             }
                         )
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
+                .animation(
+                    .spring(response: 0.34, dampingFraction: 0.9),
+                    value: pendingItems.map(\.id)
+                )
                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                 .listRowBackground(colors.background)
                 .listRowSeparator(.hidden)
@@ -2521,16 +2533,33 @@ private struct CalendarPendingTaskRow: View {
     let onComplete: () -> Void
 
     @Environment(\.tdayColors) private var colors
+    @State private var completionPhase = CalendarTaskCompletionPhase.active
+
+    private var showCheckmark: Bool {
+        completionPhase != .active || todo.completed
+    }
+
+    private var showStrikethrough: Bool {
+        completionPhase == .struck || completionPhase == .fading || todo.completed
+    }
+
+    private var isCompleting: Bool {
+        completionPhase != .active
+    }
+
+    private var isFading: Bool {
+        completionPhase == .fading
+    }
 
     var body: some View {
         let priorityIcon = priorityIndicatorSymbolName(todo.priority)
 
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
-                Button(action: onComplete) {
-                    Image(systemName: "circle")
+                Button(action: startCompletion) {
+                    Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
-                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                        .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
                         .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
                 }
                 .buttonStyle(
@@ -2542,10 +2571,12 @@ private struct CalendarPendingTaskRow: View {
                 )
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(todo.title)
-                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold))
-                        .foregroundStyle(colors.onSurface)
-                        .lineLimit(2)
+                    TodoTimelineTaskTitle(
+                        text: todo.title,
+                        isCompleted: showStrikethrough,
+                        titleColor: showStrikethrough ? colors.onSurface.opacity(0.78) : colors.onSurface,
+                        strikeColor: colors.onSurface.opacity(0.65)
+                    )
 
                     Text(todo.due.formatted(date: .omitted, time: .shortened))
                         .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
@@ -2575,6 +2606,37 @@ private struct CalendarPendingTaskRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(colors.background)
+        .opacity(isFading ? 0 : 1)
+        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
+        .offset(y: isFading ? -10 : 0)
+        .animation(.easeInOut(duration: 0.26), value: isFading)
+        .allowsHitTesting(!isCompleting)
+    }
+
+    private func startCompletion() {
+        guard completionPhase == .active else {
+            return
+        }
+
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Task { @MainActor in
+            withAnimation(.easeInOut(duration: 0.18)) {
+                completionPhase = .checked
+            }
+            try? await Task.sleep(nanoseconds: 160_000_000)
+            withAnimation(.easeInOut(duration: 0.22)) {
+                completionPhase = .struck
+            }
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            withAnimation(.easeInOut(duration: 0.26)) {
+                completionPhase = .fading
+            }
+            try? await Task.sleep(nanoseconds: 260_000_000)
+            onComplete()
+            if completionPhase == .fading {
+                completionPhase = .active
+            }
+        }
     }
 }
 
