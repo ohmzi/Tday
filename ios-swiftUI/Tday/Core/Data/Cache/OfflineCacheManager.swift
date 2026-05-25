@@ -81,6 +81,7 @@ final class OfflineCacheManager {
                     completedAtEpochMs: $0.completedAtEpochMs,
                     rrule: $0.rrule,
                     instanceDateEpochMs: $0.instanceDateEpochMs,
+                    listId: $0.listId,
                     listName: $0.listName,
                     listColor: $0.listColor
                 )

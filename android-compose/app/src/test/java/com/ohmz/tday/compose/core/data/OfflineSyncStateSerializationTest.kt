@@ -64,6 +64,7 @@ class OfflineSyncStateSerializationTest {
                     priority = "Low",
                     dueEpochMs = 1700003600000L,
                     completedAtEpochMs = 1700004000000L,
+                    listId = "l1",
                 ),
             ),
             lists = listOf(
@@ -72,10 +73,9 @@ class OfflineSyncStateSerializationTest {
             pendingMutations = listOf(
                 PendingMutationRecord(
                     mutationId = "m1",
-                    kind = MutationKind.CREATE_TODO,
+                    kind = MutationKind.DELETE_LIST,
                     timestampEpochMs = 1700000000000L,
-                    targetId = "t1",
-                    title = "New task",
+                    targetId = "l1",
                 ),
             ),
             aiSummaryEnabled = false,

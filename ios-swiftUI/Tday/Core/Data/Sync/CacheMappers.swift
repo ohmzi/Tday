@@ -236,6 +236,7 @@ func mapCompletedDTO(_ dto: CompletedTodoDTO) -> CompletedItem {
         completedAt: parseOptionalDate(dto.completedAt),
         rrule: dto.rrule,
         instanceDate: parseOptionalDate(dto.instanceDate),
+        listId: dto.listID,
         listName: dto.listName,
         listColor: dto.listColor
     )
@@ -252,6 +253,7 @@ func completedToCache(_ item: CompletedItem) -> CachedCompletedRecord {
         completedAtEpochMs: item.completedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
         rrule: item.rrule,
         instanceDateEpochMs: item.instanceDate.map { Int64($0.timeIntervalSince1970 * 1000.0) },
+        listId: item.listId,
         listName: item.listName,
         listColor: item.listColor
     )
@@ -268,6 +270,7 @@ func completedFromCache(_ record: CachedCompletedRecord) -> CompletedItem {
         completedAt: record.completedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.completedAtEpochMs) / 1000.0) : nil,
         rrule: record.rrule,
         instanceDate: record.instanceDateEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },
+        listId: record.listId,
         listName: record.listName,
         listColor: record.listColor
     )

@@ -556,6 +556,12 @@ fun TdayApp(
                         listName = listName,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
+                        onListDeleted = {
+                            navController.navigate(AppRoute.Home.route) {
+                                popUpTo(AppRoute.Home.route) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
                     )
                 }
 
@@ -816,6 +822,7 @@ private fun TodosRoute(
     mode: TodoListMode,
     onBack: () -> Unit,
     onTaskDeleted: () -> Unit,
+    onListDeleted: () -> Unit = {},
     highlightTodoId: String? = null,
     listId: String? = null,
     listName: String? = null,
@@ -853,6 +860,12 @@ private fun TodosRoute(
                 name = name,
                 color = color,
                 iconKey = iconKey,
+            )
+        },
+        onDeleteList = { targetListId ->
+            viewModel.deleteList(
+                listId = targetListId,
+                onOptimisticDelete = onListDeleted,
             )
         },
     )

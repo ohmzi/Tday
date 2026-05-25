@@ -193,6 +193,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
@@ -397,9 +399,11 @@ fun TodoListScreen(
         }
     }
     val isCollapsibleTimelineMode =
-        uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY
+        uiState.mode == TodoListMode.ALL ||
+                uiState.mode == TodoListMode.PRIORITY ||
+                uiState.mode == TodoListMode.LIST
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
-    var collapsedSectionKeys by rememberSaveable(uiState.mode, highlightedTodoId) {
+    var collapsedSectionKeys by rememberSaveable(uiState.mode, uiState.listId, highlightedTodoId) {
         mutableStateOf(
             if (isCollapsibleTimelineMode && highlightedTodoId.isNullOrBlank()) {
                 setOf("earlier")
@@ -512,7 +516,7 @@ fun TodoListScreen(
         }
     }
     LaunchedEffect(uiState.mode) {
-        if (uiState.mode == TodoListMode.PRIORITY) {
+        if (uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST) {
             collapsedSectionKeys = collapsedSectionKeys + "earlier"
         }
     }
@@ -706,6 +710,7 @@ fun TodoListScreen(
                                 TodoListMode.OVERDUE -> true
                                 TodoListMode.SCHEDULED -> true
                                 TodoListMode.PRIORITY -> section.key == "earlier"
+                                TodoListMode.LIST -> section.key == "earlier"
                                 else -> false
                             }
                             val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
@@ -1129,38 +1134,97 @@ fun TodoListScreen(
         uiState.mode == TodoListMode.LIST &&
         !deleteConfirmationListId.isNullOrBlank()
     ) {
-        AlertDialog(
+        ListDeleteConfirmationDialog(
             onDismissRequest = { showDeleteListConfirmation = false },
-            title = {
-                Text(
-                    text = stringResource(R.string.todos_delete_list_title),
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            },
-            text = {
-                Text(text = stringResource(R.string.todos_delete_list_message))
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteListConfirmation = false
-                        onDeleteList(deleteConfirmationListId)
-                        listSettingsTargetId = null
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.action_delete),
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteListConfirmation = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
+            onConfirm = {
+                showDeleteListConfirmation = false
+                onDeleteList(deleteConfirmationListId)
+                listSettingsTargetId = null
             },
         )
+    }
+}
+
+@Composable
+private fun ListDeleteConfirmationDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val isDarkTheme = colorScheme.background.luminance() < 0.5f
+    val dialogContainerColor = if (isDarkTheme) {
+        colorScheme.surface.copy(alpha = 0.98f)
+    } else {
+        colorScheme.surface
+    }
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 34.dp)
+                .sizeIn(maxWidth = 420.dp),
+            shape = RoundedCornerShape(30.dp),
+            colors = CardDefaults.cardColors(containerColor = dialogContainerColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(22.dp),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        text = stringResource(R.string.todos_delete_list_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = colorScheme.onSurface,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                    Text(
+                        text = stringResource(R.string.todos_delete_list_message),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.16f,
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onDismissRequest) {
+                        Text(
+                            text = stringResource(R.string.action_cancel),
+                            color = colorScheme.primary,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
+                    Spacer(Modifier.size(10.dp))
+                    TextButton(
+                        onClick = {
+                            ViewCompat.performHapticFeedback(
+                                view,
+                                HapticFeedbackConstantsCompat.CLOCK_TICK,
+                            )
+                            onConfirm()
+                        },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.action_delete),
+                            color = colorScheme.error,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -2305,7 +2369,7 @@ private fun buildTimelineSections(
             items = items,
             zoneId = zoneId,
             futureOnly = false,
-            placesEarlierBeforeToday = false,
+            placesEarlierBeforeToday = true,
             includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
     }
