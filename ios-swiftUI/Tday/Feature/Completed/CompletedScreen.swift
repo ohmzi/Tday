@@ -300,7 +300,7 @@ private struct CompletedTimelineRow: View {
         let completedDate = item.completedAt ?? item.due
         let completedTimeText = completedDate.formatted(date: .omitted, time: .shortened)
         let showListIndicator = item.listName?.isEmpty == false
-        let showPriorityFlag = item.priority.lowercased() == "high"
+        let priorityIcon = priorityIndicatorSymbolName(item.priority)
 
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
@@ -344,15 +344,15 @@ private struct CompletedTimelineRow: View {
 
                 Spacer(minLength: 0)
 
-                if showListIndicator || showPriorityFlag {
+                if showListIndicator || priorityIcon != nil {
                     HStack(spacing: 8) {
                         if showListIndicator {
                             Image(systemName: "tray.fill")
                                 .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
                                 .foregroundStyle(todoListAccentColor(for: item.listColor))
                         }
-                        if showPriorityFlag {
-                            Image(systemName: "flag.fill")
+                        if let priorityIcon {
+                            Image(systemName: priorityIcon)
                                 .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
                                 .foregroundStyle(priorityColor(item.priority))
                         }
