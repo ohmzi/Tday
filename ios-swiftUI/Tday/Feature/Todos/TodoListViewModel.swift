@@ -105,34 +105,19 @@ final class TodoListViewModel {
         }
     }
 
-    func moveTask(_ todo: TodoItem, toDay targetDay: Date) async {
+    func moveTask(_ todo: TodoItem, toDay targetDay: Date, scope: TaskRescheduleScope) async {
         let calendar = Calendar.current
         guard !calendar.isDate(todo.due, inSameDayAs: targetDay) else {
             return
         }
 
-        let dueTimeComponents = calendar.dateComponents([.hour, .minute, .second, .nanosecond], from: todo.due)
-        var targetComponents = calendar.dateComponents([.year, .month, .day], from: targetDay)
-        targetComponents.timeZone = calendar.timeZone
-        targetComponents.hour = dueTimeComponents.hour
-        targetComponents.minute = dueTimeComponents.minute
-        targetComponents.second = dueTimeComponents.second
-        targetComponents.nanosecond = dueTimeComponents.nanosecond
-
-        guard let movedDue = calendar.date(from: targetComponents) else {
+        guard let payload = movedTaskPayload(todo: todo, targetDay: targetDay, calendar: calendar) else {
             return
         }
 
         await updateTask(
-            todo,
-            payload: CreateTaskPayload(
-                title: todo.title,
-                description: todo.description,
-                priority: todo.priority,
-                due: movedDue,
-                rrule: todo.rrule,
-                listId: todo.listId
-            )
+            todo.repositoryTargetForReschedule(scope: scope),
+            payload: payload
         )
     }
 

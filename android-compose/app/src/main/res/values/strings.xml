@@ -112,6 +112,10 @@
     <string name="todos_section_today">Today</string>
     <string name="todos_section_tomorrow">Tomorrow</string>
     <string name="todos_section_rest_of">Rest of %1$s</string>
+    <string name="todos_reschedule_recurring_title">Move repeating task?</string>
+    <string name="todos_reschedule_recurring_message">Choose whether to move only this task occurrence or the entire repeating series.</string>
+    <string name="todos_reschedule_this_occurrence">This occurrence</string>
+    <string name="todos_reschedule_entire_series">Entire series</string>
     <string name="todos_summary_title">Summary</string>
     <string name="todos_summary_close">Close summary</string>
     <string name="todos_summary_loading">Creating your task summary…</string>
