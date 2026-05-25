@@ -318,12 +318,30 @@ class SyncManager @Inject constructor(
                         }
 
                         val remoteTodo = remoteSnapshot.todos.firstOrNull { it.canonicalId == targetId }
-                        val descriptionForApi = mutation.description
-                            ?: if (remoteTodo?.description != null) "" else null
-                        val rruleForApi = mutation.rrule
-                            ?: if (!remoteTodo?.rrule.isNullOrBlank()) "" else null
-                        val listIdForApi = resolvedListId
-                            ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null
+                        val isDueOnlyMove = mutation.dueEpochMs != null &&
+                                mutation.title == null &&
+                                mutation.description == null &&
+                                mutation.priority == null &&
+                                mutation.pinned == null &&
+                                mutation.completed == null &&
+                                mutation.rrule == null &&
+                                mutation.listId == null
+                        val descriptionForApi = if (isDueOnlyMove) {
+                            null
+                        } else {
+                            mutation.description
+                                ?: if (remoteTodo?.description != null) "" else null
+                        }
+                        val rruleForApi = if (isDueOnlyMove) {
+                            null
+                        } else {
+                            mutation.rrule ?: if (!remoteTodo?.rrule.isNullOrBlank()) "" else null
+                        }
+                        val listIdForApi = if (isDueOnlyMove) {
+                            null
+                        } else {
+                            resolvedListId ?: if (!remoteTodo?.listId.isNullOrBlank()) "" else null
+                        }
 
                         if (mutation.instanceDateEpochMs != null) {
                             requireApiBody(
@@ -356,7 +374,7 @@ class SyncManager @Inject constructor(
                                         rrule = rruleForApi,
                                         listID = listIdForApi,
                                         dateChanged = true,
-                                        rruleChanged = true,
+                                        rruleChanged = if (isDueOnlyMove) null else true,
                                         instanceDate = null,
                                     ),
                                 ),
