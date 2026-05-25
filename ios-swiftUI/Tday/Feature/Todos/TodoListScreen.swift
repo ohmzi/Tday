@@ -31,14 +31,6 @@ private struct TodoDropTargetFramePreferenceKey: PreferenceKey {
     }
 }
 
-private struct TodoDragRootFramePreferenceKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        value = nextValue()
-    }
-}
-
 enum TodoTimelineMetrics {
     static let horizontalPadding: CGFloat = 18
     static let heroTitleSize: CGFloat = 32
@@ -190,7 +182,6 @@ struct TodoListScreen: View {
     @State private var inAppDrag: TodoInAppDrag?
     @State private var activeDropSectionId: String?
     @State private var dropTargetFrames: [String: TodoDropTargetFrame] = [:]
-    @State private var dragRootGlobalFrame: CGRect = .zero
     @State private var pendingRescheduleDrop: TodoRescheduleDrop?
     @State private var collapsedSectionIDs: Set<String>
     @State private var timelineScrollOffset: CGFloat = 0
@@ -290,17 +281,6 @@ struct TodoListScreen: View {
         .onPreferenceChange(TodoDropTargetFramePreferenceKey.self) { frames in
             dropTargetFrames = frames
         }
-        .background {
-            GeometryReader { proxy in
-                Color.clear.preference(
-                    key: TodoDragRootFramePreferenceKey.self,
-                    value: proxy.frame(in: .global)
-                )
-            }
-        }
-        .onPreferenceChange(TodoDragRootFramePreferenceKey.self) { frame in
-            dragRootGlobalFrame = frame
-        }
         .overlay {
             if viewModel.items.isEmpty, !viewModel.isLoading {
                 ZStack {
@@ -316,16 +296,20 @@ struct TodoListScreen: View {
             }
         }
         .overlay(alignment: .topLeading) {
-            if let inAppDrag {
-                let previewLocation = CGPoint(
-                    x: inAppDrag.location.x - dragRootGlobalFrame.minX,
-                    y: inAppDrag.location.y - dragRootGlobalFrame.minY
-                )
-                TodoDragPreview(todo: inAppDrag.todo)
-                    .position(x: previewLocation.x, y: previewLocation.y - 34)
-                    .zIndex(20)
-                    .allowsHitTesting(false)
+            GeometryReader { proxy in
+                if let inAppDrag {
+                    let rootFrame = proxy.frame(in: .global)
+                    let previewLocation = CGPoint(
+                        x: inAppDrag.location.x - rootFrame.minX,
+                        y: inAppDrag.location.y - rootFrame.minY
+                    )
+                    TodoDragPreview(todo: inAppDrag.todo)
+                        .position(x: previewLocation.x, y: previewLocation.y)
+                        .zIndex(20)
+                        .allowsHitTesting(false)
+                }
             }
+            .allowsHitTesting(false)
         }
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
@@ -1765,15 +1749,25 @@ private struct TodoDropPlaceholder: View {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
             .fill(isActive ? colors.error.opacity(0.10) : colors.surfaceVariant.opacity(0.18))
             .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(
-                        isActive ? colors.error.opacity(0.64) : colors.onSurfaceVariant.opacity(0.18),
-                        style: StrokeStyle(lineWidth: isActive ? 1.5 : 1, dash: [7, 7])
-                    )
+                placeholderStroke
             )
             .frame(height: isActive ? 70 : 52)
             .animation(.easeInOut(duration: 0.18), value: isActive)
             .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var placeholderStroke: some View {
+        if isActive {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(colors.error.opacity(0.72), lineWidth: 1.5)
+        } else {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    colors.onSurfaceVariant.opacity(0.18),
+                    style: StrokeStyle(lineWidth: 1, dash: [7, 7])
+                )
+        }
     }
 }
 
@@ -1786,34 +1780,51 @@ private struct TodoInAppDragModifier: ViewModifier {
     let onCancel: () -> Void
 
     @State private var didStart = false
+    @State private var latestLocation: CGPoint?
 
     func body(content: Content) -> some View {
         if enabled {
-            content.highPriorityGesture(
-                LongPressGesture(minimumDuration: 0.22)
-                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .global))
+            content
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                        .onChanged { value in
+                            latestLocation = value.location
+                            guard didStart else {
+                                return
+                            }
+                            onMove(todo, value.location)
+                        }
+                        .onEnded { value in
+                            latestLocation = value.location
+                            guard didStart else {
+                                latestLocation = nil
+                                return
+                            }
+                            didStart = false
+                            onEnd(todo, value.location)
+                            latestLocation = nil
+                        }
+                )
+                .highPriorityGesture(
+                    LongPressGesture(minimumDuration: 0.22)
                     .onChanged { value in
-                        guard case let .second(true, drag?) = value else {
+                        guard value, !didStart, let latestLocation else {
                             return
                         }
-                        if !didStart {
-                            didStart = true
-                            onStart(todo, drag.location)
-                        } else {
-                            onMove(todo, drag.location)
-                        }
+                        didStart = true
+                        onStart(todo, latestLocation)
                     }
-                    .onEnded { value in
-                        defer {
-                            didStart = false
-                        }
-                        guard case let .second(true, drag?) = value else {
+                    .onEnded { completed in
+                        guard completed else {
                             onCancel()
                             return
                         }
-                        onEnd(todo, drag.location)
+                        if !didStart, let latestLocation {
+                            didStart = true
+                            onStart(todo, latestLocation)
+                        }
                     }
-            )
+                )
         } else {
             content
         }
