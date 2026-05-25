@@ -1779,54 +1779,197 @@ private struct TodoInAppDragModifier: ViewModifier {
     let onEnd: (TodoItem, CGPoint?) -> Void
     let onCancel: () -> Void
 
-    @State private var didStart = false
-    @State private var latestLocation: CGPoint?
-
     func body(content: Content) -> some View {
         if enabled {
             content
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 0, coordinateSpace: .global)
-                        .onChanged { value in
-                            latestLocation = value.location
-                            guard didStart else {
-                                return
-                            }
-                            onMove(todo, value.location)
-                        }
-                        .onEnded { value in
-                            latestLocation = value.location
-                            guard didStart else {
-                                latestLocation = nil
-                                return
-                            }
-                            didStart = false
-                            onEnd(todo, value.location)
-                            latestLocation = nil
-                        }
-                )
-                .highPriorityGesture(
-                    LongPressGesture(minimumDuration: 0.22)
-                    .onChanged { value in
-                        guard value, !didStart, let latestLocation else {
-                            return
-                        }
-                        didStart = true
-                        onStart(todo, latestLocation)
+                .background {
+                    GeometryReader { _ in
+                        TodoInAppLongPressBridge(
+                            enabled: enabled,
+                            todo: todo,
+                            onStart: onStart,
+                            onMove: onMove,
+                            onEnd: onEnd,
+                            onCancel: onCancel
+                        )
+                        .allowsHitTesting(false)
                     }
-                    .onEnded { completed in
-                        guard completed else {
-                            onCancel()
-                            return
-                        }
-                        if !didStart, let latestLocation {
-                            didStart = true
-                            onStart(todo, latestLocation)
-                        }
-                    }
-                )
+                }
         } else {
             content
+        }
+    }
+}
+
+private struct TodoInAppLongPressBridge: UIViewRepresentable {
+    let enabled: Bool
+    let todo: TodoItem
+    let onStart: (TodoItem, CGPoint) -> Void
+    let onMove: (TodoItem, CGPoint) -> Void
+    let onEnd: (TodoItem, CGPoint?) -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            enabled: enabled,
+            todo: todo,
+            onStart: onStart,
+            onMove: onMove,
+            onEnd: onEnd,
+            onCancel: onCancel
+        )
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = false
+        context.coordinator.markerView = view
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.enabled = enabled
+        context.coordinator.todo = todo
+        context.coordinator.onStart = onStart
+        context.coordinator.onMove = onMove
+        context.coordinator.onEnd = onEnd
+        context.coordinator.onCancel = onCancel
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView.enclosingScrollView() ?? uiView.superview, markerView: uiView)
+        }
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.detach()
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var enabled: Bool
+        var todo: TodoItem
+        var onStart: (TodoItem, CGPoint) -> Void
+        var onMove: (TodoItem, CGPoint) -> Void
+        var onEnd: (TodoItem, CGPoint?) -> Void
+        var onCancel: () -> Void
+
+        weak var markerView: UIView?
+        private weak var attachedView: UIView?
+        private let recognizer: UILongPressGestureRecognizer
+        private var isDragging = false
+
+        init(
+            enabled: Bool,
+            todo: TodoItem,
+            onStart: @escaping (TodoItem, CGPoint) -> Void,
+            onMove: @escaping (TodoItem, CGPoint) -> Void,
+            onEnd: @escaping (TodoItem, CGPoint?) -> Void,
+            onCancel: @escaping () -> Void
+        ) {
+            self.enabled = enabled
+            self.todo = todo
+            self.onStart = onStart
+            self.onMove = onMove
+            self.onEnd = onEnd
+            self.onCancel = onCancel
+            self.recognizer = UILongPressGestureRecognizer()
+            super.init()
+
+            recognizer.minimumPressDuration = 0.22
+            recognizer.allowableMovement = 24
+            recognizer.cancelsTouchesInView = false
+            recognizer.delaysTouchesBegan = false
+            recognizer.delaysTouchesEnded = false
+            recognizer.delegate = self
+            recognizer.addTarget(self, action: #selector(handleLongPress(_:)))
+        }
+
+        func attach(to view: UIView?, markerView: UIView) {
+            self.markerView = markerView
+            guard enabled, let view else {
+                detach()
+                return
+            }
+
+            guard attachedView !== view else {
+                return
+            }
+
+            detach()
+            attachedView = view
+            view.addGestureRecognizer(recognizer)
+        }
+
+        func detach() {
+            if isDragging {
+                isDragging = false
+                onCancel()
+            }
+            attachedView?.removeGestureRecognizer(recognizer)
+            attachedView = nil
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard enabled, let markerView else {
+                return false
+            }
+
+            let localPoint = gestureRecognizer.location(in: markerView)
+            return markerView.bounds.insetBy(dx: -6, dy: -6).contains(localPoint)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard enabled, let markerView else {
+                return false
+            }
+
+            let localPoint = touch.location(in: markerView)
+            return markerView.bounds.insetBy(dx: -6, dy: -6).contains(localPoint)
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+            let location = globalLocation(for: recognizer)
+            switch recognizer.state {
+            case .began:
+                guard enabled else {
+                    return
+                }
+                isDragging = true
+                onStart(todo, location)
+            case .changed:
+                guard isDragging else {
+                    return
+                }
+                onMove(todo, location)
+            case .ended:
+                guard isDragging else {
+                    return
+                }
+                isDragging = false
+                onEnd(todo, location)
+            case .cancelled, .failed:
+                guard isDragging else {
+                    return
+                }
+                isDragging = false
+                onCancel()
+            default:
+                break
+            }
+        }
+
+        private func globalLocation(for recognizer: UILongPressGestureRecognizer) -> CGPoint {
+            guard let view = recognizer.view else {
+                return .zero
+            }
+
+            return view.convert(recognizer.location(in: view), to: nil)
         }
     }
 }
