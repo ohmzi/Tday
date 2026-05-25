@@ -72,6 +72,8 @@ enum TodoTimelineMetrics {
     }
 }
 
+private let todoDropPlaceholderAnimation = Animation.spring(response: 0.28, dampingFraction: 0.88, blendDuration: 0.02)
+
 struct TimelinePinnedSectionHeaderBackground: ViewModifier {
     @Environment(\.tdayColors) private var colors
 
@@ -505,7 +507,7 @@ struct TodoListScreen: View {
     }
 
     private func handleItemsChanged() {
-        activeDropSectionId = nil
+        setActiveDropSection(nil)
         draggedTodo = nil
         inAppDrag = nil
         dropTargetFrames = [:]
@@ -516,7 +518,7 @@ struct TodoListScreen: View {
     }
 
     private func requestReschedule(_ todo: TodoItem, to targetDate: Date) {
-        activeDropSectionId = nil
+        setActiveDropSection(nil)
         draggedTodo = nil
         inAppDrag = nil
         dropTargetFrames = [:]
@@ -543,6 +545,13 @@ struct TodoListScreen: View {
         viewModel.items.first { $0.id == id || $0.canonicalId == id }
     }
 
+    private func setActiveDropSection(_ sectionId: String?) {
+        guard activeDropSectionId != sectionId else { return }
+        withAnimation(todoDropPlaceholderAnimation) {
+            activeDropSectionId = sectionId
+        }
+    }
+
     private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
         if draggedTodo?.id != todo.id {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -554,14 +563,14 @@ struct TodoListScreen: View {
 
     private func updateInAppDrag(_ todo: TodoItem, to location: CGPoint) {
         inAppDrag = TodoInAppDrag(todo: todo, location: location)
-        activeDropSectionId = dropSectionID(at: location)
+        setActiveDropSection(dropSectionID(at: location))
     }
 
     private func finishInAppDrag(_ todo: TodoItem, at location: CGPoint?) {
         let targetSectionID = location.flatMap(dropSectionID(at:)) ?? activeDropSectionId
         let targetDate = targetSectionID
             .flatMap { sectionID in groupedSections.first { $0.id == sectionID }?.targetDate }
-        activeDropSectionId = nil
+        setActiveDropSection(nil)
         draggedTodo = nil
         inAppDrag = nil
         dropTargetFrames = [:]
@@ -571,7 +580,7 @@ struct TodoListScreen: View {
     }
 
     private func cancelInAppDrag() {
-        activeDropSectionId = nil
+        setActiveDropSection(nil)
         draggedTodo = nil
         inAppDrag = nil
         dropTargetFrames = [:]
@@ -726,6 +735,7 @@ struct TodoListScreen: View {
                             )
                             .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 6, trailing: 20))
                             .listRowBackground(colors.surface)
+                            .transition(timelineRowTransition())
                             .scheduledTodoDropTarget(
                                 section: section,
                                 draggedTodo: draggedTodo,
@@ -734,7 +744,7 @@ struct TodoListScreen: View {
                                     requestReschedule(todo, to: targetDate)
                                 },
                                 onSectionChange: { sectionId in
-                                    activeDropSectionId = sectionId
+                                    setActiveDropSection(sectionId)
                                 }
                             )
                     }
@@ -755,7 +765,7 @@ struct TodoListScreen: View {
                                     requestReschedule(todo, to: targetDate)
                                 },
                                 onSectionChange: { sectionId in
-                                    activeDropSectionId = sectionId
+                                    setActiveDropSection(sectionId)
                                 }
                             )
                     }
@@ -778,7 +788,7 @@ struct TodoListScreen: View {
                                 requestReschedule(todo, to: targetDate)
                             },
                             onSectionChange: { sectionId in
-                                activeDropSectionId = sectionId
+                                setActiveDropSection(sectionId)
                             }
                         )
                 }
@@ -788,6 +798,7 @@ struct TodoListScreen: View {
         .scrollContentBackground(.hidden)
         .background(colors.background)
         .disableVerticalScrollBounce()
+        .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
         .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
     }
 
@@ -898,6 +909,7 @@ struct TodoListScreen: View {
                 .listRowSpacing(0)
                 .listSectionSpacing(0)
                 .environment(\.defaultMinListRowHeight, 1)
+                .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
                 .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
             }
@@ -977,7 +989,7 @@ struct TodoListScreen: View {
                     requestReschedule(droppedTodo, to: targetDate)
                 },
                 onSectionChange: { sectionId in
-                    activeDropSectionId = sectionId
+                    setActiveDropSection(sectionId)
                 }
             )
             .modifier(
@@ -1076,7 +1088,7 @@ struct TodoListScreen: View {
                 requestReschedule(droppedTodo, to: targetDate)
             },
             onSectionChange: { sectionId in
-                activeDropSectionId = sectionId
+                setActiveDropSection(sectionId)
             }
         )
         .modifier(
@@ -1139,7 +1151,7 @@ struct TodoListScreen: View {
                             requestReschedule(todo, to: targetDate)
                         },
                         onSectionChange: { sectionId in
-                            activeDropSectionId = sectionId
+                            setActiveDropSection(sectionId)
                         }
                     )
             }
@@ -1190,7 +1202,7 @@ struct TodoListScreen: View {
                     requestReschedule(todo, to: targetDate)
                 },
                 onSectionChange: { sectionId in
-                    activeDropSectionId = sectionId
+                    setActiveDropSection(sectionId)
                 }
             )
             .listRowInsets(
@@ -1262,10 +1274,10 @@ struct TodoListScreen: View {
     private func timelineRowTransition() -> AnyTransition {
         let insertion = AnyTransition.opacity
             .combined(with: .move(edge: .top))
-            .animation(.easeOut(duration: 0.16))
+            .animation(todoDropPlaceholderAnimation)
         let removal = AnyTransition.opacity
             .combined(with: .move(edge: .top))
-            .animation(.easeOut(duration: 0.1))
+            .animation(todoDropPlaceholderAnimation)
         return .asymmetric(insertion: insertion, removal: removal)
     }
 
