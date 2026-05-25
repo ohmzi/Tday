@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 private enum CalendarTitleHandoff {
     static let collapseDistance: CGFloat = 180
@@ -46,6 +47,11 @@ private struct CalendarTodayJumpRequest: Equatable {
     let targetDate: Date
 }
 
+private struct CalendarTaskRescheduleDrop: Equatable {
+    let todo: TodoItem
+    let targetDate: Date
+}
+
 struct CalendarScreen: View {
     @State private var viewModel: CalendarViewModel
     @Environment(\.tdayColors) private var colors
@@ -60,6 +66,9 @@ struct CalendarScreen: View {
     @State private var calendarTitleCollapseOffset: CGFloat = 0
     @State private var todayJumpRequestID = 0
     @State private var todayJumpRequest: CalendarTodayJumpRequest?
+    @State private var draggedTodo: TodoItem?
+    @State private var activeDropDate: Date?
+    @State private var pendingRescheduleDrop: CalendarTaskRescheduleDrop?
 
     init(container: AppContainer) {
         _viewModel = State(initialValue: CalendarViewModel(container: container))
@@ -165,6 +174,12 @@ struct CalendarScreen: View {
                             todo: todo,
                             onComplete: { Task { await viewModel.complete(todo) } }
                         )
+                        .opacity(draggedTodo?.id == todo.id && activeDropDate != nil ? 0.55 : 1)
+                        .onDrag {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            draggedTodo = todo
+                            return NSItemProvider(object: todo.id as NSString)
+                        }
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
@@ -252,6 +267,30 @@ struct CalendarScreen: View {
                 }
             )
         }
+        .confirmationDialog(
+            "Move repeating task?",
+            isPresented: Binding(
+                get: { pendingRescheduleDrop != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        pendingRescheduleDrop = nil
+                    }
+                }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("This occurrence") {
+                commitPendingReschedule(scope: .occurrence)
+            }
+            Button("Entire series") {
+                commitPendingReschedule(scope: .series)
+            }
+            Button("Cancel", role: .cancel) {
+                pendingRescheduleDrop = nil
+            }
+        } message: {
+            Text("Choose whether to move only this task occurrence or the entire repeating series.")
+        }
     }
 
     private var calendarTopInset: some View {
@@ -290,12 +329,16 @@ struct CalendarScreen: View {
                 selectedDate: selectedDate,
                 tasksByDay: pendingItemsByDay,
                 accentColor: calendarAccentColor,
+                draggedTodo: draggedTodo,
+                activeDropDate: activeDropDate,
                 canGoPreviousMonth: canGoPreviousMonth,
                 minimumNavigableMonth: minimumNavigableMonth,
                 todayJumpRequest: todayJumpRequest,
                 onPreviousMonth: { navigateMonth(by: -1) },
                 onNextMonth: { navigateMonth(by: 1) },
-                onSelectDate: { selectDate($0) }
+                onSelectDate: { selectDate($0) },
+                onDropDateChange: { activeDropDate = $0 },
+                onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) }
             )
         case .week:
             CalendarWeekCard(
@@ -303,12 +346,16 @@ struct CalendarScreen: View {
                 today: Date(),
                 tasksByDay: pendingItemsByDay,
                 accentColor: calendarAccentColor,
+                draggedTodo: draggedTodo,
+                activeDropDate: activeDropDate,
                 canGoPreviousWeek: canGoPreviousWeek,
                 canSelectDate: { canNavigate(to: $0) },
                 todayJumpRequest: todayJumpRequest,
                 onPreviousWeek: { navigateDay(by: -7) },
                 onNextWeek: { navigateDay(by: 7) },
-                onSelectDate: { selectDate($0) }
+                onSelectDate: { selectDate($0) },
+                onDropDateChange: { activeDropDate = $0 },
+                onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) }
             )
         case .day:
             CalendarDayCard(
@@ -316,12 +363,16 @@ struct CalendarScreen: View {
                 today: Date(),
                 tasksByDay: pendingItemsByDay,
                 accentColor: calendarAccentColor,
+                draggedTodo: draggedTodo,
+                activeDropDate: activeDropDate,
                 canGoPreviousDay: canGoPreviousDay,
                 canSelectDate: { canNavigate(to: $0) },
                 todayJumpRequest: todayJumpRequest,
                 onPreviousDay: { navigateDay(by: -1) },
                 onNextDay: { navigateDay(by: 1) },
-                onSelectDate: { selectDate($0) }
+                onSelectDate: { selectDate($0) },
+                onDropDateChange: { activeDropDate = $0 },
+                onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) }
             )
         }
     }
@@ -355,6 +406,40 @@ struct CalendarScreen: View {
         todayJumpRequestID += 1
         todayJumpRequest = CalendarTodayJumpRequest(id: todayJumpRequestID, targetDate: Date())
     }
+
+    private func requestReschedule(_ todo: TodoItem, to targetDate: Date) {
+        draggedTodo = nil
+        activeDropDate = nil
+        let targetDay = Calendar.current.startOfDay(for: targetDate)
+        guard !Calendar.current.isDate(todo.due, inSameDayAs: targetDay) else {
+            return
+        }
+
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        if todo.isRecurring {
+            pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo: todo, targetDate: targetDay)
+        } else {
+            Task {
+                await viewModel.moveTask(todo, toDay: targetDay, scope: .occurrence)
+                await MainActor.run {
+                    selectDate(targetDay)
+                }
+            }
+        }
+    }
+
+    private func commitPendingReschedule(scope: TaskRescheduleScope) {
+        guard let drop = pendingRescheduleDrop else {
+            return
+        }
+        pendingRescheduleDrop = nil
+        Task {
+            await viewModel.moveTask(drop.todo, toDay: drop.targetDate, scope: scope)
+            await MainActor.run {
+                selectDate(drop.targetDate)
+            }
+        }
+    }
 }
 
 private struct CalendarViewModeTabs: View {
@@ -386,12 +471,16 @@ private struct CalendarMonthGrid: View {
     let selectedDate: Date
     let tasksByDay: [Date: [TodoItem]]
     let accentColor: Color
+    let draggedTodo: TodoItem?
+    let activeDropDate: Date?
     let canGoPreviousMonth: Bool
     let minimumNavigableMonth: Date
     let todayJumpRequest: CalendarTodayJumpRequest?
     let onPreviousMonth: () -> Void
     let onNextMonth: () -> Void
     let onSelectDate: (Date) -> Void
+    let onDropDateChange: (Date?) -> Void
+    let onMoveTaskToDate: (TodoItem, Date) -> Void
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
@@ -493,12 +582,21 @@ private struct CalendarMonthGrid: View {
                     day: day,
                     isSelected: Calendar.current.isDate(day.date, inSameDayAs: selectedDate),
                     isToday: Calendar.current.isDateInToday(day.date),
+                    isEnabled: canSelectDate(day.date),
+                    isDropTarget: activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: day.date) } ?? false,
                     taskCount: dayTasks.count,
                     accentColor: accentColor,
-                    onSelectDate: onSelectDate
+                    draggedTodo: draggedTodo,
+                    onSelectDate: onSelectDate,
+                    onDropDateChange: onDropDateChange,
+                    onMoveTaskToDate: onMoveTaskToDate
                 )
             }
         }
+    }
+
+    private func canSelectDate(_ date: Date) -> Bool {
+        calendarMonthStart(for: date) >= minimumNavigableMonth
     }
 
     private func monthPages(previousMonth: Date?, displayMonth: Date, nextMonth: Date?) -> [CalendarPagerPage] {
@@ -604,12 +702,16 @@ private struct CalendarWeekCard: View {
     let today: Date
     let tasksByDay: [Date: [TodoItem]]
     let accentColor: Color
+    let draggedTodo: TodoItem?
+    let activeDropDate: Date?
     let canGoPreviousWeek: Bool
     let canSelectDate: (Date) -> Bool
     let todayJumpRequest: CalendarTodayJumpRequest?
     let onPreviousWeek: () -> Void
     let onNextWeek: () -> Void
     let onSelectDate: (Date) -> Void
+    let onDropDateChange: (Date?) -> Void
+    let onMoveTaskToDate: (TodoItem, Date) -> Void
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
@@ -696,7 +798,11 @@ private struct CalendarWeekCard: View {
                     isToday: Calendar.current.isDate(date, inSameDayAs: today),
                     isEnabled: isEnabled,
                     accentColor: accentColor,
-                    onSelect: { onSelectDate(date) }
+                    isDropTarget: activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: date) } ?? false,
+                    draggedTodo: draggedTodo,
+                    onSelect: { onSelectDate(date) },
+                    onDropDateChange: onDropDateChange,
+                    onMoveTaskToDate: onMoveTaskToDate
                 )
             }
         }
@@ -791,7 +897,11 @@ private struct CalendarWeekDayCell: View {
     let isToday: Bool
     let isEnabled: Bool
     let accentColor: Color
+    let isDropTarget: Bool
+    let draggedTodo: TodoItem?
     let onSelect: () -> Void
+    let onDropDateChange: (Date?) -> Void
+    let onMoveTaskToDate: (TodoItem, Date) -> Void
 
     @Environment(\.tdayColors) private var colors
 
@@ -825,6 +935,15 @@ private struct CalendarWeekDayCell: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
+        .onDrop(
+            of: [UTType.plainText.identifier],
+            delegate: CalendarDateDropDelegate(
+                date: date,
+                draggedTodo: isEnabled ? draggedTodo : nil,
+                onMove: onMoveTaskToDate,
+                onDateChange: onDropDateChange
+            )
+        )
         .opacity(isEnabled ? 1 : 0.48)
     }
 
@@ -839,6 +958,9 @@ private struct CalendarWeekDayCell: View {
     }
 
     private var cellBackground: Color {
+        if isDropTarget {
+            return accentColor.opacity(0.34)
+        }
         if isSelected {
             return accentColor.opacity(0.24)
         }
@@ -849,6 +971,9 @@ private struct CalendarWeekDayCell: View {
     }
 
     private var cellBorderColor: Color {
+        if isDropTarget {
+            return accentColor
+        }
         if isSelected {
             return accentColor.opacity(0.95)
         }
@@ -859,6 +984,9 @@ private struct CalendarWeekDayCell: View {
     }
 
     private var cellBorderWidth: CGFloat {
+        if isDropTarget {
+            return 2
+        }
         if isSelected {
             return 1.6
         }
@@ -889,17 +1017,55 @@ private struct CalendarWeekDayCell: View {
     }
 }
 
+private struct CalendarDateDropDelegate: DropDelegate {
+    let date: Date
+    let draggedTodo: TodoItem?
+    let onMove: (TodoItem, Date) -> Void
+    let onDateChange: (Date?) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        draggedTodo != nil
+    }
+
+    func dropEntered(info: DropInfo) {
+        onDateChange(Calendar.current.startOfDay(for: date))
+    }
+
+    func dropExited(info: DropInfo) {
+        onDateChange(nil)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer {
+            onDateChange(nil)
+        }
+        guard let draggedTodo else {
+            return false
+        }
+        onMove(draggedTodo, Calendar.current.startOfDay(for: date))
+        return true
+    }
+}
+
 private struct CalendarDayCard: View {
     let selectedDate: Date
     let today: Date
     let tasksByDay: [Date: [TodoItem]]
     let accentColor: Color
+    let draggedTodo: TodoItem?
+    let activeDropDate: Date?
     let canGoPreviousDay: Bool
     let canSelectDate: (Date) -> Bool
     let todayJumpRequest: CalendarTodayJumpRequest?
     let onPreviousDay: () -> Void
     let onNextDay: () -> Void
     let onSelectDate: (Date) -> Void
+    let onDropDateChange: (Date?) -> Void
+    let onMoveTaskToDate: (TodoItem, Date) -> Void
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
@@ -984,7 +1150,9 @@ private struct CalendarDayCard: View {
     }
 
     private func daySummary(for date: Date) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let isEnabled = canSelectDate(date)
+        let isDropTarget = activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: date) } ?? false
+        return VStack(alignment: .leading, spacing: 14) {
             Text(dateTitle(for: date))
                 .font(.tdayRounded(size: 25, weight: .heavy))
                 .foregroundStyle(Calendar.current.isDate(date, inSameDayAs: today) ? accentColor : colors.onSurface)
@@ -993,7 +1161,22 @@ private struct CalendarDayCard: View {
                 .font(.tdayRounded(size: 18, weight: .heavy))
                 .foregroundStyle(colors.onSurfaceVariant)
         }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            isDropTarget ? accentColor.opacity(0.12) : .clear,
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
+        .onDrop(
+            of: [UTType.plainText.identifier],
+            delegate: CalendarDateDropDelegate(
+                date: date,
+                draggedTodo: isEnabled ? draggedTodo : nil,
+                onMove: onMoveTaskToDate,
+                onDateChange: onDropDateChange
+            )
+        )
     }
 
     private func resetPageSelection() {
@@ -1099,9 +1282,14 @@ private struct CalendarMonthDayCell: View {
     let day: CalendarMonthDay
     let isSelected: Bool
     let isToday: Bool
+    let isEnabled: Bool
+    let isDropTarget: Bool
     let taskCount: Int
     let accentColor: Color
+    let draggedTodo: TodoItem?
     let onSelectDate: (Date) -> Void
+    let onDropDateChange: (Date?) -> Void
+    let onMoveTaskToDate: (TodoItem, Date) -> Void
 
     @Environment(\.tdayColors) private var colors
 
@@ -1153,7 +1341,16 @@ private struct CalendarMonthDayCell: View {
             .frame(height: CalendarMonthGridMetrics.dayCellHeight)
         }
         .buttonStyle(.plain)
-        .disabled(!day.isCurrentMonth)
+        .disabled(!isEnabled)
+        .onDrop(
+            of: [UTType.plainText.identifier],
+            delegate: CalendarDateDropDelegate(
+                date: day.date,
+                draggedTodo: isEnabled ? draggedTodo : nil,
+                onMove: onMoveTaskToDate,
+                onDateChange: onDropDateChange
+            )
+        )
         .opacity(day.isCurrentMonth ? 1 : 0.45)
     }
 
@@ -1172,6 +1369,9 @@ private struct CalendarMonthDayCell: View {
     }
 
     private var cellBackground: Color {
+        if isDropTarget {
+            return accentColor.opacity(0.34)
+        }
         if isSelected {
             return accentColor.opacity(0.24)
         }
@@ -1182,6 +1382,9 @@ private struct CalendarMonthDayCell: View {
     }
 
     private var cellBorderColor: Color {
+        if isDropTarget {
+            return accentColor
+        }
         if isSelected {
             return accentColor.opacity(0.95)
         }
@@ -1192,6 +1395,9 @@ private struct CalendarMonthDayCell: View {
     }
 
     private var cellBorderWidth: CGFloat {
+        if isDropTarget {
+            return 2
+        }
         if isSelected {
             return 1.6
         }

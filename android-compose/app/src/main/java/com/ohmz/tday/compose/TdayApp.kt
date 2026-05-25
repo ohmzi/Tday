@@ -595,6 +595,7 @@ fun TdayApp(
                         onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
                         onCompleteTask = viewModel::complete,
                         onUpdateTask = viewModel::updateTask,
+                        onMoveTask = viewModel::moveTask,
                         onDelete = { todo ->
                             viewModel.delete(todo) {
                                 showTaskDeletedToast()
@@ -839,6 +840,7 @@ private fun TodosRoute(
         onAddTask = viewModel::addTask,
         onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
         onUpdateTask = viewModel::updateTask,
+        onMoveTask = viewModel::moveTask,
         onComplete = viewModel::toggleComplete,
         onDelete = { todo ->
             viewModel.delete(todo) {

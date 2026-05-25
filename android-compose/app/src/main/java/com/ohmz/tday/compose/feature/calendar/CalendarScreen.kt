@@ -1,5 +1,7 @@
 package com.ohmz.tday.compose.feature.calendar
 
+import android.content.ClipData
+import android.view.View
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
@@ -18,8 +20,11 @@ import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropSource
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -69,6 +74,7 @@ import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.Work
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -78,6 +84,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -93,6 +100,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -120,6 +131,7 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
@@ -176,6 +188,11 @@ private fun shouldShowDateDivider(
     return LocalDate.ofInstant(currentTodo.due, zoneId) != LocalDate.ofInstant(nextTodo.due, zoneId)
 }
 
+private data class CalendarTaskRescheduleDrop(
+    val todo: TodoItem,
+    val targetDate: LocalDate,
+)
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CalendarScreen(
@@ -186,9 +203,11 @@ fun CalendarScreen(
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCompleteTask: (TodoItem) -> Unit,
     onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
+    onMoveTask: (todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) -> Unit,
     onDelete: (TodoItem) -> Unit,
 ) {
     val zoneId = remember { ZoneId.systemDefault() }
+    val view = LocalView.current
     val today = remember { LocalDate.now(zoneId) }
     val minNavigableMonth = remember(zoneId) { YearMonth.now(zoneId) }
     val listState = rememberLazyListState()
@@ -299,10 +318,21 @@ fun CalendarScreen(
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
     var createDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
+    var draggedCalendarTodoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var activeDropDateIso by remember { mutableStateOf<String?>(null) }
+    var pendingRescheduleDrop by remember { mutableStateOf<CalendarTaskRescheduleDrop?>(null) }
     val editTarget = remember(editTargetId, uiState.items) {
         editTargetId?.let { targetId ->
             uiState.items.firstOrNull { it.id == targetId }
         }
+    }
+    val draggedCalendarTodo = remember(draggedCalendarTodoId, uiState.items) {
+        draggedCalendarTodoId?.let { targetId ->
+            uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
+        }
+    }
+    val activeDropDate = remember(activeDropDateIso) {
+        activeDropDateIso?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
     }
     fun openCreateTaskSheetForSelectedDate() {
         val currentDate = LocalDate.now(zoneId)
@@ -314,6 +344,19 @@ fun CalendarScreen(
         }
         createDueEpochMs = prefillDue.toInstant().toEpochMilli()
         showCreateTaskSheet = true
+    }
+    fun requestTaskReschedule(todo: TodoItem, targetDate: LocalDate) {
+        draggedCalendarTodoId = null
+        activeDropDateIso = null
+        val currentDate = LocalDate.ofInstant(todo.due, zoneId)
+        if (currentDate == targetDate) return
+        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+        if (todo.isRecurring) {
+            pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo = todo, targetDate = targetDate)
+        } else {
+            onMoveTask(todo, targetDate, TaskRescheduleScope.OCCURRENCE)
+            selectDate(targetDate)
+        }
     }
     LaunchedEffect(listState.isScrollInProgress, monthTitleSnapThresholdPx) {
         if (listState.isScrollInProgress) return@LaunchedEffect
@@ -419,6 +462,9 @@ fun CalendarScreen(
                                     selectedDate = selectedDate,
                                     today = today,
                                     tasksByDate = tasksByDate,
+                                    draggedTodo = draggedCalendarTodo,
+                                    activeDropDate = activeDropDate,
+                                    canSelectDate = ::canNavigateTo,
                                     todayJumpRequest = todayJumpRequest,
                                     onTodayJumpHandled = ::clearTodayJumpRequest,
                                     onPrevMonth = {
@@ -430,12 +476,18 @@ fun CalendarScreen(
                                         visibleMonthIso = visibleMonth.plusMonths(1).toString()
                                     },
                                     onSelectDate = ::selectDate,
+                                    onDropDateChanged = { date ->
+                                        activeDropDateIso = date?.toString()
+                                    },
+                                    onMoveTaskToDate = ::requestTaskReschedule,
                                 )
 
                                 CalendarViewMode.WEEK -> CalendarWeekCard(
                                     selectedDate = selectedDate,
                                     today = today,
                                     tasksByDate = tasksByDate,
+                                    draggedTodo = draggedCalendarTodo,
+                                    activeDropDate = activeDropDate,
                                     canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
                                     canSelectDate = ::canNavigateTo,
                                     todayJumpRequest = todayJumpRequest,
@@ -443,18 +495,29 @@ fun CalendarScreen(
                                     onPrevWeek = { selectDate(selectedDate.minusWeeks(1)) },
                                     onNextWeek = { selectDate(selectedDate.plusWeeks(1)) },
                                     onSelectDate = ::selectDate,
+                                    onDropDateChanged = { date ->
+                                        activeDropDateIso = date?.toString()
+                                    },
+                                    onMoveTaskToDate = ::requestTaskReschedule,
                                 )
 
                                 CalendarViewMode.DAY -> CalendarDayCard(
                                     selectedDate = selectedDate,
                                     today = today,
                                     tasksByDate = tasksByDate,
+                                    draggedTodo = draggedCalendarTodo,
+                                    activeDropDate = activeDropDate,
                                     canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
+                                    canSelectDate = ::canNavigateTo,
                                     todayJumpRequest = todayJumpRequest,
                                     onTodayJumpHandled = ::clearTodayJumpRequest,
                                     onPrevDay = { selectDate(selectedDate.minusDays(1)) },
                                     onNextDay = { selectDate(selectedDate.plusDays(1)) },
                                     onSelectDate = ::selectDate,
+                                    onDropDateChanged = { date ->
+                                        activeDropDateIso = date?.toString()
+                                    },
+                                    onMoveTaskToDate = ::requestTaskReschedule,
                                 )
                             }
                         }
@@ -489,6 +552,11 @@ fun CalendarScreen(
                                         onComplete = { onCompleteTask(todo) },
                                         onInfo = { editTargetId = todo.id },
                                         onDelete = { onDelete(todo) },
+                                        dragging = draggedCalendarTodo?.id == todo.id,
+                                        onDragStart = {
+                                            activeDropDateIso = null
+                                            draggedCalendarTodoId = todo.id
+                                        },
                                     )
                                 }
                             }
@@ -524,6 +592,44 @@ fun CalendarScreen(
                 onCreateTask(payload)
                 showCreateTaskSheet = false
                 createDueEpochMs = null
+            },
+        )
+    }
+
+    pendingRescheduleDrop?.let { drop ->
+        AlertDialog(
+            onDismissRequest = { pendingRescheduleDrop = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.todos_reschedule_recurring_title),
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            },
+            text = {
+                Text(text = stringResource(R.string.todos_reschedule_recurring_message))
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRescheduleDrop = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = {
+                        pendingRescheduleDrop = null
+                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.OCCURRENCE)
+                        selectDate(drop.targetDate)
+                    }) {
+                        Text(stringResource(R.string.todos_reschedule_this_occurrence))
+                    }
+                    TextButton(onClick = {
+                        pendingRescheduleDrop = null
+                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.SERIES)
+                        selectDate(drop.targetDate)
+                    }) {
+                        Text(stringResource(R.string.todos_reschedule_entire_series))
+                    }
+                }
             },
         )
     }
@@ -601,6 +707,8 @@ private fun CalendarWeekCard(
     selectedDate: LocalDate,
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
+    draggedTodo: TodoItem?,
+    activeDropDate: LocalDate?,
     canGoPrevWeek: Boolean,
     canSelectDate: (LocalDate) -> Boolean,
     todayJumpRequest: CalendarTodayJumpRequest?,
@@ -608,6 +716,8 @@ private fun CalendarWeekCard(
     onPrevWeek: () -> Unit,
     onNextWeek: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val weekStart = remember(selectedDate) { startOfWeek(selectedDate) }
@@ -773,7 +883,11 @@ private fun CalendarWeekCard(
                             isSelected = isSelected,
                             isToday = isToday,
                             isEnabled = isEnabled,
+                            isDropTarget = activeDropDate == day,
+                            draggedTodo = draggedTodo.takeIf { isEnabled },
                             onClick = { onSelectDate(day) },
+                            onDropDateChanged = onDropDateChanged,
+                            onMoveTaskToDate = onMoveTaskToDate,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -790,21 +904,28 @@ private fun CalendarWeekDayCell(
     isSelected: Boolean,
     isToday: Boolean,
     isEnabled: Boolean,
+    isDropTarget: Boolean,
+    draggedTodo: TodoItem?,
     onClick: () -> Unit,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val containerColor = when {
+        isDropTarget -> CalendarAccentPurple.copy(alpha = 0.34f)
         isSelected -> CalendarAccentPurple.copy(alpha = 0.24f)
         isToday -> CalendarTodayBlue.copy(alpha = 0.16f)
         else -> colorScheme.background
     }
     val borderColor = when {
+        isDropTarget -> CalendarAccentPurple
         isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
         isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
         else -> Color.Transparent
     }
     val borderWidth = when {
+        isDropTarget -> 2.dp
         isSelected -> 1.6.dp
         isToday -> 1.4.dp
         else -> 0.dp
@@ -819,6 +940,13 @@ private fun CalendarWeekDayCell(
         modifier = modifier
             .height(CalendarPeriodCardPageHeight)
             .minimumInteractiveComponentSize()
+            .calendarDateDropTarget(
+                date = date,
+                draggedTodo = draggedTodo,
+                enabled = isEnabled,
+                onDropDateChanged = onDropDateChanged,
+                onMoveTaskToDate = onMoveTaskToDate,
+            )
             .graphicsLayer { alpha = if (isEnabled) 1f else 0.48f },
         contentAlignment = Alignment.Center,
     ) {
@@ -871,17 +999,58 @@ private fun CalendarWeekDayCell(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+private fun Modifier.calendarDateDropTarget(
+    date: LocalDate,
+    draggedTodo: TodoItem?,
+    enabled: Boolean,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+): Modifier {
+    if (!enabled || draggedTodo == null) return this
+
+    return dragAndDropTarget(
+        shouldStartDragAndDrop = { event ->
+            event.mimeTypes().any { mimeType -> mimeType.startsWith("text/") }
+        },
+        target = object : DragAndDropTarget {
+            override fun onEntered(event: DragAndDropEvent) {
+                onDropDateChanged(date)
+            }
+
+            override fun onExited(event: DragAndDropEvent) {
+                onDropDateChanged(null)
+            }
+
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                onDropDateChanged(null)
+                onMoveTaskToDate(draggedTodo, date)
+                return true
+            }
+
+            override fun onEnded(event: DragAndDropEvent) {
+                onDropDateChanged(null)
+            }
+        },
+    )
+}
+
 @Composable
 private fun CalendarDayCard(
     selectedDate: LocalDate,
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
+    draggedTodo: TodoItem?,
+    activeDropDate: LocalDate?,
     canGoPrevDay: Boolean,
+    canSelectDate: (LocalDate) -> Boolean,
     todayJumpRequest: CalendarTodayJumpRequest?,
     onTodayJumpHandled: (Int) -> Unit,
     onPrevDay: () -> Unit,
     onNextDay: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
@@ -1028,8 +1197,26 @@ private fun CalendarDayCard(
                     .height(CalendarPeriodCardPageHeight),
             ) { displayDate ->
                 val taskCount = tasksByDate[displayDate]?.size ?: 0
+                val isEnabled = canSelectDate(displayDate)
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .calendarDateDropTarget(
+                            date = displayDate,
+                            draggedTodo = draggedTodo.takeIf { isEnabled },
+                            enabled = isEnabled,
+                            onDropDateChanged = onDropDateChanged,
+                            onMoveTaskToDate = onMoveTaskToDate,
+                        )
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (activeDropDate == displayDate) {
+                                CalendarAccentPurple.copy(alpha = 0.12f)
+                            } else {
+                                Color.Transparent
+                            },
+                        )
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text(
@@ -1243,11 +1430,16 @@ private fun CalendarMonthCard(
     selectedDate: LocalDate,
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
+    draggedTodo: TodoItem?,
+    activeDropDate: LocalDate?,
+    canSelectDate: (LocalDate) -> Boolean,
     todayJumpRequest: CalendarTodayJumpRequest?,
     onTodayJumpHandled: (Int) -> Unit,
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
@@ -1427,12 +1619,18 @@ private fun CalendarMonthCard(
                         ) {
                             week.forEach { cell ->
                                 val taskCount = tasksByDate[cell.date]?.size ?: 0
+                                val isEnabled = canSelectDate(cell.date)
                                 CalendarDayCell(
                                     cell = cell,
                                     taskCount = taskCount,
                                     isSelected = cell.date == selectedDate,
                                     isToday = cell.date == today,
+                                    isEnabled = isEnabled,
+                                    isDropTarget = activeDropDate == cell.date,
+                                    draggedTodo = draggedTodo.takeIf { isEnabled },
                                     onClick = { onSelectDate(cell.date) },
+                                    onDropDateChanged = onDropDateChanged,
+                                    onMoveTaskToDate = onMoveTaskToDate,
                                     modifier = Modifier.weight(1f),
                                 )
                             }
@@ -1500,16 +1698,22 @@ private fun CalendarDayCell(
     taskCount: Int,
     isSelected: Boolean,
     isToday: Boolean,
+    isEnabled: Boolean,
+    isDropTarget: Boolean,
+    draggedTodo: TodoItem?,
     onClick: () -> Unit,
+    onDropDateChanged: (LocalDate?) -> Unit,
+    onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val targetCellBackground = when {
+        isDropTarget -> CalendarAccentPurple.copy(alpha = 0.34f)
         isSelected -> CalendarAccentPurple.copy(alpha = if (isPressed) 0.32f else 0.24f)
         isToday -> CalendarTodayBlue.copy(alpha = if (isPressed) 0.24f else 0.16f)
-        isPressed && cell.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+        isPressed && isEnabled -> colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
         else -> Color.Transparent
     }
     val cellBackground by animateColorAsState(
@@ -1517,9 +1721,10 @@ private fun CalendarDayCell(
         label = "calendarMonthDateCellBackground",
     )
     val targetCellBorderColor = when {
+        isDropTarget -> CalendarAccentPurple
         isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
         isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
-        isPressed && cell.isCurrentMonth -> colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
+        isPressed && isEnabled -> colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
         else -> Color.Transparent
     }
     val cellBorderColor by animateColorAsState(
@@ -1527,9 +1732,10 @@ private fun CalendarDayCell(
         label = "calendarMonthDateCellBorder",
     )
     val targetCellBorderWidth = when {
+        isDropTarget -> 2.dp
         isSelected -> 1.6.dp
         isToday -> 1.4.dp
-        isPressed && cell.isCurrentMonth -> 1.2.dp
+        isPressed && isEnabled -> 1.2.dp
         else -> 0.dp
     }
     val cellBorderWidth by animateDpAsState(
@@ -1553,8 +1759,15 @@ private fun CalendarDayCell(
             .fillMaxWidth()
             .height(CalendarMonthDayCellHeight)
             .graphicsLayer { alpha = if (cell.isCurrentMonth) 1f else 0.45f }
+            .calendarDateDropTarget(
+                date = cell.date,
+                draggedTodo = draggedTodo,
+                enabled = isEnabled,
+                onDropDateChanged = onDropDateChanged,
+                onMoveTaskToDate = onMoveTaskToDate,
+            )
             .clickable(
-                enabled = cell.isCurrentMonth,
+                enabled = isEnabled,
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
@@ -1595,7 +1808,7 @@ private fun CalendarDayCell(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                if (taskCount > 0 && cell.isCurrentMonth) {
+                if (taskCount > 0 && isEnabled) {
                     Box(
                         modifier = Modifier
                             .size(CalendarMonthTaskDotSize)
@@ -1620,6 +1833,7 @@ private fun CalendarDayCell(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CalendarTodoRow(
     modifier: Modifier = Modifier,
@@ -1629,6 +1843,8 @@ private fun CalendarTodoRow(
     onComplete: () -> Unit,
     onInfo: () -> Unit,
     onDelete: () -> Unit,
+    dragging: Boolean,
+    onDragStart: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -1660,6 +1876,7 @@ private fun CalendarTodoRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer { alpha = if (dragging) 0.55f else 1f }
             .semantics(mergeDescendants = true) { },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -1709,6 +1926,23 @@ private fun CalendarTodoRow(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer { translationX = animatedOffsetX }
+                    .dragAndDropSource {
+                        detectTapGestures(
+                            onLongPress = {
+                                onDragStart()
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                startTransfer(
+                                    DragAndDropTransferData(
+                                        clipData = ClipData.newPlainText("todo-id", todo.id),
+                                        flags = View.DRAG_FLAG_GLOBAL,
+                                    ),
+                                )
+                            },
+                        )
+                    }
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->

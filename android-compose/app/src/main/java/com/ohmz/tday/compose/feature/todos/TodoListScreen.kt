@@ -198,10 +198,13 @@ import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.model.supportsTaskReschedule
+import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
@@ -234,11 +237,14 @@ fun TodoListScreen(
     onAddTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
+    onMoveTask: (todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
     val usesTodayStyle =
@@ -385,6 +391,7 @@ fun TodoListScreen(
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     var draggedScheduledTodoId by rememberSaveable(uiState.mode) { mutableStateOf<String?>(null) }
     var activeDropSectionKey by remember(uiState.mode) { mutableStateOf<String?>(null) }
+    var pendingRescheduleDrop by remember(uiState.mode) { mutableStateOf<TaskRescheduleDrop?>(null) }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
     var showSummarySheet by rememberSaveable(uiState.mode) { mutableStateOf(false) }
     var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -400,6 +407,20 @@ fun TodoListScreen(
     val draggedScheduledTodo = remember(draggedScheduledTodoId, uiState.items) {
         draggedScheduledTodoId?.let { targetId ->
             uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
+        }
+    }
+    val canRescheduleTasks = uiState.mode.supportsTaskReschedule()
+    val requestTaskReschedule: (TodoItem, LocalDate) -> Unit = { todo, targetDate ->
+        draggedScheduledTodoId = null
+        activeDropSectionKey = null
+        val currentDate = LocalDate.ofInstant(todo.due, zoneId)
+        if (currentDate != targetDate) {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            if (todo.isRecurring) {
+                pendingRescheduleDrop = TaskRescheduleDrop(todo = todo, targetDate = targetDate)
+            } else {
+                onMoveTask(todo, targetDate, TaskRescheduleScope.OCCURRENCE)
+            }
         }
     }
     val canSummarizeCurrentMode =
@@ -601,7 +622,7 @@ fun TodoListScreen(
                             val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
                             val isCollapsed =
                                 sectionCanCollapse && collapsedSectionKeys.contains(section.key)
-                            val sectionDraggedTodo = if (uiState.mode == TodoListMode.SCHEDULED) {
+                            val sectionDraggedTodo = if (canRescheduleTasks) {
                                 draggedScheduledTodo
                             } else {
                                 null
@@ -614,7 +635,7 @@ fun TodoListScreen(
                                 }
                             }
                             val onSectionDragEnd: (() -> Unit)? =
-                                if (uiState.mode == TodoListMode.SCHEDULED) {
+                                if (canRescheduleTasks) {
                                     {
                                         draggedScheduledTodoId = null
                                         activeDropSectionKey = null
@@ -623,12 +644,8 @@ fun TodoListScreen(
                                     null
                                 }
                             val onMoveTaskToSectionDate: ((TodoItem, LocalDate) -> Unit)? =
-                                if (uiState.mode == TodoListMode.SCHEDULED) {
-                                    { todo, targetDate ->
-                                        draggedScheduledTodoId = null
-                                        activeDropSectionKey = null
-                                        onUpdateTask(todo, createMovedTaskPayload(todo, targetDate))
-                                    }
+                                if (canRescheduleTasks) {
+                                    requestTaskReschedule
                                 } else {
                                     null
                                 }
@@ -750,7 +767,7 @@ fun TodoListScreen(
                                                 editTargetTodoId = todo.id
                                             },
                                             draggedTodo = sectionDraggedTodo,
-                                            onDragTodoStart = if (uiState.mode == TodoListMode.SCHEDULED) {
+                                            onDragTodoStart = if (canRescheduleTasks) {
                                                 {
                                                     activeDropSectionKey = null
                                                     draggedScheduledTodoId = todo.id
@@ -865,6 +882,42 @@ fun TodoListScreen(
                     showSummarySheet = true
                 }) {
                     Text(stringResource(R.string.action_retry))
+                }
+            },
+        )
+    }
+
+    pendingRescheduleDrop?.let { drop ->
+        AlertDialog(
+            onDismissRequest = { pendingRescheduleDrop = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.todos_reschedule_recurring_title),
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            },
+            text = {
+                Text(text = stringResource(R.string.todos_reschedule_recurring_message))
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRescheduleDrop = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = {
+                        pendingRescheduleDrop = null
+                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.OCCURRENCE)
+                    }) {
+                        Text(stringResource(R.string.todos_reschedule_this_occurrence))
+                    }
+                    TextButton(onClick = {
+                        pendingRescheduleDrop = null
+                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.SERIES)
+                    }) {
+                        Text(stringResource(R.string.todos_reschedule_entire_series))
+                    }
                 }
             },
         )
@@ -1723,6 +1776,9 @@ private fun TimelineTaskRow(
                 showDuePrefix = true,
                 showDueDateInSubtitle = showEarlierDateTimeSubtitle,
                 showDateDivider = showDateDivider,
+                dragEnabled = onDragTodoStart != null,
+                dragging = draggedTodo?.id == todo.id,
+                onDragStart = { onDragTodoStart?.invoke() },
             )
         } else if (
             useMinimalStyle &&
@@ -1811,6 +1867,11 @@ private data class TodoSection(
     val items: List<TodoItem>,
     val quickAddDefaults: Long? = null,
     val targetDate: LocalDate? = null,
+)
+
+private data class TaskRescheduleDrop(
+    val todo: TodoItem,
+    val targetDate: LocalDate,
 )
 
 private fun shouldShowDateDivider(
@@ -1997,7 +2058,7 @@ private fun buildScheduledSections(
                 date = date,
                 zoneId = zoneId,
             ),
-            targetDate = date,
+            targetDate = timelineRescheduleTargetDate("day-$date", today),
         )
     }
 
@@ -2062,6 +2123,7 @@ private fun buildScheduledSections(
             date = currentMonth.atEndOfMonth(),
             zoneId = zoneId,
         ),
+        targetDate = timelineRescheduleTargetDate("rest-$currentMonth", today),
     )
 
     val futureMonthsWithData =
@@ -2086,6 +2148,7 @@ private fun buildScheduledSections(
                 date = targetMonth.atDay(1),
                 zoneId = zoneId,
             ),
+            targetDate = timelineRescheduleTargetDate("month-$targetMonth", today),
         )
         targetMonth = targetMonth.plusMonths(1)
     }
@@ -2181,24 +2244,6 @@ private fun quickAddDefaultsForTodaySection(
         TodaySectionSlot.TONIGHT -> LocalTime.of(22, 0)
     }
     return ZonedDateTime.of(today, time, zoneId).toInstant().toEpochMilli()
-}
-
-private fun createMovedTaskPayload(
-    todo: TodoItem,
-    targetDate: LocalDate,
-    zoneId: ZoneId = ZoneId.systemDefault(),
-): CreateTaskPayload {
-    val dueTime = todo.due.atZone(zoneId).toLocalTime()
-    val movedDue = ZonedDateTime.of(targetDate, dueTime, zoneId).toInstant()
-
-    return CreateTaskPayload(
-        title = todo.title,
-        description = todo.description,
-        priority = todo.priority,
-        due = movedDue,
-        rrule = todo.rrule,
-        listId = todo.listId,
-    )
 }
 
 private suspend fun LazyListState.animateSearchResultScrollToItem(
@@ -2305,6 +2350,9 @@ private fun AllTaskSwipeRow(
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
     showDateDivider: Boolean,
+    dragEnabled: Boolean = false,
+    dragging: Boolean = false,
+    onDragStart: (() -> Unit)? = null,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -2320,6 +2368,9 @@ private fun AllTaskSwipeRow(
         showDueDateInSubtitle = showDueDateInSubtitle,
         showDateDivider = showDateDivider,
         useDelayedFadeCompletion = false,
+        dragEnabled = dragEnabled,
+        dragging = dragging,
+        onDragStart = onDragStart,
     )
 }
 
@@ -2544,6 +2595,10 @@ private fun SwipeTaskRow(
                                     detectTapGestures(
                                         onLongPress = {
                                             onDragStart?.invoke()
+                                            ViewCompat.performHapticFeedback(
+                                                view,
+                                                HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                            )
                                             startTransfer(
                                                 DragAndDropTransferData(
                                                     clipData = ClipData.newPlainText(
