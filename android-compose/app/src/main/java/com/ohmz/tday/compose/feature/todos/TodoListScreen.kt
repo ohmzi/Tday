@@ -1952,9 +1952,9 @@ private fun TimelineTaskDragPreview(
                     modifier = Modifier.size(18.dp),
                 )
             }
-            if (isHighPriority(todo.priority)) {
+            priorityIconFor(todo.priority)?.let { priorityIcon ->
                 Icon(
-                    imageVector = Icons.Rounded.Flag,
+                    imageVector = priorityIcon,
                     contentDescription = null,
                     tint = priorityColor(todo.priority),
                     modifier = Modifier.size(18.dp),
@@ -2158,7 +2158,15 @@ private fun buildTimelineSections(
             includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
 
-        TodoListMode.PRIORITY, TodoListMode.LIST -> buildScheduledSections(
+        TodoListMode.PRIORITY -> buildScheduledSections(
+            items = items,
+            zoneId = zoneId,
+            futureOnly = false,
+            placesEarlierBeforeToday = true,
+            includeEmptyEarlierTarget = includeEmptyEarlierTarget,
+        )
+
+        TodoListMode.LIST -> buildScheduledSections(
             items = items,
             zoneId = zoneId,
             futureOnly = false,
@@ -2754,15 +2762,8 @@ private fun SwipeTaskRow(
         TodoListMode.LIST,
             -> false
     }
-    val showPriorityFlag = when (mode) {
-        TodoListMode.TODAY,
-        TodoListMode.OVERDUE,
-        TodoListMode.SCHEDULED,
-        TodoListMode.PRIORITY,
-        TodoListMode.LIST,
-        TodoListMode.ALL,
-            -> isHighPriority(todo.priority)
-    }
+    val priorityIcon = priorityIconFor(todo.priority)
+    val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = listAccentColor(listMeta?.color)
     LaunchedEffect(flashHighlight) {
         if (!flashHighlight) return@LaunchedEffect
@@ -3011,7 +3012,7 @@ private fun SwipeTaskRow(
                                 }
                             }
                         }
-                        if (showListIndicator || showPriorityFlag) {
+                        if (showListIndicator || showPriorityIcon) {
                             Row(
                                 modifier = Modifier.padding(start = 8.dp, end = 24.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -3025,9 +3026,9 @@ private fun SwipeTaskRow(
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
-                                if (showPriorityFlag) {
+                                if (priorityIcon != null) {
                                     Icon(
-                                        imageVector = Icons.Rounded.Flag,
+                                        imageVector = priorityIcon,
                                         contentDescription = stringResource(R.string.label_priority_task),
                                         tint = priorityColor(todo.priority),
                                         modifier = Modifier.size(18.dp),
@@ -3226,10 +3227,11 @@ private fun priorityColor(priority: String): Color {
     }
 }
 
-private fun isHighPriority(priority: String): Boolean {
-    return when (priority.trim().lowercase()) {
-        "medium", "high", "urgent", "important" -> true
-        else -> false
+private fun priorityIconFor(priority: String): ImageVector? {
+    return when (priority.trim().lowercase(Locale.getDefault())) {
+        "medium" -> Icons.Rounded.Flag
+        "high", "urgent", "important" -> Icons.Rounded.PriorityHigh
+        else -> null
     }
 }
 

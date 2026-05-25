@@ -2451,8 +2451,8 @@ private struct CalendarTaskDragPreview: View {
 
             Spacer(minLength: 0)
 
-            if todo.priority.lowercased() == "high" {
-                Image(systemName: "flag.fill")
+            if let priorityIcon = priorityIndicatorSymbolName(todo.priority) {
+                Image(systemName: priorityIcon)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(priorityColor(todo.priority))
             }
@@ -2480,7 +2480,7 @@ private struct CalendarPendingTaskRow: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        let showPriorityFlag = todo.priority.lowercased() == "high"
+        let priorityIcon = priorityIndicatorSymbolName(todo.priority)
 
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
@@ -2511,15 +2511,15 @@ private struct CalendarPendingTaskRow: View {
 
                 Spacer(minLength: 0)
 
-                if list != nil || showPriorityFlag {
+                if list != nil || priorityIcon != nil {
                     HStack(spacing: 8) {
                         if let list {
                             Image(systemName: calendarListSymbolName(for: list.iconKey))
                                 .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
                                 .foregroundStyle(calendarListAccentColor(for: list.color))
                         }
-                        if showPriorityFlag {
-                            Image(systemName: "flag.fill")
+                        if let priorityIcon {
+                            Image(systemName: priorityIcon)
                                 .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
                                 .foregroundStyle(priorityColor(todo.priority))
                         }
