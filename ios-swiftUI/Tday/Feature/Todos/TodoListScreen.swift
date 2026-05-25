@@ -1703,6 +1703,8 @@ private struct TodoDragPreview: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
+        let previewShape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+
         HStack(spacing: 10) {
             Image(systemName: "circle")
                 .font(.system(size: 22, weight: .regular))
@@ -1730,11 +1732,13 @@ private struct TodoDragPreview: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .frame(width: 260, alignment: .leading)
-        .background(colors.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(colors.surface)
+        .clipShape(previewShape)
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(colors.onSurfaceVariant.opacity(0.14), lineWidth: 1)
+            previewShape.stroke(colors.onSurfaceVariant.opacity(0.14), lineWidth: 1)
         )
+        .contentShape(previewShape)
+        .compositingGroup()
         .shadow(color: Color.black.opacity(0.18), radius: 16, x: 0, y: 8)
         .opacity(0.96)
     }
