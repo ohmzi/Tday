@@ -849,38 +849,38 @@ private struct CreateTaskSheetHeaderButton: View {
 
 private func createTaskSheetListSwatchColor(_ raw: String?) -> Color {
     switch raw?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() {
-    case "RED":
-        return createTaskSheetHexColor(0xE65E52)
-    case "ORANGE":
-        return createTaskSheetHexColor(0xF29F38)
-    case "YELLOW":
-        return createTaskSheetHexColor(0xF3D04A)
-    case "LIME":
-        return createTaskSheetHexColor(0x8ACF56)
-    case "BLUE":
-        return createTaskSheetHexColor(0x5C9FE7)
-    case "PURPLE":
-        return createTaskSheetHexColor(0x8D6CE2)
     case "PINK":
-        return createTaskSheetHexColor(0xDF6DAA)
-    case "TEAL":
-        return createTaskSheetHexColor(0x4EB5B0)
-    case "CORAL":
-        return createTaskSheetHexColor(0xE3876D)
+        return createTaskSheetHexColor(0xC987A5)
     case "GOLD":
-        return createTaskSheetHexColor(0xCFAB57)
+        return createTaskSheetHexColor(0xC7AA63)
     case "DEEP_BLUE":
-        return createTaskSheetHexColor(0x4B73D6)
+        return createTaskSheetHexColor(0x6F86C6)
+    case "CORAL":
+        return createTaskSheetHexColor(0xD39A82)
+    case "TEAL":
+        return createTaskSheetHexColor(0x67AAA7)
+    case "SLATE", "GRAY":
+        return createTaskSheetHexColor(0x7F8996)
+    case "BLUE":
+        return createTaskSheetHexColor(0x6F9FCE)
+    case "PURPLE":
+        return createTaskSheetHexColor(0x9A86CF)
     case "ROSE":
-        return createTaskSheetHexColor(0xD9799A)
+        return createTaskSheetHexColor(0xC98299)
     case "LIGHT_RED":
-        return createTaskSheetHexColor(0xE48888)
+        return createTaskSheetHexColor(0xD58D8D)
     case "BRICK":
-        return createTaskSheetHexColor(0xB86A5C)
-    case "SLATE":
-        return createTaskSheetHexColor(0x7B8593)
+        return createTaskSheetHexColor(0xAD786E)
+    case "YELLOW":
+        return createTaskSheetHexColor(0xCFB866)
+    case "LIME", "GREEN":
+        return createTaskSheetHexColor(0x8DBB73)
+    case "ORANGE":
+        return createTaskSheetHexColor(0xD69B63)
+    case "RED":
+        return createTaskSheetHexColor(0xD97873)
     default:
-        return createTaskSheetHexColor(0x5C9FE7)
+        return createTaskSheetHexColor(0xC987A5)
     }
 }
 

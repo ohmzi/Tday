@@ -1955,7 +1955,7 @@ private fun CategoryGrid(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFDDB37D),
+                color = Color(0xFFD98F4B),
                 icon = Icons.Rounded.Schedule,
                 backgroundWatermark = Icons.Rounded.Schedule,
                 title = stringResource(R.string.home_category_scheduled),
@@ -1964,7 +1964,7 @@ private fun CategoryGrid(
             )
             CategoryCard(
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFD48A8C),
+                color = Color(0xFFC97880),
                 icon = Icons.Rounded.Flag,
                 backgroundWatermark = Icons.Rounded.Flag,
                 title = stringResource(R.string.home_category_priority),
@@ -1975,7 +1975,7 @@ private fun CategoryGrid(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFDA7661),
+                color = Color(0xFFE06F66),
                 icon = Icons.Rounded.ErrorOutline,
                 backgroundWatermark = Icons.Rounded.ErrorOutline,
                 title = stringResource(R.string.home_category_overdue),
@@ -1984,7 +1984,7 @@ private fun CategoryGrid(
             )
             CategoryCard(
                 modifier = Modifier.weight(1f),
-                color = Color(0xFF4E4E50),
+                color = Color(0xFF68717A),
                 icon = Icons.Rounded.Inbox,
                 backgroundWatermark = Icons.Rounded.Inbox,
                 title = stringResource(R.string.home_category_all),
@@ -2016,11 +2016,11 @@ private fun CategoryGrid(
 }
 
 private fun completedTileColor(colorScheme: ColorScheme): Color {
-    return Color(0xFFA8C8B2)
+    return Color(0xFF719F84)
 }
 
 private fun calendarTileColor(colorScheme: ColorScheme): Color {
-    return Color(0xFFC3B4DF)
+    return Color(0xFF9A89D2)
 }
 
 @Composable
@@ -2268,7 +2268,7 @@ private fun ListRow(
     )
     val accent = listColorAccent(colorKey)
     val icon = listIconForKey(iconKey)
-    val containerColor = lerp(colorScheme.surfaceVariant, accent, 0.38f)
+    val containerColor = lerp(colorScheme.surfaceVariant, accent, HOME_LIST_CONTAINER_COLOR_WEIGHT)
     val displayName = capitalizeFirstListLetter(name)
 
     Card(
@@ -2392,8 +2392,9 @@ private data class ListIconOption(
     val icon: ImageVector,
 )
 
-private const val DEFAULT_LIST_COLOR = "BLUE"
+private const val DEFAULT_LIST_COLOR = "PINK"
 private const val DEFAULT_LIST_ICON_KEY = "inbox"
+private const val HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
@@ -2422,21 +2423,21 @@ private fun priorityIconFor(priority: String): ImageVector? {
 }
 
 private val LIST_COLOR_OPTIONS = listOf(
-    ListColorOption("RED", Color(0xFFE65E52)),
-    ListColorOption("ORANGE", Color(0xFFF29F38)),
-    ListColorOption("YELLOW", Color(0xFFF3D04A)),
-    ListColorOption("LIME", Color(0xFF8ACF56)),
-    ListColorOption("BLUE", Color(0xFF5C9FE7)),
-    ListColorOption("PURPLE", Color(0xFF8D6CE2)),
-    ListColorOption("PINK", Color(0xFFDF6DAA)),
-    ListColorOption("TEAL", Color(0xFF4EB5B0)),
-    ListColorOption("CORAL", Color(0xFFE3876D)),
-    ListColorOption("GOLD", Color(0xFFCFAB57)),
-    ListColorOption("DEEP_BLUE", Color(0xFF4B73D6)),
-    ListColorOption("ROSE", Color(0xFFD9799A)),
-    ListColorOption("LIGHT_RED", Color(0xFFE48888)),
-    ListColorOption("BRICK", Color(0xFFB86A5C)),
-    ListColorOption("SLATE", Color(0xFF7B8593)),
+    ListColorOption("PINK", Color(0xFFC987A5)),
+    ListColorOption("GOLD", Color(0xFFC7AA63)),
+    ListColorOption("DEEP_BLUE", Color(0xFF6F86C6)),
+    ListColorOption("CORAL", Color(0xFFD39A82)),
+    ListColorOption("TEAL", Color(0xFF67AAA7)),
+    ListColorOption("SLATE", Color(0xFF7F8996)),
+    ListColorOption("BLUE", Color(0xFF6F9FCE)),
+    ListColorOption("PURPLE", Color(0xFF9A86CF)),
+    ListColorOption("ROSE", Color(0xFFC98299)),
+    ListColorOption("LIGHT_RED", Color(0xFFD58D8D)),
+    ListColorOption("BRICK", Color(0xFFAD786E)),
+    ListColorOption("YELLOW", Color(0xFFCFB866)),
+    ListColorOption("LIME", Color(0xFF8DBB73)),
+    ListColorOption("ORANGE", Color(0xFFD69B63)),
+    ListColorOption("RED", Color(0xFFD97873)),
 )
 
 private val LIST_ICON_OPTIONS = listOf(
@@ -2511,8 +2512,13 @@ private val LIST_ICON_OPTIONS = listOf(
 )
 
 private fun listColorAccent(colorKey: String?): Color {
-    return LIST_COLOR_OPTIONS.firstOrNull { it.key == colorKey }?.color
-        ?: Color(0xFFE9A03B)
+    val normalizedKey = when (colorKey) {
+        "GREEN" -> "LIME"
+        "GRAY" -> "SLATE"
+        else -> colorKey
+    }
+    return LIST_COLOR_OPTIONS.firstOrNull { it.key == normalizedKey }?.color
+        ?: Color(0xFFC987A5)
 }
 
 private fun listIconForKey(iconKey: String?): ImageVector {
