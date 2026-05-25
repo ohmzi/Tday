@@ -148,7 +148,11 @@ struct CreateTaskSheet: View {
 
                     CreateTaskSheetSectionTitle(text: "Schedule")
                     CreateTaskSheetGroupCard {
-                        CreateTaskSheetDueRow(dueDate: $dueDate)
+                        CreateTaskSheetDueRow(
+                            dueDate: $dueDate,
+                            onDateTap: { activeSelector = .date },
+                            onTimeTap: { activeSelector = .time }
+                        )
                     }
 
                     CreateTaskSheetSectionTitle(text: "Details")
@@ -330,9 +334,19 @@ struct CreateTaskSheet: View {
                             activeSelector = nil
                         }
                     }
+
+                case .date:
+                    CreateTaskSheetDateSelectorContent(dueDate: $dueDate) {
+                        activeSelector = nil
+                    }
+
+                case .time:
+                    CreateTaskSheetTimeSelectorContent(dueDate: $dueDate) {
+                        activeSelector = nil
+                    }
                 }
             }
-            .padding(.horizontal, 54)
+            .padding(.horizontal, selector.horizontalPadding)
         }
     }
 }
@@ -341,6 +355,8 @@ private enum CreateTaskSheetSelector: String, Identifiable {
     case list
     case priority
     case recurrence
+    case date
+    case time
 
     var id: String { rawValue }
 
@@ -352,6 +368,19 @@ private enum CreateTaskSheetSelector: String, Identifiable {
             return "Priority"
         case .recurrence:
             return "Repeat"
+        case .date:
+            return "Due date"
+        case .time:
+            return "Due time"
+        }
+    }
+
+    var horizontalPadding: CGFloat {
+        switch self {
+        case .date, .time:
+            return 24
+        case .list, .priority, .recurrence:
+            return 54
         }
     }
 }
@@ -456,6 +485,8 @@ private struct CreateTaskSheetGroupCard<Content: View>: View {
 
 private struct CreateTaskSheetDueRow: View {
     @Binding var dueDate: Date
+    let onDateTap: () -> Void
+    let onTimeTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
@@ -465,7 +496,11 @@ private struct CreateTaskSheetDueRow: View {
 
             Spacer(minLength: 6)
 
-            CreateTaskSheetDateTimeControl(dueDate: $dueDate)
+            CreateTaskSheetDateTimeControl(
+                dueDate: $dueDate,
+                onDateTap: onDateTap,
+                onTimeTap: onTimeTap
+            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -488,6 +523,8 @@ private struct CreateTaskSheetDueRow: View {
 
 private struct CreateTaskSheetDateTimeControl: View {
     @Binding var dueDate: Date
+    let onDateTap: () -> Void
+    let onTimeTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
@@ -500,51 +537,106 @@ private struct CreateTaskSheetDateTimeControl: View {
     }
 
     var body: some View {
-        ZStack {
-            HStack(spacing: 0) {
+        HStack(spacing: 0) {
+            Button(action: onDateTap) {
                 Text(dateText)
-                    .frame(maxWidth: .infinity)
+                    .frame(width: 113, height: 38)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Due date")
+            .accessibilityValue(dateText)
 
-                Rectangle()
-                    .fill(colors.onSurfaceVariant.opacity(0.2))
-                    .frame(width: 1, height: 22)
+            Rectangle()
+                .fill(colors.onSurfaceVariant.opacity(0.2))
+                .frame(width: 1, height: 22)
 
+            Button(action: onTimeTap) {
                 Text(timeText)
-                    .frame(maxWidth: .infinity)
-            }
-            .font(.tdayRounded(size: 13, weight: .heavy))
-            .foregroundStyle(colors.onSurfaceVariant)
-            .lineLimit(1)
-            .minimumScaleFactor(0.74)
-            .padding(.horizontal, 10)
-            .frame(width: 206, height: 38)
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(colors.onSurfaceVariant.opacity(0.24), lineWidth: 1)
-            }
-            .background(
-                colors.bottomSheetControlSurface.opacity(0.32),
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-            )
-
-            HStack(spacing: 0) {
-                DatePicker("", selection: $dueDate, displayedComponents: .date)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .tint(colors.onSurfaceVariant)
-                    .frame(width: 114, height: 38)
-                    .opacity(0.02)
-
-                DatePicker("", selection: $dueDate, displayedComponents: .hourAndMinute)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .tint(colors.onSurfaceVariant)
                     .frame(width: 92, height: 38)
-                    .opacity(0.02)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Due time")
+            .accessibilityValue(timeText)
         }
+        .font(.tdayRounded(size: 13, weight: .heavy))
+        .foregroundStyle(colors.onSurfaceVariant)
+        .lineLimit(1)
+        .minimumScaleFactor(0.74)
         .frame(width: 206, height: 38)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(colors.onSurfaceVariant.opacity(0.24), lineWidth: 1)
+        }
+        .background(
+            colors.bottomSheetControlSurface.opacity(0.32),
+            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private struct CreateTaskSheetDateSelectorContent: View {
+    @Binding var dueDate: Date
+    let onDone: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        VStack(spacing: 12) {
+            DatePicker("", selection: $dueDate, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .tint(colors.primary)
+                .padding(.horizontal, 12)
+
+            CreateTaskSheetSelectorDoneButton(action: onDone)
+        }
+    }
+}
+
+private struct CreateTaskSheetTimeSelectorContent: View {
+    @Binding var dueDate: Date
+    let onDone: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        VStack(spacing: 12) {
+            DatePicker("", selection: $dueDate, displayedComponents: .hourAndMinute)
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .tint(colors.primary)
+                .frame(height: 154)
+                .clipped()
+                .padding(.horizontal, 12)
+
+            CreateTaskSheetSelectorDoneButton(action: onDone)
+        }
+    }
+}
+
+private struct CreateTaskSheetSelectorDoneButton: View {
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            Text("Done")
+                .font(.tdayRounded(size: 17, weight: .heavy))
+                .foregroundStyle(colors.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(
+                    colors.bottomSheetControlSurface.opacity(0.45),
+                    in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 4)
     }
 }
 
