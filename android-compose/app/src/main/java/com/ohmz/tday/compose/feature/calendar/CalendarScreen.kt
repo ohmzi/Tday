@@ -232,6 +232,8 @@ private val CalendarPeriodCardPageHeight = 78.dp
 private val CalendarPeriodWeekDayCellHeight = 72.dp
 private val CalendarPeriodPageHorizontalGutter = 2.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
+private val CalendarTaskListSameDateSpacing = 2.dp
+private val CalendarTaskRowHeight = 56.dp
 private val CalendarTaskDragDueTimeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
 private const val CalendarMonthPagerPageCount = 240
@@ -658,7 +660,10 @@ fun CalendarScreen(
 
                     if (selectedDatePendingTasks.isNotEmpty()) {
                     item {
-                        Column(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(CalendarTaskListSameDateSpacing),
+                        ) {
                             selectedDatePendingTasks.forEachIndexed { index, todo ->
                                 key(todo.id) {
                                     CalendarTodoRow(
@@ -2088,7 +2093,7 @@ private fun CalendarTodoRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(58.dp),
+                .height(CalendarTaskRowHeight),
         ) {
             Row(
                 modifier = Modifier
@@ -2339,7 +2344,7 @@ private fun CalendarCompletedTodoRow(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(58.dp),
+                .height(CalendarTaskRowHeight),
             shape = rowShape,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
