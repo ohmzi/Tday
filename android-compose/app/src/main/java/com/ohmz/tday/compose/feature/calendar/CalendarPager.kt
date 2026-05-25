@@ -41,7 +41,6 @@ internal fun <T> CalendarPagingContent(
     var handledSettledPage by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(centerPageIndex, pages) {
-        handledSettledPage = null
         if (pagerState.currentPage != centerPageIndex) {
             pagerState.scrollToPage(centerPageIndex)
         }
@@ -49,7 +48,11 @@ internal fun <T> CalendarPagingContent(
 
     LaunchedEffect(pagerState.settledPage, centerPageIndex, pages) {
         val settledPage = pagerState.settledPage
-        if (settledPage == centerPageIndex || handledSettledPage == settledPage) return@LaunchedEffect
+        if (settledPage == centerPageIndex) {
+            handledSettledPage = null
+            return@LaunchedEffect
+        }
+        if (handledSettledPage != null) return@LaunchedEffect
         val settledSlot = pages.getOrNull(settledPage)?.slot ?: return@LaunchedEffect
         handledSettledPage = settledPage
         onSettledAwayFromCenter(settledSlot)
@@ -58,7 +61,11 @@ internal fun <T> CalendarPagingContent(
     HorizontalPager(
         state = pagerState,
         modifier = modifier,
-        key = { page -> pages.getOrNull(page)?.slot ?: page },
+        key = { page ->
+            pages.getOrNull(page)?.let { calendarPage ->
+                "${calendarPage.slot}:${calendarPage.value}"
+            } ?: page
+        },
         beyondViewportPageCount = 1,
     ) { page ->
         pages.getOrNull(page)?.let { calendarPage ->
