@@ -57,10 +57,10 @@ class TaskRescheduleTest {
     }
 
     @Test
-    fun `timelineRescheduleTargetDate rejects earlier and past month targets`() {
+    fun `timelineRescheduleTargetDate resolves earlier to yesterday and rejects past month targets`() {
         val today = LocalDate.parse("2026-05-24")
 
-        assertNull(timelineRescheduleTargetDate("earlier", today))
+        assertEquals(LocalDate.parse("2026-05-23"), timelineRescheduleTargetDate("earlier", today))
         assertNull(timelineRescheduleTargetDate("day-2026-04-30", today))
         assertNull(timelineRescheduleTargetDate("month-2026-04", today))
     }
