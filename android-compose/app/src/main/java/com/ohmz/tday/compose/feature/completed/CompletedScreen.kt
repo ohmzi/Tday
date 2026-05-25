@@ -114,6 +114,23 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private val CompletedTimelineSameDateTaskSpacing = 2.dp
+private val CompletedTimelineDateGroupSpacing = 6.dp
+private val CompletedTimelineSectionTopSpacing = 6.dp
+private val CompletedTimelineHeaderBodySpacing = 2.dp
+private val CompletedTimelineCollapsedSectionSpacing = 4.dp
+private val CompletedSwipeRowHeight = 56.dp
+
+private fun completedTaskBottomSpacing(
+    itemIndex: Int,
+    lastIndex: Int,
+    showDateDivider: Boolean,
+) = if (showDateDivider || itemIndex == lastIndex) {
+    CompletedTimelineDateGroupSpacing
+} else {
+    CompletedTimelineSameDateTaskSpacing
+}
+
 private enum class CompletedRestorePhase {
     Completed,
     Unchecked,
@@ -255,7 +272,14 @@ fun CompletedScreen(
                                         ),
                                         fadeOutSpec = null,
                                     )
-                                    .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
+                                    .padding(
+                                        top = if (sectionIndex == 0) 0.dp else CompletedTimelineSectionTopSpacing,
+                                        bottom = if (isCollapsed) {
+                                            CompletedTimelineCollapsedSectionSpacing
+                                        } else {
+                                            CompletedTimelineHeaderBodySpacing
+                                        },
+                                    ),
                                 section = section,
                                 isCollapsed = isCollapsed,
                                 onHeaderClick = {
@@ -270,6 +294,12 @@ fun CompletedScreen(
                         }
                         if (!isCollapsed) {
                             section.items.forEachIndexed { itemIndex, completed ->
+                                val showCompletedDateDivider = shouldShowDateDivider(
+                                    afterItemIndex = itemIndex,
+                                    inSectionIndex = sectionIndex,
+                                    sections = timelineSections,
+                                    collapsedSectionKeys = collapsedSectionKeys,
+                                )
                                 item(key = "completed-row-${section.key}-${completed.id}") {
                                     CompletedSwipeRow(
                                         modifier = Modifier
@@ -287,15 +317,16 @@ fun CompletedScreen(
                                                     easing = FastOutSlowInEasing,
                                                 ),
                                             )
-                                            .padding(top = 4.dp),
+                                            .padding(
+                                                bottom = completedTaskBottomSpacing(
+                                                    itemIndex = itemIndex,
+                                                    lastIndex = section.items.lastIndex,
+                                                    showDateDivider = showCompletedDateDivider,
+                                                ),
+                                            ),
                                         item = completed,
                                         lists = uiState.lists,
-                                        showDateDivider = shouldShowDateDivider(
-                                            afterItemIndex = itemIndex,
-                                            inSectionIndex = sectionIndex,
-                                            sections = timelineSections,
-                                            collapsedSectionKeys = collapsedSectionKeys,
-                                        ),
+                                        showDateDivider = showCompletedDateDivider,
                                         onInfo = { editTargetId = completed.id },
                                         onDelete = { onDelete(completed) },
                                         onUncomplete = { onUncomplete(completed) },
@@ -621,7 +652,7 @@ private fun CompletedSwipeRow(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(58.dp),
+                    .height(CompletedSwipeRowHeight),
             ) {
                 Row(
                     modifier = Modifier

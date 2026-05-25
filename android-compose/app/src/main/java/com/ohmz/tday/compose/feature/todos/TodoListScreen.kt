@@ -226,6 +226,24 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+private val TimelineSameDateTaskSpacing = 2.dp
+private val TimelineDateGroupSpacing = 6.dp
+private val TimelineSectionTopSpacing = 6.dp
+private val TimelineHeaderBodySpacing = 2.dp
+private val TimelineCollapsedSectionSpacing = 4.dp
+
+private fun timelineTaskBottomSpacing(
+    itemIndex: Int,
+    lastIndex: Int,
+    showDateDivider: Boolean,
+): Dp {
+    return if (showDateDivider || itemIndex == lastIndex) {
+        TimelineDateGroupSpacing
+    } else {
+        TimelineSameDateTaskSpacing
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TodoListScreen(
@@ -242,6 +260,7 @@ fun TodoListScreen(
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
+    onDeleteList: (listId: String) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -399,6 +418,7 @@ fun TodoListScreen(
         remember(uiState.mode) { mutableStateMapOf<String, TimelineDropTargetBounds>() }
     var pendingRescheduleDrop by remember(uiState.mode) { mutableStateOf<TaskRescheduleDrop?>(null) }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
+    var showDeleteListConfirmation by rememberSaveable { mutableStateOf(false) }
     var showSummarySheet by rememberSaveable(uiState.mode) { mutableStateOf(false) }
     var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var listSettingsName by rememberSaveable { mutableStateOf("") }
@@ -444,8 +464,8 @@ fun TodoListScreen(
         targetValue = if (fabPressed) 2.dp else 0.dp,
         label = "todoFabOffsetY",
     )
-    val timelineItemSpacing = if (usesTodayStyle) 4.dp else 8.dp
-    val timelineHeaderBodySpacing = if (usesTodayStyle) 4.dp else 8.dp
+    val timelineItemSpacing = TimelineDateGroupSpacing
+    val timelineHeaderBodySpacing = TimelineHeaderBodySpacing
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
         var itemIndex = 0
         timelineSections.forEach { section ->
@@ -726,13 +746,13 @@ fun TodoListScreen(
                                             enabled = isDropEligibleSection,
                                             dropTargets = timelineDropTargetBounds,
                                         )
-                                        .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
+                                        .padding(top = if (sectionIndex == 0) 0.dp else TimelineSectionTopSpacing),
                                     section = section,
                                     useMinimalStyle = usesTodayStyle,
                                     isCollapsed = isCollapsed,
                                     isDropTarget = isActiveDropSection && isDropEligibleSection,
                                     bottomSpacing = if (isCollapsed) {
-                                        timelineItemSpacing
+                                        TimelineCollapsedSectionSpacing
                                     } else {
                                         timelineHeaderBodySpacing
                                     },
@@ -790,11 +810,7 @@ fun TodoListScreen(
                                                 dropTargets = timelineDropTargetBounds,
                                             )
                                             .padding(
-                                                bottom = if (isCollapsed || section.items.isEmpty()) {
-                                                    timelineItemSpacing
-                                                } else {
-                                                    8.dp
-                                                },
+                                                bottom = TimelineDateGroupSpacing,
                                             ),
                                         active = true,
                                         useMinimalStyle = usesTodayStyle,
@@ -807,6 +823,12 @@ fun TodoListScreen(
                                     section.key == "earlier" &&
                                             (uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY)
                                 section.items.forEachIndexed { itemIndex, todo ->
+                                    val showTimelineDateDivider = shouldShowDateDivider(
+                                        afterItemIndex = itemIndex,
+                                        inSectionIndex = sectionIndex,
+                                        sections = timelineSections,
+                                        collapsedSectionKeys = collapsedSectionKeys,
+                                    )
                                     item(
                                         key = "timeline-todo-${section.key}-${todo.id}",
                                         contentType = "timeline-todo",
@@ -837,11 +859,11 @@ fun TodoListScreen(
                                                     dropTargets = timelineDropTargetBounds,
                                                 )
                                                 .padding(
-                                                    bottom = if (itemIndex == section.items.lastIndex) {
-                                                        timelineItemSpacing
-                                                    } else {
-                                                        8.dp
-                                                    },
+                                                    bottom = timelineTaskBottomSpacing(
+                                                        itemIndex = itemIndex,
+                                                        lastIndex = section.items.lastIndex,
+                                                        showDateDivider = showTimelineDateDivider,
+                                                    ),
                                                 ),
                                             todo = todo,
                                             mode = uiState.mode,
@@ -849,12 +871,7 @@ fun TodoListScreen(
                                             useMinimalStyle = usesTodayStyle,
                                             flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
                                             showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
-                                            showDateDivider = shouldShowDateDivider(
-                                                afterItemIndex = itemIndex,
-                                                inSectionIndex = sectionIndex,
-                                                sections = timelineSections,
-                                                collapsedSectionKeys = collapsedSectionKeys,
-                                            ),
+                                            showDateDivider = showTimelineDateDivider,
                                             onComplete = { onComplete(todo) },
                                             onDelete = { onDelete(todo) },
                                             onInfo = {
@@ -1098,6 +1115,50 @@ fun TodoListScreen(
                 )
                 showListSettingsSheet = false
                 listSettingsTargetId = null
+            },
+            onDelete = {
+                showListSettingsSheet = false
+                showDeleteListConfirmation = true
+            },
+        )
+    }
+
+    val deleteConfirmationListId = selectedListId
+    if (
+        showDeleteListConfirmation &&
+        uiState.mode == TodoListMode.LIST &&
+        !deleteConfirmationListId.isNullOrBlank()
+    ) {
+        AlertDialog(
+            onDismissRequest = { showDeleteListConfirmation = false },
+            title = {
+                Text(
+                    text = stringResource(R.string.todos_delete_list_title),
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            },
+            text = {
+                Text(text = stringResource(R.string.todos_delete_list_message))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteListConfirmation = false
+                        onDeleteList(deleteConfirmationListId)
+                        listSettingsTargetId = null
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.action_delete),
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteListConfirmation = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
             },
         )
     }
@@ -1399,6 +1460,7 @@ private fun ListSettingsBottomSheet(
     onListIconChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
@@ -1688,7 +1750,62 @@ private fun ListSettingsBottomSheet(
                         }
                     }
                 }
+
+                Spacer(Modifier.height(2.dp))
+                ListSettingsDeleteButton(onClick = onDelete)
             }
+        }
+    }
+}
+
+@Composable
+private fun ListSettingsDeleteButton(
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val colorScheme = MaterialTheme.colorScheme
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        label = "listSettingsDeleteButtonScale",
+    )
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.5.dp, colorScheme.error.copy(alpha = 0.45f)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.errorContainer.copy(alpha = 0.22f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.DeleteOutline,
+                contentDescription = null,
+                tint = colorScheme.error,
+            )
+            Text(
+                text = stringResource(R.string.action_delete_list),
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.error,
+                fontWeight = FontWeight.ExtraBold,
+            )
         }
     }
 }
@@ -1808,7 +1925,7 @@ private fun TimelineSectionHeader(
     } else {
         baseChevronColor
     }
-    val minimumHeaderHeight = if (useMinimalStyle) 34.dp else 48.dp
+    val minimumHeaderHeight = if (useMinimalStyle) 32.dp else 44.dp
     val headerClickModifier = when {
         onHeaderClick != null -> Modifier.clickable(
             interactionSource = headerInteractionSource,
@@ -2594,7 +2711,7 @@ private const val SEARCH_RESULT_SCROLL_MAX_DURATION_MS = 2400
 private const val SEARCH_RESULT_CENTER_SCROLL_DURATION_MS = 520
 private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
-private val SWIPE_ROW_HEIGHT = 58.dp
+private val SWIPE_ROW_HEIGHT = 56.dp
 private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
 private val TODO_DUE_TIME_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())

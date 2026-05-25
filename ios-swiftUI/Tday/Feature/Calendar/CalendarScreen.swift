@@ -75,8 +75,8 @@ private enum CalendarMonthGridMetrics {
 }
 
 private enum CalendarTaskListMetrics {
-    static let rowSpacing: CGFloat = 0
-    static let rowVerticalPadding: CGFloat = 4
+    static let rowSpacing = TodoTimelineMetrics.sameDateTaskSpacing
+    static let rowVerticalPadding = TodoTimelineMetrics.minimalRowVerticalPadding
 }
 
 private enum CalendarModeCardMetrics {
