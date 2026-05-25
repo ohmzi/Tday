@@ -74,6 +74,19 @@ final class CalendarViewModel {
         }
     }
 
+    func moveTask(_ todo: TodoItem, toDay targetDay: Date, scope: TaskRescheduleScope) async {
+        let calendar = Calendar.current
+        guard !calendar.isDate(todo.due, inSameDayAs: targetDay),
+              let payload = movedTaskPayload(todo: todo, targetDay: targetDay, calendar: calendar) else {
+            return
+        }
+
+        await updateTask(
+            todo.repositoryTargetForReschedule(scope: scope),
+            payload: payload
+        )
+    }
+
     func delete(_ todo: TodoItem) async {
         do {
             try await container.todoRepository.deleteTodo(todo)

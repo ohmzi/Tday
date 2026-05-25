@@ -44,6 +44,11 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
     }
 }
 
+enum TaskRescheduleScope: String, Codable, Hashable {
+    case occurrence
+    case series
+}
+
 struct CreateTaskPayload: Equatable, Hashable, Codable {
     let title: String
     let description: String?
@@ -78,6 +83,127 @@ struct TodoItem: Identifiable, Equatable, Hashable, Codable {
     var instanceDateEpochMillis: Int64? {
         instanceDateEpochMilliseconds
     }
+}
+
+extension TodoListMode {
+    var supportsTaskReschedule: Bool {
+        switch self {
+        case .scheduled, .all, .priority, .list:
+            return true
+        case .today, .overdue:
+            return false
+        }
+    }
+}
+
+extension TodoItem {
+    func repositoryTargetForReschedule(scope: TaskRescheduleScope) -> TodoItem {
+        switch scope {
+        case .occurrence:
+            return self
+        case .series:
+            return TodoItem(
+                id: canonicalId,
+                canonicalId: canonicalId,
+                title: title,
+                description: description,
+                priority: priority,
+                due: due,
+                rrule: rrule,
+                instanceDate: nil,
+                pinned: pinned,
+                completed: completed,
+                listId: listId,
+                updatedAt: updatedAt
+            )
+        }
+    }
+}
+
+func movedDuePreservingTime(
+    due: Date,
+    targetDay: Date,
+    calendar: Calendar = .current
+) -> Date? {
+    let dueComponents = calendar.dateComponents([.hour, .minute, .second, .nanosecond], from: due)
+    var targetComponents = calendar.dateComponents([.year, .month, .day], from: targetDay)
+    targetComponents.timeZone = calendar.timeZone
+    targetComponents.hour = dueComponents.hour
+    targetComponents.minute = dueComponents.minute
+    targetComponents.second = dueComponents.second
+    targetComponents.nanosecond = dueComponents.nanosecond
+    return calendar.date(from: targetComponents)
+}
+
+func movedTaskPayload(
+    todo: TodoItem,
+    targetDay: Date,
+    calendar: Calendar = .current
+) -> CreateTaskPayload? {
+    guard let movedDue = movedDuePreservingTime(due: todo.due, targetDay: targetDay, calendar: calendar) else {
+        return nil
+    }
+    return CreateTaskPayload(
+        title: todo.title,
+        description: todo.description,
+        priority: todo.priority,
+        due: movedDue,
+        rrule: todo.rrule,
+        listId: todo.listId
+    )
+}
+
+func timelineRescheduleTargetDate(
+    sectionId: String,
+    today: Date = Date(),
+    calendar: Calendar = .current
+) -> Date? {
+    let startOfToday = calendar.startOfDay(for: today)
+    let currentMonthStart = rescheduleMonthStart(for: startOfToday, calendar: calendar)
+
+    if sectionId.hasPrefix("scheduled-") || sectionId.hasPrefix("priority-") {
+        guard let suffix = sectionId.split(separator: "-").last,
+              let interval = TimeInterval(String(suffix)) else {
+            return nil
+        }
+        let date = calendar.startOfDay(for: Date(timeIntervalSince1970: interval))
+        return rescheduleMonthStart(for: date, calendar: calendar) >= currentMonthStart ? date : nil
+    }
+
+    if sectionId.hasPrefix("rest-") {
+        guard let monthIndexValue = Int(sectionId.replacingOccurrences(of: "rest-", with: "")) else {
+            return nil
+        }
+        let horizonStart = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 7, to: startOfToday) ?? startOfToday)
+        return rescheduleMonthIndex(for: horizonStart, calendar: calendar) == monthIndexValue &&
+            rescheduleMonthStart(for: horizonStart, calendar: calendar) == currentMonthStart ? horizonStart : nil
+    }
+
+    if sectionId.hasPrefix("month-") {
+        guard let monthIndexValue = Int(sectionId.replacingOccurrences(of: "month-", with: "")) else {
+            return nil
+        }
+        let currentMonthIndex = rescheduleMonthIndex(for: startOfToday, calendar: calendar)
+        guard monthIndexValue >= currentMonthIndex else {
+            return nil
+        }
+        let year = (monthIndexValue - 1) / 12
+        let month = ((monthIndexValue - 1) % 12) + 1
+        return calendar.date(from: DateComponents(year: year, month: month, day: 1))
+    }
+
+    return nil
+}
+
+private func rescheduleMonthStart(for date: Date, calendar: Calendar) -> Date {
+    let components = calendar.dateComponents([.year, .month], from: date)
+    return calendar.date(from: components).map(calendar.startOfDay) ?? calendar.startOfDay(for: date)
+}
+
+private func rescheduleMonthIndex(for date: Date, calendar: Calendar) -> Int {
+    let year = calendar.component(.year, from: date)
+    let month = calendar.component(.month, from: date)
+    return year * 12 + month
 }
 
 struct ListSummary: Identifiable, Equatable, Hashable, Codable {
