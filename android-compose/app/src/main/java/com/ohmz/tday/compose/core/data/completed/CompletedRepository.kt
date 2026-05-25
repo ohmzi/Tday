@@ -147,6 +147,7 @@ class CompletedRepository @Inject constructor(
                             completedAtEpochMs = completed.completedAtEpochMs.takeIf { it > 0L }
                                 ?: timestampMs,
                             rrule = payload.rrule,
+                            listId = normalizedListId,
                             listName = listMeta?.name,
                             listColor = listMeta?.color,
                         )

@@ -29,9 +29,15 @@ private struct RemoteSnapshot {
 func mergeCompletedRecordsWithPendingOverrides(
     localRecords: [CachedCompletedRecord],
     remoteRecords: [CachedCompletedRecord],
-    pendingTodoTargets: Set<String>
+    pendingTodoTargets: Set<String>,
+    pendingDeletedListIds: Set<String> = []
 ) -> [CachedCompletedRecord] {
-    var mergedRecords = remoteRecords
+    var mergedRecords = remoteRecords.filter { record in
+        guard let listId = record.listId else {
+            return true
+        }
+        return !pendingDeletedListIds.contains(listId)
+    }
 
     for canonicalID in pendingTodoTargets {
         let localRecordsForTodo = localRecords.filter { $0.originalTodoId == canonicalID }
@@ -148,14 +154,25 @@ final class SyncManager {
         let pendingListTargets = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 switch mutation.kind {
-                case .createList, .updateList:
+                case .createList, .updateList, .deleteList:
                     return mutation.targetId
                 default:
                     return nil
                 }
             }
         )
-        var remoteTodosByKey = Dictionary(uniqueKeysWithValues: remote.todos.map { (todoMergeKey(item: $0), todoToCache($0)) })
+        let pendingDeletedListIds = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind == .deleteList ? mutation.targetId : nil
+            }
+        )
+        let remoteTodos = remote.todos.filter { todo in
+            guard let listId = todo.listId else {
+                return true
+            }
+            return !pendingDeletedListIds.contains(listId)
+        }
+        var remoteTodosByKey = Dictionary(uniqueKeysWithValues: remoteTodos.map { (todoMergeKey(item: $0), todoToCache($0)) })
         var mergedTodos: [CachedTodoRecord] = []
 
         for localTodo in localState.todos {
@@ -195,12 +212,15 @@ final class SyncManager {
                 remoteListsByID.removeValue(forKey: localList.id)
             }
         }
-        mergedLists.append(contentsOf: remoteListsByID.values)
+        mergedLists.append(
+            contentsOf: remoteListsByID.values.filter { !pendingDeletedListIds.contains($0.id) }
+        )
 
         let mergedCompleted = mergeCompletedRecordsWithPendingOverrides(
             localRecords: localState.completedItems,
             remoteRecords: remote.completedItems.map(completedToCache),
-            pendingTodoTargets: pendingTodoTargets
+            pendingTodoTargets: pendingTodoTargets,
+            pendingDeletedListIds: pendingDeletedListIds
         )
 
         let generatedMutations = buildLocalWinsMutations(localState: localState, remote: remote)
@@ -222,6 +242,16 @@ final class SyncManager {
         let pendingTodoTargets = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 mutation.kind.affectsTodo ? mutation.targetId : nil
+            }
+        )
+        let pendingListTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .createList, .updateList, .deleteList:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
             }
         )
         var generated: [PendingMutationRecord] = []
@@ -255,7 +285,7 @@ final class SyncManager {
             }
         }
 
-        for list in localState.lists where !list.id.hasPrefix(LOCAL_LIST_PREFIX) {
+        for list in localState.lists where !list.id.hasPrefix(LOCAL_LIST_PREFIX) && !pendingListTargets.contains(list.id) {
             guard let remoteUpdatedAt = remote.listUpdatedAtByID[list.id], list.updatedAtEpochMs > remoteUpdatedAt else {
                 continue
             }
@@ -345,6 +375,13 @@ final class SyncManager {
             _ = try await api.patchListByBody(
                 payload: UpdateListRequest(id: targetID, name: mutation.name, color: mutation.color, iconKey: mutation.iconKey)
             )
+
+        case .deleteList:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_LIST_PREFIX) {
+                return
+            }
+            _ = try await api.deleteListByBody(payload: DeleteListRequest(id: targetID))
 
         case .createTodo:
             guard let localTodoID = mutation.targetId else { return }
@@ -506,6 +543,7 @@ final class SyncManager {
                         completedAtEpochMs: item.completedAtEpochMs,
                         rrule: item.rrule,
                         instanceDateEpochMs: item.instanceDateEpochMs,
+                        listId: item.listId,
                         listName: item.listName,
                         listColor: item.listColor
                     )
@@ -560,7 +598,25 @@ final class SyncManager {
                 }
                 return todo
             },
-            completedItems: state.completedItems,
+            completedItems: state.completedItems.map { completed in
+                guard completed.listId == localListID else {
+                    return completed
+                }
+                return CachedCompletedRecord(
+                    id: completed.id,
+                    originalTodoId: completed.originalTodoId,
+                    title: completed.title,
+                    description: completed.description,
+                    priority: completed.priority,
+                    dueEpochMs: completed.dueEpochMs,
+                    completedAtEpochMs: completed.completedAtEpochMs,
+                    rrule: completed.rrule,
+                    instanceDateEpochMs: completed.instanceDateEpochMs,
+                    listId: serverListID,
+                    listName: completed.listName,
+                    listColor: completed.listColor
+                )
+            },
             lists: state.lists.map { list in
                 if list.id == localListID {
                     return CachedListRecord(
@@ -651,7 +707,8 @@ private extension MutationKind {
              .uncompleteTodo:
             return true
         case .createList,
-             .updateList:
+             .updateList,
+             .deleteList:
             return false
         }
     }

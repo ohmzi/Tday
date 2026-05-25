@@ -44,9 +44,28 @@ final class CompletedSyncMergeTests: XCTestCase {
 
         XCTAssertEqual(merged, [local])
     }
+
+    func testPendingDeletedListRemovesRemoteCompletedRecordsForThatList() {
+        let kept = completedRecord(id: "kept", originalTodoId: "todo-1", completedAtEpochMs: 2_000, listId: "list-kept")
+        let deleted = completedRecord(id: "deleted", originalTodoId: "todo-2", completedAtEpochMs: 1_000, listId: "list-deleted")
+
+        let merged = mergeCompletedRecordsWithPendingOverrides(
+            localRecords: [],
+            remoteRecords: [kept, deleted],
+            pendingTodoTargets: [],
+            pendingDeletedListIds: ["list-deleted"]
+        )
+
+        XCTAssertEqual(merged, [kept])
+    }
 }
 
-private func completedRecord(id: String, originalTodoId: String, completedAtEpochMs: Int64) -> CachedCompletedRecord {
+private func completedRecord(
+    id: String,
+    originalTodoId: String,
+    completedAtEpochMs: Int64,
+    listId: String? = nil
+) -> CachedCompletedRecord {
     CachedCompletedRecord(
         id: id,
         originalTodoId: originalTodoId,
@@ -57,6 +76,7 @@ private func completedRecord(id: String, originalTodoId: String, completedAtEpoc
         completedAtEpochMs: completedAtEpochMs,
         rrule: nil,
         instanceDateEpochMs: nil,
+        listId: listId,
         listName: nil,
         listColor: nil
     )

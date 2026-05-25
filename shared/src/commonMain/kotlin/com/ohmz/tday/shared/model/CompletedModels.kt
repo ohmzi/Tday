@@ -21,6 +21,7 @@ data class CompletedTodoDto(
     val rrule: String? = null,
     val userID: String? = null,
     val instanceDate: String? = null,
+    val listID: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
 )
