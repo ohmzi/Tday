@@ -103,7 +103,8 @@ private enum CalendarModeCardMetrics {
 }
 
 private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
-private let calendarModeTransitionAnimation = Animation.spring(response: 0.34, dampingFraction: 0.9, blendDuration: 0.02)
+private let calendarModeResizeAnimation = Animation.spring(response: 0.34, dampingFraction: 0.92, blendDuration: 0.02)
+private let calendarModeContentFadeAnimation = Animation.easeInOut(duration: 0.12)
 
 private struct CalendarCardChromeModifier: ViewModifier {
     @Environment(\.tdayColors) private var colors
@@ -231,7 +232,8 @@ struct CalendarScreen: View {
                     selectedMode: displayMode,
                     accentColor: calendarAccentColor,
                     onSelect: { mode in
-                        withAnimation(calendarModeTransitionAnimation) {
+                        guard mode != displayMode else { return }
+                        withAnimation(calendarModeResizeAnimation) {
                             displayMode = mode
                             if mode != .month {
                                 visibleMonth = calendarMonthStart(for: selectedDate)
@@ -258,13 +260,7 @@ struct CalendarScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
-                calendarModeCard
-                .id(displayMode)
-                .transition(.opacity.combined(with: .scale(scale: 0.985, anchor: .top)))
-                .frame(height: calendarModeCardHeight, alignment: .top)
-                .clipped()
-                .modifier(CalendarCardChromeModifier())
-                .animation(calendarModeTransitionAnimation, value: displayMode)
+                animatedCalendarModeCard
                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: CalendarModeCardMetrics.shadowBleed, trailing: TodoTimelineMetrics.horizontalPadding))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -338,6 +334,7 @@ struct CalendarScreen: View {
         .listRowSpacing(0)
         .listSectionSpacing(0)
         .environment(\.defaultMinListRowHeight, 1)
+        .animation(calendarModeResizeAnimation, value: calendarModeCardHeight)
         .disableVerticalScrollBounce()
         .background(colors.background)
         .onPreferenceChange(CalendarDateDropTargetFramePreferenceKey.self) { frames in
@@ -454,6 +451,19 @@ struct CalendarScreen: View {
                 action: jumpToToday
             ),
         )
+    }
+
+    private var animatedCalendarModeCard: some View {
+        ZStack(alignment: .top) {
+            calendarModeCard
+                .id(displayMode)
+                .transition(.opacity.animation(calendarModeContentFadeAnimation))
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: calendarModeCardHeight, alignment: .top)
+        .clipped()
+        .modifier(CalendarCardChromeModifier())
+        .animation(calendarModeResizeAnimation, value: calendarModeCardHeight)
     }
 
     private func isSelectedDay(_ date: Date) -> Bool {
