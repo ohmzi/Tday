@@ -4,6 +4,14 @@ import UniformTypeIdentifiers
 
 private let calendarTaskDragContentTypes = [UTType.plainText.identifier, UTType.text.identifier]
 
+private final class CalendarTaskDragSession {
+    static let shared = CalendarTaskDragSession()
+    var todo: TodoItem?
+    var handledDropSignature: String?
+
+    private init() {}
+}
+
 private enum CalendarTitleHandoff {
     static let collapseDistance: CGFloat = 180
     static let expandedTitleHeight: CGFloat = 56
@@ -180,6 +188,8 @@ struct CalendarScreen: View {
                         .onDrag {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             draggedTodo = todo
+                            CalendarTaskDragSession.shared.todo = todo
+                            CalendarTaskDragSession.shared.handledDropSignature = nil
                             return NSItemProvider(object: todo.id as NSString)
                         }
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
@@ -415,7 +425,13 @@ struct CalendarScreen: View {
     private func requestReschedule(_ todo: TodoItem, to targetDate: Date) {
         draggedTodo = nil
         activeDropDate = nil
+        CalendarTaskDragSession.shared.todo = nil
         let targetDay = Calendar.current.startOfDay(for: targetDate)
+        let dropSignature = "\(todo.id)|\(targetDay.timeIntervalSince1970)"
+        guard CalendarTaskDragSession.shared.handledDropSignature != dropSignature else {
+            return
+        }
+        CalendarTaskDragSession.shared.handledDropSignature = dropSignature
         guard !Calendar.current.isDate(todo.due, inSameDayAs: targetDay) else {
             return
         }
@@ -956,16 +972,13 @@ private struct CalendarWeekDayCell: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
-        .onDrop(
-            of: calendarTaskDragContentTypes,
-            delegate: CalendarDateDropDelegate(
-                date: date,
-                canDrop: isEnabled,
-                draggedTodo: draggedTodo,
-                resolveTodo: resolveTodo,
-                onMove: onMoveTaskToDate,
-                onDateChange: onDropDateChange
-            )
+        .calendarTaskDropTarget(
+            date: date,
+            canDrop: isEnabled,
+            draggedTodo: draggedTodo,
+            resolveTodo: resolveTodo,
+            onMove: onMoveTaskToDate,
+            onDateChange: onDropDateChange
         )
         .opacity(isEnabled ? 1 : 0.48)
     }
@@ -1076,7 +1089,7 @@ private struct CalendarDateDropDelegate: DropDelegate {
         defer {
             onDateChange(nil)
         }
-        guard let draggedTodo else {
+        guard let draggedTodo = draggedTodo ?? CalendarTaskDragSession.shared.todo else {
             return performProviderDrop(info: info)
         }
         onMove(draggedTodo, Calendar.current.startOfDay(for: date))
@@ -1101,6 +1114,55 @@ private struct CalendarDateDropDelegate: DropDelegate {
             }
         }
         return true
+    }
+}
+
+private extension View {
+    func calendarTaskDropTarget(
+        date: Date,
+        canDrop: Bool,
+        draggedTodo: TodoItem?,
+        resolveTodo: @escaping (String) -> TodoItem?,
+        onMove: @escaping (TodoItem, Date) -> Void,
+        onDateChange: @escaping (Date?) -> Void
+    ) -> some View {
+        self
+            .onDrop(
+                of: calendarTaskDragContentTypes,
+                delegate: CalendarDateDropDelegate(
+                    date: date,
+                    canDrop: canDrop,
+                    draggedTodo: draggedTodo,
+                    resolveTodo: resolveTodo,
+                    onMove: onMove,
+                    onDateChange: onDateChange
+                )
+            )
+            .dropDestination(for: String.self) { ids, _ in
+                guard canDrop else {
+                    onDateChange(nil)
+                    return false
+                }
+                let targetDate = Calendar.current.startOfDay(for: date)
+                let todo = draggedTodo
+                    ?? CalendarTaskDragSession.shared.todo
+                    ?? ids.compactMap(resolveTodo).first
+                guard let todo else {
+                    onDateChange(nil)
+                    return false
+                }
+                onDateChange(nil)
+                onMove(todo, targetDate)
+                return true
+            } isTargeted: { active in
+                guard canDrop else {
+                    if !active {
+                        onDateChange(nil)
+                    }
+                    return
+                }
+                onDateChange(active ? Calendar.current.startOfDay(for: date) : nil)
+            }
     }
 }
 
@@ -1225,16 +1287,13 @@ private struct CalendarDayCard: View {
             isDropTarget ? colors.error.opacity(0.12) : .clear,
             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
-        .onDrop(
-            of: calendarTaskDragContentTypes,
-            delegate: CalendarDateDropDelegate(
-                date: date,
-                canDrop: isEnabled,
-                draggedTodo: draggedTodo,
-                resolveTodo: resolveTodo,
-                onMove: onMoveTaskToDate,
-                onDateChange: onDropDateChange
-            )
+        .calendarTaskDropTarget(
+            date: date,
+            canDrop: isEnabled,
+            draggedTodo: draggedTodo,
+            resolveTodo: resolveTodo,
+            onMove: onMoveTaskToDate,
+            onDateChange: onDropDateChange
         )
     }
 
@@ -1402,16 +1461,13 @@ private struct CalendarMonthDayCell: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
-        .onDrop(
-            of: calendarTaskDragContentTypes,
-            delegate: CalendarDateDropDelegate(
-                date: day.date,
-                canDrop: isEnabled,
-                draggedTodo: draggedTodo,
-                resolveTodo: resolveTodo,
-                onMove: onMoveTaskToDate,
-                onDateChange: onDropDateChange
-            )
+        .calendarTaskDropTarget(
+            date: day.date,
+            canDrop: isEnabled,
+            draggedTodo: draggedTodo,
+            resolveTodo: resolveTodo,
+            onMove: onMoveTaskToDate,
+            onDateChange: onDropDateChange
         )
         .opacity(day.isCurrentMonth ? 1 : 0.45)
     }

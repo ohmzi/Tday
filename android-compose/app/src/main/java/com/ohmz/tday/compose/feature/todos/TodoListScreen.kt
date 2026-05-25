@@ -268,10 +268,13 @@ fun TodoListScreen(
         uiState.mode == TodoListMode.TODAY &&
                 !uiState.hasHydratedSnapshot &&
                 uiState.items.isEmpty()
-    val timelineSections = remember(uiState.mode, uiState.items) {
+    var draggedScheduledTodoId by rememberSaveable(uiState.mode) { mutableStateOf<String?>(null) }
+    val canRescheduleTasks = uiState.mode.supportsTaskReschedule()
+    val timelineSections = remember(uiState.mode, uiState.items, draggedScheduledTodoId) {
         buildTimelineSections(
             mode = uiState.mode,
             items = uiState.items,
+            includeEmptyEarlierTarget = canRescheduleTasks && draggedScheduledTodoId != null,
         )
     }
     var timelineAnimationsReady by remember(uiState.mode, uiState.listId) {
@@ -390,7 +393,6 @@ fun TodoListScreen(
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
-    var draggedScheduledTodoId by rememberSaveable(uiState.mode) { mutableStateOf<String?>(null) }
     var activeDropSectionKey by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var pendingRescheduleDrop by remember(uiState.mode) { mutableStateOf<TaskRescheduleDrop?>(null) }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
@@ -413,7 +415,6 @@ fun TodoListScreen(
     val resolveTodoForDrop: (String) -> TodoItem? = { targetId ->
         uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
     }
-    val canRescheduleTasks = uiState.mode.supportsTaskReschedule()
     val requestTaskReschedule: (TodoItem, LocalDate) -> Unit = { todo, targetDate ->
         draggedScheduledTodoId = null
         activeDropSectionKey = null
@@ -710,6 +711,51 @@ fun TodoListScreen(
                                             }
                                         },
                                 )
+                            }
+
+                            if (canRescheduleTasks && draggedScheduledTodoId != null && section.targetDate != null) {
+                                item(
+                                    key = "timeline-drop-placeholder-${section.key}",
+                                    contentType = "timeline-drop-placeholder",
+                                ) {
+                                    var placeholderModifier: Modifier = Modifier
+                                    if (timelineAnimationsEnabled) {
+                                        placeholderModifier = placeholderModifier.animateItem(
+                                            fadeInSpec = tween(
+                                                durationMillis = 150,
+                                                easing = FastOutSlowInEasing,
+                                            ),
+                                            placementSpec = tween(
+                                                durationMillis = 260,
+                                                easing = FastOutSlowInEasing,
+                                            ),
+                                            fadeOutSpec = tween(
+                                                durationMillis = 120,
+                                                easing = FastOutSlowInEasing,
+                                            ),
+                                        )
+                                    }
+                                    TimelineDropPlaceholder(
+                                        modifier = placeholderModifier
+                                            .timelineSectionDropTarget(
+                                                section = section,
+                                                draggedTodo = sectionDraggedTodo,
+                                                resolveTodo = resolveTodoForDrop,
+                                                onDropTargetChanged = onSectionDropTargetChanged,
+                                                onDragTodoEnd = onSectionDragEnd,
+                                                onMoveTaskToDate = onMoveTaskToSectionDate,
+                                            )
+                                            .padding(
+                                                bottom = if (isCollapsed || section.items.isEmpty()) {
+                                                    timelineItemSpacing
+                                                } else {
+                                                    8.dp
+                                                },
+                                            ),
+                                        active = activeDropSectionKey == section.key,
+                                        useMinimalStyle = usesTodayStyle,
+                                    )
+                                }
                             }
 
                             if (!isCollapsed && section.items.isNotEmpty()) {
@@ -1755,6 +1801,48 @@ private fun TimelineSectionHeader(
 }
 
 @Composable
+private fun TimelineDropPlaceholder(
+    modifier: Modifier = Modifier,
+    active: Boolean,
+    useMinimalStyle: Boolean,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val placeholderHeight by animateDpAsState(
+        targetValue = if (active) {
+            if (useMinimalStyle) 66.dp else 72.dp
+        } else {
+            if (useMinimalStyle) 46.dp else 52.dp
+        },
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "timelineDropPlaceholderHeight",
+    )
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(placeholderHeight)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                if (active) {
+                    colorScheme.error.copy(alpha = 0.10f)
+                } else {
+                    colorScheme.surfaceVariant.copy(alpha = 0.16f)
+                },
+            )
+            .border(
+                BorderStroke(
+                    width = if (active) 1.5.dp else 1.dp,
+                    color = if (active) {
+                        colorScheme.error.copy(alpha = 0.64f)
+                    } else {
+                        colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
+                    },
+                ),
+                RoundedCornerShape(18.dp),
+            ),
+    )
+}
+
+@Composable
 private fun TimelineTaskRow(
     modifier: Modifier = Modifier,
     todo: TodoItem,
@@ -1930,6 +2018,7 @@ private enum class TodaySectionSlot {
 private fun buildTimelineSections(
     mode: TodoListMode,
     items: List<TodoItem>,
+    includeEmptyEarlierTarget: Boolean = false,
 ): List<TodoSection> {
     val zoneId = ZoneId.systemDefault()
     return when (mode) {
@@ -1946,6 +2035,7 @@ private fun buildTimelineSections(
             zoneId = zoneId,
             futureOnly = false,
             placesEarlierBeforeToday = true,
+            includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
 
         TodoListMode.PRIORITY, TodoListMode.LIST -> buildScheduledSections(
@@ -1953,6 +2043,7 @@ private fun buildTimelineSections(
             zoneId = zoneId,
             futureOnly = false,
             placesEarlierBeforeToday = false,
+            includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
     }
 }
@@ -2057,6 +2148,7 @@ private fun buildScheduledSections(
     zoneId: ZoneId,
     futureOnly: Boolean,
     placesEarlierBeforeToday: Boolean = true,
+    includeEmptyEarlierTarget: Boolean = false,
 ): List<TodoSection> {
     val now = Instant.now()
     val sorted = items.asSequence().filter { todo ->
@@ -2100,16 +2192,19 @@ private fun buildScheduledSections(
     val earlierSection = if (!futureOnly) {
         val earlierItems = groupedByDate.asSequence().filter { (date, _) -> date < today }
             .flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
-        earlierItems.takeIf { it.isNotEmpty() }?.let {
+        if (earlierItems.isNotEmpty() || includeEmptyEarlierTarget) {
             TodoSection(
                 key = "earlier",
                 title = "Earlier",
-                items = it,
+                items = earlierItems,
                 quickAddDefaults = quickAddDefaultsForDate(
-                    date = today,
+                    date = today.minusDays(1),
                     zoneId = zoneId,
                 ),
+                targetDate = timelineRescheduleTargetDate("earlier", today),
             )
+        } else {
+            null
         }
     } else {
         null
