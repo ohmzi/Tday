@@ -2205,6 +2205,77 @@ private let todoListSettingsColorKeys = [
     "RED",
 ]
 
+private let todoListSettingsIconKeys = [
+    "inbox",
+    "sun",
+    "calendar",
+    "schedule",
+    "flag",
+    "check",
+    "smile",
+    "list",
+    "bookmark",
+    "key",
+    "gift",
+    "cake",
+    "school",
+    "bag",
+    "edit",
+    "document",
+    "book",
+    "work",
+    "wallet",
+    "money",
+    "fitness",
+    "run",
+    "food",
+    "drink",
+    "health",
+    "monitor",
+    "music",
+    "computer",
+    "game",
+    "headphones",
+    "eco",
+    "pets",
+    "child",
+    "family",
+    "basket",
+    "cart",
+    "mall",
+    "inventory",
+    "soccer",
+    "baseball",
+    "basketball",
+    "football",
+    "tennis",
+    "train",
+    "flight",
+    "boat",
+    "car",
+    "umbrella",
+    "drop",
+    "snow",
+    "fire",
+    "tools",
+    "scissors",
+    "architecture",
+    "code",
+    "idea",
+    "chat",
+    "alert",
+    "star",
+    "heart",
+    "circle",
+    "square",
+    "triangle",
+    "home",
+    "city",
+    "bank",
+    "camera",
+    "palette",
+]
+
 private struct ListDeleteConfirmationOverlay: View {
     let onCancel: () -> Void
     let onDelete: () -> Void
@@ -2283,67 +2354,204 @@ private struct ListSettingsSheet: View {
     let onDeleteRequest: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var tdayColors
+    @FocusState private var nameFieldFocused: Bool
 
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
 
-    private let colors = todoListSettingsColorKeys
-    private let icons = ["inbox", "briefcase", "calendar", "list.bullet", "star", "heart"]
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !trimmedName.isEmpty
+    }
+
+    private var accentColor: Color {
+        todoListAccentColor(for: color)
+    }
+
+    private var selectedSymbolName: String {
+        todoListSymbolName(for: iconKey)
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                ListSettingsSheetHeader(
-                    canSave: canSave,
-                    onClose: { dismiss() },
-                    onConfirm: {
-                        onSubmit(name.trimmingCharacters(in: .whitespacesAndNewlines), color, iconKey)
-                        dismiss()
-                    }
-                )
+        VStack(spacing: 0) {
+            ListSettingsSheetHeader(
+                canSave: canSave,
+                onClose: { dismiss() },
+                onConfirm: submit
+            )
 
-                Form {
-                    TextField("Name", text: $name)
-                    Picker("Color", selection: $color) {
-                        ForEach(colors, id: \.self) { value in
-                            Text(value.capitalized).tag(value)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 14) {
+                    ListSettingsSheetSectionTitle(text: "List")
+                    ListSettingsSheetCard {
+                        VStack(spacing: 18) {
+                            ZStack {
+                                Circle()
+                                    .fill(accentColor)
+                                    .frame(width: 86, height: 86)
+
+                                Image(systemName: selectedSymbolName)
+                                    .font(.system(size: 38, weight: .semibold))
+                                    .foregroundStyle(.white)
+                            }
+
+                            TextField(
+                                "",
+                                text: $name,
+                                prompt: Text("List name")
+                                    .foregroundStyle(tdayColors.onSurfaceVariant.opacity(0.78))
+                            )
+                            .focused($nameFieldFocused)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .submitLabel(.done)
+                            .onSubmit {
+                                if canSave {
+                                    submit()
+                                }
+                            }
+                            .multilineTextAlignment(.center)
+                            .font(.tdayRounded(size: 22, weight: .bold))
+                            .foregroundStyle(accentColor)
+                            .padding(.horizontal, 14)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 62)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(tdayColors.bottomSheetControlSurface)
+                            )
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 18)
+                    }
+
+                    ListSettingsSheetSectionTitle(text: "Color")
+                    ListSettingsSheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(todoListSettingsColorKeys, id: \.self) { colorKey in
+                                    let swatchColor = todoListAccentColor(for: colorKey)
+                                    let isSelected = colorKey == color
+                                    Button {
+                                        color = colorKey
+                                    } label: {
+                                        Circle()
+                                            .fill(swatchColor)
+                                            .frame(width: 42, height: 42)
+                                            .frame(width: 48, height: 48)
+                                            .overlay {
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? tdayColors.onSurface.opacity(0.3) : .clear,
+                                                        lineWidth: 3
+                                                    )
+                                                    .frame(width: 42, height: 42)
+                                            }
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                    .accessibilityLabel(formattedOptionName(colorKey))
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
                         }
                     }
-                    Picker("Icon", selection: $iconKey) {
-                        ForEach(icons, id: \.self) { value in
-                            Label(value.replacingOccurrences(of: ".", with: " "), systemImage: value).tag(value)
+
+                    ListSettingsSheetSectionTitle(text: "Icon")
+                    ListSettingsSheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(todoListSettingsIconKeys, id: \.self) { optionKey in
+                                    let isSelected = optionKey == iconKey
+                                    Button {
+                                        iconKey = optionKey
+                                    } label: {
+                                        Circle()
+                                            .fill(isSelected ? accentColor.opacity(0.2) : tdayColors.bottomSheetControlSurface)
+                                            .frame(width: 46, height: 46)
+                                            .overlay {
+                                                Circle()
+                                                    .stroke(
+                                                        isSelected ? accentColor.opacity(0.55) : .clear,
+                                                        lineWidth: 2
+                                                    )
+                                            }
+                                            .overlay {
+                                                Image(systemName: todoListSymbolName(for: optionKey))
+                                                    .font(.system(size: 22, weight: .semibold))
+                                                    .foregroundStyle(isSelected ? accentColor : tdayColors.onSurfaceVariant)
+                                            }
+                                    }
+                                    .buttonStyle(
+                                        TdayPressButtonStyle(
+                                            shadowColor: Color.black,
+                                            pressedShadowOpacity: 0.04,
+                                            normalShadowOpacity: 0.08
+                                        )
+                                    )
+                                    .accessibilityLabel(formattedOptionName(optionKey))
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
                         }
                     }
 
                     if list != nil {
-                        Button(role: .destructive) {
+                        ListSettingsSheetDeleteButton {
                             dismiss()
                             onDeleteRequest()
-                        } label: {
-                            Label("Delete list", systemImage: "trash")
                         }
+                        .padding(.top, 2)
                     }
                 }
-                .scrollContentBackground(.hidden)
-                .background(tdayColors.bottomSheetBackground)
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, 24)
             }
-            .background(tdayColors.bottomSheetBackground)
+            .scrollDismissesKeyboard(.interactively)
             .disableVerticalScrollBounce()
-            .toolbar(.hidden, for: .navigationBar)
-            .task {
-                name = list?.name ?? ""
-                color = normalizedTodoListColorKey(list?.color)
-                iconKey = list?.iconKey ?? "inbox"
-            }
         }
+        .frame(maxWidth: .infinity, alignment: .top)
+        .background(tdayColors.bottomSheetBackground.ignoresSafeArea())
+        .presentationDetents([.fraction(0.8)])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(34)
         .presentationBackground {
             tdayColors.bottomSheetBackground
                 .ignoresSafeArea(.container, edges: .bottom)
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .task {
+            name = list?.name ?? ""
+            color = normalizedTodoListColorKey(list?.color)
+            iconKey = normalizedTodoListIconKey(list?.iconKey)
+        }
+    }
+
+    private func submit() {
+        guard canSave else { return }
+        onSubmit(trimmedName, color, iconKey)
+        dismiss()
+    }
+
+    private func formattedOptionName(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: ".", with: " ")
+            .split(separator: " ")
+            .map { $0.capitalized }
+            .joined(separator: " ")
     }
 }
 
@@ -2366,11 +2574,11 @@ private struct ListSettingsSheetHeader: View {
 
             Spacer(minLength: 0)
 
-            Text("List Settings")
-                .font(.tdayRounded(size: 28, weight: .heavy))
+            Text("List settings")
+                .font(.tdayRounded(size: 22, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
                 .lineLimit(1)
-                .minimumScaleFactor(0.78)
+                .minimumScaleFactor(0.82)
 
             Spacer(minLength: 0)
 
@@ -2389,6 +2597,79 @@ private struct ListSettingsSheetHeader: View {
     }
 }
 
+private struct ListSettingsSheetSectionTitle: View {
+    let text: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Text(text)
+            .font(.tdayRounded(size: 22, weight: .bold))
+            .foregroundStyle(colors.onSurfaceVariant)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+    }
+}
+
+private struct ListSettingsSheetCard<Content: View>: View {
+    @Environment(\.tdayColors) private var colors
+
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(colors.bottomSheetSurface)
+            )
+    }
+}
+
+private struct ListSettingsSheetDeleteButton: View {
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(role: .destructive) {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "trash")
+                    .font(.system(size: 22, weight: .semibold))
+                    .frame(width: 28, height: 28)
+
+                Text("Delete list")
+                    .font(.tdayRounded(size: 18, weight: .heavy))
+
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(colors.error)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(colors.error.opacity(colors.isDark ? 0.14 : 0.04))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(colors.error.opacity(0.45), lineWidth: 1.5)
+            }
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.03,
+                normalShadowOpacity: 0
+            )
+        )
+        .accessibilityLabel("Delete list")
+    }
+}
+
 private struct ListSettingsSheetActionButton: View {
     let icon: String
     let accessibilityLabel: String
@@ -2403,7 +2684,7 @@ private struct ListSettingsSheetActionButton: View {
             Image(systemName: icon)
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
-                .frame(width: 56, height: 56)
+                .frame(width: 54, height: 54)
                 .background(colors.bottomSheetControlSurface, in: Circle())
                 .overlay {
                     Circle()
@@ -2976,6 +3257,13 @@ private func normalizedTodoListColorKey(_ key: String?) -> String {
     default:
         return "PINK"
     }
+}
+
+private func normalizedTodoListIconKey(_ key: String?) -> String {
+    guard let key, todoListSettingsIconKeys.contains(key) else {
+        return "inbox"
+    }
+    return key
 }
 
 private func todoListSymbolName(for key: String?) -> String {
