@@ -77,6 +77,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -88,8 +89,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
@@ -120,6 +121,8 @@ private val CompletedTimelineSectionTopSpacing = 6.dp
 private val CompletedTimelineHeaderBodySpacing = 2.dp
 private val CompletedTimelineCollapsedSectionSpacing = 4.dp
 private val CompletedSwipeRowHeight = 56.dp
+private const val COMPLETED_RESTORE_STEP_MS = 180L
+private const val COMPLETED_RESTORE_FADE_MS = 260L
 
 private fun completedTaskBottomSpacing(
     itemIndex: Int,
@@ -596,6 +599,7 @@ private fun CompletedSwipeRow(
     var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(item.id) { mutableStateOf(false) }
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
+    var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -609,13 +613,27 @@ private fun CompletedSwipeRow(
     val isRestoring = restorePhase != CompletedRestorePhase.Completed
     val rowAlpha by animateFloatAsState(
         targetValue = if (isFading) 0f else 1f,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(
+            durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
         label = "completedRestoreRowAlpha",
     )
     val rowScale by animateFloatAsState(
         targetValue = if (isFading) 0.985f else 1f,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(
+            durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
         label = "completedRestoreRowScale",
+    )
+    val rowOffsetY by animateDpAsState(
+        targetValue = if (isFading) (-10).dp else 0.dp,
+        animationSpec = tween(
+            durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
+        label = "completedRestoreRowOffsetY",
     )
     val titleColor by animateColorAsState(
         targetValue = if (showStrikethrough) {
@@ -625,6 +643,11 @@ private fun CompletedSwipeRow(
         },
         animationSpec = tween(durationMillis = 160),
         label = "completedRestoreTitleColor",
+    )
+    val titleStrikeProgress by animateFloatAsState(
+        targetValue = if (showStrikethrough) 1f else 0f,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "completedRestoreTitleStrikeProgress",
     )
     val completedAtText = COMPLETED_ROW_TIME_FORMATTER
         .withZone(ZoneId.systemDefault())
@@ -646,6 +669,7 @@ private fun CompletedSwipeRow(
                 alpha = rowAlpha
                 scaleX = rowScale
                 scaleY = rowScale
+                translationY = rowOffsetY.toPx()
             },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -763,11 +787,11 @@ private fun CompletedSwipeRow(
                                 targetOffsetX = 0f
                                 coroutineScope.launch {
                                     restorePhase = CompletedRestorePhase.Unchecked
-                                    delay(180)
+                                    delay(COMPLETED_RESTORE_STEP_MS)
                                     restorePhase = CompletedRestorePhase.Unstruck
-                                    delay(180)
+                                    delay(COMPLETED_RESTORE_STEP_MS)
                                     restorePhase = CompletedRestorePhase.Fading
-                                    delay(220)
+                                    delay(COMPLETED_RESTORE_FADE_MS)
                                     onUncomplete()
                                 }
                             },
@@ -780,14 +804,28 @@ private fun CompletedSwipeRow(
                         ) {
                             Text(
                                 text = item.title,
+                                modifier = Modifier.drawWithContent {
+                                    drawContent()
+                                    if (titleStrikeProgress > 0f) {
+                                        val lineEnd = (
+                                                titleLayoutResult
+                                                    ?.takeIf { it.lineCount > 0 }
+                                                    ?.getLineRight(0) ?: size.width
+                                                ).coerceIn(0f, size.width)
+                                        val lineY = size.height * 0.56f
+                                        drawLine(
+                                            color = colorScheme.onSurface.copy(alpha = 0.65f),
+                                            start = Offset(0f, lineY),
+                                            end = Offset(lineEnd * titleStrikeProgress, lineY),
+                                            strokeWidth = TdayDimens.BorderWidthThick.toPx(),
+                                        )
+                                    }
+                                },
                                 color = titleColor,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                textDecoration = if (showStrikethrough) {
-                                    TextDecoration.LineThrough
-                                } else {
-                                    TextDecoration.None
-                                },
+                                maxLines = 2,
+                                onTextLayout = { titleLayoutResult = it },
                             )
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
