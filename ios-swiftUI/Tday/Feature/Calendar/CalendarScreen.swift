@@ -2537,38 +2537,38 @@ private struct CalendarPendingTaskRow: View {
 
 private func calendarListAccentColor(for key: String?) -> Color {
     switch key {
-    case "RED":
-        return calendarHexColor(0xE65E52)
-    case "ORANGE":
-        return calendarHexColor(0xF29F38)
-    case "YELLOW":
-        return calendarHexColor(0xF3D04A)
-    case "LIME":
-        return calendarHexColor(0x8ACF56)
-    case "BLUE":
-        return calendarHexColor(0x5C9FE7)
-    case "PURPLE":
-        return calendarHexColor(0x8D6CE2)
     case "PINK":
-        return calendarHexColor(0xDF6DAA)
-    case "TEAL":
-        return calendarHexColor(0x4EB5B0)
-    case "CORAL":
-        return calendarHexColor(0xE3876D)
+        return calendarHexColor(0xC987A5)
     case "GOLD":
-        return calendarHexColor(0xCFAB57)
+        return calendarHexColor(0xC7AA63)
     case "DEEP_BLUE":
-        return calendarHexColor(0x4B73D6)
+        return calendarHexColor(0x6F86C6)
+    case "CORAL":
+        return calendarHexColor(0xD39A82)
+    case "TEAL":
+        return calendarHexColor(0x67AAA7)
+    case "SLATE", "GRAY":
+        return calendarHexColor(0x7F8996)
+    case "BLUE":
+        return calendarHexColor(0x6F9FCE)
+    case "PURPLE":
+        return calendarHexColor(0x9A86CF)
     case "ROSE":
-        return calendarHexColor(0xD9799A)
+        return calendarHexColor(0xC98299)
     case "LIGHT_RED":
-        return calendarHexColor(0xE48888)
+        return calendarHexColor(0xD58D8D)
     case "BRICK":
-        return calendarHexColor(0xB86A5C)
-    case "SLATE":
-        return calendarHexColor(0x7B8593)
+        return calendarHexColor(0xAD786E)
+    case "YELLOW":
+        return calendarHexColor(0xCFB866)
+    case "LIME", "GREEN":
+        return calendarHexColor(0x8DBB73)
+    case "ORANGE":
+        return calendarHexColor(0xD69B63)
+    case "RED":
+        return calendarHexColor(0xD97873)
     default:
-        return calendarHexColor(0x5C9FE7)
+        return calendarHexColor(0xC987A5)
     }
 }
 
