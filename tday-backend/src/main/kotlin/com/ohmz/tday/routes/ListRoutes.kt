@@ -57,7 +57,7 @@ fun Route.listRoutes() {
                     val deletedIds = listService.deleteMany(user.id, ids).bind()
                     DeleteListResponse(
                         message = if (ids.size == 1) {
-                            "list deleted"
+                            if (deletedIds.isEmpty()) "list already deleted" else "list deleted"
                         } else {
                             "${deletedIds.size} lists deleted"
                         },

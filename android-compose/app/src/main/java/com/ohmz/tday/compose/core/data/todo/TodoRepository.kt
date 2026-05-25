@@ -553,6 +553,7 @@ class TodoRepository @Inject constructor(
                 completedAtEpochMs = timestampMs,
                 rrule = todo.rrule,
                 instanceDateEpochMs = todo.instanceDateEpochMillis,
+                listId = todo.listId,
                 listName = listMeta?.name,
                 listColor = listMeta?.color,
             )

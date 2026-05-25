@@ -52,6 +52,7 @@ data class CachedCompletedEntity(
     val completedAtEpochMs: Long,
     val rrule: String?,
     val instanceDateEpochMs: Long?,
+    val listId: String?,
     val listName: String?,
     val listColor: String?,
 )

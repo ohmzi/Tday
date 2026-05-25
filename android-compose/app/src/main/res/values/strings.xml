@@ -13,6 +13,7 @@
     <string name="action_edit">Edit</string>
     <string name="action_edit_task">Edit task</string>
     <string name="action_delete_task">Delete task</string>
+    <string name="action_delete_list">Delete list</string>
     <string name="action_delete">Delete</string>
     <string name="action_complete">Complete</string>
     <string name="action_more">More</string>
@@ -121,6 +122,8 @@
     <string name="todos_summary_loading">Creating your task summary…</string>
     <string name="todos_list_settings">List settings</string>
     <string name="todos_save_list_settings">Save list settings</string>
+    <string name="todos_delete_list_title">Delete list?</string>
+    <string name="todos_delete_list_message">This will delete this list, every task in it, and completed history for those tasks.</string>
     <string name="todos_due_overdue_text">Overdue, %1$s</string>
     <string name="todos_due_text">Due %1$s</string>
 

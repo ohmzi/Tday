@@ -314,6 +314,7 @@ struct CompletedTodoDTO: Codable, Equatable {
     let rrule: String?
     let userID: String?
     let instanceDate: String?
+    let listID: String?
     let listName: String?
     let listColor: String?
 }

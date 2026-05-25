@@ -51,6 +51,7 @@ data class CachedCompletedRecord(
     val completedAtEpochMs: Long = 0L,
     val rrule: String? = null,
     val instanceDateEpochMs: Long? = null,
+    val listId: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
 )
@@ -79,6 +80,7 @@ data class PendingMutationRecord(
 enum class MutationKind {
     CREATE_LIST,
     UPDATE_LIST,
+    DELETE_LIST,
     CREATE_TODO,
     UPDATE_TODO,
     DELETE_TODO,

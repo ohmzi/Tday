@@ -49,6 +49,7 @@ struct CachedCompletedRecord: Identifiable, Equatable, Codable {
     let completedAtEpochMs: Int64
     let rrule: String?
     let instanceDateEpochMs: Int64?
+    let listId: String?
     let listName: String?
     let listColor: String?
 }
@@ -56,6 +57,7 @@ struct CachedCompletedRecord: Identifiable, Equatable, Codable {
 enum MutationKind: String, Codable, CaseIterable {
     case createList = "CREATE_LIST"
     case updateList = "UPDATE_LIST"
+    case deleteList = "DELETE_LIST"
     case createTodo = "CREATE_TODO"
     case updateTodo = "UPDATE_TODO"
     case deleteTodo = "DELETE_TODO"

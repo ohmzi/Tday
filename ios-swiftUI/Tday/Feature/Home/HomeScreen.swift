@@ -224,18 +224,12 @@ struct HomeScreen: View {
                             )
 
                             if !viewModel.summary.lists.isEmpty {
-                                HomeListsHeader()
-
-                                ForEach(viewModel.summary.lists) { list in
-                                    HomeListRow(
-                                        name: displayName(for: list.name),
-                                        colorKey: list.color,
-                                        iconKey: list.iconKey,
-                                        count: list.todoCount
-                                    ) {
-                                        closeSearch()
-                                        onNavigate(.listTodos(listId: list.id, listName: displayName(for: list.name)))
-                                    }
+                                HomeListsSection(
+                                    lists: viewModel.summary.lists,
+                                    displayName: displayName(for:)
+                                ) { list, name in
+                                    closeSearch()
+                                    onNavigate(.listTodos(listId: list.id, listName: name))
                                 }
                             }
 
@@ -1072,6 +1066,41 @@ private struct HomeListsHeader: View {
             .font(.tdayRounded(size: 28, weight: .bold))
             .foregroundStyle(colors.onSurface)
             .padding(.top, 2)
+    }
+}
+
+private struct HomeListsSection: View {
+    let lists: [ListSummary]
+    let displayName: (String) -> String
+    let onOpenList: (ListSummary, String) -> Void
+
+    private var listIDs: [String] {
+        lists.map(\.id)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
+            HomeListsHeader()
+
+            ForEach(lists) { list in
+                let name = displayName(list.name)
+                HomeListRow(
+                    name: name,
+                    colorKey: list.color,
+                    iconKey: list.iconKey,
+                    count: list.todoCount
+                ) {
+                    onOpenList(list, name)
+                }
+                .transition(
+                    .asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)),
+                        removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))
+                    )
+                )
+            }
+        }
+        .animation(.spring(response: 0.34, dampingFraction: 0.88), value: listIDs)
     }
 }
 

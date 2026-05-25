@@ -66,6 +66,7 @@ fun CachedCompletedRecord.toEntity() = CachedCompletedEntity(
     completedAtEpochMs = completedAtEpochMs,
     rrule = rrule,
     instanceDateEpochMs = instanceDateEpochMs,
+    listId = listId,
     listName = listName,
     listColor = listColor,
 )
@@ -80,6 +81,7 @@ fun CachedCompletedEntity.toRecord() = CachedCompletedRecord(
     completedAtEpochMs = completedAtEpochMs,
     rrule = rrule,
     instanceDateEpochMs = instanceDateEpochMs,
+    listId = listId,
     listName = listName,
     listColor = listColor,
 )

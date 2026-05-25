@@ -64,6 +64,7 @@ final class CachedCompletedEntity {
     var completedAtEpochMs: Int64
     var rrule: String?
     var instanceDateEpochMs: Int64?
+    var listId: String?
     var listName: String?
     var listColor: String?
 
@@ -77,6 +78,7 @@ final class CachedCompletedEntity {
         completedAtEpochMs = record.completedAtEpochMs
         rrule = record.rrule
         instanceDateEpochMs = record.instanceDateEpochMs
+        listId = record.listId
         listName = record.listName
         listColor = record.listColor
     }

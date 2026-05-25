@@ -549,6 +549,47 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
+    fun deleteList(
+        listId: String,
+        onOptimisticDelete: () -> Unit,
+    ) {
+        val currentState = _uiState.value
+        val resolvedListId = when {
+            listId.isNotBlank() -> listId
+            !currentState.listId.isNullOrBlank() -> currentState.listId
+            else -> return
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                listRepository.deleteList(
+                    listId = resolvedListId,
+                    onOptimisticDelete = {
+                        _uiState.update { current ->
+                            current.copy(
+                                lists = current.lists.filterNot { it.id == resolvedListId },
+                                items = current.items.filterNot { it.listId == resolvedListId },
+                                errorMessage = null,
+                            )
+                        }
+                        onOptimisticDelete()
+                    },
+                )
+            }.onSuccess {
+                rescheduleReminders()
+            }.onFailure { error ->
+                Log.e(TAG, "deleteList failed listId=$resolvedListId", error)
+                _uiState.update {
+                    it.copy(errorMessage = error.userFacingMessage("Could not delete list."))
+                }
+                hydrateFromCache(
+                    mode = _uiState.value.mode,
+                    listId = _uiState.value.listId,
+                )
+            }
+        }
+    }
+
     private fun rescheduleReminders() {
         viewModelScope.launch(Dispatchers.Default) {
             runCatching { reminderScheduler.rescheduleAll() }

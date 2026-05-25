@@ -57,7 +57,16 @@ struct AppRootView: View {
                         case .priorityTodos:
                             TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil)
                         case let .listTodos(listId, listName):
-                            TodoListScreen(container: container, mode: .list, listId: listId, listName: listName, highlightedTodoId: nil)
+                            TodoListScreen(
+                                container: container,
+                                mode: .list,
+                                listId: listId,
+                                listName: listName,
+                                highlightedTodoId: nil,
+                                onListDeleted: {
+                                    appViewModel.navigate(to: .home)
+                                }
+                            )
                         case .completed:
                             CompletedScreen(container: container)
                         case .calendar:

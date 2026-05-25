@@ -18,6 +18,7 @@ object CompletedTodos : Table("CompletedTodo") {
     val rrule = text("rrule").nullable()
     val userID = varchar("userID", 30).references(Users.id).index()
     val instanceDate = datetime("instanceDate").nullable()
+    val listID = varchar("projectID", 30).references(Lists.id).nullable().index()
     val listName = varchar("projectName", 255).nullable()
     val listColor = varchar("projectColor", 32).nullable()
 

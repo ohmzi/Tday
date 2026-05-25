@@ -184,6 +184,7 @@ struct TodoListScreen: View {
     @State private var editingTodo: TodoItem?
     @State private var showingSummary = false
     @State private var showingListSettings = false
+    @State private var showingDeleteListConfirmation = false
     @State private var draggedTodo: TodoItem?
     @State private var inAppDrag: TodoInAppDrag?
     @State private var activeDropSectionId: String?
@@ -206,7 +207,7 @@ struct TodoListScreen: View {
         self.highlightedTodoId = highlightedTodoId
         self.onListDeleted = onListDeleted
         _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
-        _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all ? ["earlier"] : [])
+        _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
     }
 
     private var groupedSections: [TodoTimelineSection] {
@@ -325,6 +326,26 @@ struct TodoListScreen: View {
             }
             .allowsHitTesting(false)
         }
+        .overlay {
+            if showingDeleteListConfirmation {
+                ListDeleteConfirmationOverlay(
+                    onCancel: {
+                        withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                            showingDeleteListConfirmation = false
+                        }
+                    },
+                    onDelete: {
+                        showingDeleteListConfirmation = false
+                        Task {
+                            await viewModel.deleteList(onOptimisticDelete: onListDeleted)
+                        }
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .zIndex(30)
+            }
+        }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingDeleteListConfirmation)
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: modeAccentColor,
@@ -518,9 +539,10 @@ struct TodoListScreen: View {
             onSubmit: { name, color, iconKey in
                 Task { await viewModel.updateListSettings(name: name, color: color, iconKey: iconKey) }
             },
-            onDelete: {
-                Task {
-                    await viewModel.deleteList(onOptimisticDelete: onListDeleted)
+            onDeleteRequest: {
+                showingListSettings = false
+                withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
+                    showingDeleteListConfirmation = true
                 }
             }
         )
@@ -1296,6 +1318,9 @@ struct TodoListScreen: View {
         }
         if viewModel.mode == .overdue {
             return true
+        }
+        if viewModel.mode == .list {
+            return section.id == "earlier" && section.isCollapsible
         }
         return viewModel.mode == .priority && section.isCollapsible
     }
@@ -2126,17 +2151,88 @@ private let todoListSettingsColorKeys = [
     "RED",
 ]
 
+private struct ListDeleteConfirmationOverlay: View {
+    let onCancel: () -> Void
+    let onDelete: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.bottomSheetScrim
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onCancel)
+
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Delete list?")
+                        .font(.tdayRounded(.title2, weight: .black))
+                        .foregroundStyle(colors.onSurface)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+
+                    Text("This will delete this list, every task in it, and completed history for those tasks.")
+                        .font(.tdayRounded(.body, weight: .heavy))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                HStack(spacing: 24) {
+                    Spacer(minLength: 0)
+
+                    Button(action: onCancel) {
+                        Text("Cancel")
+                            .font(.tdayRounded(.headline, weight: .heavy))
+                            .foregroundStyle(colors.primary)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(role: .destructive, action: onDelete) {
+                        Text("Delete")
+                            .font(.tdayRounded(.headline, weight: .heavy))
+                            .foregroundStyle(colors.error)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
+            .padding(.bottom, 20)
+            .frame(maxWidth: 330, alignment: .leading)
+            .background(
+                colors.bottomSheetSurface,
+                in: RoundedRectangle(cornerRadius: 30, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .stroke(colors.cardStroke, lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.14), radius: 24, x: 0, y: 12)
+            .padding(.horizontal, 34)
+            .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .onTapGesture {}
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+    }
+}
+
 private struct ListSettingsSheet: View {
     let list: ListSummary?
     let onSubmit: (String, String?, String?) -> Void
-    let onDelete: () -> Void
+    let onDeleteRequest: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var tdayColors
 
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
-    @State private var showingDeleteConfirmation = false
 
     private let colors = todoListSettingsColorKeys
     private let icons = ["inbox", "briefcase", "calendar", "list.bullet", "star", "heart"]
@@ -2169,10 +2265,13 @@ private struct ListSettingsSheet: View {
                         }
                     }
 
-                    Button(role: .destructive) {
-                        showingDeleteConfirmation = true
-                    } label: {
-                        Label("Delete list", systemImage: "trash")
+                    if list != nil {
+                        Button(role: .destructive) {
+                            dismiss()
+                            onDeleteRequest()
+                        } label: {
+                            Label("Delete list", systemImage: "trash")
+                        }
                     }
                 }
                 .scrollContentBackground(.hidden)
@@ -2181,15 +2280,6 @@ private struct ListSettingsSheet: View {
             .background(tdayColors.bottomSheetBackground)
             .disableVerticalScrollBounce()
             .toolbar(.hidden, for: .navigationBar)
-            .alert("Delete list?", isPresented: $showingDeleteConfirmation) {
-                Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
-                    onDelete()
-                    dismiss()
-                }
-            } message: {
-                Text("This will delete this list, every task in it, and completed history for those tasks.")
-            }
             .task {
                 name = list?.name ?? ""
                 color = normalizedTodoListColorKey(list?.color)
@@ -2536,7 +2626,7 @@ private func buildSections(
         return buildFutureTimelineSections(
             items: items,
             calendar: calendar,
-            placesEarlierBeforeToday: false,
+            placesEarlierBeforeToday: true,
             includeEmptyEarlierTarget: includeEmptyEarlierTarget
         )
     }

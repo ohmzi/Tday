@@ -40,7 +40,7 @@ final class CompletedRepository {
                     instanceDateEpochMs: item.instanceDate?.epochMilliseconds,
                     pinned: false,
                     completed: false,
-                    listId: state.lists.first(where: { $0.name == item.listName })?.id,
+                    listId: item.listId ?? state.lists.first(where: { $0.name == item.listName })?.id,
                     updatedAtEpochMs: now
                 )
             )
@@ -98,6 +98,7 @@ final class CompletedRepository {
                     completedAtEpochMs: current.completedAtEpochMs,
                     rrule: payload.rrule,
                     instanceDateEpochMs: current.instanceDateEpochMs,
+                    listId: normalizedListID,
                     listName: state.lists.first(where: { $0.id == payload.listId })?.name,
                     listColor: state.lists.first(where: { $0.id == payload.listId })?.color
                 )
