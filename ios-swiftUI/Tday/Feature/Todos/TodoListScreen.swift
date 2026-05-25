@@ -3,6 +3,7 @@ import UIKit
 import UniformTypeIdentifiers
 
 private let todoDragContentTypes = [UTType.plainText.identifier, UTType.text.identifier]
+private let todoTimelineDragCoordinateSpace = "todoTimelineDragCoordinateSpace"
 
 private final class TodoTaskDragSession {
     static let shared = TodoTaskDragSession()
@@ -10,6 +11,24 @@ private final class TodoTaskDragSession {
     var handledDropSignature: String?
 
     private init() {}
+}
+
+private struct TodoInAppDrag: Equatable {
+    let todo: TodoItem
+    var location: CGPoint
+}
+
+private struct TodoDropTargetFrame: Equatable {
+    let sectionID: String
+    let frame: CGRect
+}
+
+private struct TodoDropTargetFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [String: TodoDropTargetFrame] = [:]
+
+    static func reduce(value: inout [String: TodoDropTargetFrame], nextValue: () -> [String: TodoDropTargetFrame]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
 }
 
 enum TodoTimelineMetrics {
@@ -160,7 +179,9 @@ struct TodoListScreen: View {
     @State private var showingSummary = false
     @State private var showingListSettings = false
     @State private var draggedTodo: TodoItem?
+    @State private var inAppDrag: TodoInAppDrag?
     @State private var activeDropSectionId: String?
+    @State private var dropTargetFrames: [String: TodoDropTargetFrame] = [:]
     @State private var pendingRescheduleDrop: TodoRescheduleDrop?
     @State private var collapsedSectionIDs: Set<String>
     @State private var timelineScrollOffset: CGFloat = 0
@@ -178,7 +199,7 @@ struct TodoListScreen: View {
         buildSections(
             items: viewModel.items,
             mode: viewModel.mode,
-            includeEmptyEarlierTarget: viewModel.mode.supportsTaskReschedule && draggedTodo != nil
+            includeEmptyEarlierTarget: viewModel.mode.supportsTaskReschedule && (draggedTodo != nil || inAppDrag != nil)
         )
     }
 
@@ -255,7 +276,11 @@ struct TodoListScreen: View {
 
     var body: some View {
         modeContent
+        .coordinateSpace(name: todoTimelineDragCoordinateSpace)
         .background(colors.background)
+        .onPreferenceChange(TodoDropTargetFramePreferenceKey.self) { frames in
+            dropTargetFrames = frames
+        }
         .overlay {
             if viewModel.items.isEmpty, !viewModel.isLoading {
                 ZStack {
@@ -268,6 +293,14 @@ struct TodoListScreen: View {
                     )
                 }
                 .allowsHitTesting(false)
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            if let inAppDrag {
+                TodoDragPreview(todo: inAppDrag.todo)
+                    .position(x: inAppDrag.location.x, y: inAppDrag.location.y - 34)
+                    .zIndex(20)
+                    .allowsHitTesting(false)
             }
         }
         .navigationBackButtonBehavior()
@@ -466,6 +499,8 @@ struct TodoListScreen: View {
     private func handleItemsChanged() {
         activeDropSectionId = nil
         draggedTodo = nil
+        inAppDrag = nil
+        dropTargetFrames = [:]
         TodoTaskDragSession.shared.todo = nil
         if viewModel.mode == .all, highlightedTodoId != nil {
             collapsedSectionIDs = []
@@ -475,6 +510,8 @@ struct TodoListScreen: View {
     private func requestReschedule(_ todo: TodoItem, to targetDate: Date) {
         activeDropSectionId = nil
         draggedTodo = nil
+        inAppDrag = nil
+        dropTargetFrames = [:]
         TodoTaskDragSession.shared.todo = nil
         let targetDay = Calendar.current.startOfDay(for: targetDate)
         let dropSignature = "\(todo.id)|\(targetDay.timeIntervalSince1970)"
@@ -496,6 +533,49 @@ struct TodoListScreen: View {
 
     private func resolveTodoForDrop(id: String) -> TodoItem? {
         viewModel.items.first { $0.id == id || $0.canonicalId == id }
+    }
+
+    private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
+        if draggedTodo?.id != todo.id {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+        draggedTodo = todo
+        inAppDrag = TodoInAppDrag(todo: todo, location: location)
+        updateInAppDrag(todo, to: location)
+    }
+
+    private func updateInAppDrag(_ todo: TodoItem, to location: CGPoint) {
+        inAppDrag = TodoInAppDrag(todo: todo, location: location)
+        activeDropSectionId = dropSectionID(at: location)
+    }
+
+    private func finishInAppDrag(_ todo: TodoItem, at location: CGPoint?) {
+        let targetSectionID = location.flatMap(dropSectionID(at:)) ?? activeDropSectionId
+        let targetDate = targetSectionID
+            .flatMap { sectionID in groupedSections.first { $0.id == sectionID }?.targetDate }
+        activeDropSectionId = nil
+        draggedTodo = nil
+        inAppDrag = nil
+        dropTargetFrames = [:]
+        if let targetDate {
+            requestReschedule(todo, to: targetDate)
+        }
+    }
+
+    private func cancelInAppDrag() {
+        activeDropSectionId = nil
+        draggedTodo = nil
+        inAppDrag = nil
+        dropTargetFrames = [:]
+    }
+
+    private func dropSectionID(at location: CGPoint) -> String? {
+        dropTargetFrames.values
+            .filter { $0.frame.contains(location) }
+            .min { lhs, rhs in
+                (lhs.frame.width * lhs.frame.height) < (rhs.frame.width * rhs.frame.height)
+            }?
+            .sectionID
     }
 
     private func commitPendingReschedule(scope: TaskRescheduleScope) {
@@ -620,12 +700,22 @@ struct TodoListScreen: View {
                 Section {
                     ForEach(section.items) { todo in
                         todoRow(todo, in: section)
+                            .todoInAppDropTargetFrame(
+                                targetID: "standard-row-\(section.id)-\(todo.id)",
+                                section: section,
+                                enabled: viewModel.mode.supportsTaskReschedule && draggedTodo != nil
+                            )
                             .listRowBackground(todo.id == highlightedTodoId ? colors.surfaceVariant : colors.surface)
                     }
                     if viewModel.mode.supportsTaskReschedule,
-                       draggedTodo != nil,
+                       activeDropSectionId == section.id,
                        section.targetDate != nil {
                         TodoDropPlaceholder(isActive: activeDropSectionId == section.id)
+                            .todoInAppDropTargetFrame(
+                                targetID: "standard-placeholder-\(section.id)",
+                                section: section,
+                                enabled: true
+                            )
                             .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 6, trailing: 20))
                             .listRowBackground(colors.surface)
                             .scheduledTodoDropTarget(
@@ -643,6 +733,11 @@ struct TodoListScreen: View {
                     if viewModel.mode.supportsTaskReschedule, !section.items.isEmpty {
                         Color.clear
                             .frame(height: 8)
+                            .todoInAppDropTargetFrame(
+                                targetID: "standard-spacer-\(section.id)",
+                                section: section,
+                                enabled: draggedTodo != nil
+                            )
                             .listRowInsets(EdgeInsets())
                             .scheduledTodoDropTarget(
                                 section: section,
@@ -659,6 +754,13 @@ struct TodoListScreen: View {
                 } header: {
                     Text(section.title)
                         .foregroundStyle(activeDropSectionId == section.id ? colors.error : colors.onSurfaceVariant)
+                        .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .todoInAppDropTargetFrame(
+                            targetID: "standard-header-\(section.id)",
+                            section: section,
+                            enabled: viewModel.mode.supportsTaskReschedule && draggedTodo != nil
+                        )
                         .timelinePinnedSectionHeaderBackground()
                         .scheduledTodoDropTarget(
                             section: section,
@@ -871,12 +973,13 @@ struct TodoListScreen: View {
                 }
             )
             .modifier(
-                ScheduledDragModifier(
+                TodoInAppDragModifier(
                     enabled: viewModel.mode.supportsTaskReschedule,
                     todo: todo,
-                    onDragStart: {
-                        draggedTodo = todo
-                    }
+                    onStart: beginInAppDrag,
+                    onMove: updateInAppDrag,
+                    onEnd: finishInAppDrag,
+                    onCancel: cancelInAppDrag
                 )
             )
     }
@@ -969,12 +1072,13 @@ struct TodoListScreen: View {
             }
         )
         .modifier(
-            ScheduledDragModifier(
+            TodoInAppDragModifier(
                 enabled: viewModel.mode.supportsTaskReschedule,
                 todo: todo,
-                onDragStart: {
-                    draggedTodo = todo
-                }
+                onStart: beginInAppDrag,
+                onMove: updateInAppDrag,
+                onEnd: finishInAppDrag,
+                onCancel: cancelInAppDrag
             )
         )
     }
@@ -1007,9 +1111,14 @@ struct TodoListScreen: View {
 
         Section {
             if viewModel.mode.supportsTaskReschedule,
-               draggedTodo != nil,
+               activeDropSectionId == section.id,
                section.targetDate != nil {
                 TodoDropPlaceholder(isActive: activeDropSectionId == section.id)
+                    .todoInAppDropTargetFrame(
+                        targetID: "minimal-placeholder-\(section.id)",
+                        section: section,
+                        enabled: true
+                    )
                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 8, trailing: TodoTimelineMetrics.horizontalPadding))
                     .listRowBackground(colors.background)
                     .listRowSeparator(.hidden)
@@ -1030,6 +1139,11 @@ struct TodoListScreen: View {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
                     minimalTimelineRow(todo, in: section, flashHighlight: shouldFlashTodo(todo))
                         .id(timelineTodoScrollID(todo.id))
+                        .todoInAppDropTargetFrame(
+                            targetID: "minimal-row-\(section.id)-\(todo.id)",
+                            section: section,
+                            enabled: viewModel.mode.supportsTaskReschedule && draggedTodo != nil
+                        )
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
@@ -1052,6 +1166,13 @@ struct TodoListScreen: View {
             )
             .id(timelineSectionScrollID(section.id))
             .padding(.top, isFirstSection ? 0 : 8)
+            .frame(maxWidth: .infinity, minHeight: viewModel.mode.supportsTaskReschedule && draggedTodo != nil ? 44 : nil, alignment: .leading)
+            .contentShape(Rectangle())
+            .todoInAppDropTargetFrame(
+                targetID: "minimal-header-\(section.id)",
+                section: section,
+                enabled: viewModel.mode.supportsTaskReschedule && draggedTodo != nil
+            )
             .timelinePinnedSectionHeaderBackground()
             .scheduledTodoDropTarget(
                 section: section,
@@ -1555,6 +1676,7 @@ struct TimelineSectionHeader: View {
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
         .padding(.bottom, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
 
         if let onTap {
             Button(action: onTap) {
@@ -1564,6 +1686,49 @@ struct TimelineSectionHeader: View {
         } else {
             content
         }
+    }
+}
+
+private struct TodoDragPreview: View {
+    let todo: TodoItem
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "circle")
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.76))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(todo.title)
+                    .font(.tdayRounded(size: 16, weight: .bold))
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+                Text(todo.due.formatted(date: .omitted, time: .shortened))
+                    .font(.tdayRounded(size: 12, weight: .semibold))
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            if todo.priority.lowercased() == "high" {
+                Image(systemName: "flag.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(priorityColor(todo.priority))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .frame(width: 260, alignment: .leading)
+        .background(colors.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(colors.onSurfaceVariant.opacity(0.14), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.18), radius: 16, x: 0, y: 8)
+        .opacity(0.96)
     }
 }
 
@@ -1585,6 +1750,89 @@ private struct TodoDropPlaceholder: View {
             .frame(height: isActive ? 70 : 52)
             .animation(.easeInOut(duration: 0.18), value: isActive)
             .accessibilityHidden(true)
+    }
+}
+
+private struct TodoInAppDragModifier: ViewModifier {
+    let enabled: Bool
+    let todo: TodoItem
+    let onStart: (TodoItem, CGPoint) -> Void
+    let onMove: (TodoItem, CGPoint) -> Void
+    let onEnd: (TodoItem, CGPoint?) -> Void
+    let onCancel: () -> Void
+
+    @State private var didStart = false
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.highPriorityGesture(
+                LongPressGesture(minimumDuration: 0.22)
+                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(todoTimelineDragCoordinateSpace)))
+                    .onChanged { value in
+                        guard case let .second(true, drag?) = value else {
+                            return
+                        }
+                        if !didStart {
+                            didStart = true
+                            onStart(todo, drag.location)
+                        } else {
+                            onMove(todo, drag.location)
+                        }
+                    }
+                    .onEnded { value in
+                        defer {
+                            didStart = false
+                        }
+                        guard case let .second(true, drag?) = value else {
+                            onCancel()
+                            return
+                        }
+                        onEnd(todo, drag.location)
+                    }
+            )
+        } else {
+            content
+        }
+    }
+}
+
+private struct TodoInAppDropTargetFrameModifier: ViewModifier {
+    let targetID: String
+    let section: TodoTimelineSection
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        content.background {
+            if enabled, section.targetDate != nil {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: TodoDropTargetFramePreferenceKey.self,
+                        value: [
+                            targetID: TodoDropTargetFrame(
+                                sectionID: section.id,
+                                frame: proxy.frame(in: .named(todoTimelineDragCoordinateSpace))
+                            )
+                        ]
+                    )
+                }
+            }
+        }
+    }
+}
+
+private extension View {
+    func todoInAppDropTargetFrame(
+        targetID: String,
+        section: TodoTimelineSection,
+        enabled: Bool
+    ) -> some View {
+        modifier(
+            TodoInAppDropTargetFrameModifier(
+                targetID: targetID,
+                section: section,
+                enabled: enabled
+            )
+        )
     }
 }
 
