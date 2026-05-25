@@ -263,6 +263,12 @@ private data class CalendarDateDropTargetBounds(
     val bounds: Rect,
 )
 
+private fun calendarTaskAlreadyDueOnDate(
+    todo: TodoItem,
+    date: LocalDate,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Boolean = LocalDate.ofInstant(todo.due, zoneId) == date
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CalendarScreen(
@@ -436,8 +442,7 @@ fun CalendarScreen(
         activeCalendarDrag = null
         activeDropDateIso = null
         calendarDropTargetBounds.clear()
-        val currentDate = LocalDate.ofInstant(todo.due, zoneId)
-        if (currentDate == targetDate) return
+        if (calendarTaskAlreadyDueOnDate(todo, targetDate, zoneId)) return
         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
         if (todo.isRecurring) {
             pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo = todo, targetDate = targetDate)
@@ -447,22 +452,29 @@ fun CalendarScreen(
         }
     }
 
-    fun activeCalendarDropDate(position: Offset): LocalDate? {
+    fun activeCalendarDropDate(position: Offset, todo: TodoItem?): LocalDate? {
         return calendarDropTargetBounds.values
             .asSequence()
             .filter { target -> target.bounds.contains(position) }
+            .filter { target ->
+                todo == null || !calendarTaskAlreadyDueOnDate(todo, target.date, zoneId)
+            }
             .minByOrNull { target -> target.bounds.width * target.bounds.height }
             ?.date
     }
 
     fun updateActiveCalendarDropTarget(position: Offset) {
-        activeDropDateIso = activeCalendarDropDate(position)?.toString()
+        val todo = activeCalendarDrag?.todo ?: draggedCalendarTodo
+        activeDropDateIso = activeCalendarDropDate(position, todo)?.toString()
     }
 
     fun finishCalendarDrag(position: Offset?) {
         val drag = activeCalendarDrag
-        val targetDate = position?.let(::activeCalendarDropDate)
+        val targetDate = position?.let { activeCalendarDropDate(it, drag?.todo) }
             ?: activeDropDate
+                ?.takeUnless { target ->
+                    drag?.todo?.let { todo -> calendarTaskAlreadyDueOnDate(todo, target, zoneId) } == true
+                }
         activeCalendarDrag = null
         draggedCalendarTodoId = null
         activeDropDateIso = null
@@ -994,14 +1006,18 @@ private fun CalendarWeekCard(
                         val isToday = day == today
                         val taskCount = tasksByDate[day]?.size ?: 0
                         val isEnabled = canSelectDate(day)
+                        val dropEligibleDraggedTodo = draggedTodo?.takeIf { todo ->
+                            isEnabled && !calendarTaskAlreadyDueOnDate(todo, day)
+                        }
                         CalendarWeekDayCell(
                             date = day,
                             taskCount = taskCount,
                             isSelected = isSelected,
                             isToday = isToday,
                             isEnabled = isEnabled,
-                            isDropTarget = activeDropDate == day,
-                            draggedTodo = draggedTodo.takeIf { isEnabled },
+                            isDropTarget = activeDropDate == day &&
+                                (draggedTodo == null || dropEligibleDraggedTodo != null),
+                            draggedTodo = dropEligibleDraggedTodo,
                             dropTargets = dropTargets,
                             onClick = { onSelectDate(day) },
                             onDropDateChanged = onDropDateChanged,
@@ -1141,11 +1157,17 @@ private fun Modifier.calendarDateDropTarget(
 
     return dragAndDropTarget(
         shouldStartDragAndDrop = { event ->
-            event.mimeTypes().any { mimeType -> mimeType.startsWith("text/") }
+            event.mimeTypes().any { mimeType -> mimeType.startsWith("text/") } &&
+                (draggedTodo?.let { todo -> !calendarTaskAlreadyDueOnDate(todo, date) } != false)
         },
         target = object : DragAndDropTarget {
             override fun onEntered(event: DragAndDropEvent) {
-                onDropDateChanged(date)
+                val todo = draggedTodo ?: event.todoIdText()?.let(resolveTodo)
+                if (todo == null || !calendarTaskAlreadyDueOnDate(todo, date)) {
+                    onDropDateChanged(date)
+                } else {
+                    onDropDateChanged(null)
+                }
             }
 
             override fun onExited(event: DragAndDropEvent) {
@@ -1154,6 +1176,10 @@ private fun Modifier.calendarDateDropTarget(
 
             override fun onDrop(event: DragAndDropEvent): Boolean {
                 val todo = draggedTodo ?: event.todoIdText()?.let(resolveTodo) ?: return false
+                if (calendarTaskAlreadyDueOnDate(todo, date)) {
+                    onDropDateChanged(null)
+                    return false
+                }
                 onDropDateChanged(null)
                 onMoveTaskToDate(todo, date)
                 return true
@@ -1709,14 +1735,18 @@ private fun CalendarMonthCard(
                             week.forEach { cell ->
                                 val taskCount = tasksByDate[cell.date]?.size ?: 0
                                 val isEnabled = canSelectDate(cell.date)
+                                val dropEligibleDraggedTodo = draggedTodo?.takeIf { todo ->
+                                    isEnabled && !calendarTaskAlreadyDueOnDate(todo, cell.date)
+                                }
                                 CalendarDayCell(
                                     cell = cell,
                                     taskCount = taskCount,
                                     isSelected = cell.date == selectedDate,
                                     isToday = cell.date == today,
                                     isEnabled = isEnabled,
-                                    isDropTarget = activeDropDate == cell.date,
-                                    draggedTodo = draggedTodo.takeIf { isEnabled },
+                                    isDropTarget = activeDropDate == cell.date &&
+                                        (draggedTodo == null || dropEligibleDraggedTodo != null),
+                                    draggedTodo = dropEligibleDraggedTodo,
                                     dropTargets = dropTargets,
                                     onClick = { onSelectDate(cell.date) },
                                     onDropDateChanged = onDropDateChanged,
