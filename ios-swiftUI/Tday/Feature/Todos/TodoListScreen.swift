@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 enum TodoTimelineMetrics {
@@ -150,6 +151,7 @@ struct TodoListScreen: View {
     @State private var showingListSettings = false
     @State private var draggedTodo: TodoItem?
     @State private var activeDropSectionId: String?
+    @State private var pendingRescheduleDrop: TodoRescheduleDrop?
     @State private var collapsedSectionIDs: Set<String>
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var completingTodoIDs: Set<String> = []
@@ -286,6 +288,30 @@ struct TodoListScreen: View {
         }
         .sheet(isPresented: $showingListSettings) {
             listSettingsSheetContent
+        }
+        .confirmationDialog(
+            "Move repeating task?",
+            isPresented: Binding(
+                get: { pendingRescheduleDrop != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        pendingRescheduleDrop = nil
+                    }
+                }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("This occurrence") {
+                commitPendingReschedule(scope: .occurrence)
+            }
+            Button("Entire series") {
+                commitPendingReschedule(scope: .series)
+            }
+            Button("Cancel", role: .cancel) {
+                pendingRescheduleDrop = nil
+            }
+        } message: {
+            Text("Choose whether to move only this task occurrence or the entire repeating series.")
         }
     }
 
@@ -431,6 +457,31 @@ struct TodoListScreen: View {
         }
     }
 
+    private func requestReschedule(_ todo: TodoItem, to targetDate: Date) {
+        activeDropSectionId = nil
+        draggedTodo = nil
+        guard !Calendar.current.isDate(todo.due, inSameDayAs: targetDate) else {
+            return
+        }
+
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        if todo.isRecurring {
+            pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: targetDate)
+        } else {
+            Task { await viewModel.moveTask(todo, toDay: targetDate, scope: .occurrence) }
+        }
+    }
+
+    private func commitPendingReschedule(scope: TaskRescheduleScope) {
+        guard let drop = pendingRescheduleDrop else {
+            return
+        }
+        pendingRescheduleDrop = nil
+        Task {
+            await viewModel.moveTask(drop.todo, toDay: drop.targetDate, scope: scope)
+        }
+    }
+
     private func matchesHighlightedTodo(_ todo: TodoItem, id: String) -> Bool {
         todo.id == id || todo.canonicalId == id
     }
@@ -545,7 +596,7 @@ struct TodoListScreen: View {
                         todoRow(todo, in: section)
                             .listRowBackground(todo.id == highlightedTodoId ? colors.surfaceVariant : colors.surface)
                     }
-                    if viewModel.mode == .scheduled, !section.items.isEmpty {
+                    if viewModel.mode.supportsTaskReschedule, !section.items.isEmpty {
                         Color.clear
                             .frame(height: 8)
                             .listRowInsets(EdgeInsets())
@@ -555,9 +606,7 @@ struct TodoListScreen: View {
                                     section: section,
                                     draggedTodo: draggedTodo,
                                     onMove: { todo, targetDate in
-                                        activeDropSectionId = nil
-                                        draggedTodo = nil
-                                        Task { await viewModel.moveTask(todo, toDay: targetDate) }
+                                        requestReschedule(todo, to: targetDate)
                                     },
                                     onSectionChange: { sectionId in
                                         activeDropSectionId = sectionId
@@ -569,6 +618,19 @@ struct TodoListScreen: View {
                     Text(section.title)
                         .foregroundStyle(activeDropSectionId == section.id ? colors.primary : colors.onSurfaceVariant)
                         .timelinePinnedSectionHeaderBackground()
+                        .onDrop(
+                            of: [UTType.plainText.identifier],
+                            delegate: ScheduledTodoDropDelegate(
+                                section: section,
+                                draggedTodo: draggedTodo,
+                                onMove: { todo, targetDate in
+                                    requestReschedule(todo, to: targetDate)
+                                },
+                                onSectionChange: { sectionId in
+                                    activeDropSectionId = sectionId
+                                }
+                            )
+                        )
                 }
             }
         }
@@ -763,9 +825,7 @@ struct TodoListScreen: View {
                     section: section,
                     draggedTodo: draggedTodo,
                     onMove: { droppedTodo, targetDate in
-                        activeDropSectionId = nil
-                        draggedTodo = nil
-                        Task { await viewModel.moveTask(droppedTodo, toDay: targetDate) }
+                        requestReschedule(droppedTodo, to: targetDate)
                     },
                     onSectionChange: { sectionId in
                         activeDropSectionId = sectionId
@@ -774,7 +834,7 @@ struct TodoListScreen: View {
             )
             .modifier(
                 ScheduledDragModifier(
-                    enabled: viewModel.mode == .scheduled,
+                    enabled: viewModel.mode.supportsTaskReschedule,
                     todo: todo,
                     onDragStart: {
                         draggedTodo = todo
@@ -865,9 +925,7 @@ struct TodoListScreen: View {
                 section: section,
                 draggedTodo: draggedTodo,
                 onMove: { droppedTodo, targetDate in
-                    activeDropSectionId = nil
-                    draggedTodo = nil
-                    Task { await viewModel.moveTask(droppedTodo, toDay: targetDate) }
+                    requestReschedule(droppedTodo, to: targetDate)
                 },
                 onSectionChange: { sectionId in
                     activeDropSectionId = sectionId
@@ -876,7 +934,7 @@ struct TodoListScreen: View {
         )
         .modifier(
             ScheduledDragModifier(
-                enabled: viewModel.mode == .scheduled,
+                enabled: viewModel.mode.supportsTaskReschedule,
                 todo: todo,
                 onDragStart: {
                     draggedTodo = todo
@@ -939,6 +997,19 @@ struct TodoListScreen: View {
             .id(timelineSectionScrollID(section.id))
             .padding(.top, isFirstSection ? 0 : 8)
             .timelinePinnedSectionHeaderBackground()
+            .onDrop(
+                of: [UTType.plainText.identifier],
+                delegate: ScheduledTodoDropDelegate(
+                    section: section,
+                    draggedTodo: draggedTodo,
+                    onMove: { todo, targetDate in
+                        requestReschedule(todo, to: targetDate)
+                    },
+                    onSectionChange: { sectionId in
+                        activeDropSectionId = sectionId
+                    }
+                )
+            )
             .listRowInsets(
                 EdgeInsets(
                     top: 0,
@@ -1595,6 +1666,11 @@ private struct TodoTimelineSection: Identifiable, Hashable {
     let targetDate: Date?
 }
 
+private struct TodoRescheduleDrop: Equatable {
+    let todo: TodoItem
+    let targetDate: Date
+}
+
 private struct ScheduledDragModifier: ViewModifier {
     let enabled: Bool
     let todo: TodoItem
@@ -1604,6 +1680,7 @@ private struct ScheduledDragModifier: ViewModifier {
     func body(content: Content) -> some View {
         if enabled {
             content.onDrag {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 onDragStart()
                 return NSItemProvider(object: todo.id as NSString)
             }
@@ -1710,14 +1787,17 @@ private func buildSections(items: [TodoItem], mode: TodoListMode) -> [TodoTimeli
             calendar.startOfDay(for: item.due)
         }
         return grouped.keys.sorted().map { date in
-            TodoTimelineSection(
-                id: "scheduled-\(date.timeIntervalSince1970)",
-                title: scheduledSectionTitle(for: date, calendar: calendar),
-                items: grouped[date]?.sorted(by: todoTimelineSortPrecedes) ?? [],
-                isCollapsible: false,
-                targetDate: date
-            )
-        }
+                TodoTimelineSection(
+                    id: "scheduled-\(date.timeIntervalSince1970)",
+                    title: scheduledSectionTitle(for: date, calendar: calendar),
+                    items: grouped[date]?.sorted(by: todoTimelineSortPrecedes) ?? [],
+                    isCollapsible: false,
+                    targetDate: timelineRescheduleTargetDate(
+                        sectionId: "scheduled-\(date.timeIntervalSince1970)",
+                        calendar: calendar
+                    )
+                )
+            }
     case .all:
         return buildFutureTimelineSections(items: items, calendar: calendar, placesEarlierBeforeToday: true)
     case .priority, .list:
@@ -1751,12 +1831,13 @@ private func buildFutureTimelineSections(
     let horizonStart = calendar.date(byAdding: .day, value: 7, to: today) ?? today
 
     func daySection(for date: Date, title: String) -> TodoTimelineSection {
-        TodoTimelineSection(
-            id: "priority-\(date.timeIntervalSince1970)",
+        let sectionId = "priority-\(date.timeIntervalSince1970)"
+        return TodoTimelineSection(
+            id: sectionId,
             title: title,
             items: groupedByDate[date] ?? [],
             isCollapsible: false,
-            targetDate: nil
+            targetDate: timelineRescheduleTargetDate(sectionId: sectionId, calendar: calendar)
         )
     }
 
@@ -1811,7 +1892,10 @@ private func buildFutureTimelineSections(
                 title: "Rest of \(monthTitle(for: currentMonthStart, currentYear: currentYear, calendar: calendar))",
                 items: restOfCurrentMonthItems,
                 isCollapsible: false,
-                targetDate: nil
+                targetDate: timelineRescheduleTargetDate(
+                    sectionId: "rest-\(currentMonthIndex)",
+                    calendar: calendar
+                )
             )
         )
     }
@@ -1844,7 +1928,10 @@ private func buildFutureTimelineSections(
                 title: monthTitle(for: monthStart, currentYear: currentYear, calendar: calendar),
                 items: monthItems,
                 isCollapsible: false,
-                targetDate: nil
+                targetDate: timelineRescheduleTargetDate(
+                    sectionId: "month-\(targetMonthIndex)",
+                    calendar: calendar
+                )
             )
         )
 
