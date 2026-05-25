@@ -270,11 +270,10 @@ fun TodoListScreen(
                 uiState.items.isEmpty()
     var draggedScheduledTodoId by rememberSaveable(uiState.mode) { mutableStateOf<String?>(null) }
     val canRescheduleTasks = uiState.mode.supportsTaskReschedule()
-    val timelineSections = remember(uiState.mode, uiState.items, draggedScheduledTodoId) {
+    val timelineSections = remember(uiState.mode, uiState.items) {
         buildTimelineSections(
             mode = uiState.mode,
             items = uiState.items,
-            includeEmptyEarlierTarget = canRescheduleTasks && draggedScheduledTodoId != null,
         )
     }
     var timelineAnimationsReady by remember(uiState.mode, uiState.listId) {
@@ -503,27 +502,51 @@ fun TodoListScreen(
         }
     }
 
-    fun updateActiveTimelineDropTarget(position: Offset) {
-        activeDropSectionKey = timelineDropTargetBounds.values
+    fun timelineSectionForKey(key: String): TodoSection? =
+        timelineSections.firstOrNull { section -> section.key == key }
+
+    fun originSectionKeyFor(todo: TodoItem): String? {
+        timelineSections.firstOrNull { section ->
+            section.items.any { item -> item.id == todo.id }
+        }?.let { section ->
+            return section.key
+        }
+        return timelineSections.firstOrNull { section ->
+            section.items.any { item -> item.canonicalId == todo.canonicalId }
+        }?.key
+    }
+
+    fun canDropTodoInTimelineSection(todo: TodoItem, section: TodoSection): Boolean {
+        val targetDate = section.targetDate ?: return false
+        if (originSectionKeyFor(todo) == section.key) return false
+        return LocalDate.ofInstant(todo.due, zoneId) != targetDate
+    }
+
+    fun timelineDropSectionKeyAt(position: Offset, todo: TodoItem): String? {
+        return timelineDropTargetBounds.values
             .asSequence()
             .filter { target -> target.bounds.contains(position) }
+            .mapNotNull { target ->
+                val section = timelineSectionForKey(target.sectionKey) ?: return@mapNotNull null
+                if (canDropTodoInTimelineSection(todo, section)) target else null
+            }
             .minByOrNull { target -> target.bounds.height }
             ?.sectionKey
+    }
+
+    fun updateActiveTimelineDropTarget(position: Offset) {
+        val todo = activeTimelineDrag?.todo ?: draggedScheduledTodo
+        activeDropSectionKey = todo?.let { timelineDropSectionKeyAt(position, it) }
     }
 
     fun finishTimelineDrag(position: Offset?) {
         val drag = activeTimelineDrag
         val targetKey = position
-            ?.let { dropPosition ->
-                timelineDropTargetBounds.values
-                    .asSequence()
-                    .filter { target -> target.bounds.contains(dropPosition) }
-                    .minByOrNull { target -> target.bounds.height }
-                    ?.sectionKey
-            }
+            ?.let { dropPosition -> drag?.let { timelineDropSectionKeyAt(dropPosition, it.todo) } }
             ?: activeDropSectionKey
         val targetDate = targetKey
-            ?.let { key -> timelineSections.firstOrNull { section -> section.key == key } }
+            ?.let(::timelineSectionForKey)
+            ?.takeIf { section -> drag?.let { canDropTodoInTimelineSection(it.todo, section) } == true }
             ?.targetDate
         activeTimelineDrag = null
         draggedScheduledTodoId = null
@@ -674,6 +697,9 @@ fun TodoListScreen(
                             } else {
                                 null
                             }
+                            val isDropEligibleSection = sectionDraggedTodo?.let { todo ->
+                                canDropTodoInTimelineSection(todo, section)
+                            } == true
 
                             item(
                                 key = "timeline-header-${section.key}",
@@ -693,24 +719,18 @@ fun TodoListScreen(
                                 TimelineSectionHeader(
                                     modifier = headerModifier
                                         .fillMaxWidth()
-                                        .heightIn(
-                                            min = if (canRescheduleTasks && draggedScheduledTodoId != null) {
-                                                if (usesTodayStyle) 44.dp else 56.dp
-                                            } else {
-                                                1.dp
-                                            },
-                                        )
+                                        .heightIn(min = 1.dp)
                                         .timelineInAppDropTarget(
                                             targetId = "header-${section.key}",
                                             section = section,
-                                            enabled = canRescheduleTasks && draggedScheduledTodoId != null,
+                                            enabled = isDropEligibleSection,
                                             dropTargets = timelineDropTargetBounds,
                                         )
                                         .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
                                     section = section,
                                     useMinimalStyle = usesTodayStyle,
                                     isCollapsed = isCollapsed,
-                                    isDropTarget = isActiveDropSection,
+                                    isDropTarget = isActiveDropSection && isDropEligibleSection,
                                     bottomSpacing = if (isCollapsed) {
                                         timelineItemSpacing
                                     } else {
@@ -739,7 +759,7 @@ fun TodoListScreen(
                                 )
                             }
 
-                            if (canRescheduleTasks && isActiveDropSection && section.targetDate != null) {
+                            if (canRescheduleTasks && isActiveDropSection && isDropEligibleSection && section.targetDate != null) {
                                 item(
                                     key = "timeline-drop-placeholder-${section.key}",
                                     contentType = "timeline-drop-placeholder",
@@ -766,7 +786,7 @@ fun TodoListScreen(
                                             .timelineInAppDropTarget(
                                                 targetId = "placeholder-${section.key}",
                                                 section = section,
-                                                enabled = true,
+                                                enabled = isDropEligibleSection,
                                                 dropTargets = timelineDropTargetBounds,
                                             )
                                             .padding(
@@ -813,7 +833,7 @@ fun TodoListScreen(
                                                 .timelineInAppDropTarget(
                                                     targetId = "row-${section.key}-${todo.id}",
                                                     section = section,
-                                                    enabled = canRescheduleTasks && draggedScheduledTodoId != null,
+                                                    enabled = isDropEligibleSection,
                                                     dropTargets = timelineDropTargetBounds,
                                                 )
                                                 .padding(

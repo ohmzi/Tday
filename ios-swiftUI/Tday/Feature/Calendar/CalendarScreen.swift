@@ -30,6 +30,10 @@ private struct CalendarDateDropTargetFramePreferenceKey: PreferenceKey {
     }
 }
 
+private func calendarTaskAlreadyDueOnDate(_ todo: TodoItem, _ date: Date) -> Bool {
+    Calendar.current.isDate(todo.due, inSameDayAs: date)
+}
+
 private enum CalendarTitleHandoff {
     static let collapseDistance: CGFloat = 180
     static let expandedTitleHeight: CGFloat = 56
@@ -540,7 +544,7 @@ struct CalendarScreen: View {
             return
         }
         CalendarTaskDragSession.shared.handledDropSignature = dropSignature
-        guard !Calendar.current.isDate(todo.due, inSameDayAs: targetDay) else {
+        guard !calendarTaskAlreadyDueOnDate(todo, targetDay) else {
             return
         }
 
@@ -574,11 +578,14 @@ struct CalendarScreen: View {
 
     private func updateInAppDrag(_ todo: TodoItem, to location: CGPoint) {
         inAppDrag = CalendarInAppDrag(todo: todo, location: location)
-        activeDropDate = dropDate(at: location)
+        activeDropDate = dropDate(at: location, for: todo)
     }
 
     private func finishInAppDrag(_ todo: TodoItem, at location: CGPoint?) {
-        let targetDate = location.flatMap(dropDate(at:)) ?? activeDropDate
+        let fallbackDate = activeDropDate.flatMap { date in
+            calendarTaskAlreadyDueOnDate(todo, date) ? nil : date
+        }
+        let targetDate = location.flatMap { dropDate(at: $0, for: todo) } ?? fallbackDate
         activeDropDate = nil
         draggedTodo = nil
         inAppDrag = nil
@@ -596,9 +603,13 @@ struct CalendarScreen: View {
         CalendarTaskDragSession.shared.todo = nil
     }
 
-    private func dropDate(at location: CGPoint) -> Date? {
+    private func dropDate(at location: CGPoint, for todo: TodoItem?) -> Date? {
         dateDropTargetFrames.values
             .filter { $0.frame.contains(location) }
+            .filter { target in
+                guard let todo else { return true }
+                return !calendarTaskAlreadyDueOnDate(todo, target.date)
+            }
             .min { lhs, rhs in
                 (lhs.frame.width * lhs.frame.height) < (rhs.frame.width * rhs.frame.height)
             }
@@ -753,15 +764,19 @@ private struct CalendarMonthGrid: View {
         LazyVGrid(columns: columns, spacing: CalendarMonthGridMetrics.spacing) {
             ForEach(Self.makeDays(for: displayMonth)) { day in
                 let dayTasks = tasksByDay[Calendar.current.startOfDay(for: day.date)].orEmpty
+                let dropEligibleDraggedTodo = draggedTodo.flatMap { todo in
+                    calendarTaskAlreadyDueOnDate(todo, day.date) ? nil : todo
+                }
                 CalendarMonthDayCell(
                     day: day,
                     isSelected: Calendar.current.isDate(day.date, inSameDayAs: selectedDate),
                     isToday: Calendar.current.isDateInToday(day.date),
                     isEnabled: canSelectDate(day.date),
-                    isDropTarget: activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: day.date) } ?? false,
+                    isDropTarget: (activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: day.date) } ?? false) &&
+                        (draggedTodo == nil || dropEligibleDraggedTodo != nil),
                     taskCount: dayTasks.count,
                     accentColor: accentColor,
-                    draggedTodo: draggedTodo,
+                    draggedTodo: dropEligibleDraggedTodo,
                     onSelectDate: onSelectDate,
                     onDropDateChange: onDropDateChange,
                     onMoveTaskToDate: onMoveTaskToDate,
@@ -965,6 +980,9 @@ private struct CalendarWeekCard: View {
                 let normalizedDate = Calendar.current.startOfDay(for: date)
                 let taskCount = tasksByDay[normalizedDate].orEmpty.count
                 let isEnabled = canSelectDate(date)
+                let dropEligibleDraggedTodo = draggedTodo.flatMap { todo in
+                    calendarTaskAlreadyDueOnDate(todo, date) ? nil : todo
+                }
                 CalendarWeekDayCell(
                     date: date,
                     taskCount: taskCount,
@@ -972,8 +990,9 @@ private struct CalendarWeekCard: View {
                     isToday: Calendar.current.isDate(date, inSameDayAs: today),
                     isEnabled: isEnabled,
                     accentColor: accentColor,
-                    isDropTarget: activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: date) } ?? false,
-                    draggedTodo: draggedTodo,
+                    isDropTarget: (activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: date) } ?? false) &&
+                        (draggedTodo == nil || dropEligibleDraggedTodo != nil),
+                    draggedTodo: dropEligibleDraggedTodo,
                     onSelect: { onSelectDate(date) },
                     onDropDateChange: onDropDateChange,
                     onMoveTaskToDate: onMoveTaskToDate,
@@ -1119,7 +1138,7 @@ private struct CalendarWeekDayCell: View {
             onMove: onMoveTaskToDate,
             onDateChange: onDropDateChange
         )
-        .calendarInAppDateDropTargetFrame(date: date, enabled: isEnabled)
+        .calendarInAppDateDropTargetFrame(date: date, enabled: isEnabled && draggedTodo != nil)
         .opacity(isEnabled ? 1 : 0.48)
     }
 
@@ -1208,7 +1227,14 @@ private struct CalendarDateDropDelegate: DropDelegate {
     let onDateChange: (Date?) -> Void
 
     func validateDrop(info: DropInfo) -> Bool {
-        canDrop && info.hasItemsConforming(to: calendarTaskDragContentTypes)
+        guard canDrop,
+              info.hasItemsConforming(to: calendarTaskDragContentTypes) else {
+            return false
+        }
+        if let todo = draggedTodo ?? CalendarTaskDragSession.shared.todo {
+            return canMove(todo)
+        }
+        return true
     }
 
     func dropEntered(info: DropInfo) {
@@ -1232,6 +1258,9 @@ private struct CalendarDateDropDelegate: DropDelegate {
         guard let draggedTodo = draggedTodo ?? CalendarTaskDragSession.shared.todo else {
             return performProviderDrop(info: info)
         }
+        guard canMove(draggedTodo) else {
+            return false
+        }
         onMove(draggedTodo, Calendar.current.startOfDay(for: date))
         return true
     }
@@ -1248,12 +1277,16 @@ private struct CalendarDateDropDelegate: DropDelegate {
             }
             let todoId = rawId as String
             DispatchQueue.main.async {
-                if let todo = resolveTodo(todoId) {
+                if let todo = resolveTodo(todoId), canMove(todo) {
                     onMove(todo, targetDate)
                 }
             }
         }
         return true
+    }
+
+    private func canMove(_ todo: TodoItem) -> Bool {
+        !calendarTaskAlreadyDueOnDate(todo, date)
     }
 }
 
@@ -1319,6 +1352,10 @@ private extension View {
                     onDateChange(nil)
                     return false
                 }
+                guard !calendarTaskAlreadyDueOnDate(todo, targetDate) else {
+                    onDateChange(nil)
+                    return false
+                }
                 onDateChange(nil)
                 onMove(todo, targetDate)
                 return true
@@ -1327,6 +1364,12 @@ private extension View {
                     if !active {
                         onDateChange(nil)
                     }
+                    return
+                }
+                if active,
+                   let todo = draggedTodo ?? CalendarTaskDragSession.shared.todo,
+                   calendarTaskAlreadyDueOnDate(todo, date) {
+                    onDateChange(nil)
                     return
                 }
                 onDateChange(active ? Calendar.current.startOfDay(for: date) : nil)
@@ -1615,7 +1658,7 @@ private struct CalendarMonthDayCell: View {
             onMove: onMoveTaskToDate,
             onDateChange: onDropDateChange
         )
-        .calendarInAppDateDropTargetFrame(date: day.date, enabled: isEnabled)
+        .calendarInAppDateDropTargetFrame(date: day.date, enabled: isEnabled && draggedTodo != nil)
         .opacity(day.isCurrentMonth ? 1 : 0.45)
     }
 
