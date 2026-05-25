@@ -76,6 +76,7 @@ private enum CalendarTaskListMetrics {
 }
 
 private enum CalendarModeCardMetrics {
+    static let shadowBleed: CGFloat = 12
     static let monthHeight = CalendarPeriodCardMetrics.topPadding
         + CalendarPeriodCardMetrics.headerHeight
         + CalendarPeriodCardMetrics.contentSpacing
@@ -253,7 +254,7 @@ struct CalendarScreen: View {
                 .clipped()
                 .modifier(CalendarCardChromeModifier())
                 .animation(calendarModeTransitionAnimation, value: displayMode)
-                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: CalendarModeCardMetrics.shadowBleed, trailing: TodoTimelineMetrics.horizontalPadding))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
@@ -271,7 +272,7 @@ struct CalendarScreen: View {
                 .font(.tdayRounded(size: 22, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
                 .textCase(nil)
-                .listRowInsets(EdgeInsets(top: 14, leading: TodoTimelineMetrics.horizontalPadding, bottom: 4, trailing: TodoTimelineMetrics.horizontalPadding))
+                .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 4, trailing: TodoTimelineMetrics.horizontalPadding))
                 .timelinePinnedSectionHeaderBackground()
 
             if !pendingItems.isEmpty {
