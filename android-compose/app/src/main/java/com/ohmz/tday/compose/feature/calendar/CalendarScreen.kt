@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.calendar
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -552,6 +553,12 @@ fun CalendarScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                            )
                             .shadow(
                                 elevation = 2.dp,
                                 shape = RoundedCornerShape(CalendarCardCornerRadius),

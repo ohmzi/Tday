@@ -58,6 +58,8 @@ private enum CalendarPeriodCardMetrics {
 private enum CalendarMonthGridMetrics {
     static let spacing: CGFloat = 8
     static let height: CGFloat = 292
+    static let weekdayHeight: CGFloat = 18
+    static let cardBottomPadding: CGFloat = 20
     static let dayCellHeight: CGFloat = 42
     static let dayHighlightWidth: CGFloat = 42
     static let dayHighlightHeight: CGFloat = 40
@@ -69,10 +71,27 @@ private enum CalendarMonthGridMetrics {
 }
 
 private enum CalendarTaskListMetrics {
-    static let rowVerticalPadding: CGFloat = 6
+    static let rowSpacing: CGFloat = 0
+    static let rowVerticalPadding: CGFloat = 4
+}
+
+private enum CalendarModeCardMetrics {
+    static let monthHeight = CalendarPeriodCardMetrics.topPadding
+        + CalendarPeriodCardMetrics.headerHeight
+        + CalendarPeriodCardMetrics.contentSpacing
+        + CalendarMonthGridMetrics.weekdayHeight
+        + CalendarMonthGridMetrics.spacing
+        + CalendarMonthGridMetrics.height
+        + CalendarMonthGridMetrics.cardBottomPadding
+    static let periodHeight = CalendarPeriodCardMetrics.topPadding
+        + CalendarPeriodCardMetrics.headerHeight
+        + CalendarPeriodCardMetrics.contentSpacing
+        + CalendarPeriodCardMetrics.pageHeight
+        + CalendarPeriodCardMetrics.bottomPadding
 }
 
 private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
+private let calendarModeTransitionAnimation = Animation.spring(response: 0.34, dampingFraction: 0.9, blendDuration: 0.02)
 
 private struct CalendarTodayJumpRequest: Equatable {
     let id: Int
@@ -128,6 +147,15 @@ struct CalendarScreen: View {
         return formatter.string(from: selectedDate)
     }
 
+    private var calendarModeCardHeight: CGFloat {
+        switch displayMode {
+        case .month:
+            return CalendarModeCardMetrics.monthHeight
+        case .week, .day:
+            return CalendarModeCardMetrics.periodHeight
+        }
+    }
+
     private var titleCollapseProgress: CGFloat {
         let distance = CalendarTitleHandoff.collapseDistance
         guard distance > 0 else { return 0 }
@@ -163,7 +191,7 @@ struct CalendarScreen: View {
                     selectedMode: displayMode,
                     accentColor: calendarAccentColor,
                     onSelect: { mode in
-                        withAnimation(.easeInOut(duration: 0.2)) {
+                        withAnimation(calendarModeTransitionAnimation) {
                             displayMode = mode
                             if mode != .month {
                                 visibleMonth = calendarMonthStart(for: selectedDate)
@@ -191,6 +219,11 @@ struct CalendarScreen: View {
                 .listRowSeparator(.hidden)
 
                 calendarModeCard
+                .id(displayMode)
+                .transition(.opacity.combined(with: .scale(scale: 0.985, anchor: .top)))
+                .frame(height: calendarModeCardHeight, alignment: .top)
+                .clipped()
+                .animation(calendarModeTransitionAnimation, value: displayMode)
                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -205,8 +238,15 @@ struct CalendarScreen: View {
                 }
             }
 
-            Section {
-                if !pendingItems.isEmpty {
+            Text("Tasks due \(selectedDateHeaderText)")
+                .font(.tdayRounded(size: 22, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .textCase(nil)
+                .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 4, trailing: TodoTimelineMetrics.horizontalPadding))
+                .timelinePinnedSectionHeaderBackground()
+
+            if !pendingItems.isEmpty {
+                VStack(spacing: CalendarTaskListMetrics.rowSpacing) {
                     ForEach(pendingItems) { todo in
                         CalendarPendingTaskRow(
                             todo: todo,
@@ -216,11 +256,7 @@ struct CalendarScreen: View {
                             onComplete: { Task { await viewModel.complete(todo) } }
                         )
                         .opacity(draggedTodo?.id == todo.id && activeDropDate != nil ? 0.55 : 1)
-                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .background(colors.background)
-                        .listRowBackground(colors.background)
-                        .listRowSeparator(.hidden)
-                        .listSectionSeparator(.hidden)
                         .modifier(
                             CalendarInAppDragModifier(
                                 enabled: calendarTaskRescheduleEnabled,
@@ -239,28 +275,17 @@ struct CalendarScreen: View {
                                 Task { await viewModel.delete(todo) }
                             }
                         )
-                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                            Button {
-                                Task { await viewModel.complete(todo) }
-                            } label: {
-                                Label("Complete", systemImage: "checkmark")
-                            }
-                            .tint(.green)
-                        }
                     }
                 }
-            } header: {
-                Text("Tasks due \(selectedDateHeaderText)")
-                    .font(.tdayRounded(size: 22, weight: .heavy))
-                    .foregroundStyle(colors.onSurface)
-                    .textCase(nil)
-                    .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                    .timelinePinnedSectionHeaderBackground()
+                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                .listRowBackground(colors.background)
+                .listRowSeparator(.hidden)
+                .listSectionSeparator(.hidden)
             }
-            .listRowBackground(colors.background)
-            .listRowSeparator(.hidden)
-            .listSectionSeparator(.hidden)
         }
+        .listRowBackground(colors.background)
+        .listRowSeparator(.hidden)
+        .listSectionSeparator(.hidden)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .contentMargins(.top, 0, for: .scrollContent)
@@ -670,7 +695,7 @@ private struct CalendarMonthGrid: View {
                             .font(.tdayRounded(size: 12, weight: .heavy))
                             .foregroundStyle(colors.onSurfaceVariant.opacity(0.48))
                             .frame(maxWidth: .infinity)
-                            .frame(height: 18)
+                            .frame(height: CalendarMonthGridMetrics.weekdayHeight)
                     }
                 }
 
@@ -688,7 +713,7 @@ private struct CalendarMonthGrid: View {
         }
         .padding(.horizontal, CalendarPeriodCardMetrics.horizontalPadding)
         .padding(.top, CalendarPeriodCardMetrics.topPadding)
-        .padding(.bottom, 20)
+        .padding(.bottom, CalendarMonthGridMetrics.cardBottomPadding)
         .frame(maxWidth: .infinity)
     }
 
