@@ -1,24 +1,26 @@
 import { Navigate, useParams } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import OnboardingLanding from "@/components/landing/OnboardingLanding";
 import { DEFAULT_LOCALE } from "@/i18n";
+import AuthBootstrapScreen from "@/components/auth/AuthBootstrapScreen";
+import { hasReturningBrowser } from "@/lib/security/returningBrowser";
 
 export default function LandingPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { authState } = useAuth();
   const { locale } = useParams();
   const loc = locale || DEFAULT_LOCALE;
+  const isReturningBrowser = hasReturningBrowser();
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
-      </div>
-    );
+  if (authState === "loading" || authState === "unavailable") {
+    return <AuthBootstrapScreen />;
   }
 
-  if (isAuthenticated) {
+  if (authState === "authenticated") {
     return <Navigate to={`/${loc}/app/tday`} replace />;
+  }
+
+  if (isReturningBrowser) {
+    return <Navigate to={`/${loc}/login`} replace />;
   }
 
   return <OnboardingLanding />;

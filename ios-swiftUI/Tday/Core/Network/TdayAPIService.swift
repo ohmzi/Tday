@@ -34,6 +34,13 @@ func isLikelyConnectivityIssue(_ error: Error) -> Bool {
     return false
 }
 
+func isSessionAuthenticationIssue(_ error: Error) -> Bool {
+    guard let apiError = error as? APIError else {
+        return false
+    }
+    return apiError.statusCode == 401
+}
+
 func isLikelyServerUnavailableStatusCode(_ statusCode: Int) -> Bool {
     statusCode == 408 ||
         statusCode == 502 ||
