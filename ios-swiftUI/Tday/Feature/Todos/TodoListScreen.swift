@@ -31,6 +31,14 @@ private struct TodoDropTargetFramePreferenceKey: PreferenceKey {
     }
 }
 
+private struct TodoDragRootFramePreferenceKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
+
 enum TodoTimelineMetrics {
     static let horizontalPadding: CGFloat = 18
     static let heroTitleSize: CGFloat = 32
@@ -182,6 +190,7 @@ struct TodoListScreen: View {
     @State private var inAppDrag: TodoInAppDrag?
     @State private var activeDropSectionId: String?
     @State private var dropTargetFrames: [String: TodoDropTargetFrame] = [:]
+    @State private var dragRootGlobalFrame: CGRect = .zero
     @State private var pendingRescheduleDrop: TodoRescheduleDrop?
     @State private var collapsedSectionIDs: Set<String>
     @State private var timelineScrollOffset: CGFloat = 0
@@ -281,6 +290,17 @@ struct TodoListScreen: View {
         .onPreferenceChange(TodoDropTargetFramePreferenceKey.self) { frames in
             dropTargetFrames = frames
         }
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: TodoDragRootFramePreferenceKey.self,
+                    value: proxy.frame(in: .global)
+                )
+            }
+        }
+        .onPreferenceChange(TodoDragRootFramePreferenceKey.self) { frame in
+            dragRootGlobalFrame = frame
+        }
         .overlay {
             if viewModel.items.isEmpty, !viewModel.isLoading {
                 ZStack {
@@ -297,8 +317,12 @@ struct TodoListScreen: View {
         }
         .overlay(alignment: .topLeading) {
             if let inAppDrag {
+                let previewLocation = CGPoint(
+                    x: inAppDrag.location.x - dragRootGlobalFrame.minX,
+                    y: inAppDrag.location.y - dragRootGlobalFrame.minY
+                )
                 TodoDragPreview(todo: inAppDrag.todo)
-                    .position(x: inAppDrag.location.x, y: inAppDrag.location.y - 34)
+                    .position(x: previewLocation.x, y: previewLocation.y - 34)
                     .zIndex(20)
                     .allowsHitTesting(false)
             }
@@ -1767,7 +1791,7 @@ private struct TodoInAppDragModifier: ViewModifier {
         if enabled {
             content.highPriorityGesture(
                 LongPressGesture(minimumDuration: 0.22)
-                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(todoTimelineDragCoordinateSpace)))
+                    .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .global))
                     .onChanged { value in
                         guard case let .second(true, drag?) = value else {
                             return
@@ -1810,7 +1834,7 @@ private struct TodoInAppDropTargetFrameModifier: ViewModifier {
                         value: [
                             targetID: TodoDropTargetFrame(
                                 sectionID: section.id,
-                                frame: proxy.frame(in: .named(todoTimelineDragCoordinateSpace))
+                                frame: proxy.frame(in: .global)
                             )
                         ]
                     )
