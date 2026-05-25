@@ -207,6 +207,8 @@ import kotlin.math.roundToInt
 private val CalendarAccentPurple = Color(0xFF7D67B6)
 private val CalendarTodayBlue = Color(0xFF509AE6)
 private val CalendarCardCornerRadius = 24.dp
+private val CalendarCardAmbientShadowElevation = 10.dp
+private val CalendarCardKeyShadowElevation = 3.dp
 private val CalendarCardHeaderHeight = 36.dp
 private val CalendarCardHeaderHorizontalPadding = 6.dp
 private val CalendarCardNavButtonWidth = 40.dp
@@ -578,16 +580,7 @@ fun CalendarScreen(
                                     stiffness = Spring.StiffnessMediumLow,
                                 ),
                             )
-                            .shadow(
-                                elevation = 2.dp,
-                                shape = RoundedCornerShape(CalendarCardCornerRadius),
-                                clip = false,
-                            )
-                            .clip(RoundedCornerShape(CalendarCardCornerRadius))
-                            .background(
-                                color = MaterialTheme.colorScheme.surface,
-                                shape = RoundedCornerShape(CalendarCardCornerRadius),
-                            ),
+                            .calendarCardChrome(),
                     ) {
                         when (selectedViewMode) {
                             CalendarViewMode.MONTH -> CalendarMonthCard(
@@ -859,6 +852,46 @@ private enum class CalendarViewMode {
     MONTH,
     WEEK,
     DAY,
+}
+
+@Composable
+private fun Modifier.calendarCardChrome(): Modifier {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDark = colorScheme.surface.luminance() < 0.5f
+    val shape = RoundedCornerShape(CalendarCardCornerRadius)
+    val ambientShadowColor = Color.Black.copy(alpha = if (isDark) 0.24f else 0.055f)
+    val keyShadowColor = Color.Black.copy(alpha = if (isDark) 0.18f else 0.045f)
+    val strokeColor = if (isDark) {
+        Color.White.copy(alpha = 0.08f)
+    } else {
+        Color.Black.copy(alpha = 0.035f)
+    }
+
+    return this
+        .shadow(
+            elevation = CalendarCardAmbientShadowElevation,
+            shape = shape,
+            clip = false,
+            ambientColor = ambientShadowColor,
+            spotColor = ambientShadowColor,
+        )
+        .shadow(
+            elevation = CalendarCardKeyShadowElevation,
+            shape = shape,
+            clip = false,
+            ambientColor = Color.Transparent,
+            spotColor = keyShadowColor,
+        )
+        .clip(shape)
+        .background(
+            color = colorScheme.surface,
+            shape = shape,
+        )
+        .border(
+            width = 1.dp,
+            color = strokeColor,
+            shape = shape,
+        )
 }
 
 @Composable
