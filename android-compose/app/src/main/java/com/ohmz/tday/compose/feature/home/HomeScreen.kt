@@ -1704,6 +1704,7 @@ private fun HomeTodayTaskRow(
     val rowShape = RoundedCornerShape(16.dp)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val listIndicatorColor = listColorAccent(listMeta?.color)
+    val priorityIcon = priorityIconFor(todo.priority)
     val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
     val subtitleColor =
         if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(
@@ -1902,16 +1903,29 @@ private fun HomeTodayTaskRow(
                         )
                     }
 
-                    if (listMeta != null) {
-                        Icon(
-                            imageVector = listIconForKey(listMeta.iconKey),
-                            contentDescription = null,
-                            tint = listIndicatorColor,
-                            modifier = Modifier
-                                .size(18.dp)
-                                .padding(end = 0.dp),
-                        )
-                        Spacer(Modifier.width(12.dp))
+                    if (listMeta != null || priorityIcon != null) {
+                        Row(
+                            modifier = Modifier.padding(end = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (listMeta != null) {
+                                Icon(
+                                    imageVector = listIconForKey(listMeta.iconKey),
+                                    contentDescription = null,
+                                    tint = listIndicatorColor,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            if (priorityIcon != null) {
+                                Icon(
+                                    imageVector = priorityIcon,
+                                    contentDescription = stringResource(R.string.label_priority_task),
+                                    tint = priorityColor(todo.priority),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1941,15 +1955,6 @@ private fun CategoryGrid(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
-                color = Color(0xFFDA7661),
-                icon = Icons.Rounded.ErrorOutline,
-                backgroundWatermark = Icons.Rounded.ErrorOutline,
-                title = stringResource(R.string.home_category_overdue),
-                count = overdueCount,
-                onClick = onOpenOverdue,
-            )
-            CategoryCard(
-                modifier = Modifier.weight(1f),
                 color = Color(0xFFDDB37D),
                 icon = Icons.Rounded.Schedule,
                 backgroundWatermark = Icons.Rounded.Schedule,
@@ -1957,8 +1962,6 @@ private fun CategoryGrid(
                 count = scheduledCount,
                 onClick = onOpenScheduled,
             )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFD48A8C),
@@ -1967,6 +1970,17 @@ private fun CategoryGrid(
                 title = stringResource(R.string.home_category_priority),
                 count = priorityCount,
                 onClick = onOpenPriority,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CategoryCard(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFDA7661),
+                icon = Icons.Rounded.ErrorOutline,
+                backgroundWatermark = Icons.Rounded.ErrorOutline,
+                title = stringResource(R.string.home_category_overdue),
+                count = overdueCount,
+                onClick = onOpenOverdue,
             )
             CategoryCard(
                 modifier = Modifier.weight(1f),
@@ -2388,6 +2402,23 @@ private const val SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS = 260L
 
 private fun performGentleHaptic(view: android.view.View) {
     ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+}
+
+@Composable
+private fun priorityColor(priority: String): Color {
+    return when (priority.lowercase(Locale.getDefault())) {
+        "high", "urgent", "important" -> Color(0xFFE56A6A)
+        "medium" -> Color(0xFFE3B368)
+        else -> Color(0xFF6FBF86)
+    }
+}
+
+private fun priorityIconFor(priority: String): ImageVector? {
+    return when (priority.trim().lowercase(Locale.getDefault())) {
+        "medium" -> Icons.Rounded.Flag
+        "high", "urgent", "important" -> Icons.Rounded.PriorityHigh
+        else -> null
+    }
 }
 
 private val LIST_COLOR_OPTIONS = listOf(

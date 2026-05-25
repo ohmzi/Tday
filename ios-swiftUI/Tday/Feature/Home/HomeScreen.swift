@@ -572,6 +572,7 @@ private struct HomeTodayTaskRow: View {
         todo.listId.flatMap { id in lists.first { $0.id == id } }
     }
 
+    private var priorityIcon: String? { priorityIndicatorSymbolName(todo.priority) }
     private var isOverdue: Bool { !todo.completed && todo.due < Date() }
     private var dueText: String { todo.due.formatted(date: .omitted, time: .shortened) }
     private var subtitleText: String { isOverdue ? "Overdue, \(dueText)" : "Due \(dueText)" }
@@ -682,11 +683,20 @@ private struct HomeTodayTaskRow: View {
 
             Spacer(minLength: 0)
 
-            if let listMeta {
-                Image(systemName: homeListSymbolName(for: listMeta.iconKey))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(homeListAccentColor(for: listMeta.color))
-                    .padding(.trailing, 8)
+            if listMeta != nil || priorityIcon != nil {
+                HStack(spacing: 8) {
+                    if let listMeta {
+                        Image(systemName: homeListSymbolName(for: listMeta.iconKey))
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(homeListAccentColor(for: listMeta.color))
+                    }
+                    if let priorityIcon {
+                        Image(systemName: priorityIcon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(priorityColor(todo.priority))
+                    }
+                }
+                .padding(.trailing, 8)
             }
         }
         .padding(.vertical, 10)
@@ -869,15 +879,6 @@ private struct HomeCategoryBoard: View {
         VStack(spacing: HomeMetrics.tileGap) {
             HStack(spacing: HomeMetrics.tileGap) {
                 HomeCategoryTile(
-                    color: Color(hex: 0xDA7661),
-                    icon: "exclamationmark.circle",
-                    watermark: "exclamationmark.circle",
-                    title: "Overdue",
-                    count: overdueCount,
-                    action: onOpenOverdue
-                )
-
-                HomeCategoryTile(
                     color: Color(hex: 0xDDB37D),
                     icon: "clock",
                     watermark: "clock",
@@ -885,9 +886,7 @@ private struct HomeCategoryBoard: View {
                     count: scheduledCount,
                     action: onOpenScheduled
                 )
-            }
 
-            HStack(spacing: HomeMetrics.tileGap) {
                 HomeCategoryTile(
                     color: Color(hex: 0xD48A8C),
                     icon: "flag.fill",
@@ -895,6 +894,17 @@ private struct HomeCategoryBoard: View {
                     title: "Priority",
                     count: priorityCount,
                     action: onOpenPriority
+                )
+            }
+
+            HStack(spacing: HomeMetrics.tileGap) {
+                HomeCategoryTile(
+                    color: Color(hex: 0xDA7661),
+                    icon: "exclamationmark.circle",
+                    watermark: "exclamationmark.circle",
+                    title: "Overdue",
+                    count: overdueCount,
+                    action: onOpenOverdue
                 )
 
                 HomeCategoryTile(
