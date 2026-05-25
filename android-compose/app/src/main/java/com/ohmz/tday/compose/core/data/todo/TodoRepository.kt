@@ -337,6 +337,123 @@ class TodoRepository @Inject constructor(
         }
     }
 
+    suspend fun moveTodo(todo: TodoItem, due: Instant) {
+        val canonicalId = todo.canonicalId
+        if (canonicalId.isBlank()) return
+
+        val instanceDateEpochMs = todo.instanceDateEpochMillis
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.UPDATE_TODO,
+            targetId = canonicalId,
+            timestampEpochMs = timestampMs,
+            dueEpochMs = due.toEpochMilli(),
+            instanceDateEpochMs = instanceDateEpochMs,
+        )
+
+        val isLocalOnly = canonicalId.startsWith(LOCAL_TODO_PREFIX)
+        cacheManager.updateOfflineState { state ->
+            val hasExistingUpdateMutation = state.pendingMutations.any { mutation ->
+                mutation.kind == MutationKind.UPDATE_TODO &&
+                        mutation.targetId == canonicalId &&
+                        mutation.instanceDateEpochMs == instanceDateEpochMs
+            }
+            val updatedMutations = state.pendingMutations
+                .map { mutation ->
+                    when {
+                        mutation.kind == MutationKind.CREATE_TODO && mutation.targetId == canonicalId -> {
+                            mutation.copy(
+                                dueEpochMs = due.toEpochMilli(),
+                                timestampEpochMs = timestampMs,
+                            )
+                        }
+
+                        mutation.kind == MutationKind.UPDATE_TODO &&
+                                mutation.targetId == canonicalId &&
+                                mutation.instanceDateEpochMs == instanceDateEpochMs -> {
+                            mutation.copy(
+                                dueEpochMs = due.toEpochMilli(),
+                                timestampEpochMs = timestampMs,
+                            )
+                        }
+
+                        else -> mutation
+                    }
+                }
+            state.copy(
+                todos = state.todos.map { cached ->
+                    val isTarget = cached.canonicalId == canonicalId &&
+                            (instanceDateEpochMs == null || cached.instanceDateEpochMs == instanceDateEpochMs)
+                    if (isTarget) {
+                        cached.copy(
+                            dueEpochMs = due.toEpochMilli(),
+                            updatedAtEpochMs = timestampMs,
+                        )
+                    } else {
+                        cached
+                    }
+                },
+                pendingMutations = if (isLocalOnly || hasExistingUpdateMutation) {
+                    updatedMutations
+                } else {
+                    updatedMutations + pendingMutation
+                },
+            )
+        }
+
+        if (isLocalOnly) {
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            return
+        }
+
+        val immediateError = runCatching {
+            if (instanceDateEpochMs != null) {
+                requireApiBody(
+                    api.patchTodoInstanceByBody(
+                        TodoInstanceUpdateRequest(
+                            todoId = canonicalId,
+                            instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
+                            due = due.toString(),
+                        ),
+                    ),
+                    "Could not reschedule recurring task instance",
+                )
+            } else {
+                requireApiBody(
+                    api.patchTodoByBody(
+                        UpdateTodoRequest(
+                            id = canonicalId,
+                            due = due.toString(),
+                            dateChanged = true,
+                            instanceDate = null,
+                        ),
+                    ),
+                    "Could not reschedule task",
+                )
+            }
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(
+                immediateError,
+                pendingMutation
+            )
+        ) {
+            throw immediateError
+        }
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        } else {
+            Log.w(LOG_TAG, "moveTodo deferred todo=$canonicalId reason=${immediateError.message}")
+        }
+    }
+
     suspend fun deleteTodo(todo: TodoItem) {
         val timestampMs = System.currentTimeMillis()
         val canonicalId = todo.canonicalId
