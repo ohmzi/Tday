@@ -77,14 +77,19 @@ final class CalendarViewModel {
     func moveTask(_ todo: TodoItem, toDay targetDay: Date, scope: TaskRescheduleScope) async {
         let calendar = Calendar.current
         guard !calendar.isDate(todo.due, inSameDayAs: targetDay),
-              let payload = movedTaskPayload(todo: todo, targetDay: targetDay, calendar: calendar) else {
+              let movedDue = movedDuePreservingTime(due: todo.due, targetDay: targetDay, calendar: calendar) else {
             return
         }
 
-        await updateTask(
-            todo.repositoryTargetForReschedule(scope: scope),
-            payload: payload
-        )
+        do {
+            try await container.todoRepository.moveTodo(
+                todo.repositoryTargetForReschedule(scope: scope),
+                due: movedDue
+            )
+            hydrateFromCache()
+        } catch {
+            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
+        }
     }
 
     func delete(_ todo: TodoItem) async {

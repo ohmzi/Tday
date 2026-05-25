@@ -371,6 +371,14 @@ final class SyncManager {
             let remoteUpdatedAt = remoteSnapshot.todoUpdatedAtByCanonical[targetID] ?? 0
             guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
             let resolvedListID = mutation.listId.flatMap { resolvedListIDs[$0] ?? $0 }
+            let isDueOnlyMove = mutation.dueEpochMs != nil &&
+                mutation.title == nil &&
+                mutation.description == nil &&
+                mutation.priority == nil &&
+                mutation.pinned == nil &&
+                mutation.completed == nil &&
+                mutation.rrule == nil &&
+                mutation.listId == nil
             if let instanceDateEpochMs = mutation.instanceDateEpochMs {
                 _ = try await api.patchTodoInstanceByBody(
                     payload: TodoInstancePatchRequest(
@@ -392,10 +400,10 @@ final class SyncManager {
                         priority: mutation.priority,
                         completed: mutation.completed,
                         due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
-                        rrule: mutation.rrule,
-                        listID: resolvedListID,
+                        rrule: isDueOnlyMove ? nil : mutation.rrule,
+                        listID: isDueOnlyMove ? nil : resolvedListID,
                         dateChanged: true,
-                        rruleChanged: true,
+                        rruleChanged: isDueOnlyMove ? nil : true,
                         instanceDate: nil
                     )
                 )
