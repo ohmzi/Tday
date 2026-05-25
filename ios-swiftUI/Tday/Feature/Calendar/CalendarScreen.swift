@@ -12,6 +12,24 @@ private final class CalendarTaskDragSession {
     private init() {}
 }
 
+private struct CalendarInAppDrag: Equatable {
+    let todo: TodoItem
+    var location: CGPoint
+}
+
+private struct CalendarDateDropTargetFrame: Equatable {
+    let date: Date
+    let frame: CGRect
+}
+
+private struct CalendarDateDropTargetFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [String: CalendarDateDropTargetFrame] = [:]
+
+    static func reduce(value: inout [String: CalendarDateDropTargetFrame], nextValue: () -> [String: CalendarDateDropTargetFrame]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, newValue in newValue })
+    }
+}
+
 private enum CalendarTitleHandoff {
     static let collapseDistance: CGFloat = 180
     static let expandedTitleHeight: CGFloat = 56
@@ -77,7 +95,9 @@ struct CalendarScreen: View {
     @State private var todayJumpRequestID = 0
     @State private var todayJumpRequest: CalendarTodayJumpRequest?
     @State private var draggedTodo: TodoItem?
+    @State private var inAppDrag: CalendarInAppDrag?
     @State private var activeDropDate: Date?
+    @State private var dateDropTargetFrames: [String: CalendarDateDropTargetFrame] = [:]
     @State private var pendingRescheduleDrop: CalendarTaskRescheduleDrop?
 
     init(container: AppContainer) {
@@ -92,6 +112,10 @@ struct CalendarScreen: View {
         Dictionary(grouping: viewModel.items) { todo in
             Calendar.current.startOfDay(for: todo.due)
         }
+    }
+
+    private var calendarTaskRescheduleEnabled: Bool {
+        displayMode != .day
     }
 
     private var selectedDateHeaderText: String {
@@ -179,22 +203,30 @@ struct CalendarScreen: View {
 
             Section {
                 if !pendingItems.isEmpty {
-                    ForEach(Array(pendingItems.enumerated()), id: \.element.id) { index, todo in
+                    ForEach(pendingItems) { todo in
                         CalendarPendingTaskRow(
                             todo: todo,
+                            list: todo.listId.flatMap { listId in
+                                viewModel.lists.first(where: { $0.id == listId })
+                            },
                             onComplete: { Task { await viewModel.complete(todo) } }
                         )
                         .opacity(draggedTodo?.id == todo.id && activeDropDate != nil ? 0.55 : 1)
-                        .onDrag {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            draggedTodo = todo
-                            CalendarTaskDragSession.shared.todo = todo
-                            CalendarTaskDragSession.shared.handledDropSignature = nil
-                            return NSItemProvider(object: todo.id as NSString)
-                        }
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(Color.clear)
+                        .background(colors.background)
+                        .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
+                        .listSectionSeparator(.hidden)
+                        .modifier(
+                            CalendarInAppDragModifier(
+                                enabled: calendarTaskRescheduleEnabled,
+                                todo: todo,
+                                onStart: beginInAppDrag,
+                                onMove: updateInAppDrag,
+                                onEnd: finishInAppDrag,
+                                onCancel: cancelInAppDrag
+                            )
+                        )
                         .todoTrailingSwipeActions(
                             onEdit: {
                                 editingTodo = todo
@@ -211,9 +243,6 @@ struct CalendarScreen: View {
                             }
                             .tint(.green)
                         }
-                        if shouldShowDateDivider(after: index, in: pendingItems) {
-                            TimelineRowDivider()
-                        }
                     }
                 }
             } header: {
@@ -224,6 +253,9 @@ struct CalendarScreen: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                     .timelinePinnedSectionHeaderBackground()
             }
+            .listRowBackground(colors.background)
+            .listRowSeparator(.hidden)
+            .listSectionSeparator(.hidden)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -232,6 +264,30 @@ struct CalendarScreen: View {
         .environment(\.defaultMinListRowHeight, 1)
         .disableVerticalScrollBounce()
         .background(colors.background)
+        .onPreferenceChange(CalendarDateDropTargetFramePreferenceKey.self) { frames in
+            dateDropTargetFrames = frames
+        }
+        .onChange(of: displayMode) { _, mode in
+            if mode == .day {
+                cancelInAppDrag()
+            }
+        }
+        .overlay(alignment: .topLeading) {
+            GeometryReader { proxy in
+                if let inAppDrag {
+                    let rootFrame = proxy.frame(in: .global)
+                    let previewLocation = CGPoint(
+                        x: inAppDrag.location.x - rootFrame.minX,
+                        y: inAppDrag.location.y - rootFrame.minY
+                    )
+                    CalendarTaskDragPreview(todo: inAppDrag.todo)
+                        .position(x: previewLocation.x, y: previewLocation.y)
+                        .zIndex(20)
+                        .allowsHitTesting(false)
+                }
+            }
+            .allowsHitTesting(false)
+        }
         .navigationBackButtonBehavior()
         .navigationTitleTypography(
             largeTitleColor: calendarAccentColor,
@@ -324,14 +380,6 @@ struct CalendarScreen: View {
         Calendar.current.isDate(date, inSameDayAs: selectedDate)
     }
 
-    private func shouldShowDateDivider(after index: Int, in items: [TodoItem]) -> Bool {
-        guard items.indices.contains(index),
-              items.indices.contains(index + 1) else {
-            return false
-        }
-        return !Calendar.current.isDate(items[index].due, inSameDayAs: items[index + 1].due)
-    }
-
     @ViewBuilder
     private var calendarModeCard: some View {
         switch displayMode {
@@ -377,17 +425,12 @@ struct CalendarScreen: View {
                 today: Date(),
                 tasksByDay: pendingItemsByDay,
                 accentColor: calendarAccentColor,
-                draggedTodo: draggedTodo,
-                activeDropDate: activeDropDate,
                 canGoPreviousDay: canGoPreviousDay,
                 canSelectDate: { canNavigate(to: $0) },
                 todayJumpRequest: todayJumpRequest,
                 onPreviousDay: { navigateDay(by: -1) },
                 onNextDay: { navigateDay(by: 1) },
-                onSelectDate: { selectDate($0) },
-                onDropDateChange: { activeDropDate = $0 },
-                onMoveTaskToDate: { todo, date in requestReschedule(todo, to: date) },
-                resolveTodo: resolveTodoForDrop
+                onSelectDate: { selectDate($0) }
             )
         }
     }
@@ -424,7 +467,9 @@ struct CalendarScreen: View {
 
     private func requestReschedule(_ todo: TodoItem, to targetDate: Date) {
         draggedTodo = nil
+        inAppDrag = nil
         activeDropDate = nil
+        dateDropTargetFrames = [:]
         CalendarTaskDragSession.shared.todo = nil
         let targetDay = Calendar.current.startOfDay(for: targetDate)
         let dropSignature = "\(todo.id)|\(targetDay.timeIntervalSince1970)"
@@ -451,6 +496,52 @@ struct CalendarScreen: View {
 
     private func resolveTodoForDrop(id: String) -> TodoItem? {
         viewModel.items.first { $0.id == id || $0.canonicalId == id }
+    }
+
+    private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
+        if draggedTodo?.id != todo.id {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+        draggedTodo = todo
+        CalendarTaskDragSession.shared.todo = todo
+        CalendarTaskDragSession.shared.handledDropSignature = nil
+        inAppDrag = CalendarInAppDrag(todo: todo, location: location)
+        updateInAppDrag(todo, to: location)
+    }
+
+    private func updateInAppDrag(_ todo: TodoItem, to location: CGPoint) {
+        inAppDrag = CalendarInAppDrag(todo: todo, location: location)
+        activeDropDate = dropDate(at: location)
+    }
+
+    private func finishInAppDrag(_ todo: TodoItem, at location: CGPoint?) {
+        let targetDate = location.flatMap(dropDate(at:)) ?? activeDropDate
+        activeDropDate = nil
+        draggedTodo = nil
+        inAppDrag = nil
+        dateDropTargetFrames = [:]
+        if let targetDate {
+            requestReschedule(todo, to: targetDate)
+        } else {
+            CalendarTaskDragSession.shared.todo = nil
+        }
+    }
+
+    private func cancelInAppDrag() {
+        activeDropDate = nil
+        draggedTodo = nil
+        inAppDrag = nil
+        dateDropTargetFrames = [:]
+        CalendarTaskDragSession.shared.todo = nil
+    }
+
+    private func dropDate(at location: CGPoint) -> Date? {
+        dateDropTargetFrames.values
+            .filter { $0.frame.contains(location) }
+            .min { lhs, rhs in
+                (lhs.frame.width * lhs.frame.height) < (rhs.frame.width * rhs.frame.height)
+            }
+            .map { Calendar.current.startOfDay(for: $0.date) }
     }
 
     private func commitPendingReschedule(scope: TaskRescheduleScope) {
@@ -980,6 +1071,7 @@ private struct CalendarWeekDayCell: View {
             onMove: onMoveTaskToDate,
             onDateChange: onDropDateChange
         )
+        .calendarInAppDateDropTargetFrame(date: date, enabled: isEnabled)
         .opacity(isEnabled ? 1 : 0.48)
     }
 
@@ -1117,7 +1209,35 @@ private struct CalendarDateDropDelegate: DropDelegate {
     }
 }
 
+private struct CalendarInAppDateDropTargetFrameModifier: ViewModifier {
+    let date: Date
+    let enabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        content.background {
+            if enabled {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: CalendarDateDropTargetFramePreferenceKey.self,
+                        value: [
+                            String(Calendar.current.startOfDay(for: date).timeIntervalSince1970): CalendarDateDropTargetFrame(
+                                date: Calendar.current.startOfDay(for: date),
+                                frame: proxy.frame(in: .global)
+                            )
+                        ]
+                    )
+                }
+            }
+        }
+    }
+}
+
 private extension View {
+    func calendarInAppDateDropTargetFrame(date: Date, enabled: Bool) -> some View {
+        modifier(CalendarInAppDateDropTargetFrameModifier(date: date, enabled: enabled))
+    }
+
     func calendarTaskDropTarget(
         date: Date,
         canDrop: Bool,
@@ -1171,17 +1291,12 @@ private struct CalendarDayCard: View {
     let today: Date
     let tasksByDay: [Date: [TodoItem]]
     let accentColor: Color
-    let draggedTodo: TodoItem?
-    let activeDropDate: Date?
     let canGoPreviousDay: Bool
     let canSelectDate: (Date) -> Bool
     let todayJumpRequest: CalendarTodayJumpRequest?
     let onPreviousDay: () -> Void
     let onNextDay: () -> Void
     let onSelectDate: (Date) -> Void
-    let onDropDateChange: (Date?) -> Void
-    let onMoveTaskToDate: (TodoItem, Date) -> Void
-    let resolveTodo: (String) -> TodoItem?
 
     @Environment(\.tdayColors) private var colors
     @State private var pageSelection = calendarNativePagerCenterIndex
@@ -1266,14 +1381,11 @@ private struct CalendarDayCard: View {
     }
 
     private func daySummary(for date: Date) -> some View {
-        let isEnabled = canSelectDate(date)
-        let isDropTarget = activeDropDate.map { Calendar.current.isDate($0, inSameDayAs: date) } ?? false
         return VStack(alignment: .leading, spacing: 14) {
             Text(dateTitle(for: date))
                 .font(.tdayRounded(size: 25, weight: .heavy))
                 .foregroundStyle(
-                    isDropTarget ? colors.error :
-                        (Calendar.current.isDate(date, inSameDayAs: today) ? accentColor : colors.onSurface)
+                    Calendar.current.isDate(date, inSameDayAs: today) ? accentColor : colors.onSurface
                 )
 
             Text(taskCountText(for: date))
@@ -1283,18 +1395,6 @@ private struct CalendarDayCard: View {
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            isDropTarget ? colors.error.opacity(0.12) : .clear,
-            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-        )
-        .calendarTaskDropTarget(
-            date: date,
-            canDrop: isEnabled,
-            draggedTodo: draggedTodo,
-            resolveTodo: resolveTodo,
-            onMove: onMoveTaskToDate,
-            onDateChange: onDropDateChange
-        )
     }
 
     private func resetPageSelection() {
@@ -1469,6 +1569,7 @@ private struct CalendarMonthDayCell: View {
             onMove: onMoveTaskToDate,
             onDateChange: onDropDateChange
         )
+        .calendarInAppDateDropTargetFrame(date: day.date, enabled: isEnabled)
         .opacity(day.isCurrentMonth ? 1 : 0.45)
     }
 
@@ -2085,13 +2186,256 @@ private extension UIView {
     }
 }
 
+private struct CalendarInAppDragModifier: ViewModifier {
+    let enabled: Bool
+    let todo: TodoItem
+    let onStart: (TodoItem, CGPoint) -> Void
+    let onMove: (TodoItem, CGPoint) -> Void
+    let onEnd: (TodoItem, CGPoint?) -> Void
+    let onCancel: () -> Void
+
+    func body(content: Content) -> some View {
+        if enabled {
+            content.background {
+                GeometryReader { _ in
+                    CalendarInAppLongPressBridge(
+                        todo: todo,
+                        onStart: onStart,
+                        onMove: onMove,
+                        onEnd: onEnd,
+                        onCancel: onCancel
+                    )
+                    .allowsHitTesting(false)
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
+private struct CalendarInAppLongPressBridge: UIViewRepresentable {
+    let todo: TodoItem
+    let onStart: (TodoItem, CGPoint) -> Void
+    let onMove: (TodoItem, CGPoint) -> Void
+    let onEnd: (TodoItem, CGPoint?) -> Void
+    let onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            todo: todo,
+            onStart: onStart,
+            onMove: onMove,
+            onEnd: onEnd,
+            onCancel: onCancel
+        )
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = false
+        context.coordinator.markerView = view
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.todo = todo
+        context.coordinator.onStart = onStart
+        context.coordinator.onMove = onMove
+        context.coordinator.onEnd = onEnd
+        context.coordinator.onCancel = onCancel
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView.calendarEnclosingScrollView() ?? uiView.superview, markerView: uiView)
+        }
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.detach()
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var todo: TodoItem
+        var onStart: (TodoItem, CGPoint) -> Void
+        var onMove: (TodoItem, CGPoint) -> Void
+        var onEnd: (TodoItem, CGPoint?) -> Void
+        var onCancel: () -> Void
+
+        weak var markerView: UIView?
+        private weak var attachedView: UIView?
+        private let recognizer: UILongPressGestureRecognizer
+        private var isDragging = false
+
+        init(
+            todo: TodoItem,
+            onStart: @escaping (TodoItem, CGPoint) -> Void,
+            onMove: @escaping (TodoItem, CGPoint) -> Void,
+            onEnd: @escaping (TodoItem, CGPoint?) -> Void,
+            onCancel: @escaping () -> Void
+        ) {
+            self.todo = todo
+            self.onStart = onStart
+            self.onMove = onMove
+            self.onEnd = onEnd
+            self.onCancel = onCancel
+            self.recognizer = UILongPressGestureRecognizer()
+            super.init()
+
+            recognizer.minimumPressDuration = 0.22
+            recognizer.allowableMovement = 24
+            recognizer.cancelsTouchesInView = false
+            recognizer.delaysTouchesBegan = false
+            recognizer.delaysTouchesEnded = false
+            recognizer.delegate = self
+            recognizer.addTarget(self, action: #selector(handleLongPress(_:)))
+        }
+
+        func attach(to view: UIView?, markerView: UIView) {
+            self.markerView = markerView
+            guard let view else {
+                detach()
+                return
+            }
+
+            guard attachedView !== view else {
+                return
+            }
+
+            detach()
+            attachedView = view
+            view.addGestureRecognizer(recognizer)
+        }
+
+        func detach() {
+            if isDragging {
+                isDragging = false
+                onCancel()
+            }
+            attachedView?.removeGestureRecognizer(recognizer)
+            attachedView = nil
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let markerView else {
+                return false
+            }
+
+            let localPoint = gestureRecognizer.location(in: markerView)
+            return markerView.bounds.insetBy(dx: -6, dy: -6).contains(localPoint)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard let markerView else {
+                return false
+            }
+
+            let localPoint = touch.location(in: markerView)
+            return markerView.bounds.insetBy(dx: -6, dy: -6).contains(localPoint)
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+            let location = globalLocation(for: recognizer)
+            switch recognizer.state {
+            case .began:
+                isDragging = true
+                onStart(todo, location)
+            case .changed:
+                guard isDragging else {
+                    return
+                }
+                onMove(todo, location)
+            case .ended:
+                guard isDragging else {
+                    return
+                }
+                isDragging = false
+                onEnd(todo, location)
+            case .cancelled, .failed:
+                guard isDragging else {
+                    return
+                }
+                isDragging = false
+                onCancel()
+            default:
+                break
+            }
+        }
+
+        private func globalLocation(for recognizer: UILongPressGestureRecognizer) -> CGPoint {
+            guard let view = recognizer.view else {
+                return .zero
+            }
+
+            return view.convert(recognizer.location(in: view), to: nil)
+        }
+    }
+}
+
+private struct CalendarTaskDragPreview: View {
+    let todo: TodoItem
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        let previewShape = RoundedRectangle(cornerRadius: 18, style: .continuous)
+
+        HStack(spacing: 10) {
+            Image(systemName: "circle")
+                .font(.system(size: 22, weight: .regular))
+                .foregroundStyle(colors.onSurfaceVariant.opacity(0.76))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(todo.title)
+                    .font(.tdayRounded(size: 16, weight: .bold))
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+
+                Text(todo.due.formatted(date: .omitted, time: .shortened))
+                    .font(.tdayRounded(size: 12, weight: .semibold))
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            if todo.priority.lowercased() == "high" {
+                Image(systemName: "flag.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(priorityColor(todo.priority))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .frame(width: 260, alignment: .leading)
+        .background(colors.surface)
+        .clipShape(previewShape)
+        .overlay(
+            previewShape.stroke(colors.onSurfaceVariant.opacity(0.14), lineWidth: 1)
+        )
+        .contentShape(previewShape)
+        .compositingGroup()
+        .shadow(color: Color.black.opacity(0.18), radius: 16, x: 0, y: 8)
+        .opacity(0.96)
+    }
+}
+
 private struct CalendarPendingTaskRow: View {
     let todo: TodoItem
+    let list: ListSummary?
     let onComplete: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
+        let showPriorityFlag = todo.priority.lowercased() == "high"
+
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
                 Button(action: onComplete) {
@@ -2120,9 +2464,213 @@ private struct CalendarPendingTaskRow: View {
                 }
 
                 Spacer(minLength: 0)
+
+                if list != nil || showPriorityFlag {
+                    HStack(spacing: 8) {
+                        if let list {
+                            Image(systemName: calendarListSymbolName(for: list.iconKey))
+                                .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
+                                .foregroundStyle(calendarListAccentColor(for: list.color))
+                        }
+                        if showPriorityFlag {
+                            Image(systemName: "flag.fill")
+                                .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
+                                .foregroundStyle(priorityColor(todo.priority))
+                        }
+                    }
+                    .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
+                }
             }
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
             .contentShape(Rectangle())
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(colors.background)
     }
+}
+
+private func calendarListAccentColor(for key: String?) -> Color {
+    switch key {
+    case "RED":
+        return calendarHexColor(0xE65E52)
+    case "ORANGE":
+        return calendarHexColor(0xF29F38)
+    case "YELLOW":
+        return calendarHexColor(0xF3D04A)
+    case "LIME":
+        return calendarHexColor(0x8ACF56)
+    case "BLUE":
+        return calendarHexColor(0x5C9FE7)
+    case "PURPLE":
+        return calendarHexColor(0x8D6CE2)
+    case "PINK":
+        return calendarHexColor(0xDF6DAA)
+    case "TEAL":
+        return calendarHexColor(0x4EB5B0)
+    case "CORAL":
+        return calendarHexColor(0xE3876D)
+    case "GOLD":
+        return calendarHexColor(0xCFAB57)
+    case "DEEP_BLUE":
+        return calendarHexColor(0x4B73D6)
+    case "ROSE":
+        return calendarHexColor(0xD9799A)
+    case "LIGHT_RED":
+        return calendarHexColor(0xE48888)
+    case "BRICK":
+        return calendarHexColor(0xB86A5C)
+    case "SLATE":
+        return calendarHexColor(0x7B8593)
+    default:
+        return calendarHexColor(0x5C9FE7)
+    }
+}
+
+private func calendarListSymbolName(for key: String?) -> String {
+    switch key {
+    case "sun":
+        return "sun.max.fill"
+    case "calendar":
+        return "calendar"
+    case "schedule":
+        return "clock"
+    case "flag":
+        return "flag.fill"
+    case "check":
+        return "checkmark"
+    case "smile":
+        return "face.smiling"
+    case "list":
+        return "list.bullet"
+    case "bookmark":
+        return "bookmark.fill"
+    case "key":
+        return "key.fill"
+    case "gift":
+        return "gift.fill"
+    case "cake":
+        return "birthday.cake.fill"
+    case "school":
+        return "graduationcap.fill"
+    case "bag":
+        return "backpack.fill"
+    case "edit":
+        return "pencil"
+    case "document":
+        return "doc.text.fill"
+    case "book":
+        return "book.closed.fill"
+    case "work":
+        return "briefcase.fill"
+    case "wallet":
+        return "wallet.pass.fill"
+    case "money":
+        return "dollarsign.circle.fill"
+    case "fitness":
+        return "dumbbell.fill"
+    case "run":
+        return "figure.run"
+    case "food":
+        return "fork.knife"
+    case "drink":
+        return "wineglass.fill"
+    case "health":
+        return "cross.case.fill"
+    case "monitor":
+        return "display"
+    case "music":
+        return "music.note"
+    case "computer":
+        return "desktopcomputer"
+    case "game":
+        return "gamecontroller.fill"
+    case "headphones":
+        return "headphones"
+    case "eco":
+        return "leaf.fill"
+    case "pets":
+        return "pawprint.fill"
+    case "child":
+        return "figure.2.and.child.holdinghands"
+    case "family":
+        return "person.3.fill"
+    case "basket":
+        return "basket.fill"
+    case "cart":
+        return "cart.fill"
+    case "mall":
+        return "bag.fill"
+    case "inventory":
+        return "archivebox.fill"
+    case "soccer":
+        return "soccerball"
+    case "baseball":
+        return "baseball.fill"
+    case "basketball":
+        return "basketball.fill"
+    case "football":
+        return "football.fill"
+    case "tennis":
+        return "tennis.racket"
+    case "train":
+        return "tram.fill"
+    case "flight":
+        return "airplane"
+    case "boat":
+        return "ferry.fill"
+    case "car":
+        return "car.fill"
+    case "umbrella":
+        return "umbrella.fill"
+    case "drop":
+        return "drop.fill"
+    case "snow":
+        return "snowflake"
+    case "fire":
+        return "flame.fill"
+    case "tools":
+        return "hammer.fill"
+    case "scissors":
+        return "scissors"
+    case "architecture", "bank":
+        return "building.columns.fill"
+    case "code":
+        return "chevron.left.forwardslash.chevron.right"
+    case "idea":
+        return "lightbulb.fill"
+    case "chat":
+        return "bubble.left.fill"
+    case "alert":
+        return "exclamationmark.triangle.fill"
+    case "star":
+        return "star.fill"
+    case "heart":
+        return "heart.fill"
+    case "circle":
+        return "circle.fill"
+    case "square":
+        return "square.fill"
+    case "triangle":
+        return "triangle.fill"
+    case "home":
+        return "house.fill"
+    case "city":
+        return "building.2.fill"
+    case "camera":
+        return "camera.fill"
+    case "palette":
+        return "paintpalette.fill"
+    default:
+        return "tray.fill"
+    }
+}
+
+private func calendarHexColor(_ hex: UInt) -> Color {
+    Color(
+        .sRGB,
+        red: Double((hex >> 16) & 0xFF) / 255,
+        green: Double((hex >> 8) & 0xFF) / 255,
+        blue: Double(hex & 0xFF) / 255,
+        opacity: 1
+    )
 }

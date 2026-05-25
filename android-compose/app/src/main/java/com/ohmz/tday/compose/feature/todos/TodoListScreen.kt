@@ -1905,17 +1905,14 @@ private fun TimelineTaskDragPreview(
     val colorScheme = MaterialTheme.colorScheme
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = listMeta != null && mode != TodoListMode.LIST
+    val previewShape = RoundedCornerShape(18.dp)
     Card(
         modifier = modifier
-            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp)
-            .graphicsLayer {
-                shadowElevation = 18f
-                alpha = 0.96f
-            },
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp),
+        shape = previewShape,
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface.copy(alpha = 0.88f)),
         border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
