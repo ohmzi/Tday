@@ -24,7 +24,7 @@ import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -104,6 +104,7 @@ import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -331,6 +332,9 @@ fun CalendarScreen(
             uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
         }
     }
+    val resolveTodoForDrop: (String) -> TodoItem? = { targetId ->
+        uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
+    }
     val activeDropDate = remember(activeDropDateIso) {
         activeDropDateIso?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
     }
@@ -480,6 +484,7 @@ fun CalendarScreen(
                                         activeDropDateIso = date?.toString()
                                     },
                                     onMoveTaskToDate = ::requestTaskReschedule,
+                                    resolveTodo = resolveTodoForDrop,
                                 )
 
                                 CalendarViewMode.WEEK -> CalendarWeekCard(
@@ -499,6 +504,7 @@ fun CalendarScreen(
                                         activeDropDateIso = date?.toString()
                                     },
                                     onMoveTaskToDate = ::requestTaskReschedule,
+                                    resolveTodo = resolveTodoForDrop,
                                 )
 
                                 CalendarViewMode.DAY -> CalendarDayCard(
@@ -518,6 +524,7 @@ fun CalendarScreen(
                                         activeDropDateIso = date?.toString()
                                     },
                                     onMoveTaskToDate = ::requestTaskReschedule,
+                                    resolveTodo = resolveTodoForDrop,
                                 )
                             }
                         }
@@ -718,6 +725,7 @@ private fun CalendarWeekCard(
     onSelectDate: (LocalDate) -> Unit,
     onDropDateChanged: (LocalDate?) -> Unit,
     onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val weekStart = remember(selectedDate) { startOfWeek(selectedDate) }
@@ -843,7 +851,15 @@ private fun CalendarWeekCard(
                             fontSize = CalendarPeriodHeaderTitleSize,
                         ),
                         fontWeight = FontWeight.ExtraBold,
-                        color = colorScheme.onSurface,
+                        color = if (
+                            activeDropDate != null &&
+                            activeDropDate >= weekStart &&
+                            activeDropDate <= weekStart.plusDays(6)
+                        ) {
+                            colorScheme.error
+                        } else {
+                            colorScheme.onSurface
+                        },
                     )
                 }
                 MiniCalendarNavButton(
@@ -888,6 +904,7 @@ private fun CalendarWeekCard(
                             onClick = { onSelectDate(day) },
                             onDropDateChanged = onDropDateChanged,
                             onMoveTaskToDate = onMoveTaskToDate,
+                            resolveTodo = resolveTodo,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -909,17 +926,18 @@ private fun CalendarWeekDayCell(
     onClick: () -> Unit,
     onDropDateChanged: (LocalDate?) -> Unit,
     onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val containerColor = when {
-        isDropTarget -> CalendarAccentPurple.copy(alpha = 0.34f)
+        isDropTarget -> colorScheme.error.copy(alpha = 0.20f)
         isSelected -> CalendarAccentPurple.copy(alpha = 0.24f)
         isToday -> CalendarTodayBlue.copy(alpha = 0.16f)
         else -> colorScheme.background
     }
     val borderColor = when {
-        isDropTarget -> CalendarAccentPurple
+        isDropTarget -> colorScheme.error
         isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
         isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
         else -> Color.Transparent
@@ -931,6 +949,7 @@ private fun CalendarWeekDayCell(
         else -> 0.dp
     }
     val stateTint = when {
+        isDropTarget -> colorScheme.error
         isSelected -> CalendarAccentPurple
         isToday -> CalendarTodayBlue
         else -> CalendarAccentPurple
@@ -946,6 +965,7 @@ private fun CalendarWeekDayCell(
                 enabled = isEnabled,
                 onDropDateChanged = onDropDateChanged,
                 onMoveTaskToDate = onMoveTaskToDate,
+                resolveTodo = resolveTodo,
             )
             .graphicsLayer { alpha = if (isEnabled) 1f else 0.48f },
         contentAlignment = Alignment.Center,
@@ -979,7 +999,7 @@ private fun CalendarWeekDayCell(
                 Text(
                     text = date.dayOfMonth.toString(),
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isSelected || isToday) stateTint else colorScheme.onSurface,
+                    color = if (isDropTarget || isSelected || isToday) stateTint else colorScheme.onSurface,
                     fontWeight = FontWeight.ExtraBold,
                 )
                 Text(
@@ -1006,8 +1026,9 @@ private fun Modifier.calendarDateDropTarget(
     enabled: Boolean,
     onDropDateChanged: (LocalDate?) -> Unit,
     onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
 ): Modifier {
-    if (!enabled || draggedTodo == null) return this
+    if (!enabled) return this
 
     return dragAndDropTarget(
         shouldStartDragAndDrop = { event ->
@@ -1023,8 +1044,9 @@ private fun Modifier.calendarDateDropTarget(
             }
 
             override fun onDrop(event: DragAndDropEvent): Boolean {
+                val todo = draggedTodo ?: event.todoIdText()?.let(resolveTodo) ?: return false
                 onDropDateChanged(null)
-                onMoveTaskToDate(draggedTodo, date)
+                onMoveTaskToDate(todo, date)
                 return true
             }
 
@@ -1033,6 +1055,17 @@ private fun Modifier.calendarDateDropTarget(
             }
         },
     )
+}
+
+private fun DragAndDropEvent.todoIdText(): String? {
+    val clipData = toAndroidDragEvent().clipData ?: return null
+    for (index in 0 until clipData.itemCount) {
+        val text = clipData.getItemAt(index).text?.toString()?.trim()
+        if (!text.isNullOrBlank()) {
+            return text
+        }
+    }
+    return null
 }
 
 @Composable
@@ -1051,6 +1084,7 @@ private fun CalendarDayCard(
     onSelectDate: (LocalDate) -> Unit,
     onDropDateChanged: (LocalDate?) -> Unit,
     onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
@@ -1207,11 +1241,12 @@ private fun CalendarDayCard(
                             enabled = isEnabled,
                             onDropDateChanged = onDropDateChanged,
                             onMoveTaskToDate = onMoveTaskToDate,
+                            resolveTodo = resolveTodo,
                         )
                         .clip(RoundedCornerShape(16.dp))
                         .background(
                             if (activeDropDate == displayDate) {
-                                CalendarAccentPurple.copy(alpha = 0.12f)
+                                colorScheme.error.copy(alpha = 0.12f)
                             } else {
                                 Color.Transparent
                             },
@@ -1224,7 +1259,11 @@ private fun CalendarDayCard(
                         style = MaterialTheme.typography.headlineSmall.copy(
                             fontSize = CalendarDaySummaryTitleSize,
                         ),
-                        color = if (displayDate == today) CalendarAccentPurple else colorScheme.onSurface,
+                        color = when {
+                            activeDropDate == displayDate -> colorScheme.error
+                            displayDate == today -> CalendarAccentPurple
+                            else -> colorScheme.onSurface
+                        },
                         fontWeight = FontWeight.ExtraBold,
                     )
                     Text(
@@ -1440,6 +1479,7 @@ private fun CalendarMonthCard(
     onSelectDate: (LocalDate) -> Unit,
     onDropDateChanged: (LocalDate?) -> Unit,
     onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
@@ -1569,7 +1609,11 @@ private fun CalendarMonthCard(
                             fontSize = CalendarMonthHeaderTitleSize,
                         ),
                         fontWeight = FontWeight.ExtraBold,
-                        color = colorScheme.onSurface,
+                        color = if (activeDropDate?.let { YearMonth.from(it) } == visibleMonth) {
+                            colorScheme.error
+                        } else {
+                            colorScheme.onSurface
+                        },
                     )
                 }
                 MiniCalendarNavButton(
@@ -1631,6 +1675,7 @@ private fun CalendarMonthCard(
                                     onClick = { onSelectDate(cell.date) },
                                     onDropDateChanged = onDropDateChanged,
                                     onMoveTaskToDate = onMoveTaskToDate,
+                                    resolveTodo = resolveTodo,
                                     modifier = Modifier.weight(1f),
                                 )
                             }
@@ -1704,13 +1749,14 @@ private fun CalendarDayCell(
     onClick: () -> Unit,
     onDropDateChanged: (LocalDate?) -> Unit,
     onMoveTaskToDate: (TodoItem, LocalDate) -> Unit,
+    resolveTodo: (String) -> TodoItem?,
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val targetCellBackground = when {
-        isDropTarget -> CalendarAccentPurple.copy(alpha = 0.34f)
+        isDropTarget -> colorScheme.error.copy(alpha = 0.20f)
         isSelected -> CalendarAccentPurple.copy(alpha = if (isPressed) 0.32f else 0.24f)
         isToday -> CalendarTodayBlue.copy(alpha = if (isPressed) 0.24f else 0.16f)
         isPressed && isEnabled -> colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
@@ -1721,7 +1767,7 @@ private fun CalendarDayCell(
         label = "calendarMonthDateCellBackground",
     )
     val targetCellBorderColor = when {
-        isDropTarget -> CalendarAccentPurple
+        isDropTarget -> colorScheme.error
         isSelected -> CalendarAccentPurple.copy(alpha = 0.95f)
         isToday -> CalendarTodayBlue.copy(alpha = 0.74f)
         isPressed && isEnabled -> colorScheme.onSurfaceVariant.copy(alpha = 0.34f)
@@ -1743,13 +1789,14 @@ private fun CalendarDayCell(
         label = "calendarMonthDateCellBorderWidth",
     )
     val stateTint = when {
+        isDropTarget -> colorScheme.error
         isSelected -> CalendarAccentPurple
         isToday -> CalendarTodayBlue
         else -> CalendarAccentPurple
     }
     val cellShape = RoundedCornerShape(16.dp)
     val dayTextColor = when {
-        isSelected || isToday -> stateTint
+        isDropTarget || isSelected || isToday -> stateTint
         cell.isCurrentMonth -> colorScheme.onSurface
         else -> colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
     }
@@ -1765,6 +1812,7 @@ private fun CalendarDayCell(
                 enabled = isEnabled,
                 onDropDateChanged = onDropDateChanged,
                 onMoveTaskToDate = onMoveTaskToDate,
+                resolveTodo = resolveTodo,
             )
             .clickable(
                 enabled = isEnabled,
@@ -1927,8 +1975,8 @@ private fun CalendarTodoRow(
                     .fillMaxSize()
                     .graphicsLayer { translationX = animatedOffsetX }
                     .dragAndDropSource {
-                        detectTapGestures(
-                            onLongPress = {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
                                 onDragStart()
                                 ViewCompat.performHapticFeedback(
                                     view,
@@ -1940,6 +1988,9 @@ private fun CalendarTodoRow(
                                         flags = View.DRAG_FLAG_GLOBAL,
                                     ),
                                 )
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
                             },
                         )
                     }
