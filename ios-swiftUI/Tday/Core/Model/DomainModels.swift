@@ -239,6 +239,7 @@ struct CompletedItem: Identifiable, Equatable, Hashable, Codable {
     let completedAt: Date?
     let rrule: String?
     let instanceDate: Date?
+    let listId: String?
     let listName: String?
     let listColor: String?
 }

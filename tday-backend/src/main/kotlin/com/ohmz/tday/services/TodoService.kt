@@ -187,6 +187,7 @@ class TodoServiceImpl(
                     it[CompletedTodos.rrule] = todo[Todos.rrule]
                     it[CompletedTodos.userID] = userId
                     it[CompletedTodos.instanceDate] = instanceDate
+                    it[CompletedTodos.listID] = todo[Todos.listID]
                     it[CompletedTodos.listName] = list?.get(Lists.name)
                     it[CompletedTodos.listColor] = list?.get(Lists.color)?.name
                 }

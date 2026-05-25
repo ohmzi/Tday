@@ -112,6 +112,7 @@ internal fun completedToCache(item: CompletedItem): CachedCompletedRecord {
         completedAtEpochMs = item.completedAt?.toEpochMilli() ?: 0L,
         rrule = item.rrule,
         instanceDateEpochMs = item.instanceDate?.toEpochMilli(),
+        listId = item.listId,
         listName = item.listName,
         listColor = item.listColor,
     )
@@ -132,6 +133,7 @@ internal fun completedFromCache(cache: CachedCompletedRecord): CompletedItem {
         },
         rrule = cache.rrule,
         instanceDate = cache.instanceDateEpochMs?.let(Instant::ofEpochMilli),
+        listId = cache.listId,
         listName = cache.listName,
         listColor = cache.listColor,
     )
@@ -171,6 +173,7 @@ internal fun mapCompletedDto(dto: CompletedTodoDto): CompletedItem {
         completedAt = parseOptionalInstant(dto.completedAt),
         rrule = dto.rrule,
         instanceDate = parseOptionalInstant(dto.instanceDate),
+        listId = dto.listID,
         listName = dto.listName,
         listColor = dto.listColor,
     )

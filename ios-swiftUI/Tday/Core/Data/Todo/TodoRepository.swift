@@ -331,6 +331,7 @@ final class TodoRepository {
                     completedAtEpochMs: now,
                     rrule: todo.rrule,
                     instanceDateEpochMs: todo.instanceDateEpochMilliseconds,
+                    listId: todo.listId,
                     listName: state.lists.first(where: { $0.id == todo.listId })?.name,
                     listColor: state.lists.first(where: { $0.id == todo.listId })?.color
                 ),
@@ -501,6 +502,7 @@ final class TodoRepository {
                     completedAtEpochMs: item.completedAtEpochMs,
                     rrule: item.rrule,
                     instanceDateEpochMs: item.instanceDateEpochMs,
+                    listId: item.listId,
                     listName: item.listName,
                     listColor: item.listColor
                 )

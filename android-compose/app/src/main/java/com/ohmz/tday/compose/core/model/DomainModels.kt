@@ -157,6 +157,7 @@ data class CompletedItem(
     val completedAt: Instant? = null,
     val rrule: String?,
     val instanceDate: Instant?,
+    val listId: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
 )

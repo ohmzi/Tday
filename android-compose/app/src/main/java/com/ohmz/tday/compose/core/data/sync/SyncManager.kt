@@ -26,6 +26,7 @@ import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateListRequest
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
+import com.ohmz.tday.compose.core.model.DeleteListRequest
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
@@ -270,6 +271,16 @@ class SyncManager @Inject constructor(
                                 ),
                             ),
                             "Could not update list",
+                        )
+                        true
+                    }
+
+                    MutationKind.DELETE_LIST -> {
+                        val targetId = resolvedTargetId ?: return@runCatching false
+                        if (targetId.startsWith(LOCAL_LIST_PREFIX)) return@runCatching true
+                        requireApiBody(
+                            api.deleteListByBody(DeleteListRequest(id = targetId)),
+                            "Could not delete list",
                         )
                         true
                     }
@@ -536,16 +547,29 @@ class SyncManager @Inject constructor(
         localState: OfflineSyncState,
         remote: RemoteSnapshot,
     ): OfflineSyncState {
-        val remoteTodos = remote.todos.map(::todoToCache)
+        val pendingDeletedListIds = localState.pendingMutations
+            .filter { it.kind == MutationKind.DELETE_LIST }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val remoteTodos = remote.todos
+            .filterNot { it.listId != null && pendingDeletedListIds.contains(it.listId) }
+            .map(::todoToCache)
         val remoteLists = remote.lists.map(::listToCache)
-        val remoteCompleted = remote.completedItems.map(::completedToCache).toMutableList()
+        val remoteCompleted = remote.completedItems
+            .filterNot { it.listId != null && pendingDeletedListIds.contains(it.listId) }
+            .map(::completedToCache)
+            .toMutableList()
 
         val pendingTodoCanonicalIds = localState.pendingMutations
             .filter { it.kind.affectsTodo() }
             .mapNotNull { it.targetId }
             .toSet()
         val pendingListIds = localState.pendingMutations
-            .filter { it.kind == MutationKind.CREATE_LIST || it.kind == MutationKind.UPDATE_LIST }
+            .filter {
+                it.kind == MutationKind.CREATE_LIST ||
+                        it.kind == MutationKind.UPDATE_LIST ||
+                        it.kind == MutationKind.DELETE_LIST
+            }
             .mapNotNull { it.targetId }
             .toSet()
         val pendingDeleteAllCanonicals = localState.pendingMutations
@@ -621,6 +645,10 @@ class SyncManager @Inject constructor(
             val localList = localListById[listId]
             val remoteList = remoteListById[listId]
 
+            if (remoteList != null && pendingDeletedListIds.contains(remoteList.id)) {
+                return@forEach
+            }
+
             if (remoteList == null && localList != null) {
                 val hasPendingLocalMutation = pendingListIds.contains(localList.id)
                 val isUnsyncedLocalList = localList.id.startsWith(LOCAL_LIST_PREFIX)
@@ -686,7 +714,11 @@ class SyncManager @Inject constructor(
             .mapNotNull { it.targetId }
             .toSet()
         val pendingListIds = existingPending
-            .filter { it.kind == MutationKind.CREATE_LIST || it.kind == MutationKind.UPDATE_LIST }
+            .filter {
+                it.kind == MutationKind.CREATE_LIST ||
+                        it.kind == MutationKind.UPDATE_LIST ||
+                        it.kind == MutationKind.DELETE_LIST
+            }
             .mapNotNull { it.targetId }
             .toSet()
         val pendingLocalListCreates = existingPending
@@ -869,6 +901,9 @@ class SyncManager @Inject constructor(
                 if (it.id == localListId) it.copy(id = serverListId) else it
             },
             todos = state.todos.map {
+                if (it.listId == localListId) it.copy(listId = serverListId) else it
+            },
+            completedItems = state.completedItems.map {
                 if (it.listId == localListId) it.copy(listId = serverListId) else it
             },
             pendingMutations = state.pendingMutations.map {

@@ -1,14 +1,14 @@
 package com.ohmz.tday.routes
 
+import arrow.core.Either
+import com.ohmz.tday.di.inject
+import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.services.CompletedTodoService
+import com.ohmz.tday.shared.model.DeleteCompletedTodoRequest
+import com.ohmz.tday.shared.model.UpdateCompletedTodoRequest
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.Serializable
-import com.ohmz.tday.di.inject
-
-@Serializable
-private data class CompletedTodoPatchBody(val id: String)
 
 fun Route.completedTodoRoutes() {
     val completedTodoService by inject<CompletedTodoService>()
@@ -23,16 +23,45 @@ fun Route.completedTodoRoutes() {
 
         delete {
             call.withAuth { user ->
-                completedTodoService.deleteAll(user.id)
-                    .map { mapOf("message" to "completed todos cleared") }
+                val body = runCatching { call.receiveNullable<DeleteCompletedTodoRequest>() }.getOrNull()
+                if (body?.id?.isNotBlank() == true) {
+                    completedTodoService.deleteById(user.id, body.id)
+                        .map { count ->
+                            mapOf("message" to if (count > 0) "completed todo removed" else "completed todo already removed")
+                        }
+                } else {
+                    completedTodoService.deleteAll(user.id)
+                        .map { mapOf("message" to "completed todos cleared") }
+                }
             }
         }
 
         patch {
             call.withAuth { user ->
-                val body = call.receive<CompletedTodoPatchBody>()
-                completedTodoService.deleteById(user.id, body.id)
-                    .map { mapOf("message" to "completed todo removed") }
+                val body = call.receive<UpdateCompletedTodoRequest>()
+                val fields = mutableMapOf<String, Any?>()
+                body.title?.let { fields["title"] = it }
+                body.description?.let { fields["description"] = it }
+                body.priority?.let { fields["priority"] = it }
+                body.due?.let { due ->
+                    val parsed = parseTodoDateTime(due)
+                        ?: return@withAuth Either.Left(
+                            AppError.BadRequest("due must be a valid ISO-8601 datetime"),
+                        )
+                    fields["due"] = parsed
+                }
+                body.rrule?.let { fields["rrule"] = it }
+                body.listID?.let { fields["listID"] = it }
+                if (fields.isEmpty()) {
+                    return@withAuth completedTodoService.deleteById(user.id, body.id)
+                        .map { count ->
+                            mapOf("message" to if (count > 0) "completed todo removed" else "completed todo already removed")
+                        }
+                }
+                completedTodoService.update(user.id, body.id, fields)
+                    .map { count ->
+                        mapOf("message" to if (count > 0) "completed todo updated" else "completed todo already removed")
+                    }
             }
         }
     }

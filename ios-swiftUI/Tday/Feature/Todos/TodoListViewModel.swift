@@ -155,6 +155,24 @@ final class TodoListViewModel {
         }
     }
 
+    func deleteList(onOptimisticDelete: @escaping () -> Void) async {
+        guard let listId else { return }
+        do {
+            try await container.listRepository.deleteList(
+                listId: listId,
+                onOptimisticDelete: {
+                    self.lists.removeAll { $0.id == listId }
+                    self.items.removeAll { $0.listId == listId }
+                    self.errorMessage = nil
+                    onOptimisticDelete()
+                }
+            )
+        } catch {
+            errorMessage = userFacingMessage(for: error, fallback: "Could not delete list.")
+            hydrateFromCache()
+        }
+    }
+
     func parseTaskTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
         await container.todoRepository.parseTodoTitleNlp(text: text, referenceDueEpochMs: referenceDueEpochMs)
     }

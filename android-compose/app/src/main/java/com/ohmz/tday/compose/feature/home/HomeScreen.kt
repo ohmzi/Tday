@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.home
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -273,6 +274,7 @@ fun HomeScreen(
     var hasCapturedInitialListSnapshot by rememberSaveable { mutableStateOf(false) }
     var hasShownListDataOnce by rememberSaveable { mutableStateOf(false) }
     var lastListStructureSignature by rememberSaveable { mutableStateOf("") }
+    var lastListIdsSignature by rememberSaveable { mutableStateOf("") }
     var visibleListStage by rememberSaveable { mutableIntStateOf(0) }
     var animateListCascade by rememberSaveable { mutableStateOf(false) }
     var searchResultOpening by rememberSaveable { mutableStateOf(false) }
@@ -329,6 +331,9 @@ fun HomeScreen(
             }
         }
     }
+    val listIdsSignature = remember(uiState.summary.lists) {
+        uiState.summary.lists.joinToString(separator = "|") { it.id }
+    }
     val listById = remember(uiState.summary.lists) { uiState.summary.lists.associateBy { it.id } }
     val normalizedSearchQuery = remember(searchQuery) { searchQuery.trim().lowercase(Locale.getDefault()) }
     val overdueCount = remember(uiState.searchableTodos) {
@@ -383,6 +388,7 @@ fun HomeScreen(
             hasCapturedInitialListSnapshot = true
             hasShownListDataOnce = lists.isNotEmpty()
             lastListStructureSignature = listStructureSignature
+            lastListIdsSignature = listIdsSignature
             return@LaunchedEffect
         }
 
@@ -392,7 +398,17 @@ fun HomeScreen(
             return@LaunchedEffect
         }
 
+        val previousListIds = lastListIdsSignature
+            .split('|')
+            .filter { it.isNotBlank() }
+        val currentListIds = lists.map { it.id }
+        val isDeletionOnly = previousListIds.isNotEmpty() &&
+                currentListIds.size < previousListIds.size &&
+                currentListIds.all { it in previousListIds }
+        val isMetadataOnlyChange = previousListIds == currentListIds
+
         lastListStructureSignature = listStructureSignature
+        lastListIdsSignature = listIdsSignature
         if (lists.isEmpty()) {
             visibleListStage = 0
             animateListCascade = false
@@ -403,6 +419,12 @@ fun HomeScreen(
             visibleListStage = targetFinalStage
             animateListCascade = false
             hasShownListDataOnce = true
+            return@LaunchedEffect
+        }
+
+        if (isDeletionOnly || isMetadataOnlyChange) {
+            visibleListStage = targetFinalStage
+            animateListCascade = false
             return@LaunchedEffect
         }
 
@@ -596,8 +618,16 @@ fun HomeScreen(
                             contentType = { _, _ -> "list_row" },
                         ) { index, list ->
                             if (visibleListStage >= index + 2) {
+                                val listRowPlacementModifier = Modifier.animateItem(
+                                    fadeInSpec = tween(durationMillis = 180),
+                                    placementSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    ),
+                                    fadeOutSpec = tween(durationMillis = 130),
+                                )
                                 if (animateListCascade) {
-                                    TopDownCascadeReveal {
+                                    TopDownCascadeReveal(modifier = listRowPlacementModifier) {
                                         ListRow(
                                             name = list.name,
                                             colorKey = list.color,
@@ -611,6 +641,7 @@ fun HomeScreen(
                                     }
                                 } else {
                                     ListRow(
+                                        modifier = listRowPlacementModifier,
                                         name = list.name,
                                         colorKey = list.color,
                                         iconKey = list.iconKey,
@@ -2025,6 +2056,7 @@ private fun calendarTileColor(colorScheme: ColorScheme): Color {
 
 @Composable
 private fun TopDownCascadeReveal(
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     var revealed by remember { mutableStateOf(false) }
@@ -2044,7 +2076,7 @@ private fun TopDownCascadeReveal(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .graphicsLayer {
                 this.alpha = alpha
@@ -2239,6 +2271,7 @@ private fun CategoryCard(
 
 @Composable
 private fun ListRow(
+    modifier: Modifier = Modifier,
     name: String,
     colorKey: String?,
     iconKey: String?,
@@ -2272,7 +2305,7 @@ private fun ListRow(
     val displayName = capitalizeFirstListLetter(name)
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(70.dp)
             .semantics(mergeDescendants = true) {}
