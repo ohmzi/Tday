@@ -181,6 +181,93 @@ final class TodoRepository {
         }
     }
 
+    func moveTodo(_ todo: TodoItem, due: Date) async throws {
+        let now = Date().epochMilliseconds
+        let dueEpochMs = due.epochMilliseconds
+        let isLocalOnly = todo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX)
+
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            let hasExistingUpdateMutation = state.pendingMutations.contains { mutation in
+                mutation.kind == .updateTodo &&
+                    mutation.targetId == todo.canonicalId &&
+                    mutation.instanceDateEpochMs == todo.instanceDateEpochMilliseconds
+            }
+            nextState.todos = state.todos.map { current in
+                let sameTodo = current.canonicalId == todo.canonicalId && current.instanceDateEpochMs == todo.instanceDateEpochMilliseconds
+                guard sameTodo else { return current }
+                return CachedTodoRecord(
+                    id: current.id,
+                    canonicalId: current.canonicalId,
+                    title: current.title,
+                    description: current.description,
+                    priority: current.priority,
+                    dueEpochMs: dueEpochMs,
+                    rrule: current.rrule,
+                    instanceDateEpochMs: current.instanceDateEpochMs,
+                    pinned: current.pinned,
+                    completed: current.completed,
+                    listId: current.listId,
+                    updatedAtEpochMs: now
+                )
+            }
+            nextState.pendingMutations = state.pendingMutations.map { mutation in
+                let samePendingUpdate = mutation.kind == .updateTodo &&
+                    mutation.targetId == todo.canonicalId &&
+                    mutation.instanceDateEpochMs == todo.instanceDateEpochMilliseconds
+                guard samePendingUpdate || (mutation.kind == .createTodo && mutation.targetId == todo.canonicalId) else {
+                    return mutation
+                }
+                return PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId,
+                    timestampEpochMs: now,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey
+                )
+            }
+            if !isLocalOnly && !hasExistingUpdateMutation {
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: UUID().uuidString,
+                        kind: .updateTodo,
+                        targetId: todo.canonicalId,
+                        timestampEpochMs: now,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: dueEpochMs,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: todo.instanceDateEpochMilliseconds,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil
+                    )
+                )
+            }
+            return nextState
+        }
+
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
     func deleteTodo(_ todo: TodoItem) async throws {
         let now = Date().epochMilliseconds
         _ = try await cacheManager.updateOfflineState { state in

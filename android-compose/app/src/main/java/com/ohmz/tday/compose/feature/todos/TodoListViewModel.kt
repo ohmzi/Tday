@@ -16,7 +16,7 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
-import com.ohmz.tday.compose.core.model.createMovedTaskPayload
+import com.ohmz.tday.compose.core.model.movedDuePreservingTime
 import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
@@ -303,11 +303,48 @@ class TodoListViewModel @Inject constructor(
     }
 
     fun moveTask(todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) {
-        updateTaskInternal(
-            visibleTodo = todo,
-            repositoryTodo = todo.repositoryTargetForReschedule(scope),
-            payload = createMovedTaskPayload(todo, targetDate),
-        )
+        val movedDue = movedDuePreservingTime(todo.due, targetDate)
+        val previousState = _uiState.value
+        val mode = previousState.mode
+        val currentListId = previousState.listId
+        val updatedTodo = todo.copy(due = movedDue)
+
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.map { item ->
+                    if (item.id == todo.id) updatedTodo else item
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.moveTodo(
+                    todo = todo.repositoryTargetForReschedule(scope),
+                    due = movedDue,
+                )
+            }.onSuccess {
+                rescheduleReminders()
+                runCatching {
+                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = currentListId)
+                    val lists = listRepository.fetchLists()
+                    todos to lists
+                }.onSuccess { (todos, lists) ->
+                    _uiState.update { current ->
+                        current.copy(
+                            lists = if (current.lists == lists) current.lists else lists,
+                            items = if (current.items == todos) current.items else todos,
+                            errorMessage = null,
+                        )
+                    }
+                }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = error.userFacingMessage("Could not update task."),
+                )
+            }
+        }
     }
 
     private fun updateTaskInternal(

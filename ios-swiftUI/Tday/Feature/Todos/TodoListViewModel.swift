@@ -111,14 +111,19 @@ final class TodoListViewModel {
             return
         }
 
-        guard let payload = movedTaskPayload(todo: todo, targetDay: targetDay, calendar: calendar) else {
+        guard let movedDue = movedDuePreservingTime(due: todo.due, targetDay: targetDay, calendar: calendar) else {
             return
         }
 
-        await updateTask(
-            todo.repositoryTargetForReschedule(scope: scope),
-            payload: payload
-        )
+        do {
+            try await container.todoRepository.moveTodo(
+                todo.repositoryTargetForReschedule(scope: scope),
+                due: movedDue
+            )
+            hydrateFromCache()
+        } catch {
+            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
+        }
     }
 
     func complete(_ todo: TodoItem) async {
