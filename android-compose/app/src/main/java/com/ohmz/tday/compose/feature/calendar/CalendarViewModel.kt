@@ -10,9 +10,12 @@ import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.model.createMovedTaskPayload
+import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 data class CalendarUiState(
@@ -231,6 +235,26 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        updateTaskInternal(
+            visibleTodo = todo,
+            repositoryTodo = todo,
+            payload = payload,
+        )
+    }
+
+    fun moveTask(todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) {
+        updateTaskInternal(
+            visibleTodo = todo,
+            repositoryTodo = todo.repositoryTargetForReschedule(scope),
+            payload = createMovedTaskPayload(todo, targetDate),
+        )
+    }
+
+    private fun updateTaskInternal(
+        visibleTodo: TodoItem,
+        repositoryTodo: TodoItem,
+        payload: CreateTaskPayload,
+    ) {
         val normalizedTitle = payload.title.trim()
         if (normalizedTitle.isBlank()) return
 
@@ -244,7 +268,7 @@ class CalendarViewModel @Inject constructor(
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
 
         val previousState = _uiState.value
-        val optimisticTodo = todo.copy(
+        val optimisticTodo = visibleTodo.copy(
             title = normalizedTitle,
             description = normalizedDescription,
             priority = normalizedPriority,
@@ -256,7 +280,7 @@ class CalendarViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 items = current.items.map { item ->
-                    if (item.id == todo.id) optimisticTodo else item
+                    if (item.id == visibleTodo.id) optimisticTodo else item
                 },
                 errorMessage = null,
             )
@@ -265,7 +289,7 @@ class CalendarViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 todoRepository.updateTodo(
-                    todo = todo,
+                    todo = repositoryTodo,
                     payload = CreateTaskPayload(
                         title = normalizedTitle,
                         description = normalizedDescription,

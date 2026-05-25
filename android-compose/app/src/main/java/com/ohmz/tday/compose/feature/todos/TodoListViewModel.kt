@@ -11,10 +11,13 @@ import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.model.createMovedTaskPayload
+import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 data class TodoListUiState(
@@ -291,6 +295,26 @@ class TodoListViewModel @Inject constructor(
     }
 
     fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        updateTaskInternal(
+            visibleTodo = todo,
+            repositoryTodo = todo,
+            payload = payload,
+        )
+    }
+
+    fun moveTask(todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) {
+        updateTaskInternal(
+            visibleTodo = todo,
+            repositoryTodo = todo.repositoryTargetForReschedule(scope),
+            payload = createMovedTaskPayload(todo, targetDate),
+        )
+    }
+
+    private fun updateTaskInternal(
+        visibleTodo: TodoItem,
+        repositoryTodo: TodoItem,
+        payload: CreateTaskPayload,
+    ) {
         val normalizedTitle = payload.title.trim()
         if (normalizedTitle.isBlank()) return
 
@@ -306,7 +330,7 @@ class TodoListViewModel @Inject constructor(
         val previousState = _uiState.value
         val mode = previousState.mode
         val currentListId = previousState.listId
-        val updatedTodo = todo.copy(
+        val updatedTodo = visibleTodo.copy(
             title = normalizedTitle,
             description = normalizedDescription,
             priority = normalizedPriority,
@@ -317,11 +341,11 @@ class TodoListViewModel @Inject constructor(
 
         _uiState.update { current ->
             val optimisticItems = current.items
-                .map { item -> if (item.id == todo.id) updatedTodo else item }
+                .map { item -> if (item.id == visibleTodo.id) updatedTodo else item }
                 .filterNot { item ->
                     current.mode == TodoListMode.LIST &&
                         !current.listId.isNullOrBlank() &&
-                        item.id == todo.id &&
+                            item.id == visibleTodo.id &&
                         item.listId != current.listId
                 }
             current.copy(items = optimisticItems, errorMessage = null)
@@ -330,7 +354,7 @@ class TodoListViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 todoRepository.updateTodo(
-                    todo = todo,
+                    todo = repositoryTodo,
                     payload = CreateTaskPayload(
                         title = normalizedTitle,
                         description = normalizedDescription,
