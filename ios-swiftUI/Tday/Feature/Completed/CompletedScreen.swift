@@ -125,6 +125,7 @@ struct CompletedScreen: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .contentMargins(.top, 0, for: .scrollContent)
+            .listRowSpacing(0)
             .listSectionSpacing(0)
             .environment(\.defaultMinListRowHeight, 1)
             .disableVerticalScrollBounce()
@@ -184,7 +185,7 @@ struct CompletedScreen: View {
             )
             .listRowInsets(
                 EdgeInsets(
-                    top: isFirstSection ? 0 : 8,
+                    top: isFirstSection ? 0 : TodoTimelineMetrics.sectionTopSpacing,
                     leading: 0,
                     bottom: 0,
                     trailing: 0

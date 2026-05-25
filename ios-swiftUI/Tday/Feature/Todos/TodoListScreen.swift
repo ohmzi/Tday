@@ -43,7 +43,10 @@ enum TodoTimelineMetrics {
     static let minimalRowSubtitleSize: CGFloat = 13
     static let minimalRowIndicatorSize: CGFloat = 14
     static let minimalRowTrailingIndicatorPadding: CGFloat = 24
-    static let minimalRowVerticalPadding: CGFloat = 10
+    static let minimalRowVerticalPadding: CGFloat = 8
+    static let sameDateTaskSpacing: CGFloat = 2
+    static let sectionTopSpacing: CGFloat = 6
+    static let sectionHeaderBottomPadding: CGFloat = 2
     static let titleCollapseDistance: CGFloat = 64
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
@@ -173,6 +176,7 @@ struct TimelineTopBarAction {
 
 struct TodoListScreen: View {
     let highlightedTodoId: String?
+    let onListDeleted: () -> Void
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
@@ -191,8 +195,16 @@ struct TodoListScreen: View {
     @State private var flashTodoId: String?
     @State private var highlightedScrollRequestID = 0
 
-    init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?, highlightedTodoId: String?) {
+    init(
+        container: AppContainer,
+        mode: TodoListMode,
+        listId: String?,
+        listName: String?,
+        highlightedTodoId: String?,
+        onListDeleted: @escaping () -> Void = {}
+    ) {
         self.highlightedTodoId = highlightedTodoId
+        self.onListDeleted = onListDeleted
         _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
         _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all ? ["earlier"] : [])
     }
@@ -501,9 +513,17 @@ struct TodoListScreen: View {
     }
 
     private var listSettingsSheetContent: some View {
-        ListSettingsSheet(list: viewModel.lists.first { $0.id == viewModel.listId }) { name, color, iconKey in
-            Task { await viewModel.updateListSettings(name: name, color: color, iconKey: iconKey) }
-        }
+        ListSettingsSheet(
+            list: viewModel.lists.first(where: { $0.id == viewModel.listId }),
+            onSubmit: { name, color, iconKey in
+                Task { await viewModel.updateListSettings(name: name, color: color, iconKey: iconKey) }
+            },
+            onDelete: {
+                Task {
+                    await viewModel.deleteList(onOptimisticDelete: onListDeleted)
+                }
+            }
+        )
     }
 
     private func handleItemsChanged() {
@@ -880,7 +900,7 @@ struct TodoListScreen: View {
                             title: section.title,
                             isActiveDropTarget: activeDropSectionId == section.id
                         )
-                        .padding(.top, index == 0 ? 0 : 8)
+                        .padding(.top, index == 0 ? 0 : TodoTimelineMetrics.sectionTopSpacing)
                         .timelinePinnedSectionHeaderBackground()
                         .listRowInsets(
                             EdgeInsets(
@@ -1234,7 +1254,7 @@ struct TodoListScreen: View {
                 } : nil
             )
             .id(timelineSectionScrollID(section.id))
-            .padding(.top, isFirstSection ? 0 : 8)
+            .padding(.top, isFirstSection ? 0 : TodoTimelineMetrics.sectionTopSpacing)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .todoInAppDropTargetFrame(
@@ -1744,7 +1764,7 @@ struct TimelineSectionHeader: View {
         }
         .padding(.top, 2)
         .padding(.horizontal, TodoTimelineMetrics.horizontalPadding)
-        .padding(.bottom, 4)
+        .padding(.bottom, TodoTimelineMetrics.sectionHeaderBottomPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
 
@@ -2109,12 +2129,14 @@ private let todoListSettingsColorKeys = [
 private struct ListSettingsSheet: View {
     let list: ListSummary?
     let onSubmit: (String, String?, String?) -> Void
+    let onDelete: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var tdayColors
 
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
+    @State private var showingDeleteConfirmation = false
 
     private let colors = todoListSettingsColorKeys
     private let icons = ["inbox", "briefcase", "calendar", "list.bullet", "star", "heart"]
@@ -2146,6 +2168,12 @@ private struct ListSettingsSheet: View {
                             Label(value.replacingOccurrences(of: ".", with: " "), systemImage: value).tag(value)
                         }
                     }
+
+                    Button(role: .destructive) {
+                        showingDeleteConfirmation = true
+                    } label: {
+                        Label("Delete list", systemImage: "trash")
+                    }
                 }
                 .scrollContentBackground(.hidden)
                 .background(tdayColors.bottomSheetBackground)
@@ -2153,6 +2181,15 @@ private struct ListSettingsSheet: View {
             .background(tdayColors.bottomSheetBackground)
             .disableVerticalScrollBounce()
             .toolbar(.hidden, for: .navigationBar)
+            .alert("Delete list?", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    onDelete()
+                    dismiss()
+                }
+            } message: {
+                Text("This will delete this list, every task in it, and completed history for those tasks.")
+            }
             .task {
                 name = list?.name ?? ""
                 color = normalizedTodoListColorKey(list?.color)
