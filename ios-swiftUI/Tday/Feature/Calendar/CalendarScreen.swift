@@ -93,6 +93,34 @@ private enum CalendarModeCardMetrics {
 private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
 private let calendarModeTransitionAnimation = Animation.spring(response: 0.34, dampingFraction: 0.9, blendDuration: 0.02)
 
+private struct CalendarCardChromeModifier: ViewModifier {
+    @Environment(\.tdayColors) private var colors
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+
+        content
+            .background(colors.surface, in: shape)
+            .overlay {
+                shape.stroke(cardStrokeColor, lineWidth: 1)
+            }
+            .shadow(color: ambientShadowColor, radius: 18, x: 0, y: 9)
+            .shadow(color: keyShadowColor, radius: 4, x: 0, y: 2)
+    }
+
+    private var cardStrokeColor: Color {
+        colors.isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.035)
+    }
+
+    private var ambientShadowColor: Color {
+        Color.black.opacity(colors.isDark ? 0.24 : 0.045)
+    }
+
+    private var keyShadowColor: Color {
+        Color.black.opacity(colors.isDark ? 0.18 : 0.04)
+    }
+}
+
 private struct CalendarTodayJumpRequest: Equatable {
     let id: Int
     let targetDate: Date
@@ -223,6 +251,7 @@ struct CalendarScreen: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.985, anchor: .top)))
                 .frame(height: calendarModeCardHeight, alignment: .top)
                 .clipped()
+                .modifier(CalendarCardChromeModifier())
                 .animation(calendarModeTransitionAnimation, value: displayMode)
                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                 .listRowBackground(Color.clear)
@@ -242,7 +271,7 @@ struct CalendarScreen: View {
                 .font(.tdayRounded(size: 22, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
                 .textCase(nil)
-                .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 4, trailing: TodoTimelineMetrics.horizontalPadding))
+                .listRowInsets(EdgeInsets(top: 14, leading: TodoTimelineMetrics.horizontalPadding, bottom: 4, trailing: TodoTimelineMetrics.horizontalPadding))
                 .timelinePinnedSectionHeaderBackground()
 
             if !pendingItems.isEmpty {
@@ -331,7 +360,11 @@ struct CalendarScreen: View {
             calendarTopInset
         }
         .safeAreaInset(edge: .bottom) {
-            TaskFloatingActionButtonDock(fillColor: calendarAccentColor) {
+            TaskFloatingActionButtonDock(
+                fillColor: calendarAccentColor,
+                pressedShadowOpacity: 0.09,
+                normalShadowOpacity: 0.16
+            ) {
                 showingCreateTask = true
             }
         }
@@ -647,8 +680,6 @@ private struct CalendarMonthGrid: View {
         monthContent(for: displayMonth)
             .onChange(of: todayJumpRequest) { _, request in handleTodayJump(request, from: displayMonth) }
             .onChange(of: displayMonth) { _, _ in resetPageSelection() }
-            .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
     }
 
     private func monthContent(for displayMonth: Date) -> some View {
@@ -867,8 +898,6 @@ private struct CalendarWeekCard: View {
         weekContent(for: displaySelectedDate)
             .onChange(of: todayJumpRequest) { _, request in handleTodayJump(request, from: displaySelectedDate) }
             .onChange(of: displaySelectedDate) { _, _ in resetPageSelection() }
-            .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
     }
 
     private func weekContent(for displaySelectedDate: Date) -> some View {
@@ -1325,8 +1354,6 @@ private struct CalendarDayCard: View {
         dayContent(for: displayDate)
             .onChange(of: todayJumpRequest) { _, request in handleTodayJump(request, from: displayDate) }
             .onChange(of: displayDate) { _, _ in resetPageSelection() }
-            .background(colors.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 5)
     }
 
     private func dayContent(for displayDate: Date) -> some View {
@@ -1887,8 +1914,8 @@ private struct CalendarTopBarButton: View {
         .buttonStyle(
             TdayPressButtonStyle(
                 shadowColor: .black,
-                pressedShadowOpacity: chrome == .filled ? 0.14 : 0,
-                normalShadowOpacity: chrome == .filled ? 0.24 : 0
+                pressedShadowOpacity: chrome == .filled ? 0.09 : 0,
+                normalShadowOpacity: chrome == .filled ? 0.15 : 0
             )
         )
         .foregroundStyle(foregroundColor)
