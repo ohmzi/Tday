@@ -4,6 +4,8 @@ private let defaultTaskFabFillColor = Color(red: 110.0 / 255.0, green: 168.0 / 2
 
 struct TaskFloatingActionButton: View {
     var fillColor = defaultTaskFabFillColor
+    var pressedShadowOpacity = 0.14
+    var normalShadowOpacity = 0.24
     let action: () -> Void
 
     private var borderColor: Color {
@@ -23,7 +25,12 @@ struct TaskFloatingActionButton: View {
                 )
                 .clipShape(Circle())
         }
-        .buttonStyle(TdayPressButtonStyle())
+        .buttonStyle(
+            TdayPressButtonStyle(
+                pressedShadowOpacity: pressedShadowOpacity,
+                normalShadowOpacity: normalShadowOpacity
+            )
+        )
         .accessibilityLabel("Create Task")
     }
 }
@@ -56,12 +63,19 @@ private func taskFabBlend(_ color: Color, with other: Color, amount: CGFloat) ->
 
 struct TaskFloatingActionButtonDock: View {
     var fillColor = defaultTaskFabFillColor
+    var pressedShadowOpacity = 0.14
+    var normalShadowOpacity = 0.24
     let action: () -> Void
 
     var body: some View {
         HStack {
             Spacer()
-            TaskFloatingActionButton(fillColor: fillColor, action: action)
+            TaskFloatingActionButton(
+                fillColor: fillColor,
+                pressedShadowOpacity: pressedShadowOpacity,
+                normalShadowOpacity: normalShadowOpacity,
+                action: action
+            )
                 .padding(.trailing, 18)
                 .padding(.vertical, 8)
         }
