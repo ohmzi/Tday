@@ -1816,13 +1816,7 @@ private fun TimelineSectionHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .background(
-                    if (isDropTarget) {
-                        colorScheme.error.copy(alpha = 0.1f)
-                    } else {
-                        Color.Transparent
-                    },
-                )
+                .background(Color.Transparent)
                 .padding(horizontal = 4.dp)
                 .heightIn(min = minimumHeaderHeight)
                 .then(headerClickModifier),
