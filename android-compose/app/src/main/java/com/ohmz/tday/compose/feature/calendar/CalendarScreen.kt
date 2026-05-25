@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -136,7 +137,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -152,6 +152,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -169,6 +170,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -234,6 +236,9 @@ private val CalendarPeriodPageHorizontalGutter = 2.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
 private val CalendarTaskListSameDateSpacing = 2.dp
 private val CalendarTaskRowHeight = 56.dp
+private const val CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
+private const val CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
+private const val CALENDAR_TASK_COMPLETION_FADE_MS = 260L
 private val CalendarTaskDragDueTimeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
 private const val CalendarMonthPagerPageCount = 240
@@ -658,51 +663,66 @@ fun CalendarScreen(
                     )
                 }
 
-                    if (selectedDatePendingTasks.isNotEmpty()) {
-                    item {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(CalendarTaskListSameDateSpacing),
-                        ) {
-                            selectedDatePendingTasks.forEachIndexed { index, todo ->
-                                key(todo.id) {
-                                    CalendarTodoRow(
-                                        todo = todo,
-                                        lists = uiState.lists,
-                                        showDateDivider = shouldShowDateDivider(
-                                            afterItemIndex = index,
-                                            items = selectedDatePendingTasks,
-                                            zoneId = zoneId,
-                                        ),
-                                        dragEnabled = calendarTaskRescheduleEnabled,
-                                        onComplete = { onCompleteTask(todo) },
-                                        onInfo = { editTargetId = todo.id },
-                                        onDelete = { onDelete(todo) },
-                                        dragging = calendarTaskRescheduleEnabled && draggedCalendarTodo?.id == todo.id,
-                                        onDragStart = { position ->
-                                            activeDropDateIso = null
-                                            draggedCalendarTodoId = todo.id
-                                            activeCalendarDrag = CalendarTaskDragState(
-                                                todo = todo,
-                                                position = position,
-                                            )
-                                            updateActiveCalendarDropTarget(position)
-                                        },
-                                        onDragMove = { position ->
-                                            activeCalendarDrag = CalendarTaskDragState(
-                                                todo = todo,
-                                                position = position,
-                                            )
-                                            updateActiveCalendarDropTarget(position)
-                                        },
-                                        onDragEnd = ::finishCalendarDrag,
-                                        onDragCancel = ::cancelCalendarDrag,
-                                    )
-                                }
-                            }
-                        }
+                    itemsIndexed(
+                        items = selectedDatePendingTasks,
+                        key = { _, todo -> "calendar-task-${todo.id}" },
+                        contentType = { _, _ -> "calendar_task_row" },
+                    ) { index, todo ->
+                        CalendarTodoRow(
+                            modifier = Modifier
+                                .animateItem(
+                                    fadeInSpec = tween(
+                                        durationMillis = 180,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                    placementSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    ),
+                                    fadeOutSpec = tween(
+                                        durationMillis = 140,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                )
+                                .padding(
+                                    bottom = if (index == selectedDatePendingTasks.lastIndex) {
+                                        0.dp
+                                    } else {
+                                        CalendarTaskListSameDateSpacing
+                                    },
+                                ),
+                            todo = todo,
+                            lists = uiState.lists,
+                            showDateDivider = shouldShowDateDivider(
+                                afterItemIndex = index,
+                                items = selectedDatePendingTasks,
+                                zoneId = zoneId,
+                            ),
+                            dragEnabled = calendarTaskRescheduleEnabled,
+                            onComplete = { onCompleteTask(todo) },
+                            onInfo = { editTargetId = todo.id },
+                            onDelete = { onDelete(todo) },
+                            dragging = calendarTaskRescheduleEnabled && draggedCalendarTodo?.id == todo.id,
+                            onDragStart = { position ->
+                                activeDropDateIso = null
+                                draggedCalendarTodoId = todo.id
+                                activeCalendarDrag = CalendarTaskDragState(
+                                    todo = todo,
+                                    position = position,
+                                )
+                                updateActiveCalendarDropTarget(position)
+                            },
+                            onDragMove = { position ->
+                                activeCalendarDrag = CalendarTaskDragState(
+                                    todo = todo,
+                                    position = position,
+                                )
+                                updateActiveCalendarDropTarget(position)
+                            },
+                            onDragEnd = ::finishCalendarDrag,
+                            onDragCancel = ::cancelCalendarDrag,
+                        )
                     }
-                }
 
                 uiState.errorMessage?.let { message ->
                     item {
@@ -2062,7 +2082,11 @@ private fun CalendarTodoRow(
     val maxElasticDragPx = actionRevealPx * 1.14f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(todo.id) { mutableStateOf(false) }
+    var localChecked by remember(todo.id) { mutableStateOf(false) }
+    var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
+    var completionFading by remember(todo.id) { mutableStateOf(false) }
+    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
     val animatedOffsetX by animateFloatAsState(
@@ -2070,7 +2094,27 @@ private fun CalendarTodoRow(
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "calendarTaskSwipeOffset",
     )
-    val showCompletedState = pendingCompletion
+    val completionAlpha by animateFloatAsState(
+        targetValue = if (completionFading) 0f else 1f,
+        animationSpec = tween(
+            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
+        label = "calendarTaskCompletionAlpha",
+    )
+    val completionOffsetY by animateDpAsState(
+        targetValue = if (completionFading) (-10).dp else 0.dp,
+        animationSpec = tween(
+            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
+        label = "calendarTaskCompletionOffsetY",
+    )
+    val titleStrikeProgress by animateFloatAsState(
+        targetValue = if (localStruck) 1f else 0f,
+        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+        label = "calendarTaskTitleStrikeProgress",
+    )
     val dueText = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(todo.due)
@@ -2086,7 +2130,10 @@ private fun CalendarTodoRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .graphicsLayer { alpha = if (dragging) 0.55f else 1f }
+            .graphicsLayer {
+                alpha = if (dragging) completionAlpha * 0.55f else completionAlpha
+                translationY = completionOffsetY.toPx()
+            }
             .semantics(mergeDescendants = true) { },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -2221,17 +2268,17 @@ private fun CalendarTodoRow(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CalendarCompletionToggleIcon(
-                        imageVector = if (showCompletedState) {
+                        imageVector = if (localChecked) {
                             Icons.Rounded.CheckCircle
                         } else {
                             Icons.Rounded.RadioButtonUnchecked
                         },
-                        contentDescription = if (showCompletedState) {
+                        contentDescription = if (localChecked) {
                             stringResource(R.string.label_completed)
                         } else {
                             stringResource(R.string.label_mark_complete)
                         },
-                        tint = if (showCompletedState) {
+                        tint = if (localChecked) {
                             Color(0xFF6FBF86)
                         } else {
                             colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
@@ -2240,9 +2287,14 @@ private fun CalendarTodoRow(
                         onClick = {
                             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
                             targetOffsetX = 0f
+                            localChecked = true
                             pendingCompletion = true
                             coroutineScope.launch {
-                                delay(500)
+                                delay(CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS)
+                                localStruck = true
+                                delay(CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS)
+                                completionFading = true
+                                delay(CALENDAR_TASK_COMPLETION_FADE_MS)
                                 onComplete()
                             }
                         },
@@ -2254,19 +2306,33 @@ private fun CalendarTodoRow(
                     ) {
                         Text(
                             text = todo.title,
-                            color = if (showCompletedState) {
+                            modifier = Modifier.drawWithContent {
+                                drawContent()
+                                if (titleStrikeProgress > 0f) {
+                                    val lineEnd = (
+                                            titleLayoutResult
+                                                ?.takeIf { it.lineCount > 0 }
+                                                ?.getLineRight(0) ?: size.width
+                                            ).coerceIn(0f, size.width)
+                                    val lineY = size.height * 0.56f
+                                    drawLine(
+                                        color = colorScheme.onSurface.copy(alpha = 0.65f),
+                                        start = Offset(0f, lineY),
+                                        end = Offset(lineEnd * titleStrikeProgress, lineY),
+                                        strokeWidth = TdayDimens.BorderWidthThick.toPx(),
+                                    )
+                                }
+                            },
+                            color = if (localStruck) {
                                 colorScheme.onSurface.copy(alpha = 0.78f)
                             } else {
                                 colorScheme.onSurface
                             },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
-                            textDecoration = if (showCompletedState) {
-                                TextDecoration.LineThrough
-                            } else {
-                                TextDecoration.None
-                            },
+                            textDecoration = TextDecoration.None,
                             maxLines = 2,
+                            onTextLayout = { titleLayoutResult = it },
                         )
                         Text(
                             text = dueText,
@@ -2322,7 +2388,26 @@ private fun CalendarCompletedTodoRow(
     val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
     var pendingUncomplete by remember(item.id) { mutableStateOf(false) }
+    var unstruck by remember(item.id) { mutableStateOf(false) }
+    var fading by remember(item.id) { mutableStateOf(false) }
     val showCompletedState = !pendingUncomplete
+    val showStrikethrough = !unstruck
+    val rowAlpha by animateFloatAsState(
+        targetValue = if (fading) 0f else 1f,
+        animationSpec = tween(
+            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
+        label = "calendarCompletedRestoreAlpha",
+    )
+    val rowOffsetY by animateDpAsState(
+        targetValue = if (fading) (-10).dp else 0.dp,
+        animationSpec = tween(
+            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
+        label = "calendarCompletedRestoreOffsetY",
+    )
     val dueText = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
         .format(item.due)
@@ -2338,6 +2423,10 @@ private fun CalendarCompletedTodoRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                alpha = rowAlpha
+                translationY = rowOffsetY.toPx()
+            }
             .semantics(mergeDescendants = true) { },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -2372,7 +2461,11 @@ private fun CalendarCompletedTodoRow(
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
                         pendingUncomplete = true
                         coroutineScope.launch {
-                            delay(500)
+                            delay(180)
+                            unstruck = true
+                            delay(180)
+                            fading = true
+                            delay(CALENDAR_TASK_COMPLETION_FADE_MS)
                             onUndoComplete()
                         }
                     },
@@ -2385,14 +2478,14 @@ private fun CalendarCompletedTodoRow(
                 ) {
                     Text(
                         text = item.title,
-                        color = if (showCompletedState) {
+                        color = if (showStrikethrough) {
                             colorScheme.onSurface.copy(alpha = 0.78f)
                         } else {
                             colorScheme.onSurface
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
-                        textDecoration = if (showCompletedState) {
+                        textDecoration = if (showStrikethrough) {
                             TextDecoration.LineThrough
                         } else {
                             TextDecoration.None

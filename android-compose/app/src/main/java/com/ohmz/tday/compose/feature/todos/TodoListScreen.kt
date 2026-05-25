@@ -161,6 +161,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -184,6 +185,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -826,7 +828,11 @@ fun TodoListScreen(
                             if (!isCollapsed && section.items.isNotEmpty()) {
                                 val showEarlierDateTimeSubtitle =
                                     section.key == "earlier" &&
-                                            (uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY)
+                                            (
+                                                    uiState.mode == TodoListMode.ALL ||
+                                                            uiState.mode == TodoListMode.PRIORITY ||
+                                                            uiState.mode == TodoListMode.LIST
+                                                    )
                                 section.items.forEachIndexed { itemIndex, todo ->
                                     val showTimelineDateDivider = shouldShowDateDivider(
                                         afterItemIndex = itemIndex,
@@ -1158,69 +1164,91 @@ private fun ListDeleteConfirmationDialog(
     } else {
         colorScheme.surface
     }
+    val scrimColor = if (isDarkTheme) {
+        Color.Black.copy(alpha = 0.68f)
+    } else {
+        Color.Black.copy(alpha = 0.36f)
+    }
 
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Card(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 34.dp)
-                .sizeIn(maxWidth = 420.dp),
-            shape = RoundedCornerShape(30.dp),
-            colors = CardDefaults.cardColors(containerColor = dialogContainerColor),
-            elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
+                .fillMaxSize()
+                .background(scrimColor)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismissRequest,
+                )
+                .padding(horizontal = 34.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Column(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(22.dp),
+                    .sizeIn(maxWidth = 420.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                    ),
+                shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(containerColor = dialogContainerColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text(
-                        text = stringResource(R.string.todos_delete_list_title),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = colorScheme.onSurface,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-                    Text(
-                        text = stringResource(R.string.todos_delete_list_message),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.16f,
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(22.dp),
                 ) {
-                    TextButton(onClick = onDismissRequest) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Text(
-                            text = stringResource(R.string.action_cancel),
-                            color = colorScheme.primary,
+                            text = stringResource(R.string.todos_delete_list_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = colorScheme.onSurface,
                             fontWeight = FontWeight.ExtraBold,
+                        )
+                        Text(
+                            text = stringResource(R.string.todos_delete_list_message),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.16f,
                         )
                     }
-                    Spacer(Modifier.size(10.dp))
-                    TextButton(
-                        onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
-                            onConfirm()
-                        },
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = stringResource(R.string.action_delete),
-                            color = colorScheme.error,
-                            fontWeight = FontWeight.ExtraBold,
-                        )
+                        TextButton(onClick = onDismissRequest) {
+                            Text(
+                                text = stringResource(R.string.action_cancel),
+                                color = colorScheme.primary,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
+                        Spacer(Modifier.size(10.dp))
+                        TextButton(
+                            onClick = {
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                onConfirm()
+                            },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.action_delete),
+                                color = colorScheme.error,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
                     }
                 }
             }
@@ -2774,6 +2802,9 @@ private const val SEARCH_RESULT_SCROLL_MIN_DURATION_MS = 720
 private const val SEARCH_RESULT_SCROLL_MAX_DURATION_MS = 2400
 private const val SEARCH_RESULT_CENTER_SCROLL_DURATION_MS = 520
 private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
+private const val TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
+private const val TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
+private const val TASK_COMPLETION_FADE_MS = 260L
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 56.dp
 private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
@@ -2898,13 +2929,16 @@ private fun SwipeTaskRow(
     val maxElasticDragPx = actionRevealPx * 1.14f
     var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
     var swipeHinting by remember(todo.id) { mutableStateOf(false) }
-    var localCompleted by remember(todo.id) { mutableStateOf(false) }
+    var localChecked by remember(todo.id) { mutableStateOf(false) }
+    var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
+    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
     val highlightAnim = remember(todo.id) { Animatable(0f) }
-    val visuallyCompleted = localCompleted || (keepCompletedInline && todo.completed)
+    val visuallyChecked = localChecked || (keepCompletedInline && todo.completed)
+    val visuallyStruck = localStruck || (keepCompletedInline && todo.completed)
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -2913,8 +2947,24 @@ private fun SwipeTaskRow(
     val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(
+            durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
         label = "swipeTaskCompletionAlpha",
+    )
+    val completionOffsetY by animateDpAsState(
+        targetValue = if (completionFading) (-10).dp else 0.dp,
+        animationSpec = tween(
+            durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
+        label = "swipeTaskCompletionOffsetY",
+    )
+    val titleStrikeProgress by animateFloatAsState(
+        targetValue = if (visuallyStruck) 1f else 0f,
+        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+        label = "swipeTaskTitleStrikeProgress",
     )
     val dueTimeText = TODO_DUE_TIME_FORMATTER.format(todo.due)
     val dueDateTimeText = TODO_DUE_DATE_TIME_FORMATTER.format(todo.due)
@@ -2987,7 +3037,10 @@ private fun SwipeTaskRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer { alpha = if (dragging) completionAlpha * 0.55f else completionAlpha },
+            .graphicsLayer {
+                alpha = if (dragging) completionAlpha * 0.55f else completionAlpha
+                translationY = completionOffsetY.toPx()
+            },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
             Box(
@@ -3141,42 +3194,37 @@ private fun SwipeTaskRow(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             CircularCheckToggleIcon(
-                                imageVector = if (!visuallyCompleted) {
+                                imageVector = if (!visuallyChecked) {
                                     Icons.Rounded.RadioButtonUnchecked
                                 } else {
                                     Icons.Rounded.CheckCircle
                                 },
-                                contentDescription = if (visuallyCompleted) {
+                                contentDescription = if (visuallyChecked) {
                                     stringResource(R.string.label_completed)
                                 } else {
                                     stringResource(R.string.label_mark_complete)
                                 },
-                                tint = if (!visuallyCompleted) {
+                                tint = if (!visuallyChecked) {
                                     colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                                 } else {
                                     TASK_CHECKMARK_GREEN
                                 },
-                                enabled = !visuallyCompleted && !pendingCompletion,
+                                enabled = !visuallyChecked && !pendingCompletion,
                                 onClick = {
                                     ViewCompat.performHapticFeedback(
                                         view,
                                         HapticFeedbackConstantsCompat.CLOCK_TICK,
                                     )
                                     targetOffsetX = 0f
-                                    localCompleted = true
+                                    localChecked = true
                                     pendingCompletion = true
                                     coroutineScope.launch {
-                                        if (useDelayedFadeCompletion) {
-                                            delay(500)
-                                            if (useFadeOnCompletion) {
-                                                completionFading = true
-                                                delay(220)
-                                            }
-                                            onComplete()
-                                        } else {
-                                            delay(if (keepCompletedInline) 120 else 180)
-                                            onComplete()
-                                        }
+                                        delay(TASK_COMPLETION_CHECK_TO_STRIKE_MS)
+                                        localStruck = true
+                                        delay(TASK_COMPLETION_STRIKE_TO_FADE_MS)
+                                        completionFading = true
+                                        delay(TASK_COMPLETION_FADE_MS)
+                                        onComplete()
                                     }
                                 },
                             )
@@ -3188,19 +3236,33 @@ private fun SwipeTaskRow(
                             ) {
                                 Text(
                                     text = todo.title,
-                                    color = if (visuallyCompleted) {
+                                    modifier = Modifier.drawWithContent {
+                                        drawContent()
+                                        if (titleStrikeProgress > 0f) {
+                                            val lineEnd = (
+                                                    titleLayoutResult
+                                                        ?.takeIf { it.lineCount > 0 }
+                                                        ?.getLineRight(0) ?: size.width
+                                                    ).coerceIn(0f, size.width)
+                                            val lineY = size.height * 0.56f
+                                            drawLine(
+                                                color = colorScheme.onSurface.copy(alpha = 0.65f),
+                                                start = Offset(0f, lineY),
+                                                end = Offset(lineEnd * titleStrikeProgress, lineY),
+                                                strokeWidth = TdayDimens.BorderWidthThick.toPx(),
+                                            )
+                                        }
+                                    },
+                                    color = if (visuallyStruck) {
                                         colorScheme.onSurface.copy(alpha = 0.78f)
                                     } else {
                                         colorScheme.onSurface
                                     },
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
-                                    textDecoration = if (visuallyCompleted) {
-                                        TextDecoration.LineThrough
-                                    } else {
-                                        TextDecoration.None
-                                    },
+                                    textDecoration = TextDecoration.None,
                                     maxLines = 2,
+                                    onTextLayout = { titleLayoutResult = it },
                                 )
                                 if (showDueText) {
                                     Text(

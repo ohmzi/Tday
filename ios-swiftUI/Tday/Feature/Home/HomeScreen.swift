@@ -186,8 +186,13 @@ struct HomeScreen: View {
                                 VStack(spacing: 0) {
                                     ForEach(viewModel.todayTodos) { todo in
                                         homeTodayTaskRow(todo)
+                                            .transition(.opacity.combined(with: .move(edge: .top)))
                                     }
                                 }
+                                .animation(
+                                    .spring(response: 0.34, dampingFraction: 0.9),
+                                    value: viewModel.todayTodos.map(\.id)
+                                )
                             }
 
                             HomeCategoryBoard(
@@ -545,6 +550,7 @@ private struct HomeIconCircleButton: View {
 private enum HomeTodayTaskCompletionPhase {
     case active
     case checked
+    case struck
     case fading
 }
 
@@ -575,8 +581,10 @@ private struct HomeTodayTaskRow: View {
     private var revealProgress: CGFloat { min(1, max(0, -offsetX / revealWidth)) }
     private var isCompleting: Bool { completionPhase != .active }
     private var isFading: Bool { completionPhase == .fading }
+    private var showCheckmark: Bool { completionPhase != .active || todo.completed }
+    private var showStrikethrough: Bool { completionPhase == .struck || completionPhase == .fading || todo.completed }
     private var titleColor: Color {
-        isCompleting ? colors.onSurface.opacity(0.78) : colors.onSurface
+        showStrikethrough ? colors.onSurface.opacity(0.78) : colors.onSurface
     }
 
     var body: some View {
@@ -648,16 +656,17 @@ private struct HomeTodayTaskRow: View {
         }
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
-        .animation(.easeInOut(duration: 0.22), value: isFading)
+        .offset(y: isFading ? -10 : 0)
+        .animation(.easeInOut(duration: 0.26), value: isFading)
         .allowsHitTesting(!isCompleting)
     }
 
     private var rowContent: some View {
         HStack(alignment: .center, spacing: 12) {
             Button(action: startCompletion) {
-                Image(systemName: isCompleting || todo.completed ? "checkmark.circle.fill" : "circle")
+                Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 24, weight: .regular))
-                    .foregroundStyle(isCompleting || todo.completed ? Color.green : colors.onSurfaceVariant.opacity(0.78))
+                    .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
                     .frame(width: 38, height: 38)
             }
             .buttonStyle(TdayPressButtonStyle(shadowColor: .black, pressedShadowOpacity: 0, normalShadowOpacity: 0))
@@ -666,7 +675,7 @@ private struct HomeTodayTaskRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HomeTodayTaskTitle(
                     text: todo.title,
-                    isCompleted: isCompleting,
+                    isCompleted: showStrikethrough,
                     titleColor: titleColor,
                     strikeColor: colors.onSurface.opacity(0.65)
                 )
@@ -708,11 +717,15 @@ private struct HomeTodayTaskRow: View {
         }
 
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 500_000_000)
+            try? await Task.sleep(nanoseconds: 160_000_000)
             withAnimation(.easeInOut(duration: 0.22)) {
+                completionPhase = .struck
+            }
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            withAnimation(.easeInOut(duration: 0.26)) {
                 completionPhase = .fading
             }
-            try? await Task.sleep(nanoseconds: 220_000_000)
+            try? await Task.sleep(nanoseconds: 260_000_000)
             await onComplete()
             if completionPhase == .fading {
                 withAnimation(.easeInOut(duration: 0.16)) {

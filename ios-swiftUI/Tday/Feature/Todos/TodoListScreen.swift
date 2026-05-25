@@ -18,6 +18,12 @@ private struct TodoInAppDrag: Equatable {
     var location: CGPoint
 }
 
+private enum TodoCompletionPhase {
+    case checked
+    case struck
+    case fading
+}
+
 private struct TodoDropTargetFrame: Equatable {
     let sectionID: String
     let frame: CGRect
@@ -155,6 +161,39 @@ private struct TimelineTaskFlashHighlight: ViewModifier {
     }
 }
 
+struct TodoTimelineTaskTitle: View {
+    let text: String
+    let isCompleted: Bool
+    let titleColor: Color
+    let strikeColor: Color
+    var font: Font = .tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold)
+    var lineLimit: Int = 2
+
+    private var strikeProgress: CGFloat {
+        isCompleted ? 1 : 0
+    }
+
+    var body: some View {
+        Text(text)
+            .font(font)
+            .foregroundStyle(titleColor)
+            .lineLimit(lineLimit)
+            .overlay {
+                GeometryReader { proxy in
+                    Rectangle()
+                        .fill(strikeColor)
+                        .frame(width: proxy.size.width * strikeProgress, height: 1.4)
+                        .position(
+                            x: (proxy.size.width * strikeProgress) / 2,
+                            y: proxy.size.height * 0.55
+                        )
+                }
+                .allowsHitTesting(false)
+            }
+            .animation(.easeInOut(duration: 0.32), value: isCompleted)
+    }
+}
+
 struct TimelineTopBarAction {
     let systemName: String
     let tint: Color?
@@ -192,7 +231,7 @@ struct TodoListScreen: View {
     @State private var pendingRescheduleDrop: TodoRescheduleDrop?
     @State private var collapsedSectionIDs: Set<String>
     @State private var timelineScrollOffset: CGFloat = 0
-    @State private var completingTodoIDs: Set<String> = []
+    @State private var completionPhases: [String: TodoCompletionPhase] = [:]
     @State private var flashTodoId: String?
     @State private var highlightedScrollRequestID = 0
 
@@ -253,7 +292,7 @@ struct TodoListScreen: View {
 
     private var timelineItemAnimationKey: String {
         let itemIDs = viewModel.items.map(\.id).joined(separator: "|")
-        let completingIDs = completingTodoIDs.sorted().joined(separator: "|")
+        let completingIDs = completionPhases.keys.sorted().joined(separator: "|")
         return "\(itemIDs)::\(completingIDs)"
     }
 
@@ -1015,7 +1054,9 @@ struct TodoListScreen: View {
         _ todo: TodoItem,
         in section: TodoTimelineSection
     ) -> some View {
-        let isCompleting = completingTodoIDs.contains(todo.id)
+        let completionPhase = completionPhases[todo.id]
+        let isCompleting = completionPhase != nil
+        let isFading = completionPhase == .fading
         let rowContent = VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
                 Circle()
@@ -1042,9 +1083,10 @@ struct TodoListScreen: View {
                     .lineLimit(2)
             }
         }
-        .opacity(isCompleting ? 0 : 1)
-        .scaleEffect(isCompleting ? 0.985 : 1, anchor: .center)
-        .animation(.easeInOut(duration: 0.16), value: isCompleting)
+        .opacity(isFading ? 0 : 1)
+        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
+        .offset(y: isFading ? -10 : 0)
+        .animation(.easeInOut(duration: 0.26), value: isFading)
         .opacity(draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1)
         .allowsHitTesting(!isCompleting)
         .todoTrailingSwipeActions(
@@ -1100,16 +1142,20 @@ struct TodoListScreen: View {
         let subtitleText = minimalTimelineSubtitle(for: todo, in: section)
         let isOverdueTask = !todo.completed && todo.due < Date()
         let subtitleColor = isOverdueTask ? colors.error : colors.onSurfaceVariant.opacity(0.8)
-        let isCompleting = completingTodoIDs.contains(todo.id)
+        let completionPhase = completionPhases[todo.id]
+        let isCompleting = completionPhase != nil
+        let isFading = completionPhase == .fading
+        let showCheckmark = completionPhase != nil || todo.completed
+        let showStrikethrough = completionPhase == .struck || completionPhase == .fading || todo.completed
 
         return VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
                 Button {
                     completeTodoWithoutReflow(todo)
                 } label: {
-                    Image(systemName: todo.completed ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
-                        .foregroundStyle(todo.completed ? Color.green : colors.onSurfaceVariant.opacity(0.78))
+                        .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
                         .frame(width: TodoTimelineMetrics.minimalRowToggleFrame, height: TodoTimelineMetrics.minimalRowToggleFrame)
                 }
                 .buttonStyle(
@@ -1121,10 +1167,12 @@ struct TodoListScreen: View {
                 )
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(todo.title)
-                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold))
-                        .foregroundStyle(colors.onSurface)
-                        .lineLimit(2)
+                    TodoTimelineTaskTitle(
+                        text: todo.title,
+                        isCompleted: showStrikethrough,
+                        titleColor: showStrikethrough ? colors.onSurface.opacity(0.78) : colors.onSurface,
+                        strikeColor: colors.onSurface.opacity(0.65)
+                    )
 
                     Text(subtitleText)
                         .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
@@ -1152,9 +1200,10 @@ struct TodoListScreen: View {
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)
             .contentShape(Rectangle())
         }
-        .opacity(isCompleting ? 0 : (draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1))
-        .scaleEffect(isCompleting ? 0.985 : 1, anchor: .center)
-        .animation(.easeInOut(duration: 0.16), value: isCompleting)
+        .opacity(isFading ? 0 : (draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1))
+        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
+        .offset(y: isFading ? -10 : 0)
+        .animation(.easeInOut(duration: 0.26), value: isFading)
         .allowsHitTesting(!isCompleting)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
@@ -1192,18 +1241,24 @@ struct TodoListScreen: View {
     }
 
     private func completeTodoWithoutReflow(_ todo: TodoItem) {
-        guard !completingTodoIDs.contains(todo.id) else {
+        guard completionPhases[todo.id] == nil else {
             return
         }
         withAnimation(.easeInOut(duration: 0.16)) {
-            _ = completingTodoIDs.insert(todo.id)
+            completionPhases[todo.id] = .checked
         }
-        Task {
-            try? await Task.sleep(nanoseconds: 190_000_000)
-            await viewModel.complete(todo)
-            await MainActor.run {
-                _ = completingTodoIDs.remove(todo.id)
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 160_000_000)
+            withAnimation(.easeInOut(duration: 0.22)) {
+                completionPhases[todo.id] = .struck
             }
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            withAnimation(.easeInOut(duration: 0.26)) {
+                completionPhases[todo.id] = .fading
+            }
+            try? await Task.sleep(nanoseconds: 260_000_000)
+            await viewModel.complete(todo)
+            completionPhases[todo.id] = nil
         }
     }
 
@@ -1378,7 +1433,8 @@ struct TodoListScreen: View {
 
     private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String {
         let timeText = todo.due.formatted(date: .omitted, time: .shortened)
-        let dueBodyText = if viewModel.mode == .priority && section.id == "earlier" {
+        let dueBodyText = if section.id == "earlier" &&
+            (viewModel.mode == .all || viewModel.mode == .priority || viewModel.mode == .list) {
             timelineDateTimeText(todo.due)
         } else {
             timeText
@@ -1409,8 +1465,6 @@ struct TodoListScreen: View {
                 return "Overdue, \(dueBodyText)"
             }
             return "Due \(dueBodyText)"
-        default:
-            return dueBodyText
         }
     }
 }
