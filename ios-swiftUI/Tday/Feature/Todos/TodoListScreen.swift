@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
+private let todoDragContentTypes = [UTType.plainText.identifier, UTType.text.identifier]
+
 enum TodoTimelineMetrics {
     static let horizontalPadding: CGFloat = 18
     static let heroTitleSize: CGFloat = 32
@@ -472,6 +474,10 @@ struct TodoListScreen: View {
         }
     }
 
+    private func resolveTodoForDrop(id: String) -> TodoItem? {
+        viewModel.items.first { $0.id == id || $0.canonicalId == id }
+    }
+
     private func commitPendingReschedule(scope: TaskRescheduleScope) {
         guard let drop = pendingRescheduleDrop else {
             return
@@ -601,10 +607,11 @@ struct TodoListScreen: View {
                             .frame(height: 8)
                             .listRowInsets(EdgeInsets())
                             .onDrop(
-                                of: [UTType.plainText.identifier],
+                                of: todoDragContentTypes,
                                 delegate: ScheduledTodoDropDelegate(
                                     section: section,
                                     draggedTodo: draggedTodo,
+                                    resolveTodo: resolveTodoForDrop,
                                     onMove: { todo, targetDate in
                                         requestReschedule(todo, to: targetDate)
                                     },
@@ -616,13 +623,14 @@ struct TodoListScreen: View {
                     }
                 } header: {
                     Text(section.title)
-                        .foregroundStyle(activeDropSectionId == section.id ? colors.primary : colors.onSurfaceVariant)
+                        .foregroundStyle(activeDropSectionId == section.id ? colors.error : colors.onSurfaceVariant)
                         .timelinePinnedSectionHeaderBackground()
                         .onDrop(
-                            of: [UTType.plainText.identifier],
+                            of: todoDragContentTypes,
                             delegate: ScheduledTodoDropDelegate(
                                 section: section,
                                 draggedTodo: draggedTodo,
+                                resolveTodo: resolveTodoForDrop,
                                 onMove: { todo, targetDate in
                                     requestReschedule(todo, to: targetDate)
                                 },
@@ -820,10 +828,11 @@ struct TodoListScreen: View {
         return rowContent
             .transition(.opacity.combined(with: .scale(scale: 0.985)))
             .onDrop(
-                of: [UTType.plainText.identifier],
+                of: todoDragContentTypes,
                 delegate: ScheduledTodoDropDelegate(
                     section: section,
                     draggedTodo: draggedTodo,
+                    resolveTodo: resolveTodoForDrop,
                     onMove: { droppedTodo, targetDate in
                         requestReschedule(droppedTodo, to: targetDate)
                     },
@@ -920,10 +929,11 @@ struct TodoListScreen: View {
             }
         )
         .onDrop(
-            of: [UTType.plainText.identifier],
+            of: todoDragContentTypes,
             delegate: ScheduledTodoDropDelegate(
                 section: section,
                 draggedTodo: draggedTodo,
+                resolveTodo: resolveTodoForDrop,
                 onMove: { droppedTodo, targetDate in
                     requestReschedule(droppedTodo, to: targetDate)
                 },
@@ -998,10 +1008,11 @@ struct TodoListScreen: View {
             .padding(.top, isFirstSection ? 0 : 8)
             .timelinePinnedSectionHeaderBackground()
             .onDrop(
-                of: [UTType.plainText.identifier],
+                of: todoDragContentTypes,
                 delegate: ScheduledTodoDropDelegate(
                     section: section,
                     draggedTodo: draggedTodo,
+                    resolveTodo: resolveTodoForDrop,
                     onMove: { todo, targetDate in
                         requestReschedule(todo, to: targetDate)
                     },
@@ -1485,7 +1496,7 @@ struct TimelineSectionHeader: View {
             HStack(spacing: 8) {
                 Text(title)
                     .font(.tdayRounded(size: TodoTimelineMetrics.sectionTitleSize, weight: .bold))
-                    .foregroundStyle(isActiveDropTarget ? colors.primary : colors.onSurfaceVariant.opacity(0.78))
+                    .foregroundStyle(isActiveDropTarget ? colors.error : colors.onSurfaceVariant.opacity(0.78))
                     .textCase(nil)
 
                 if isCollapsible {
@@ -1693,15 +1704,18 @@ private struct ScheduledDragModifier: ViewModifier {
 private struct ScheduledTodoDropDelegate: DropDelegate {
     let section: TodoTimelineSection
     let draggedTodo: TodoItem?
+    let resolveTodo: (String) -> TodoItem?
     let onMove: (TodoItem, Date) -> Void
     let onSectionChange: (String?) -> Void
 
     func validateDrop(info: DropInfo) -> Bool {
-        draggedTodo != nil && section.targetDate != nil
+        section.targetDate != nil && info.hasItemsConforming(to: todoDragContentTypes)
     }
 
     func dropEntered(info: DropInfo) {
-        onSectionChange(section.id)
+        if validateDrop(info: info) {
+            onSectionChange(section.id)
+        }
     }
 
     func dropExited(info: DropInfo) {
@@ -1717,9 +1731,28 @@ private struct ScheduledTodoDropDelegate: DropDelegate {
             onSectionChange(nil)
         }
         guard let todo = draggedTodo, let targetDate = section.targetDate else {
-            return false
+            return performProviderDrop(info: info)
         }
         onMove(todo, targetDate)
+        return true
+    }
+
+    private func performProviderDrop(info: DropInfo) -> Bool {
+        guard let targetDate = section.targetDate,
+              let provider = info.itemProviders(for: todoDragContentTypes).first else {
+            return false
+        }
+        provider.loadObject(ofClass: NSString.self) { object, _ in
+            guard let rawId = object as? NSString else {
+                return
+            }
+            let todoId = rawId as String
+            DispatchQueue.main.async {
+                if let todo = resolveTodo(todoId) {
+                    onMove(todo, targetDate)
+                }
+            }
+        }
         return true
     }
 }
