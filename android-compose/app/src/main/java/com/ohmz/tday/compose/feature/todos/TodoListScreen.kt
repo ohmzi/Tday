@@ -560,9 +560,7 @@ fun TodoListScreen(
                         } else if (selectedList != null) {
                             listSettingsTargetId = selectedList.id
                             listSettingsName = selectedList.name
-                            listSettingsColor = selectedList.color
-                                ?.takeIf { isSupportedListColor(it) }
-                                ?: DEFAULT_LIST_COLOR_KEY
+                            listSettingsColor = normalizedListColorKey(selectedList.color)
                             listSettingsIconKey = selectedList.iconKey
                                 ?.takeIf { isSupportedListIconKey(it) }
                                 ?: DEFAULT_LIST_ICON_KEY
@@ -3261,22 +3259,22 @@ private fun modeAccentColor(
 
 private fun listAccentColor(colorKey: String?): Color {
     return when (colorKey) {
-        "RED" -> Color(0xFFE65E52)
-        "ORANGE" -> Color(0xFFF29F38)
-        "YELLOW" -> Color(0xFFF3D04A)
-        "LIME" -> Color(0xFF8ACF56)
-        "BLUE" -> Color(0xFF5C9FE7)
-        "PURPLE" -> Color(0xFF8D6CE2)
-        "PINK" -> Color(0xFFDF6DAA)
-        "TEAL" -> Color(0xFF4EB5B0)
-        "CORAL" -> Color(0xFFE3876D)
-        "GOLD" -> Color(0xFFCFAB57)
-        "DEEP_BLUE" -> Color(0xFF4B73D6)
-        "ROSE" -> Color(0xFFD9799A)
-        "LIGHT_RED" -> Color(0xFFE48888)
-        "BRICK" -> Color(0xFFB86A5C)
-        "SLATE" -> Color(0xFF7B8593)
-        else -> Color(0xFF5C9FE7)
+        "PINK" -> Color(0xFFC987A5)
+        "GOLD" -> Color(0xFFC7AA63)
+        "DEEP_BLUE" -> Color(0xFF6F86C6)
+        "CORAL" -> Color(0xFFD39A82)
+        "TEAL" -> Color(0xFF67AAA7)
+        "SLATE", "GRAY" -> Color(0xFF7F8996)
+        "BLUE" -> Color(0xFF6F9FCE)
+        "PURPLE" -> Color(0xFF9A86CF)
+        "ROSE" -> Color(0xFFC98299)
+        "LIGHT_RED" -> Color(0xFFD58D8D)
+        "BRICK" -> Color(0xFFAD786E)
+        "YELLOW" -> Color(0xFFCFB866)
+        "LIME", "GREEN" -> Color(0xFF8DBB73)
+        "ORANGE" -> Color(0xFFD69B63)
+        "RED" -> Color(0xFFD97873)
+        else -> Color(0xFFC987A5)
     }
 }
 
@@ -3288,6 +3286,14 @@ private fun isSupportedListColor(colorKey: String): Boolean {
     return LIST_SETTINGS_COLOR_KEYS.contains(colorKey)
 }
 
+private fun normalizedListColorKey(colorKey: String?): String {
+    return when (colorKey) {
+        "GREEN" -> "LIME"
+        "GRAY" -> "SLATE"
+        else -> colorKey?.takeIf { isSupportedListColor(it) } ?: DEFAULT_LIST_COLOR_KEY
+    }
+}
+
 private fun isSupportedListIconKey(iconKey: String): Boolean {
     return LIST_SETTINGS_ICON_OPTIONS.any { it.key == iconKey }
 }
@@ -3297,25 +3303,25 @@ private data class ListSettingsIconOption(
     val icon: ImageVector,
 )
 
-private const val DEFAULT_LIST_COLOR_KEY = "BLUE"
+private const val DEFAULT_LIST_COLOR_KEY = "PINK"
 private const val DEFAULT_LIST_ICON_KEY = "inbox"
 
 private val LIST_SETTINGS_COLOR_KEYS = listOf(
-    "RED",
-    "ORANGE",
-    "YELLOW",
-    "LIME",
-    "BLUE",
-    "PURPLE",
     "PINK",
-    "TEAL",
-    "CORAL",
     "GOLD",
     "DEEP_BLUE",
+    "CORAL",
+    "TEAL",
+    "SLATE",
+    "BLUE",
+    "PURPLE",
     "ROSE",
     "LIGHT_RED",
     "BRICK",
-    "SLATE",
+    "YELLOW",
+    "LIME",
+    "ORANGE",
+    "RED",
 )
 
 private val LIST_SETTINGS_ICON_OPTIONS = listOf(

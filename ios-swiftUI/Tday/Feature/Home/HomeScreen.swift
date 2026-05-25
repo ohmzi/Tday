@@ -12,6 +12,7 @@ private enum HomeMetrics {
     static let tileInnerPadding: CGFloat = 12
     static let todayCardHeight: CGFloat = 70
     static let listRowHeight: CGFloat = 70
+    static let listContainerColorWeight: CGFloat = 0.66
     static let tileWatermarkSize: CGFloat = 116
     static let tileWatermarkTrailingInset: CGFloat = 22
 }
@@ -879,7 +880,7 @@ private struct HomeCategoryBoard: View {
         VStack(spacing: HomeMetrics.tileGap) {
             HStack(spacing: HomeMetrics.tileGap) {
                 HomeCategoryTile(
-                    color: Color(hex: 0xDDB37D),
+                    color: Color(hex: 0xD98F4B),
                     icon: "clock",
                     watermark: "clock",
                     title: "Scheduled",
@@ -888,7 +889,7 @@ private struct HomeCategoryBoard: View {
                 )
 
                 HomeCategoryTile(
-                    color: Color(hex: 0xD48A8C),
+                    color: Color(hex: 0xC97880),
                     icon: "flag.fill",
                     watermark: "flag.fill",
                     title: "Priority",
@@ -899,7 +900,7 @@ private struct HomeCategoryBoard: View {
 
             HStack(spacing: HomeMetrics.tileGap) {
                 HomeCategoryTile(
-                    color: Color(hex: 0xDA7661),
+                    color: Color(hex: 0xE06F66),
                     icon: "exclamationmark.circle",
                     watermark: "exclamationmark.circle",
                     title: "Overdue",
@@ -908,7 +909,7 @@ private struct HomeCategoryBoard: View {
                 )
 
                 HomeCategoryTile(
-                    color: Color(hex: 0x4E4E50),
+                    color: Color(hex: 0x68717A),
                     icon: "tray.fill",
                     watermark: "tray.fill",
                     title: "All",
@@ -919,7 +920,7 @@ private struct HomeCategoryBoard: View {
 
             HStack(spacing: HomeMetrics.tileGap) {
                 HomeCategoryTile(
-                    color: Color(hex: 0xA8C8B2),
+                    color: Color(hex: 0x719F84),
                     icon: "checkmark",
                     watermark: "checkmark",
                     title: "Completed",
@@ -928,7 +929,7 @@ private struct HomeCategoryBoard: View {
                 )
 
                 HomeCategoryTile(
-                    color: Color(hex: 0xC3B4DF),
+                    color: Color(hex: 0x9A89D2),
                     icon: "calendar",
                     watermark: nil,
                     title: "Calendar",
@@ -1092,7 +1093,7 @@ private struct HomeListRow: View {
     }
 
     private var containerColor: Color {
-        colors.surfaceVariant.blended(with: accent, amount: colors.isDark ? 0.24 : 0.38)
+        colors.surfaceVariant.blended(with: accent, amount: HomeMetrics.listContainerColorWeight)
     }
 
     var body: some View {
@@ -1400,7 +1401,7 @@ private struct CreateListSheet: View {
     @FocusState private var nameFieldFocused: Bool
 
     @State private var name = ""
-    @State private var color = "BLUE"
+    @State private var color = "PINK"
     @State private var iconKey = "inbox"
     @State private var headerHeight: CGFloat = 84
     @State private var contentHeight: CGFloat = CreateListSheetMetrics.initialCompactHeight - 84
@@ -1715,21 +1716,21 @@ private struct CreateListSheetCard<Content: View>: View {
 }
 
 private let homeListColorOptions: [HomeListColorOption] = [
-    HomeListColorOption(key: "RED", color: Color(hex: 0xE65E52)),
-    HomeListColorOption(key: "ORANGE", color: Color(hex: 0xF29F38)),
-    HomeListColorOption(key: "YELLOW", color: Color(hex: 0xF3D04A)),
-    HomeListColorOption(key: "LIME", color: Color(hex: 0x8ACF56)),
-    HomeListColorOption(key: "BLUE", color: Color(hex: 0x5C9FE7)),
-    HomeListColorOption(key: "PURPLE", color: Color(hex: 0x8D6CE2)),
-    HomeListColorOption(key: "PINK", color: Color(hex: 0xDF6DAA)),
-    HomeListColorOption(key: "TEAL", color: Color(hex: 0x4EB5B0)),
-    HomeListColorOption(key: "CORAL", color: Color(hex: 0xE3876D)),
-    HomeListColorOption(key: "GOLD", color: Color(hex: 0xCFAB57)),
-    HomeListColorOption(key: "DEEP_BLUE", color: Color(hex: 0x4B73D6)),
-    HomeListColorOption(key: "ROSE", color: Color(hex: 0xD9799A)),
-    HomeListColorOption(key: "LIGHT_RED", color: Color(hex: 0xE48888)),
-    HomeListColorOption(key: "BRICK", color: Color(hex: 0xB86A5C)),
-    HomeListColorOption(key: "SLATE", color: Color(hex: 0x7B8593)),
+    HomeListColorOption(key: "PINK", color: Color(hex: 0xC987A5)),
+    HomeListColorOption(key: "GOLD", color: Color(hex: 0xC7AA63)),
+    HomeListColorOption(key: "DEEP_BLUE", color: Color(hex: 0x6F86C6)),
+    HomeListColorOption(key: "CORAL", color: Color(hex: 0xD39A82)),
+    HomeListColorOption(key: "TEAL", color: Color(hex: 0x67AAA7)),
+    HomeListColorOption(key: "SLATE", color: Color(hex: 0x7F8996)),
+    HomeListColorOption(key: "BLUE", color: Color(hex: 0x6F9FCE)),
+    HomeListColorOption(key: "PURPLE", color: Color(hex: 0x9A86CF)),
+    HomeListColorOption(key: "ROSE", color: Color(hex: 0xC98299)),
+    HomeListColorOption(key: "LIGHT_RED", color: Color(hex: 0xD58D8D)),
+    HomeListColorOption(key: "BRICK", color: Color(hex: 0xAD786E)),
+    HomeListColorOption(key: "YELLOW", color: Color(hex: 0xCFB866)),
+    HomeListColorOption(key: "LIME", color: Color(hex: 0x8DBB73)),
+    HomeListColorOption(key: "ORANGE", color: Color(hex: 0xD69B63)),
+    HomeListColorOption(key: "RED", color: Color(hex: 0xD97873)),
 ]
 
 private let homeListIconOptions: [HomeListIconOption] = [
@@ -1804,7 +1805,16 @@ private let homeListIconOptions: [HomeListIconOption] = [
 ]
 
 private func homeListAccentColor(for key: String?) -> Color {
-    homeListColorOptions.first(where: { $0.key == key })?.color ?? Color(hex: 0xE9A03B)
+    let normalizedKey: String?
+    switch key {
+    case "GREEN":
+        normalizedKey = "LIME"
+    case "GRAY":
+        normalizedKey = "SLATE"
+    default:
+        normalizedKey = key
+    }
+    return homeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? Color(hex: 0xC987A5)
 }
 
 private func homeListSymbolName(for key: String?) -> String {
