@@ -2038,6 +2038,24 @@ private struct TimelineSectionHeaderButtonStyle: ButtonStyle {
     }
 }
 
+private let todoListSettingsColorKeys = [
+    "PINK",
+    "GOLD",
+    "DEEP_BLUE",
+    "CORAL",
+    "TEAL",
+    "SLATE",
+    "BLUE",
+    "PURPLE",
+    "ROSE",
+    "LIGHT_RED",
+    "BRICK",
+    "YELLOW",
+    "LIME",
+    "ORANGE",
+    "RED",
+]
+
 private struct ListSettingsSheet: View {
     let list: ListSummary?
     let onSubmit: (String, String?, String?) -> Void
@@ -2045,10 +2063,10 @@ private struct ListSettingsSheet: View {
     @Environment(\.tdayColors) private var tdayColors
 
     @State private var name = ""
-    @State private var color = "BLUE"
+    @State private var color = "PINK"
     @State private var iconKey = "inbox"
 
-    private let colors = ["BLUE", "GREEN", "ORANGE", "PINK", "PURPLE", "GRAY"]
+    private let colors = todoListSettingsColorKeys
     private let icons = ["inbox", "briefcase", "calendar", "list.bullet", "star", "heart"]
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -2087,7 +2105,7 @@ private struct ListSettingsSheet: View {
             .toolbar(.hidden, for: .navigationBar)
             .task {
                 name = list?.name ?? ""
-                color = list?.color ?? "BLUE"
+                color = normalizedTodoListColorKey(list?.color)
                 iconKey = list?.iconKey ?? "inbox"
             }
         }
@@ -2658,38 +2676,51 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
 
 func todoListAccentColor(for key: String?) -> Color {
     switch key {
-    case "RED":
-        return todoHexColor(0xE65E52)
-    case "ORANGE":
-        return todoHexColor(0xF29F38)
-    case "YELLOW":
-        return todoHexColor(0xF3D04A)
-    case "LIME":
-        return todoHexColor(0x8ACF56)
-    case "BLUE":
-        return todoHexColor(0x5C9FE7)
-    case "PURPLE":
-        return todoHexColor(0x8D6CE2)
     case "PINK":
-        return todoHexColor(0xDF6DAA)
-    case "TEAL":
-        return todoHexColor(0x4EB5B0)
-    case "CORAL":
-        return todoHexColor(0xE3876D)
+        return todoHexColor(0xC987A5)
     case "GOLD":
-        return todoHexColor(0xCFAB57)
+        return todoHexColor(0xC7AA63)
     case "DEEP_BLUE":
-        return todoHexColor(0x4B73D6)
+        return todoHexColor(0x6F86C6)
+    case "CORAL":
+        return todoHexColor(0xD39A82)
+    case "TEAL":
+        return todoHexColor(0x67AAA7)
+    case "SLATE", "GRAY":
+        return todoHexColor(0x7F8996)
+    case "BLUE":
+        return todoHexColor(0x6F9FCE)
+    case "PURPLE":
+        return todoHexColor(0x9A86CF)
     case "ROSE":
-        return todoHexColor(0xD9799A)
+        return todoHexColor(0xC98299)
     case "LIGHT_RED":
-        return todoHexColor(0xE48888)
+        return todoHexColor(0xD58D8D)
     case "BRICK":
-        return todoHexColor(0xB86A5C)
-    case "SLATE":
-        return todoHexColor(0x7B8593)
+        return todoHexColor(0xAD786E)
+    case "YELLOW":
+        return todoHexColor(0xCFB866)
+    case "LIME", "GREEN":
+        return todoHexColor(0x8DBB73)
+    case "ORANGE":
+        return todoHexColor(0xD69B63)
+    case "RED":
+        return todoHexColor(0xD97873)
     default:
-        return todoHexColor(0x5C9FE7)
+        return todoHexColor(0xC987A5)
+    }
+}
+
+private func normalizedTodoListColorKey(_ key: String?) -> String {
+    switch key {
+    case "GREEN":
+        return "LIME"
+    case "GRAY":
+        return "SLATE"
+    case let value? where todoListSettingsColorKeys.contains(value):
+        return value
+    default:
+        return "PINK"
     }
 }
 
