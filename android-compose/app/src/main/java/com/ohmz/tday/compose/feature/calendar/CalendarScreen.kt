@@ -1,7 +1,6 @@
 package com.ohmz.tday.compose.feature.calendar
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -235,9 +234,25 @@ private val CalendarDaySummaryCountSize = 18.sp
 private val CalendarPeriodCardPageHeight = 78.dp
 private val CalendarPeriodWeekDayCellHeight = 72.dp
 private val CalendarPeriodPageHorizontalGutter = 2.dp
+private val CalendarPeriodCardTopPadding = 16.dp
+private val CalendarPeriodCardOuterSpacing = 14.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
+private val CalendarMonthModeCardHeight = CalendarMonthCardTopPadding +
+        CalendarCardHeaderHeight +
+        CalendarMonthCardOuterSpacing +
+        CalendarMonthWeekdayHeight +
+        CalendarMonthGridSpacing +
+        CalendarMonthGridHeight +
+        CalendarMonthCardBottomPadding
+private val CalendarPeriodModeCardHeight = CalendarPeriodCardTopPadding +
+        CalendarCardHeaderHeight +
+        CalendarPeriodCardOuterSpacing +
+        CalendarPeriodCardPageHeight +
+        CalendarPeriodCardBottomPadding
 private val CalendarTaskListSameDateSpacing = 2.dp
 private val CalendarTaskRowHeight = 56.dp
+private const val CALENDAR_MODE_BELOW_LEAD_DELAY_MS = 110L
+private const val CALENDAR_MODE_BELOW_TRAIL_DELAY_MS = 130L
 private const val CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
 private const val CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
 private const val CALENDAR_TASK_COMPLETION_FADE_MS = 260L
@@ -374,6 +389,8 @@ fun CalendarScreen(
     var visibleMonthIso by rememberSaveable { mutableStateOf(minNavigableMonth.toString()) }
     var selectedDateIso by rememberSaveable { mutableStateOf(today.toString()) }
     var selectedViewKey by rememberSaveable { mutableStateOf(CalendarViewMode.MONTH.name) }
+    var calendarLayoutViewKey by rememberSaveable { mutableStateOf(selectedViewKey) }
+    var belowCalendarOffsetTarget by remember { mutableStateOf(0.dp) }
     var todayJumpRequestId by rememberSaveable { mutableStateOf(0) }
     var todayJumpRequest by remember { mutableStateOf<CalendarTodayJumpRequest?>(null) }
 
@@ -382,6 +399,26 @@ fun CalendarScreen(
     val selectedViewMode = remember(selectedViewKey) {
         CalendarViewMode.entries.firstOrNull { it.name == selectedViewKey } ?: CalendarViewMode.MONTH
     }
+    val calendarLayoutViewMode = remember(calendarLayoutViewKey) {
+        CalendarViewMode.entries.firstOrNull { it.name == calendarLayoutViewKey }
+            ?: CalendarViewMode.MONTH
+    }
+    val calendarCardHeight by animateDpAsState(
+        targetValue = calendarCardHeightFor(calendarLayoutViewMode),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "calendarModeCardHeight",
+    )
+    val belowCalendarOffset by animateDpAsState(
+        targetValue = belowCalendarOffsetTarget,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "calendarModeBelowOffset",
+    )
     val calendarTaskRescheduleEnabled = selectedViewMode != CalendarViewMode.DAY
     val tasksByDate = remember(uiState.items, zoneId) {
         uiState.items
@@ -418,6 +455,32 @@ fun CalendarScreen(
             activeDropDateIso = null
             calendarDropTargetBounds.clear()
         }
+
+        val currentHeight = calendarCardHeightFor(calendarLayoutViewMode)
+        val targetHeight = calendarCardHeightFor(selectedViewMode)
+        val heightDelta = if (targetHeight > currentHeight) {
+            targetHeight - currentHeight
+        } else {
+            currentHeight - targetHeight
+        }
+        val isCollapsing = targetHeight < currentHeight
+        val isExpanding = targetHeight > currentHeight
+
+        if (heightDelta < 1.dp) {
+            belowCalendarOffsetTarget = 0.dp
+            calendarLayoutViewKey = selectedViewMode.name
+        } else if (isCollapsing) {
+            belowCalendarOffsetTarget = heightDelta
+            calendarLayoutViewKey = selectedViewMode.name
+            delay(CALENDAR_MODE_BELOW_TRAIL_DELAY_MS)
+            belowCalendarOffsetTarget = 0.dp
+        } else if (isExpanding) {
+            belowCalendarOffsetTarget = heightDelta
+            delay(CALENDAR_MODE_BELOW_LEAD_DELAY_MS)
+            calendarLayoutViewKey = selectedViewMode.name
+            belowCalendarOffsetTarget = 0.dp
+        }
+
     }
     val editTarget = remember(editTargetId, uiState.items) {
         editTargetId?.let { targetId ->
@@ -574,72 +637,101 @@ fun CalendarScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
-                            )
+                            .height(calendarCardHeight)
                             .calendarCardChrome(),
                     ) {
-                        when (selectedViewMode) {
-                            CalendarViewMode.MONTH -> CalendarMonthCard(
-                                visibleMonth = visibleMonth,
-                                minNavigableMonth = minNavigableMonth,
-                                canGoPrevMonth = visibleMonth > minNavigableMonth,
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = tasksByDate,
-                                draggedTodo = draggedCalendarTodo,
-                                activeDropDate = activeDropDate,
-                                dropTargets = calendarDropTargetBounds,
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onVisibleMonthChanged = { targetMonth ->
-                                    if (targetMonth >= minNavigableMonth) {
-                                        visibleMonthIso = targetMonth.toString()
-                                    }
-                                },
-                                onSelectDate = ::selectDate,
-                                onDropDateChanged = { date ->
-                                    activeDropDateIso = date?.toString()
-                                },
-                                onMoveTaskToDate = ::requestTaskReschedule,
-                                resolveTodo = resolveTodoForDrop,
+                        CalendarViewMode.entries.forEach { mode ->
+                            val isActive = selectedViewMode == mode
+                            val contentAlpha by animateFloatAsState(
+                                targetValue = if (isActive) 1f else 0f,
+                                animationSpec = tween(
+                                    durationMillis = 120,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                                label = "calendarMode${mode.name}ContentAlpha",
                             )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer { alpha = contentAlpha }
+                                    .zIndex(if (isActive) 1f else 0f),
+                            ) {
+                                when (mode) {
+                                    CalendarViewMode.MONTH -> CalendarMonthCard(
+                                        visibleMonth = visibleMonth,
+                                        minNavigableMonth = minNavigableMonth,
+                                        canGoPrevMonth = visibleMonth > minNavigableMonth,
+                                        selectedDate = selectedDate,
+                                        today = today,
+                                        tasksByDate = tasksByDate,
+                                        draggedTodo = draggedCalendarTodo.takeIf { isActive },
+                                        activeDropDate = activeDropDate.takeIf { isActive },
+                                        dropTargets = calendarDropTargetBounds,
+                                        canSelectDate = ::canNavigateTo,
+                                        todayJumpRequest = todayJumpRequest.takeIf { isActive },
+                                        onTodayJumpHandled = { requestId ->
+                                            if (isActive) clearTodayJumpRequest(requestId)
+                                        },
+                                        onVisibleMonthChanged = { targetMonth ->
+                                            if (isActive && targetMonth >= minNavigableMonth) {
+                                                visibleMonthIso = targetMonth.toString()
+                                            }
+                                        },
+                                        onSelectDate = { date ->
+                                            if (isActive) selectDate(date)
+                                        },
+                                        onDropDateChanged = { date ->
+                                            if (isActive) activeDropDateIso = date?.toString()
+                                        },
+                                        onMoveTaskToDate = { todo, date ->
+                                            if (isActive) requestTaskReschedule(todo, date)
+                                        },
+                                        resolveTodo = resolveTodoForDrop,
+                                    )
 
-                            CalendarViewMode.WEEK -> CalendarWeekCard(
-                                selectedDate = selectedDate,
-                                minNavigableMonth = minNavigableMonth,
-                                today = today,
-                                tasksByDate = tasksByDate,
-                                draggedTodo = draggedCalendarTodo,
-                                activeDropDate = activeDropDate,
-                                dropTargets = calendarDropTargetBounds,
-                                canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onSelectDate = ::selectDate,
-                                onDropDateChanged = { date ->
-                                    activeDropDateIso = date?.toString()
-                                },
-                                onMoveTaskToDate = ::requestTaskReschedule,
-                                resolveTodo = resolveTodoForDrop,
-                            )
+                                    CalendarViewMode.WEEK -> CalendarWeekCard(
+                                        selectedDate = selectedDate,
+                                        minNavigableMonth = minNavigableMonth,
+                                        today = today,
+                                        tasksByDate = tasksByDate,
+                                        draggedTodo = draggedCalendarTodo.takeIf { isActive },
+                                        activeDropDate = activeDropDate.takeIf { isActive },
+                                        dropTargets = calendarDropTargetBounds,
+                                        canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
+                                        canSelectDate = ::canNavigateTo,
+                                        todayJumpRequest = todayJumpRequest.takeIf { isActive },
+                                        onTodayJumpHandled = { requestId ->
+                                            if (isActive) clearTodayJumpRequest(requestId)
+                                        },
+                                        onSelectDate = { date ->
+                                            if (isActive) selectDate(date)
+                                        },
+                                        onDropDateChanged = { date ->
+                                            if (isActive) activeDropDateIso = date?.toString()
+                                        },
+                                        onMoveTaskToDate = { todo, date ->
+                                            if (isActive) requestTaskReschedule(todo, date)
+                                        },
+                                        resolveTodo = resolveTodoForDrop,
+                                    )
 
-                            CalendarViewMode.DAY -> CalendarDayCard(
-                                selectedDate = selectedDate,
-                                minNavigableMonth = minNavigableMonth,
-                                today = today,
-                                tasksByDate = tasksByDate,
-                                canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onSelectDate = ::selectDate,
-                            )
+                                    CalendarViewMode.DAY -> CalendarDayCard(
+                                        selectedDate = selectedDate,
+                                        minNavigableMonth = minNavigableMonth,
+                                        today = today,
+                                        tasksByDate = tasksByDate,
+                                        canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
+                                        canSelectDate = ::canNavigateTo,
+                                        todayJumpRequest = todayJumpRequest.takeIf { isActive },
+                                        onTodayJumpHandled = { requestId ->
+                                            if (isActive) clearTodayJumpRequest(requestId)
+                                        },
+                                        onSelectDate = { date ->
+                                            if (isActive) selectDate(date)
+                                        },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -652,7 +744,9 @@ fun CalendarScreen(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 4.dp),
+                        modifier = Modifier
+                            .offset(y = belowCalendarOffset)
+                            .padding(horizontal = 4.dp),
                     )
                 }
 
@@ -677,6 +771,7 @@ fun CalendarScreen(
                                         easing = FastOutSlowInEasing,
                                     ),
                                 )
+                                .offset(y = belowCalendarOffset)
                                 .padding(
                                     bottom = if (index == selectedDatePendingTasks.lastIndex) {
                                         0.dp
@@ -722,6 +817,7 @@ fun CalendarScreen(
                         com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                             message = message,
                             onRetry = onRefresh,
+                            modifier = Modifier.offset(y = belowCalendarOffset),
                         )
                     }
                 }
@@ -852,6 +948,12 @@ private enum class CalendarViewMode {
     MONTH,
     WEEK,
     DAY,
+}
+
+private fun calendarCardHeightFor(mode: CalendarViewMode) = when (mode) {
+    CalendarViewMode.MONTH -> CalendarMonthModeCardHeight
+    CalendarViewMode.WEEK,
+    CalendarViewMode.DAY -> CalendarPeriodModeCardHeight
 }
 
 @Composable
