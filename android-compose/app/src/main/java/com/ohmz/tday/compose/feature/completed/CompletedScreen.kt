@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.LocalBar
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PriorityHigh
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
@@ -602,7 +603,8 @@ private fun CompletedSwipeRow(
         ?: item.listColor?.let(::listAccentColor)
         ?: colorScheme.onSurfaceVariant.copy(alpha = 0.86f)
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
-    val showPriorityFlag = isHighPriority(item.priority)
+    val priorityIcon = priorityIconFor(item.priority)
+    val showPriorityIcon = priorityIcon != null
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
 
@@ -775,7 +777,7 @@ private fun CompletedSwipeRow(
                             }
                         }
 
-                        if (showPriorityFlag) {
+                        if (showPriorityIcon) {
                             Row(
                                 modifier = Modifier.padding(end = 24.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -790,7 +792,7 @@ private fun CompletedSwipeRow(
                                     )
                                 }
                                 Icon(
-                                    imageVector = Icons.Rounded.Flag,
+                                    imageVector = priorityIcon ?: Icons.Rounded.Flag,
                                     contentDescription = stringResource(R.string.label_priority_task),
                                     tint = priorityColor(item.priority),
                                     modifier = Modifier.size(18.dp),
@@ -881,10 +883,11 @@ private fun priorityColor(priority: String): Color {
     }
 }
 
-private fun isHighPriority(priority: String): Boolean {
-    return when (priority.trim().lowercase()) {
-        "medium", "high", "urgent", "important" -> true
-        else -> false
+private fun priorityIconFor(priority: String): ImageVector? {
+    return when (priority.trim().lowercase(Locale.getDefault())) {
+        "medium" -> Icons.Rounded.Flag
+        "high", "urgent", "important" -> Icons.Rounded.PriorityHigh
+        else -> null
     }
 }
 

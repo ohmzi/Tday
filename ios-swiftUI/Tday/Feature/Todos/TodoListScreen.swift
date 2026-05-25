@@ -1009,7 +1009,7 @@ struct TodoListScreen: View {
             viewModel.lists.first(where: { $0.id == listId })
         }
         let showListIndicator = listMeta != nil && viewModel.mode != .list
-        let showPriorityFlag = todo.priority.lowercased() == "high"
+        let priorityIcon = priorityIndicatorSymbolName(todo.priority)
         let subtitleText = minimalTimelineSubtitle(for: todo, in: section)
         let isOverdueTask = !todo.completed && todo.due < Date()
         let subtitleColor = isOverdueTask ? colors.error : colors.onSurfaceVariant.opacity(0.8)
@@ -1046,15 +1046,15 @@ struct TodoListScreen: View {
 
                 Spacer(minLength: 0)
 
-                if showListIndicator || showPriorityFlag {
+                if showListIndicator || priorityIcon != nil {
                     HStack(spacing: 8) {
                         if let listMeta, showListIndicator {
                             Image(systemName: todoListSymbolName(for: listMeta.iconKey))
                                 .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
                                 .foregroundStyle(todoListAccentColor(for: listMeta.color))
                         }
-                        if showPriorityFlag {
-                            Image(systemName: "flag.fill")
+                        if let priorityIcon {
+                            Image(systemName: priorityIcon)
                                 .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
                                 .foregroundStyle(priorityColor(todo.priority))
                         }
@@ -1735,8 +1735,8 @@ private struct TodoDragPreview: View {
 
             Spacer(minLength: 0)
 
-            if todo.priority.lowercased() == "high" {
-                Image(systemName: "flag.fill")
+            if let priorityIcon = priorityIndicatorSymbolName(todo.priority) {
+                Image(systemName: priorityIcon)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(priorityColor(todo.priority))
             }
@@ -2397,7 +2397,14 @@ private func buildSections(
             placesEarlierBeforeToday: true,
             includeEmptyEarlierTarget: includeEmptyEarlierTarget
         )
-    case .priority, .list:
+    case .priority:
+        return buildFutureTimelineSections(
+            items: items,
+            calendar: calendar,
+            placesEarlierBeforeToday: true,
+            includeEmptyEarlierTarget: includeEmptyEarlierTarget
+        )
+    case .list:
         return buildFutureTimelineSections(
             items: items,
             calendar: calendar,
@@ -2578,12 +2585,23 @@ private func monthIndex(for date: Date, calendar: Calendar) -> Int {
 
 func priorityColor(_ priority: String) -> Color {
     switch priority.lowercased() {
-    case "high":
+    case "high", "urgent", "important":
         return .red
     case "medium":
         return .orange
     default:
         return .blue
+    }
+}
+
+func priorityIndicatorSymbolName(_ priority: String) -> String? {
+    switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "medium":
+        return "flag.fill"
+    case "high", "urgent", "important":
+        return "exclamationmark.circle.fill"
+    default:
+        return nil
     }
 }
 

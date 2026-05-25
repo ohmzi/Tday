@@ -1989,9 +1989,9 @@ private fun CalendarTaskDragPreview(
                     modifier = Modifier.size(18.dp),
                 )
             }
-            if (isHighPriority(todo.priority)) {
+            priorityIconFor(todo.priority)?.let { priorityIcon ->
                 Icon(
-                    imageVector = Icons.Rounded.Flag,
+                    imageVector = priorityIcon,
                     contentDescription = null,
                     tint = priorityColor(todo.priority),
                     modifier = Modifier.size(18.dp),
@@ -2041,7 +2041,8 @@ private fun CalendarTodoRow(
         .format(todo.due)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = listMeta != null
-    val showPriorityFlag = isHighPriority(todo.priority)
+    val priorityIcon = priorityIconFor(todo.priority)
+    val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = listAccentColor(listMeta?.color)
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
@@ -2238,7 +2239,7 @@ private fun CalendarTodoRow(
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                    if (showListIndicator || showPriorityFlag) {
+                    if (showListIndicator || showPriorityIcon) {
                         Row(
                             modifier = Modifier.padding(end = 24.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -2252,9 +2253,9 @@ private fun CalendarTodoRow(
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
-                            if (showPriorityFlag) {
+                            if (priorityIcon != null) {
                                 Icon(
-                                    imageVector = Icons.Rounded.Flag,
+                                    imageVector = priorityIcon,
                                     contentDescription = stringResource(R.string.label_priority_task),
                                     tint = priorityColor(todo.priority),
                                     modifier = Modifier.size(18.dp),
@@ -2295,7 +2296,8 @@ private fun CalendarCompletedTodoRow(
         ?: item.listColor?.let(::listAccentColor)
         ?: colorScheme.onSurfaceVariant.copy(alpha = 0.86f)
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
-    val showPriorityFlag = isHighPriority(item.priority)
+    val priorityIcon = priorityIconFor(item.priority)
+    val showPriorityIcon = priorityIcon != null
     val rowShape = RoundedCornerShape(16.dp)
 
     Column(
@@ -2368,7 +2370,7 @@ private fun CalendarCompletedTodoRow(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                if (showPriorityFlag) {
+                if (showPriorityIcon) {
                     Row(
                         modifier = Modifier.padding(end = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -2383,7 +2385,7 @@ private fun CalendarCompletedTodoRow(
                             )
                         }
                         Icon(
-                            imageVector = Icons.Rounded.Flag,
+                            imageVector = priorityIcon ?: Icons.Rounded.Flag,
                             contentDescription = stringResource(R.string.label_priority_task),
                             tint = priorityColor(item.priority),
                             modifier = Modifier.size(18.dp),
@@ -2559,10 +2561,11 @@ private fun priorityColor(priority: String): Color {
     }
 }
 
-private fun isHighPriority(priority: String): Boolean {
+private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
-        "medium", "high", "urgent", "important" -> true
-        else -> false
+        "medium" -> Icons.Rounded.Flag
+        "high", "urgent", "important" -> Icons.Rounded.PriorityHigh
+        else -> null
     }
 }
 
