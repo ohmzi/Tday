@@ -469,7 +469,6 @@ struct CalendarScreen: View {
         draggedTodo = nil
         inAppDrag = nil
         activeDropDate = nil
-        dateDropTargetFrames = [:]
         CalendarTaskDragSession.shared.todo = nil
         let targetDay = Calendar.current.startOfDay(for: targetDate)
         let dropSignature = "\(todo.id)|\(targetDay.timeIntervalSince1970)"
@@ -519,7 +518,6 @@ struct CalendarScreen: View {
         activeDropDate = nil
         draggedTodo = nil
         inAppDrag = nil
-        dateDropTargetFrames = [:]
         if let targetDate {
             requestReschedule(todo, to: targetDate)
         } else {
@@ -531,7 +529,6 @@ struct CalendarScreen: View {
         activeDropDate = nil
         draggedTodo = nil
         inAppDrag = nil
-        dateDropTargetFrames = [:]
         CalendarTaskDragSession.shared.todo = nil
     }
 
