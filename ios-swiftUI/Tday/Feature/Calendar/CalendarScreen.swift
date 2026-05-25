@@ -104,11 +104,6 @@ private enum CalendarModeCardMetrics {
 
 private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
 private let calendarModeResizeAnimation = Animation.spring(response: 0.34, dampingFraction: 0.92, blendDuration: 0.02)
-private let calendarModeContentFadeAnimation = Animation.easeInOut(duration: 0.12)
-private let calendarModeBelowLeadAnimation = Animation.easeInOut(duration: 0.14)
-private let calendarModeBelowTrailAnimation = Animation.spring(response: 0.30, dampingFraction: 0.9, blendDuration: 0.02)
-private let calendarModeBelowLeadDelayNanoseconds: UInt64 = 110_000_000
-private let calendarModeBelowTrailDelayNanoseconds: UInt64 = 130_000_000
 
 private struct CalendarCardChromeModifier: ViewModifier {
     @Environment(\.tdayColors) private var colors
@@ -157,9 +152,6 @@ struct CalendarScreen: View {
     @State private var selectedDate = Date()
     @State private var visibleMonth = calendarMonthStart(for: Date())
     @State private var displayMode: CalendarDisplayMode = .month
-    @State private var calendarLayoutMode: CalendarDisplayMode = .month
-    @State private var belowCalendarOffset: CGFloat = 0
-    @State private var calendarModeTransitionTask: Task<Void, Never>?
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
     @State private var calendarTitleCollapseOffset: CGFloat = 0
@@ -196,7 +188,7 @@ struct CalendarScreen: View {
     }
 
     private var calendarModeCardHeight: CGFloat {
-        calendarModeCardHeight(for: calendarLayoutMode)
+        calendarModeCardHeight(for: displayMode)
     }
 
     private func calendarModeCardHeight(for mode: CalendarDisplayMode) -> CGFloat {
@@ -276,7 +268,6 @@ struct CalendarScreen: View {
                     ErrorRetryView(message: errorMessage) {
                         Task { await viewModel.refresh() }
                     }
-                    .offset(y: belowCalendarOffset)
                     .listRowBackground(Color.clear)
                 }
             }
@@ -285,7 +276,6 @@ struct CalendarScreen: View {
                 .font(.tdayRounded(size: 22, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
                 .textCase(nil)
-                .offset(y: belowCalendarOffset)
                 .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 4, trailing: TodoTimelineMetrics.horizontalPadding))
                 .timelinePinnedSectionHeaderBackground()
 
@@ -326,7 +316,6 @@ struct CalendarScreen: View {
                     .spring(response: 0.34, dampingFraction: 0.9),
                     value: pendingItems.map(\.id)
                 )
-                .offset(y: belowCalendarOffset)
                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                 .listRowBackground(colors.background)
                 .listRowSeparator(.hidden)
@@ -352,10 +341,6 @@ struct CalendarScreen: View {
             if mode == .day {
                 cancelInAppDrag()
             }
-        }
-        .onDisappear {
-            calendarModeTransitionTask?.cancel()
-            calendarModeTransitionTask = nil
         }
         .overlay(alignment: .topLeading) {
             GeometryReader { proxy in
@@ -466,74 +451,23 @@ struct CalendarScreen: View {
     }
 
     private var animatedCalendarModeCard: some View {
-        ZStack(alignment: .top) {
-            ForEach(CalendarDisplayMode.allCases, id: \.self) { mode in
-                calendarModeContent(for: mode)
-                    .transaction { transaction in
-                        transaction.animation = nil
-                    }
-                    .opacity(displayMode == mode ? 1 : 0)
-                    .animation(calendarModeContentFadeAnimation, value: displayMode)
-                    .allowsHitTesting(displayMode == mode)
-                    .accessibilityHidden(displayMode != mode)
+        calendarModeContent(for: displayMode)
+            .transaction { transaction in
+                transaction.animation = nil
             }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: calendarModeCardHeight, alignment: .top)
-        .clipped()
-        .modifier(CalendarCardChromeModifier())
-        .animation(calendarModeResizeAnimation, value: calendarModeCardHeight)
+            .frame(maxWidth: .infinity)
+            .frame(height: calendarModeCardHeight, alignment: .top)
+            .clipped()
+            .modifier(CalendarCardChromeModifier())
+            .animation(calendarModeResizeAnimation, value: calendarModeCardHeight)
     }
 
     private func selectCalendarMode(_ mode: CalendarDisplayMode) {
         guard mode != displayMode else { return }
 
-        calendarModeTransitionTask?.cancel()
-        calendarModeTransitionTask = nil
-
-        let currentHeight = calendarModeCardHeight(for: calendarLayoutMode)
-        let targetHeight = calendarModeCardHeight(for: mode)
-        let heightDelta = abs(currentHeight - targetHeight)
-        let isExpanding = targetHeight > currentHeight
-        let isCollapsing = targetHeight < currentHeight
-
         displayMode = mode
         if mode != .month {
             visibleMonth = calendarMonthStart(for: selectedDate)
-        }
-
-        if heightDelta < 1 {
-            withAnimation(calendarModeBelowTrailAnimation) {
-                belowCalendarOffset = 0
-            }
-            calendarLayoutMode = mode
-            return
-        }
-
-        if isCollapsing {
-            withAnimation(calendarModeResizeAnimation) {
-                calendarLayoutMode = mode
-                belowCalendarOffset = heightDelta
-            }
-            calendarModeTransitionTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: calendarModeBelowTrailDelayNanoseconds)
-                guard !Task.isCancelled else { return }
-                withAnimation(calendarModeBelowTrailAnimation) {
-                    belowCalendarOffset = 0
-                }
-            }
-        } else if isExpanding {
-            withAnimation(calendarModeBelowLeadAnimation) {
-                belowCalendarOffset = heightDelta
-            }
-            calendarModeTransitionTask = Task { @MainActor in
-                try? await Task.sleep(nanoseconds: calendarModeBelowLeadDelayNanoseconds)
-                guard !Task.isCancelled else { return }
-                withAnimation(calendarModeResizeAnimation) {
-                    calendarLayoutMode = mode
-                    belowCalendarOffset = 0
-                }
-            }
         }
     }
 
@@ -543,8 +477,6 @@ struct CalendarScreen: View {
 
     @ViewBuilder
     private func calendarModeContent(for mode: CalendarDisplayMode) -> some View {
-        let isActive = displayMode == mode
-
         switch mode {
         case .month:
             CalendarMonthGrid(
@@ -552,11 +484,11 @@ struct CalendarScreen: View {
                 selectedDate: selectedDate,
                 tasksByDay: pendingItemsByDay,
                 accentColor: calendarAccentColor,
-                draggedTodo: isActive ? draggedTodo : nil,
-                activeDropDate: isActive ? activeDropDate : nil,
+                draggedTodo: draggedTodo,
+                activeDropDate: activeDropDate,
                 canGoPreviousMonth: canGoPreviousMonth,
                 minimumNavigableMonth: minimumNavigableMonth,
-                todayJumpRequest: isActive ? todayJumpRequest : nil,
+                todayJumpRequest: todayJumpRequest,
                 onPreviousMonth: { navigateMonth(by: -1) },
                 onNextMonth: { navigateMonth(by: 1) },
                 onSelectDate: { selectDate($0) },
@@ -570,11 +502,11 @@ struct CalendarScreen: View {
                 today: Date(),
                 tasksByDay: pendingItemsByDay,
                 accentColor: calendarAccentColor,
-                draggedTodo: isActive ? draggedTodo : nil,
-                activeDropDate: isActive ? activeDropDate : nil,
+                draggedTodo: draggedTodo,
+                activeDropDate: activeDropDate,
                 canGoPreviousWeek: canGoPreviousWeek,
                 canSelectDate: { canNavigate(to: $0) },
-                todayJumpRequest: isActive ? todayJumpRequest : nil,
+                todayJumpRequest: todayJumpRequest,
                 onPreviousWeek: { navigateDay(by: -7) },
                 onNextWeek: { navigateDay(by: 7) },
                 onSelectDate: { selectDate($0) },
@@ -590,7 +522,7 @@ struct CalendarScreen: View {
                 accentColor: calendarAccentColor,
                 canGoPreviousDay: canGoPreviousDay,
                 canSelectDate: { canNavigate(to: $0) },
-                todayJumpRequest: isActive ? todayJumpRequest : nil,
+                todayJumpRequest: todayJumpRequest,
                 onPreviousDay: { navigateDay(by: -1) },
                 onNextDay: { navigateDay(by: 1) },
                 onSelectDate: { selectDate($0) }
