@@ -19,7 +19,7 @@ import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
@@ -165,6 +165,7 @@ import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -408,6 +409,9 @@ fun TodoListScreen(
         draggedScheduledTodoId?.let { targetId ->
             uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
         }
+    }
+    val resolveTodoForDrop: (String) -> TodoItem? = { targetId ->
+        uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
     }
     val canRescheduleTasks = uiState.mode.supportsTaskReschedule()
     val requestTaskReschedule: (TodoItem, LocalDate) -> Unit = { todo, targetDate ->
@@ -670,6 +674,7 @@ fun TodoListScreen(
                                         .timelineSectionDropTarget(
                                             section = section,
                                             draggedTodo = sectionDraggedTodo,
+                                            resolveTodo = resolveTodoForDrop,
                                             onDropTargetChanged = onSectionDropTargetChanged,
                                             onDragTodoEnd = onSectionDragEnd,
                                             onMoveTaskToDate = onMoveTaskToSectionDate,
@@ -738,6 +743,7 @@ fun TodoListScreen(
                                                 .timelineSectionDropTarget(
                                                     section = section,
                                                     draggedTodo = sectionDraggedTodo,
+                                                    resolveTodo = resolveTodoForDrop,
                                                     onDropTargetChanged = onSectionDropTargetChanged,
                                                     onDragTodoEnd = onSectionDragEnd,
                                                     onMoveTaskToDate = onMoveTaskToSectionDate,
@@ -1667,6 +1673,8 @@ private fun TimelineSectionHeader(
     }
     val headerTextColor = if (isHeaderPressed) {
         androidx.compose.ui.graphics.lerp(baseHeaderColor, colorScheme.onSurface, 0.16f)
+    } else if (isDropTarget) {
+        colorScheme.error
     } else {
         baseHeaderColor
     }
@@ -1705,7 +1713,7 @@ private fun TimelineSectionHeader(
                 .clip(RoundedCornerShape(18.dp))
                 .background(
                     if (isDropTarget) {
-                        colorScheme.primary.copy(alpha = 0.1f)
+                        colorScheme.error.copy(alpha = 0.1f)
                     } else {
                         Color.Transparent
                     },
@@ -1825,11 +1833,12 @@ private fun TimelineTaskRow(
 private fun Modifier.timelineSectionDropTarget(
     section: TodoSection,
     draggedTodo: TodoItem?,
+    resolveTodo: (String) -> TodoItem?,
     onDropTargetChanged: (Boolean) -> Unit,
     onDragTodoEnd: (() -> Unit)?,
     onMoveTaskToDate: ((TodoItem, LocalDate) -> Unit)?,
 ): Modifier {
-    if (section.targetDate == null || draggedTodo == null || onMoveTaskToDate == null) {
+    if (section.targetDate == null || onMoveTaskToDate == null) {
         return this
     }
 
@@ -1848,8 +1857,9 @@ private fun Modifier.timelineSectionDropTarget(
 
             override fun onDrop(event: DragAndDropEvent): Boolean {
                 val targetDate = section.targetDate ?: return false
+                val todo = draggedTodo ?: event.todoIdText()?.let(resolveTodo) ?: return false
                 onDropTargetChanged(false)
-                onMoveTaskToDate(draggedTodo, targetDate)
+                onMoveTaskToDate(todo, targetDate)
                 return true
             }
 
@@ -1859,6 +1869,17 @@ private fun Modifier.timelineSectionDropTarget(
             }
         },
     )
+}
+
+private fun DragAndDropEvent.todoIdText(): String? {
+    val clipData = toAndroidDragEvent().clipData ?: return null
+    for (index in 0 until clipData.itemCount) {
+        val text = clipData.getItemAt(index).text?.toString()?.trim()
+        if (!text.isNullOrBlank()) {
+            return text
+        }
+    }
+    return null
 }
 
 private data class TodoSection(
@@ -2592,8 +2613,8 @@ private fun SwipeTaskRow(
                         .then(
                             if (dragEnabled) {
                                 Modifier.dragAndDropSource {
-                                    detectTapGestures(
-                                        onLongPress = {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = {
                                             onDragStart?.invoke()
                                             ViewCompat.performHapticFeedback(
                                                 view,
@@ -2608,6 +2629,9 @@ private fun SwipeTaskRow(
                                                     flags = View.DRAG_FLAG_GLOBAL,
                                                 ),
                                             )
+                                        },
+                                        onDrag = { change, _ ->
+                                            change.consume()
                                         },
                                     )
                                 }
