@@ -75,6 +75,9 @@ final class AppViewModel {
     @ObservationIgnored nonisolated(unsafe) private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private let networkMonitorQueue = DispatchQueue(label: "tday.network-monitor")
     @ObservationIgnored private var isForegroundReconnectInFlight = false
+    @ObservationIgnored private var lastOfflineNoticeShownAt: Date?
+
+    private static let offlineNoticeCooldownSeconds: TimeInterval = 10 * 60
 
     init(container: AppContainer) {
         self.container = container
@@ -143,7 +146,7 @@ final class AppViewModel {
             pendingApprovalMessage = nil
             canResetServerTrust = true
             isOffline = sessionResult.isOffline
-            if sessionResult.isOffline {
+            if sessionResult.isOffline && shouldShowOfflineNotice() {
                 offlineNoticeID += 1
             }
             finishBootstrap()
@@ -432,7 +435,7 @@ final class AppViewModel {
         case let .failure(error):
             isOffline = isLikelyConnectivityIssue(error) ||
                 (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
-            if isOffline && showOfflineNotice {
+            if isOffline && showOfflineNotice && shouldShowOfflineNotice() {
                 offlineNoticeID += 1
             }
             if !isOffline {
@@ -440,6 +443,16 @@ final class AppViewModel {
             }
             refreshPendingMutationCount()
         }
+    }
+
+    private func shouldShowOfflineNotice(now: Date = Date()) -> Bool {
+        if let lastOfflineNoticeShownAt,
+           now.timeIntervalSince(lastOfflineNoticeShownAt) < Self.offlineNoticeCooldownSeconds {
+            return false
+        }
+
+        lastOfflineNoticeShownAt = now
+        return true
     }
 
     private func observeOfflineSyncFailures() {
