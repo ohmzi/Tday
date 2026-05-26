@@ -42,29 +42,22 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -74,7 +67,7 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
-import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
+import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -104,82 +97,18 @@ fun SettingsScreen(
     val colorScheme = MaterialTheme.colorScheme
     val isAdminUser = user?.role?.equals("ADMIN", ignoreCase = true) == true
     val scrollState = rememberScrollState()
-    val density = LocalDensity.current
-    val maxCollapsePx = with(density) { SETTINGS_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    var headerCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val collapseProgressTarget = if (maxCollapsePx > 0f) {
-        (headerCollapsePx / maxCollapsePx).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    val nestedScrollConnection = remember(scrollState, maxCollapsePx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val deltaY = available.y
-                if (deltaY < 0f) {
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = next - previous
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, -consumed)
-                    }
-                    return Offset.Zero
-                }
-
-                if (deltaY > 0f) {
-                    if (scrollState.value > 0) return Offset.Zero
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = previous - next
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, consumed)
-                    }
-                }
-
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (available.y > 0f && scrollState.value > 0) return Velocity.Zero
-                val snapped = snapTitleCollapsePx(
-                    currentPx = headerCollapsePx,
-                    maxPx = maxCollapsePx,
-                    velocityY = available.y,
-                )
-                if (snapped == headerCollapsePx) return Velocity.Zero
-                headerCollapsePx = snapped
-                return if (available.y == 0f) Velocity.Zero else available
-            }
-        }
-    }
-    val collapseProgress by animateFloatAsState(
-        targetValue = collapseProgressTarget,
+    val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
+        scrollState = scrollState,
+        maxCollapseDistance = SETTINGS_TITLE_COLLAPSE_DISTANCE_DP.dp,
         label = "settingsTitleCollapseProgress",
     )
-    LaunchedEffect(
-        scrollState.isScrollInProgress,
-        headerCollapsePx,
-        maxCollapsePx,
-        scrollState.value,
-    ) {
-        if (scrollState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
-            return@LaunchedEffect
-        }
-        headerCollapsePx = if (scrollState.value == 0) {
-            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
-        } else {
-            maxCollapsePx
-        }
-    }
 
     Scaffold(
         containerColor = colorScheme.background,
         topBar = {
             SettingsTopBar(
                 onBack = onBack,
-                collapseProgress = collapseProgress,
+                collapseProgress = titleScrollBehavior.collapseProgress,
             )
         },
         ) { padding ->
@@ -188,7 +117,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(colorScheme.background)
-                .nestedScroll(nestedScrollConnection)
+                .nestedScroll(titleScrollBehavior.nestedScrollConnection)
                 .verticalScroll(scrollState)
                 .padding(horizontal = 18.dp, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

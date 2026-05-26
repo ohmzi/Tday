@@ -563,11 +563,7 @@ private struct HomeTodayTaskRow: View {
 
     @Environment(\.tdayColors) private var colors
 
-    @State private var offsetX: CGFloat = 0
-    @State private var isHinting = false
     @State private var completionPhase = HomeTodayTaskCompletionPhase.active
-
-    private let revealWidth: CGFloat = 152
 
     private var listMeta: ListSummary? {
         todo.listId.flatMap { id in lists.first { $0.id == id } }
@@ -578,7 +574,6 @@ private struct HomeTodayTaskRow: View {
     private var dueText: String { todo.due.formatted(date: .omitted, time: .shortened) }
     private var subtitleText: String { isOverdue ? "Overdue, \(dueText)" : "Due \(dueText)" }
     private var subtitleColor: Color { isOverdue ? colors.error : colors.onSurfaceVariant.opacity(0.8) }
-    private var revealProgress: CGFloat { min(1, max(0, -offsetX / revealWidth)) }
     private var isCompleting: Bool { completionPhase != .active }
     private var isFading: Bool { completionPhase == .fading }
     private var showCheckmark: Bool { completionPhase != .active || todo.completed }
@@ -588,72 +583,12 @@ private struct HomeTodayTaskRow: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ZStack(alignment: .trailing) {
-                rowContent
-                    .offset(x: offsetX)
-                    .gesture(
-                        DragGesture(minimumDistance: 6)
-                            .onChanged { value in
-                                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                                let proposed = value.translation.width
-                                if proposed < 0 {
-                                    offsetX = max(-revealWidth * 1.12, proposed)
-                                } else {
-                                    offsetX = min(0, offsetX + proposed * 0.15)
-                                }
-                            }
-                            .onEnded { value in
-                                let velocity = value.predictedEndTranslation.width - value.translation.width
-                                let shouldOpen = offsetX < -(revealWidth * 0.32) || velocity < -200
-                                withAnimation(.spring(response: 0.34, dampingFraction: 0.78)) {
-                                    offsetX = shouldOpen ? -revealWidth : 0
-                                }
-                            }
-                    )
-                    .onTapGesture {
-                        if offsetX != 0 {
-                            withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
-                        } else if !isHinting && !isCompleting {
-                            isHinting = true
-                            Task { @MainActor in
-                                withAnimation(.spring(response: 0.26, dampingFraction: 0.78)) { offsetX = -28 }
-                                try? await Task.sleep(nanoseconds: 150_000_000)
-                                withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) { offsetX = 0 }
-                                try? await Task.sleep(nanoseconds: 340_000_000)
-                                isHinting = false
-                            }
-                        }
-                    }
-
-                HStack(spacing: 16) {
-                    Spacer()
-                    HomeTodaySwipeActionButton(
-                        title: "Edit",
-                        systemImage: "square.and.pencil",
-                        tint: TaskSwipeActionTint.edit,
-                        revealProgress: revealProgress,
-                        revealDelay: 0.62
-                    ) {
-                        withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
-                        onEdit()
-                    }
-
-                    HomeTodaySwipeActionButton(
-                        title: "Delete",
-                        systemImage: "trash",
-                        tint: TaskSwipeActionTint.delete,
-                        revealProgress: revealProgress,
-                        revealDelay: 0.04
-                    ) {
-                        withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) { offsetX = 0 }
-                        onDelete()
-                    }
-                }
-                .padding(.trailing, 2)
-                .frame(maxWidth: .infinity)
-            }
-        }
+        rowContent
+            .todoTrailingSwipeActions(
+                enabled: !isCompleting,
+                onEdit: onEdit,
+                onDelete: onDelete
+            )
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
@@ -712,7 +647,6 @@ private struct HomeTodayTaskRow: View {
         guard completionPhase == .active else { return }
 
         withAnimation(.easeInOut(duration: 0.18)) {
-            offsetX = 0
             completionPhase = .checked
         }
 
@@ -764,51 +698,6 @@ private struct HomeTodayTaskTitle: View {
                 .allowsHitTesting(false)
             }
             .animation(.easeInOut(duration: 0.32), value: isCompleted)
-    }
-}
-
-private struct HomeTodaySwipeActionButton: View {
-    let title: String
-    let systemImage: String
-    let tint: Color
-    let revealProgress: CGFloat
-    let revealDelay: CGFloat
-    let action: () -> Void
-
-    private var easedReveal: CGFloat {
-        let normalized = max(0, min(1, (revealProgress - revealDelay) / (1 - revealDelay)))
-        return normalized * normalized * (3 - (2 * normalized))
-    }
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 17, style: .continuous)
-                        .fill(tint)
-                    Image(systemName: systemImage)
-                        .font(.system(size: 21, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 56, height: 34)
-
-                Text(title)
-                    .font(.tdayRounded(size: 12, weight: .bold))
-                    .foregroundStyle(Color(uiColor: .secondaryLabel).opacity(0.82))
-                    .lineLimit(1)
-            }
-            .frame(minWidth: 60)
-        }
-        .buttonStyle(
-            TdayPressButtonStyle(
-                shadowColor: Color.black,
-                pressedShadowOpacity: 0,
-                normalShadowOpacity: 0
-            )
-        )
-        .opacity(Double(easedReveal))
-        .scaleEffect(0.38 + (0.62 * easedReveal))
-        .allowsHitTesting(easedReveal > 0.8)
     }
 }
 
@@ -1233,7 +1122,7 @@ private struct HomeSearchResultsOverlay: View {
         return min(contentHeight, maxResultsHeight)
     }
 
-    private let dueFormatter: DateFormatter = {
+    private static let dueFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEE h:mm a"
         return formatter
@@ -1268,7 +1157,7 @@ private struct HomeSearchResultsOverlay: View {
                                         .foregroundStyle(colors.onSurface)
                                         .lineLimit(1)
 
-                                    Text(dueFormatter.string(from: todo.due))
+                                    Text(Self.dueFormatter.string(from: todo.due))
                                         .font(.tdayRounded(size: 12, weight: .bold))
                                         .foregroundStyle(colors.onSurfaceVariant)
                                         .lineLimit(1)

@@ -2,10 +2,8 @@ package com.ohmz.tday.compose.feature.completed
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -66,9 +64,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,15 +79,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -104,7 +97,9 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
-import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
@@ -156,79 +151,11 @@ fun CompletedScreen(
     val timelineSections = remember(uiState.items) {
         buildCompletedTimelineSections(uiState.items)
     }
-    val density = LocalDensity.current
-    val maxCollapsePx = with(density) { COMPLETED_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    var headerCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val collapseProgressTarget = if (maxCollapsePx > 0f) {
-        (headerCollapsePx / maxCollapsePx).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    val nestedScrollConnection = remember(listState, maxCollapsePx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val deltaY = available.y
-                if (deltaY < 0f) {
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = next - previous
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, -consumed)
-                    }
-                    return Offset.Zero
-                }
-
-                if (deltaY > 0f) {
-                    val isListAtTop =
-                        listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                    if (!isListAtTop) return Offset.Zero
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = previous - next
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, consumed)
-                    }
-                }
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                val isListAtTop =
-                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && !isListAtTop) return Velocity.Zero
-                val snapped = snapTitleCollapsePx(
-                    currentPx = headerCollapsePx,
-                    maxPx = maxCollapsePx,
-                    velocityY = available.y,
-                )
-                if (snapped == headerCollapsePx) return Velocity.Zero
-                headerCollapsePx = snapped
-                return if (available.y == 0f) Velocity.Zero else available
-            }
-        }
-    }
-    val collapseProgress by animateFloatAsState(
-        targetValue = collapseProgressTarget,
+    val titleScrollBehavior = rememberLazyListCollapsingTitleScrollBehavior(
+        listState = listState,
+        maxCollapseDistance = COMPLETED_TITLE_COLLAPSE_DISTANCE_DP.dp,
         label = "completedTitleCollapseProgress",
     )
-    LaunchedEffect(
-        listState.isScrollInProgress,
-        headerCollapsePx,
-        maxCollapsePx,
-    ) {
-        if (listState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
-            return@LaunchedEffect
-        }
-        val isListAtTop =
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        headerCollapsePx = if (isListAtTop) {
-            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
-        } else {
-            maxCollapsePx
-        }
-    }
     var collapsedSectionKeys by rememberSaveable {
         mutableStateOf(emptySet<String>())
     }
@@ -242,7 +169,7 @@ fun CompletedScreen(
         topBar = {
             CompletedTopBar(
                 onBack = onBack,
-                collapseProgress = collapseProgress,
+                collapseProgress = titleScrollBehavior.collapseProgress,
             )
         },
     ) { padding ->
@@ -257,7 +184,7 @@ fun CompletedScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .nestedScroll(nestedScrollConnection),
+                        .nestedScroll(titleScrollBehavior.nestedScrollConnection),
                     state = listState,
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(0.dp),
@@ -591,21 +518,15 @@ private fun CompletedSwipeRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
-    val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 176.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
-    val maxElasticDragPx = actionRevealPx * 1.14f
-    var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
-    var swipeHinting by remember(item.id) { mutableStateOf(false) }
+    val swipeRevealState = rememberTaskSwipeRevealState(item.id)
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
     var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = targetOffsetX,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+    val animatedOffsetX by animateTaskSwipeOffsetAsState(
+        state = swipeRevealState,
         label = "completedSwipeOffset",
     )
-    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val showCompletedCheckmark = restorePhase == CompletedRestorePhase.Completed
     val showStrikethrough =
         restorePhase == CompletedRestorePhase.Completed || restorePhase == CompletedRestorePhase.Unchecked
@@ -699,7 +620,7 @@ private fun CompletedSwipeRow(
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
                             onInfo()
-                            targetOffsetX = 0f
+                            swipeRevealState.close()
                         },
                     )
                     TaskSwipeActionButton(
@@ -716,7 +637,7 @@ private fun CompletedSwipeRow(
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
                             onDelete()
-                            targetOffsetX = 0f
+                            swipeRevealState.close()
                         },
                     )
                 }
@@ -728,31 +649,21 @@ private fun CompletedSwipeRow(
                         .draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
-                                targetOffsetX = (targetOffsetX + delta).coerceIn(
-                                    -maxElasticDragPx,
-                                    0f,
-                                )
+                                swipeRevealState.dragBy(delta)
                             },
                             onDragStopped = { velocity ->
-                                val flingOpen = velocity < -1450f
-                                val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
-                                targetOffsetX = if (flingOpen || dragOpen) -actionRevealPx else 0f
+                                swipeRevealState.settle(velocity)
                             },
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
-                            if (targetOffsetX != 0f) {
-                                targetOffsetX = 0f
-                            } else if (!swipeHinting && !isRestoring) {
-                                swipeHinting = true
+                            if (swipeRevealState.isOpenOrDragging) {
+                                swipeRevealState.close()
+                            } else if (!swipeRevealState.isHinting && !isRestoring) {
                                 coroutineScope.launch {
-                                    targetOffsetX = -swipeHintOffsetPx
-                                    delay(150)
-                                    targetOffsetX = 0f
-                                    delay(360)
-                                    swipeHinting = false
+                                    swipeRevealState.playHint()
                                 }
                             }
                         },
@@ -784,7 +695,7 @@ private fun CompletedSwipeRow(
                                     view,
                                     HapticFeedbackConstantsCompat.CLOCK_TICK,
                                 )
-                                targetOffsetX = 0f
+                                swipeRevealState.close()
                                 coroutineScope.launch {
                                     restorePhase = CompletedRestorePhase.Unchecked
                                     delay(COMPLETED_RESTORE_STEP_MS)
