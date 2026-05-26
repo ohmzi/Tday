@@ -668,10 +668,7 @@ fun CalendarScreen(
                                         durationMillis = 180,
                                         easing = FastOutSlowInEasing,
                                     ),
-                                    placementSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMediumLow,
-                                    ),
+                                    placementSpec = null,
                                     fadeOutSpec = tween(
                                         durationMillis = 140,
                                         easing = FastOutSlowInEasing,
