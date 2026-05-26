@@ -152,7 +152,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -207,6 +206,8 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -1715,23 +1716,17 @@ private fun HomeTodayTaskRow(
     onDelete: () -> Unit,
     onEdit: () -> Unit,
 ) {
-    val density = LocalDensity.current
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 176.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
-    val maxElasticDragPx = actionRevealPx * 1.14f
-    var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
-    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id)
     var localChecked by remember(todo.id) { mutableStateOf(false) }
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
     var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = targetOffsetX,
-        animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessLow),
+    val animatedOffsetX by animateTaskSwipeOffsetAsState(
+        state = swipeRevealState,
         label = "homeTodaySwipeOffset",
     )
     val completionAlpha by animateFloatAsState(
@@ -1749,7 +1744,7 @@ private fun HomeTodayTaskRow(
         animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
         label = "homeTodayTitleStrikeProgress",
     )
-    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val dueText = HOME_TODAY_DUE_FORMATTER.format(todo.due)
     val rowShape = RoundedCornerShape(16.dp)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
@@ -1800,7 +1795,7 @@ private fun HomeTodayTaskRow(
                             HapticFeedbackConstantsCompat.CLOCK_TICK
                         )
                         onEdit()
-                        targetOffsetX = 0f
+                        swipeRevealState.close()
                     },
                 )
                 TaskSwipeActionButton(
@@ -1817,7 +1812,7 @@ private fun HomeTodayTaskRow(
                             HapticFeedbackConstantsCompat.CLOCK_TICK
                         )
                         onDelete()
-                        targetOffsetX = 0f
+                        swipeRevealState.close()
                     },
                 )
             }
@@ -1829,31 +1824,21 @@ private fun HomeTodayTaskRow(
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
-                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
+                            swipeRevealState.dragBy(delta)
                         },
                         onDragStopped = { velocity ->
-                            targetOffsetX =
-                                if (velocity < -1450f || targetOffsetX < -(actionRevealPx * 0.32f)) {
-                                    -actionRevealPx
-                                } else {
-                                    0f
-                                }
+                            swipeRevealState.settle(velocity)
                         },
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) {
-                        if (targetOffsetX != 0f) {
-                            targetOffsetX = 0f
-                        } else if (!swipeHinting && !pendingCompletion) {
-                            swipeHinting = true
+                        if (swipeRevealState.isOpenOrDragging) {
+                            swipeRevealState.close()
+                        } else if (!swipeRevealState.isHinting && !pendingCompletion) {
                             coroutineScope.launch {
-                                targetOffsetX = -swipeHintOffsetPx
-                                delay(150)
-                                targetOffsetX = 0f
-                                delay(360)
-                                swipeHinting = false
+                                swipeRevealState.playHint()
                             }
                         }
                     },
@@ -1879,7 +1864,7 @@ private fun HomeTodayTaskRow(
                                 enabled = !pendingCompletion,
                             ) {
                                 if (!pendingCompletion) {
-                                    targetOffsetX = 0f
+                                    swipeRevealState.close()
                                     localChecked = true
                                     pendingCompletion = true
                                     coroutineScope.launch {

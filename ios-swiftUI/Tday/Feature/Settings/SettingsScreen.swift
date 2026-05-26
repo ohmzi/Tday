@@ -945,14 +945,23 @@ private func parseChangelog(_ body: String?) -> [String] {
 }
 
 private func formatIsoDate(_ value: String) -> String {
-    let parser = ISO8601DateFormatter()
-    parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    let date = parser.date(from: value) ?? {
-        let fallback = ISO8601DateFormatter()
-        fallback.formatOptions = [.withInternetDateTime]
-        return fallback.date(from: value)
-    }()
+    let date = ReleaseDateFormatters.internetDateTimeWithFraction.date(from: value)
+        ?? ReleaseDateFormatters.internetDateTime.date(from: value)
 
     guard let date else { return value }
     return date.formatted(.dateTime.month(.wide).day().year())
+}
+
+private enum ReleaseDateFormatters {
+    static let internetDateTimeWithFraction: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    static let internetDateTime: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 }

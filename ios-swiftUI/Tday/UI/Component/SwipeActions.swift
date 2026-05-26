@@ -56,6 +56,9 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
     @State private var isHorizontalDragging = false
 
     private let revealWidth: CGFloat = 152
+    private let horizontalActivationDistance: CGFloat = 8
+    private let horizontalActivationBias: CGFloat = 4
+    private let openVelocityThreshold: CGFloat = -180
 
     private var revealProgress: CGFloat {
         min(1, max(0, -offsetX / revealWidth))
@@ -67,11 +70,16 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                 .offset(x: offsetX)
                 .contentShape(Rectangle())
                 .simultaneousGesture(
-                    DragGesture(minimumDistance: 6)
+                    DragGesture(minimumDistance: horizontalActivationDistance)
                         .onChanged { value in
                             guard enabled else { return }
-                            guard abs(value.translation.width) > abs(value.translation.height) else { return }
                             if !isHorizontalDragging {
+                                let horizontalDistance = abs(value.translation.width)
+                                let verticalDistance = abs(value.translation.height)
+                                guard horizontalDistance > horizontalActivationDistance,
+                                      horizontalDistance > verticalDistance + horizontalActivationBias else {
+                                    return
+                                }
                                 dragStartOffsetX = offsetX
                                 isHorizontalDragging = true
                             }
@@ -89,8 +97,8 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                             }
                             guard enabled, isHorizontalDragging else { return }
                             let velocity = value.predictedEndTranslation.width - value.translation.width
-                            let shouldOpen = offsetX < -(revealWidth * 0.32) || velocity < -200
-                            withAnimation(.spring(response: 0.34, dampingFraction: 0.78)) {
+                            let shouldOpen = offsetX < -(revealWidth * 0.32) || velocity < openVelocityThreshold
+                            withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
                                 offsetX = shouldOpen ? -revealWidth : 0
                             }
                         }
@@ -101,6 +109,11 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         closeActions()
                     } else {
                         revealHint()
+                    }
+                }
+                .onChange(of: enabled) { isEnabled in
+                    if !isEnabled {
+                        closeActions()
                     }
                 }
 
@@ -134,7 +147,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
     }
 
     private func closeActions() {
-        withAnimation(.spring(response: 0.26, dampingFraction: 0.8)) {
+        withAnimation(.interactiveSpring(response: 0.26, dampingFraction: 0.86)) {
             offsetX = 0
         }
     }
