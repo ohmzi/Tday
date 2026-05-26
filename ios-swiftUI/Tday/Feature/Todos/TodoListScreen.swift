@@ -3110,24 +3110,51 @@ private func buildFutureTimelineSections(
 }
 
 private func timelineDayTitle(for date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale.current
-    formatter.dateFormat = "EEE MMM d"
-    return formatter.string(from: date)
+    TodoTimelineFormatters.dayTitle.string(from: date)
 }
 
 private func timelineDateTimeText(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale.current
-    formatter.dateFormat = "MMM d, h:mm a"
-    return formatter.string(from: date)
+    TodoTimelineFormatters.dateTime.string(from: date)
 }
 
 private func monthTitle(for date: Date, currentYear: Int, calendar: Calendar) -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale.current
-    formatter.dateFormat = calendar.component(.year, from: date) == currentYear ? "LLLL" : "LLLL yyyy"
+    let formatter: DateFormatter
+    if calendar.component(.year, from: date) == currentYear {
+        formatter = TodoTimelineFormatters.month
+    } else {
+        formatter = TodoTimelineFormatters.monthAndYear
+    }
     return formatter.string(from: date)
+}
+
+private enum TodoTimelineFormatters {
+    static let dayTitle: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "EEE MMM d"
+        return formatter
+    }()
+
+    static let dateTime: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "MMM d, h:mm a"
+        return formatter
+    }()
+
+    static let month: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "LLLL"
+        return formatter
+    }()
+
+    static let monthAndYear: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "LLLL yyyy"
+        return formatter
+    }()
 }
 
 private func monthIndex(for date: Date, calendar: Calendar) -> Int {
