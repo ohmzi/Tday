@@ -8,6 +8,7 @@ struct OfflineBanner: View {
     @Environment(\.tdayColors) private var colors
     @GestureState private var dragOffsetY: CGFloat = 0
     @State private var isPresented = false
+    @State private var lastPresentedNoticeID = 0
     @State private var dismissalTask: Task<Void, Never>?
 
     var body: some View {
@@ -18,13 +19,13 @@ struct OfflineBanner: View {
         }
         .animation(.spring(response: 0.26, dampingFraction: 0.86), value: isPresented)
         .onAppear {
-            updatePresentation(visible)
+            updatePresentation(visible, noticeID: noticeID)
         }
         .onChange(of: visible) { _, newValue in
-            updatePresentation(newValue)
+            updatePresentation(newValue, noticeID: noticeID)
         }
-        .onChange(of: noticeID) { _, _ in
-            updatePresentation(visible)
+        .onChange(of: noticeID) { _, newValue in
+            updatePresentation(visible, noticeID: newValue)
         }
     }
 
@@ -103,14 +104,18 @@ struct OfflineBanner: View {
         min(abs(min(dragOffsetY, 0)) / 88, 1)
     }
 
-    private func updatePresentation(_ shouldShow: Bool) {
-        dismissalTask?.cancel()
-
+    private func updatePresentation(_ shouldShow: Bool, noticeID: Int) {
         guard shouldShow else {
-            dismissNotice(cancelTimer: false)
+            dismissNotice()
             return
         }
 
+        guard noticeID > lastPresentedNoticeID else {
+            return
+        }
+
+        dismissalTask?.cancel()
+        lastPresentedNoticeID = noticeID
         isPresented = true
         dismissalTask = Task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
