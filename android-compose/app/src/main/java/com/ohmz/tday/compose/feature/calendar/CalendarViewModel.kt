@@ -50,7 +50,7 @@ class CalendarViewModel @Inject constructor(
         runCatching {
             CalendarUiState(
                 isLoading = false,
-                items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED),
+                items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
                 completedItems = completedRepository.fetchCompletedItemsSnapshot(),
                 lists = listRepository.fetchListsSnapshot(),
                 errorMessage = null,
@@ -96,7 +96,7 @@ class CalendarViewModel @Inject constructor(
 
     private fun hydrateFromCache() {
         runCatching {
-            val todos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED)
+            val todos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
             val completedItems = completedRepository.fetchCompletedItemsSnapshot()
             val lists = listRepository.fetchListsSnapshot()
             Triple(todos, completedItems, lists)
@@ -139,7 +139,7 @@ class CalendarViewModel @Inject constructor(
                     )
                         .onFailure { /* fall back to cache */ }
                 }
-                val todos = todoRepository.fetchTodos(mode = TodoListMode.SCHEDULED)
+                val todos = todoRepository.fetchTodos(mode = TodoListMode.ALL)
                 val completedItems = completedRepository.fetchCompletedItems()
                 val lists = listRepository.fetchLists()
                 Triple(todos, completedItems, lists)
