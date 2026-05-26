@@ -106,7 +106,7 @@ final class CalendarViewModel {
     }
 
     private func hydrateFromCache() {
-        items = container.todoRepository.fetchTodosSnapshot(mode: .scheduled)
+        items = container.todoRepository.fetchTodosSnapshot(mode: .all)
         completedItems = container.completedRepository.fetchCompletedItemsSnapshot()
         lists = container.listRepository.fetchListsSnapshot()
         errorMessage = nil
