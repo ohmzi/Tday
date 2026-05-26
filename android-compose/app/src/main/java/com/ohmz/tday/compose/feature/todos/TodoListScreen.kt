@@ -3,10 +3,8 @@ package com.ohmz.tday.compose.feature.todos
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -149,7 +147,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -174,8 +171,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -192,7 +187,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.window.Dialog
@@ -213,7 +207,9 @@ import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
-import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
@@ -320,86 +316,12 @@ fun TodoListScreen(
         uiState.mode != TodoListMode.TODAY || timelineAnimationsReady
     val listState = rememberLazyListState()
     val density = LocalDensity.current
-    val maxTodayCollapsePx = with(density) { TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    var todayHeaderCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val todayCollapseProgressTarget = if (usesTodayStyle && maxTodayCollapsePx > 0f) {
-        (todayHeaderCollapsePx / maxTodayCollapsePx).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    val todayNestedScrollConnection = remember(usesTodayStyle, listState, maxTodayCollapsePx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (!usesTodayStyle) return Offset.Zero
-                val deltaY = available.y
-                if (deltaY < 0f) {
-                    val previous = todayHeaderCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
-                    val consumed = next - previous
-                    if (consumed > 0f) {
-                        todayHeaderCollapsePx = next
-                        return Offset(0f, -consumed)
-                    }
-                    return Offset.Zero
-                }
-
-                if (deltaY > 0f) {
-                    val isListAtTop =
-                        listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                    if (!isListAtTop) return Offset.Zero
-                    val previous = todayHeaderCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
-                    val consumed = previous - next
-                    if (consumed > 0f) {
-                        todayHeaderCollapsePx = next
-                        return Offset(0f, consumed)
-                    }
-                }
-
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (!usesTodayStyle) return Velocity.Zero
-                val isListAtTop =
-                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && !isListAtTop) return Velocity.Zero
-                val snapped = snapTitleCollapsePx(
-                    currentPx = todayHeaderCollapsePx,
-                    maxPx = maxTodayCollapsePx,
-                    velocityY = available.y,
-                )
-                if (snapped == todayHeaderCollapsePx) return Velocity.Zero
-                todayHeaderCollapsePx = snapped
-                return if (available.y == 0f) Velocity.Zero else available
-            }
-        }
-    }
-    val todayCollapseProgress by animateFloatAsState(
-        targetValue = todayCollapseProgressTarget,
+    val todayTitleScrollBehavior = rememberLazyListCollapsingTitleScrollBehavior(
+        listState = listState,
+        maxCollapseDistance = TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp,
+        enabled = usesTodayStyle,
         label = "todayTitleCollapseProgress",
     )
-    LaunchedEffect(
-        usesTodayStyle,
-        listState.isScrollInProgress,
-        todayHeaderCollapsePx,
-        maxTodayCollapsePx,
-    ) {
-        if (!usesTodayStyle ||
-            listState.isScrollInProgress ||
-            todayHeaderCollapsePx <= 0f ||
-            todayHeaderCollapsePx >= maxTodayCollapsePx
-        ) {
-            return@LaunchedEffect
-        }
-        val isListAtTop =
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        todayHeaderCollapsePx = if (isListAtTop) {
-            snapTitleCollapsePx(todayHeaderCollapsePx, maxTodayCollapsePx)
-        } else {
-            maxTodayCollapsePx
-        }
-    }
     val isCollapsibleTimelineMode =
         uiState.mode == TodoListMode.ALL ||
                 uiState.mode == TodoListMode.PRIORITY ||
@@ -496,7 +418,7 @@ fun TodoListScreen(
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
-            todayHeaderCollapsePx = maxTodayCollapsePx
+            todayTitleScrollBehavior.collapseFully()
             delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
@@ -562,7 +484,10 @@ fun TodoListScreen(
 
     fun updateActiveTimelineDropTarget(position: Offset) {
         val todo = activeTimelineDrag?.todo ?: draggedScheduledTodo
-        activeDropSectionKey = todo?.let { timelineDropSectionKeyAt(position, it) }
+        val nextSectionKey = todo?.let { timelineDropSectionKeyAt(position, it) }
+        if (activeDropSectionKey != nextSectionKey) {
+            activeDropSectionKey = nextSectionKey
+        }
     }
 
     fun finishTimelineDrag(position: Offset?) {
@@ -589,7 +514,7 @@ fun TodoListScreen(
             if (usesTodayStyle) {
                 TodayTopBar(
                     onBack = onBack,
-                    collapseProgress = todayCollapseProgress,
+                    collapseProgress = todayTitleScrollBehavior.collapseProgress,
                     title = uiState.title,
                     titleColor = titleColor,
                     showActionButton = showTopBarActionButton,
@@ -674,7 +599,7 @@ fun TodoListScreen(
                         .fillMaxSize()
                         .then(
                             if (usesTodayStyle) {
-                                Modifier.nestedScroll(todayNestedScrollConnection)
+                                Modifier.nestedScroll(todayTitleScrollBehavior.nestedScrollConnection)
                             } else {
                                 Modifier
                             },
@@ -2922,13 +2847,8 @@ private fun SwipeTaskRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
-    val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 176.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
-    val maxElasticDragPx = actionRevealPx * 1.14f
-    var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
-    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id)
     var localChecked by remember(todo.id) { mutableStateOf(false) }
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -2939,12 +2859,11 @@ private fun SwipeTaskRow(
     val highlightAnim = remember(todo.id) { Animatable(0f) }
     val visuallyChecked = localChecked || (keepCompletedInline && todo.completed)
     val visuallyStruck = localStruck || (keepCompletedInline && todo.completed)
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = targetOffsetX,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+    val animatedOffsetX by animateTaskSwipeOffsetAsState(
+        state = swipeRevealState,
         label = "swipeTaskOffset",
     )
-    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
         animationSpec = tween(
@@ -3016,7 +2935,7 @@ private fun SwipeTaskRow(
     val listIndicatorColor = listAccentColor(listMeta?.color)
     LaunchedEffect(flashHighlight) {
         if (!flashHighlight) return@LaunchedEffect
-        targetOffsetX = 0f
+        swipeRevealState.close()
         highlightAnim.stop()
         highlightAnim.snapTo(0f)
         repeat(2) { pulseIndex ->
@@ -3069,7 +2988,7 @@ private fun SwipeTaskRow(
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
                             onInfo()
-                            targetOffsetX = 0f
+                            swipeRevealState.close()
                         },
                     )
                     TaskSwipeActionButton(
@@ -3086,7 +3005,7 @@ private fun SwipeTaskRow(
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
                             onDelete()
-                            targetOffsetX = 0f
+                            swipeRevealState.close()
                         },
                     )
                 }
@@ -3103,7 +3022,7 @@ private fun SwipeTaskRow(
                                 Modifier.pointerInput(todo.id, dragEnabled) {
                                     detectDragGesturesAfterLongPress(
                                         onDragStart = { localOffset ->
-                                            targetOffsetX = 0f
+                                            swipeRevealState.close()
                                             val startPosition = rowOriginInRoot + localOffset
                                             dragPointerPosition = startPosition
                                             onDragStart?.invoke(startPosition)
@@ -3137,35 +3056,21 @@ private fun SwipeTaskRow(
                         .draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
-                                targetOffsetX = (targetOffsetX + delta).coerceIn(
-                                    -maxElasticDragPx,
-                                    0f,
-                                )
+                                swipeRevealState.dragBy(delta)
                             },
                             onDragStopped = { velocity ->
-                                val flingOpen = velocity < -1450f
-                                val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
-                                targetOffsetX = if (flingOpen || dragOpen) {
-                                    -actionRevealPx
-                                } else {
-                                    0f
-                                }
+                                swipeRevealState.settle(velocity)
                             },
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
-                            if (targetOffsetX != 0f) {
-                                targetOffsetX = 0f
-                            } else if (!swipeHinting && !pendingCompletion && !dragging) {
-                                swipeHinting = true
+                            if (swipeRevealState.isOpenOrDragging) {
+                                swipeRevealState.close()
+                            } else if (!swipeRevealState.isHinting && !pendingCompletion && !dragging) {
                                 coroutineScope.launch {
-                                    targetOffsetX = -swipeHintOffsetPx
-                                    delay(150)
-                                    targetOffsetX = 0f
-                                    delay(360)
-                                    swipeHinting = false
+                                    swipeRevealState.playHint()
                                 }
                             }
                         },
@@ -3215,7 +3120,7 @@ private fun SwipeTaskRow(
                                         view,
                                         HapticFeedbackConstantsCompat.CLOCK_TICK,
                                     )
-                                    targetOffsetX = 0f
+                                    swipeRevealState.close()
                                     localChecked = true
                                     pendingCompletion = true
                                     coroutineScope.launch {

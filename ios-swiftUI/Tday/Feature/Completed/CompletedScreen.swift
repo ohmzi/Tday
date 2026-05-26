@@ -429,8 +429,14 @@ private func buildCompletedTimelineSections(items: [CompletedItem]) -> [Timeline
 }
 
 private func completedTimelineSectionTitle(for date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale.current
-    formatter.dateFormat = "EEEE, MMM d"
-    return formatter.string(from: date)
+    CompletedTimelineFormatters.sectionTitle.string(from: date)
+}
+
+private enum CompletedTimelineFormatters {
+    static let sectionTitle: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter
+    }()
 }
