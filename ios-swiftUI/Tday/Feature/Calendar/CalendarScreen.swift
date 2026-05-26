@@ -324,6 +324,7 @@ struct CalendarScreen: View {
         .listSectionSeparator(.hidden)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .scrollDisabled(inAppDrag != nil)
         .contentMargins(.top, 0, for: .scrollContent)
         .listRowSpacing(0)
         .listSectionSpacing(0)
@@ -2457,7 +2458,11 @@ private struct CalendarInAppLongPressBridge: UIViewRepresentable {
             _ gestureRecognizer: UIGestureRecognizer,
             shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
         ) -> Bool {
-            true
+            if let scrollView = attachedView as? UIScrollView,
+               otherGestureRecognizer === scrollView.panGestureRecognizer {
+                return false
+            }
+            return true
         }
 
         @objc private func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
