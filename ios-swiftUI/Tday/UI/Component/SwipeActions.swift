@@ -52,12 +52,8 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
 
     @State private var offsetX: CGFloat = 0
     @State private var isHinting = false
-    @State private var dragStartOffsetX: CGFloat?
-    @State private var isHorizontalDragging = false
 
     private let revealWidth: CGFloat = 152
-    private let horizontalActivationDistance: CGFloat = 8
-    private let horizontalActivationBias: CGFloat = 4
     private let openVelocityThreshold: CGFloat = -180
 
     private var revealProgress: CGFloat {
@@ -69,39 +65,13 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
             content
                 .offset(x: offsetX)
                 .contentShape(Rectangle())
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: horizontalActivationDistance)
-                        .onChanged { value in
-                            guard enabled else { return }
-                            if !isHorizontalDragging {
-                                let horizontalDistance = abs(value.translation.width)
-                                let verticalDistance = abs(value.translation.height)
-                                guard horizontalDistance > horizontalActivationDistance,
-                                      horizontalDistance > verticalDistance + horizontalActivationBias else {
-                                    return
-                                }
-                                dragStartOffsetX = offsetX
-                                isHorizontalDragging = true
-                            }
-                            let proposed = (dragStartOffsetX ?? offsetX) + value.translation.width
-                            if proposed < 0 {
-                                offsetX = max(-revealWidth * 1.12, min(0, proposed))
-                            } else {
-                                offsetX = 0
-                            }
-                        }
-                        .onEnded { value in
-                            defer {
-                                dragStartOffsetX = nil
-                                isHorizontalDragging = false
-                            }
-                            guard enabled, isHorizontalDragging else { return }
-                            let velocity = value.predictedEndTranslation.width - value.translation.width
-                            let shouldOpen = offsetX < -(revealWidth * 0.32) || velocity < openVelocityThreshold
-                            withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
-                                offsetX = shouldOpen ? -revealWidth : 0
-                            }
-                        }
+                .background(
+                    HorizontalSwipePanObserver(
+                        enabled: enabled,
+                        revealWidth: revealWidth,
+                        openVelocityThreshold: openVelocityThreshold,
+                        offsetX: $offsetX
+                    )
                 )
                 .onTapGesture {
                     guard enabled else { return }
@@ -111,7 +81,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         revealHint()
                     }
                 }
-                .onChange(of: enabled) { isEnabled in
+                .onChange(of: enabled) { _, isEnabled in
                     if !isEnabled {
                         closeActions()
                     }
@@ -166,6 +136,130 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
             }
             try? await Task.sleep(nanoseconds: 340_000_000)
             isHinting = false
+        }
+    }
+}
+
+private struct HorizontalSwipePanObserver: UIViewRepresentable {
+    let enabled: Bool
+    let revealWidth: CGFloat
+    let openVelocityThreshold: CGFloat
+    @Binding var offsetX: CGFloat
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(offsetX: $offsetX)
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.enabled = enabled
+        context.coordinator.revealWidth = revealWidth
+        context.coordinator.openVelocityThreshold = openVelocityThreshold
+        context.coordinator.offsetX = $offsetX
+        DispatchQueue.main.async {
+            context.coordinator.attach(to: uiView)
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var enabled = true
+        var revealWidth: CGFloat = 152
+        var openVelocityThreshold: CGFloat = -180
+        var offsetX: Binding<CGFloat>
+
+        private weak var markerView: UIView?
+        private weak var observedScrollView: UIScrollView?
+        private var dragStartOffsetX: CGFloat = 0
+        private lazy var panRecognizer: UIPanGestureRecognizer = {
+            let recognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+            recognizer.cancelsTouchesInView = false
+            recognizer.delaysTouchesBegan = false
+            recognizer.delaysTouchesEnded = false
+            recognizer.delegate = self
+            return recognizer
+        }()
+
+        init(offsetX: Binding<CGFloat>) {
+            self.offsetX = offsetX
+        }
+
+        deinit {
+            observedScrollView?.removeGestureRecognizer(panRecognizer)
+        }
+
+        func attach(to markerView: UIView) {
+            self.markerView = markerView
+            guard let scrollView = markerView.enclosingSwipeScrollView() else {
+                return
+            }
+            guard observedScrollView !== scrollView else {
+                return
+            }
+
+            observedScrollView?.removeGestureRecognizer(panRecognizer)
+            observedScrollView = scrollView
+            scrollView.addGestureRecognizer(panRecognizer)
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard enabled,
+                  gestureRecognizer === panRecognizer,
+                  let scrollView = observedScrollView,
+                  let markerView else {
+                return false
+            }
+
+            let location = panRecognizer.location(in: markerView)
+            guard markerView.bounds.insetBy(dx: 0, dy: -4).contains(location) else {
+                return false
+            }
+
+            let velocity = panRecognizer.velocity(in: scrollView)
+            let horizontalVelocity = abs(velocity.x)
+            let verticalVelocity = abs(velocity.y)
+            return horizontalVelocity > 45 && horizontalVelocity > verticalVelocity + 28
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
+            guard enabled, let scrollView = observedScrollView else {
+                return
+            }
+
+            switch recognizer.state {
+            case .began:
+                dragStartOffsetX = offsetX.wrappedValue
+            case .changed:
+                let translation = recognizer.translation(in: scrollView)
+                let proposed = dragStartOffsetX + translation.x
+                if proposed < 0 {
+                    offsetX.wrappedValue = max(-revealWidth * 1.12, min(0, proposed))
+                } else {
+                    offsetX.wrappedValue = 0
+                }
+            case .ended, .cancelled, .failed:
+                let velocityX = recognizer.velocity(in: scrollView).x
+                let shouldOpen = offsetX.wrappedValue < -(revealWidth * 0.32) ||
+                    velocityX < openVelocityThreshold
+                withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
+                    offsetX.wrappedValue = shouldOpen ? -revealWidth : 0
+                }
+                dragStartOffsetX = 0
+            default:
+                break
+            }
         }
     }
 }
@@ -243,5 +337,18 @@ private struct SwipeRevealHintModifier: ViewModifier {
                     isHinting = false
                 }
             }
+    }
+}
+
+private extension UIView {
+    func enclosingSwipeScrollView() -> UIScrollView? {
+        var view: UIView? = self
+        while let current = view {
+            if let scrollView = current as? UIScrollView {
+                return scrollView
+            }
+            view = current.superview
+        }
+        return nil
     }
 }
