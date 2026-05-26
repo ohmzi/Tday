@@ -70,6 +70,25 @@ data class AppUiState(
     val isCheckingUpdateRelease: Boolean = false,
 )
 
+internal const val OFFLINE_NOTICE_COOLDOWN_MS = 10 * 60 * 1000L
+
+internal class OfflineNoticeCooldown(
+    private val nowMillis: () -> Long = { System.currentTimeMillis() },
+) {
+    private var lastNoticeShownAtMs: Long? = null
+
+    fun shouldShowNotice(): Boolean {
+        val now = nowMillis()
+        val lastShownAt = lastNoticeShownAtMs
+        if (lastShownAt != null && now - lastShownAt < OFFLINE_NOTICE_COOLDOWN_MS) {
+            return false
+        }
+
+        lastNoticeShownAtMs = now
+        return true
+    }
+}
+
 @HiltViewModel
 class AppViewModel @Inject constructor(
     private val authRepository: AuthRepository,
@@ -93,6 +112,7 @@ class AppViewModel @Inject constructor(
     private var realtimeJob: Job? = null
     private var connectivityJob: Job? = null
     private var foregroundReconnectJob: Job? = null
+    private val offlineNoticeCooldown = OfflineNoticeCooldown()
 
     init {
         _uiState.update {
@@ -155,6 +175,8 @@ class AppViewModel @Inject constructor(
             if (sessionResult != null) {
                 val sessionUser = sessionResult.user
                 val adminUser = isAdmin(sessionUser)
+                val shouldShowOfflineNotice = sessionResult.isOffline &&
+                        offlineNoticeCooldown.shouldShowNotice()
                 val pendingCount = runCatching {
                     cacheManager.loadOfflineState().pendingMutations.size
                 }.getOrDefault(_uiState.value.pendingMutationCount)
@@ -180,7 +202,7 @@ class AppViewModel @Inject constructor(
                         adminAiSummaryError = null,
                         isOffline = sessionResult.isOffline,
                         pendingMutationCount = pendingCount,
-                        offlineNoticeId = if (sessionResult.isOffline) {
+                        offlineNoticeId = if (shouldShowOfflineNotice) {
                             it.offlineNoticeId + 1L
                         } else {
                             it.offlineNoticeId
@@ -510,11 +532,16 @@ class AppViewModel @Inject constructor(
                         error = syncError,
                         suppressAuthenticationExpired = true,
                     )
+            val shouldShowOfflineNotice = isOffline && offlineNoticeCooldown.shouldShowNotice()
             _uiState.update {
                 it.copy(
                     isManualSyncing = false,
                     isOffline = isOffline,
-                    offlineNoticeId = if (isOffline) it.offlineNoticeId + 1L else it.offlineNoticeId,
+                    offlineNoticeId = if (shouldShowOfflineNotice) {
+                        it.offlineNoticeId + 1L
+                    } else {
+                        it.offlineNoticeId
+                    },
                     pendingMutationCount = runCatching {
                         cacheManager.loadOfflineState().pendingMutations.size
                     }.getOrDefault(it.pendingMutationCount),
@@ -637,15 +664,19 @@ class AppViewModel @Inject constructor(
             connectionProbeTimeoutMs = connectionProbeTimeoutMs,
         )
         val syncError = result.exceptionOrNull()
+        val isOffline = syncError != null &&
+                shouldTreatSyncFailureAsOffline(
+                    error = syncError,
+                    suppressAuthenticationExpired = suppressAuthenticationExpired,
+                )
+        val shouldDeferOfflineState = syncError != null &&
+                isLikelyConnectivityIssue(syncError) &&
+                !markOfflineOnConnectivityFailure
+        val shouldShowOfflineNotice = isOffline &&
+                showOfflineNotice &&
+                !shouldDeferOfflineState &&
+                offlineNoticeCooldown.shouldShowNotice()
         _uiState.update {
-            val isOffline = syncError != null &&
-                    shouldTreatSyncFailureAsOffline(
-                        error = syncError,
-                        suppressAuthenticationExpired = suppressAuthenticationExpired,
-                    )
-            val shouldDeferOfflineState = syncError != null &&
-                    isLikelyConnectivityIssue(syncError) &&
-                    !markOfflineOnConnectivityFailure
             it.copy(
                 isOffline = when {
                     syncError == null -> false
@@ -653,7 +684,7 @@ class AppViewModel @Inject constructor(
                     isOffline -> true
                     else -> false
                 },
-                offlineNoticeId = if (isOffline && showOfflineNotice && !shouldDeferOfflineState) {
+                offlineNoticeId = if (shouldShowOfflineNotice) {
                     it.offlineNoticeId + 1L
                 } else {
                     it.offlineNoticeId

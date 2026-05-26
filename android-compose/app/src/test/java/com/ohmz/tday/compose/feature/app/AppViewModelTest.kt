@@ -186,6 +186,21 @@ class AppViewModelTest {
         runCurrent()
     }
 
+    @Test
+    fun `offline notice cooldown suppresses repeat notices for ten minutes`() {
+        var now = 1_000L
+        val cooldown = OfflineNoticeCooldown { now }
+
+        assertTrue(cooldown.shouldShowNotice())
+        assertFalse(cooldown.shouldShowNotice())
+
+        now += OFFLINE_NOTICE_COOLDOWN_MS - 1
+        assertFalse(cooldown.shouldShowNotice())
+
+        now += 1
+        assertTrue(cooldown.shouldShowNotice())
+    }
+
     private fun makeViewModel(): AppViewModel =
         AppViewModel(
             authRepository = authRepository,
