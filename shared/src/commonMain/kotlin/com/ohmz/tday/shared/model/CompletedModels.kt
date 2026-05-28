@@ -14,7 +14,7 @@ data class CompletedTodoDto(
     val title: String,
     val description: String? = null,
     val priority: String = "Low",
-    val due: String,
+    val due: String? = null,
     val completedAt: String? = null,
     val completedOnTime: Boolean? = null,
     val daysToComplete: Double? = null,

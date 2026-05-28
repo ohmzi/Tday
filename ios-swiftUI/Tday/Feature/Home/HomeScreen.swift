@@ -79,6 +79,11 @@ private struct CreateListSheetHeaderHeightKey: PreferenceKey {
 }
 
 struct HomeScreen: View {
+    let onRootFeedTabSelected: (RootFeedTab) -> Void
+    let showsRootControls: Bool
+    let createTaskRequestID: Int
+    let onRootDockCollapsedChange: (Bool) -> Void
+    let onRootControlsVisibleChange: (Bool) -> Void
     let onNavigate: (AppRoute) -> Void
 
     @State private var viewModel: HomeViewModel
@@ -93,8 +98,22 @@ struct HomeScreen: View {
     @State private var showingCreateTask = false
     @State private var showingCreateList = false
     @State private var editingTodo: TodoItem?
+    @State private var homeScrollOffset: CGFloat = 0
 
-    init(container: AppContainer, onNavigate: @escaping (AppRoute) -> Void) {
+    init(
+        container: AppContainer,
+        onRootFeedTabSelected: @escaping (RootFeedTab) -> Void = { _ in },
+        showsRootControls: Bool = true,
+        createTaskRequestID: Int = 0,
+        onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
+        onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
+        onNavigate: @escaping (AppRoute) -> Void
+    ) {
+        self.onRootFeedTabSelected = onRootFeedTabSelected
+        self.showsRootControls = showsRootControls
+        self.createTaskRequestID = createTaskRequestID
+        self.onRootDockCollapsedChange = onRootDockCollapsedChange
+        self.onRootControlsVisibleChange = onRootControlsVisibleChange
         self.onNavigate = onNavigate
         _viewModel = State(initialValue: HomeViewModel(container: container))
     }
@@ -117,14 +136,16 @@ struct HomeScreen: View {
                 (todo.description.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false) ||
                 (todo.listId.flatMap { listByID[$0]?.name }.map { homeSearchText($0).contains(normalizedSearchQuery) } ?? false)
         }
-        .sorted { $0.due < $1.due }
+        .sorted {
+            ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture)
+        }
         .prefix(20)
         .map { $0 }
     }
 
     private var overdueCount: Int {
         let now = Date()
-        return viewModel.searchableTodos.count { $0.due < now }
+        return viewModel.searchableTodos.count { ($0.due ?? .distantFuture) < now }
     }
 
     private var showSearchResultsOverlay: Bool {
@@ -152,6 +173,10 @@ struct HomeScreen: View {
                 ) {
                     ScrollView(showsIndicators: false) {
                         LazyVStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
+                            TimelineScrollOffsetObserver { homeScrollOffset = $0 }
+                                .frame(height: 0)
+                                .allowsHitTesting(false)
+
                             HomeTopBar(
                                 totalWidth: proxy.size.width - (HomeMetrics.screenPadding * 2),
                                 searchExpanded: $searchExpanded,
@@ -250,9 +275,27 @@ struct HomeScreen: View {
                     }
                     .scrollBounceBehavior(.always, axes: .vertical)
                     .safeAreaInset(edge: .bottom) {
-                        TaskFloatingActionButtonDock {
-                            closeSearch()
-                            showingCreateTask = true
+                        if showsRootControls {
+                            HStack(alignment: .bottom) {
+                                RootFeedDock(
+                                    activeTab: .home,
+                                    collapsed: homeScrollOffset > 18,
+                                    onSelect: onRootFeedTabSelected
+                                )
+                                .padding(.leading, 18)
+                                .padding(.vertical, 8)
+
+                                Spacer(minLength: 12)
+
+                                TaskFloatingActionButton {
+                                    closeSearch()
+                                    showingCreateTask = true
+                                }
+                                .padding(.trailing, 18)
+                                .padding(.vertical, 8)
+                            }
+                        } else {
+                            Color.clear.frame(height: 80)
                         }
                     }
                 }
@@ -297,6 +340,7 @@ struct HomeScreen: View {
             searchResultsFrame = frame
         }
         .onChange(of: searchExpanded) { _, expanded in
+            onRootControlsVisibleChange(!expanded)
             if expanded {
                 searchFieldFocused = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
@@ -308,6 +352,21 @@ struct HomeScreen: View {
                 searchFieldFocused = false
                 searchResultsFrame = .zero
             }
+        }
+        .onChange(of: homeScrollOffset, initial: true) { _, offset in
+            onRootDockCollapsedChange(offset > 18)
+        }
+        .onChange(of: createTaskRequestID) { _, requestID in
+            guard requestID > 0 else { return }
+            closeSearch()
+            showingCreateTask = true
+        }
+        .onAppear {
+            onRootControlsVisibleChange(!searchExpanded)
+            onRootDockCollapsedChange(homeScrollOffset > 18)
+        }
+        .onDisappear {
+            onRootControlsVisibleChange(true)
         }
         .sheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
@@ -375,7 +434,11 @@ struct HomeScreen: View {
         }
         openingSearchResultID = todo.id
         closeSearch()
-        onNavigate(.allTodos(highlightTodoId: todo.id))
+        if todo.due == nil {
+            onNavigate(.anytimeTodos)
+        } else {
+            onNavigate(.allTodos(highlightTodoId: todo.id))
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             openingSearchResultID = nil
         }
@@ -570,8 +633,8 @@ private struct HomeTodayTaskRow: View {
     }
 
     private var priorityIcon: String? { priorityIndicatorSymbolName(todo.priority) }
-    private var isOverdue: Bool { !todo.completed && todo.due < Date() }
-    private var dueText: String { todo.due.formatted(date: .omitted, time: .shortened) }
+    private var isOverdue: Bool { !todo.completed && (todo.due ?? .distantFuture) < Date() }
+    private var dueText: String { todo.due?.formatted(date: .omitted, time: .shortened) ?? "Anytime" }
     private var subtitleText: String { isOverdue ? "Overdue, \(dueText)" : "Due \(dueText)" }
     private var subtitleColor: Color { isOverdue ? colors.error : colors.onSurfaceVariant.opacity(0.8) }
     private var isCompleting: Bool { completionPhase != .active }
@@ -1157,7 +1220,7 @@ private struct HomeSearchResultsOverlay: View {
                                         .foregroundStyle(colors.onSurface)
                                         .lineLimit(1)
 
-                                    Text(Self.dueFormatter.string(from: todo.due))
+                                    Text(todo.due.map(Self.dueFormatter.string(from:)) ?? "Anytime")
                                         .font(.tdayRounded(size: 12, weight: .bold))
                                         .foregroundStyle(colors.onSurfaceVariant)
                                         .lineLimit(1)
@@ -1202,7 +1265,11 @@ private struct HomeSearchResultsOverlay: View {
               todos.indices.contains(index + 1) else {
             return false
         }
-        return !Calendar.current.isDate(todos[index].due, inSameDayAs: todos[index + 1].due)
+        guard let currentDue = todos[index].due,
+              let nextDue = todos[index + 1].due else {
+            return false
+        }
+        return !Calendar.current.isDate(currentDue, inSameDayAs: nextDue)
     }
 }
 

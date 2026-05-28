@@ -8,7 +8,7 @@ final class CachedTodoEntity {
     var title: String
     var itemDescription: String?
     var priority: String
-    var dueEpochMs: Int64
+    var dueEpochMs: Int64?
     var rrule: String?
     var instanceDateEpochMs: Int64?
     var pinned: Bool
@@ -60,7 +60,7 @@ final class CachedCompletedEntity {
     var title: String
     var itemDescription: String?
     var priority: String
-    var dueEpochMs: Int64
+    var dueEpochMs: Int64?
     var completedAtEpochMs: Int64
     var rrule: String?
     var instanceDateEpochMs: Int64?

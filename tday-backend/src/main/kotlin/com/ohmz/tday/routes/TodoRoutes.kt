@@ -24,6 +24,7 @@ private const val MSG = "message"
 private const val TODOS = "todos"
 private const val SUMMARY = "summary"
 private const val ERR_INVALID_DUE = "due must be a valid ISO-8601 datetime"
+private const val ERR_RECURRING_REQUIRES_DUE = "due is required for recurring tasks"
 private const val ERR_INVALID_INSTANCE_DATE = "instanceDate must be a valid ISO-8601 datetime"
 
 fun Route.todoRoutes() {
@@ -50,8 +51,14 @@ private fun Route.todoCreateRoute(todoService: TodoService) {
                 val body = call.receive<TodoCreateRequest>()
                 validateCreateTodo.validateOrFail(body).bind()
                 val due = parseTodoDateTime(body.due)
-                    ?: raise(AppError.BadRequest(ERR_INVALID_DUE))
-                val todo = todoService.create(user.id, body.title, body.description, body.priority, due, body.rrule, body.listID).bind()
+                if (!body.due.isNullOrBlank() && due == null) {
+                    raise(AppError.BadRequest(ERR_INVALID_DUE))
+                }
+                val rrule = body.rrule?.takeIf { it.isNotBlank() }
+                if (rrule != null && due == null) {
+                    raise(AppError.BadRequest(ERR_RECURRING_REQUIRES_DUE))
+                }
+                val todo = todoService.create(user.id, body.title, body.description, body.priority, due, rrule, body.listID).bind()
                 CreateTodoResponse(message = "todo created", todo = todo)
             }
         }
@@ -92,13 +99,28 @@ private fun Route.todoPatchRoute(todoService: TodoService) {
                 body.priority?.let { fields["priority"] = it }
                 body.pinned?.let { fields["pinned"] = it }
                 body.completed?.let { fields["completed"] = it }
-                body.due?.let {
-                    val parsed = parseTodoDateTime(it)
+                val requestedRrule = body.rrule?.takeIf { it.isNotBlank() }
+                if (body.dateChanged == true && body.due.isNullOrBlank() && requestedRrule != null) {
+                    raise(AppError.BadRequest(ERR_RECURRING_REQUIRES_DUE))
+                }
+                if (body.dateChanged == true) {
+                    if (body.due.isNullOrBlank()) {
+                        fields["due"] = null
+                        fields["rrule"] = null
+                    } else {
+                        val parsed = parseTodoDateTime(body.due)
+                            ?: raise(AppError.BadRequest(ERR_INVALID_DUE))
+                        fields["due"] = parsed
+                    }
+                } else if (!body.due.isNullOrBlank()) {
+                    val parsed = parseTodoDateTime(body.due)
                         ?: raise(AppError.BadRequest(ERR_INVALID_DUE))
                     fields["due"] = parsed
                 }
-                body.rrule?.let { fields["rrule"] = it }
-                body.listID?.let { fields["listID"] = it }
+                if (body.rruleChanged == true || body.rrule != null) {
+                    fields["rrule"] = requestedRrule
+                }
+                body.listID?.let { fields["listID"] = it.takeIf { value -> value.isNotBlank() } }
                 todoService.update(user.id, body.id, fields).bind()
                 mapOf(MSG to "Todo updated")
             }
@@ -261,10 +283,11 @@ private fun Route.todoUtilityRoutes(
     }
 }
 
-internal fun parseTodoDateTime(value: String): LocalDateTime? {
-    return runCatching { LocalDateTime.parse(value) }.getOrNull()
+internal fun parseTodoDateTime(value: String?): LocalDateTime? {
+    val normalized = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    return runCatching { LocalDateTime.parse(normalized) }.getOrNull()
         ?: runCatching {
-            OffsetDateTime.parse(value)
+            OffsetDateTime.parse(normalized)
                 .withOffsetSameInstant(ZoneOffset.UTC)
                 .toLocalDateTime()
         }.getOrNull()

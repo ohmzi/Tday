@@ -25,7 +25,6 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
@@ -60,8 +59,8 @@ class TodayTasksWidget : GlanceAppWidget() {
         val dayEnd = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
 
         val todayTasks = state.todos
-            .filter { !it.completed && it.dueEpochMs in dayStart until dayEnd }
-            .sortedBy { it.dueEpochMs }
+            .filter { task -> !task.completed && task.dueEpochMs?.let { it in dayStart until dayEnd } == true }
+            .sortedBy { it.dueEpochMs ?: Long.MAX_VALUE }
             .take(8)
 
         provideContent {
@@ -142,7 +141,9 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
 private fun TaskRow(task: CachedTodoRecord) {
     val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
-    val dueText = timeFormatter.format(Instant.ofEpochMilli(task.dueEpochMs))
+    val dueText = task.dueEpochMs
+        ?.let { timeFormatter.format(Instant.ofEpochMilli(it)) }
+        ?: "Anytime"
     val priorityColor = when (task.priority.lowercase()) {
         "high" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFE53935))
         "medium" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFFB8C00))

@@ -7,6 +7,7 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
     case scheduled = "SCHEDULED"
     case all = "ALL"
     case priority = "PRIORITY"
+    case anytime = "ANYTIME"
     case list = "LIST"
 
     var title: String {
@@ -21,6 +22,8 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
             return "All Tasks"
         case .priority:
             return "Priority"
+        case .anytime:
+            return "Anytime"
         case .list:
             return "List"
         }
@@ -38,6 +41,8 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
             return "all"
         case .priority:
             return "priority"
+        case .anytime:
+            return "anytime"
         case .list:
             return "list"
         }
@@ -53,7 +58,7 @@ struct CreateTaskPayload: Equatable, Hashable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let due: Date
+    let due: Date?
     let rrule: String?
     let listId: String?
 }
@@ -64,7 +69,7 @@ struct TodoItem: Identifiable, Equatable, Hashable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let due: Date
+    let due: Date?
     let rrule: String?
     let instanceDate: Date?
     let pinned: Bool
@@ -90,7 +95,7 @@ extension TodoListMode {
         switch self {
         case .scheduled, .all, .priority, .list:
             return true
-        case .today, .overdue:
+        case .today, .overdue, .anytime:
             return false
         }
     }
@@ -140,7 +145,8 @@ func movedTaskPayload(
     targetDay: Date,
     calendar: Calendar = .current
 ) -> CreateTaskPayload? {
-    guard let movedDue = movedDuePreservingTime(due: todo.due, targetDay: targetDay, calendar: calendar) else {
+    guard let due = todo.due,
+          let movedDue = movedDuePreservingTime(due: due, targetDay: targetDay, calendar: calendar) else {
         return nil
     }
     return CreateTaskPayload(
@@ -225,6 +231,7 @@ struct DashboardSummary: Equatable, Hashable, Codable {
     let scheduledCount: Int
     let allCount: Int
     let priorityCount: Int
+    let anytimeCount: Int
     let completedCount: Int
     let lists: [ListSummary]
 }
@@ -235,7 +242,7 @@ struct CompletedItem: Identifiable, Equatable, Hashable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let due: Date
+    let due: Date?
     let completedAt: Date?
     let rrule: String?
     let instanceDate: Date?

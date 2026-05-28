@@ -216,6 +216,12 @@ struct TimelineTopBarAction {
 struct TodoListScreen: View {
     let highlightedTodoId: String?
     let onListDeleted: () -> Void
+    let rootFeedTab: RootFeedTab?
+    let onRootFeedTabSelected: ((RootFeedTab) -> Void)?
+    let showsRootControls: Bool
+    let createTaskRequestID: Int
+    let onRootDockCollapsedChange: (Bool) -> Void
+    let onRootControlsVisibleChange: (Bool) -> Void
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
@@ -241,10 +247,22 @@ struct TodoListScreen: View {
         listId: String?,
         listName: String?,
         highlightedTodoId: String?,
+        rootFeedTab: RootFeedTab? = nil,
+        onRootFeedTabSelected: ((RootFeedTab) -> Void)? = nil,
+        showsRootControls: Bool = true,
+        createTaskRequestID: Int = 0,
+        onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
+        onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
         onListDeleted: @escaping () -> Void = {}
     ) {
         self.highlightedTodoId = highlightedTodoId
         self.onListDeleted = onListDeleted
+        self.rootFeedTab = rootFeedTab
+        self.onRootFeedTabSelected = onRootFeedTabSelected
+        self.showsRootControls = showsRootControls
+        self.createTaskRequestID = createTaskRequestID
+        self.onRootDockCollapsedChange = onRootDockCollapsedChange
+        self.onRootControlsVisibleChange = onRootControlsVisibleChange
         _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
         _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
     }
@@ -265,6 +283,7 @@ struct TodoListScreen: View {
         viewModel.mode == .overdue ||
             viewModel.mode == .scheduled ||
             viewModel.mode == .priority ||
+            viewModel.mode == .anytime ||
             viewModel.mode == .all ||
             viewModel.mode == .list
     }
@@ -298,6 +317,7 @@ struct TodoListScreen: View {
 
     private var canSummarizeCurrentMode: Bool {
         viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled
+            && viewModel.mode != .anytime
     }
 
     private var heroTopBarAction: TimelineTopBarAction? {
@@ -404,7 +424,25 @@ struct TodoListScreen: View {
             handleItemsChanged()
         }
         .safeAreaInset(edge: .bottom) {
-            floatingActionButtonDock
+            if showsRootControls {
+                floatingActionButtonDock
+            } else {
+                Color.clear.frame(height: 80)
+            }
+        }
+        .onChange(of: timelineScrollOffset, initial: true) { _, offset in
+            onRootDockCollapsedChange(offset > 18)
+        }
+        .onChange(of: createTaskRequestID) { _, requestID in
+            guard requestID > 0 else { return }
+            showingCreateTask = true
+        }
+        .onAppear {
+            onRootControlsVisibleChange(true)
+            onRootDockCollapsedChange(timelineScrollOffset > 18)
+        }
+        .onDisappear {
+            onRootControlsVisibleChange(true)
         }
         .sheet(isPresented: $showingCreateTask) {
             createTaskSheetContent
@@ -447,7 +485,7 @@ struct TodoListScreen: View {
     @ToolbarContentBuilder
     private var navigationToolbarContent: some ToolbarContent {
         if !usesHeroTimelineMode {
-            if viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled {
+            if canSummarizeCurrentMode {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: presentSummary) {
                         Image(systemName: "sparkles")
@@ -496,8 +534,24 @@ struct TodoListScreen: View {
     }
 
     private var floatingActionButtonDock: some View {
-        TaskFloatingActionButtonDock(fillColor: modeAccentColor) {
-            showingCreateTask = true
+        HStack(alignment: .bottom) {
+            if showsRootControls, let rootFeedTab, let onRootFeedTabSelected {
+                RootFeedDock(
+                    activeTab: rootFeedTab,
+                    collapsed: timelineScrollOffset > 18,
+                    onSelect: onRootFeedTabSelected
+                )
+                .padding(.leading, 18)
+                .padding(.vertical, 8)
+            }
+
+            Spacer(minLength: 12)
+
+            TaskFloatingActionButton(fillColor: modeAccentColor) {
+                showingCreateTask = true
+            }
+            .padding(.trailing, 18)
+            .padding(.vertical, 8)
         }
     }
 
@@ -506,7 +560,8 @@ struct TodoListScreen: View {
             lists: viewModel.lists,
             titleText: "New task",
             submitText: "Create",
-            initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? "High" : "Low", due: Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
+            initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? "High" : "Low", due: viewModel.mode == .anytime ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
+            defaultScheduled: viewModel.mode != .anytime,
             onParseTaskTitleNlp: { title, dueRef in
                 await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
             },
@@ -610,7 +665,8 @@ struct TodoListScreen: View {
             return
         }
         TodoTaskDragSession.shared.handledDropSignature = dropSignature
-        guard !Calendar.current.isDate(todo.due, inSameDayAs: targetDay) else {
+        guard let due = todo.due,
+              !Calendar.current.isDate(due, inSameDayAs: targetDay) else {
             return
         }
 
@@ -644,7 +700,10 @@ struct TodoListScreen: View {
         if sectionID(containing: todo) == section.id {
             return false
         }
-        return !Calendar.current.isDate(todo.due, inSameDayAs: targetDate)
+        guard let due = todo.due else {
+            return false
+        }
+        return !Calendar.current.isDate(due, inSameDayAs: targetDate)
     }
 
     private func setActiveDropSection(_ sectionId: String?) {
@@ -1072,7 +1131,7 @@ struct TodoListScreen: View {
                 }
             }
             HStack(spacing: 6) {
-                Text(todo.due.formatted(date: .abbreviated, time: .shortened))
+                Text(todo.due?.formatted(date: .abbreviated, time: .shortened) ?? "Anytime")
                     .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(colors.onSurfaceVariant)
             }
@@ -1140,7 +1199,7 @@ struct TodoListScreen: View {
         let showListIndicator = listMeta != nil && viewModel.mode != .list
         let priorityIcon = priorityIndicatorSymbolName(todo.priority)
         let subtitleText = minimalTimelineSubtitle(for: todo, in: section)
-        let isOverdueTask = !todo.completed && todo.due < Date()
+        let isOverdueTask = !todo.completed && (todo.due ?? .distantFuture) < Date()
         let subtitleColor = isOverdueTask ? colors.error : colors.onSurfaceVariant.opacity(0.8)
         let completionPhase = completionPhases[todo.id]
         let isCompleting = completionPhase != nil
@@ -1408,7 +1467,11 @@ struct TodoListScreen: View {
         let currentTodo = sections[sectionIndex].items[itemIndex]
         let nextTodoInSection = sections[sectionIndex].items.dropFirst(itemIndex + 1).first
         if let nextTodoInSection {
-            return !Calendar.current.isDate(currentTodo.due, inSameDayAs: nextTodoInSection.due)
+            guard let currentDue = currentTodo.due,
+                  let nextDue = nextTodoInSection.due else {
+                return false
+            }
+            return !Calendar.current.isDate(currentDue, inSameDayAs: nextDue)
         }
 
         let nextVisibleTodo = sections.dropFirst(sectionIndex + 1)
@@ -1418,7 +1481,11 @@ struct TodoListScreen: View {
         guard let nextVisibleTodo else {
             return false
         }
-        return !Calendar.current.isDate(currentTodo.due, inSameDayAs: nextVisibleTodo.due)
+        guard let currentDue = currentTodo.due,
+              let nextDue = nextVisibleTodo.due else {
+            return false
+        }
+        return !Calendar.current.isDate(currentDue, inSameDayAs: nextDue)
     }
 
     private func timelineRowTransition() -> AnyTransition {
@@ -1432,17 +1499,20 @@ struct TodoListScreen: View {
     }
 
     private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String {
-        let timeText = todo.due.formatted(date: .omitted, time: .shortened)
+        guard let due = todo.due else {
+            return "Anytime"
+        }
+        let timeText = due.formatted(date: .omitted, time: .shortened)
         let dueBodyText = if section.id == "earlier" &&
             (viewModel.mode == .all || viewModel.mode == .priority || viewModel.mode == .list) {
-            timelineDateTimeText(todo.due)
+            timelineDateTimeText(due)
         } else {
             timeText
         }
 
         switch viewModel.mode {
         case .today:
-            if !todo.completed && todo.due < Date() {
+            if !todo.completed && due < Date() {
                 return "Overdue, \(dueBodyText)"
             }
             return "Due \(dueBodyText)"
@@ -1451,17 +1521,19 @@ struct TodoListScreen: View {
         case .scheduled:
             return "Due \(dueBodyText)"
         case .all:
-            if !todo.completed && todo.due < Date() {
+            if !todo.completed && due < Date() {
                 return "Overdue, \(dueBodyText)"
             }
             return "Due \(dueBodyText)"
         case .priority:
-            if !todo.completed && todo.due < Date() {
+            if !todo.completed && due < Date() {
                 return "Overdue, \(dueBodyText)"
             }
             return "Due \(dueBodyText)"
+        case .anytime:
+            return "Anytime"
         case .list:
-            if !todo.completed && todo.due < Date() {
+            if !todo.completed && due < Date() {
                 return "Overdue, \(dueBodyText)"
             }
             return "Due \(dueBodyText)"
@@ -1876,7 +1948,7 @@ private struct TodoDragPreview: View {
                     .font(.tdayRounded(size: 16, weight: .bold))
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
-                Text(todo.due.formatted(date: .omitted, time: .shortened))
+                Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Anytime")
                     .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(colors.onSurfaceVariant)
                     .lineLimit(1)
@@ -2873,8 +2945,10 @@ private func buildSections(
     let calendar = Calendar.current
     switch mode {
     case .today:
-        let grouped = Dictionary(grouping: items) { item -> String in
-            let hour = calendar.component(.hour, from: item.due)
+        let grouped = Dictionary(grouping: items.compactMap { item -> TodoItem? in
+            item.due == nil ? nil : item
+        }) { item -> String in
+            let hour = calendar.component(.hour, from: item.due ?? .distantFuture)
             if hour < 12 { return "Morning" }
             if hour < 18 { return "Afternoon" }
             return "Tonight"
@@ -2891,9 +2965,9 @@ private func buildSections(
     case .overdue:
         let now = Date()
         let startOfToday = calendar.startOfDay(for: now)
-        let overdueItems = items.filter { $0.due < now }
+        let overdueItems = items.filter { ($0.due ?? .distantFuture) < now }
         let grouped = Dictionary(grouping: overdueItems) { item in
-            calendar.startOfDay(for: item.due)
+            calendar.startOfDay(for: item.due ?? now)
         }
 
         var sections: [TodoTimelineSection] = []
@@ -2928,8 +3002,8 @@ private func buildSections(
         return sections
     case .scheduled:
         let startOfToday = calendar.startOfDay(for: Date())
-        let grouped = Dictionary(grouping: items.filter { $0.due >= startOfToday }) { item in
-            calendar.startOfDay(for: item.due)
+        let grouped = Dictionary(grouping: items.filter { ($0.due ?? .distantPast) >= startOfToday }) { item in
+            calendar.startOfDay(for: item.due ?? startOfToday)
         }
         return grouped.keys.sorted().map { date in
                 TodoTimelineSection(
@@ -2957,6 +3031,8 @@ private func buildSections(
             placesEarlierBeforeToday: true,
             includeEmptyEarlierTarget: includeEmptyEarlierTarget
         )
+    case .anytime:
+        return buildAnytimeTimelineSections(items: items)
     case .list:
         return buildFutureTimelineSections(
             items: items,
@@ -2964,6 +3040,64 @@ private func buildSections(
             placesEarlierBeforeToday: true,
             includeEmptyEarlierTarget: includeEmptyEarlierTarget
         )
+    }
+}
+
+private func buildAnytimeTimelineSections(items: [TodoItem]) -> [TodoTimelineSection] {
+    let anytimeItems = items.filter { $0.due == nil }
+    let priorityItems = anytimeItems
+        .filter { $0.pinned || $0.priority.caseInsensitiveCompare("High") == .orderedSame || $0.priority.caseInsensitiveCompare("Medium") == .orderedSame }
+        .sorted(by: anytimeTodoSortPrecedes)
+    let openItems = anytimeItems
+        .filter { item in !priorityItems.contains(where: { $0.id == item.id }) }
+        .sorted(by: anytimeTodoSortPrecedes)
+
+    var sections: [TodoTimelineSection] = []
+    if !priorityItems.isEmpty {
+        sections.append(
+            TodoTimelineSection(
+                id: "anytime-priority",
+                title: "Priority",
+                items: priorityItems,
+                isCollapsible: false,
+                targetDate: nil
+            )
+        )
+    }
+    if !openItems.isEmpty || sections.isEmpty {
+        sections.append(
+            TodoTimelineSection(
+                id: "anytime-open",
+                title: "Open",
+                items: openItems,
+                isCollapsible: false,
+                targetDate: nil
+            )
+        )
+    }
+    return sections
+}
+
+private func anytimeTodoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
+    if lhs.pinned != rhs.pinned {
+        return lhs.pinned && !rhs.pinned
+    }
+    let lhsPriority = anytimePriorityRank(lhs.priority)
+    let rhsPriority = anytimePriorityRank(rhs.priority)
+    if lhsPriority != rhsPriority {
+        return lhsPriority > rhsPriority
+    }
+    return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+}
+
+private func anytimePriorityRank(_ priority: String) -> Int {
+    switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "high", "urgent", "important":
+        return 3
+    case "medium":
+        return 2
+    default:
+        return 1
     }
 }
 
@@ -2985,8 +3119,9 @@ private func buildFutureTimelineSections(
 ) -> [TodoTimelineSection] {
     let now = Date()
     let today = calendar.startOfDay(for: now)
-    let groupedByDate = Dictionary(grouping: items.sorted(by: todoTimelineSortPrecedes)) { item in
-        calendar.startOfDay(for: item.due)
+    let datedItems = items.filter { $0.due != nil }
+    let groupedByDate = Dictionary(grouping: datedItems.sorted(by: todoTimelineSortPrecedes)) { item in
+        calendar.startOfDay(for: item.due ?? today)
     }
     let currentYear = calendar.component(.year, from: today)
     let currentMonth = calendar.component(.month, from: today)
@@ -3197,6 +3332,8 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
         return "No tasks yet"
     case .priority:
         return "No priority tasks"
+    case .anytime:
+        return "No anytime tasks"
     case .list:
         return "No tasks in this list"
     }
@@ -3214,6 +3351,8 @@ private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: Strin
         return "tray.fill"
     case .priority:
         return "flag.fill"
+    case .anytime:
+        return "tray.full.fill"
     case .list:
         return todoListSymbolName(for: listIconKey)
     }
@@ -3231,6 +3370,8 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
         return todoHexColor(0x5E6878)
     case .priority:
         return todoHexColor(0xE65E52)
+    case .anytime:
+        return todoHexColor(0x4D8F83)
     case .list:
         return todoListAccentColor(for: listColorKey)
     }

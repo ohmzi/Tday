@@ -1,4 +1,4 @@
-import { TodoItemType } from "@/types";
+import { TodoApiItemType, TodoItemType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
@@ -7,13 +7,13 @@ const getTodoTimeline = async () => {
   const data = await api.GET({
     url: "/api/todo?timeline=true",
   });
-  const { todos }: { todos: TodoItemType[] } = data;
+  const { todos }: { todos: TodoApiItemType[] } = data;
 
   if (!todos) {
     throw new Error(data.message || "bad server response: Did not recieve todo");
   }
 
-  return todos.map((todo) => {
+  return todos.filter((todo) => todo.due != null).map((todo) => {
     const todoInstanceDate = todo.instanceDate
       ? parseApiDateTime(todo.instanceDate)
       : null;
@@ -24,7 +24,7 @@ const getTodoTimeline = async () => {
       ...todo,
       id: todoId,
       createdAt: parseApiDateTime(todo.createdAt),
-      due: parseApiDateTime(todo.due),
+      due: parseApiDateTime(todo.due!),
       instanceDate: todoInstanceDate,
     };
   });

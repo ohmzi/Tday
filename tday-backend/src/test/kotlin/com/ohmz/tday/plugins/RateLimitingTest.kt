@@ -261,7 +261,7 @@ class RateLimitingTest {
             title: String,
             description: String?,
             priority: String,
-            due: LocalDateTime,
+            due: LocalDateTime?,
             rrule: String?,
             listID: String?,
         ): Either<AppError, TodoResponse> = unsupported()

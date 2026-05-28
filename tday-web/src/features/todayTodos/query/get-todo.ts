@@ -1,4 +1,4 @@
-import { TodoItemType } from "@/types";
+import { TodoApiItemType, TodoItemType } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { startOfToday, endOfToday } from "date-fns";
@@ -8,13 +8,13 @@ const getTodo = async () => {
   const data = await api.GET({
     url: `/api/todo?start=${startOfToday().getTime()}&end=${endOfToday().getTime()}`,
   });
-  const { todos }: { todos: TodoItemType[] } = data;
+  const { todos }: { todos: TodoApiItemType[] } = data;
   if (!todos) {
     throw new Error(
       data.message || `bad server response: Did not recieve todo`,
     );
   }
-  const todoWithFormattedDates = todos.map((todo) => {
+  const todoWithFormattedDates = todos.filter((todo) => todo.due != null).map((todo) => {
     // id needs to be todo id + instance date, so that ghost todos of the same parent can have unique ids
     const todoInstanceDate = todo.instanceDate
       ? parseApiDateTime(todo.instanceDate)
@@ -25,7 +25,7 @@ const getTodo = async () => {
       ...todo,
       id: todoId,
       createdAt: parseApiDateTime(todo.createdAt),
-      due: parseApiDateTime(todo.due),
+      due: parseApiDateTime(todo.due!),
       instanceDate: todoInstanceDate,
       listID: todo.listID ?? null,
     };

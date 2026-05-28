@@ -302,10 +302,10 @@ class SyncManager @Inject constructor(
                                     title = mutation.title?.trim().orEmpty(),
                                     description = mutation.description,
                                     priority = mutation.priority ?: "Low",
-                                    due = Instant.ofEpochMilli(
-                                        mutation.dueEpochMs ?: System.currentTimeMillis(),
-                                    ).toString(),
-                                    rrule = mutation.rrule,
+                                    due = mutation.dueEpochMs?.let {
+                                        Instant.ofEpochMilli(it).toString()
+                                    },
+                                    rrule = mutation.rrule?.takeIf { mutation.dueEpochMs != null },
                                     listID = resolvedListId,
                                 ),
                             ),

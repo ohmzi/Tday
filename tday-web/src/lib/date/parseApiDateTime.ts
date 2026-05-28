@@ -49,3 +49,12 @@ export default function parseApiDateTime(value: string | Date): Date {
 
   return new Date(value);
 }
+
+export function parseOptionalApiDateTime(
+  value: string | Date | null | undefined,
+): Date | null {
+  if (value == null || value === "") {
+    return null;
+  }
+  return parseApiDateTime(value);
+}
