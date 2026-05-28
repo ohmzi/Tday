@@ -20,7 +20,7 @@ struct CachedTodoRecord: Identifiable, Equatable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let dueEpochMs: Int64
+    let dueEpochMs: Int64?
     let rrule: String?
     let instanceDateEpochMs: Int64?
     let pinned: Bool
@@ -45,7 +45,7 @@ struct CachedCompletedRecord: Identifiable, Equatable, Codable {
     let title: String
     let description: String?
     let priority: String
-    let dueEpochMs: Int64
+    let dueEpochMs: Int64?
     let completedAtEpochMs: Int64
     let rrule: String?
     let instanceDateEpochMs: Int64?

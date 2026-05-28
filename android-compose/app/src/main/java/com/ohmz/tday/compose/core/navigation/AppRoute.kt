@@ -7,6 +7,7 @@ sealed class AppRoute(val route: String) {
     data object ServerSetup : AppRoute("server-setup")
     data object Login : AppRoute("login")
     data object Home : AppRoute("home")
+    data object AnytimeTodos : AppRoute("anytime")
     data object TodayTodos : AppRoute("todos/today")
     data object OverdueTodos : AppRoute("todos/overdue")
     data object ScheduledTodos : AppRoute("todos/scheduled")

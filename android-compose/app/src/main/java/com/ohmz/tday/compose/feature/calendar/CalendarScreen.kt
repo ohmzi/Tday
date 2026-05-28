@@ -254,7 +254,9 @@ private fun shouldShowDateDivider(
 ): Boolean {
     val currentTodo = items.getOrNull(afterItemIndex) ?: return false
     val nextTodo = items.getOrNull(afterItemIndex + 1) ?: return false
-    return LocalDate.ofInstant(currentTodo.due, zoneId) != LocalDate.ofInstant(nextTodo.due, zoneId)
+    val currentDue = currentTodo.due ?: return false
+    val nextDue = nextTodo.due ?: return false
+    return LocalDate.ofInstant(currentDue, zoneId) != LocalDate.ofInstant(nextDue, zoneId)
 }
 
 private data class CalendarTaskRescheduleDrop(
@@ -276,7 +278,7 @@ private fun calendarTaskAlreadyDueOnDate(
     todo: TodoItem,
     date: LocalDate,
     zoneId: ZoneId = ZoneId.systemDefault(),
-): Boolean = LocalDate.ofInstant(todo.due, zoneId) == date
+): Boolean = todo.due?.let { LocalDate.ofInstant(it, zoneId) == date } == true
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -385,8 +387,9 @@ fun CalendarScreen(
     val calendarTaskRescheduleEnabled = selectedViewMode != CalendarViewMode.DAY
     val tasksByDate = remember(uiState.items, zoneId) {
         uiState.items
-            .groupBy { LocalDate.ofInstant(it.due, zoneId) }
-            .mapValues { (_, tasks) -> tasks.sortedBy { it.due } }
+            .mapNotNull { todo -> todo.due?.let { due -> due to todo } }
+            .groupBy({ (due, _) -> LocalDate.ofInstant(due, zoneId) }, { (_, todo) -> todo })
+            .mapValues { (_, tasks) -> tasks.sortedBy { it.due ?: java.time.Instant.MAX } }
     }
     val selectedDatePendingTasks = tasksByDate[selectedDate].orEmpty()
     fun canNavigateTo(date: LocalDate): Boolean = YearMonth.from(date) >= minNavigableMonth
@@ -2059,7 +2062,7 @@ private fun CalendarTaskDragPreview(
                     maxLines = 1,
                 )
                 Text(
-                    text = CalendarTaskDragDueTimeFormatter.format(todo.due),
+                    text = todo.due?.let(CalendarTaskDragDueTimeFormatter::format) ?: "Anytime",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -2145,9 +2148,9 @@ private fun CalendarTodoRow(
         animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
         label = "calendarTaskTitleStrikeProgress",
     )
-    val dueText = DateTimeFormatter.ofPattern("h:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(todo.due)
+    val dueText = todo.due
+        ?.let { DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(it) }
+        ?: "Anytime"
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = listMeta != null
     val priorityIcon = priorityIconFor(todo.priority)
@@ -2438,9 +2441,9 @@ private fun CalendarCompletedTodoRow(
         ),
         label = "calendarCompletedRestoreOffsetY",
     )
-    val dueText = DateTimeFormatter.ofPattern("h:mm a")
-        .withZone(ZoneId.systemDefault())
-        .format(item.due)
+    val dueText = item.due
+        ?.let { DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(it) }
+        ?: "Anytime"
     val listMeta = item.resolveListSummary(lists)
     val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
         ?: item.listColor?.let(::listAccentColor)
