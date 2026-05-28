@@ -50,7 +50,8 @@ class CalendarViewModel @Inject constructor(
         runCatching {
             CalendarUiState(
                 isLoading = false,
-                items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
+                items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+                    .filter { it.due != null },
                 completedItems = completedRepository.fetchCompletedItemsSnapshot(),
                 lists = listRepository.fetchListsSnapshot(),
                 errorMessage = null,
@@ -96,7 +97,8 @@ class CalendarViewModel @Inject constructor(
 
     private fun hydrateFromCache() {
         runCatching {
-            val todos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+            val todos =
+                todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL).filter { it.due != null }
             val completedItems = completedRepository.fetchCompletedItemsSnapshot()
             val lists = listRepository.fetchListsSnapshot()
             Triple(todos, completedItems, lists)
@@ -139,7 +141,8 @@ class CalendarViewModel @Inject constructor(
                     )
                         .onFailure { /* fall back to cache */ }
                 }
-                val todos = todoRepository.fetchTodos(mode = TodoListMode.ALL)
+                val todos =
+                    todoRepository.fetchTodos(mode = TodoListMode.ALL).filter { it.due != null }
                 val completedItems = completedRepository.fetchCompletedItems()
                 val lists = listRepository.fetchLists()
                 Triple(todos, completedItems, lists)
@@ -243,7 +246,8 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun moveTask(todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) {
-        val movedDue = movedDuePreservingTime(todo.due, targetDate)
+        val due = todo.due ?: return
+        val movedDue = movedDuePreservingTime(due, targetDate)
         val previousState = _uiState.value
         val updatedTodo = todo.copy(due = movedDue)
 

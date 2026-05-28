@@ -76,8 +76,9 @@ final class CalendarViewModel {
 
     func moveTask(_ todo: TodoItem, toDay targetDay: Date, scope: TaskRescheduleScope) async {
         let calendar = Calendar.current
-        guard !calendar.isDate(todo.due, inSameDayAs: targetDay),
-              let movedDue = movedDuePreservingTime(due: todo.due, targetDay: targetDay, calendar: calendar) else {
+        guard let due = todo.due,
+              !calendar.isDate(due, inSameDayAs: targetDay),
+              let movedDue = movedDuePreservingTime(due: due, targetDay: targetDay, calendar: calendar) else {
             return
         }
 
@@ -106,7 +107,7 @@ final class CalendarViewModel {
     }
 
     private func hydrateFromCache() {
-        items = container.todoRepository.fetchTodosSnapshot(mode: .all)
+        items = container.todoRepository.fetchTodosSnapshot(mode: .all).filter { $0.due != nil }
         completedItems = container.completedRepository.fetchCompletedItemsSnapshot()
         lists = container.listRepository.fetchListsSnapshot()
         errorMessage = nil

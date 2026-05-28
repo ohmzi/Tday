@@ -34,12 +34,19 @@ enum TodayTasksWidgetSnapshotStore {
         let dayEndEpochMs = Int64(dayEnd.timeIntervalSince1970 * 1_000)
 
         let todayTasks = state.todos
-            .filter { !$0.completed && $0.dueEpochMs >= dayStartEpochMs && $0.dueEpochMs < dayEndEpochMs }
+            .filter {
+                guard let dueEpochMs = $0.dueEpochMs else {
+                    return false
+                }
+                return !$0.completed && dueEpochMs >= dayStartEpochMs && dueEpochMs < dayEndEpochMs
+            }
             .sorted { left, right in
-                if left.dueEpochMs == right.dueEpochMs {
+                let leftDue = left.dueEpochMs ?? Int64.max
+                let rightDue = right.dueEpochMs ?? Int64.max
+                if leftDue == rightDue {
                     return left.title.localizedStandardCompare(right.title) == .orderedAscending
                 }
-                return left.dueEpochMs < right.dueEpochMs
+                return leftDue < rightDue
             }
 
         return TodayTasksWidgetSnapshot(
@@ -50,7 +57,7 @@ enum TodayTasksWidgetSnapshotStore {
                 TodayTasksWidgetTaskSnapshot(
                     id: $0.id,
                     title: $0.title,
-                    dueEpochMs: $0.dueEpochMs,
+                    dueEpochMs: $0.dueEpochMs ?? dayStartEpochMs,
                     priority: $0.priority
                 )
             }

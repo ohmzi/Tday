@@ -43,15 +43,20 @@ fun Route.completedTodoRoutes() {
                 body.title?.let { fields["title"] = it }
                 body.description?.let { fields["description"] = it }
                 body.priority?.let { fields["priority"] = it }
-                body.due?.let { due ->
-                    val parsed = parseTodoDateTime(due)
-                        ?: return@withAuth Either.Left(
-                            AppError.BadRequest("due must be a valid ISO-8601 datetime"),
-                        )
-                    fields["due"] = parsed
+                val due = body.due
+                if (due != null) {
+                    if (due.isBlank()) {
+                        fields["due"] = null
+                    } else {
+                        val parsed = parseTodoDateTime(due)
+                            ?: return@withAuth Either.Left(
+                                AppError.BadRequest("due must be a valid ISO-8601 datetime"),
+                            )
+                        fields["due"] = parsed
+                    }
                 }
-                body.rrule?.let { fields["rrule"] = it }
-                body.listID?.let { fields["listID"] = it }
+                body.rrule?.let { fields["rrule"] = it.takeIf { value -> value.isNotBlank() } }
+                body.listID?.let { fields["listID"] = it.takeIf { value -> value.isNotBlank() } }
                 if (fields.isEmpty()) {
                     return@withAuth completedTodoService.deleteById(user.id, body.id)
                         .map { count ->

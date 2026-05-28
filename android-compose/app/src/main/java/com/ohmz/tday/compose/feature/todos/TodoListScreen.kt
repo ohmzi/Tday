@@ -211,6 +211,8 @@ import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -261,6 +263,13 @@ fun TodoListScreen(
     onDelete: (todo: TodoItem) -> Unit,
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
+    rootFeedTab: RootFeedTab? = null,
+    onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
+    showRootFeedDock: Boolean = true,
+    showCreateTaskButton: Boolean = true,
+    createTaskRequestKey: Int = 0,
+    onRootDockCollapsedChange: (Boolean) -> Unit = {},
+    onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -268,7 +277,7 @@ fun TodoListScreen(
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
     val usesTodayStyle =
-        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.ANYTIME || uiState.mode == TodoListMode.LIST
     val titleColor = modeAccentColor(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -282,7 +291,7 @@ fun TodoListScreen(
         listIconKey = selectedList?.iconKey,
     )
     val showSectionedTimeline =
-        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.ANYTIME || uiState.mode == TodoListMode.LIST
     val suppressInitialTodayTimeline =
         uiState.mode == TodoListMode.TODAY &&
                 !uiState.hasHydratedSnapshot &&
@@ -315,6 +324,17 @@ fun TodoListScreen(
     val timelineAnimationsEnabled =
         uiState.mode != TodoListMode.TODAY || timelineAnimationsReady
     val listState = rememberLazyListState()
+    val dockCollapsed =
+        listState.isScrollInProgress || listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 18
+    LaunchedEffect(dockCollapsed) {
+        onRootDockCollapsedChange(dockCollapsed)
+    }
+    LaunchedEffect(Unit) {
+        onRootControlsVisibleChange(true)
+    }
+    DisposableEffect(Unit) {
+        onDispose { onRootControlsVisibleChange(true) }
+    }
     val density = LocalDensity.current
     val todayTitleScrollBehavior = rememberLazyListCollapsingTitleScrollBehavior(
         listState = listState,
@@ -327,6 +347,9 @@ fun TodoListScreen(
                 uiState.mode == TodoListMode.PRIORITY ||
                 uiState.mode == TodoListMode.LIST
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
+    var lastHandledCreateTaskRequestKey by rememberSaveable {
+        mutableStateOf(createTaskRequestKey)
+    }
     var collapsedSectionKeys by rememberSaveable(uiState.mode, uiState.listId, highlightedTodoId) {
         mutableStateOf(
             if (isCollapsibleTimelineMode && highlightedTodoId.isNullOrBlank()) {
@@ -345,6 +368,13 @@ fun TodoListScreen(
     val timelineDropTargetBounds =
         remember(uiState.mode) { mutableStateMapOf<String, TimelineDropTargetBounds>() }
     var pendingRescheduleDrop by remember(uiState.mode) { mutableStateOf<TaskRescheduleDrop?>(null) }
+    LaunchedEffect(createTaskRequestKey) {
+        if (createTaskRequestKey > lastHandledCreateTaskRequestKey) {
+            lastHandledCreateTaskRequestKey = createTaskRequestKey
+            quickAddDueEpochMs = null
+            showCreateTaskSheet = true
+        }
+    }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
     var showDeleteListConfirmation by rememberSaveable { mutableStateOf(false) }
     var showSummarySheet by rememberSaveable(uiState.mode) { mutableStateOf(false) }
@@ -363,12 +393,14 @@ fun TodoListScreen(
             uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
         }
     }
-    val requestTaskReschedule: (TodoItem, LocalDate) -> Unit = { todo, targetDate ->
+    val requestTaskReschedule: (TodoItem, LocalDate) -> Unit =
+        requestTaskReschedule@{ todo, targetDate ->
         draggedScheduledTodoId = null
         activeDropSectionKey = null
         activeTimelineDrag = null
         timelineDropTargetBounds.clear()
-        val currentDate = LocalDate.ofInstant(todo.due, zoneId)
+            val currentDue = todo.due ?: return@requestTaskReschedule
+            val currentDate = LocalDate.ofInstant(currentDue, zoneId)
         if (currentDate != targetDate) {
             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
             if (todo.isRecurring) {
@@ -381,6 +413,7 @@ fun TodoListScreen(
     val canSummarizeCurrentMode =
         uiState.mode != TodoListMode.LIST &&
             uiState.mode != TodoListMode.OVERDUE &&
+                uiState.mode != TodoListMode.ANYTIME &&
             uiState.aiSummaryEnabled
     val showTopBarActionButton = canSummarizeCurrentMode || uiState.mode == TodoListMode.LIST
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
@@ -467,7 +500,8 @@ fun TodoListScreen(
     fun canDropTodoInTimelineSection(todo: TodoItem, section: TodoSection): Boolean {
         val targetDate = section.targetDate ?: return false
         if (originSectionKeyFor(todo) == section.key) return false
-        return LocalDate.ofInstant(todo.due, zoneId) != targetDate
+        val due = todo.due ?: return false
+        return LocalDate.ofInstant(due, zoneId) != targetDate
     }
 
     fun timelineDropSectionKeyAt(position: Offset, todo: TodoItem): String? {
@@ -566,20 +600,22 @@ fun TodoListScreen(
             }
         },
         floatingActionButton = {
-            CreateTaskButton(
-                modifier = Modifier
-                    .offset(y = fabOffsetY)
-                    .graphicsLayer {
-                        scaleX = fabScale
-                        scaleY = fabScale
+            if (showCreateTaskButton) {
+                CreateTaskButton(
+                    modifier = Modifier
+                        .offset(y = fabOffsetY)
+                        .graphicsLayer {
+                            scaleX = fabScale
+                            scaleY = fabScale
+                        },
+                    interactionSource = fabInteractionSource,
+                    backgroundColor = fabColor,
+                    onClick = {
+                        quickAddDueEpochMs = null
+                        showCreateTaskSheet = true
                     },
-                interactionSource = fabInteractionSource,
-                backgroundColor = fabColor,
-                onClick = {
-                    quickAddDueEpochMs = null
-                    showCreateTaskSheet = true
-                },
-            )
+                )
+            }
         },
     ) { padding ->
         Box(
@@ -890,6 +926,17 @@ fun TodoListScreen(
                 )
             }
 
+            if (showRootFeedDock && rootFeedTab != null && onRootFeedTabSelected != null) {
+                RootFeedDock(
+                    activeTab = rootFeedTab,
+                    collapsed = dockCollapsed,
+                    onTabSelected = onRootFeedTabSelected,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .zIndex(8f),
+                )
+            }
+
             activeTimelineDrag?.let { drag ->
                 TimelineTaskDragPreview(
                     modifier = Modifier
@@ -914,6 +961,7 @@ fun TodoListScreen(
             lists = uiState.lists,
             defaultListId = if (uiState.mode == TodoListMode.LIST) uiState.listId else null,
             defaultPriority = if (uiState.mode == TodoListMode.PRIORITY) "Medium" else null,
+            defaultScheduled = uiState.mode != TodoListMode.ANYTIME,
             initialDueEpochMs = quickAddDueEpochMs,
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = {
@@ -2089,7 +2137,7 @@ private fun TimelineTaskDragPreview(
                     maxLines = 1,
                 )
                 Text(
-                    text = TODO_DUE_TIME_FORMATTER.format(todo.due),
+                    text = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Anytime",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -2163,6 +2211,7 @@ private fun TimelineTaskRow(
                             mode == TodoListMode.OVERDUE ||
                             mode == TodoListMode.SCHEDULED ||
                             mode == TodoListMode.PRIORITY ||
+                            mode == TodoListMode.ANYTIME ||
                             mode == TodoListMode.LIST
                     )
         ) {
@@ -2266,7 +2315,9 @@ private fun shouldShowDateDivider(
     val currentTodo = section.items.getOrNull(afterItemIndex) ?: return false
     val nextTodoInSection = section.items.getOrNull(afterItemIndex + 1)
     if (nextTodoInSection != null) {
-        return !currentTodo.due.isSameLocalDayAs(nextTodoInSection.due, zoneId)
+        val currentDue = currentTodo.due ?: return false
+        val nextDue = nextTodoInSection.due ?: return false
+        return !currentDue.isSameLocalDayAs(nextDue, zoneId)
     }
 
     val nextVisibleTodo = sections
@@ -2277,7 +2328,9 @@ private fun shouldShowDateDivider(
         .firstOrNull()
         ?: return false
 
-    return !currentTodo.due.isSameLocalDayAs(nextVisibleTodo.due, zoneId)
+    val currentDue = currentTodo.due ?: return false
+    val nextDue = nextVisibleTodo.due ?: return false
+    return !currentDue.isSameLocalDayAs(nextDue, zoneId)
 }
 
 private fun Instant.isSameLocalDayAs(other: Instant, zoneId: ZoneId): Boolean =
@@ -2318,6 +2371,8 @@ private fun buildTimelineSections(
             includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
 
+        TodoListMode.ANYTIME -> buildAnytimeSections(items)
+
         TodoListMode.LIST -> buildScheduledSections(
             items = items,
             zoneId = zoneId,
@@ -2335,13 +2390,14 @@ private fun buildOverdueSections(
     val now = Instant.now()
     val today = LocalDate.now(zoneId)
     val overdueByDate = items.asSequence()
-        .filter { todo -> todo.due.isBefore(now) }
-        .groupBy { todo -> LocalDate.ofInstant(todo.due, zoneId) }
+        .mapNotNull { todo -> todo.due?.let { due -> due to todo } }
+        .filter { (due, _) -> due.isBefore(now) }
+        .groupBy({ (due, _) -> LocalDate.ofInstant(due, zoneId) }, { (_, todo) -> todo })
 
     val sections = mutableListOf<TodoSection>()
 
     overdueByDate[today]
-        ?.sortedBy { it.due }
+        ?.sortedBy { it.due ?: Instant.MAX }
         ?.takeIf { it.isNotEmpty() }
         ?.let { todaysItems ->
             sections += TodoSection(
@@ -2363,7 +2419,7 @@ private fun buildOverdueSections(
             sections += TodoSection(
                 key = "day-$date",
                 title = date.format(SCHEDULED_DAY_FORMATTER),
-                items = overdueByDate[date].orEmpty().sortedBy { it.due },
+                items = overdueByDate[date].orEmpty().sortedBy { it.due ?: Instant.MAX },
                 quickAddDefaults = null,
             )
         }
@@ -2375,12 +2431,12 @@ private fun buildTodaySections(
     items: List<TodoItem>,
     zoneId: ZoneId,
 ): List<TodoSection> {
-    val sorted = items.sortedBy { it.due }
+    val sorted = items.filter { it.due != null }.sortedBy { it.due ?: Instant.MAX }
     val noon = LocalTime.NOON
     val eveningStartBoundary = LocalTime.of(18, 0)
 
     fun sectionOf(todo: TodoItem): TodaySectionSlot {
-        val dueTime = todo.due.atZone(zoneId).toLocalTime()
+        val dueTime = todo.due?.atZone(zoneId)?.toLocalTime() ?: LocalTime.NOON
         return when {
             // Requested boundaries:
             // Morning: 12:01 AM -> 12:00 PM (inclusive of 12:00 PM)
@@ -2423,6 +2479,36 @@ private fun buildTodaySections(
     )
 }
 
+private fun buildAnytimeSections(items: List<TodoItem>): List<TodoSection> {
+    val anytimeItems = items.filter { it.due == null }
+    val priorityItems = anytimeItems
+        .filter {
+            it.pinned || it.priority.equals(
+                "High",
+                ignoreCase = true
+            ) || it.priority.equals("Medium", ignoreCase = true)
+        }
+        .sortedWith(compareByDescending<TodoItem> { it.pinned }.thenBy { it.title.lowercase(Locale.getDefault()) })
+    val laterItems = anytimeItems
+        .filterNot { it in priorityItems }
+        .sortedBy { it.title.lowercase(Locale.getDefault()) }
+
+    return listOfNotNull(
+        priorityItems.takeIf { it.isNotEmpty() }?.let {
+            TodoSection(
+                key = "anytime-priority",
+                title = "Priority",
+                items = it,
+            )
+        },
+        TodoSection(
+            key = "anytime-open",
+            title = "Open",
+            items = laterItems,
+        ),
+    )
+}
+
 private fun buildScheduledSections(
     items: List<TodoItem>,
     zoneId: ZoneId,
@@ -2431,11 +2517,13 @@ private fun buildScheduledSections(
     includeEmptyEarlierTarget: Boolean = false,
 ): List<TodoSection> {
     val now = Instant.now()
-    val sorted = items.asSequence().filter { todo ->
-        if (futureOnly) !todo.due.isBefore(now) else true
-    }.sortedBy { it.due }.toList()
+    val sorted = items.asSequence().mapNotNull { todo ->
+        todo.due?.let { due -> due to todo }
+    }.filter { (due, _) ->
+        if (futureOnly) !due.isBefore(now) else true
+    }.sortedBy { (due, _) -> due }.map { (_, todo) -> todo }.toList()
     val groupedByDate = sorted.groupBy { todo ->
-        LocalDate.ofInstant(todo.due, zoneId)
+        LocalDate.ofInstant(todo.due ?: Instant.MAX, zoneId)
     }
     val today = LocalDate.now(zoneId)
     val horizonStart = today.plusDays(7)
@@ -2471,7 +2559,8 @@ private fun buildScheduledSections(
 
     val earlierSection = if (!futureOnly) {
         val earlierItems = groupedByDate.asSequence().filter { (date, _) -> date < today }
-            .flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
+            .flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due ?: Instant.MAX }
+            .toList()
         if (earlierItems.isNotEmpty() || includeEmptyEarlierTarget) {
             TodoSection(
                 key = "earlier",
@@ -2509,7 +2598,7 @@ private fun buildScheduledSections(
 
     val restOfCurrentMonthItems = groupedByDate.asSequence().filter { (date, _) ->
         date >= horizonStart && YearMonth.from(date) == currentMonth
-    }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
+    }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due ?: Instant.MAX }.toList()
     val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
     sections += TodoSection(
         key = "rest-$currentMonth",
@@ -2535,7 +2624,8 @@ private fun buildScheduledSections(
     while (targetMonth <= finalMonth) {
         val monthItems = groupedByDate.asSequence().filter { (date, _) ->
             date >= horizonStart && YearMonth.from(date) == targetMonth
-        }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
+        }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due ?: Instant.MAX }
+            .toList()
         sections += TodoSection(
             key = "month-$targetMonth",
             title = monthTitle(targetMonth, currentMonth.year),
@@ -2599,6 +2689,7 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
         TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
         TodoListMode.OVERDUE -> stringResource(R.string.todos_empty_overdue)
         TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
+        TodoListMode.ANYTIME -> "No anytime tasks"
         TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
         TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
         TodoListMode.LIST -> stringResource(R.string.todos_empty_list)
@@ -2613,6 +2704,7 @@ private fun emptyStateIconForMode(
         TodoListMode.TODAY -> Icons.Rounded.WbSunny
         TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
         TodoListMode.PRIORITY -> Icons.Rounded.Flag
+        TodoListMode.ANYTIME -> Icons.Rounded.Inventory
         TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
         TodoListMode.ALL -> Icons.Rounded.Inbox
         TodoListMode.LIST -> listIconForKey(listIconKey)
@@ -2885,9 +2977,9 @@ private fun SwipeTaskRow(
         animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
         label = "swipeTaskTitleStrikeProgress",
     )
-    val dueTimeText = TODO_DUE_TIME_FORMATTER.format(todo.due)
-    val dueDateTimeText = TODO_DUE_DATE_TIME_FORMATTER.format(todo.due)
-    val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
+    val dueTimeText = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Anytime"
+    val dueDateTimeText = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format) ?: "Anytime"
+    val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
     val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
     val dueSubtitleText = if (isOverdue) {
         stringResource(R.string.todos_due_overdue_text, dueBodyText)
@@ -2924,6 +3016,7 @@ private fun SwipeTaskRow(
         TodoListMode.OVERDUE,
         TodoListMode.SCHEDULED,
         TodoListMode.PRIORITY,
+        TodoListMode.ANYTIME,
         TodoListMode.ALL,
             -> listMeta != null
 
@@ -3223,8 +3316,8 @@ private fun TodayTodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val dueText = TODO_DUE_TIME_FORMATTER.format(todo.due)
-    val isDetailOverdue = !todo.completed && todo.due.isBefore(Instant.now())
+    val dueText = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Anytime"
+    val isDetailOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
     val detailDueText = if (isDetailOverdue) {
         stringResource(R.string.todos_due_overdue_text, dueText)
     } else {
@@ -3297,7 +3390,7 @@ private fun TodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = TODO_DUE_DATE_TIME_FORMATTER.format(todo.due)
+    val due = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format) ?: "Anytime"
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
@@ -3421,6 +3514,7 @@ private fun modeAccentColor(
         TodoListMode.SCHEDULED -> Color(0xFFF29F38)
         TodoListMode.ALL -> Color(0xFF5E6878)
         TodoListMode.PRIORITY -> Color(0xFFE65E52)
+        TodoListMode.ANYTIME -> Color(0xFF4D8F83)
         TodoListMode.LIST -> listAccentColor(listColorKey)
     }
 }

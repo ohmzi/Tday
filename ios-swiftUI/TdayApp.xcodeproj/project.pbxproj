@@ -56,6 +56,7 @@
 		861A548A6A3DDE0A78D35D83 /* TdayApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A4E591B572A2A9980EC6B7 /* TdayApp.swift */; };
 		8D227AE36B26809A15603F5E /* SecureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E867FA22FEB66EDCE837CF6D /* SecureStore.swift */; };
 		8F2E99D406CD695C364FE1DF /* UserFacingError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */; };
+		A9F10102A9F10102A9F10102 /* RootFeedDock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9F10101A9F10101A9F10101 /* RootFeedDock.swift */; };
 		9146B23E1A1F6A3A71DE7A5B /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */; };
 		91660A57CFA826E39338BD33 /* CalendarScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25A90A443440754855071C9D /* CalendarScreen.swift */; };
 		957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */; };
@@ -102,6 +103,7 @@
 		0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProbeDecryptor.swift; sourceTree = "<group>"; };
 		055D0F0501B287B70456AF4B /* TodoRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRepository.swift; sourceTree = "<group>"; };
 		0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFloatingActionButton.swift; sourceTree = "<group>"; };
+		A9F10101A9F10101A9F10101 /* RootFeedDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedDock.swift; sourceTree = "<group>"; };
 		133161412A6BD2A0C04F745A /* SnackbarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnackbarManager.swift; sourceTree = "<group>"; };
 		15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBackHistoryTitle.swift; sourceTree = "<group>"; };
 		19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCredentialLoginTests.swift; sourceTree = "<group>"; };
@@ -553,6 +555,7 @@
 				AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */,
 				15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */,
 				AC35A6A50C3BFA68468FEDF9 /* OfflineBanner.swift */,
+				A9F10101A9F10101A9F10101 /* RootFeedDock.swift */,
 				133161412A6BD2A0C04F745A /* SnackbarManager.swift */,
 				0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */,
 				8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */,
@@ -734,6 +737,7 @@
 				1AC138341BE3A2841CF05908 /* StringHelpers.swift in Sources */,
 				222184A155C5A7B9F178007B /* SwiftDataModels.swift in Sources */,
 				2C1549AFC2F29218C879306C /* SwipeActions.swift in Sources */,
+				A9F10102A9F10102A9F10102 /* RootFeedDock.swift in Sources */,
 				58EB6EF803693EB982E331E4 /* SyncAndRefreshUseCase.swift in Sources */,
 				02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */,
 				5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */,

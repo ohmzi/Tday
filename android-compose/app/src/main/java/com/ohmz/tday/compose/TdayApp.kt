@@ -48,6 +48,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -55,6 +56,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -92,6 +94,9 @@ import com.ohmz.tday.compose.feature.release.LatestReleaseViewModel
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
+import com.ohmz.tday.compose.ui.component.RootCreateTaskButton
+import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import io.sentry.android.navigation.SentryNavigationListener
 import kotlin.math.roundToInt
@@ -150,6 +155,10 @@ fun TdayApp(
     var activeToast by remember { mutableStateOf<TdayToastData?>(null) }
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     var isStartupSplashHeld by remember { mutableStateOf(false) }
+    var rootFeedTab by rememberSaveable { mutableStateOf(RootFeedTab.HOME) }
+    var rootCreateTaskRequestKey by rememberSaveable { mutableStateOf(0) }
+    var rootDockCollapsed by rememberSaveable { mutableStateOf(false) }
+    var rootControlsVisible by rememberSaveable { mutableStateOf(true) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -307,52 +316,123 @@ fun TdayApp(
                                 ),
                         ) {
                             if (appUiState.authenticated) {
-                                val homeViewModel: HomeViewModel = hiltViewModel()
-                                val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
-                                OnRouteResume {
-                                    homeViewModel.refreshFromCache()
-                                    appViewModel.refreshVersionInfo()
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    when (rootFeedTab) {
+                                        RootFeedTab.HOME -> {
+                                            val homeViewModel: HomeViewModel = hiltViewModel()
+                                            val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                                            OnRouteResume {
+                                                homeViewModel.refreshFromCache()
+                                                appViewModel.refreshVersionInfo()
+                                            }
+                                            HomeScreen(
+                                                uiState = homeUiState,
+                                                onRefresh = homeViewModel::refresh,
+                                                onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
+                                                onOpenOverdue = { navController.navigate(AppRoute.OverdueTodos.route) },
+                                                onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
+                                                onOpenAll = { navController.navigate(AppRoute.AllTodos.create()) },
+                                                onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
+                                                onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
+                                                onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
+                                                onOpenAnytime = {
+                                                    rootFeedTab = RootFeedTab.ANYTIME
+                                                },
+                                                onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
+                                                onOpenTaskFromSearch = { todoId ->
+                                                    navController.currentBackStackEntry
+                                                        ?.savedStateHandle
+                                                        ?.set(
+                                                            PENDING_SEARCH_HIGHLIGHT_TODO_ID,
+                                                            todoId
+                                                        )
+                                                    navController.navigate(AppRoute.AllTodos.create())
+                                                },
+                                                onOpenList = { id, name ->
+                                                    navController.navigate(
+                                                        AppRoute.ListTodos.create(
+                                                            id,
+                                                            name
+                                                        )
+                                                    )
+                                                },
+                                                onCreateTask = { payload ->
+                                                    homeViewModel.createTask(payload)
+                                                },
+                                                onParseTaskTitleNlp = homeViewModel::parseTaskTitleNlp,
+                                                onCreateList = { name, color, iconKey ->
+                                                    homeViewModel.createList(
+                                                        name = name,
+                                                        color = color,
+                                                        iconKey = iconKey,
+                                                    )
+                                                },
+                                                onCompleteTask = { todo ->
+                                                    homeViewModel.completeTodo(
+                                                        todo
+                                                    )
+                                                },
+                                                onDeleteTask = { todo ->
+                                                    homeViewModel.deleteTodo(
+                                                        todo
+                                                    )
+                                                },
+                                                onUpdateTask = { todo, payload ->
+                                                    homeViewModel.updateTask(
+                                                        todo,
+                                                        payload
+                                                    )
+                                                },
+                                                showRootFeedDock = false,
+                                                showCreateTaskButton = false,
+                                                createTaskRequestKey = rootCreateTaskRequestKey,
+                                                onRootDockCollapsedChange = {
+                                                    rootDockCollapsed = it
+                                                },
+                                                onRootControlsVisibleChange = {
+                                                    rootControlsVisible = it
+                                                },
+                                            )
+                                        }
+
+                                        RootFeedTab.ANYTIME -> {
+                                            TodosRoute(
+                                                mode = TodoListMode.ANYTIME,
+                                                onBack = { rootFeedTab = RootFeedTab.HOME },
+                                                onTaskDeleted = ::showTaskDeletedToast,
+                                                showRootFeedDock = false,
+                                                showCreateTaskButton = false,
+                                                createTaskRequestKey = rootCreateTaskRequestKey,
+                                                onRootDockCollapsedChange = {
+                                                    rootDockCollapsed = it
+                                                },
+                                                onRootControlsVisibleChange = {
+                                                    rootControlsVisible = it
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    if (rootControlsVisible) {
+                                        RootFeedDock(
+                                            activeTab = rootFeedTab,
+                                            collapsed = rootDockCollapsed,
+                                            onTabSelected = { tab -> rootFeedTab = tab },
+                                            modifier = Modifier
+                                                .align(Alignment.BottomStart)
+                                                .zIndex(8f),
+                                        )
+                                        RootCreateTaskButton(
+                                            backgroundColor = Color(0xFF6EA8E1),
+                                            onClick = { rootCreateTaskRequestKey += 1 },
+                                            modifier = Modifier
+                                                .align(Alignment.BottomEnd)
+                                                .navigationBarsPadding()
+                                                .padding(end = 18.dp, bottom = 18.dp)
+                                                .zIndex(8f),
+                                        )
+                                    }
                                 }
-                                HomeScreen(
-                                    uiState = homeUiState,
-                                    onRefresh = homeViewModel::refresh,
-                                    onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
-                                    onOpenOverdue = { navController.navigate(AppRoute.OverdueTodos.route) },
-                                    onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
-                                    onOpenAll = { navController.navigate(AppRoute.AllTodos.create()) },
-                                    onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
-                                    onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
-                                    onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
-                                    onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
-                                    onOpenTaskFromSearch = { todoId ->
-                                        navController.currentBackStackEntry
-                                            ?.savedStateHandle
-                                            ?.set(PENDING_SEARCH_HIGHLIGHT_TODO_ID, todoId)
-                                        navController.navigate(AppRoute.AllTodos.create())
-                                    },
-                                    onOpenList = { id, name ->
-                                        navController.navigate(AppRoute.ListTodos.create(id, name))
-                                    },
-                                    onCreateTask = { payload ->
-                                        homeViewModel.createTask(payload)
-                                    },
-                                    onParseTaskTitleNlp = homeViewModel::parseTaskTitleNlp,
-                                    onCreateList = { name, color, iconKey ->
-                                        homeViewModel.createList(
-                                            name = name,
-                                            color = color,
-                                            iconKey = iconKey,
-                                        )
-                                    },
-                                    onCompleteTask = { todo -> homeViewModel.completeTodo(todo) },
-                                    onDeleteTask = { todo -> homeViewModel.deleteTodo(todo) },
-                                    onUpdateTask = { todo, payload ->
-                                        homeViewModel.updateTask(
-                                            todo,
-                                            payload
-                                        )
-                                    },
-                                )
                             } else {
                                 HomeScreen(
                                     uiState = UnauthenticatedHomeUiState,
@@ -364,6 +444,7 @@ fun TdayApp(
                                     onOpenPriority = {},
                                     onOpenCompleted = {},
                                     onOpenCalendar = {},
+                                    onOpenAnytime = {},
                                     onOpenSettings = {},
                                     onOpenTaskFromSearch = {},
                                     onOpenList = { _, _ -> },
@@ -462,6 +543,33 @@ fun TdayApp(
                             )
                         }
                     }
+                }
+
+                composable(
+                    route = AppRoute.AnytimeTodos.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://anytime" }),
+                ) {
+                    TodosRoute(
+                        mode = TodoListMode.ANYTIME,
+                        onBack = {
+                            navController.navigate(AppRoute.Home.route) {
+                                popUpTo(AppRoute.Home.route) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
+                        onTaskDeleted = ::showTaskDeletedToast,
+                        rootFeedTab = RootFeedTab.ANYTIME,
+                        onRootFeedTabSelected = { tab ->
+                            when (tab) {
+                                RootFeedTab.HOME -> navController.navigate(AppRoute.Home.route) {
+                                    popUpTo(AppRoute.Home.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+
+                                RootFeedTab.ANYTIME -> Unit
+                            }
+                        },
+                    )
                 }
 
                 composable(
@@ -826,6 +934,13 @@ private fun TodosRoute(
     highlightTodoId: String? = null,
     listId: String? = null,
     listName: String? = null,
+    rootFeedTab: RootFeedTab? = null,
+    onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
+    showRootFeedDock: Boolean = true,
+    showCreateTaskButton: Boolean = true,
+    createTaskRequestKey: Int = 0,
+    onRootDockCollapsedChange: (Boolean) -> Unit = {},
+    onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
     val viewModel: TodoListViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -868,6 +983,13 @@ private fun TodosRoute(
                 onOptimisticDelete = onListDeleted,
             )
         },
+        rootFeedTab = rootFeedTab,
+        onRootFeedTabSelected = onRootFeedTabSelected,
+        showRootFeedDock = showRootFeedDock,
+        showCreateTaskButton = showCreateTaskButton,
+        createTaskRequestKey = createTaskRequestKey,
+        onRootDockCollapsedChange = onRootDockCollapsedChange,
+        onRootControlsVisibleChange = onRootControlsVisibleChange,
     )
 }
 
@@ -1072,6 +1194,7 @@ private val UnauthenticatedHomeUiState = HomeUiState(
         scheduledCount = 0,
         allCount = 0,
         priorityCount = 0,
+        anytimeCount = 0,
         completedCount = 0,
         lists = listOf(
             ListSummary(

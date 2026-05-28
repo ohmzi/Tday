@@ -218,10 +218,10 @@ struct CompletedScreen: View {
         }
 
         let currentItem = sections[sectionIndex].items[itemIndex]
-        let currentDate = currentItem.completedAt ?? currentItem.due
+        let currentDate = currentItem.completedAt ?? currentItem.due ?? .distantPast
         let nextItemInSection = sections[sectionIndex].items.dropFirst(itemIndex + 1).first
         if let nextItemInSection {
-            let nextDate = nextItemInSection.completedAt ?? nextItemInSection.due
+            let nextDate = nextItemInSection.completedAt ?? nextItemInSection.due ?? .distantPast
             return !Calendar.current.isDate(currentDate, inSameDayAs: nextDate)
         }
 
@@ -232,7 +232,7 @@ struct CompletedScreen: View {
         guard let nextVisibleItem else {
             return false
         }
-        let nextDate = nextVisibleItem.completedAt ?? nextVisibleItem.due
+        let nextDate = nextVisibleItem.completedAt ?? nextVisibleItem.due ?? .distantPast
         return !Calendar.current.isDate(currentDate, inSameDayAs: nextDate)
     }
 
@@ -298,7 +298,7 @@ private struct CompletedTimelineRow: View {
     }
 
     var body: some View {
-        let completedDate = item.completedAt ?? item.due
+        let completedDate = item.completedAt ?? item.due ?? .distantPast
         let completedTimeText = completedDate.formatted(date: .omitted, time: .shortened)
         let showListIndicator = item.listName?.isEmpty == false
         let priorityIcon = priorityIndicatorSymbolName(item.priority)
@@ -406,13 +406,13 @@ private struct CompletedTimelineRow: View {
 private func buildCompletedTimelineSections(items: [CompletedItem]) -> [TimelineSection<CompletedItem>] {
     let calendar = Calendar.current
     let grouped = Dictionary(grouping: items) { item in
-        calendar.startOfDay(for: item.completedAt ?? item.due)
+        calendar.startOfDay(for: item.completedAt ?? item.due ?? .distantPast)
     }
 
     return grouped.keys.sorted(by: >).map { date in
         let sectionItems = (grouped[date] ?? []).sorted { lhs, rhs in
-            let lhsCompletedAt = lhs.completedAt ?? lhs.due
-            let rhsCompletedAt = rhs.completedAt ?? rhs.due
+            let lhsCompletedAt = lhs.completedAt ?? lhs.due ?? .distantPast
+            let rhsCompletedAt = rhs.completedAt ?? rhs.due ?? .distantPast
             if lhsCompletedAt != rhsCompletedAt {
                 return lhsCompletedAt > rhsCompletedAt
             }

@@ -47,7 +47,7 @@ data class CreateTodoRequest(
     val title: String,
     val description: String? = null,
     val priority: String = "Low",
-    val due: String,
+    val due: String? = null,
     val rrule: String? = null,
     val listID: String? = null,
 )
@@ -59,7 +59,7 @@ data class TodoDto(
     val description: String? = null,
     val pinned: Boolean = false,
     val priority: String = "Low",
-    val due: String,
+    val due: String? = null,
     val rrule: String? = null,
     val timeZone: String? = null,
     val instanceDate: String? = null,

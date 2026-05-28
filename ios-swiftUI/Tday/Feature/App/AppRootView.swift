@@ -8,6 +8,10 @@ struct AppRootView: View {
     @State private var notificationDeepLinkRouter = NotificationDeepLinkRouter.shared
     @State private var hasLeftActiveScene = false
     @State private var isLaunchSplashHeld = false
+    @State private var rootFeedTab: RootFeedTab = .home
+    @State private var rootCreateTaskRequestID = 0
+    @State private var rootDockCollapsed = false
+    @State private var rootControlsVisible = true
     @Environment(\.scenePhase) private var scenePhase
 
     init(container: AppContainer) {
@@ -33,8 +37,38 @@ struct AppRootView: View {
                     )
                 ) {
                     TdayBackground {
-                        HomeScreen(container: container) { route in
-                            handleRoute(route)
+                        ZStack(alignment: .bottom) {
+                            switch rootFeedTab {
+                            case .home:
+                                HomeScreen(
+                                    container: container,
+                                    onRootFeedTabSelected: handleRootFeedTabSelection,
+                                    showsRootControls: false,
+                                    createTaskRequestID: rootCreateTaskRequestID,
+                                    onRootDockCollapsedChange: { rootDockCollapsed = $0 },
+                                    onRootControlsVisibleChange: { rootControlsVisible = $0 }
+                                ) { route in
+                                    handleRoute(route)
+                                }
+                            case .anytime:
+                                TodoListScreen(
+                                    container: container,
+                                    mode: .anytime,
+                                    listId: nil,
+                                    listName: nil,
+                                    highlightedTodoId: nil,
+                                    rootFeedTab: .anytime,
+                                    onRootFeedTabSelected: handleRootFeedTabSelection,
+                                    showsRootControls: false,
+                                    createTaskRequestID: rootCreateTaskRequestID,
+                                    onRootDockCollapsedChange: { rootDockCollapsed = $0 },
+                                    onRootControlsVisibleChange: { rootControlsVisible = $0 }
+                                )
+                            }
+
+                            if appViewModel.authenticated, rootControlsVisible {
+                                rootFloatingControls
+                            }
                         }
                     }
                     .blur(radius: showOnboardingOverlay ? 6 : 0)
@@ -43,7 +77,10 @@ struct AppRootView: View {
                     .navigationDestination(for: AppRoute.self) { route in
                         switch route {
                         case .home:
-                            HomeScreen(container: container) { nextRoute in
+                            HomeScreen(
+                                container: container,
+                                onRootFeedTabSelected: handleRootFeedTabSelection
+                            ) { nextRoute in
                                 handleRoute(nextRoute)
                             }
                         case .todayTodos:
@@ -56,6 +93,16 @@ struct AppRootView: View {
                             TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId)
                         case .priorityTodos:
                             TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil)
+                        case .anytimeTodos:
+                            TodoListScreen(
+                                container: container,
+                                mode: .anytime,
+                                listId: nil,
+                                listName: nil,
+                                highlightedTodoId: nil,
+                                rootFeedTab: .anytime,
+                                onRootFeedTabSelected: handleRootFeedTabSelection
+                            )
                         case let .listTodos(listId, listName):
                             TodoListScreen(
                                 container: container,
@@ -191,7 +238,41 @@ struct AppRootView: View {
     }
 
     private func handleRoute(_ route: AppRoute) {
-        appViewModel.navigate(to: route)
+        switch route {
+        case .home:
+            rootFeedTab = .home
+            appViewModel.navigate(to: .home)
+        case .anytimeTodos:
+            rootFeedTab = .anytime
+            appViewModel.navigate(to: .home)
+        default:
+            appViewModel.navigate(to: route)
+        }
+    }
+
+    private func handleRootFeedTabSelection(_ tab: RootFeedTab) {
+        rootFeedTab = tab
+        appViewModel.navigate(to: .home)
+    }
+
+    private var rootFloatingControls: some View {
+        HStack(alignment: .bottom) {
+            RootFeedDock(
+                activeTab: rootFeedTab,
+                collapsed: rootDockCollapsed,
+                onSelect: handleRootFeedTabSelection
+            )
+            .padding(.leading, 18)
+            .padding(.vertical, 8)
+
+            Spacer(minLength: 12)
+
+            TaskFloatingActionButton {
+                rootCreateTaskRequestID += 1
+            }
+            .padding(.trailing, 18)
+            .padding(.vertical, 8)
+        }
     }
 
     private func handleDeepLink(_ url: URL) {

@@ -38,7 +38,10 @@ private struct CalendarDateDropTargetFramePreferenceKey: PreferenceKey {
 }
 
 private func calendarTaskAlreadyDueOnDate(_ todo: TodoItem, _ date: Date) -> Bool {
-    Calendar.current.isDate(todo.due, inSameDayAs: date)
+    guard let due = todo.due else {
+        return false
+    }
+    return Calendar.current.isDate(due, inSameDayAs: date)
 }
 
 private enum CalendarTitleHandoff {
@@ -169,12 +172,14 @@ struct CalendarScreen: View {
     }
 
     private var pendingItems: [TodoItem] {
-        viewModel.items.filter { isSelectedDay($0.due) }.sorted(by: { $0.due < $1.due })
+        viewModel.items
+            .filter { todo in todo.due.map(isSelectedDay) ?? false }
+            .sorted(by: { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) })
     }
 
     private var pendingItemsByDay: [Date: [TodoItem]] {
-        Dictionary(grouping: viewModel.items) { todo in
-            Calendar.current.startOfDay(for: todo.due)
+        Dictionary(grouping: viewModel.items.filter { $0.due != nil }) { todo in
+            Calendar.current.startOfDay(for: todo.due ?? selectedDate)
         }
     }
 
@@ -2522,7 +2527,7 @@ private struct CalendarTaskDragPreview: View {
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
 
-                Text(todo.due.formatted(date: .omitted, time: .shortened))
+                Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Anytime")
                     .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(colors.onSurfaceVariant)
                     .lineLimit(1)
@@ -2602,7 +2607,7 @@ private struct CalendarPendingTaskRow: View {
                         strikeColor: colors.onSurface.opacity(0.65)
                     )
 
-                    Text(todo.due.formatted(date: .omitted, time: .shortened))
+                    Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Anytime")
                         .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
                 }

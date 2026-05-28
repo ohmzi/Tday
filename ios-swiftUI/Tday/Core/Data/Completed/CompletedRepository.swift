@@ -35,8 +35,8 @@ final class CompletedRepository {
                     title: item.title,
                     description: item.description,
                     priority: item.priority,
-                    dueEpochMs: item.due.epochMilliseconds,
-                    rrule: item.rrule,
+                    dueEpochMs: item.due?.epochMilliseconds,
+                    rrule: item.due == nil ? nil : item.rrule,
                     instanceDateEpochMs: item.instanceDate?.epochMilliseconds,
                     pinned: false,
                     completed: false,
@@ -94,9 +94,9 @@ final class CompletedRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    dueEpochMs: payload.due.epochMilliseconds,
+                    dueEpochMs: payload.due?.epochMilliseconds,
                     completedAtEpochMs: current.completedAtEpochMs,
-                    rrule: payload.rrule,
+                    rrule: payload.due == nil ? nil : payload.rrule,
                     instanceDateEpochMs: current.instanceDateEpochMs,
                     listId: normalizedListID,
                     listName: state.lists.first(where: { $0.id == payload.listId })?.name,
@@ -113,8 +113,8 @@ final class CompletedRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    due: payload.due.ISO8601Format(),
-                    rrule: payload.rrule,
+                    due: payload.due?.ISO8601Format(),
+                    rrule: payload.due == nil ? nil : payload.rrule,
                     listID: normalizedListID
                 )
             )

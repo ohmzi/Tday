@@ -48,8 +48,8 @@ final class TodoRepository {
             title: normalizedTitle,
             description: normalizedDescription,
             priority: normalizedPriorityValue,
-            dueEpochMs: payload.due.epochMilliseconds,
-            rrule: payload.rrule,
+            dueEpochMs: payload.due?.epochMilliseconds,
+            rrule: payload.due == nil ? nil : payload.rrule,
             listId: normalizedListID,
             pinned: false,
             completed: false,
@@ -68,8 +68,8 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    dueEpochMs: payload.due.epochMilliseconds,
-                    rrule: payload.rrule,
+                    dueEpochMs: payload.due?.epochMilliseconds,
+                    rrule: payload.due == nil ? nil : payload.rrule,
                     instanceDateEpochMs: nil,
                     pinned: false,
                     completed: false,
@@ -92,8 +92,8 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    due: payload.due.ISO8601Format(),
-                    rrule: payload.rrule,
+                    due: payload.due?.ISO8601Format(),
+                    rrule: payload.due == nil ? nil : payload.rrule,
                     listID: normalizedListID
                 )
             )
@@ -143,8 +143,8 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    dueEpochMs: payload.due.epochMilliseconds,
-                    rrule: payload.rrule,
+                    dueEpochMs: payload.due?.epochMilliseconds,
+                    rrule: payload.due == nil ? nil : payload.rrule,
                     instanceDateEpochMs: current.instanceDateEpochMs,
                     pinned: current.pinned,
                     completed: current.completed,
@@ -162,8 +162,8 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    dueEpochMs: payload.due.epochMilliseconds,
-                    rrule: payload.rrule,
+                    dueEpochMs: payload.due?.epochMilliseconds,
+                    rrule: payload.due == nil ? nil : payload.rrule,
                     listId: normalizedListID,
                     pinned: todo.pinned,
                     completed: todo.completed,
@@ -327,7 +327,7 @@ final class TodoRepository {
                     title: todo.title,
                     description: todo.description,
                     priority: todo.priority,
-                    dueEpochMs: todo.due.epochMilliseconds,
+                    dueEpochMs: todo.due?.epochMilliseconds,
                     completedAtEpochMs: now,
                     rrule: todo.rrule,
                     instanceDateEpochMs: todo.instanceDateEpochMilliseconds,
@@ -537,6 +537,7 @@ final class TodoRepository {
         let now = Date()
         let todayTodos = timelineTodos.filter { isTodayTodo($0, now: now) }
         let scheduledTodos = timelineTodos.filter { isScheduledTodo($0, now: now) }
+        let anytimeTodos = timelineTodos.filter { $0.due == nil }
         let todoCountsByList = Dictionary(grouping: timelineTodos, by: \.listId).mapValues(\.count)
         let lists = orderListsLikeWeb(state.lists).map { list in
             listFromCache(list, todoCountOverride: todoCountsByList[list.id] ?? 0)
@@ -547,6 +548,7 @@ final class TodoRepository {
             scheduledCount: scheduledTodos.count,
             allCount: timelineTodos.count,
             priorityCount: timelineTodos.filter { isPriorityTodo($0.priority) }.count,
+            anytimeCount: anytimeTodos.count,
             completedCount: state.completedItems.count,
             lists: lists
         )
@@ -568,6 +570,8 @@ final class TodoRepository {
             filtered = items
         case .priority:
             filtered = items.filter { isPriorityTodo($0.priority) }
+        case .anytime:
+            filtered = items.filter { $0.due == nil }
         case .list:
             filtered = items.filter { $0.listId == listId }
         }
@@ -592,15 +596,18 @@ final class TodoRepository {
         guard let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) else {
             return false
         }
-        return todo.due >= startOfToday && todo.due < startOfTomorrow
+        guard let due = todo.due else { return false }
+        return due >= startOfToday && due < startOfTomorrow
     }
 
     private func isScheduledTodo(_ todo: TodoItem, now: Date = Date()) -> Bool {
-        todo.due >= now
+        guard let due = todo.due else { return false }
+        return due >= now
     }
 
     private func isOverdueTodo(_ todo: TodoItem, now: Date = Date()) -> Bool {
-        todo.due < now
+        guard let due = todo.due else { return false }
+        return due < now
     }
 
     private func isPriorityTodo(_ priority: String?) -> Bool {

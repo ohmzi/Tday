@@ -97,6 +97,7 @@ class TodoListViewModel @Inject constructor(
                     TodoListMode.SCHEDULED -> "Scheduled"
                     TodoListMode.ALL -> "All Tasks"
                     TodoListMode.PRIORITY -> "Priority"
+                    TodoListMode.ANYTIME -> "Anytime"
                     TodoListMode.LIST -> listName ?: "List"
                 },
                 aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
@@ -119,7 +120,7 @@ class TodoListViewModel @Inject constructor(
             _uiState.update { it.copy(summaryError = "AI summary is disabled by admin") }
             return
         }
-        if (current.mode == TodoListMode.LIST || current.mode == TodoListMode.OVERDUE) {
+        if (current.mode == TodoListMode.LIST || current.mode == TodoListMode.OVERDUE || current.mode == TodoListMode.ANYTIME) {
             _uiState.update {
                 it.copy(summaryError = "Summary is available only for Today, Scheduled, All, and Priority")
             }
@@ -303,7 +304,8 @@ class TodoListViewModel @Inject constructor(
     }
 
     fun moveTask(todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) {
-        val movedDue = movedDuePreservingTime(todo.due, targetDate)
+        val due = todo.due ?: return
+        val movedDue = movedDuePreservingTime(due, targetDate)
         val previousState = _uiState.value
         val mode = previousState.mode
         val currentListId = previousState.listId

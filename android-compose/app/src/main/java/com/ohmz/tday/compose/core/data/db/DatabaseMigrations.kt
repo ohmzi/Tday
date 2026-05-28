@@ -118,3 +118,67 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         )
     }
 }
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `cached_todos_new` (
+                `id` TEXT NOT NULL PRIMARY KEY,
+                `canonicalId` TEXT NOT NULL,
+                `title` TEXT NOT NULL,
+                `description` TEXT,
+                `priority` TEXT NOT NULL,
+                `dueEpochMs` INTEGER,
+                `rrule` TEXT,
+                `instanceDateEpochMs` INTEGER,
+                `pinned` INTEGER NOT NULL,
+                `completed` INTEGER NOT NULL,
+                `listId` TEXT,
+                `updatedAtEpochMs` INTEGER NOT NULL
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            INSERT INTO `cached_todos_new` (`id`,`canonicalId`,`title`,`description`,`priority`,`dueEpochMs`,`rrule`,`instanceDateEpochMs`,`pinned`,`completed`,`listId`,`updatedAtEpochMs`)
+            SELECT `id`,`canonicalId`,`title`,`description`,`priority`,`dueEpochMs`,`rrule`,`instanceDateEpochMs`,`pinned`,`completed`,`listId`,`updatedAtEpochMs` FROM `cached_todos`
+            """.trimIndent(),
+        )
+        db.execSQL("DROP TABLE `cached_todos`")
+        db.execSQL("ALTER TABLE `cached_todos_new` RENAME TO `cached_todos`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_cached_todos_listId` ON `cached_todos` (`listId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_cached_todos_dueEpochMs` ON `cached_todos` (`dueEpochMs`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_cached_todos_completed` ON `cached_todos` (`completed`)")
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `cached_completed_new` (
+                `id` TEXT NOT NULL PRIMARY KEY,
+                `originalTodoId` TEXT,
+                `title` TEXT NOT NULL,
+                `description` TEXT,
+                `priority` TEXT NOT NULL,
+                `dueEpochMs` INTEGER,
+                `completedAtEpochMs` INTEGER NOT NULL,
+                `rrule` TEXT,
+                `instanceDateEpochMs` INTEGER,
+                `listId` TEXT,
+                `listName` TEXT,
+                `listColor` TEXT
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            INSERT INTO `cached_completed_new` (`id`,`originalTodoId`,`title`,`description`,`priority`,`dueEpochMs`,`completedAtEpochMs`,`rrule`,`instanceDateEpochMs`,`listId`,`listName`,`listColor`)
+            SELECT `id`,`originalTodoId`,`title`,`description`,`priority`,`dueEpochMs`,`completedAtEpochMs`,`rrule`,`instanceDateEpochMs`,`listId`,`listName`,`listColor` FROM `cached_completed`
+            """.trimIndent(),
+        )
+        db.execSQL("DROP TABLE `cached_completed`")
+        db.execSQL("ALTER TABLE `cached_completed_new` RENAME TO `cached_completed`")
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_cached_completed_completedAtEpochMs` ON `cached_completed` (`completedAtEpochMs`)",
+        )
+    }
+}

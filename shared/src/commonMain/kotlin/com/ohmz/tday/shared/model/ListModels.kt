@@ -63,7 +63,7 @@ data class ListTodoDto(
     val id: String,
     val title: String,
     val priority: String,
-    val due: String,
+    val due: String? = null,
     val completed: Boolean,
     val order: Int,
 )

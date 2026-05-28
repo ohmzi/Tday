@@ -394,8 +394,8 @@ final class SyncManager {
                     title: mutation.title ?? "Untitled",
                     description: mutation.description,
                     priority: mutation.priority ?? "Low",
-                    due: Date(epochMilliseconds: mutation.dueEpochMs ?? Date().epochMilliseconds).ISO8601Format(),
-                    rrule: mutation.rrule,
+                    due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
+                    rrule: mutation.dueEpochMs == nil ? nil : mutation.rrule,
                     listID: resolvedListID
                 )
             )

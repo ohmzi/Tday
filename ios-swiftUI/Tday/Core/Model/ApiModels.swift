@@ -122,7 +122,7 @@ struct CreateTodoRequest: Codable {
     let title: String
     let description: String?
     let priority: String
-    let due: String
+    let due: String?
     let rrule: String?
     let listID: String?
 }
@@ -133,7 +133,7 @@ struct TodoDTO: Codable, Equatable {
     let description: String?
     let pinned: Bool
     let priority: String
-    let due: String
+    let due: String?
     let rrule: String?
     let timeZone: String?
     let instanceDate: String?
@@ -292,7 +292,7 @@ struct ListTodoDTO: Codable, Equatable {
     let id: String
     let title: String
     let priority: String
-    let due: String
+    let due: String?
     let completed: Bool
     let order: Int
 }
@@ -307,7 +307,7 @@ struct CompletedTodoDTO: Codable, Equatable {
     let title: String
     let description: String?
     let priority: String
-    let due: String
+    let due: String?
     let completedAt: String?
     let completedOnTime: Bool?
     let daysToComplete: Double?

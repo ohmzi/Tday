@@ -9,8 +9,8 @@ object ContractValidators {
         if (request.title.isBlank()) {
             errors += "title cannot be blank"
         }
-        if (request.due.isBlank()) {
-            errors += "due is required"
+        if (!request.rrule.isNullOrBlank() && request.due.isNullOrBlank()) {
+            errors += "due is required for recurring tasks"
         }
         return errors
     }
