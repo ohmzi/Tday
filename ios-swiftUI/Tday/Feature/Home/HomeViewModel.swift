@@ -7,7 +7,7 @@ final class HomeViewModel {
     private let container: AppContainer
 
     var isLoading = true
-    var summary = DashboardSummary(todayCount: 0, scheduledCount: 0, allCount: 0, priorityCount: 0, completedCount: 0, lists: [])
+    var summary = DashboardSummary(todayCount: 0, scheduledCount: 0, allCount: 0, priorityCount: 0, anytimeCount: 0, completedCount: 0, lists: [])
     var searchableTodos: [TodoItem] = []
     var todayTodos: [TodoItem] = []
     var errorMessage: String?

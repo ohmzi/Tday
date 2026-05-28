@@ -66,7 +66,7 @@ func todoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
         return lhs.pinned && !rhs.pinned
     }
     if lhs.due != rhs.due {
-        return lhs.due < rhs.due
+        return (lhs.due ?? .distantFuture) < (rhs.due ?? .distantFuture)
     }
     let lhsKey = todoMergeKey(item: lhs)
     let rhsKey = todoMergeKey(item: rhs)
@@ -81,7 +81,7 @@ func cachedTodoSortPrecedes(_ lhs: CachedTodoRecord, _ rhs: CachedTodoRecord) ->
         return lhs.pinned && !rhs.pinned
     }
     if lhs.dueEpochMs != rhs.dueEpochMs {
-        return lhs.dueEpochMs < rhs.dueEpochMs
+        return (lhs.dueEpochMs ?? Int64.max) < (rhs.dueEpochMs ?? Int64.max)
     }
     let lhsKey = todoMergeKey(record: lhs)
     let rhsKey = todoMergeKey(record: rhs)
@@ -93,7 +93,7 @@ func cachedTodoSortPrecedes(_ lhs: CachedTodoRecord, _ rhs: CachedTodoRecord) ->
 
 func todoTimelineSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
     if lhs.due != rhs.due {
-        return lhs.due < rhs.due
+        return (lhs.due ?? .distantFuture) < (rhs.due ?? .distantFuture)
     }
     let lhsKey = todoMergeKey(item: lhs)
     let rhsKey = todoMergeKey(item: rhs)
@@ -131,7 +131,7 @@ func mapTodoDTO(_ dto: TodoDTO) -> TodoItem {
         title: dto.title,
         description: dto.description,
         priority: dto.priority,
-        due: parseOptionalDate(dto.due) ?? .now,
+        due: parseOptionalDate(dto.due),
         rrule: dto.rrule,
         instanceDate: instanceDate,
         pinned: dto.pinned,
@@ -148,7 +148,7 @@ func todoToCache(_ todo: TodoItem) -> CachedTodoRecord {
         title: todo.title,
         description: todo.description,
         priority: todo.priority,
-        dueEpochMs: Int64(todo.due.timeIntervalSince1970 * 1000.0),
+        dueEpochMs: todo.due.map { Int64($0.timeIntervalSince1970 * 1000.0) },
         rrule: todo.rrule,
         instanceDateEpochMs: todo.instanceDateEpochMillis,
         pinned: todo.pinned,
@@ -165,7 +165,7 @@ func todoFromCache(_ record: CachedTodoRecord) -> TodoItem {
         title: record.title,
         description: record.description,
         priority: record.priority,
-        due: Date(timeIntervalSince1970: TimeInterval(record.dueEpochMs) / 1000.0),
+        due: record.dueEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },
         rrule: record.rrule,
         instanceDate: record.instanceDateEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },
         pinned: record.pinned,
@@ -232,7 +232,7 @@ func mapCompletedDTO(_ dto: CompletedTodoDTO) -> CompletedItem {
         title: dto.title,
         description: dto.description,
         priority: dto.priority,
-        due: parseOptionalDate(dto.due) ?? .now,
+        due: parseOptionalDate(dto.due),
         completedAt: parseOptionalDate(dto.completedAt),
         rrule: dto.rrule,
         instanceDate: parseOptionalDate(dto.instanceDate),
@@ -249,7 +249,7 @@ func completedToCache(_ item: CompletedItem) -> CachedCompletedRecord {
         title: item.title,
         description: item.description,
         priority: item.priority,
-        dueEpochMs: Int64(item.due.timeIntervalSince1970 * 1000.0),
+        dueEpochMs: item.due.map { Int64($0.timeIntervalSince1970 * 1000.0) },
         completedAtEpochMs: item.completedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
         rrule: item.rrule,
         instanceDateEpochMs: item.instanceDate.map { Int64($0.timeIntervalSince1970 * 1000.0) },
@@ -266,7 +266,7 @@ func completedFromCache(_ record: CachedCompletedRecord) -> CompletedItem {
         title: record.title,
         description: record.description,
         priority: record.priority,
-        due: Date(timeIntervalSince1970: TimeInterval(record.dueEpochMs) / 1000.0),
+        due: record.dueEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },
         completedAt: record.completedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.completedAtEpochMs) / 1000.0) : nil,
         rrule: record.rrule,
         instanceDate: record.instanceDateEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },

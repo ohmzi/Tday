@@ -12,6 +12,7 @@ enum class TodoListMode {
     SCHEDULED,
     ALL,
     PRIORITY,
+    ANYTIME,
     LIST,
 }
 
@@ -24,7 +25,7 @@ data class CreateTaskPayload(
     val title: String,
     val description: String? = null,
     val priority: String = "Low",
-    val due: Instant,
+    val due: Instant?,
     val rrule: String? = null,
     val listId: String? = null,
 )
@@ -35,7 +36,7 @@ data class TodoItem(
     val title: String,
     val description: String?,
     val priority: String,
-    val due: Instant,
+    val due: Instant?,
     val rrule: String?,
     val instanceDate: Instant?,
     val pinned: Boolean,
@@ -58,6 +59,7 @@ fun TodoListMode.supportsTaskReschedule(): Boolean {
         TodoListMode.LIST,
             -> true
 
+        TodoListMode.ANYTIME,
         TodoListMode.TODAY,
         TodoListMode.OVERDUE,
             -> false
@@ -85,11 +87,12 @@ fun createMovedTaskPayload(
     targetDate: LocalDate,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): CreateTaskPayload {
+    val due = todo.due ?: ZonedDateTime.now(zoneId).toInstant()
     return CreateTaskPayload(
         title = todo.title,
         description = todo.description,
         priority = todo.priority,
-        due = movedDuePreservingTime(todo.due, targetDate, zoneId),
+        due = movedDuePreservingTime(due, targetDate, zoneId),
         rrule = todo.rrule,
         listId = todo.listId,
     )
@@ -143,6 +146,7 @@ data class DashboardSummary(
     val scheduledCount: Int,
     val allCount: Int,
     val priorityCount: Int,
+    val anytimeCount: Int,
     val completedCount: Int,
     val lists: List<ListSummary>,
 )
@@ -153,7 +157,7 @@ data class CompletedItem(
     val title: String,
     val description: String? = null,
     val priority: String,
-    val due: Instant,
+    val due: Instant?,
     val completedAt: Instant? = null,
     val rrule: String?,
     val instanceDate: Instant?,

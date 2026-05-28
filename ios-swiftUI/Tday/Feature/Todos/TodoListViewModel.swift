@@ -57,7 +57,7 @@ final class TodoListViewModel {
             summaryError = "AI summary is disabled by admin"
             return
         }
-        guard mode != .list && mode != .overdue else {
+        guard mode != .list && mode != .overdue && mode != .anytime else {
             summaryError = "Summary is available for Today, Scheduled, All, and Priority"
             return
         }
@@ -107,11 +107,12 @@ final class TodoListViewModel {
 
     func moveTask(_ todo: TodoItem, toDay targetDay: Date, scope: TaskRescheduleScope) async {
         let calendar = Calendar.current
-        guard !calendar.isDate(todo.due, inSameDayAs: targetDay) else {
+        guard let due = todo.due,
+              !calendar.isDate(due, inSameDayAs: targetDay) else {
             return
         }
 
-        guard let movedDue = movedDuePreservingTime(due: todo.due, targetDay: targetDay, calendar: calendar) else {
+        guard let movedDue = movedDuePreservingTime(due: due, targetDay: targetDay, calendar: calendar) else {
             return
         }
 

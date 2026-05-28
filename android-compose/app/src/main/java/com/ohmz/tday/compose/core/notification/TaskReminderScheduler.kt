@@ -75,7 +75,7 @@ class TaskReminderScheduler @Inject constructor(
         val intent = Intent(context, TaskReminderReceiver::class.java).apply {
             putExtra(TaskReminderReceiver.EXTRA_TASK_ID, task.id)
             putExtra(TaskReminderReceiver.EXTRA_TASK_TITLE, task.title)
-            putExtra(TaskReminderReceiver.EXTRA_TASK_DUE_MILLIS, task.due.toEpochMilli())
+            putExtra(TaskReminderReceiver.EXTRA_TASK_DUE_MILLIS, task.due?.toEpochMilli() ?: -1L)
             putExtra(TaskReminderReceiver.EXTRA_TASK_PRIORITY, task.priority)
             putExtra(
                 TaskReminderReceiver.EXTRA_INSTANCE_DATE_MILLIS,
@@ -114,7 +114,7 @@ class TaskReminderScheduler @Inject constructor(
     }
 
     private fun computeAlarmTime(task: TodoItem, reminder: ReminderOption): Long? {
-        val dueMillis = task.due.toEpochMilli()
+        val dueMillis = task.due?.toEpochMilli() ?: return null
         if (dueMillis <= 0) return null
         return dueMillis - reminder.offsetMillis
     }

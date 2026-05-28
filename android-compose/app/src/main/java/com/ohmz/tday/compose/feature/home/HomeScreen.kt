@@ -150,6 +150,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -209,6 +210,8 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFontFamily
@@ -233,6 +236,7 @@ fun HomeScreen(
     onOpenPriority: () -> Unit,
     onOpenCompleted: () -> Unit,
     onOpenCalendar: () -> Unit,
+    onOpenAnytime: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTaskFromSearch: (todoId: String) -> Unit,
     onOpenList: (listId: String, listName: String) -> Unit,
@@ -242,6 +246,11 @@ fun HomeScreen(
     onCompleteTask: (todo: com.ohmz.tday.compose.core.model.TodoItem) -> Unit,
     onDeleteTask: (todo: com.ohmz.tday.compose.core.model.TodoItem) -> Unit,
     onUpdateTask: (todo: com.ohmz.tday.compose.core.model.TodoItem, payload: CreateTaskPayload) -> Unit,
+    showRootFeedDock: Boolean = true,
+    showCreateTaskButton: Boolean = true,
+    createTaskRequestKey: Int = 0,
+    onRootDockCollapsedChange: (Boolean) -> Unit = {},
+    onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
@@ -264,6 +273,9 @@ fun HomeScreen(
     var searchResultsBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
+    var lastHandledCreateTaskRequestKey by rememberSaveable {
+        mutableIntStateOf(createTaskRequestKey)
+    }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     val editTargetTodo = remember(editTargetTodoId, uiState.todayTodos) {
         editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
@@ -305,6 +317,19 @@ fun HomeScreen(
     BackHandler(enabled = searchExpanded) {
         closeSearch()
     }
+    LaunchedEffect(createTaskRequestKey) {
+        if (createTaskRequestKey > lastHandledCreateTaskRequestKey) {
+            lastHandledCreateTaskRequestKey = createTaskRequestKey
+            closeSearch()
+            showCreateTask = true
+        }
+    }
+    LaunchedEffect(searchExpanded) {
+        onRootControlsVisibleChange(!searchExpanded)
+    }
+    DisposableEffect(Unit) {
+        onDispose { onRootControlsVisibleChange(true) }
+    }
     LaunchedEffect(searchExpanded, imeVisible) {
         if (!searchExpanded) {
             searchImeWasVisible = false
@@ -339,7 +364,7 @@ fun HomeScreen(
     val normalizedSearchQuery = remember(searchQuery) { searchQuery.trim().lowercase(Locale.getDefault()) }
     val overdueCount = remember(uiState.searchableTodos) {
         val now = Instant.now()
-        uiState.searchableTodos.count { todo -> todo.due.isBefore(now) }
+        uiState.searchableTodos.count { todo -> todo.due?.isBefore(now) == true }
     }
     val dueFormatter = remember {
         java.time.format.DateTimeFormatter.ofPattern("EEE h:mm a")
@@ -357,7 +382,7 @@ fun HomeScreen(
                         (todo.listId?.let { listById[it]?.name }?.lowercase(Locale.getDefault())
                             ?.contains(normalizedSearchQuery) == true)
                 }
-                .sortedBy { it.due }
+                .sortedBy { it.due ?: Instant.MAX }
                 .take(20)
                 .toList()
         }
@@ -365,6 +390,11 @@ fun HomeScreen(
     val showSearchResultsOverlay = searchExpanded && searchQuery.isNotBlank()
     val density = LocalDensity.current
     val listState = rememberLazyListState()
+    val dockCollapsed =
+        listState.isScrollInProgress || listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 18
+    LaunchedEffect(dockCollapsed) {
+        onRootDockCollapsedChange(dockCollapsed)
+    }
     LaunchedEffect(listState.isScrollInProgress, searchExpanded) {
         if (searchExpanded || listState.isScrollInProgress) return@LaunchedEffect
         // Snap only when top header row is partially visible.
@@ -452,63 +482,67 @@ fun HomeScreen(
     Scaffold(
         containerColor = colorScheme.background,
         floatingActionButton = {
-            CreateTaskButton(
-                modifier = Modifier
-                    .offset(y = fabOffsetY)
-                    .graphicsLayer {
-                        scaleX = fabScale
-                        scaleY = fabScale
+            if (showCreateTaskButton) {
+                CreateTaskButton(
+                    modifier = Modifier
+                        .offset(y = fabOffsetY)
+                        .graphicsLayer {
+                            scaleX = fabScale
+                            scaleY = fabScale
+                        },
+                    interactionSource = fabInteractionSource,
+                    onClick = {
+                        showCreateTask = true
                     },
-                interactionSource = fabInteractionSource,
-                onClick = {
-                    showCreateTask = true
-                },
-            )
+                )
+            }
         },
     ) { padding ->
-        CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
-            TdayPullToRefreshBox(
-                isRefreshing = uiState.isLoading,
-                onRefresh = onRefresh,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            ) {
-                Box(
+        Box(modifier = Modifier.fillMaxSize()) {
+            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+                TdayPullToRefreshBox(
+                    isRefreshing = uiState.isLoading,
+                    onRefresh = onRefresh,
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(
-                            if (searchExpanded) {
-                                Modifier
-                                    .onGloballyPositioned { coordinates ->
-                                        val topLeft = coordinates.boundsInRoot().topLeft
-                                        if (rootInRoot != topLeft) {
-                                            rootInRoot = topLeft
-                                        }
-                                    }
-                                    .pointerInput(
-                                        searchBarBounds,
-                                        searchResultsBounds,
-                                        rootInRoot
-                                    ) {
-                                        awaitEachGesture {
-                                            val down = awaitFirstDown(pass = PointerEventPass.Final)
-                                            val tapInRoot = down.position + rootInRoot
-                                            val tappedSearchBar =
-                                                searchBarBounds?.contains(tapInRoot) == true
-                                            val tappedSearchResults =
-                                                searchResultsBounds?.contains(tapInRoot) == true
-                                            val up =
-                                                waitForUpOrCancellation(pass = PointerEventPass.Final)
-                                            if (up != null && !tappedSearchBar && !tappedSearchResults) {
-                                                closeSearch()
+                        .padding(padding),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (searchExpanded) {
+                                    Modifier
+                                        .onGloballyPositioned { coordinates ->
+                                            val topLeft = coordinates.boundsInRoot().topLeft
+                                            if (rootInRoot != topLeft) {
+                                                rootInRoot = topLeft
                                             }
                                         }
-                                    }
-                            } else {
-                                Modifier
-                            }
-                        ),
+                                        .pointerInput(
+                                            searchBarBounds,
+                                            searchResultsBounds,
+                                            rootInRoot
+                                        ) {
+                                            awaitEachGesture {
+                                                val down =
+                                                    awaitFirstDown(pass = PointerEventPass.Final)
+                                                val tapInRoot = down.position + rootInRoot
+                                                val tappedSearchBar =
+                                                    searchBarBounds?.contains(tapInRoot) == true
+                                                val tappedSearchResults =
+                                                    searchResultsBounds?.contains(tapInRoot) == true
+                                                val up =
+                                                    waitForUpOrCancellation(pass = PointerEventPass.Final)
+                                                if (up != null && !tappedSearchBar && !tappedSearchResults) {
+                                                    closeSearch()
+                                                }
+                                            }
+                                        }
+                                } else {
+                                    Modifier
+                                }
+                            ),
                 ) {
                     LazyColumn(
                         state = listState,
@@ -726,7 +760,12 @@ fun HomeScreen(
                                                 .semantics(mergeDescendants = true) {}
                                                 .heightIn(min = 48.dp)
                                                 .clickable {
-                                                    openTaskFromSearch(todo.id)
+                                                    if (todo.due == null) {
+                                                        closeSearch()
+                                                        onOpenAnytime()
+                                                    } else {
+                                                        openTaskFromSearch(todo.id)
+                                                    }
                                                 }
                                                 .padding(horizontal = 12.dp, vertical = 9.dp),
                                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -748,7 +787,8 @@ fun HomeScreen(
                                                     fontWeight = FontWeight.ExtraBold,
                                                 )
                                                 Text(
-                                                    text = dueFormatter.format(todo.due),
+                                                    text = todo.due?.let(dueFormatter::format)
+                                                        ?: "Anytime",
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.onSurfaceVariant,
                                                     maxLines = 1,
@@ -777,7 +817,24 @@ fun HomeScreen(
                             }
                         }
                     }
+
+                    }
                 }
+            }
+            if (showRootFeedDock && !searchExpanded) {
+                RootFeedDock(
+                    activeTab = RootFeedTab.HOME,
+                    collapsed = dockCollapsed,
+                    onTabSelected = { tab ->
+                        if (tab == RootFeedTab.ANYTIME) {
+                            closeSearch()
+                            onOpenAnytime()
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .zIndex(8f),
+                )
             }
         }
     }
@@ -839,7 +896,9 @@ private fun shouldShowDateDivider(
 ): Boolean {
     val currentTodo = items.getOrNull(afterItemIndex) ?: return false
     val nextTodo = items.getOrNull(afterItemIndex + 1) ?: return false
-    return LocalDate.ofInstant(currentTodo.due, zoneId) != LocalDate.ofInstant(nextTodo.due, zoneId)
+    val currentDue = currentTodo.due ?: return false
+    val nextDue = nextTodo.due ?: return false
+    return LocalDate.ofInstant(currentDue, zoneId) != LocalDate.ofInstant(nextDue, zoneId)
 }
 
 @Composable
@@ -1745,12 +1804,12 @@ private fun HomeTodayTaskRow(
         label = "homeTodayTitleStrikeProgress",
     )
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
-    val dueText = HOME_TODAY_DUE_FORMATTER.format(todo.due)
+    val dueText = todo.due?.let(HOME_TODAY_DUE_FORMATTER::format) ?: "Anytime"
     val rowShape = RoundedCornerShape(16.dp)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val listIndicatorColor = listColorAccent(listMeta?.color)
     val priorityIcon = priorityIconFor(todo.priority)
-    val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
+    val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
     val subtitleColor =
         if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(
             alpha = 0.8f

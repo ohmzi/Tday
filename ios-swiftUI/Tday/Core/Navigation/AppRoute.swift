@@ -7,6 +7,7 @@ enum AppRoute: Hashable {
     case scheduledTodos
     case allTodos(highlightTodoId: String?)
     case priorityTodos
+    case anytimeTodos
     case listTodos(listId: String, listName: String)
     case completed
     case calendar
@@ -30,6 +31,8 @@ enum AppRoute: Hashable {
             return "todos/all"
         case .priorityTodos:
             return "todos/priority"
+        case .anytimeTodos:
+            return "todos/anytime"
         case let .listTodos(listId, listName):
             return "todos/list/\(listId)/\(listName)"
         case .completed:
@@ -84,6 +87,8 @@ enum AppRoute: Hashable {
                 return .allTodos(highlightTodoId: highlightTodoId)
             case "priority":
                 return .priorityTodos
+            case "anytime":
+                return .anytimeTodos
             case "list":
                 let remaining = Array(components.dropFirst(2))
                 guard remaining.count >= 2 else {

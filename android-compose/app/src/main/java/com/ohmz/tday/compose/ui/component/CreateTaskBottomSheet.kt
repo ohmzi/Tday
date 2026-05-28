@@ -55,6 +55,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -133,6 +135,7 @@ fun CreateTaskBottomSheet(
     editingTask: TodoItem? = null,
     defaultListId: String? = null,
     defaultPriority: String? = null,
+    defaultScheduled: Boolean = true,
     initialDueEpochMs: Long? = null,
     onParseTaskTitleNlp: (suspend (
         title: String,
@@ -180,6 +183,9 @@ fun CreateTaskBottomSheet(
     var dueEpochMs by rememberSaveable(editingTask?.id, initialDueEpochMs) {
         mutableStateOf(resolvedDueEpochMs)
     }
+    var scheduleEnabled by rememberSaveable(editingTask?.id, defaultScheduled) {
+        mutableStateOf(editingTask?.due != null || (editingTask == null && defaultScheduled))
+    }
     LaunchedEffect(title, onParseTaskTitleNlp) {
         val nlpParser = onParseTaskTitleNlp ?: return@LaunchedEffect
         val inputTitle = title.trim()
@@ -199,6 +205,9 @@ fun CreateTaskBottomSheet(
         if (cleanTitle != title) {
             title = cleanTitle
         }
+        if (!scheduleEnabled) {
+            scheduleEnabled = true
+        }
         if (parsedDueEpochMs != dueEpochMs) {
             dueEpochMs = parsedDueEpochMs
         }
@@ -206,12 +215,21 @@ fun CreateTaskBottomSheet(
     var selectedRepeat by rememberSaveable(editingTask?.id) {
         mutableStateOf(repeatPresetFromRrule(editingTask?.rrule).name)
     }
+    LaunchedEffect(scheduleEnabled) {
+        if (!scheduleEnabled) {
+            selectedRepeat = RepeatPreset.NONE.name
+        }
+    }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
     var sheetVisible by remember { mutableStateOf(false) }
 
     val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
-    val repeatPreset = RepeatPreset.valueOf(selectedRepeat)
+    val repeatPreset = if (scheduleEnabled) {
+        RepeatPreset.valueOf(selectedRepeat)
+    } else {
+        RepeatPreset.NONE
+    }
     val canSubmit = title.isNotBlank()
     val colorScheme = MaterialTheme.colorScheme
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
@@ -247,14 +265,14 @@ fun CreateTaskBottomSheet(
     }
 
     fun submitTask() {
-        val due = Instant.ofEpochMilli(dueEpochMs)
+        val due = if (scheduleEnabled) Instant.ofEpochMilli(dueEpochMs) else null
 
         val payload = CreateTaskPayload(
             title = title.trim(),
             description = notes.trim().ifBlank { null },
             priority = selectedPriority,
             due = due,
-            rrule = repeatPreset.rrule,
+            rrule = repeatPreset.rrule?.takeIf { scheduleEnabled },
             listId = selectedListId,
         )
         val editing = editingTask
@@ -352,14 +370,31 @@ fun CreateTaskBottomSheet(
 
                     SectionHeading("Schedule")
                     GroupCard {
-                        SplitDateTimeRow(
-                            icon = Icons.Rounded.CalendarMonth,
-                            title = "Due",
-                            dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                            timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                            onDateClick = { dueDatePickerOpen = true },
-                            onTimeClick = { dueTimePickerOpen = true },
+                        ScheduleSwitchRow(
+                            enabled = scheduleEnabled,
+                            onEnabledChange = { enabled -> scheduleEnabled = enabled },
                         )
+                        AnimatedVisibility(visible = scheduleEnabled) {
+                            Column {
+                                RowDivider()
+                                SplitDateTimeRow(
+                                    icon = Icons.Rounded.CalendarMonth,
+                                    title = "Due",
+                                    dateValue = dateOnlyFormatter.format(
+                                        Instant.ofEpochMilli(
+                                            dueEpochMs
+                                        )
+                                    ),
+                                    timeValue = timeOnlyFormatter.format(
+                                        Instant.ofEpochMilli(
+                                            dueEpochMs
+                                        )
+                                    ),
+                                    onDateClick = { dueDatePickerOpen = true },
+                                    onTimeClick = { dueTimePickerOpen = true },
+                                )
+                            }
+                        }
                     }
 
                     SectionHeading("Details")
@@ -397,7 +432,9 @@ fun CreateTaskBottomSheet(
                             icon = Icons.Rounded.Repeat,
                             title = "Repeat",
                             value = repeatPreset.label,
-                            options = RepeatPreset.entries.toList(),
+                            options = if (scheduleEnabled) RepeatPreset.entries.toList() else listOf(
+                                RepeatPreset.NONE
+                            ),
                             optionLabel = { option -> option.label },
                             optionSwatchColor = { option -> repeatSwatchColor(option) },
                             isSelected = { option -> selectedRepeat == option.name },
@@ -755,6 +792,54 @@ private fun SplitDateTimeRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ScheduleSwitchRow(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onEnabledChange(!enabled) }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Schedule,
+            contentDescription = null,
+            tint = colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(modifier = Modifier.size(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Due date",
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Text(
+                text = if (enabled) "Scheduled" else "Anytime",
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Switch(
+            checked = enabled,
+            onCheckedChange = onEnabledChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = colorScheme.onPrimary,
+                checkedTrackColor = colorScheme.primary,
+                uncheckedThumbColor = colorScheme.onSurfaceVariant,
+                uncheckedTrackColor = colorScheme.surfaceVariant,
+            ),
+        )
     }
 }
 

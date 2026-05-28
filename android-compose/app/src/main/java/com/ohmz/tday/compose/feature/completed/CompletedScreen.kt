@@ -572,7 +572,7 @@ private fun CompletedSwipeRow(
     )
     val completedAtText = COMPLETED_ROW_TIME_FORMATTER
         .withZone(ZoneId.systemDefault())
-        .format(item.completedAt ?: item.due)
+        .format(item.completedAt ?: item.due ?: Instant.EPOCH)
     val listMeta = item.resolveListSummary(lists)
     val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
         ?: item.listColor?.let(::listAccentColor)
@@ -975,7 +975,7 @@ private fun shouldShowDateDivider(
     return !currentItem.completedDate().isSameLocalDayAs(nextVisibleItem.completedDate(), zoneId)
 }
 
-private fun CompletedItem.completedDate() = completedAt ?: due
+private fun CompletedItem.completedDate() = completedAt ?: due ?: Instant.EPOCH
 
 private fun Instant.isSameLocalDayAs(other: Instant, zoneId: ZoneId): Boolean =
     LocalDate.ofInstant(this, zoneId) == LocalDate.ofInstant(other, zoneId)
@@ -985,14 +985,14 @@ private fun buildCompletedTimelineSections(
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): List<CompletedSection> {
     val groupedByDate = items.groupBy { item ->
-        LocalDate.ofInstant(item.completedAt ?: item.due, zoneId)
+        LocalDate.ofInstant(item.completedAt ?: item.due ?: Instant.EPOCH, zoneId)
     }
 
     return groupedByDate.keys
         .sortedDescending()
         .map { date ->
             val sectionItems = groupedByDate[date].orEmpty().sortedWith(
-                compareByDescending<CompletedItem> { it.completedAt ?: it.due }
+                compareByDescending<CompletedItem> { it.completedAt ?: it.due ?: Instant.EPOCH }
                     .thenBy { it.title.lowercase(Locale.getDefault()) }
                     .thenBy { it.id },
             )

@@ -28,6 +28,7 @@ struct CreateTaskSheet: View {
     let titleText: String
     let submitText: String
     let initialPayload: CreateTaskPayload?
+    let defaultScheduled: Bool
     let onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?
     let onDismiss: () -> Void
     let onSubmit: (CreateTaskPayload) async -> Void
@@ -40,6 +41,7 @@ struct CreateTaskSheet: View {
     @State private var priority = "Low"
     @State private var selectedListID: String?
     @State private var dueDate = Date().addingTimeInterval(60 * 60)
+    @State private var scheduleEnabled = true
     @State private var repeatRule: String?
     @State private var isSubmitting = false
     @State private var parserTask: Task<Void, Never>?
@@ -66,7 +68,10 @@ struct CreateTaskSheet: View {
     }
 
     private var selectedRepeatLabel: String {
-        repeatOptions.first(where: { $0.value == repeatRule })?.label ?? "No repeat"
+        guard scheduleEnabled else {
+            return "No repeat"
+        }
+        return repeatOptions.first(where: { $0.value == repeatRule })?.label ?? "No repeat"
     }
 
     private var maximumSheetHeight: CGFloat {
@@ -86,6 +91,7 @@ struct CreateTaskSheet: View {
         titleText: String,
         submitText: String,
         initialPayload: CreateTaskPayload?,
+        defaultScheduled: Bool = true,
         onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?,
         onDismiss: @escaping () -> Void,
         onSubmit: @escaping (CreateTaskPayload) async -> Void
@@ -94,6 +100,7 @@ struct CreateTaskSheet: View {
         self.titleText = titleText
         self.submitText = submitText
         self.initialPayload = initialPayload
+        self.defaultScheduled = defaultScheduled
         self.onParseTaskTitleNlp = onParseTaskTitleNlp
         self.onDismiss = onDismiss
         self.onSubmit = onSubmit
@@ -148,11 +155,20 @@ struct CreateTaskSheet: View {
 
                     CreateTaskSheetSectionTitle(text: "Schedule")
                     CreateTaskSheetGroupCard {
-                        CreateTaskSheetDueRow(
-                            dueDate: $dueDate,
-                            onDateTap: { activeSelector = .date },
-                            onTimeTap: { activeSelector = .time }
+                        CreateTaskSheetScheduleToggleRow(
+                            isOn: $scheduleEnabled
                         )
+
+                        if scheduleEnabled {
+                            CreateTaskSheetDivider()
+
+                            CreateTaskSheetDueRow(
+                                dueDate: $dueDate,
+                                onDateTap: { activeSelector = .date },
+                                onTimeTap: { activeSelector = .time }
+                            )
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
                     }
 
                     CreateTaskSheetSectionTitle(text: "Details")
@@ -179,7 +195,11 @@ struct CreateTaskSheet: View {
                             iconName: "repeat",
                             title: "Repeat",
                             value: selectedRepeatLabel,
-                            onTap: { activeSelector = .recurrence }
+                            isEnabled: scheduleEnabled,
+                            onTap: {
+                                guard scheduleEnabled else { return }
+                                activeSelector = .recurrence
+                            }
                         )
                     }
                 }
@@ -214,6 +234,14 @@ struct CreateTaskSheet: View {
         .onChange(of: title) { _, _ in
             scheduleNlpParse()
         }
+        .onChange(of: scheduleEnabled) { _, isEnabled in
+            if !isEnabled {
+                repeatRule = nil
+                if activeSelector == .date || activeSelector == .time || activeSelector == .recurrence {
+                    activeSelector = nil
+                }
+            }
+        }
         .onPreferenceChange(CreateTaskSheetHeaderHeightKey.self) { height in
             headerHeight = max(height, 1)
         }
@@ -224,14 +252,22 @@ struct CreateTaskSheet: View {
 
     private func hydrateFromInitialPayload() {
         guard let initialPayload else {
+            scheduleEnabled = defaultScheduled
+            repeatRule = defaultScheduled ? repeatRule : nil
             return
         }
         title = initialPayload.title
         notes = initialPayload.description ?? ""
         priority = initialPayload.priority
         selectedListID = initialPayload.listId
-        dueDate = initialPayload.due
-        repeatRule = initialPayload.rrule
+        if let due = initialPayload.due {
+            dueDate = due
+            scheduleEnabled = true
+            repeatRule = initialPayload.rrule
+        } else {
+            scheduleEnabled = false
+            repeatRule = nil
+        }
     }
 
     private func scheduleNlpParse() {
@@ -251,6 +287,7 @@ struct CreateTaskSheet: View {
                 title = parsed.cleanTitle
                 if let dueEpochMs = parsed.dueEpochMs {
                     dueDate = Date(epochMilliseconds: dueEpochMs)
+                    scheduleEnabled = true
                 }
             }
         }
@@ -262,8 +299,8 @@ struct CreateTaskSheet: View {
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines),
             priority: priority,
-            due: dueDate,
-            rrule: repeatRule,
+            due: scheduleEnabled ? dueDate : nil,
+            rrule: scheduleEnabled ? repeatRule : nil,
             listId: selectedListID
         )
         await onSubmit(payload)
@@ -483,6 +520,37 @@ private struct CreateTaskSheetGroupCard<Content: View>: View {
     }
 }
 
+private struct CreateTaskSheetScheduleToggleRow: View {
+    @Binding var isOn: Bool
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Toggle(isOn: $isOn.animation(.spring(response: 0.28, dampingFraction: 0.9))) {
+            HStack(spacing: 10) {
+                Image(systemName: isOn ? "calendar.badge.clock" : "tray.full")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .frame(width: 22, height: 22)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Schedule")
+                        .font(.tdayRounded(size: 18, weight: .heavy))
+                        .foregroundStyle(colors.onSurface)
+                    Text(isOn ? "Task has a due date" : "Anytime task")
+                        .font(.tdayRounded(size: 12, weight: .bold))
+                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                }
+            }
+        }
+        .toggleStyle(.switch)
+        .tint(colors.primary)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(minHeight: 72)
+    }
+}
+
 private struct CreateTaskSheetDueRow: View {
     @Binding var dueDate: Date
     let onDateTap: () -> Void
@@ -644,6 +712,7 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
     let iconName: String
     let title: String
     let value: String
+    var isEnabled = true
     let onTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -653,25 +722,25 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
             HStack(spacing: 14) {
                 Image(systemName: iconName)
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(colors.onSurfaceVariant)
+                    .foregroundStyle(colors.onSurfaceVariant.opacity(isEnabled ? 1 : 0.42))
                     .frame(width: 22, height: 22)
 
                 Text(title)
                     .font(.tdayRounded(size: 18, weight: .heavy))
-                    .foregroundStyle(colors.onSurface)
+                    .foregroundStyle(colors.onSurface.opacity(isEnabled ? 1 : 0.5))
 
                 Spacer(minLength: 8)
 
                 HStack(spacing: 4) {
                     Text(value)
                         .font(.tdayRounded(size: 14, weight: .heavy))
-                        .foregroundStyle(colors.onSurfaceVariant)
+                        .foregroundStyle(colors.onSurfaceVariant.opacity(isEnabled ? 1 : 0.48))
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
 
                     Image(systemName: "chevron.down")
                         .font(.system(size: 12, weight: .heavy))
-                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.72))
+                        .foregroundStyle(colors.onSurfaceVariant.opacity(isEnabled ? 0.72 : 0.3))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -680,6 +749,7 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
     }
 }
 

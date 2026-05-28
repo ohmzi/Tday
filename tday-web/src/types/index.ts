@@ -51,6 +51,10 @@ export interface recurringTodoItemType extends TodoItemType {
   instances: overridingInstance[];
 }
 
+export interface TodoApiItemType extends Omit<TodoItemType, "due"> {
+  due: Date | null;
+}
+
 export interface CompletedTodoItemType {
   id: string;
   originalTodoID: string | null;
@@ -59,7 +63,7 @@ export interface CompletedTodoItemType {
   createdAt: Date;
   completedAt: Date;
   priority: "Low" | "Medium" | "High";
-  due: Date;
+  due: Date | null;
   userID: string;
   rrule: string | null;
   instanceDate: Date | null;
