@@ -170,6 +170,14 @@
 
     <!-- Todo list screen -->
     <string name="todos_summarize">Summarize tasks</string>
+    <string name="todos_title_tasks">Tasks</string>
+    <string name="todos_title_today">Today</string>
+    <string name="todos_title_overdue">Overdue</string>
+    <string name="todos_title_scheduled">Scheduled</string>
+    <string name="todos_title_all_tasks">All Tasks</string>
+    <string name="todos_title_priority">Priority</string>
+    <string name="todos_title_floater">Floater</string>
+    <string name="todos_title_list">List</string>
     <string name="todos_empty_today">No tasks for today</string>
     <string name="todos_empty_overdue">No overdue tasks</string>
     <string name="todos_empty_priority">No priority tasks</string>
@@ -190,6 +198,8 @@
     <string name="todos_summary_title">Summary</string>
     <string name="todos_summary_close">Close summary</string>
     <string name="todos_summary_loading">Creating your task summary…</string>
+    <string name="todos_summary_admin_disabled">AI summary is disabled by admin</string>
+    <string name="todos_summary_modes_unavailable">Summary is available only for Today, Scheduled, All, and Priority</string>
     <string name="todos_list_settings">List settings</string>
     <string name="todos_save_list_settings">Save list settings</string>
     <string name="todos_delete_list_title">Delete list?</string>
@@ -256,9 +266,35 @@
     <string name="error_auth_expired">Session expired. Please sign in again.</string>
     <string name="error_app_outdated">This version of the app is out of date. Please update to continue.</string>
     <string name="error_server">Server error. Please try again later.</string>
+    <string name="error_permission_denied">You don\'t have permission to do that.</string>
+    <string name="error_not_found">The requested item was not found.</string>
+    <string name="error_connection">Connection error. Check your internet and try again.</string>
     <string name="error_connectivity_title">No Internet Connection</string>
     <string name="error_connectivity">Unable to connect. Please check your network connection and try again.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_load_failed">Failed to load.</string>
+    <string name="error_load_dashboard_failed">Failed to load dashboard.</string>
+    <string name="error_load_calendar_failed">Failed to load calendar.</string>
+    <string name="error_load_tasks_failed">Failed to load tasks.</string>
+    <string name="error_create_task_failed">Could not create task.</string>
+    <string name="error_update_task_failed">Could not update task.</string>
+    <string name="error_complete_task_failed">Could not complete task.</string>
+    <string name="error_delete_task_failed">Could not delete task.</string>
+    <string name="error_restore_task_failed">Could not restore task.</string>
+    <string name="error_create_list_failed">Could not create list.</string>
+    <string name="error_update_list_failed">Could not update list.</string>
+    <string name="error_delete_list_failed">Could not delete list.</string>
+    <string name="error_summarize_tasks_failed">Could not summarize tasks.</string>
+    <string name="error_load_admin_settings_failed">Could not load admin settings</string>
+    <string name="error_update_admin_settings_failed">Could not update admin settings</string>
+    <string name="error_reset_trusted_server_failed">Could not reset trusted server.</string>
+    <string name="error_connect_server_failed">Could not connect to server.</string>
+    <string name="server_setup_error_probe_timeout">Server probe timed out. Check URL and network, then try again.</string>
+    <string name="server_setup_error_invalid_url">Invalid server URL.</string>
+    <string name="server_setup_error_insecure_transport">Use HTTPS for remote server URLs.</string>
+    <string name="server_setup_error_not_tday_server">Server is reachable but does not appear to be a T\'Day server.</string>
+    <string name="server_setup_trust_refreshing">Saved server trust changed. Trying again with a refreshed certificate.</string>
+    <string name="server_setup_trust_refresh_failed">The app could not recover from a saved server trust mismatch automatically. Clear app storage or reinstall the app, then try again.</string>
 
     <string name="notification_channel_task_reminders_name">Task Reminders</string>
     <string name="notification_channel_task_reminders_description">Reminders for upcoming task due dates</string>

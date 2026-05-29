@@ -1,7 +1,9 @@
 package com.ohmz.tday.compose.feature.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
@@ -16,6 +18,7 @@ import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,6 +50,7 @@ class HomeViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
     private var activeLoadingRefreshes = 0
 
@@ -97,7 +101,7 @@ class HomeViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     isLoading = activeLoadingRefreshes > 0,
-                    errorMessage = error.userFacingMessage("Failed to load dashboard."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_load_dashboard_failed),
                 )
             }
         }
@@ -151,7 +155,7 @@ class HomeViewModel @Inject constructor(
                         val keepLoading = activeLoadingRefreshes > if (showLoading) 1 else 0
                         current.copy(
                             isLoading = keepLoading,
-                            errorMessage = error.userFacingMessage("Failed to load dashboard."),
+                            errorMessage = error.userFacingMessage(appContext, R.string.error_load_dashboard_failed),
                         )
                     }
                 }
@@ -168,7 +172,9 @@ class HomeViewModel @Inject constructor(
             runCatching { listRepository.createList(normalizedName, color = color, iconKey = iconKey) }
                 .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not create list.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_list_failed))
+                    }
                 }
         }
     }
@@ -199,7 +205,9 @@ class HomeViewModel @Inject constructor(
                         .onFailure { refreshInternal(forceSync = false, showLoading = false) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not create task.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_task_failed))
+                    }
                 }
         }
     }
@@ -228,7 +236,9 @@ class HomeViewModel @Inject constructor(
             runCatching { todoRepository.completeTodo(todo) }
                 .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not complete task.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_complete_task_failed))
+                    }
                     refreshFromCache()
                 }
         }
@@ -242,7 +252,9 @@ class HomeViewModel @Inject constructor(
             runCatching { todoRepository.deleteTodo(todo) }
                 .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not delete task.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed))
+                    }
                     refreshFromCache()
                 }
         }
@@ -253,7 +265,9 @@ class HomeViewModel @Inject constructor(
             runCatching { todoRepository.updateTodo(todo, payload) }
                 .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not update task.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed))
+                    }
                 }
         }
     }

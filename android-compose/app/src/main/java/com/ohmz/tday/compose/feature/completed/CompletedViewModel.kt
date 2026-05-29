@@ -1,7 +1,9 @@
 package com.ohmz.tday.compose.feature.completed
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
@@ -12,6 +14,7 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +37,7 @@ class CompletedViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -126,7 +130,7 @@ class CompletedViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
-                        errorMessage = error.userFacingMessage("Failed to load."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_load_failed),
                     )
                 }
             }
@@ -141,7 +145,9 @@ class CompletedViewModel @Inject constructor(
                     loadInternal(forceSync = false, showLoading = false)
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not delete task.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed))
+                    }
                 }
         }
     }
@@ -154,7 +160,9 @@ class CompletedViewModel @Inject constructor(
                     loadInternal(forceSync = false, showLoading = false)
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not restore task.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_restore_task_failed))
+                    }
                 }
         }
     }
@@ -164,7 +172,9 @@ class CompletedViewModel @Inject constructor(
             runCatching { completedRepository.updateCompletedTodo(item, payload) }
                 .onSuccess { loadInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not update task.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed))
+                    }
                 }
         }
     }
