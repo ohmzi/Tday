@@ -28,6 +28,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.BubbleChart
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -46,6 +48,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -66,10 +69,10 @@ enum class RootFeedTab {
 
 private val RootFeedTabs = listOf(RootFeedTab.HOME, RootFeedTab.FLOATER)
 private val RootFeedSliderAccent = Color(0xFF7D67B6)
-private val RootFeedDockCollapsedWidth = 112.dp
 private val RootFeedDockHeight = 58.dp
+private val RootFeedDockCollapsedWidth = RootFeedDockHeight
 private val RootFeedDockInnerPadding = 5.dp
-private val RootFeedDockTabWidth = RootFeedDockCollapsedWidth - (RootFeedDockInnerPadding * 2)
+private val RootFeedDockTabWidth = 102.dp
 private val RootFeedDockExpandedWidth =
     (RootFeedDockTabWidth * RootFeedTabs.size) + (RootFeedDockInnerPadding * 2)
 private val RootFeedDockShape = RoundedCornerShape(22.dp)
@@ -79,6 +82,13 @@ private fun RootFeedTab.label(): String {
     return when (this) {
         RootFeedTab.HOME -> "Home"
         RootFeedTab.FLOATER -> "Floater"
+    }
+}
+
+private fun RootFeedTab.icon(): ImageVector {
+    return when (this) {
+        RootFeedTab.HOME -> Icons.Rounded.Home
+        RootFeedTab.FLOATER -> Icons.Rounded.BubbleChart
     }
 }
 
@@ -359,6 +369,21 @@ fun RootFeedDock(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
+                    val textAlpha = if (selected) expansionProgress else 1f
+                    val iconAlpha = if (selected) 1f - expansionProgress else 0f
+
+                    Icon(
+                        imageVector = tab.icon(),
+                        contentDescription = null,
+                        tint = animatedContentColor,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .graphicsLayer {
+                                alpha = iconAlpha * tabAlpha
+                                scaleX = contentScale * (1f - (0.08f * expansionProgress))
+                                scaleY = contentScale * (1f - (0.08f * expansionProgress))
+                            },
+                    )
                     Text(
                         text = tab.label(),
                         style = MaterialTheme.typography.titleSmall,
@@ -368,8 +393,9 @@ fun RootFeedDock(
                         overflow = TextOverflow.Ellipsis,
                         softWrap = false,
                         modifier = Modifier.graphicsLayer {
-                            scaleX = contentScale
-                            scaleY = contentScale
+                            alpha = textAlpha
+                            scaleX = contentScale * (0.94f + (0.06f * textAlpha))
+                            scaleY = contentScale * (0.94f + (0.06f * textAlpha))
                         },
                     )
                 }
