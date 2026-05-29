@@ -11,6 +11,8 @@ import {
 import { ArrowUpRight, Check, Info, Loader2, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import { api } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/error-message";
 import { Link } from "@/lib/navigation";
 import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
 
@@ -244,36 +246,36 @@ export default function AdminUserControl() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users", { cache: "no-store" });
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body?.message || "Failed to load users");
-      }
-      setUsers(body.users || []);
+      const body = (await api.GET({ url: "/api/admin/users" })) as {
+        users?: AdminUser[];
+      } | null;
+      setUsers(body?.users || []);
     } catch (error) {
-      toast({ description: error instanceof Error ? error.message : "Failed to load users", variant: "destructive" });
+      toast({
+        description: getErrorMessage(error, "Failed to load users"),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   const fetchAdminSettings = useCallback(async () => {
     setSettingsLoading(true);
     try {
-      const res = await fetch("/api/admin/settings", { cache: "no-store" });
-      const body = (await res.json()) as AdminSettingsResponse & {
-        message?: string;
-      };
-      if (!res.ok) {
-        throw new Error(body?.message || "Failed to load admin settings");
-      }
-      setAiSummaryEnabled(Boolean(body.aiSummaryEnabled));
+      const body = (await api.GET({
+        url: "/api/admin/settings",
+      })) as AdminSettingsResponse | null;
+      setAiSummaryEnabled(Boolean(body?.aiSummaryEnabled));
     } catch (error) {
-      toast({ description: error instanceof Error ? error.message : "Failed to load admin settings", variant: "destructive" });
+      toast({
+        description: getErrorMessage(error, "Failed to load admin settings"),
+        variant: "destructive",
+      });
     } finally {
       setSettingsLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchUsers();
@@ -293,15 +295,14 @@ export default function AdminUserControl() {
     setActionUserId(userId);
     setActionType("approve");
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: "PATCH",
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.message || "Failed to approve user");
+      await api.PATCH({ url: `/api/admin/users/${userId}` });
       toast({ description: "User approved" });
       await fetchUsers();
     } catch (error) {
-      toast({ description: error instanceof Error ? error.message : "Failed to approve user", variant: "destructive" });
+      toast({
+        description: getErrorMessage(error, "Failed to approve user"),
+        variant: "destructive",
+      });
     } finally {
       setActionUserId(null);
       setActionType(null);
@@ -317,15 +318,14 @@ export default function AdminUserControl() {
     setActionUserId(userId);
     setActionType("delete");
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: "DELETE",
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.message || "Failed to delete user");
+      await api.DELETE({ url: `/api/admin/users/${userId}` });
       toast({ description: "User deleted" });
       await fetchUsers();
     } catch (error) {
-      toast({ description: error instanceof Error ? error.message : "Failed to delete user", variant: "destructive" });
+      toast({
+        description: getErrorMessage(error, "Failed to delete user"),
+        variant: "destructive",
+      });
     } finally {
       setActionUserId(null);
       setActionType(null);
@@ -336,17 +336,11 @@ export default function AdminUserControl() {
     const nextValue = !aiSummaryEnabled;
     setSettingsSaving(true);
     try {
-      const res = await fetch("/api/admin/settings", {
-        method: "PATCH",
+      const body = (await api.PATCH({
+        url: "/api/admin/settings",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ aiSummaryEnabled: nextValue }),
-      });
-      const body = (await res.json()) as AdminSettingsResponse & {
-        message?: string;
-      };
-      if (!res.ok) {
-        throw new Error(body?.message || "Failed to update admin settings");
-      }
+      })) as AdminSettingsResponse;
       setAiSummaryEnabled(Boolean(body.aiSummaryEnabled));
       toast({
         description: body.aiSummaryEnabled
@@ -354,7 +348,10 @@ export default function AdminUserControl() {
           : "AI summaries disabled for all users",
       });
     } catch (error) {
-      toast({ description: error instanceof Error ? error.message : "Failed to update admin settings", variant: "destructive" });
+      toast({
+        description: getErrorMessage(error, "Failed to update admin settings"),
+        variant: "destructive",
+      });
     } finally {
       setSettingsSaving(false);
     }

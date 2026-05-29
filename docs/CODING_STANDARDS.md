@@ -42,7 +42,7 @@ Some AI-assisted editors (Cursor, Copilot, etc.) **silently inject trailers** in
 1. **`commit-msg` git hook** — Automatically strips `Made-with:` and AI `Co-authored-by:` trailers from every commit. Installed via `scripts/install-hooks.sh`. Run it once after cloning.
 2. **Guardrail tests** — `tests/guardrails/dependency-hygiene.test.ts` verifies the hook script exists and contains the correct stripping logic.
 3. **PR template checklist** — Reviewers verify no AI attribution in the final diff.
-4. **AI agent rule** — `.cursor/rules/no-ai-trailers.mdc` instructs AI assistants to use `git commit-tree` (plumbing) instead of `git commit` to avoid trailer injection entirely.
+4. **Cursor agent rule** — `.cursor/rules/no-ai-trailers.mdc` documents a trailer-safe `git commit-tree` fallback for Cursor environments that inject commit trailers. It must not use destructive cleanup commands.
 
 > **Never use `--no-verify`** to skip the hook. If the hook causes problems, fix the hook — don't bypass it.
 
@@ -484,9 +484,9 @@ All colors and dimension values must come from centralized theme files — never
 **Colors:**
 
 - Use `MaterialTheme.colorScheme.*` in Composables for all standard colors (`primary`, `surface`, `onSurface`, `error`, etc.).
-- Custom colors not in the Material scheme are defined as named constants in `ui/theme/Color.kt` (e.g., `TdayDarkPrimary`, `TdayLightError`).
+- Custom colors not in the Material scheme are defined as named constants in the Android theme layer: app palette values in `ui/theme/Color.kt`, reusable domain accents in `ui/theme/TdaySemanticColors.kt`.
 - Repeated product/domain colors belong in `ui/theme/TdaySemanticColors.kt`, not in feature screens. Use the shared helpers for priority colors, list palette colors, todo-mode accents, completed accents, and root-feed accents.
-- Never write `Color(0xFF...)` directly in a screen or component file. If a new color is needed, add it to `Color.kt` first.
+- Never write `Color(0xFF...)` directly in a screen or component file. If a new color is needed, add it to the smallest appropriate theme file first.
 
 **List visuals:**
 
