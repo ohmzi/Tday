@@ -51,89 +51,28 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.AccountBalance
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Architecture
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Backpack
-import androidx.compose.material.icons.rounded.BeachAccess
-import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BorderColor
-import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Cake
-import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.CardGiftcard
-import androidx.compose.material.icons.rounded.ChangeHistory
-import androidx.compose.material.icons.rounded.ChatBubbleOutline
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ChildCare
-import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.Computer
-import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.DesktopWindows
-import androidx.compose.material.icons.rounded.DirectionsBoat
-import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.Eco
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.FamilyRestroom
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Flight
-import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.Inventory
 import androidx.compose.material.icons.rounded.Key
-import androidx.compose.material.icons.rounded.Lightbulb
-import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.LocalMall
-import androidx.compose.material.icons.rounded.LocationCity
-import androidx.compose.material.icons.rounded.Medication
-import androidx.compose.material.icons.rounded.Mood
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.NightsStay
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material.icons.rounded.Pets
-import androidx.compose.material.icons.rounded.PriorityHigh
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.ShoppingBasket
-import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material.icons.rounded.SportsBaseball
-import androidx.compose.material.icons.rounded.SportsBasketball
-import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.SportsFootball
-import androidx.compose.material.icons.rounded.SportsSoccer
-import androidx.compose.material.icons.rounded.SportsTennis
-import androidx.compose.material.icons.rounded.Square
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Train
-import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material.icons.rounded.Whatshot
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -231,16 +170,20 @@ import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
+import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
 import com.ohmz.tday.compose.ui.theme.TdayTodoModeAllAccent
 import com.ohmz.tday.compose.ui.theme.TdayTodoModeOverdueAccent
 import com.ohmz.tday.compose.ui.theme.TdayTodoModePriorityAccent
 import com.ohmz.tday.compose.ui.theme.TdayTodoModeScheduledAccent
 import com.ohmz.tday.compose.ui.theme.TdayTodoModeTodayAccent
+import com.ohmz.tday.compose.ui.theme.isTdayListIconKeySupported
 import com.ohmz.tday.compose.ui.theme.normalizeTdayListColorKey
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
+import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -518,12 +461,12 @@ fun TodoListScreen(
     var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var listSettingsName by rememberSaveable { mutableStateOf("") }
     var listSettingsColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
-    var listSettingsIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
+    var listSettingsIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var listSettingsColorTouched by rememberSaveable { mutableStateOf(false) }
     var listSettingsIconTouched by rememberSaveable { mutableStateOf(false) }
     var createListName by rememberSaveable { mutableStateOf("") }
     var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
-    var createListIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
+    var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val editTargetTodo = remember(editTargetTodoId, uiState.items) {
         editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
@@ -750,8 +693,8 @@ fun TodoListScreen(
                                 listSettingsName = selectedList.name
                                 listSettingsColor = normalizeTdayListColorKey(selectedList.color)
                                 listSettingsIconKey = selectedList.iconKey
-                                    ?.takeIf { isSupportedListIconKey(it) }
-                                    ?: DEFAULT_LIST_ICON_KEY
+                                    ?.takeIf { isTdayListIconKeySupported(it) }
+                                    ?: TDAY_DEFAULT_LIST_ICON_KEY
                                 listSettingsColorTouched = false
                                 listSettingsIconTouched = false
                                 showListSettingsSheet = true
@@ -1357,7 +1300,7 @@ fun TodoListScreen(
                     onCreateList(normalizedName, createListColor, createListIconKey)
                     createListName = ""
                     createListColor = TDAY_DEFAULT_LIST_COLOR_KEY
-                    createListIconKey = DEFAULT_LIST_ICON_KEY
+                    createListIconKey = TDAY_DEFAULT_LIST_ICON_KEY
                     showCreateListSheet = false
                 }
             },
@@ -1788,7 +1731,7 @@ private fun RootFloaterSearchResultsCard(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            imageVector = listIconForKey(listMeta?.iconKey),
+                            imageVector = tdayListIconForKey(listMeta?.iconKey),
                             contentDescription = null,
                             tint = tdayListAccentColor(listMeta?.color).copy(alpha = 0.92f),
                             modifier = Modifier.size(17.dp),
@@ -1856,7 +1799,7 @@ private fun FloaterListRow(
         label = "floaterListRowElevation",
     )
     val accent = tdayListAccentColor(colorKey)
-    val icon = listIconForKey(iconKey)
+    val icon = tdayListIconForKey(iconKey)
     val containerColor =
         lerpColor(colorScheme.surfaceVariant, accent, FLOATER_LIST_CONTAINER_COLOR_WEIGHT)
     val displayName = capitalizeFirstListLetter(name)
@@ -2226,7 +2169,7 @@ private fun ListSettingsBottomSheet(
     val keyboardController = LocalSoftwareKeyboardController.current
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = tdayListAccentColor(listColor)
-    val selectedIcon = listIconForKey(listIconKey)
+    val selectedIcon = tdayListIconForKey(listIconKey)
     val canSave = listName.isNotBlank()
 
     TdayModalBottomSheet(
@@ -2409,7 +2352,7 @@ private fun ListSettingsBottomSheet(
                             .padding(horizontal = 14.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        LIST_SETTINGS_ICON_OPTIONS.forEach { option ->
+                        TdayListIconOptions.forEach { option ->
                             val selected = listIconKey == option.key
                             val interactionSource = remember { MutableInteractionSource() }
                             Box(
@@ -2720,7 +2663,7 @@ private fun TimelineTaskDragPreview(
             }
             if (showListIndicator) {
                 Icon(
-                    imageVector = listIconForKey(listMeta?.iconKey),
+                    imageVector = tdayListIconForKey(listMeta?.iconKey),
                     contentDescription = null,
                     tint = tdayListAccentColor(listMeta?.color),
                     modifier = Modifier.size(18.dp),
@@ -3304,7 +3247,7 @@ private fun emptyStateIconForMode(
         TodoListMode.FLOATER -> Icons.Rounded.Inventory
         TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
         TodoListMode.ALL -> Icons.Rounded.Inbox
-        TodoListMode.LIST -> listIconForKey(listIconKey)
+        TodoListMode.LIST -> tdayListIconForKey(listIconKey)
     }
 }
 
@@ -3925,7 +3868,7 @@ private fun SwipeTaskRow(
                             ) {
                                 if (showListIndicator) {
                                     Icon(
-                                        imageVector = listIconForKey(listMeta?.iconKey),
+                                        imageVector = tdayListIconForKey(listMeta?.iconKey),
                                         contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
                                         modifier = Modifier.size(18.dp),
@@ -4167,89 +4110,4 @@ private fun modeAccentColor(
     }
 }
 
-private fun listIconForKey(iconKey: String?): ImageVector {
-    return LIST_SETTINGS_ICON_OPTIONS.firstOrNull { it.key == iconKey }?.icon ?: Icons.Rounded.Inbox
-}
-
-private fun isSupportedListIconKey(iconKey: String): Boolean {
-    return LIST_SETTINGS_ICON_OPTIONS.any { it.key == iconKey }
-}
-
-private data class ListSettingsIconOption(
-    val key: String,
-    val icon: ImageVector,
-)
-
-private const val DEFAULT_LIST_ICON_KEY = "inbox"
 private const val FLOATER_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
-
-private val LIST_SETTINGS_ICON_OPTIONS = listOf(
-    ListSettingsIconOption("inbox", Icons.Rounded.Inbox),
-    ListSettingsIconOption("sun", Icons.Rounded.WbSunny),
-    ListSettingsIconOption("calendar", Icons.Rounded.CalendarToday),
-    ListSettingsIconOption("schedule", Icons.Rounded.Schedule),
-    ListSettingsIconOption("flag", Icons.Rounded.Flag),
-    ListSettingsIconOption("check", Icons.Rounded.Check),
-    ListSettingsIconOption("smile", Icons.Rounded.Mood),
-    ListSettingsIconOption("list", Icons.AutoMirrored.Rounded.List),
-    ListSettingsIconOption("bookmark", Icons.Rounded.Bookmark),
-    ListSettingsIconOption("key", Icons.Rounded.Key),
-    ListSettingsIconOption("gift", Icons.Rounded.CardGiftcard),
-    ListSettingsIconOption("cake", Icons.Rounded.Cake),
-    ListSettingsIconOption("school", Icons.Rounded.School),
-    ListSettingsIconOption("bag", Icons.Rounded.Backpack),
-    ListSettingsIconOption("edit", Icons.Rounded.Edit),
-    ListSettingsIconOption("document", Icons.Rounded.Description),
-    ListSettingsIconOption("book", Icons.AutoMirrored.Rounded.MenuBook),
-    ListSettingsIconOption("work", Icons.Rounded.Work),
-    ListSettingsIconOption("wallet", Icons.Rounded.AccountBalanceWallet),
-    ListSettingsIconOption("money", Icons.Rounded.Payments),
-    ListSettingsIconOption("fitness", Icons.Rounded.FitnessCenter),
-    ListSettingsIconOption("run", Icons.AutoMirrored.Rounded.DirectionsRun),
-    ListSettingsIconOption("food", Icons.Rounded.Restaurant),
-    ListSettingsIconOption("drink", Icons.Rounded.LocalBar),
-    ListSettingsIconOption("health", Icons.Rounded.Medication),
-    ListSettingsIconOption("monitor", Icons.Rounded.DesktopWindows),
-    ListSettingsIconOption("music", Icons.Rounded.MusicNote),
-    ListSettingsIconOption("computer", Icons.Rounded.Computer),
-    ListSettingsIconOption("game", Icons.Rounded.SportsEsports),
-    ListSettingsIconOption("headphones", Icons.Rounded.Headphones),
-    ListSettingsIconOption("eco", Icons.Rounded.Eco),
-    ListSettingsIconOption("pets", Icons.Rounded.Pets),
-    ListSettingsIconOption("child", Icons.Rounded.ChildCare),
-    ListSettingsIconOption("family", Icons.Rounded.FamilyRestroom),
-    ListSettingsIconOption("basket", Icons.Rounded.ShoppingBasket),
-    ListSettingsIconOption("cart", Icons.Rounded.ShoppingCart),
-    ListSettingsIconOption("mall", Icons.Rounded.LocalMall),
-    ListSettingsIconOption("inventory", Icons.Rounded.Inventory),
-    ListSettingsIconOption("soccer", Icons.Rounded.SportsSoccer),
-    ListSettingsIconOption("baseball", Icons.Rounded.SportsBaseball),
-    ListSettingsIconOption("basketball", Icons.Rounded.SportsBasketball),
-    ListSettingsIconOption("football", Icons.Rounded.SportsFootball),
-    ListSettingsIconOption("tennis", Icons.Rounded.SportsTennis),
-    ListSettingsIconOption("train", Icons.Rounded.Train),
-    ListSettingsIconOption("flight", Icons.Rounded.Flight),
-    ListSettingsIconOption("boat", Icons.Rounded.DirectionsBoat),
-    ListSettingsIconOption("car", Icons.Rounded.DirectionsCar),
-    ListSettingsIconOption("umbrella", Icons.Rounded.BeachAccess),
-    ListSettingsIconOption("drop", Icons.Rounded.WaterDrop),
-    ListSettingsIconOption("snow", Icons.Rounded.AcUnit),
-    ListSettingsIconOption("fire", Icons.Rounded.Whatshot),
-    ListSettingsIconOption("tools", Icons.Rounded.Build),
-    ListSettingsIconOption("scissors", Icons.Rounded.ContentCut),
-    ListSettingsIconOption("architecture", Icons.Rounded.Architecture),
-    ListSettingsIconOption("code", Icons.Rounded.Code),
-    ListSettingsIconOption("idea", Icons.Rounded.Lightbulb),
-    ListSettingsIconOption("chat", Icons.Rounded.ChatBubbleOutline),
-    ListSettingsIconOption("alert", Icons.Rounded.PriorityHigh),
-    ListSettingsIconOption("star", Icons.Rounded.Star),
-    ListSettingsIconOption("heart", Icons.Rounded.Favorite),
-    ListSettingsIconOption("circle", Icons.Rounded.Circle),
-    ListSettingsIconOption("square", Icons.Rounded.Square),
-    ListSettingsIconOption("triangle", Icons.Rounded.ChangeHistory),
-    ListSettingsIconOption("home", Icons.Rounded.Home),
-    ListSettingsIconOption("city", Icons.Rounded.LocationCity),
-    ListSettingsIconOption("bank", Icons.Rounded.AccountBalance),
-    ListSettingsIconOption("camera", Icons.Rounded.CameraAlt),
-    ListSettingsIconOption("palette", Icons.Rounded.Palette),
-)

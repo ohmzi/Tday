@@ -101,5 +101,7 @@ navigation rules while keeping Android Compose idioms.
 - New Material palette values belong in `ui/theme/Color.kt`; repeated domain colors belong in
   `ui/theme/TdaySemanticColors.kt` (`tdayPriorityColor`, `tdayListAccentColor`,
   `TdayListColorOptions`, mode accents, and related semantic tokens).
+- List icon options and persisted key lookup belong in `ui/theme/TdayListIcons.kt`, using
+  `TdayListIconOptions` and `tdayListIconForKey` instead of screen-local maps.
 - User-facing Android copy belongs in `res/values/strings.xml`; repeated copy such as splash
   taglines should use string arrays rather than Kotlin lists.

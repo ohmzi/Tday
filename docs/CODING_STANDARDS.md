@@ -474,7 +474,14 @@ All colors and dimension values must come from centralized theme files — never
 
 - Use `MaterialTheme.colorScheme.*` in Composables for all standard colors (`primary`, `surface`, `onSurface`, `error`, etc.).
 - Custom colors not in the Material scheme are defined as named constants in `ui/theme/Color.kt` (e.g., `TdayDarkPrimary`, `TdayLightError`).
+- Repeated product/domain colors belong in `ui/theme/TdaySemanticColors.kt`, not in feature screens. Use the shared helpers for priority colors, list palette colors, todo-mode accents, completed accents, and root-feed accents.
 - Never write `Color(0xFF...)` directly in a screen or component file. If a new color is needed, add it to `Color.kt` first.
+
+**List visuals:**
+
+- List icon key options and icon lookup live in `ui/theme/TdayListIcons.kt`.
+- Use `TdayListIconOptions`, `tdayListIconForKey`, `isTdayListIconKeySupported`, and `TDAY_DEFAULT_LIST_ICON_KEY` instead of re-declaring key-to-icon maps inside screens.
+- Add legacy aliases in `TdayListIcons.kt` when persisted keys need compatibility.
 
 ```kotlin
 // Good: theme color
