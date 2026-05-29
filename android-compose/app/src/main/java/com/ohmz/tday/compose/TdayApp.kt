@@ -48,10 +48,10 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -97,6 +97,7 @@ import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.component.RootCreateTaskButton
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import io.sentry.android.navigation.SentryNavigationListener
 import kotlin.math.roundToInt
@@ -115,7 +116,13 @@ private const val SETTINGS_VERTICAL_FRACTION = 0.22f
 fun TdayApp(
     onFirstFrameDrawn: () -> Unit = {},
 ) {
-    val startupTagline = rememberSaveable { splashTaglines.random() }
+    val splashTaglineOptions = stringArrayResource(R.array.splash_taglines)
+    val startupTagline = rememberSaveable(splashTaglineOptions.contentHashCode()) {
+        splashTaglineOptions.random()
+    }
+    val unauthenticatedHomeUiState = unauthenticatedHomeUiState(
+        lockedListName = stringResource(R.string.home_locked_list_name),
+    )
     var hasDrawnStartupFrame by remember { mutableStateOf(false) }
     val currentOnFirstFrameDrawn by rememberUpdatedState(onFirstFrameDrawn)
 
@@ -452,19 +459,21 @@ fun TdayApp(
                                                 .zIndex(8f),
                                         )
                                         RootCreateTaskButton(
-                                            backgroundColor = Color(0xFF6EA8E1),
                                             onClick = { rootCreateTaskRequestKey += 1 },
                                             modifier = Modifier
                                                 .align(Alignment.BottomEnd)
                                                 .navigationBarsPadding()
-                                                .padding(end = 18.dp, bottom = 18.dp)
+                                                .padding(
+                                                    end = TdayDimens.ContentPaddingHorizontal,
+                                                    bottom = TdayDimens.ContentPaddingHorizontal,
+                                                )
                                                 .zIndex(8f),
                                         )
                                     }
                                 }
                             } else {
                                 HomeScreen(
-                                    uiState = UnauthenticatedHomeUiState,
+                                    uiState = unauthenticatedHomeUiState,
                                     onRefresh = {},
                                     onOpenToday = {},
                                     onOpenOverdue = {},
@@ -1154,55 +1163,15 @@ private fun showSystemToast(
     Toast.makeText(context.applicationContext, message, duration).show()
 }
 
-private val splashTaglines = listOf(
-    "Your server remembers, so you don\u2019t have to",
-    "Hosted by you, haunted by deadlines",
-    "Because \u2018I\u2019ll remember later\u2019 is always a lie",
-    "Self-hosted sanity, one task at a time",
-    "Nagging you from your own hardware",
-    "Your data, your server, your no-excuse zone",
-    "Making procrastination slightly harder since v0.1",
-    "Running on your server, running your life",
-    "Because sticky notes don\u2019t have push notifications",
-    "Turning \u2018I forgot\u2019 into \u2018I got this\u2019",
-    "Your personal nudge machine",
-    "Self-hosted, self-organized\u2026 well, getting there",
-    "Where forgotten tasks go to get found",
-    "Adulting, but make it self-hosted",
-    "Taming chaos from a server near you",
-    "Future you says thanks in advance",
-    "The cloud is just someone else\u2019s server. This one\u2019s yours.",
-    "Organizing your life, no landlord required",
-    "Zero trust\u2026 except your own server",
-    "Syncing your tasks, judging your priorities",
-    "Today called. It wants a plan.",
-    "Making later file a formal request",
-    "Turning chaos into checkboxes",
-    "Your tasks are lining up nicely",
-    "A private server with opinions about your priorities",
-    "For when your brain opens too many tabs",
-    "Scheduling the chaos before it schedules you",
-    "Your lists have entered their productive era",
-    "A tiny operations desk for future you",
-    "Because vibes are not a task strategy",
-    "Private tasks. Better mornings.",
-    "Making your backlog feel seen, then sorted",
-    "Where scattered thoughts get assigned seating",
-    "Your priorities just got a home address",
-    "Sync first, panic later",
-    "Calendar drama, now with containment",
-    "Deadlines hate this one self-hosted trick",
-    "Helping your day stop freelancing",
-    "Your reminders came prepared",
-    "Turning I should into scheduled",
-)
-
 @Composable
 private fun SplashScreen(
     onHoldChanged: (Boolean) -> Unit,
     tagline: String? = null,
 ) {
-    val resolvedTagline = tagline ?: remember { splashTaglines.random() }
+    val splashTaglineOptions = stringArrayResource(R.array.splash_taglines)
+    val resolvedTagline = tagline ?: remember(splashTaglineOptions.contentHashCode()) {
+        splashTaglineOptions.random()
+    }
 
     DisposableEffect(onHoldChanged) {
         onDispose { onHoldChanged(false) }
@@ -1235,12 +1204,12 @@ private fun SplashScreen(
         ) {
             Image(
                 painter = painterResource(id = R.drawable.splash_icon),
-                contentDescription = "T'Day",
+                contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier.size(160.dp),
             )
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "T\u2019Day",
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -1256,24 +1225,26 @@ private fun SplashScreen(
     }
 }
 
-private val UnauthenticatedHomeUiState = HomeUiState(
-    isLoading = false,
-    summary = DashboardSummary(
-        todayCount = 0,
-        scheduledCount = 0,
-        allCount = 0,
-        priorityCount = 0,
-        floaterCount = 0,
-        completedCount = 0,
-        lists = listOf(
-            ListSummary(
-                id = "locked",
-                name = "Sign in to load your lists",
-                color = null,
-                iconKey = null,
-                todoCount = 0,
+private fun unauthenticatedHomeUiState(lockedListName: String): HomeUiState {
+    return HomeUiState(
+        isLoading = false,
+        summary = DashboardSummary(
+            todayCount = 0,
+            scheduledCount = 0,
+            allCount = 0,
+            priorityCount = 0,
+            floaterCount = 0,
+            completedCount = 0,
+            lists = listOf(
+                ListSummary(
+                    id = "locked",
+                    name = lockedListName,
+                    color = null,
+                    iconKey = null,
+                    todoCount = 0,
+                ),
             ),
         ),
-    ),
-    errorMessage = null,
-)
+        errorMessage = null,
+    )
+}
