@@ -241,9 +241,10 @@ cd tday-web
 npm run test                   # all Vitest suites
 ```
 
-- Tests live in `tday-web/tests/` organized by domain.
-- Name files `*.test.ts`.
-- Security-critical code must have tests.
+- Tests live in `tday-web/tests/`.
+- Use `tests/unit/` for behavior tests and `tests/guardrails/` for repository-wide standards.
+- Name files `*.test.ts` or `*.test.tsx`.
+- Security-critical code must have tests in the most relevant layer.
 
 ### Backend
 
@@ -252,7 +253,7 @@ npm run test                   # all Vitest suites
 ```
 
 - Tests live in `tday-backend/src/test/kotlin/`.
-- Security services (password, encryption, JWT, envelope, proof) have dedicated test classes.
+- Security services (password, encryption, JWE session handling, credential envelope, proof) have dedicated test classes.
 
 ### Android
 
