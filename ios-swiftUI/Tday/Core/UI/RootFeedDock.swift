@@ -2,14 +2,14 @@ import SwiftUI
 
 enum RootFeedTab: Hashable {
     case home
-    case anytime
+    case floater
 
     var title: String {
         switch self {
         case .home:
             return "Home"
-        case .anytime:
-            return "Anytime"
+        case .floater:
+            return "Floater"
         }
     }
 
@@ -17,7 +17,7 @@ enum RootFeedTab: Hashable {
         switch self {
         case .home:
             return "house.fill"
-        case .anytime:
+        case .floater:
             return "tray.full.fill"
         }
     }
@@ -31,7 +31,7 @@ struct RootFeedDock: View {
     @Environment(\.tdayColors) private var colors
     @State private var tapExpanded = false
 
-    private let tabs: [RootFeedTab] = [.home, .anytime]
+    private let tabs: [RootFeedTab] = [.home, .floater]
     private let accentColor = Color(red: 125.0 / 255.0, green: 103.0 / 255.0, blue: 182.0 / 255.0)
     private let animation = Animation.interactiveSpring(response: 0.36, dampingFraction: 0.88, blendDuration: 0.04)
 

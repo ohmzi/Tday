@@ -2527,7 +2527,7 @@ private struct CalendarTaskDragPreview: View {
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
 
-                Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Anytime")
+                Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Floater")
                     .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(colors.onSurfaceVariant)
                     .lineLimit(1)
@@ -2607,7 +2607,7 @@ private struct CalendarPendingTaskRow: View {
                         strikeColor: colors.onSurface.opacity(0.65)
                     )
 
-                    Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Anytime")
+                    Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Floater")
                         .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
                 }

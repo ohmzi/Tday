@@ -3,7 +3,12 @@ package com.ohmz.tday.compose.core.network
 import com.ohmz.tday.compose.core.model.AdminSettingsResponse
 import com.ohmz.tday.compose.core.model.AppSettingsResponse
 import com.ohmz.tday.compose.core.model.ChangePasswordRequest
+import com.ohmz.tday.compose.core.model.CompletedFloatersResponse
 import com.ohmz.tday.compose.core.model.CompletedTodosResponse
+import com.ohmz.tday.compose.core.model.CreateFloaterListRequest
+import com.ohmz.tday.compose.core.model.CreateFloaterListResponse
+import com.ohmz.tday.compose.core.model.CreateFloaterRequest
+import com.ohmz.tday.compose.core.model.CreateFloaterResponse
 import com.ohmz.tday.compose.core.model.CreateListRequest
 import com.ohmz.tday.compose.core.model.CreateListResponse
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
@@ -11,10 +16,21 @@ import com.ohmz.tday.compose.core.model.CreateTodoResponse
 import com.ohmz.tday.compose.core.model.CredentialKeyResponse
 import com.ohmz.tday.compose.core.model.CredentialsCallbackRequest
 import com.ohmz.tday.compose.core.model.CsrfResponse
+import com.ohmz.tday.compose.core.model.DeleteCompletedFloaterRequest
 import com.ohmz.tday.compose.core.model.DeleteCompletedTodoRequest
-import com.ohmz.tday.compose.core.model.DeleteListResponse
+import com.ohmz.tday.compose.core.model.DeleteFloaterListRequest
+import com.ohmz.tday.compose.core.model.DeleteFloaterListResponse
+import com.ohmz.tday.compose.core.model.DeleteFloaterRequest
 import com.ohmz.tday.compose.core.model.DeleteListRequest
+import com.ohmz.tday.compose.core.model.DeleteListResponse
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
+import com.ohmz.tday.compose.core.model.FloaterCompleteRequest
+import com.ohmz.tday.compose.core.model.FloaterListDetailResponse
+import com.ohmz.tday.compose.core.model.FloaterListsResponse
+import com.ohmz.tday.compose.core.model.FloaterPrioritizeRequest
+import com.ohmz.tday.compose.core.model.FloaterReorderRequest
+import com.ohmz.tday.compose.core.model.FloaterUncompleteRequest
+import com.ohmz.tday.compose.core.model.FloatersResponse
 import com.ohmz.tday.compose.core.model.ListDetailResponse
 import com.ohmz.tday.compose.core.model.ListsResponse
 import com.ohmz.tday.compose.core.model.MessageResponse
@@ -35,7 +51,10 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.TodosResponse
 import com.ohmz.tday.compose.core.model.UpdateAdminSettingsRequest
+import com.ohmz.tday.compose.core.model.UpdateCompletedFloaterRequest
 import com.ohmz.tday.compose.core.model.UpdateCompletedTodoRequest
+import com.ohmz.tday.compose.core.model.UpdateFloaterListRequest
+import com.ohmz.tday.compose.core.model.UpdateFloaterRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateProfileRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
@@ -119,6 +138,44 @@ interface TdayApiService {
         @Body payload: CreateTodoRequest,
     ): Response<CreateTodoResponse>
 
+    @GET("/api/floater")
+    suspend fun getFloaters(): Response<FloatersResponse>
+
+    @POST("/api/floater")
+    suspend fun createFloater(
+        @Body payload: CreateFloaterRequest,
+    ): Response<CreateFloaterResponse>
+
+    @PATCH("/api/floater")
+    suspend fun patchFloaterByBody(
+        @Body payload: UpdateFloaterRequest,
+    ): Response<MessageResponse>
+
+    @HTTP(method = "DELETE", path = "/api/floater", hasBody = true)
+    suspend fun deleteFloaterByBody(
+        @Body payload: DeleteFloaterRequest,
+    ): Response<MessageResponse>
+
+    @PATCH("/api/floater/complete")
+    suspend fun completeFloaterByBody(
+        @Body payload: FloaterCompleteRequest,
+    ): Response<MessageResponse>
+
+    @PATCH("/api/floater/uncomplete")
+    suspend fun uncompleteFloaterByBody(
+        @Body payload: FloaterUncompleteRequest,
+    ): Response<MessageResponse>
+
+    @PATCH("/api/floater/prioritize")
+    suspend fun prioritizeFloaterByBody(
+        @Body payload: FloaterPrioritizeRequest,
+    ): Response<MessageResponse>
+
+    @PATCH("/api/floater/reorder")
+    suspend fun reorderFloater(
+        @Body payload: FloaterReorderRequest,
+    ): Response<MessageResponse>
+
     @PATCH("/api/todo")
     suspend fun patchTodoByBody(
         @Body payload: UpdateTodoRequest,
@@ -168,6 +225,9 @@ interface TdayApiService {
     @GET("/api/completedTodo")
     suspend fun getCompletedTodos(): Response<CompletedTodosResponse>
 
+    @GET("/api/completedFloater")
+    suspend fun getCompletedFloaters(): Response<CompletedFloatersResponse>
+
     @PATCH("/api/completedTodo")
     suspend fun patchCompletedTodoByBody(
         @Body payload: UpdateCompletedTodoRequest,
@@ -176,6 +236,16 @@ interface TdayApiService {
     @HTTP(method = "DELETE", path = "/api/completedTodo", hasBody = true)
     suspend fun deleteCompletedTodoByBody(
         @Body payload: DeleteCompletedTodoRequest,
+    ): Response<MessageResponse>
+
+    @PATCH("/api/completedFloater")
+    suspend fun patchCompletedFloaterByBody(
+        @Body payload: UpdateCompletedFloaterRequest,
+    ): Response<MessageResponse>
+
+    @HTTP(method = "DELETE", path = "/api/completedFloater", hasBody = true)
+    suspend fun deleteCompletedFloaterByBody(
+        @Body payload: DeleteCompletedFloaterRequest,
     ): Response<MessageResponse>
 
     @GET("/api/list")
@@ -202,6 +272,29 @@ interface TdayApiService {
     suspend fun deleteListByBody(
         @Body payload: DeleteListRequest,
     ): Response<DeleteListResponse>
+
+    @GET("/api/floaterList")
+    suspend fun getFloaterLists(): Response<FloaterListsResponse>
+
+    @GET("/api/floaterList/{id}")
+    suspend fun getFloaterListTodos(
+        @Path("id") listId: String,
+    ): Response<FloaterListDetailResponse>
+
+    @POST("/api/floaterList")
+    suspend fun createFloaterList(
+        @Body payload: CreateFloaterListRequest,
+    ): Response<CreateFloaterListResponse>
+
+    @PATCH("/api/floaterList")
+    suspend fun patchFloaterListByBody(
+        @Body payload: UpdateFloaterListRequest,
+    ): Response<MessageResponse>
+
+    @HTTP(method = "DELETE", path = "/api/floaterList", hasBody = true)
+    suspend fun deleteFloaterListByBody(
+        @Body payload: DeleteFloaterListRequest,
+    ): Response<DeleteFloaterListResponse>
 
     @GET("/api/preferences")
     suspend fun getPreferences(): Response<PreferencesResponse>

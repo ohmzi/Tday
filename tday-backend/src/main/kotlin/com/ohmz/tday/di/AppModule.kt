@@ -29,9 +29,12 @@ val securityModule = module {
 val serviceModule = module {
     single<CacheService> { CacheServiceImpl() }
     single<TodoService> { TodoServiceImpl(get(), get()) }
+    single<FloaterService> { FloaterServiceImpl(get(), get()) }
     single<ListService> { ListServiceImpl(get()) }
+    single<FloaterListService> { FloaterListServiceImpl(get()) }
     single<UserService> { UserServiceImpl(get()) }
     single<CompletedTodoService> { CompletedTodoServiceImpl(get(), get()) }
+    single<CompletedFloaterService> { CompletedFloaterServiceImpl(get(), get()) }
     single<PreferencesService> { PreferencesServiceImpl() }
     single<AppConfigService> { AppConfigServiceImpl() }
     single<TodoSummaryService> { TodoSummaryServiceImpl(get()) }

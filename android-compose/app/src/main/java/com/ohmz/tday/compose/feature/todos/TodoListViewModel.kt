@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
+import com.ohmz.tday.compose.core.data.list.FloaterListRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
@@ -52,6 +53,7 @@ data class TodoListUiState(
 class TodoListViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val listRepository: ListRepository,
+    private val floaterListRepository: FloaterListRepository,
     private val settingsRepository: SettingsRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
@@ -97,7 +99,7 @@ class TodoListViewModel @Inject constructor(
                     TodoListMode.SCHEDULED -> "Scheduled"
                     TodoListMode.ALL -> "All Tasks"
                     TodoListMode.PRIORITY -> "Priority"
-                    TodoListMode.ANYTIME -> "Anytime"
+                    TodoListMode.FLOATER -> listName ?: "Floater"
                     TodoListMode.LIST -> listName ?: "List"
                 },
                 aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
@@ -120,7 +122,7 @@ class TodoListViewModel @Inject constructor(
             _uiState.update { it.copy(summaryError = "AI summary is disabled by admin") }
             return
         }
-        if (current.mode == TodoListMode.LIST || current.mode == TodoListMode.OVERDUE || current.mode == TodoListMode.ANYTIME) {
+        if (current.mode == TodoListMode.LIST || current.mode == TodoListMode.OVERDUE || current.mode == TodoListMode.FLOATER) {
             _uiState.update {
                 it.copy(summaryError = "Summary is available only for Today, Scheduled, All, and Priority")
             }
@@ -187,7 +189,7 @@ class TodoListViewModel @Inject constructor(
     private fun hydrateFromCache(mode: TodoListMode, listId: String?) {
         runCatching {
             val todos = todoRepository.fetchTodosSnapshot(mode = mode, listId = listId)
-            val lists = listRepository.fetchListsSnapshot()
+            val lists = fetchListsSnapshotForMode(mode)
             val aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot()
             Triple(todos, lists, aiSummaryEnabled)
         }.onSuccess { (todos, lists, aiSummaryEnabled) ->
@@ -233,7 +235,7 @@ class TodoListViewModel @Inject constructor(
                         .onFailure { /* fall back to local cache */ }
                 }
                 val todos = todoRepository.fetchTodos(mode = mode, listId = listId)
-                val lists = listRepository.fetchLists()
+                val lists = fetchListsForMode(mode)
                 todos to lists
             }.onSuccess { (todos, lists) ->
                 _uiState.update { current ->
@@ -269,16 +271,20 @@ class TodoListViewModel @Inject constructor(
     fun addTask(payload: CreateTaskPayload) {
         if (payload.title.isBlank()) return
         val mode = _uiState.value.mode
-        val listId = payload.listId
+        val currentListId = _uiState.value.listId
 
         viewModelScope.launch {
             runCatching {
-                todoRepository.createTodo(payload)
+                if (mode == TodoListMode.FLOATER) {
+                    todoRepository.createFloater(payload)
+                } else {
+                    todoRepository.createTodo(payload)
+                }
             }.onSuccess {
-                rescheduleReminders()
+                if (mode != TodoListMode.FLOATER) rescheduleReminders()
                 runCatching {
-                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
-                    val lists = listRepository.fetchLists()
+                    val todos = todoRepository.fetchTodosCached(mode = mode, listId = currentListId)
+                    val lists = fetchListsForMode(mode)
                     todos to lists
                 }.onSuccess { (todos, lists) ->
                     _uiState.update { current ->
@@ -330,7 +336,7 @@ class TodoListViewModel @Inject constructor(
                 rescheduleReminders()
                 runCatching {
                     val todos = todoRepository.fetchTodosCached(mode = mode, listId = currentListId)
-                    val lists = listRepository.fetchLists()
+                    val lists = fetchListsForMode(mode)
                     todos to lists
                 }.onSuccess { (todos, lists) ->
                     _uiState.update { current ->
@@ -362,12 +368,12 @@ class TodoListViewModel @Inject constructor(
             "High" -> "High"
             else -> "Low"
         }
-        val normalizedDue = payload.due
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
 
         val previousState = _uiState.value
         val mode = previousState.mode
+        val normalizedDue = if (mode == TodoListMode.FLOATER) null else payload.due
         val currentListId = previousState.listId
         val updatedTodo = visibleTodo.copy(
             title = normalizedTitle,
@@ -382,7 +388,7 @@ class TodoListViewModel @Inject constructor(
             val optimisticItems = current.items
                 .map { item -> if (item.id == visibleTodo.id) updatedTodo else item }
                 .filterNot { item ->
-                    current.mode == TodoListMode.LIST &&
+                    (current.mode == TodoListMode.LIST || current.mode == TodoListMode.FLOATER) &&
                         !current.listId.isNullOrBlank() &&
                             item.id == visibleTodo.id &&
                         item.listId != current.listId
@@ -392,22 +398,24 @@ class TodoListViewModel @Inject constructor(
 
         viewModelScope.launch {
             runCatching {
-                todoRepository.updateTodo(
-                    todo = repositoryTodo,
-                    payload = CreateTaskPayload(
-                        title = normalizedTitle,
-                        description = normalizedDescription,
-                        priority = normalizedPriority,
-                        due = normalizedDue,
-                        rrule = payload.rrule,
-                        listId = normalizedListId,
-                    ),
+                val normalizedPayload = CreateTaskPayload(
+                    title = normalizedTitle,
+                    description = normalizedDescription,
+                    priority = normalizedPriority,
+                    due = normalizedDue,
+                    rrule = if (mode == TodoListMode.FLOATER) null else payload.rrule,
+                    listId = normalizedListId,
                 )
+                if (mode == TodoListMode.FLOATER) {
+                    todoRepository.updateFloater(repositoryTodo, normalizedPayload)
+                } else {
+                    todoRepository.updateTodo(repositoryTodo, normalizedPayload)
+                }
             }.onSuccess {
-                rescheduleReminders()
+                if (mode != TodoListMode.FLOATER) rescheduleReminders()
                 runCatching {
                     val todos = todoRepository.fetchTodosCached(mode = mode, listId = currentListId)
-                    val lists = listRepository.fetchLists()
+                    val lists = fetchListsForMode(mode)
                     todos to lists
                 }.onSuccess { (todos, lists) ->
                     _uiState.update { current ->
@@ -436,9 +444,13 @@ class TodoListViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                todoRepository.completeTodo(todo)
+                if (_uiState.value.mode == TodoListMode.FLOATER) {
+                    todoRepository.completeFloater(todo)
+                } else {
+                    todoRepository.completeTodo(todo)
+                }
             }.onSuccess {
-                rescheduleReminders()
+                if (_uiState.value.mode != TodoListMode.FLOATER) rescheduleReminders()
                 refreshInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update {
@@ -463,13 +475,17 @@ class TodoListViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runCatching {
-                todoRepository.deleteTodo(todo)
+                if (mode == TodoListMode.FLOATER) {
+                    todoRepository.deleteFloater(todo)
+                } else {
+                    todoRepository.deleteTodo(todo)
+                }
             }.onSuccess {
                 onDeleted?.invoke()
-                rescheduleReminders()
+                if (mode != TodoListMode.FLOATER) rescheduleReminders()
                 runCatching {
                     val todos = todoRepository.fetchTodosCached(mode = mode, listId = listId)
-                    val lists = listRepository.fetchLists()
+                    val lists = fetchListsForMode(mode)
                     todos to lists
                 }.onSuccess { (todos, lists) ->
                     _uiState.update { current ->
@@ -516,7 +532,14 @@ class TodoListViewModel @Inject constructor(
         val previousState = currentState
         _uiState.update { current ->
             current.copy(
-                title = if (current.mode == TodoListMode.LIST) trimmedName else current.title,
+                title = if (
+                    current.mode == TodoListMode.LIST ||
+                    (current.mode == TodoListMode.FLOATER && !current.listId.isNullOrBlank())
+                ) {
+                    trimmedName
+                } else {
+                    current.title
+                },
                 lists = current.lists.map { list ->
                     if (list.id == resolvedListId) {
                         list.copy(
@@ -534,12 +557,21 @@ class TodoListViewModel @Inject constructor(
 
         viewModelScope.launch {
             runCatching {
-                listRepository.updateList(
-                    listId = resolvedListId,
-                    name = trimmedName,
-                    color = color,
-                    iconKey = iconKey,
-                )
+                if (currentState.mode == TodoListMode.FLOATER) {
+                    floaterListRepository.updateList(
+                        listId = resolvedListId,
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                    )
+                } else {
+                    listRepository.updateList(
+                        listId = resolvedListId,
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                    )
+                }
             }.onSuccess {
                 Log.d(TAG, "updateListSettings persisted listId=$resolvedListId")
             }.onFailure { error ->
@@ -547,6 +579,39 @@ class TodoListViewModel @Inject constructor(
                 _uiState.value = previousState.copy(
                     errorMessage = error.userFacingMessage("Could not update list."),
                 )
+            }
+        }
+    }
+
+    fun createList(name: String, color: String? = null, iconKey: String? = null) {
+        val trimmedName = capitalizeFirstListLetter(name).trim()
+        if (trimmedName.isBlank()) return
+
+        val currentMode = _uiState.value.mode
+        viewModelScope.launch {
+            runCatching {
+                if (currentMode == TodoListMode.FLOATER) {
+                    floaterListRepository.createList(
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                    )
+                } else {
+                    listRepository.createList(
+                        name = trimmedName,
+                        color = color,
+                        iconKey = iconKey,
+                    )
+                }
+            }.onSuccess {
+                hydrateFromCache(
+                    mode = _uiState.value.mode,
+                    listId = _uiState.value.listId,
+                )
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(errorMessage = error.userFacingMessage("Could not create list."))
+                }
             }
         }
     }
@@ -564,21 +629,30 @@ class TodoListViewModel @Inject constructor(
 
         viewModelScope.launch {
             runCatching {
-                listRepository.deleteList(
-                    listId = resolvedListId,
-                    onOptimisticDelete = {
-                        _uiState.update { current ->
-                            current.copy(
-                                lists = current.lists.filterNot { it.id == resolvedListId },
-                                items = current.items.filterNot { it.listId == resolvedListId },
-                                errorMessage = null,
-                            )
-                        }
-                        onOptimisticDelete()
-                    },
-                )
+                val optimisticDelete = {
+                    _uiState.update { current ->
+                        current.copy(
+                            lists = current.lists.filterNot { it.id == resolvedListId },
+                            items = current.items.filterNot { it.listId == resolvedListId },
+                            errorMessage = null,
+                        )
+                    }
+                    onOptimisticDelete()
+                }
+
+                if (currentState.mode == TodoListMode.FLOATER) {
+                    floaterListRepository.deleteList(
+                        listId = resolvedListId,
+                        onOptimisticDelete = optimisticDelete,
+                    )
+                } else {
+                    listRepository.deleteList(
+                        listId = resolvedListId,
+                        onOptimisticDelete = optimisticDelete,
+                    )
+                }
             }.onSuccess {
-                rescheduleReminders()
+                if (currentState.mode != TodoListMode.FLOATER) rescheduleReminders()
             }.onFailure { error ->
                 Log.e(TAG, "deleteList failed listId=$resolvedListId", error)
                 _uiState.update {
@@ -595,6 +669,22 @@ class TodoListViewModel @Inject constructor(
     private fun rescheduleReminders() {
         viewModelScope.launch(Dispatchers.Default) {
             runCatching { reminderScheduler.rescheduleAll() }
+        }
+    }
+
+    private suspend fun fetchListsForMode(mode: TodoListMode): List<ListSummary> {
+        return if (mode == TodoListMode.FLOATER) {
+            floaterListRepository.fetchLists()
+        } else {
+            listRepository.fetchLists()
+        }
+    }
+
+    private fun fetchListsSnapshotForMode(mode: TodoListMode): List<ListSummary> {
+        return if (mode == TodoListMode.FLOATER) {
+            floaterListRepository.fetchListsSnapshot()
+        } else {
+            listRepository.fetchListsSnapshot()
         }
     }
 

@@ -7,8 +7,11 @@ extension Notification.Name {
 
 private struct RemoteSnapshot {
     let todos: [TodoItem]
+    let floaters: [TodoItem]
     let completedItems: [CompletedItem]
+    let completedFloaters: [CompletedItem]
     let lists: [ListSummary]
+    let floaterLists: [ListSummary]
     let aiSummaryEnabled: Bool
 
     var todoUpdatedAtByCanonical: [String: Int64] {
@@ -22,6 +25,20 @@ private struct RemoteSnapshot {
         lists.reduce(into: [:]) { result, list in
             let updatedAt = list.updatedAt?.epochMilliseconds ?? 0
             result[list.id] = max(result[list.id] ?? 0, updatedAt)
+        }
+    }
+
+    var floaterListUpdatedAtByID: [String: Int64] {
+        floaterLists.reduce(into: [:]) { result, list in
+            let updatedAt = list.updatedAt?.epochMilliseconds ?? 0
+            result[list.id] = max(result[list.id] ?? 0, updatedAt)
+        }
+    }
+
+    var floaterUpdatedAtByCanonical: [String: Int64] {
+        floaters.reduce(into: [:]) { result, floater in
+            let updatedAt = floater.updatedAt?.epochMilliseconds ?? 0
+            result[floater.canonicalId] = max(result[floater.canonicalId] ?? 0, updatedAt)
         }
     }
 }
@@ -46,6 +63,31 @@ func mergeCompletedRecordsWithPendingOverrides(
         }
         mergedRecords.removeAll { $0.originalTodoId == canonicalID }
         mergedRecords.append(contentsOf: localRecordsForTodo)
+    }
+
+    return mergedRecords
+}
+
+func mergeCompletedFloaterRecordsWithPendingOverrides(
+    localRecords: [CachedCompletedFloaterRecord],
+    remoteRecords: [CachedCompletedFloaterRecord],
+    pendingFloaterTargets: Set<String>,
+    pendingDeletedListIds: Set<String> = []
+) -> [CachedCompletedFloaterRecord] {
+    var mergedRecords = remoteRecords.filter { record in
+        guard let listId = record.listId else {
+            return true
+        }
+        return !pendingDeletedListIds.contains(listId)
+    }
+
+    for canonicalID in pendingFloaterTargets {
+        let localRecordsForFloater = localRecords.filter { $0.originalFloaterId == canonicalID }
+        guard !localRecordsForFloater.isEmpty else {
+            continue
+        }
+        mergedRecords.removeAll { $0.originalFloaterId == canonicalID }
+        mergedRecords.append(contentsOf: localRecordsForFloater)
     }
 
     return mergedRecords
@@ -130,25 +172,47 @@ final class SyncManager {
 
     private func fetchRemoteSnapshot() async throws -> RemoteSnapshot {
         async let todosTask = api.getTodos(timeline: true)
+        async let floatersTask = api.getFloaters()
         async let completedTask = api.getCompletedTodos()
+        async let completedFloatersTask = api.getCompletedFloaters()
         async let listsTask = api.getLists()
+        async let floaterListsTask = api.getFloaterLists()
         async let appSettingsTask = api.getAppSettings()
 
         let todosResponse = try await todosTask
+        let floatersResponse = try await floatersTask
         let completedResponse = try await completedTask
+        let completedFloatersResponse = try await completedFloatersTask
         let listsResponse = try await listsTask
+        let floaterListsResponse = try await floaterListsTask
         let appSettingsResponse = try await appSettingsTask
         let todos = todosResponse.todos.map(mapTodoDTO)
+        let floaters = floatersResponse.floaters.map(mapFloaterDTO)
         let completedItems = completedResponse.completedTodos.map(mapCompletedDTO)
+        let completedFloaters = completedFloatersResponse.completedFloaters.map(mapCompletedFloaterDTO)
         let lists = listsResponse.lists.map { mapListDTO($0) }
+        let floaterLists = floaterListsResponse.lists.map { mapFloaterListDTO($0) }
         let aiSummaryEnabled = appSettingsResponse.aiSummaryEnabled
-        return RemoteSnapshot(todos: todos, completedItems: completedItems, lists: lists, aiSummaryEnabled: aiSummaryEnabled)
+        return RemoteSnapshot(
+            todos: todos,
+            floaters: floaters,
+            completedItems: completedItems,
+            completedFloaters: completedFloaters,
+            lists: lists,
+            floaterLists: floaterLists,
+            aiSummaryEnabled: aiSummaryEnabled
+        )
     }
 
     private func mergeRemoteWithLocal(localState: OfflineSyncState, remote: RemoteSnapshot) -> OfflineSyncState {
         let pendingTodoTargets = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 mutation.kind.affectsTodo ? mutation.targetId : nil
+            }
+        )
+        let pendingFloaterTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind.affectsFloater ? mutation.targetId : nil
             }
         )
         let pendingListTargets = Set(
@@ -161,9 +225,24 @@ final class SyncManager {
                 }
             }
         )
+        let pendingFloaterListTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .createFloaterList, .updateFloaterList, .deleteFloaterList:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
+            }
+        )
         let pendingDeletedListIds = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 mutation.kind == .deleteList ? mutation.targetId : nil
+            }
+        )
+        let pendingDeletedFloaterListIds = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind == .deleteFloaterList ? mutation.targetId : nil
             }
         )
         let remoteTodos = remote.todos.filter { todo in
@@ -171,6 +250,12 @@ final class SyncManager {
                 return true
             }
             return !pendingDeletedListIds.contains(listId)
+        }
+        let remoteFloaters = remote.floaters.filter { floater in
+            guard let listId = floater.listId else {
+                return true
+            }
+            return !pendingDeletedFloaterListIds.contains(listId)
         }
         var remoteTodosByKey = Dictionary(uniqueKeysWithValues: remoteTodos.map { (todoMergeKey(item: $0), todoToCache($0)) })
         var mergedTodos: [CachedTodoRecord] = []
@@ -195,6 +280,25 @@ final class SyncManager {
         }
         mergedTodos.append(contentsOf: remoteTodosByKey.values)
 
+        var remoteFloatersByID = Dictionary(uniqueKeysWithValues: remoteFloaters.map { ($0.canonicalId, floaterToCache($0)) })
+        var mergedFloaters: [CachedFloaterRecord] = []
+        for localFloater in localState.floaters {
+            let remoteFloater = remoteFloatersByID[localFloater.canonicalId]
+            if remoteFloater == nil,
+               !localFloater.canonicalId.hasPrefix(LOCAL_FLOATER_PREFIX),
+               !pendingFloaterTargets.contains(localFloater.canonicalId) {
+                continue
+            }
+            let localWins = localFloater.canonicalId.hasPrefix(LOCAL_FLOATER_PREFIX) ||
+                pendingFloaterTargets.contains(localFloater.canonicalId) ||
+                localFloater.updatedAtEpochMs > (remoteFloater?.updatedAtEpochMs ?? 0)
+            if localWins {
+                mergedFloaters.append(localFloater)
+                remoteFloatersByID.removeValue(forKey: localFloater.canonicalId)
+            }
+        }
+        mergedFloaters.append(contentsOf: remoteFloatersByID.values)
+
         var remoteListsByID = Dictionary(uniqueKeysWithValues: remote.lists.map { ($0.id, listToCache($0)) })
         var mergedLists: [CachedListRecord] = []
         for localList in localState.lists {
@@ -216,12 +320,44 @@ final class SyncManager {
             contentsOf: remoteListsByID.values.filter { !pendingDeletedListIds.contains($0.id) }
         )
 
+        var remoteFloaterListsByID = Dictionary(uniqueKeysWithValues: remote.floaterLists.map { ($0.id, floaterListToCache($0)) })
+        var mergedFloaterLists: [CachedFloaterListRecord] = []
+        for localList in localState.floaterLists {
+            let remoteList = remoteFloaterListsByID[localList.id]
+            if remoteList == nil,
+               !localList.id.hasPrefix(LOCAL_FLOATER_LIST_PREFIX),
+               !pendingFloaterListTargets.contains(localList.id) {
+                continue
+            }
+            let localWins = localList.id.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) ||
+                pendingFloaterListTargets.contains(localList.id) ||
+                localList.updatedAtEpochMs > (remoteList?.updatedAtEpochMs ?? 0)
+            if localWins {
+                mergedFloaterLists.append(localList)
+                remoteFloaterListsByID.removeValue(forKey: localList.id)
+            }
+        }
+        mergedFloaterLists.append(
+            contentsOf: remoteFloaterListsByID.values.filter { !pendingDeletedFloaterListIds.contains($0.id) }
+        )
+
         let mergedCompleted = mergeCompletedRecordsWithPendingOverrides(
             localRecords: localState.completedItems,
             remoteRecords: remote.completedItems.map(completedToCache),
             pendingTodoTargets: pendingTodoTargets,
             pendingDeletedListIds: pendingDeletedListIds
         )
+        let mergedCompletedFloaters = mergeCompletedFloaterRecordsWithPendingOverrides(
+            localRecords: localState.completedFloaters,
+            remoteRecords: remote.completedFloaters.map(completedFloaterToCache),
+            pendingFloaterTargets: pendingFloaterTargets,
+            pendingDeletedListIds: pendingDeletedFloaterListIds
+        )
+
+        let todoCountsByList = Dictionary(grouping: mergedTodos.filter { !$0.completed }, by: { $0.listId })
+            .mapValues(\.count)
+        let floaterCountsByList = Dictionary(grouping: mergedFloaters.filter { !$0.completed }, by: { $0.listId })
+            .mapValues(\.count)
 
         let generatedMutations = buildLocalWinsMutations(localState: localState, remote: remote)
         let pendingMutations = dedupePendingMutations(localState.pendingMutations + generatedMutations)
@@ -230,8 +366,35 @@ final class SyncManager {
             lastSuccessfulSyncEpochMs: localState.lastSuccessfulSyncEpochMs,
             lastSyncAttemptEpochMs: localState.lastSyncAttemptEpochMs,
             todos: mergedTodos.sorted(by: cachedTodoSortPrecedes),
+            floaters: mergedFloaters.sorted(by: cachedFloaterSortPrecedes),
             completedItems: mergedCompleted.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
-            lists: orderListsLikeWeb(mergedLists),
+            completedFloaters: mergedCompletedFloaters.sorted { $0.completedAtEpochMs > $1.completedAtEpochMs },
+            lists: orderListsLikeWeb(
+                mergedLists.map { list in
+                    CachedListRecord(
+                        id: list.id,
+                        name: list.name,
+                        color: list.color,
+                        iconKey: list.iconKey,
+                        todoCount: todoCountsByList[list.id] ?? 0,
+                        updatedAtEpochMs: list.updatedAtEpochMs,
+                        createdAtEpochMs: list.createdAtEpochMs
+                    )
+                }
+            ),
+            floaterLists: orderFloaterListsLikeWeb(
+                mergedFloaterLists.map { list in
+                    CachedFloaterListRecord(
+                        id: list.id,
+                        name: list.name,
+                        color: list.color,
+                        iconKey: list.iconKey,
+                        todoCount: floaterCountsByList[list.id] ?? 0,
+                        updatedAtEpochMs: list.updatedAtEpochMs,
+                        createdAtEpochMs: list.createdAtEpochMs
+                    )
+                }
+            ),
             pendingMutations: pendingMutations,
             aiSummaryEnabled: remote.aiSummaryEnabled
         )
@@ -244,10 +407,25 @@ final class SyncManager {
                 mutation.kind.affectsTodo ? mutation.targetId : nil
             }
         )
+        let pendingFloaterTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind.affectsFloater ? mutation.targetId : nil
+            }
+        )
         let pendingListTargets = Set(
             localState.pendingMutations.compactMap { mutation -> String? in
                 switch mutation.kind {
                 case .createList, .updateList, .deleteList:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
+            }
+        )
+        let pendingFloaterListTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .createFloaterList, .updateFloaterList, .deleteFloaterList:
                     return mutation.targetId
                 default:
                     return nil
@@ -285,6 +463,35 @@ final class SyncManager {
             }
         }
 
+        for floater in localState.floaters
+            where !floater.canonicalId.hasPrefix(LOCAL_FLOATER_PREFIX) &&
+                !pendingFloaterTargets.contains(floater.canonicalId) {
+            guard let remoteUpdatedAt = remote.floaterUpdatedAtByCanonical[floater.canonicalId], floater.updatedAtEpochMs > remoteUpdatedAt else {
+                continue
+            }
+            let mutation = PendingMutationRecord(
+                mutationId: UUID().uuidString,
+                kind: .updateFloater,
+                targetId: floater.canonicalId,
+                timestampEpochMs: floater.updatedAtEpochMs,
+                title: floater.title,
+                description: floater.description,
+                priority: floater.priority,
+                dueEpochMs: nil,
+                rrule: nil,
+                listId: floater.listId,
+                pinned: floater.pinned,
+                completed: floater.completed,
+                instanceDateEpochMs: nil,
+                name: nil,
+                color: nil,
+                iconKey: nil
+            )
+            if !existingKeys.contains(mutationKey(for: mutation)) {
+                generated.append(mutation)
+            }
+        }
+
         for list in localState.lists where !list.id.hasPrefix(LOCAL_LIST_PREFIX) && !pendingListTargets.contains(list.id) {
             guard let remoteUpdatedAt = remote.listUpdatedAtByID[list.id], list.updatedAtEpochMs > remoteUpdatedAt else {
                 continue
@@ -312,6 +519,33 @@ final class SyncManager {
             }
         }
 
+        for list in localState.floaterLists where !list.id.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) && !pendingFloaterListTargets.contains(list.id) {
+            guard let remoteUpdatedAt = remote.floaterListUpdatedAtByID[list.id], list.updatedAtEpochMs > remoteUpdatedAt else {
+                continue
+            }
+            let mutation = PendingMutationRecord(
+                mutationId: UUID().uuidString,
+                kind: .updateFloaterList,
+                targetId: list.id,
+                timestampEpochMs: list.updatedAtEpochMs,
+                title: nil,
+                description: nil,
+                priority: nil,
+                dueEpochMs: nil,
+                rrule: nil,
+                listId: nil,
+                pinned: nil,
+                completed: nil,
+                instanceDateEpochMs: nil,
+                name: list.name,
+                color: list.color,
+                iconKey: list.iconKey
+            )
+            if !existingKeys.contains(mutationKey(for: mutation)) {
+                generated.append(mutation)
+            }
+        }
+
         return generated
     }
 
@@ -319,7 +553,9 @@ final class SyncManager {
         var state = initialState
         var remaining: [PendingMutationRecord] = []
         var resolvedTodoIDs: [String: String] = [:]
+        var resolvedFloaterIDs: [String: String] = [:]
         var resolvedListIDs: [String: String] = [:]
+        var resolvedFloaterListIDs: [String: String] = [:]
         let orderedMutations = initialState.pendingMutations.sorted { $0.timestampEpochMs < $1.timestampEpochMs }
 
         for index in orderedMutations.indices {
@@ -330,7 +566,9 @@ final class SyncManager {
                     state: &state,
                     remoteSnapshot: remoteSnapshot,
                     resolvedTodoIDs: &resolvedTodoIDs,
-                    resolvedListIDs: &resolvedListIDs
+                    resolvedFloaterIDs: &resolvedFloaterIDs,
+                    resolvedListIDs: &resolvedListIDs,
+                    resolvedFloaterListIDs: &resolvedFloaterListIDs
                 )
             } catch {
                 if isLikelyConnectivityIssue(error) {
@@ -352,9 +590,16 @@ final class SyncManager {
         state: inout OfflineSyncState,
         remoteSnapshot: RemoteSnapshot,
         resolvedTodoIDs: inout [String: String],
-        resolvedListIDs: inout [String: String]
+        resolvedFloaterIDs: inout [String: String],
+        resolvedListIDs: inout [String: String],
+        resolvedFloaterListIDs: inout [String: String]
     ) async throws {
-        let targetID = resolveTargetID(mutation.targetId, todoMap: resolvedTodoIDs, listMap: resolvedListIDs)
+        let targetID = resolveTargetID(
+            mutation.targetId,
+            todoMap: resolvedTodoIDs,
+            floaterMap: resolvedFloaterIDs,
+            listMap: resolvedListIDs.merging(resolvedFloaterListIDs) { current, _ in current }
+        )
         switch mutation.kind {
         case .createList:
             guard let localListID = mutation.targetId else { return }
@@ -383,25 +628,71 @@ final class SyncManager {
             }
             _ = try await api.deleteListByBody(payload: DeleteListRequest(id: targetID))
 
+        case .createFloaterList:
+            guard let localListID = mutation.targetId else { return }
+            if !localListID.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) {
+                return
+            }
+            let response = try await api.createFloaterList(
+                payload: CreateFloaterListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey)
+            )
+            guard let createdList = response.list else { return }
+            resolvedFloaterListIDs[localListID] = createdList.id
+            state = replaceLocalFloaterListID(state, localListID: localListID, serverListID: createdList.id)
+
+        case .updateFloaterList:
+            guard let targetID else { return }
+            let remoteUpdatedAt = remoteSnapshot.floaterListUpdatedAtByID[targetID] ?? 0
+            guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
+            _ = try await api.patchFloaterListByBody(
+                payload: UpdateFloaterListRequest(id: targetID, name: mutation.name, color: mutation.color, iconKey: mutation.iconKey)
+            )
+
+        case .deleteFloaterList:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) {
+                return
+            }
+            _ = try await api.deleteFloaterListByBody(payload: DeleteFloaterListRequest(id: targetID))
+
         case .createTodo:
             guard let localTodoID = mutation.targetId else { return }
             if !localTodoID.hasPrefix(LOCAL_TODO_PREFIX) {
                 return
             }
+            guard let dueEpochMs = mutation.dueEpochMs else { return }
             let resolvedListID = mutation.listId.flatMap { resolvedListIDs[$0] ?? $0 }
             let response = try await api.createTodo(
                 payload: CreateTodoRequest(
                     title: mutation.title ?? "Untitled",
                     description: mutation.description,
                     priority: mutation.priority ?? "Low",
-                    due: mutation.dueEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() },
-                    rrule: mutation.dueEpochMs == nil ? nil : mutation.rrule,
+                    due: Date(epochMilliseconds: dueEpochMs).ISO8601Format(),
+                    rrule: mutation.rrule,
                     listID: resolvedListID
                 )
             )
             guard let createdTodo = response.todo else { return }
             resolvedTodoIDs[localTodoID] = createdTodo.id
             state = replaceLocalTodoID(state, localTodoID: localTodoID, serverTodoID: createdTodo.id)
+
+        case .createFloater:
+            guard let localFloaterID = mutation.targetId else { return }
+            if !localFloaterID.hasPrefix(LOCAL_FLOATER_PREFIX) {
+                return
+            }
+            let resolvedListID = mutation.listId.flatMap { resolvedFloaterListIDs[$0] ?? $0 }
+            let response = try await api.createFloater(
+                payload: CreateFloaterRequest(
+                    title: mutation.title ?? "Untitled",
+                    description: mutation.description,
+                    priority: mutation.priority ?? "Low",
+                    listID: resolvedListID
+                )
+            )
+            guard let createdFloater = response.floater else { return }
+            resolvedFloaterIDs[localFloaterID] = createdFloater.id
+            state = replaceLocalFloaterID(state, localFloaterID: localFloaterID, serverFloaterID: createdFloater.id)
 
         case .updateTodo:
             guard let targetID else { return }
@@ -446,6 +737,23 @@ final class SyncManager {
                 )
             }
 
+        case .updateFloater:
+            guard let targetID else { return }
+            let remoteUpdatedAt = remoteSnapshot.floaterUpdatedAtByCanonical[targetID] ?? 0
+            guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
+            let resolvedListID = mutation.listId.flatMap { resolvedFloaterListIDs[$0] ?? $0 }
+            _ = try await api.patchFloaterByBody(
+                payload: UpdateFloaterRequest(
+                    id: targetID,
+                    title: mutation.title,
+                    description: mutation.description,
+                    pinned: mutation.pinned,
+                    priority: mutation.priority,
+                    completed: mutation.completed,
+                    listID: resolvedListID
+                )
+            )
+
         case .deleteTodo:
             guard let targetID else { return }
             if let instanceDateEpochMs = mutation.instanceDateEpochMs {
@@ -459,34 +767,53 @@ final class SyncManager {
                 _ = try await api.deleteTodoByBody(payload: DeleteTodoRequest(id: targetID))
             }
 
+        case .deleteFloater:
+            guard let targetID else { return }
+            if targetID.hasPrefix(LOCAL_FLOATER_PREFIX) {
+                return
+            }
+            _ = try await api.deleteFloaterByBody(payload: DeleteFloaterRequest(id: targetID))
+
         case .setPinned:
             guard let targetID else { return }
-            _ = try await api.patchTodoByBody(
-                payload: UpdateTodoRequest(
-                    id: targetID,
-                    title: nil,
-                    description: nil,
-                    pinned: mutation.pinned,
-                    priority: nil,
-                    completed: nil,
-                    due: nil,
-                    rrule: nil,
-                    listID: nil,
-                    dateChanged: nil,
-                    rruleChanged: nil,
-                    instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+            if targetID.hasPrefix(LOCAL_FLOATER_PREFIX) || remoteSnapshot.floaterUpdatedAtByCanonical[targetID] != nil {
+                _ = try await api.patchFloaterByBody(
+                    payload: UpdateFloaterRequest(id: targetID, title: nil, description: nil, pinned: mutation.pinned, priority: nil, completed: nil, listID: nil)
                 )
-            )
+            } else {
+                _ = try await api.patchTodoByBody(
+                    payload: UpdateTodoRequest(
+                        id: targetID,
+                        title: nil,
+                        description: nil,
+                        pinned: mutation.pinned,
+                        priority: nil,
+                        completed: nil,
+                        due: nil,
+                        rrule: nil,
+                        listID: nil,
+                        dateChanged: nil,
+                        rruleChanged: nil,
+                        instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                    )
+                )
+            }
 
         case .setPriority:
             guard let targetID else { return }
-            _ = try await api.prioritizeTodoByBody(
-                payload: TodoPrioritizeRequest(
-                    id: targetID,
-                    priority: mutation.priority ?? "Low",
-                    instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+            if targetID.hasPrefix(LOCAL_FLOATER_PREFIX) || remoteSnapshot.floaterUpdatedAtByCanonical[targetID] != nil {
+                _ = try await api.prioritizeFloaterByBody(
+                    payload: FloaterPrioritizeRequest(id: targetID, priority: mutation.priority ?? "Low")
                 )
-            )
+            } else {
+                _ = try await api.prioritizeTodoByBody(
+                    payload: TodoPrioritizeRequest(
+                        id: targetID,
+                        priority: mutation.priority ?? "Low",
+                        instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
+                    )
+                )
+            }
 
         case .completeTodo, .completeTodoInstance:
             guard let targetID else { return }
@@ -505,6 +832,14 @@ final class SyncManager {
                     instanceDate: mutation.instanceDateEpochMs.map { Date(epochMilliseconds: $0).ISO8601Format() }
                 )
             )
+
+        case .completeFloater:
+            guard let targetID else { return }
+            _ = try await api.completeFloaterByBody(payload: FloaterCompleteRequest(id: targetID))
+
+        case .uncompleteFloater:
+            guard let targetID else { return }
+            _ = try await api.uncompleteFloaterByBody(payload: FloaterUncompleteRequest(id: targetID))
         }
     }
 
@@ -531,6 +866,7 @@ final class SyncManager {
                 }
                 return todo
             },
+            floaters: state.floaters,
             completedItems: state.completedItems.map { item in
                 if item.originalTodoId == localTodoID {
                     return CachedCompletedRecord(
@@ -550,12 +886,78 @@ final class SyncManager {
                 }
                 return item
             },
+            completedFloaters: state.completedFloaters,
             lists: state.lists,
+            floaterLists: state.floaterLists,
             pendingMutations: state.pendingMutations.map { mutation in
                 PendingMutationRecord(
                     mutationId: mutation.mutationId,
                     kind: mutation.kind,
                     targetId: mutation.targetId == localTodoID ? serverTodoID : mutation.targetId,
+                    timestampEpochMs: mutation.timestampEpochMs,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: mutation.dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey
+                )
+            },
+            aiSummaryEnabled: state.aiSummaryEnabled
+        )
+    }
+
+    private func replaceLocalFloaterID(_ state: OfflineSyncState, localFloaterID: String, serverFloaterID: String) -> OfflineSyncState {
+        OfflineSyncState(
+            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
+            todos: state.todos,
+            floaters: state.floaters.map { floater in
+                if floater.canonicalId == localFloaterID || floater.id == localFloaterID {
+                    return CachedFloaterRecord(
+                        id: serverFloaterID,
+                        canonicalId: serverFloaterID,
+                        title: floater.title,
+                        description: floater.description,
+                        priority: floater.priority,
+                        pinned: floater.pinned,
+                        completed: floater.completed,
+                        listId: floater.listId,
+                        updatedAtEpochMs: floater.updatedAtEpochMs
+                    )
+                }
+                return floater
+            },
+            completedItems: state.completedItems,
+            completedFloaters: state.completedFloaters.map { item in
+                if item.originalFloaterId == localFloaterID {
+                    return CachedCompletedFloaterRecord(
+                        id: item.id,
+                        originalFloaterId: serverFloaterID,
+                        title: item.title,
+                        description: item.description,
+                        priority: item.priority,
+                        completedAtEpochMs: item.completedAtEpochMs,
+                        listId: item.listId,
+                        listName: item.listName,
+                        listColor: item.listColor
+                    )
+                }
+                return item
+            },
+            lists: state.lists,
+            floaterLists: state.floaterLists,
+            pendingMutations: state.pendingMutations.map { mutation in
+                PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId == localFloaterID ? serverFloaterID : mutation.targetId,
                     timestampEpochMs: mutation.timestampEpochMs,
                     title: mutation.title,
                     description: mutation.description,
@@ -598,6 +1000,7 @@ final class SyncManager {
                 }
                 return todo
             },
+            floaters: state.floaters,
             completedItems: state.completedItems.map { completed in
                 guard completed.listId == localListID else {
                     return completed
@@ -617,6 +1020,7 @@ final class SyncManager {
                     listColor: completed.listColor
                 )
             },
+            completedFloaters: state.completedFloaters,
             lists: state.lists.map { list in
                 if list.id == localListID {
                     return CachedListRecord(
@@ -630,6 +1034,84 @@ final class SyncManager {
                     )
                 }
                 return list
+            },
+            floaterLists: state.floaterLists,
+            pendingMutations: state.pendingMutations.map { mutation in
+                PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId == localListID ? serverListID : mutation.targetId,
+                    timestampEpochMs: mutation.timestampEpochMs,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: mutation.dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId == localListID ? serverListID : mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey
+                )
+            },
+            aiSummaryEnabled: state.aiSummaryEnabled
+        )
+    }
+
+    private func replaceLocalFloaterListID(_ state: OfflineSyncState, localListID: String, serverListID: String) -> OfflineSyncState {
+        OfflineSyncState(
+            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
+            todos: state.todos,
+            floaters: state.floaters.map { floater in
+                guard floater.listId == localListID else {
+                    return floater
+                }
+                return CachedFloaterRecord(
+                    id: floater.id,
+                    canonicalId: floater.canonicalId,
+                    title: floater.title,
+                    description: floater.description,
+                    priority: floater.priority,
+                    pinned: floater.pinned,
+                    completed: floater.completed,
+                    listId: serverListID,
+                    updatedAtEpochMs: floater.updatedAtEpochMs
+                )
+            },
+            completedItems: state.completedItems,
+            completedFloaters: state.completedFloaters.map { completed in
+                guard completed.listId == localListID else {
+                    return completed
+                }
+                return CachedCompletedFloaterRecord(
+                    id: completed.id,
+                    originalFloaterId: completed.originalFloaterId,
+                    title: completed.title,
+                    description: completed.description,
+                    priority: completed.priority,
+                    completedAtEpochMs: completed.completedAtEpochMs,
+                    listId: serverListID,
+                    listName: completed.listName,
+                    listColor: completed.listColor
+                )
+            },
+            lists: state.lists,
+            floaterLists: state.floaterLists.map { list in
+                guard list.id == localListID else {
+                    return list
+                }
+                return CachedFloaterListRecord(
+                    id: serverListID,
+                    name: list.name,
+                    color: list.color,
+                    iconKey: list.iconKey,
+                    todoCount: list.todoCount,
+                    updatedAtEpochMs: list.updatedAtEpochMs,
+                    createdAtEpochMs: list.createdAtEpochMs
+                )
             },
             pendingMutations: state.pendingMutations.map { mutation in
                 PendingMutationRecord(
@@ -655,12 +1137,15 @@ final class SyncManager {
         )
     }
 
-    private func resolveTargetID(_ original: String?, todoMap: [String: String], listMap: [String: String]) -> String? {
+    private func resolveTargetID(_ original: String?, todoMap: [String: String], floaterMap: [String: String], listMap: [String: String]) -> String? {
         guard let original else {
             return nil
         }
         if let todoID = todoMap[original] {
             return todoID
+        }
+        if let floaterID = floaterMap[original] {
+            return floaterID
         }
         if let listID = listMap[original] {
             return listID
@@ -708,7 +1193,41 @@ private extension MutationKind {
             return true
         case .createList,
              .updateList,
-             .deleteList:
+             .deleteList,
+             .createFloaterList,
+             .updateFloaterList,
+             .deleteFloaterList,
+             .createFloater,
+             .updateFloater,
+             .deleteFloater,
+             .completeFloater,
+             .uncompleteFloater:
+            return false
+        }
+    }
+
+    var affectsFloater: Bool {
+        switch self {
+        case .createFloater,
+             .updateFloater,
+             .deleteFloater,
+             .completeFloater,
+             .uncompleteFloater:
+            return true
+        case .createList,
+             .updateList,
+             .deleteList,
+             .createFloaterList,
+             .updateFloaterList,
+             .deleteFloaterList,
+             .createTodo,
+             .updateTodo,
+             .deleteTodo,
+             .setPinned,
+             .setPriority,
+             .completeTodo,
+             .completeTodoInstance,
+             .uncompleteTodo:
             return false
         }
     }

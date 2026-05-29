@@ -126,7 +126,6 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
                 .select(Todos.id)
                 .where { (Todos.userID eq userId) and (Todos.listID inList existingIds) }
                 .map { it[Todos.id] }
-
             if (todoIds.isNotEmpty()) {
                 CompletedTodos.deleteWhere {
                     SqlExpressionBuilder.run {

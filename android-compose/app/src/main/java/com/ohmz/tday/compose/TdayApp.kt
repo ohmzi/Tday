@@ -335,8 +335,8 @@ fun TdayApp(
                                                 onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
                                                 onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
                                                 onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
-                                                onOpenAnytime = {
-                                                    rootFeedTab = RootFeedTab.ANYTIME
+                                                onOpenFloater = {
+                                                    rootFeedTab = RootFeedTab.FLOATER
                                                 },
                                                 onOpenSettings = { navController.navigate(AppRoute.Settings.route) },
                                                 onOpenTaskFromSearch = { todoId ->
@@ -395,11 +395,22 @@ fun TdayApp(
                                             )
                                         }
 
-                                        RootFeedTab.ANYTIME -> {
+                                        RootFeedTab.FLOATER -> {
                                             TodosRoute(
-                                                mode = TodoListMode.ANYTIME,
+                                                mode = TodoListMode.FLOATER,
                                                 onBack = { rootFeedTab = RootFeedTab.HOME },
                                                 onTaskDeleted = ::showTaskDeletedToast,
+                                                onOpenFloaterList = { id, name ->
+                                                    navController.navigate(
+                                                        AppRoute.FloaterListTodos.create(
+                                                            id,
+                                                            name
+                                                        )
+                                                    )
+                                                },
+                                                onOpenSettings = {
+                                                    navController.navigate(AppRoute.Settings.route)
+                                                },
                                                 showRootFeedDock = false,
                                                 showCreateTaskButton = false,
                                                 usesRootFeedHeader = true,
@@ -445,7 +456,7 @@ fun TdayApp(
                                     onOpenPriority = {},
                                     onOpenCompleted = {},
                                     onOpenCalendar = {},
-                                    onOpenAnytime = {},
+                                    onOpenFloater = {},
                                     onOpenSettings = {},
                                     onOpenTaskFromSearch = {},
                                     onOpenList = { _, _ -> },
@@ -547,11 +558,11 @@ fun TdayApp(
                 }
 
                 composable(
-                    route = AppRoute.AnytimeTodos.route,
-                    deepLinks = listOf(navDeepLink { uriPattern = "tday://anytime" }),
+                    route = AppRoute.FloaterTodos.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://floater" }),
                 ) {
                     LaunchedEffect(Unit) {
-                        rootFeedTab = RootFeedTab.ANYTIME
+                        rootFeedTab = RootFeedTab.FLOATER
                         navController.navigate(AppRoute.Home.route) {
                             popUpTo(AppRoute.Home.route) { inclusive = false }
                             launchSingleTop = true
@@ -658,6 +669,28 @@ fun TdayApp(
                                 launchSingleTop = true
                             }
                         },
+                    )
+                }
+
+                composable(
+                    route = AppRoute.FloaterListTodos.route,
+                    arguments = listOf(
+                        navArgument("listId") { type = NavType.StringType },
+                        navArgument("listName") { type = NavType.StringType },
+                    ),
+                    deepLinks = listOf(
+                        navDeepLink { uriPattern = "tday://floater/list/{listId}/{listName}" },
+                    ),
+                ) { entry ->
+                    val listId = entry.arguments?.getString("listId").orEmpty()
+                    val listName = Uri.decode(entry.arguments?.getString("listName").orEmpty())
+                    TodosRoute(
+                        mode = TodoListMode.FLOATER,
+                        listId = listId,
+                        listName = listName,
+                        onBack = { navController.popBackStack() },
+                        onTaskDeleted = ::showTaskDeletedToast,
+                        usesRootFeedHeader = true,
                     )
                 }
 
@@ -919,6 +952,8 @@ private fun TodosRoute(
     onBack: () -> Unit,
     onTaskDeleted: () -> Unit,
     onListDeleted: () -> Unit = {},
+    onOpenFloaterList: (String, String) -> Unit = { _, _ -> },
+    onOpenSettings: () -> Unit = {},
     highlightTodoId: String? = null,
     listId: String? = null,
     listName: String? = null,
@@ -972,6 +1007,9 @@ private fun TodosRoute(
                 onOptimisticDelete = onListDeleted,
             )
         },
+        onOpenFloaterList = onOpenFloaterList,
+        onOpenSettings = onOpenSettings,
+        onCreateList = viewModel::createList,
         rootFeedTab = rootFeedTab,
         onRootFeedTabSelected = onRootFeedTabSelected,
         showRootFeedDock = showRootFeedDock,
@@ -1184,7 +1222,7 @@ private val UnauthenticatedHomeUiState = HomeUiState(
         scheduledCount = 0,
         allCount = 0,
         priorityCount = 0,
-        anytimeCount = 0,
+        floaterCount = 0,
         completedCount = 0,
         lists = listOf(
             ListSummary(

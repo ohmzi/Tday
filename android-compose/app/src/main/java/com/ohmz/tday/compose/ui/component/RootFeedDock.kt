@@ -61,10 +61,10 @@ import kotlinx.coroutines.delay
 
 enum class RootFeedTab {
     HOME,
-    ANYTIME,
+    FLOATER,
 }
 
-private val RootFeedTabs = listOf(RootFeedTab.HOME, RootFeedTab.ANYTIME)
+private val RootFeedTabs = listOf(RootFeedTab.HOME, RootFeedTab.FLOATER)
 private val RootFeedSliderAccent = Color(0xFF7D67B6)
 private val RootFeedDockCollapsedWidth = 112.dp
 private val RootFeedDockHeight = 58.dp
@@ -78,7 +78,7 @@ private val RootFeedDockSelectorShape = RoundedCornerShape(18.dp)
 private fun RootFeedTab.label(): String {
     return when (this) {
         RootFeedTab.HOME -> "Home"
-        RootFeedTab.ANYTIME -> "Anytime"
+        RootFeedTab.FLOATER -> "Floater"
     }
 }
 

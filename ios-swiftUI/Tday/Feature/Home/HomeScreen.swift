@@ -439,11 +439,7 @@ struct HomeScreen: View {
         }
         openingSearchResultID = todo.id
         closeSearch()
-        if todo.due == nil {
-            onNavigate(.anytimeTodos)
-        } else {
-            onNavigate(.allTodos(highlightTodoId: todo.id))
-        }
+        onNavigate(.allTodos(highlightTodoId: todo.id))
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             openingSearchResultID = nil
         }
@@ -639,7 +635,7 @@ private struct HomeTodayTaskRow: View {
 
     private var priorityIcon: String? { priorityIndicatorSymbolName(todo.priority) }
     private var isOverdue: Bool { !todo.completed && (todo.due ?? .distantFuture) < Date() }
-    private var dueText: String { todo.due?.formatted(date: .omitted, time: .shortened) ?? "Anytime" }
+    private var dueText: String { todo.due?.formatted(date: .omitted, time: .shortened) ?? "" }
     private var subtitleText: String { isOverdue ? "Overdue, \(dueText)" : "Due \(dueText)" }
     private var subtitleColor: Color { isOverdue ? colors.error : colors.onSurfaceVariant.opacity(0.8) }
     private var isCompleting: Bool { completionPhase != .active }
@@ -1214,7 +1210,7 @@ private struct HomeSearchResultsOverlay: View {
                                         .foregroundStyle(colors.onSurface)
                                         .lineLimit(1)
 
-                                    Text(todo.due.map(Self.dueFormatter.string(from:)) ?? "Anytime")
+                                    Text(todo.due.map(Self.dueFormatter.string(from:)) ?? "")
                                         .font(.tdayRounded(size: 12, weight: .bold))
                                         .foregroundStyle(colors.onSurfaceVariant)
                                         .lineLimit(1)
@@ -1385,7 +1381,7 @@ private struct HomeTdayLogoMark: View {
     }
 }
 
-private struct CreateListSheet: View {
+struct CreateListSheet: View {
     let onSubmit: (String, String?, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss

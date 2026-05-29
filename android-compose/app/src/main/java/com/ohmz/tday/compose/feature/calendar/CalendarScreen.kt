@@ -2062,7 +2062,7 @@ private fun CalendarTaskDragPreview(
                     maxLines = 1,
                 )
                 Text(
-                    text = todo.due?.let(CalendarTaskDragDueTimeFormatter::format) ?: "Anytime",
+                    text = todo.due?.let(CalendarTaskDragDueTimeFormatter::format) ?: "Floater",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -2150,7 +2150,7 @@ private fun CalendarTodoRow(
     )
     val dueText = todo.due
         ?.let { DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(it) }
-        ?: "Anytime"
+        ?: "Floater"
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = listMeta != null
     val priorityIcon = priorityIconFor(todo.priority)
@@ -2443,7 +2443,7 @@ private fun CalendarCompletedTodoRow(
     )
     val dueText = item.due
         ?.let { DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(it) }
-        ?: "Anytime"
+        ?: "Floater"
     val listMeta = item.resolveListSummary(lists)
     val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
         ?: item.listColor?.let(::listAccentColor)
