@@ -23,6 +23,17 @@ struct PullToRefreshContainer<Content: View>: View {
     }
 }
 
+extension View {
+    func tdayPullToRefresh(
+        isRefreshing: Bool,
+        action: @escaping @Sendable () async -> Void
+    ) -> some View {
+        PullToRefreshContainer(isRefreshing: isRefreshing, action: action) {
+            self
+        }
+    }
+}
+
 private struct RefreshContainerBody<Content: View>: View {
     let isRefreshing: Bool
     let action: @Sendable () async -> Void
@@ -237,13 +248,20 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
         }
     }
 
-    final class Coordinator {
+    final class Coordinator: NSObject {
         var onChange: (CGFloat) -> Void
         private weak var observedScrollView: UIScrollView?
         private var observation: NSKeyValueObservation?
+        private var overscrollDistance: CGFloat = 0
+        private var gesturePullDistance: CGFloat = 0
+        private var pullStartTranslationY: CGFloat?
 
         init(onChange: @escaping (CGFloat) -> Void) {
             self.onChange = onChange
+        }
+
+        deinit {
+            observedScrollView?.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
         }
 
         func attach(to view: UIView) {
@@ -257,17 +275,56 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
                 return
             }
 
+            observedScrollView?.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
             observedScrollView = scrollView
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
             observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
                 self?.hideNativeRefreshControl(in: scrollView)
                 let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
-                let pullDistance = max(-normalizedOffset, 0)
-                if Thread.isMainThread {
-                    self?.onChange(pullDistance)
-                } else {
-                    DispatchQueue.main.async {
-                        self?.onChange(pullDistance)
+                self?.overscrollDistance = max(-normalizedOffset, 0)
+                self?.emitPullDistance()
+            }
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let scrollView = observedScrollView else {
+                return
+            }
+
+            let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
+            let translationY = gesture.translation(in: scrollView).y
+
+            switch gesture.state {
+            case .began:
+                pullStartTranslationY = nil
+                gesturePullDistance = 0
+            case .changed:
+                if normalizedOffset <= 1, translationY > 0 {
+                    if pullStartTranslationY == nil {
+                        pullStartTranslationY = translationY
                     }
+                    gesturePullDistance = max(translationY - (pullStartTranslationY ?? translationY), 0)
+                } else if normalizedOffset > 1 || translationY <= 0 {
+                    pullStartTranslationY = nil
+                    gesturePullDistance = 0
+                }
+            case .ended, .cancelled, .failed:
+                pullStartTranslationY = nil
+                gesturePullDistance = 0
+            default:
+                break
+            }
+
+            emitPullDistance()
+        }
+
+        private func emitPullDistance() {
+            let pullDistance = max(overscrollDistance, gesturePullDistance)
+            if Thread.isMainThread {
+                onChange(pullDistance)
+            } else {
+                DispatchQueue.main.async {
+                    self.onChange(pullDistance)
                 }
             }
         }

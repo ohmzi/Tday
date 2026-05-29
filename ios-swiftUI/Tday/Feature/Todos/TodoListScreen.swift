@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 private let todoDragContentTypes = [UTType.plainText.identifier, UTType.text.identifier]
 private let todoTimelineDragCoordinateSpace = "todoTimelineDragCoordinateSpace"
+private let todoTimelineScrollTopID = "todo-timeline-scroll-top"
 
 private final class TodoTaskDragSession {
     static let shared = TodoTaskDragSession()
@@ -55,6 +56,8 @@ enum TodoTimelineMetrics {
     static let sectionHeaderBottomPadding: CGFloat = 2
     static let titleCollapseDistance: CGFloat = 64
     static let rootFeedTitleTopInset: CGFloat = 32
+    static let timelineBottomSpacerHeight: CGFloat = 120
+    static let rootFloaterBottomSpacerHeight: CGFloat = 12
     static let rootDockCollapseThreshold: CGFloat = 44
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
@@ -564,6 +567,7 @@ struct TodoListScreen: View {
     let showsRootControls: Bool
     let usesRootFeedHeader: Bool
     let createTaskRequestID: Int
+    let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
     let onOpenFloaterList: (String, String) -> Void
@@ -591,6 +595,7 @@ struct TodoListScreen: View {
     @State private var rootFloaterSearchExpanded = false
     @State private var rootFloaterSearchQuery = ""
     @State private var openingRootFloaterSearchResultID: String?
+    @State private var openSwipeTaskID: String?
 
     init(
         container: AppContainer,
@@ -603,6 +608,7 @@ struct TodoListScreen: View {
         showsRootControls: Bool = true,
         usesRootFeedHeader: Bool = false,
         createTaskRequestID: Int = 0,
+        scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
         onOpenFloaterList: @escaping (String, String) -> Void = { _, _ in },
@@ -616,6 +622,7 @@ struct TodoListScreen: View {
         self.showsRootControls = showsRootControls
         self.usesRootFeedHeader = usesRootFeedHeader
         self.createTaskRequestID = createTaskRequestID
+        self.scrollToTopRequestID = scrollToTopRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
         self.onOpenFloaterList = onOpenFloaterList
@@ -647,6 +654,11 @@ struct TodoListScreen: View {
 
     private var isRootFloaterScreen: Bool {
         viewModel.mode == .floater && viewModel.listId == nil
+    }
+
+    private var isListDetailScreen: Bool {
+        viewModel.mode == .list ||
+            (viewModel.mode == .floater && !(viewModel.listId?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true))
     }
 
     private var floaterListByID: [String: ListSummary] {
@@ -720,6 +732,10 @@ struct TodoListScreen: View {
         max(timelineScrollOffset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold
     }
 
+    private var minimalTimelineBottomSpacerHeight: CGFloat {
+        isRootFloaterScreen ? TodoTimelineMetrics.rootFloaterBottomSpacerHeight : TodoTimelineMetrics.timelineBottomSpacerHeight
+    }
+
     private var timelineItemAnimationKey: String {
         let itemIDs = viewModel.items.map(\.id).joined(separator: "|")
         let completingIDs = completionPhases.keys.sorted().joined(separator: "|")
@@ -739,7 +755,7 @@ struct TodoListScreen: View {
                 action: presentSummary
             )
         }
-        if viewModel.mode == .list {
+        if isListDetailScreen {
             return TimelineTopBarAction(
                 systemName: "ellipsis",
                 usesCircularChrome: true,
@@ -761,6 +777,9 @@ struct TodoListScreen: View {
 
     var body: some View {
         modeContent
+        .tdayPullToRefresh(isRefreshing: viewModel.isLoading) {
+            await viewModel.refresh()
+        }
         .coordinateSpace(name: todoTimelineDragCoordinateSpace)
         .background(colors.background)
         .onPreferenceChange(TodoDropTargetFramePreferenceKey.self) { frames in
@@ -835,7 +854,7 @@ struct TodoListScreen: View {
         .onChange(of: viewModel.items) {
             handleItemsChanged()
         }
-        .safeAreaInset(edge: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if showsRootControls {
                 floatingActionButtonDock
             } else {
@@ -929,7 +948,7 @@ struct TodoListScreen: View {
                     }
                 }
             }
-            if viewModel.mode == .list {
+            if isListDetailScreen {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showingListSettings = true
@@ -1082,38 +1101,46 @@ struct TodoListScreen: View {
     }
 
     private var summarySheetContent: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            TdaySheetHeader(
+                title: "AI Summary",
+                closeAccessibilityLabel: "Close",
+                confirmSystemName: nil,
+                onClose: { showingSummary = false }
+            )
+
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    if viewModel.isSummarizing {
-                        ProgressView()
-                    } else if let summaryText = viewModel.summaryText {
-                        Text(summaryText)
-                            .font(.tdayRounded(.body, weight: .bold))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else if viewModel.summaryConnectivityError {
-                        ErrorRetryView(message: "Summary needs a network connection.") {
-                            Task { await viewModel.summarizeCurrentMode() }
+                TdaySheetCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if viewModel.isSummarizing {
+                            ProgressView()
+                        } else if let summaryText = viewModel.summaryText {
+                            Text(summaryText)
+                                .font(.tdayRounded(.body, weight: .bold))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else if viewModel.summaryConnectivityError {
+                            ErrorRetryView(message: "Summary needs a network connection.") {
+                                Task { await viewModel.summarizeCurrentMode() }
+                            }
+                        } else if let summaryError = viewModel.summaryError {
+                            Text(summaryError)
+                                .foregroundStyle(colors.error)
+                        } else {
+                            Text("No summary available.")
                         }
-                    } else if let summaryError = viewModel.summaryError {
-                        Text(summaryError)
-                            .foregroundStyle(colors.error)
-                    } else {
-                        Text("No summary available.")
                     }
+                    .padding(18)
                 }
-                .padding(20)
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, 24)
             }
-            .background(colors.bottomSheetBackground)
-            .navigationTitle("AI Summary")
             .disableVerticalScrollBounce()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { showingSummary = false }
-                }
-            }
         }
+        .background(colors.bottomSheetBackground.ignoresSafeArea())
         .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(34)
         .presentationBackground {
             colors.bottomSheetBackground
                 .ignoresSafeArea(.container, edges: .bottom)
@@ -1141,6 +1168,9 @@ struct TodoListScreen: View {
         inAppDrag = nil
         dropTargetFrames = [:]
         TodoTaskDragSession.shared.todo = nil
+        if let openSwipeTaskID, !viewModel.items.contains(where: { $0.id == openSwipeTaskID }) {
+            self.openSwipeTaskID = nil
+        }
         if viewModel.mode == .all, highlightedTodoId != nil {
             collapsedSectionIDs = []
         }
@@ -1207,6 +1237,7 @@ struct TodoListScreen: View {
     }
 
     private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
+        openSwipeTaskID = nil
         if draggedTodo?.id != todo.id {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
@@ -1570,7 +1601,7 @@ struct TodoListScreen: View {
                 }
 
                 Color.clear
-                    .frame(height: 120)
+                    .frame(height: TodoTimelineMetrics.timelineBottomSpacerHeight)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(colors.background)
                     .listRowSeparator(.hidden)
@@ -1593,6 +1624,7 @@ struct TodoListScreen: View {
             ZStack {
                 List {
                     timelineHeroTitleRow
+                        .id(todoTimelineScrollTopID)
 
                     if showRootFloaterSearchResults {
                         FloaterSearchResultsCard(
@@ -1661,7 +1693,7 @@ struct TodoListScreen: View {
                     }
 
                     Color.clear
-                        .frame(height: 120)
+                        .frame(height: minimalTimelineBottomSpacerHeight)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
@@ -1687,6 +1719,13 @@ struct TodoListScreen: View {
             .onChange(of: viewModel.items) {
                 scrollToHighlightedTodo(using: scrollProxy)
             }
+            .onChange(of: scrollToTopRequestID) { _, requestID in
+                guard requestID > 0, isRootFloaterScreen else { return }
+                closeRootFloaterSearch()
+                withAnimation(.easeInOut(duration: 0.34)) {
+                    scrollProxy.scrollTo(todoTimelineScrollTopID, anchor: .top)
+                }
+            }
         }
     }
 
@@ -1711,10 +1750,12 @@ struct TodoListScreen: View {
                         .foregroundStyle(colors.tertiary)
                 }
             }
-            HStack(spacing: 6) {
-                Text(todo.due?.formatted(date: .abbreviated, time: .shortened) ?? "Floater")
-                    .font(.tdayRounded(size: 12, weight: .semibold))
-                    .foregroundStyle(colors.onSurfaceVariant)
+            if let due = todo.due {
+                HStack(spacing: 6) {
+                    Text(due.formatted(date: .abbreviated, time: .shortened))
+                        .font(.tdayRounded(size: 12, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                }
             }
             if let description = todo.description, !description.isEmpty {
                 Text(description)
@@ -1730,6 +1771,8 @@ struct TodoListScreen: View {
         .opacity(draggedTodo?.id == todo.id && activeDropSectionId != nil ? 0.55 : 1)
         .allowsHitTesting(!isCompleting)
         .todoTrailingSwipeActions(
+            rowID: todo.id,
+            openRowID: $openSwipeTaskID,
             enabled: !isCompleting,
             onEdit: {
                 editingTodo = todo
@@ -1814,9 +1857,11 @@ struct TodoListScreen: View {
                         strikeColor: colors.onSurface.opacity(0.65)
                     )
 
-                    Text(subtitleText)
-                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
-                        .foregroundStyle(subtitleColor)
+                    if let subtitleText {
+                        Text(subtitleText)
+                            .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
+                            .foregroundStyle(subtitleColor)
+                    }
                 }
 
                 Spacer(minLength: 0)
@@ -1848,6 +1893,8 @@ struct TodoListScreen: View {
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
         .todoTrailingSwipeActions(
+            rowID: todo.id,
+            openRowID: $openSwipeTaskID,
             enabled: !isCompleting,
             onEdit: {
                 editingTodo = todo
@@ -1883,6 +1930,9 @@ struct TodoListScreen: View {
     private func completeTodoWithoutReflow(_ todo: TodoItem) {
         guard completionPhases[todo.id] == nil else {
             return
+        }
+        if openSwipeTaskID == todo.id {
+            openSwipeTaskID = nil
         }
         withAnimation(.easeInOut(duration: 0.16)) {
             completionPhases[todo.id] = .checked
@@ -2081,9 +2131,9 @@ struct TodoListScreen: View {
         return .asymmetric(insertion: insertion, removal: removal)
     }
 
-    private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String {
+    private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String? {
         guard let due = todo.due else {
-            return "Floater"
+            return nil
         }
         let timeText = due.formatted(date: .omitted, time: .shortened)
         let dueBodyText = if section.id == "earlier" &&
@@ -2114,7 +2164,7 @@ struct TodoListScreen: View {
             }
             return "Due \(dueBodyText)"
         case .floater:
-            return "Floater"
+            return nil
         case .list:
             if !todo.completed && due < Date() {
                 return "Overdue, \(dueBodyText)"
@@ -2531,10 +2581,12 @@ private struct TodoDragPreview: View {
                     .font(.tdayRounded(size: 16, weight: .bold))
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
-                Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Floater")
-                    .font(.tdayRounded(size: 12, weight: .semibold))
-                    .foregroundStyle(colors.onSurfaceVariant)
-                    .lineLimit(1)
+                if let due = todo.due {
+                    Text(due.formatted(date: .omitted, time: .shortened))
+                        .font(.tdayRounded(size: 12, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 0)
@@ -2944,62 +2996,77 @@ private struct ListDeleteConfirmationOverlay: View {
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onCancel)
 
-            VStack(alignment: .leading, spacing: 22) {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Delete list?")
-                        .font(.tdayRounded(.title2, weight: .black))
-                        .foregroundStyle(colors.onSurface)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+            TdaySheetOverlayCard {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Delete list?")
+                            .font(.tdayRounded(.title2, weight: .black))
+                            .foregroundStyle(colors.onSurface)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
 
-                    Text("This will delete this list, every task in it, and completed history for those tasks.")
-                        .font(.tdayRounded(.body, weight: .heavy))
-                        .foregroundStyle(colors.onSurfaceVariant)
-                        .lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                HStack(spacing: 24) {
-                    Spacer(minLength: 0)
-
-                    Button(action: onCancel) {
-                        Text("Cancel")
-                            .font(.tdayRounded(.headline, weight: .heavy))
-                            .foregroundStyle(colors.primary)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 8)
+                        Text("This will delete this list, every task in it, and completed history for those tasks.")
+                            .font(.tdayRounded(.body, weight: .heavy))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .buttonStyle(.plain)
 
-                    Button(role: .destructive, action: onDelete) {
-                        Text("Delete")
-                            .font(.tdayRounded(.headline, weight: .heavy))
-                            .foregroundStyle(colors.error)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 8)
+                    HStack(spacing: 24) {
+                        Spacer(minLength: 0)
+
+                        Button(action: onCancel) {
+                            Text("Cancel")
+                                .font(.tdayRounded(.headline, weight: .heavy))
+                                .foregroundStyle(colors.primary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(role: .destructive, action: onDelete) {
+                            Text("Delete")
+                                .font(.tdayRounded(.headline, weight: .heavy))
+                                .foregroundStyle(colors.error)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 20)
+                .frame(maxWidth: 330, alignment: .leading)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 24)
-            .padding(.bottom, 20)
-            .frame(maxWidth: 330, alignment: .leading)
-            .background(
-                colors.bottomSheetSurface,
-                in: RoundedRectangle(cornerRadius: 30, style: .continuous)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .stroke(colors.cardStroke, lineWidth: 1)
-            }
-            .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.14), radius: 24, x: 0, y: 12)
             .padding(.horizontal, 34)
             .contentShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
             .onTapGesture {}
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .contain)
+    }
+}
+
+private enum ListSettingsSheetMetrics {
+    static let initialSheetHeight: CGFloat = 760
+    static let maximumHeightFraction: CGFloat = 0.94
+    static let bottomContentPadding: CGFloat = 24
+}
+
+private struct ListSettingsSheetHeaderHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct ListSettingsSheetContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
@@ -3014,6 +3081,8 @@ private struct ListSettingsSheet: View {
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
+    @State private var headerHeight: CGFloat = 84
+    @State private var contentHeight: CGFloat = ListSettingsSheetMetrics.initialSheetHeight - 84
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -3031,18 +3100,39 @@ private struct ListSettingsSheet: View {
         todoListSymbolName(for: iconKey)
     }
 
+    private var maximumSheetHeight: CGFloat {
+        max(1, UIScreen.main.bounds.height * ListSettingsSheetMetrics.maximumHeightFraction)
+    }
+
+    private var measuredSheetHeight: CGFloat {
+        min(max(headerHeight + contentHeight, 1), maximumSheetHeight)
+    }
+
+    private var contentNeedsScrolling: Bool {
+        headerHeight + contentHeight > maximumSheetHeight
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            ListSettingsSheetHeader(
-                canSave: canSave,
+            TdaySheetHeader(
+                title: "List settings",
+                closeAccessibilityLabel: "Cancel",
+                confirmAccessibilityLabel: "Save",
+                isConfirmEnabled: canSave,
                 onClose: { dismiss() },
                 onConfirm: submit
+            )
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: ListSettingsSheetHeaderHeightKey.self, value: ceil(proxy.size.height))
+                }
             )
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
-                    ListSettingsSheetSectionTitle(text: "List")
-                    ListSettingsSheetCard {
+                    TdaySheetSectionTitle(text: "List")
+                    TdaySheetCard {
                         VStack(spacing: 18) {
                             ZStack {
                                 Circle()
@@ -3084,8 +3174,8 @@ private struct ListSettingsSheet: View {
                         .padding(.vertical, 18)
                     }
 
-                    ListSettingsSheetSectionTitle(text: "Color")
-                    ListSettingsSheetCard {
+                    TdaySheetSectionTitle(text: "Color")
+                    TdaySheetCard {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
                                 ForEach(todoListSettingsColorKeys, id: \.self) { colorKey in
@@ -3122,8 +3212,8 @@ private struct ListSettingsSheet: View {
                         }
                     }
 
-                    ListSettingsSheetSectionTitle(text: "Icon")
-                    ListSettingsSheetCard {
+                    TdaySheetSectionTitle(text: "Icon")
+                    TdaySheetCard {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(todoListSettingsIconKeys, id: \.self) { optionKey in
@@ -3172,14 +3262,21 @@ private struct ListSettingsSheet: View {
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 14)
-                .padding(.bottom, 24)
+                .padding(.bottom, ListSettingsSheetMetrics.bottomContentPadding)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .preference(key: ListSettingsSheetContentHeightKey.self, value: ceil(proxy.size.height))
+                    }
+                )
             }
+            .scrollDisabled(!contentNeedsScrolling)
             .scrollDismissesKeyboard(.interactively)
             .disableVerticalScrollBounce()
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .background(tdayColors.bottomSheetBackground.ignoresSafeArea())
-        .presentationDetents([.fraction(0.8)])
+        .presentationDetents([.height(measuredSheetHeight)])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground {
@@ -3192,6 +3289,13 @@ private struct ListSettingsSheet: View {
             color = normalizedTodoListColorKey(list?.color)
             iconKey = normalizedTodoListIconKey(list?.iconKey)
         }
+        .onPreferenceChange(ListSettingsSheetHeaderHeightKey.self) { height in
+            headerHeight = max(height, 1)
+        }
+        .onPreferenceChange(ListSettingsSheetContentHeightKey.self) { height in
+            contentHeight = max(height, 1)
+        }
+        .animation(.snappy(duration: 0.24), value: measuredSheetHeight)
     }
 
     private func submit() {
@@ -3207,77 +3311,6 @@ private struct ListSettingsSheet: View {
             .split(separator: " ")
             .map { $0.capitalized }
             .joined(separator: " ")
-    }
-}
-
-private struct ListSettingsSheetHeader: View {
-    let canSave: Bool
-    let onClose: () -> Void
-    let onConfirm: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        HStack {
-            ListSettingsSheetActionButton(
-                icon: "xmark",
-                accessibilityLabel: "Cancel",
-                accentColor: Color(red: 227.0 / 255.0, green: 90.0 / 255.0, blue: 90.0 / 255.0),
-                enabled: true,
-                action: onClose
-            )
-
-            Spacer(minLength: 0)
-
-            Text("List settings")
-                .font(.tdayRounded(size: 22, weight: .heavy))
-                .foregroundStyle(colors.onSurface)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-
-            Spacer(minLength: 0)
-
-            ListSettingsSheetActionButton(
-                icon: "checkmark",
-                accessibilityLabel: "Save",
-                accentColor: Color(red: 47.0 / 255.0, green: 163.0 / 255.0, blue: 91.0 / 255.0),
-                enabled: canSave,
-                action: onConfirm
-            )
-        }
-        .padding(.horizontal, 18)
-        .padding(.top, 14)
-        .padding(.bottom, 14)
-        .background(colors.bottomSheetBackground)
-    }
-}
-
-private struct ListSettingsSheetSectionTitle: View {
-    let text: String
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Text(text)
-            .font(.tdayRounded(size: 22, weight: .bold))
-            .foregroundStyle(colors.onSurfaceVariant)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
-    }
-}
-
-private struct ListSettingsSheetCard<Content: View>: View {
-    @Environment(\.tdayColors) private var colors
-
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        content
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(colors.bottomSheetSurface)
-            )
     }
 }
 
@@ -3322,41 +3355,6 @@ private struct ListSettingsSheetDeleteButton: View {
             )
         )
         .accessibilityLabel("Delete list")
-    }
-}
-
-private struct ListSettingsSheetActionButton: View {
-    let icon: String
-    let accessibilityLabel: String
-    let accentColor: Color
-    let enabled: Bool
-    let action: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
-                .frame(width: 54, height: 54)
-                .background(colors.bottomSheetControlSurface, in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(accentColor.opacity(enabled ? 0.55 : 0.3), lineWidth: 1.5)
-                }
-                .contentShape(Circle())
-        }
-        .buttonStyle(
-            TdayPressButtonStyle(
-                shadowColor: Color.black,
-                pressedShadowOpacity: 0.04,
-                normalShadowOpacity: enabled ? 0.16 : 0.06
-            )
-        )
-        .disabled(!enabled)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -3914,7 +3912,7 @@ func priorityIndicatorSymbolName(_ priority: String) -> String? {
     case "medium":
         return "flag.fill"
     case "high", "urgent", "important":
-        return "exclamationmark.circle.fill"
+        return "flag.fill"
     default:
         return nil
     }
@@ -3971,6 +3969,9 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
     case .priority:
         return todoHexColor(0xE65E52)
     case .floater:
+        if let listColorKey, !listColorKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return todoListAccentColor(for: listColorKey)
+        }
         return todoHexColor(0x4D8F83)
     case .list:
         return todoListAccentColor(for: listColorKey)

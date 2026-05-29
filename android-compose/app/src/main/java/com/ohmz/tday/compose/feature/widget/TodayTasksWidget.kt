@@ -143,10 +143,9 @@ private fun TaskRow(task: CachedTodoRecord) {
         .withZone(ZoneId.systemDefault())
     val dueText = task.dueEpochMs
         ?.let { timeFormatter.format(Instant.ofEpochMilli(it)) }
-        ?: "Floater"
     val priorityColor = when (task.priority.lowercase()) {
-        "high" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFE53935))
-        "medium" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFFB8C00))
+        "high" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFFF3B30))
+        "medium" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFFF9500))
         else -> GlanceTheme.colors.onSurfaceVariant
     }
 
@@ -180,15 +179,17 @@ private fun TaskRow(task: CachedTodoRecord) {
                 maxLines = 1,
             )
         }
-        Spacer(modifier = GlanceModifier.width(6.dp))
-        Text(
-            text = dueText,
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurfaceVariant,
-                fontFamily = TdayWidgetFontFamily,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-            ),
-        )
+        dueText?.let { text ->
+            Spacer(modifier = GlanceModifier.width(6.dp))
+            Text(
+                text = text,
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurfaceVariant,
+                    fontFamily = TdayWidgetFontFamily,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+        }
     }
 }
