@@ -11,7 +11,7 @@ T'Day is a **monorepo application** with a Kotlin/Ktor backend, a React SPA fron
 │                        Clients                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │  Web (React)  │  │ Android App  │  │    iOS App      │  │
-│  │  Vite SPA     │  │ Compose/Room │  │ SwiftUI/Cache  │  │
+│  │  Vite SPA     │  │ Compose/Room │  │ SwiftUI/Data   │  │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────────┘  │
 │         │                 │                  │               │
 └─────────┼─────────────────┼──────────────────┼───────────────┘
@@ -130,7 +130,8 @@ tday-backend/src/main/kotlin/com/ohmz/tday/
 │   └── DatabaseConfig.kt   # HikariCP pool, Flyway migrate, Exposed connect
 ├── db/
 │   ├── enums/PgEnums.kt    # PostgreSQL enum ↔ shared Kotlin enum mapping
-│   └── tables/             # Exposed Table definitions (Users, Todos, etc.)
+│   ├── tables/             # Exposed Table definitions (Users, Todos, etc.)
+│   └── util/               # Database utility helpers
 ├── di/AppModule.kt         # Koin modules: config, security, services
 ├── domain/
 │   ├── AppError.kt         # Sealed error hierarchy → HTTP status codes
@@ -208,9 +209,9 @@ tday-web/src/
 ├── globals.css           # Tailwind @theme tokens, CSS variables
 ├── i18n.ts               # i18next configuration (11 locales, path-based detection)
 ├── components/           # Shared UI (ui/* primitives, Sidebar, auth, todo pieces)
-├── features/             # Feature modules (calendar, list, todayTodos, completed)
+├── features/             # Feature modules (calendar, completed, list, release, todayTodos, user)
 ├── hooks/                # Shared React hooks
-├── lib/                  # Utilities (api-client, navigation, security, dates)
+├── lib/                  # Utilities (api-client, navigation, cache, performance, security, dates, todo)
 ├── pages/                # Route-level screens and layouts
 ├── providers/            # React context providers (Auth, Theme, Query, Menu, etc.)
 └── types/                # TypeScript type definitions
@@ -343,7 +344,7 @@ ios-swiftUI/Tday/
 └── AppRootView.swift # NavigationStack, root feed state, overlays, deep links
 ```
 
-Sentry Cocoa is the only notable third-party runtime dependency; core app behavior uses native frameworks.
+The widget extension lives beside the app target at `ios-swiftUI/TdayWidget/`, while iOS tests live in `ios-swiftUI/Tests/`. Sentry Cocoa is the only notable third-party runtime dependency; core app behavior uses native frameworks.
 
 ## Database Design
 
