@@ -6,55 +6,58 @@ This document captures maintenance expectations for T'Day so the repo stays easy
 
 The markdown inventory was checked on 2026-05-29 with `git log -1 --date=short -- <file>`.
 
-### Markdown Inventory Before This Refresh
+### Markdown Inventory At Audit Start
 
 | File | Last commit date | Commit |
 |------|------------------|--------|
-| `.github/ISSUE_TEMPLATE/bug_report.md` | 2026-03-24 | `d6d55e7` Add comprehensive project documentation, coding guardrails, and CI enforcement |
-| `.github/ISSUE_TEMPLATE/feature_request.md` | 2026-03-24 | `d6d55e7` Add comprehensive project documentation, coding guardrails, and CI enforcement |
-| `.github/PULL_REQUEST_TEMPLATE.md` | 2026-03-27 | `4bb1f60` docs: align all documentation with current Ktor/Vite/Exposed stack |
-| `AGENTS.md` | 2026-05-19 | `11221e0` Add agent project guidance |
-| `CONTRIBUTING.md` | 2026-03-27 | `4bb1f60` docs: align all documentation with current Ktor/Vite/Exposed stack |
-| `README.md` | 2026-05-19 | `11221e0` Add agent project guidance |
-| `SECURITY.md` | 2026-04-02 | `825c6bd` feat: implement app-layer request rate limiting and security hardening |
-| `android-compose/README.md` | 2026-03-24 | `d6d55e7` Add comprehensive project documentation, coding guardrails, and CI enforcement |
-| `docs/API_GUIDELINES.md` | 2026-04-02 | `825c6bd` feat: implement app-layer request rate limiting and security hardening |
-| `docs/ARCHITECTURE.md` | 2026-04-02 | `825c6bd` feat: implement app-layer request rate limiting and security hardening |
-| `docs/CODING_STANDARDS.md` | 2026-04-02 | `8dca84e` feat(release): add structured web release metadata |
-| `docs/DEPLOYMENT.md` | 2026-05-22 | `f18309d` Implement Android Credential Manager support for seamless login and registration. |
-| `docs/REMOTE_ACCESS.md` | 2026-03-30 | `d4b3e9e` docs: add remote access guides for all supported ingress methods |
-| `docs/TELEMETRY.md` | 2026-04-04 | `4b79a1b` feat: add Sentry telemetry across all platforms (v1.14.0) |
-| `docs/TESTING.md` | 2026-03-27 | `4bb1f60` docs: align all documentation with current Ktor/Vite/Exposed stack |
-| `docs/adr/001-next-js-monolith-with-native-mobile.md` | 2026-03-27 | `4bb1f60` docs: align all documentation with current Ktor/Vite/Exposed stack |
-| `docs/adr/002-postgresql-with-exposed.md` | 2026-03-27 | `c13b1cc` fix: harden auth and lazy-load locales |
-| `docs/adr/003-jwe-jwt-sessions.md` | 2026-04-01 | `6871121` fix(auth): add rolling web session renewal |
-| `docs/adr/004-local-ai-via-ollama.md` | 2026-03-24 | `d6d55e7` Add comprehensive project documentation, coding guardrails, and CI enforcement |
-| `docs/adr/005-offline-first-android-with-sync.md` | 2026-03-28 | `dad190d` Inline use-case logic into ViewModels and bump to v1.7.0 |
-| `docs/adr/006-rfc5545-recurrence.md` | 2026-03-27 | `4bb1f60` docs: align all documentation with current Ktor/Vite/Exposed stack |
-| `docs/remote-access/cloudflare-tunnel.md` | 2026-03-30 | `d4b3e9e` docs: add remote access guides for all supported ingress methods |
-| `docs/remote-access/frp.md` | 2026-03-30 | `d4b3e9e` docs: add remote access guides for all supported ingress methods |
-| `docs/remote-access/ngrok.md` | 2026-03-30 | `d4b3e9e` docs: add remote access guides for all supported ingress methods |
-| `docs/remote-access/ssh-tunnel.md` | 2026-03-30 | `d4b3e9e` docs: add remote access guides for all supported ingress methods |
-| `docs/remote-access/tailscale.md` | 2026-03-30 | `d4b3e9e` docs: add remote access guides for all supported ingress methods |
-| `docs/remote-access/wireguard.md` | 2026-03-30 | `d4b3e9e` docs: add remote access guides for all supported ingress methods |
-| `docs/remote-access/zerotier.md` | 2026-03-30 | `d4b3e9e` docs: add remote access guides for all supported ingress methods |
-| `docs/security/cloudflare-auth-hardening.md` | 2026-03-27 | `c13b1cc` fix: harden auth and lazy-load locales |
-| `docs/security/operations-hardening.md` | 2026-04-02 | `825c6bd` feat: implement app-layer request rate limiting and security hardening |
-| `ios-swiftUI/README.md` | 2026-05-22 | `a3a3c66` Fix mobile reminder deep links |
+| `.github/ISSUE_TEMPLATE/bug_report.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `.github/ISSUE_TEMPLATE/feature_request.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `.github/PULL_REQUEST_TEMPLATE.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `AGENTS.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `CONTRIBUTING.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `README.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `SECURITY.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `android-compose/README.md` | 2026-05-29 | `df1fd00` Centralize Android list icon visuals |
+| `docs/API_GUIDELINES.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/ARCHITECTURE.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/CODING_STANDARDS.md` | 2026-05-29 | `df1fd00` Centralize Android list icon visuals |
+| `docs/DATA_MODEL.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/DEPLOYMENT.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/PRODUCT_DIRECTION.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/REMOTE_ACCESS.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/REPO_HOUSEKEEPING.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/TELEMETRY.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/TESTING.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/adr/001-next-js-monolith-with-native-mobile.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/adr/002-postgresql-with-exposed.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/adr/003-jwe-jwt-sessions.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/adr/004-local-ai-via-ollama.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/adr/005-offline-first-android-with-sync.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/adr/006-rfc5545-recurrence.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/adr/007-local-mode-and-floater-workspace.md` | 2026-05-29 | `1c5effd` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/remote-access/cloudflare-tunnel.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/remote-access/frp.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/remote-access/ngrok.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/remote-access/ssh-tunnel.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/remote-access/tailscale.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/remote-access/wireguard.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/remote-access/zerotier.md` | 2026-05-29 | `1c5effd` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/security/cloudflare-auth-hardening.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/security/operations-hardening.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `ios-swiftUI/README.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 
 ### Summary By Area
 
 | Area | Last updated before this refresh | Notes |
 |------|----------------------------------|-------|
-| Root README / agent guide | 2026-05-19 | Behind Local Mode, RootFeedDock, Floater/Anytime, and recent mobile parity work. |
-| Contributing / testing / ADR base | 2026-03-27 | Behind the current Ktor/Vite/mobile architecture and native iOS expectations. |
-| Architecture / API / security hardening docs | 2026-04-02 | Missing floater APIs, Room cache, SwiftData parity, local mode, and current mobile data flow. |
-| Deployment | 2026-05-22 | Mostly current for release/versioning, but now needs mobile local/server mode context. |
-| Telemetry | 2026-04-04 | Still accurate in spirit; should mention Local Mode and mobile cache privacy boundaries. |
-| Android README | 2026-03-24 | Behind Room cache, RootFeedDock, Floater, Local Mode, widgets, and update flow. |
-| iOS README | 2026-05-22 | Behind Local Mode, RootFeedDock, Floater, and current app structure. |
-| Issue/PR templates | 2026-03-24 to 2026-03-27 | Missing iOS, Local Mode, data contract, and docs-impact prompts. |
-| Remote access guides | 2026-03-30 | Still scoped to ingress setup; update only when ports, host binding, or recommended ingress changes. |
+| Root README / agent guide | 2026-05-29 | Refreshed for Local Mode, RootFeedDock, Floater/Anytime, mobile parity, and agent expectations. |
+| Contributing / testing / ADR base | 2026-05-29 | Updated around current monorepo structure, verification expectations, and decision record links. |
+| Architecture / API / data docs | 2026-05-29 | Covers floater APIs, Room cache, SwiftData cache, local mode, sync mutations, and mobile data flow. |
+| Deployment / telemetry / security | 2026-05-29 | Covers mobile local/server mode context, credential handling, telemetry boundaries, and operations hardening. |
+| Android README | 2026-05-29 | Covers Room cache, RootFeedDock, Floater, Local Mode, widgets, in-app updates, and shared list icon resources. |
+| iOS README | 2026-05-29 | Covers Local Mode, RootFeedDock, Floater, SwiftData cache, and current native app structure. |
+| Issue/PR templates | 2026-05-29 | Includes mobile parity, data contract, Local Mode, and docs-impact prompts. |
+| Remote access guides | 2026-05-29 | Scoped to ingress setup; update only when ports, host binding, certificate trust, or recommended ingress changes. |
 
 ## Recent Product Changes Audited
 
