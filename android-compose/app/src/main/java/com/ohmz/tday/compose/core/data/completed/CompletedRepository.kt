@@ -69,6 +69,8 @@ class CompletedRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         if (originalTodoId.startsWith(LOCAL_TODO_PREFIX)) return
 
         runCatching {
@@ -158,6 +160,8 @@ class CompletedRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         requireApiBody(
             api.patchCompletedTodoByBody(
                 UpdateCompletedTodoRequest(
@@ -207,6 +211,8 @@ class CompletedRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         if (resolvedCompletedId.startsWith(LOCAL_COMPLETED_PREFIX)) return
 
         requireApiBody(
@@ -222,6 +228,10 @@ class CompletedRepository @Inject constructor(
         canonicalTodoId: String?,
         instanceDateEpochMs: Long?,
     ): String {
+        if (syncManager.isLocalMode()) {
+            return currentCompletedId
+        }
+
         if (!currentCompletedId.startsWith(LOCAL_COMPLETED_PREFIX)) {
             return currentCompletedId
         }

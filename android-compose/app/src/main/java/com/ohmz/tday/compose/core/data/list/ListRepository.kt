@@ -74,6 +74,8 @@ class ListRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         runCatching {
             requireApiBody(
                 api.createList(
@@ -164,6 +166,7 @@ class ListRepository @Inject constructor(
             iconKey?.takeIf { it.isNotBlank() }?.let {
                 secureConfigStore.saveListIcon(listId, it)
             }
+            if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             Log.d(LOG_TAG, "updateList local-list path finished listId=$listId")
             return
@@ -195,6 +198,13 @@ class ListRepository @Inject constructor(
                         iconKey = iconKey,
                     ),
             )
+        }
+
+        if (syncManager.isLocalMode()) {
+            iconKey?.takeIf { it.isNotBlank() }?.let {
+                secureConfigStore.saveListIcon(listId, it)
+            }
+            return
         }
 
         Log.d(LOG_TAG, "updateList patch /api/list listId=$listId")
@@ -285,6 +295,8 @@ class ListRepository @Inject constructor(
         }
 
         onOptimisticDelete()
+
+        if (syncManager.isLocalMode()) return
 
         if (isLocalOnly) {
             syncManager.syncCachedData(force = true, replayPendingMutations = true)

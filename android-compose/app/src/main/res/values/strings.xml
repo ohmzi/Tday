@@ -65,9 +65,20 @@
 
     <!-- Onboarding / wizard -->
     <string name="onboarding_title">Set Up T\'Day</string>
-    <string name="onboarding_subtitle">Secure onboarding wizard</string>
+    <string name="onboarding_subtitle">Set up your workspace</string>
+    <string name="onboarding_step_mode">Mode</string>
     <string name="onboarding_step_server">Server</string>
     <string name="onboarding_step_login">Login</string>
+    <string name="onboarding_mode_title">Choose your setup</string>
+    <string name="onboarding_mode_subtitle">Pick where T\'Day keeps your tasks.</string>
+    <string name="onboarding_mode_server_title">Self-hosted server</string>
+    <string name="onboarding_mode_server_subtitle">Use accounts, sync, and your backend.</string>
+    <string name="onboarding_mode_server_short_title">Self-hosted</string>
+    <string name="onboarding_mode_server_short_subtitle">Accounts and sync</string>
+    <string name="onboarding_mode_local_short_title">This device</string>
+    <string name="onboarding_mode_local_short_subtitle">No login</string>
+    <string name="onboarding_mode_local_subtitle">No login. Data stays in app storage.</string>
+    <string name="onboarding_server_hero_subtitle">Connect your T\'Day endpoint.</string>
     <string name="onboarding_server_url_label">Server URL</string>
     <string name="onboarding_server_url_placeholder">https://app.example.com</string>
     <string name="onboarding_reset_trust">Reset trusted server</string>
@@ -75,11 +86,15 @@
     <string name="onboarding_connect">Connect</string>
     <string name="onboarding_connecting_title">Connecting to server…</string>
     <string name="onboarding_connecting_subtitle">Checking endpoint, TLS, and workspace settings</string>
+    <string name="onboarding_use_device_only">Use this device only</string>
     <string name="onboarding_email_label">Email</string>
     <string name="onboarding_password_label">Password</string>
     <string name="onboarding_sign_in">Sign in</string>
+    <string name="onboarding_login_hero_subtitle">Open your synced workspace.</string>
     <string name="onboarding_create_account">Create account</string>
+    <string name="onboarding_register_hero_subtitle">Create your server account.</string>
     <string name="onboarding_change_server">Change server</string>
+    <string name="onboarding_change_setup">Change setup</string>
     <string name="onboarding_first_name_label">First name</string>
     <string name="onboarding_confirm_password_label">Confirm password</string>
     <string name="onboarding_creating_account">Creating account…</string>

@@ -73,6 +73,7 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 @Composable
 fun SettingsScreen(
     user: SessionUser?,
+    isLocalMode: Boolean = false,
     selectedThemeMode: AppThemeMode,
     selectedReminder: ReminderOption,
     adminAiSummaryEnabled: Boolean?,
@@ -120,9 +121,11 @@ fun SettingsScreen(
                 .padding(horizontal = 18.dp, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SettingsProfileCard(
-                user = user,
-            )
+            if (!isLocalMode) {
+                SettingsProfileCard(
+                    user = user,
+                )
+            }
 
             SettingsSectionCard {
                 SettingsSectionTitle(title = stringResource(R.string.settings_appearance))
@@ -138,7 +141,7 @@ fun SettingsScreen(
                 )
             }
 
-            if (isAdminUser) {
+            if (!isLocalMode && isAdminUser) {
                 SettingsSectionCard {
                     SettingsSectionTitle(title = stringResource(R.string.settings_feature_toggle))
                     Row(
@@ -206,7 +209,7 @@ fun SettingsScreen(
                         fontWeight = FontWeight.ExtraBold,
                     )
                 }
-                if (backendVersion != null) {
+                if (!isLocalMode && backendVersion != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -242,15 +245,17 @@ fun SettingsScreen(
                         }
                     }
                 }
-                SettingsDivider()
-                SettingsListRow(
-                    title = stringResource(R.string.action_sign_out),
-                    value = null,
-                    onClick = onLogout,
-                    titleColor = colorScheme.error,
-                    trailingTint = colorScheme.error.copy(alpha = 0.72f),
-                    showChevron = false,
-                )
+                if (!isLocalMode) {
+                    SettingsDivider()
+                    SettingsListRow(
+                        title = stringResource(R.string.action_sign_out),
+                        value = null,
+                        onClick = onLogout,
+                        titleColor = colorScheme.error,
+                        trailingTint = colorScheme.error.copy(alpha = 0.72f),
+                        showChevron = false,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

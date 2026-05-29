@@ -35,6 +35,14 @@ final class ServerConfigRepository {
         serverURLState.currentURL != nil || secureStore.loadPersistedServerURL() != nil
     }
 
+    func appDataMode() -> AppDataMode {
+        secureStore.appDataMode()
+    }
+
+    func isLocalMode() -> Bool {
+        secureStore.isLocalMode()
+    }
+
     func getServerURL() -> URL? {
         serverURLState.currentURL ?? secureStore.loadPersistedServerURL()
     }
@@ -123,7 +131,17 @@ final class ServerConfigRepository {
     func clearServerConfiguration() {
         serverURLState.currentURL = nil
         secureStore.clearPersistedServerURL()
+        secureStore.clearAppDataMode()
         secureStore.clearAllTrustedFingerprints()
+    }
+
+    func enableLocalMode() {
+        serverURLState.currentURL = nil
+        secureStore.clearPersistedServerURL()
+        secureStore.clearCachedSessionUser()
+        secureStore.clearLastEmail()
+        secureStore.clearPersistedAuthSessionCookie()
+        secureStore.setAppDataMode(.local)
     }
 
     func buildAbsoluteAppURL(_ path: String) -> URL? {

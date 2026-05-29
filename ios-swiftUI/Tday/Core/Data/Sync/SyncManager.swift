@@ -97,17 +97,23 @@ func mergeCompletedFloaterRecordsWithPendingOverrides(
 final class SyncManager {
     private let api: TdayAPIService
     private let cacheManager: OfflineCacheManager
+    private let secureStore: SecureStore
 
     private let offlineResyncIntervalMs: Int64 = 5 * 60 * 1_000
     private let minForceSyncIntervalMs: Int64 = 1_200
 
-    init(api: TdayAPIService, cacheManager: OfflineCacheManager) {
+    init(api: TdayAPIService, cacheManager: OfflineCacheManager, secureStore: SecureStore) {
         self.api = api
         self.cacheManager = cacheManager
+        self.secureStore = secureStore
     }
 
     func hasPendingMutations() -> Bool {
-        !cacheManager.loadOfflineState().pendingMutations.isEmpty
+        !isLocalMode && !cacheManager.loadOfflineState().pendingMutations.isEmpty
+    }
+
+    var isLocalMode: Bool {
+        secureStore.isLocalMode()
     }
 
     func syncCachedData(
@@ -116,6 +122,19 @@ final class SyncManager {
         notifyOfflineFailure: Bool = true,
         connectionProbeTimeoutSeconds: TimeInterval? = nil
     ) async -> Result<Void, Error> {
+        if isLocalMode {
+            if let localState = try? await cacheManager.updateOfflineState({ state in
+                var nextState = state
+                nextState.lastSuccessfulSyncEpochMs = 0
+                nextState.lastSyncAttemptEpochMs = 0
+                nextState.pendingMutations = []
+                return nextState
+            }) {
+                TodayTasksWidgetSnapshotStore.saveTodayTasks(from: localState)
+            }
+            return .success(())
+        }
+
         do {
             var contactedServer = false
             if let connectionProbeTimeoutSeconds {

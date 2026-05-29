@@ -88,6 +88,7 @@ struct HomeScreen: View {
     let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
+    let pullRefreshEnabled: Bool
     let onNavigate: (AppRoute) -> Void
 
     @State private var viewModel: HomeViewModel
@@ -113,6 +114,7 @@ struct HomeScreen: View {
         scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
+        pullRefreshEnabled: Bool = true,
         onNavigate: @escaping (AppRoute) -> Void
     ) {
         self.onRootFeedTabSelected = onRootFeedTabSelected
@@ -121,6 +123,7 @@ struct HomeScreen: View {
         self.scrollToTopRequestID = scrollToTopRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
+        self.pullRefreshEnabled = pullRefreshEnabled
         self.onNavigate = onNavigate
         _viewModel = State(initialValue: HomeViewModel(container: container))
     }
@@ -178,6 +181,7 @@ struct HomeScreen: View {
             ZStack(alignment: .topLeading) {
                 PullToRefreshContainer(
                     isRefreshing: viewModel.isLoading,
+                    isEnabled: pullRefreshEnabled,
                     action: {
                         await viewModel.refresh()
                     }

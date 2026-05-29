@@ -68,6 +68,9 @@ final class CompletedRepository {
             }
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -106,6 +109,10 @@ final class CompletedRepository {
             return nextState
         }
 
+        if syncManager.isLocalMode {
+            return
+        }
+
         do {
             _ = try await api.patchCompletedTodoByBody(
                 payload: UpdateCompletedTodoRequest(
@@ -130,6 +137,10 @@ final class CompletedRepository {
             var nextState = state
             nextState.completedItems.removeAll { $0.id == item.id }
             return nextState
+        }
+
+        if syncManager.isLocalMode {
+            return
         }
 
         guard !item.id.hasPrefix(LOCAL_COMPLETED_PREFIX) else {

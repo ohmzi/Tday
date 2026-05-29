@@ -82,6 +82,10 @@ final class TodoRepository {
             return nextState
         }
 
+        if syncManager.isLocalMode {
+            return
+        }
+
         if normalizedListID?.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) == true {
             _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
             return
@@ -171,6 +175,10 @@ final class TodoRepository {
             )
             nextState.pendingMutations.append(mutation)
             return nextState
+        }
+
+        if syncManager.isLocalMode {
+            return
         }
 
         if normalizedListID?.hasPrefix(LOCAL_LIST_PREFIX) == true {
@@ -266,6 +274,9 @@ final class TodoRepository {
             )
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -320,6 +331,9 @@ final class TodoRepository {
                 )
             )
             return nextState
+        }
+        if syncManager.isLocalMode {
+            return
         }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
@@ -408,6 +422,10 @@ final class TodoRepository {
             return nextState
         }
 
+        if syncManager.isLocalMode {
+            return
+        }
+
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -444,6 +462,9 @@ final class TodoRepository {
             }
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -479,6 +500,9 @@ final class TodoRepository {
                 )
             }
             return nextState
+        }
+        if syncManager.isLocalMode {
+            return
         }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
@@ -540,6 +564,9 @@ final class TodoRepository {
                 )
             )
             return nextState
+        }
+        if syncManager.isLocalMode {
+            return
         }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
@@ -604,6 +631,9 @@ final class TodoRepository {
             )
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -619,7 +649,11 @@ final class TodoRepository {
     }
 
     func summarizeTodos(mode: TodoListMode, listId: String? = nil) async throws -> TodoSummaryResponse {
-        try await api.summarizeTodos(
+        if syncManager.isLocalMode {
+            throw APIError(message: "AI summary is unavailable in local mode", statusCode: nil)
+        }
+
+        return try await api.summarizeTodos(
             payload: TodoSummaryRequest(
                 mode: mode.rawValue,
                 listId: listId,
@@ -629,6 +663,10 @@ final class TodoRepository {
     }
 
     func parseTodoTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
+        if syncManager.isLocalMode {
+            return nil
+        }
+
         let timezoneOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
         return try? await api.parseTodoTitleNlp(
             payload: TodoTitleNlpRequest(
@@ -703,6 +741,9 @@ final class TodoRepository {
                 )
             )
             return nextState
+        }
+        if syncManager.isLocalMode {
+            return
         }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {

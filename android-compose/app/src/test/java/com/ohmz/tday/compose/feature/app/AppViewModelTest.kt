@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.feature.app
 
 import app.cash.turbine.test
 import com.ohmz.tday.compose.core.data.ApiCallException
+import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
@@ -22,8 +23,10 @@ import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.feature.auth.MainDispatcherRule
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,6 +78,7 @@ class AppViewModelTest {
         every { reminderPreferenceStore.getDefaultReminder() } returns ReminderOption.DEFAULT
         every { appVersionManager.state } returns versionState
         coEvery { appVersionManager.refreshServerCompatibility() } returns Unit
+        every { serverConfigRepository.getAppDataMode() } returns AppDataMode.SERVER
         every { serverConfigRepository.hasServerConfigured() } returns true
         every { serverConfigRepository.getServerUrl() } returns "https://tday.example.com"
         every { cacheManager.loadOfflineState() } returns OfflineSyncState()
@@ -90,6 +94,40 @@ class AppViewModelTest {
         coEvery { authRepository.syncTimezone() } returns Unit
         every { reminderScheduler.rescheduleAll() } returns Unit
         every { reminderScheduler.cancelAll() } returns Unit
+    }
+
+    @Test
+    fun `local bootstrap opens workspace without server session or sync`() = runTest {
+        every { serverConfigRepository.getAppDataMode() } returns AppDataMode.LOCAL
+        every { cacheManager.updateOfflineState(any()) } answers {
+            firstArg<(OfflineSyncState) -> OfflineSyncState>().invoke(
+                OfflineSyncState(
+                    pendingMutations = listOf(
+                        com.ohmz.tday.compose.core.data.PendingMutationRecord(
+                            mutationId = "mutation-1",
+                            kind = com.ohmz.tday.compose.core.data.MutationKind.CREATE_TODO,
+                            targetId = "local-todo-1",
+                            timestampEpochMs = 1L,
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        assertTrue(viewModel.uiState.value.isLocalMode)
+        assertTrue(viewModel.uiState.value.isWorkspaceAvailable)
+        assertFalse(viewModel.uiState.value.authenticated)
+        assertFalse(viewModel.uiState.value.requiresServerSetup)
+        assertFalse(viewModel.uiState.value.requiresLogin)
+        assertEquals(0, viewModel.uiState.value.pendingMutationCount)
+
+        coVerify(exactly = 0) { authRepository.restoreSessionForBootstrap() }
+        coVerify(exactly = 0) { appVersionManager.refreshServerCompatibility() }
+        coVerify(exactly = 0) { syncManager.syncCachedData(any(), any(), any(), any()) }
+        verify(exactly = 0) { realtimeClient.connect() }
     }
 
     @Test

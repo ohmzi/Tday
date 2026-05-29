@@ -107,11 +107,20 @@ class OfflineCacheManager @Inject constructor(
     fun saveOfflineState(state: OfflineSyncState) {
         ensureMigrated()
         val previous = lastPersistedState ?: loadOfflineState()
-        if (previous == state) return
+        val normalizedState = if (secureConfigStore.isLocalMode()) {
+            state.copy(
+                lastSuccessfulSyncEpochMs = 0L,
+                lastSyncAttemptEpochMs = 0L,
+                pendingMutations = emptyList(),
+            )
+        } else {
+            state
+        }
+        if (previous == normalizedState) return
 
-        persistStateToDaos(state)
-        lastPersistedState = state
-        if (hasUiDataChanges(previous, state)) {
+        persistStateToDaos(normalizedState)
+        lastPersistedState = normalizedState
+        if (hasUiDataChanges(previous, normalizedState)) {
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
         }
     }

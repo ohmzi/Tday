@@ -11,7 +11,7 @@ struct SettingsScreen: View {
     @State private var showingReminderSelector = false
 
     private var isAdminUser: Bool {
-        (viewModel.user?.role ?? "").uppercased() == "ADMIN"
+        !viewModel.isLocalMode && (viewModel.user?.role ?? "").uppercased() == "ADMIN"
     }
 
     private var titleCollapseProgress: CGFloat {
@@ -85,8 +85,10 @@ struct SettingsScreen: View {
         List {
             settingsHeroTitleRow
 
-            settingsListRow {
-                SettingsProfileCard(user: viewModel.user)
+            if !viewModel.isLocalMode {
+                settingsListRow {
+                    SettingsProfileCard(user: viewModel.user)
+                }
             }
 
             settingsListRow {
@@ -132,24 +134,26 @@ struct SettingsScreen: View {
                             .foregroundStyle(colors.secondary)
                     }
 
-                    if let backendVersion = viewModel.backendVersion {
+                    if !viewModel.isLocalMode, let backendVersion = viewModel.backendVersion {
                         SettingsServerVersionRow(
                             backendVersion: backendVersion,
                             versionCheckResult: viewModel.versionCheckResult
                         )
                     }
 
-                    SettingsDivider()
+                    if !viewModel.isLocalMode {
+                        SettingsDivider()
 
-                    SettingsListRow(
-                        title: "Sign out",
-                        value: nil,
-                        titleColor: colors.error,
-                        showChevron: false,
-                        action: {
-                            Task { await viewModel.logout() }
-                        }
-                    )
+                        SettingsListRow(
+                            title: "Sign out",
+                            value: nil,
+                            titleColor: colors.error,
+                            showChevron: false,
+                            action: {
+                                Task { await viewModel.logout() }
+                            }
+                        )
+                    }
                 }
             }
 

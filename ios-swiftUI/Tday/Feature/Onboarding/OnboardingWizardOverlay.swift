@@ -1,7 +1,13 @@
 import SwiftUI
 import UIKit
 
+private func isOnboardingDaytime(_ date: Date) -> Bool {
+    let hour = Calendar.current.component(.hour, from: date)
+    return (6..<18).contains(hour)
+}
+
 enum OnboardingStep: Equatable {
+    case mode
     case server
     case login
 }
@@ -9,15 +15,18 @@ enum OnboardingStep: Equatable {
 struct OnboardingWizardOverlay: View {
     fileprivate enum Metrics {
         static let overlayPadding: CGFloat = 18
-        static let cardMaxWidth: CGFloat = 460
-        static let cardCornerRadius: CGFloat = 32
+        static let cardMaxWidth: CGFloat = 430
+        static let cardCornerRadius: CGFloat = 34
         static let cardPadding: CGFloat = 18
-        static let sectionSpacing: CGFloat = 12
-        static let chipSpacing: CGFloat = 10
-        static let chipCornerRadius: CGFloat = 20
-        static let inputHeight: CGFloat = 56
-        static let inputCornerRadius: CGFloat = 8
-        static let buttonHeight: CGFloat = 40
+        static let sectionSpacing: CGFloat = 14
+        static let chipSpacing: CGFloat = 8
+        static let chipCornerRadius: CGFloat = 18
+        static let inputHeight: CGFloat = 54
+        static let inputCornerRadius: CGFloat = 22
+        static let buttonHeight: CGFloat = 48
+        static let tileCornerRadius: CGFloat = 26
+        static let tileHeight: CGFloat = 116
+        static let heroHeight: CGFloat = 78
         static let watermarkSize: CGFloat = 130
     }
 
@@ -31,6 +40,7 @@ struct OnboardingWizardOverlay: View {
     let onResetServerTrust: (String) async -> Result<Void, MessageError>
     let onLogin: (String, String, LoginCredentialSource) async -> Bool
     let onRegister: (String, String, String) async -> Bool
+    let onUseLocalMode: () async -> Void
     let onClearAuthStatus: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -71,17 +81,17 @@ struct OnboardingWizardOverlay: View {
         }
         .onAppear {
             serverURL = initialServerURL ?? ""
-            step = (initialServerURL?.isEmpty == false) ? .login : .server
+            step = (initialServerURL?.isEmpty == false) ? .login : .mode
             if step == .login {
                 requestSavedCredentialIfAvailable()
-            } else {
+            } else if step == .server {
                 requestSavedServerURLIfAvailable()
             }
         }
         .onChange(of: step) { _, newStep in
             if newStep == .login {
                 requestSavedCredentialIfAvailable()
-            } else {
+            } else if newStep == .server {
                 requestSavedServerURLIfAvailable()
             }
         }
@@ -149,17 +159,26 @@ struct OnboardingWizardOverlay: View {
 
     private var wizardCard: some View {
         VStack(alignment: .leading, spacing: Metrics.sectionSpacing) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Set Up T'Day")
-                    .font(.tdayRounded(size: 23, weight: .bold))
+            HStack(spacing: 8) {
+                Image(systemName: isOnboardingDaytime(Date()) ? "sun.max.fill" : "moon.stars.fill")
+                    .font(.system(size: 25, weight: .regular))
+                    .foregroundStyle(Color(red: 0.96, green: 0.77, blue: 0.26))
+
+                Text("T'Day")
+                    .font(.tdayRounded(size: 31, weight: .heavy))
                     .foregroundStyle(colors.onSurface)
 
-                Text("Secure onboarding wizard")
-                    .font(.tdayRounded(size: 12, weight: .bold))
-                    .foregroundStyle(colors.onSurface.opacity(0.6))
+                Spacer(minLength: 0)
             }
 
             HStack(spacing: Metrics.chipSpacing) {
+                WizardStepChip(
+                    title: "Mode",
+                    systemImage: "iphone",
+                    tint: Color(red: 0.5, green: 0.72, blue: 0.54),
+                    active: step == .mode
+                )
+
                 WizardStepChip(
                     title: "Server",
                     systemImage: "globe",
@@ -175,6 +194,11 @@ struct OnboardingWizardOverlay: View {
                 )
             }
 
+            Text("Set up your workspace")
+                .font(.tdayRounded(size: 13, weight: .bold))
+                .foregroundStyle(colors.onSurface.opacity(0.62))
+                .padding(.top, -4)
+
             Group {
                 if isConnecting {
                     WizardLoadingPanel(
@@ -188,6 +212,8 @@ struct OnboardingWizardOverlay: View {
                         title: authLoadingTitle,
                         subtitle: authLoadingSubtitle
                     )
+                } else if step == .mode {
+                    modeStepContent
                 } else if step == .server {
                     serverStepContent
                 } else {
@@ -198,41 +224,68 @@ struct OnboardingWizardOverlay: View {
         .frame(maxWidth: Metrics.cardMaxWidth, alignment: .leading)
         .padding(Metrics.cardPadding)
         .background {
-            ZStack(alignment: .bottomTrailing) {
+            ZStack {
                 RoundedRectangle(cornerRadius: Metrics.cardCornerRadius, style: .continuous)
-                    .fill(colors.surface.opacity(1))
+                    .fill(colors.background)
                     .overlay(
                         RoundedRectangle(cornerRadius: Metrics.cardCornerRadius, style: .continuous)
-                            .fill(Color.white.opacity(colors.isDark ? 0.045 : 0.18))
+                            .fill(Color.white.opacity(colors.isDark ? 0.035 : 0.34))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: Metrics.cardCornerRadius, style: .continuous)
-                            .stroke(Color.white.opacity(colors.isDark ? 0.11 : 0.88), lineWidth: 1)
+                            .stroke(colors.onSurface.opacity(colors.isDark ? 0.12 : 0.08), lineWidth: 1)
                     )
-
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(colors.isDark ? 0.06 : 0.2),
-                        colors.onSurface.opacity(0.025),
-                        .clear,
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .clipShape(RoundedRectangle(cornerRadius: Metrics.cardCornerRadius, style: .continuous))
-
-                Image(systemName: step == .server ? "globe.americas.fill" : "lock.fill")
-                    .font(.system(size: Metrics.watermarkSize, weight: .regular))
-                    .foregroundStyle(colors.primary.opacity(0.18))
-                    .padding(.trailing, 18)
-                    .padding(.bottom, isLoginStep ? 18 : 10)
             }
         }
-        .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.16), radius: 10, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.14), radius: 14, x: 0, y: 10)
+    }
+
+    private var modeStepContent: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            WizardHeroTile(
+                title: "Choose your setup",
+                subtitle: "Pick where T'Day keeps your tasks.",
+                systemImage: "sparkles",
+                tint: Color(red: 0.43, green: 0.66, blue: 0.88)
+            )
+
+            HStack(spacing: 10) {
+                WizardModeChoiceButton(
+                    title: "Self-hosted",
+                    subtitle: "Accounts and sync",
+                    systemImage: "globe",
+                    tint: Color(red: 0.43, green: 0.66, blue: 0.88)
+                ) {
+                    localError = nil
+                    onClearAuthStatus()
+                    step = .server
+                }
+
+                WizardModeChoiceButton(
+                    title: "This device",
+                    subtitle: "No login",
+                    systemImage: "iphone",
+                    tint: Color(red: 0.45, green: 0.62, blue: 0.52)
+                ) {
+                    localError = nil
+                    onClearAuthStatus()
+                    Task {
+                        await onUseLocalMode()
+                    }
+                }
+            }
+        }
     }
 
     private var serverStepContent: some View {
         VStack(alignment: .leading, spacing: 12) {
+            WizardHeroTile(
+                title: "Self-hosted server",
+                subtitle: "Connect your T'Day endpoint.",
+                systemImage: "globe",
+                tint: Color(red: 0.43, green: 0.66, blue: 0.88)
+            )
+
             WizardInputField(
                 title: "Server URL",
                 text: $serverURL,
@@ -280,11 +333,29 @@ struct OnboardingWizardOverlay: View {
                     await connectServer()
                 }
             }
+
+            Button("Change setup") {
+                localError = nil
+                onClearAuthStatus()
+                step = .mode
+            }
+            .buttonStyle(WizardTextButtonStyle())
+            .font(.tdayRounded(size: 15, weight: .bold))
+            .foregroundStyle(colors.primary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .disabled(isConnecting)
         }
     }
 
     private var loginStepContent: some View {
         VStack(alignment: .leading, spacing: 11) {
+            WizardHeroTile(
+                title: isCreatingAccount ? "Create account" : "Sign in",
+                subtitle: isCreatingAccount ? "Create your server account." : "Open your synced workspace.",
+                systemImage: isCreatingAccount ? "person.badge.plus.fill" : "person.fill",
+                tint: Color(red: 0.79, green: 0.47, blue: 0.50)
+            )
+
             if isCreatingAccount {
                 WizardInputField(title: "First name", text: $firstName, autocapitalization: .words, submitLabel: .next)
             }
@@ -366,12 +437,12 @@ struct OnboardingWizardOverlay: View {
 
                 Spacer(minLength: 16)
 
-                Button("Change server") {
+                Button("Change setup") {
                     localError = nil
                     onClearAuthStatus()
                     isCompletingAuthentication = false
                     isCreatingAccount = false
-                    step = .server
+                    step = .mode
                 }
                 .buttonStyle(WizardTextButtonStyle())
                 .font(.tdayRounded(size: 15, weight: .bold))
@@ -606,6 +677,8 @@ private struct WizardStepChip: View {
     let tint: Color
     let active: Bool
 
+    @Environment(\.tdayColors) private var colors
+
     var body: some View {
         let ringColor = Color(
             red: min(1, tint.components.red * 0.75),
@@ -615,26 +688,25 @@ private struct WizardStepChip: View {
 
         HStack(spacing: 8) {
             Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 13, weight: .bold))
 
             Text(title)
-                .font(.tdayRounded(size: 14, weight: .bold))
+                .font(.tdayRounded(size: 13, weight: .bold))
                 .lineLimit(1)
         }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .foregroundStyle(active ? .white : colors.onSurface.opacity(0.68))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.chipCornerRadius, style: .continuous)
-                .fill(tint)
+                .fill(active ? tint : colors.surface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.chipCornerRadius, style: .continuous)
-                .stroke(active ? ringColor.opacity(0.85) : .clear, lineWidth: 2)
+                .stroke(active ? ringColor.opacity(0.62) : colors.onSurface.opacity(0.08), lineWidth: 1)
         )
-        .scaleEffect(active ? 1.04 : 1)
-        .shadow(color: tint.opacity(active ? 0.22 : 0.14), radius: active ? 10 : 8, x: 0, y: 6)
+        .shadow(color: tint.opacity(active ? 0.18 : 0), radius: active ? 8 : 0, x: 0, y: 5)
     }
 }
 
@@ -668,15 +740,16 @@ private struct WizardInputField: View {
             .frame(height: OnboardingWizardOverlay.Metrics.inputHeight)
             .background {
                 RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.inputCornerRadius, style: .continuous)
-                    .fill(colors.surface.opacity(0.9))
+                    .fill(colors.surface)
                     .overlay(
                         RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.inputCornerRadius, style: .continuous)
                             .stroke(
-                                colors.onSurface.opacity(isFocused ? 0.92 : 0.3),
+                                isFocused ? colors.primary.opacity(0.82) : colors.onSurface.opacity(0.14),
                                 lineWidth: isFocused ? 1.1 : 1
                             )
                     )
             }
+            .shadow(color: Color.black.opacity(colors.isDark ? 0.08 : 0.04), radius: 7, x: 0, y: 4)
             .background(PasswordRulesConfigurator(rulesDescriptor: passwordRulesDescriptor))
             .accessibilityLabel(title)
             .frame(maxWidth: .infinity)
@@ -707,6 +780,130 @@ private struct WizardInputField: View {
 
 private enum TdayPasswordRules {
     static let descriptor = "allowed: ascii-printable; minlength: 8; required: upper; required: special;"
+}
+
+private struct WizardHeroTile: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.tileCornerRadius, style: .continuous)
+                .fill(tint)
+                .overlay(
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.24), Color.white.opacity(0.08), .clear],
+                        center: UnitPoint(x: 0.18, y: 0.18),
+                        startRadius: 0,
+                        endRadius: 210
+                    )
+                )
+
+            Image(systemName: systemImage)
+                .font(.system(size: 82, weight: .regular))
+                .foregroundStyle(Color.white.opacity(0.2))
+                .offset(x: 20, y: 12)
+
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 23, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 42, height: 42)
+                    .background(Color.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.tdayRounded(size: 21, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+
+                    Text(subtitle)
+                        .font(.tdayRounded(size: 13, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: OnboardingWizardOverlay.Metrics.heroHeight)
+        .clipShape(RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.tileCornerRadius, style: .continuous))
+        .shadow(color: tint.opacity(0.16), radius: 9, x: 0, y: 7)
+    }
+}
+
+private struct WizardModeChoiceButton: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+    let tint: Color
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            ZStack(alignment: .bottomTrailing) {
+                RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.tileCornerRadius, style: .continuous)
+                    .fill(tint)
+                    .overlay(
+                        RadialGradient(
+                            colors: [Color.white.opacity(0.24), Color.white.opacity(0.08), .clear],
+                            center: UnitPoint(x: 0.22, y: 0.18),
+                            startRadius: 0,
+                            endRadius: 140
+                        )
+                    )
+                    .overlay(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.12),
+                                Color(red: 0.91, green: 0.96, blue: 1.0).opacity(0.08),
+                                .clear,
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                Image(systemName: systemImage)
+                    .font(.system(size: 70, weight: .regular))
+                    .foregroundStyle(Color.white.opacity(0.22))
+                    .offset(x: 14, y: 18)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.white)
+
+                    Spacer(minLength: 0)
+
+                    Text(title)
+                        .font(.tdayRounded(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+
+                    Text(subtitle)
+                        .font(.tdayRounded(size: 12, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(13)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: OnboardingWizardOverlay.Metrics.tileHeight)
+            .clipShape(RoundedRectangle(cornerRadius: OnboardingWizardOverlay.Metrics.tileCornerRadius, style: .continuous))
+        }
+        .buttonStyle(WizardPressButtonStyle())
+        .shadow(color: tint.opacity(colors.isDark ? 0.18 : 0.16), radius: 9, x: 0, y: 7)
+    }
 }
 
 private struct PasswordRulesConfigurator: UIViewRepresentable {
@@ -770,13 +967,23 @@ private struct WizardPrimaryButton: View {
                 .foregroundStyle(enabled ? colors.onPrimary : colors.onSurfaceVariant.opacity(0.65))
                 .frame(maxWidth: .infinity)
                 .frame(height: OnboardingWizardOverlay.Metrics.buttonHeight)
-                .background(
+                .background {
                     Capsule(style: .continuous)
                         .fill(enabled ? colors.primary : colors.surfaceVariant.opacity(0.95))
-                )
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(enabled ? 0.16 : 0), .clear],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        )
+                }
         }
         .buttonStyle(WizardPressButtonStyle())
-        .shadow(color: enabled ? colors.primary.opacity(0.16) : .clear, radius: 12, x: 0, y: 8)
+        .shadow(color: enabled ? colors.primary.opacity(0.18) : .clear, radius: 11, x: 0, y: 8)
         .opacity(enabled ? 1 : 0.72)
         .disabled(!enabled)
     }

@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.app
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.core.data.ApiCallException
+import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
@@ -49,6 +50,7 @@ data class AppUiState(
     val requiresServerSetup: Boolean = false,
     val requiresLogin: Boolean = false,
     val serverUrl: String? = null,
+    val dataMode: AppDataMode = AppDataMode.UNSET,
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val user: SessionUser? = null,
     val error: String? = null,
@@ -68,7 +70,13 @@ data class AppUiState(
     val backendVersion: String? = null,
     val requiredUpdateRelease: GitHubRelease? = null,
     val isCheckingUpdateRelease: Boolean = false,
-)
+) {
+    val isLocalMode: Boolean
+        get() = dataMode == AppDataMode.LOCAL
+
+    val isWorkspaceAvailable: Boolean
+        get() = authenticated || isLocalMode
+}
 
 internal const val OFFLINE_NOTICE_COOLDOWN_MS = 10 * 60 * 1000L
 
@@ -141,6 +149,12 @@ class AppViewModel @Inject constructor(
     fun bootstrap() {
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null, isManualSyncing = false) }
+            val dataMode = serverConfigRepository.getAppDataMode()
+            if (dataMode == AppDataMode.LOCAL) {
+                enterLocalWorkspace()
+                return@launch
+            }
+
             if (!serverConfigRepository.hasServerConfigured()) {
                 authRepository.clearAllLocalUserDataForUnauthenticatedState()
                 _uiState.update {
@@ -150,6 +164,7 @@ class AppViewModel @Inject constructor(
                         requiresServerSetup = true,
                         requiresLogin = false,
                         serverUrl = null,
+                        dataMode = AppDataMode.UNSET,
                         user = null,
                         error = null,
                         canResetServerTrust = false,
@@ -159,6 +174,12 @@ class AppViewModel @Inject constructor(
                         isAdminAiSummaryLoading = false,
                         isAdminAiSummarySaving = false,
                         adminAiSummaryError = null,
+                        isOffline = false,
+                        pendingMutationCount = 0,
+                        versionCheckResult = VersionCheckResult.Compatible,
+                        backendVersion = null,
+                        requiredUpdateRelease = null,
+                        isCheckingUpdateRelease = false,
                     )
                 }
                 ensureResyncLoop(authenticated = false)
@@ -187,6 +208,7 @@ class AppViewModel @Inject constructor(
                         requiresServerSetup = false,
                         requiresLogin = false,
                         serverUrl = serverConfigRepository.getServerUrl(),
+                        dataMode = AppDataMode.SERVER,
                         user = sessionUser,
                         error = null,
                         canResetServerTrust = false,
@@ -228,6 +250,7 @@ class AppViewModel @Inject constructor(
                         requiresServerSetup = false,
                         requiresLogin = false,
                         serverUrl = serverConfigRepository.getServerUrl(),
+                        dataMode = AppDataMode.SERVER,
                         user = null,
                         error = null,
                         canResetServerTrust = false,
@@ -255,6 +278,7 @@ class AppViewModel @Inject constructor(
                     requiresServerSetup = false,
                     requiresLogin = true,
                     serverUrl = serverConfigRepository.getServerUrl(),
+                    dataMode = AppDataMode.SERVER,
                     user = null,
                     error = null,
                     canResetServerTrust = false,
@@ -267,6 +291,58 @@ class AppViewModel @Inject constructor(
                 )
             }
             ensureResyncLoop(authenticated = false)
+        }
+    }
+
+    fun useLocalMode() {
+        viewModelScope.launch {
+            runCatching { authRepository.clearAllLocalUserDataForUnauthenticatedState() }
+            runCatching { systemCredentialService.clearCredentialState() }
+            runCatching { reminderScheduler.cancelAll() }
+            serverConfigRepository.enableLocalMode()
+            enterLocalWorkspace()
+        }
+    }
+
+    private fun enterLocalWorkspace() {
+        ensureResyncLoop(authenticated = false)
+        runCatching {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    lastSuccessfulSyncEpochMs = 0L,
+                    lastSyncAttemptEpochMs = 0L,
+                    pendingMutations = emptyList(),
+                )
+            }
+        }
+        _uiState.update {
+            it.copy(
+                loading = false,
+                authenticated = false,
+                requiresServerSetup = false,
+                requiresLogin = false,
+                serverUrl = null,
+                dataMode = AppDataMode.LOCAL,
+                user = null,
+                error = null,
+                canResetServerTrust = false,
+                pendingApprovalMessage = null,
+                isManualSyncing = false,
+                adminAiSummaryEnabled = null,
+                isAdminAiSummaryLoading = false,
+                isAdminAiSummarySaving = false,
+                adminAiSummaryError = null,
+                aiSummaryValidationError = null,
+                isOffline = false,
+                pendingMutationCount = 0,
+                versionCheckResult = VersionCheckResult.Compatible,
+                backendVersion = null,
+                requiredUpdateRelease = null,
+                isCheckingUpdateRelease = false,
+            )
+        }
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
         }
     }
 
@@ -304,7 +380,7 @@ class AppViewModel @Inject constructor(
 
     fun refreshAdminAiSummarySetting() {
         val current = _uiState.value
-        if (!isAdmin(current.user)) {
+        if (current.isLocalMode || !isAdmin(current.user)) {
             _uiState.update {
                 it.copy(
                     adminAiSummaryEnabled = null,
@@ -348,7 +424,7 @@ class AppViewModel @Inject constructor(
 
     fun setAdminAiSummaryEnabled(enabled: Boolean) {
         val current = _uiState.value
-        if (!isAdmin(current.user) || current.isAdminAiSummarySaving) return
+        if (current.isLocalMode || !isAdmin(current.user) || current.isAdminAiSummarySaving) return
 
         viewModelScope.launch {
             _uiState.update {
@@ -410,6 +486,7 @@ class AppViewModel @Inject constructor(
                         requiresServerSetup = false,
                         requiresLogin = !isBlocking,
                         serverUrl = probeResult.serverUrl,
+                        dataMode = AppDataMode.SERVER,
                         error = null,
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
@@ -438,6 +515,7 @@ class AppViewModel @Inject constructor(
     }
 
     fun recheckVersion() {
+        if (_uiState.value.isLocalMode) return
         viewModelScope.launch {
             appVersionManager.refreshServerCompatibility()
             if (appVersionManager.state.value.versionCheckResult is VersionCheckResult.Compatible &&
@@ -450,7 +528,11 @@ class AppViewModel @Inject constructor(
 
     fun refreshVersionInfo() {
         viewModelScope.launch {
-            appVersionManager.refreshAll()
+            if (_uiState.value.isLocalMode) {
+                appVersionManager.refreshGitHubReleases()
+            } else {
+                appVersionManager.refreshAll()
+            }
         }
     }
 
@@ -496,6 +578,7 @@ class AppViewModel @Inject constructor(
                     requiresServerSetup = true,
                     requiresLogin = false,
                     serverUrl = null,
+                    dataMode = AppDataMode.UNSET,
                     user = null,
                     error = null,
                     loading = false,
@@ -506,13 +589,20 @@ class AppViewModel @Inject constructor(
                     isAdminAiSummaryLoading = false,
                     isAdminAiSummarySaving = false,
                     adminAiSummaryError = null,
+                    aiSummaryValidationError = null,
+                    isOffline = false,
+                    pendingMutationCount = 0,
+                    versionCheckResult = VersionCheckResult.Compatible,
+                    backendVersion = null,
+                    requiredUpdateRelease = null,
+                    isCheckingUpdateRelease = false,
                 )
             }
         }
     }
 
     fun syncNow() {
-        if (!_uiState.value.authenticated) return
+        if (!_uiState.value.authenticated || _uiState.value.isLocalMode) return
         if (_uiState.value.isManualSyncing) return
 
         viewModelScope.launch {
@@ -561,7 +651,7 @@ class AppViewModel @Inject constructor(
     }
 
     fun reconnectAfterForeground() {
-        if (!_uiState.value.authenticated) return
+        if (!_uiState.value.authenticated || _uiState.value.isLocalMode) return
         if (foregroundReconnectJob?.isActive == true) return
 
         foregroundReconnectJob = viewModelScope.launch {
@@ -720,6 +810,7 @@ class AppViewModel @Inject constructor(
                 requiresServerSetup = false,
                 requiresLogin = false,
                 serverUrl = serverConfigRepository.getServerUrl(),
+                dataMode = AppDataMode.SERVER,
                 user = restoredSession.user,
                 error = null,
                 pendingApprovalMessage = null,

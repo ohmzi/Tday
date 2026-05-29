@@ -22,12 +22,14 @@ actor AsyncLock {
 final class OfflineCacheManager {
     let modelContainer: ModelContainer
     private let modelContext: ModelContext
+    private let secureStore: SecureStore
     private let syncLock = AsyncLock()
     private(set) var cacheDataVersion = 0
     private var lastState = OfflineSyncState()
 
-    init(modelContainer: ModelContainer) {
+    init(modelContainer: ModelContainer, secureStore: SecureStore) {
         self.modelContainer = modelContainer
+        self.secureStore = secureStore
         modelContext = ModelContext(modelContainer)
         lastState = loadOfflineState()
     }
@@ -154,7 +156,18 @@ final class OfflineCacheManager {
     }
 
     func saveOfflineState(_ state: OfflineSyncState) {
-        if state == lastState {
+        let normalizedState: OfflineSyncState
+        if secureStore.isLocalMode() {
+            var localState = state
+            localState.lastSuccessfulSyncEpochMs = 0
+            localState.lastSyncAttemptEpochMs = 0
+            localState.pendingMutations = []
+            normalizedState = localState
+        } else {
+            normalizedState = state
+        }
+
+        if normalizedState == lastState {
             return
         }
 
@@ -167,24 +180,24 @@ final class OfflineCacheManager {
         replaceAll(PendingMutationEntity.self)
         replaceAll(SyncMetadataEntity.self)
 
-        state.todos.forEach { modelContext.insert(CachedTodoEntity(from: $0)) }
-        state.floaters.forEach { modelContext.insert(CachedFloaterEntity(from: $0)) }
-        state.lists.forEach { modelContext.insert(CachedListEntity(from: $0)) }
-        state.floaterLists.forEach { modelContext.insert(CachedFloaterListEntity(from: $0)) }
-        state.completedItems.forEach { modelContext.insert(CachedCompletedEntity(from: $0)) }
-        state.completedFloaters.forEach { modelContext.insert(CachedCompletedFloaterEntity(from: $0)) }
-        state.pendingMutations.forEach { modelContext.insert(PendingMutationEntity(from: $0)) }
+        normalizedState.todos.forEach { modelContext.insert(CachedTodoEntity(from: $0)) }
+        normalizedState.floaters.forEach { modelContext.insert(CachedFloaterEntity(from: $0)) }
+        normalizedState.lists.forEach { modelContext.insert(CachedListEntity(from: $0)) }
+        normalizedState.floaterLists.forEach { modelContext.insert(CachedFloaterListEntity(from: $0)) }
+        normalizedState.completedItems.forEach { modelContext.insert(CachedCompletedEntity(from: $0)) }
+        normalizedState.completedFloaters.forEach { modelContext.insert(CachedCompletedFloaterEntity(from: $0)) }
+        normalizedState.pendingMutations.forEach { modelContext.insert(PendingMutationEntity(from: $0)) }
         modelContext.insert(
             SyncMetadataEntity(
-                lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
-                lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
-                aiSummaryEnabled: state.aiSummaryEnabled
+                lastSuccessfulSyncEpochMs: normalizedState.lastSuccessfulSyncEpochMs,
+                lastSyncAttemptEpochMs: normalizedState.lastSyncAttemptEpochMs,
+                aiSummaryEnabled: normalizedState.aiSummaryEnabled
             )
         )
 
         try? modelContext.save()
-        lastState = state
-        TodayTasksWidgetSnapshotStore.saveTodayTasks(from: state)
+        lastState = normalizedState
+        TodayTasksWidgetSnapshotStore.saveTodayTasks(from: normalizedState)
         cacheDataVersion += 1
         NotificationCenter.default.post(name: .offlineCacheDidChange, object: nil)
     }
