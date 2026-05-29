@@ -320,11 +320,7 @@ private struct RootFeedSearchTitleRow: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                     .buttonStyle(
-                        TdayPressButtonStyle(
-                            shadowColor: Color.black,
-                            pressedShadowOpacity: 0.08,
-                            normalShadowOpacity: 0.16
-                        )
+                        TdayToolbarButtonStyle()
                     )
                     .opacity(searchExpanded ? 0 : 1)
                     .allowsHitTesting(!searchExpanded)
@@ -400,13 +396,7 @@ private struct RootFeedHeaderIconButton: View {
                         .stroke(colors.onSurface.opacity(0.34), lineWidth: 1)
                 }
         }
-        .buttonStyle(
-            TdayPressButtonStyle(
-                shadowColor: Color.black,
-                pressedShadowOpacity: 0.08,
-                normalShadowOpacity: 0.16
-            )
-        )
+        .buttonStyle(TdayToolbarButtonStyle())
     }
 }
 
