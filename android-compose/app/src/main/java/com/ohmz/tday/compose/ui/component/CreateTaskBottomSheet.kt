@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.ui.component
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -78,12 +79,14 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
@@ -98,25 +101,37 @@ import java.time.format.DateTimeFormatter
 import android.graphics.Color as AndroidColor
 
 private enum class RepeatPreset(
-    val label: String,
+    @StringRes val labelRes: Int,
     val rrule: String?,
 ) {
-    NONE("No repeat", null),
-    DAILY("Daily", "RRULE:FREQ=DAILY;INTERVAL=1"),
-    WEEKLY("Weekly", "RRULE:FREQ=WEEKLY;INTERVAL=1"),
-    WEEKDAYS("Weekdays", "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR"),
-    MONTHLY("Monthly", "RRULE:FREQ=MONTHLY;INTERVAL=1"),
-    YEARLY("Yearly", "RRULE:FREQ=YEARLY;INTERVAL=1"),
+    NONE(R.string.create_task_repeat_none, null),
+    DAILY(R.string.create_task_repeat_daily, "RRULE:FREQ=DAILY;INTERVAL=1"),
+    WEEKLY(R.string.create_task_repeat_weekly, "RRULE:FREQ=WEEKLY;INTERVAL=1"),
+    WEEKDAYS(R.string.create_task_repeat_weekdays, "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR"),
+    MONTHLY(R.string.create_task_repeat_monthly, "RRULE:FREQ=MONTHLY;INTERVAL=1"),
+    YEARLY(R.string.create_task_repeat_yearly, "RRULE:FREQ=YEARLY;INTERVAL=1"),
 }
 
 private fun normalizePriorityValue(value: String?): String {
     return when (value?.trim()?.lowercase()) {
-        "medium" -> "Medium"
-        "high" -> "High"
-        else -> "Low"
+        "medium" -> PRIORITY_MEDIUM
+        "high" -> PRIORITY_HIGH
+        else -> PRIORITY_LOW
     }
 }
 
+@StringRes
+private fun priorityLabelRes(priority: String): Int {
+    return when (priority) {
+        PRIORITY_MEDIUM -> R.string.create_task_priority_medium
+        PRIORITY_HIGH -> R.string.create_task_priority_high
+        else -> R.string.create_task_priority_low
+    }
+}
+
+private const val PRIORITY_LOW = "Low"
+private const val PRIORITY_MEDIUM = "Medium"
+private const val PRIORITY_HIGH = "High"
 private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
 private const val CREATE_TASK_SHEET_CREATE_HEIGHT_FRACTION = 0.74f
 private const val CREATE_TASK_SHEET_FLOATER_CREATE_HEIGHT_FRACTION = 0.54f
@@ -223,7 +238,22 @@ fun CreateTaskBottomSheet(
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
     var sheetVisible by remember { mutableStateOf(false) }
 
-    val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
+    val noListLabel = stringResource(R.string.create_task_no_list)
+    val priorityOptions = remember { listOf(PRIORITY_LOW, PRIORITY_MEDIUM, PRIORITY_HIGH) }
+    val priorityLabels = mapOf(
+        PRIORITY_LOW to stringResource(R.string.create_task_priority_low),
+        PRIORITY_MEDIUM to stringResource(R.string.create_task_priority_medium),
+        PRIORITY_HIGH to stringResource(R.string.create_task_priority_high),
+    )
+    val repeatLabels = mapOf(
+        RepeatPreset.NONE to stringResource(RepeatPreset.NONE.labelRes),
+        RepeatPreset.DAILY to stringResource(RepeatPreset.DAILY.labelRes),
+        RepeatPreset.WEEKLY to stringResource(RepeatPreset.WEEKLY.labelRes),
+        RepeatPreset.WEEKDAYS to stringResource(RepeatPreset.WEEKDAYS.labelRes),
+        RepeatPreset.MONTHLY to stringResource(RepeatPreset.MONTHLY.labelRes),
+        RepeatPreset.YEARLY to stringResource(RepeatPreset.YEARLY.labelRes),
+    )
+    val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: noListLabel
     val repeatPreset = if (scheduleEnabled && showScheduleControls) {
         RepeatPreset.valueOf(selectedRepeat)
     } else {
@@ -386,14 +416,26 @@ fun CreateTaskBottomSheet(
                             verticalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
                             TdaySheetHeader(
-                                title = if (isEditMode) "Edit task" else "New task",
+                                title = stringResource(
+                                    if (isEditMode) {
+                                        R.string.create_task_title_edit
+                                    } else {
+                                        R.string.create_task_title_new
+                                    },
+                                ),
                                 leftIcon = Icons.Rounded.Close,
-                                leftContentDescription = "Close",
+                                leftContentDescription = stringResource(R.string.action_close),
                                 onLeftClick = {
                                     dismissKeyboard()
                                     onDismiss()
                                 },
-                                confirmContentDescription = if (isEditMode) "Save task" else "Create task",
+                                confirmContentDescription = stringResource(
+                                    if (isEditMode) {
+                                        R.string.action_save_task
+                                    } else {
+                                        R.string.action_create_task
+                                    },
+                                ),
                                 onConfirm = {
                                     dismissKeyboard()
                                     if (canSubmit) {
@@ -425,7 +467,7 @@ fun CreateTaskBottomSheet(
                                 )
 
                                 if (showScheduleControls) {
-                                    SectionHeading("Schedule")
+                                    SectionHeading(stringResource(R.string.create_task_section_schedule))
                                     GroupCard {
                                         ScheduleSwitchRow(
                                             enabled = scheduleEnabled,
@@ -438,7 +480,7 @@ fun CreateTaskBottomSheet(
                                                 RowDivider()
                                                 SplitDateTimeRow(
                                                     icon = Icons.Rounded.CalendarMonth,
-                                                    title = "Due",
+                                                    title = stringResource(R.string.create_task_due),
                                                     dateValue = dateOnlyFormatter.format(
                                                         Instant.ofEpochMilli(
                                                             dueEpochMs
@@ -457,14 +499,14 @@ fun CreateTaskBottomSheet(
                                     }
                                 }
 
-                                SectionHeading("Details")
+                                SectionHeading(stringResource(R.string.create_task_section_details))
                                 GroupCard {
                                     SheetDropdownRow(
                                         icon = Icons.AutoMirrored.Rounded.List,
-                                        title = "List",
+                                        title = stringResource(R.string.create_task_list),
                                         value = selectedListName,
                                         options = listOf<ListSummary?>(null) + lists,
-                                        optionLabel = { option -> option?.name ?: "No list" },
+                                        optionLabel = { option -> option?.name ?: noListLabel },
                                         optionSwatchColor = { option ->
                                             option?.let {
                                                 listColorSwatchForSelector(
@@ -481,10 +523,10 @@ fun CreateTaskBottomSheet(
                                     RowDivider()
                                     SheetDropdownRow(
                                         icon = Icons.Rounded.LowPriority,
-                                        title = "Priority",
-                                        value = selectedPriority,
-                                        options = listOf("Low", "Medium", "High"),
-                                        optionLabel = { option -> option },
+                                        title = stringResource(R.string.create_task_priority),
+                                        value = priorityLabels.getValue(selectedPriority),
+                                        options = priorityOptions,
+                                        optionLabel = { option -> priorityLabels.getValue(option) },
                                         optionSwatchColor = { option -> tdayPriorityColor(option) },
                                         isSelected = { option -> selectedPriority == option },
                                         onOptionSelected = { option -> selectedPriority = option },
@@ -493,14 +535,14 @@ fun CreateTaskBottomSheet(
                                         RowDivider()
                                         SheetDropdownRow(
                                             icon = Icons.Rounded.Repeat,
-                                            title = "Repeat",
-                                            value = repeatPreset.label,
+                                            title = stringResource(R.string.create_task_repeat),
+                                            value = repeatLabels.getValue(repeatPreset),
                                             options = if (scheduleEnabled) {
                                                 RepeatPreset.entries.toList()
                                             } else {
                                                 listOf(RepeatPreset.NONE)
                                             },
-                                            optionLabel = { option -> option.label },
+                                            optionLabel = { option -> repeatLabels.getValue(option) },
                                             optionSwatchColor = { option -> repeatSwatchColor(option) },
                                             isSelected = { option -> selectedRepeat == option.name },
                                             onOptionSelected = { option ->
@@ -573,14 +615,14 @@ private fun TaskTextCard(
     GroupCard {
         TaskField(
             value = title,
-            placeholder = "Title",
+            placeholder = stringResource(R.string.create_task_title_placeholder),
             onValueChange = onTitleChange,
             onKeyboardDone = onKeyboardDone,
         )
         RowDivider()
         TaskField(
             value = notes,
-            placeholder = "Notes",
+            placeholder = stringResource(R.string.create_task_notes_placeholder),
             onValueChange = onNotesChange,
             onKeyboardDone = onKeyboardDone,
         )
@@ -752,13 +794,19 @@ private fun ScheduleSwitchRow(
         Spacer(modifier = Modifier.size(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Schedule",
+                text = stringResource(R.string.create_task_section_schedule),
                 style = MaterialTheme.typography.titleMedium,
                 color = colorScheme.onSurface,
                 fontWeight = FontWeight.ExtraBold,
             )
             Text(
-                text = if (enabled) "Task has a due date" else "Floater task",
+                text = stringResource(
+                    if (enabled) {
+                        R.string.create_task_schedule_enabled
+                    } else {
+                        R.string.create_task_schedule_disabled
+                    },
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
                 fontWeight = FontWeight.Bold,
@@ -972,7 +1020,7 @@ private fun ThemedDatePickerDialog(
 
     SpectrumPickerDialog(
         onDismiss = onDismiss,
-        title = "Select date",
+        title = stringResource(R.string.create_task_select_date),
         titleIcon = Icons.Rounded.CalendarMonth,
         accent = pickerAccent,
         primaryText = primaryText,
@@ -1050,7 +1098,7 @@ private fun ThemedTimePickerDialog(
 
     SpectrumPickerDialog(
         onDismiss = onDismiss,
-        title = "Select time",
+        title = stringResource(R.string.create_task_select_time),
         titleIcon = Icons.Rounded.Schedule,
         accent = pickerAccent,
         primaryText = primaryText,
@@ -1162,7 +1210,7 @@ private fun SpectrumPickerDialog(
                     ) {
                         TextButton(onClick = onDismiss) {
                             Text(
-                                text = "Cancel",
+                                text = stringResource(R.string.action_cancel),
                                 color = mutedText,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
@@ -1170,7 +1218,7 @@ private fun SpectrumPickerDialog(
                         }
                         TextButton(onClick = onConfirm) {
                             Text(
-                                text = "Done",
+                                text = stringResource(R.string.action_done),
                                 color = primaryText,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
