@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -157,6 +156,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -176,7 +176,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -212,7 +211,12 @@ import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
+import com.ohmz.tday.compose.ui.component.TdayCenteredSheetContent
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import com.ohmz.tday.compose.ui.component.TdaySheetCard
+import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
+import com.ohmz.tday.compose.ui.component.TdaySheetHeader
+import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFontFamily
 import kotlinx.coroutines.delay
@@ -249,6 +253,7 @@ fun HomeScreen(
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
     createTaskRequestKey: Int = 0,
+    scrollToTopRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
@@ -273,6 +278,7 @@ fun HomeScreen(
     var searchResultsBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
+    var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     var lastHandledCreateTaskRequestKey by rememberSaveable {
         mutableIntStateOf(createTaskRequestKey)
     }
@@ -378,6 +384,19 @@ fun HomeScreen(
         hasScrollableContent && hasScrolledPastDockCollapseThreshold
     LaunchedEffect(dockCollapsed) {
         onRootDockCollapsedChange(dockCollapsed)
+    }
+    LaunchedEffect(scrollToTopRequestKey) {
+        if (scrollToTopRequestKey <= 0) return@LaunchedEffect
+        closeSearch()
+        if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+            listState.animateScrollToItem(index = 0, scrollOffset = 0)
+        }
+    }
+    LaunchedEffect(uiState.todayTodos, openSwipeTaskId) {
+        val openId = openSwipeTaskId ?: return@LaunchedEffect
+        if (uiState.todayTodos.none { it.id == openId }) {
+            openSwipeTaskId = null
+        }
     }
     LaunchedEffect(listState.isScrollInProgress, searchExpanded) {
         if (searchExpanded || listState.isScrollInProgress) return@LaunchedEffect
@@ -528,6 +547,8 @@ fun HomeScreen(
                                 onComplete = { onCompleteTask(todo) },
                                 onDelete = { onDeleteTask(todo) },
                                 onEdit = { editTargetTodoId = todo.id },
+                                openSwipeTaskId = openSwipeTaskId,
+                                onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
                             )
                         }
 
@@ -708,9 +729,18 @@ fun HomeScreen(
                     activeTab = RootFeedTab.HOME,
                     collapsed = dockCollapsed,
                     onTabSelected = { tab ->
-                        if (tab == RootFeedTab.FLOATER) {
-                            closeSearch()
-                            onOpenFloater()
+                        when (tab) {
+                            RootFeedTab.HOME -> {
+                                searchResultScope.launch {
+                                    closeSearch()
+                                    listState.animateScrollToItem(index = 0, scrollOffset = 0)
+                                }
+                            }
+
+                            RootFeedTab.FLOATER -> {
+                                closeSearch()
+                                onOpenFloater()
+                            }
                         }
                     },
                     modifier = Modifier
@@ -824,17 +854,9 @@ private fun CreateListBottomSheet(
         ),
         label = "createListSheetHeight",
     )
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val sheetContainerColor = if (isDarkTheme) {
-        lerp(colorScheme.background, colorScheme.surfaceVariant, 0.34f)
-    } else {
-        colorScheme.background
-    }
-    val sheetScrimColor = if (isDarkTheme) {
-        Color.Black.copy(alpha = 0.68f)
-    } else {
-        Color.Black.copy(alpha = 0.40f)
-    }
+    val sheetContainerColor = TdaySheetDefaults.containerColor()
+    val sheetScrimColor = TdaySheetDefaults.scrimColor()
+    val sheetTonalElevation = TdaySheetDefaults.tonalElevation()
 
     LaunchedEffect(Unit) {
         sheetVisible = true
@@ -895,22 +917,27 @@ private fun CreateListBottomSheet(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {},
-                    shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+                    shape = TdaySheetDefaults.TopShape,
                     color = sheetContainerColor,
-                    tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+                    tonalElevation = sheetTonalElevation,
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 18.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                    ) {
-                        ListSheetHeader(
-                            onClose = {
+                    TdayCenteredSheetContent {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 18.dp, vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            TdaySheetHeader(
+                                title = stringResource(R.string.home_new_list),
+                                leftIcon = Icons.Rounded.Close,
+                                leftContentDescription = stringResource(R.string.action_close),
+                                onLeftClick = {
                                 dismissKeyboard()
                                 onDismiss()
                             },
+                                confirmContentDescription = stringResource(R.string.action_create_list),
                             onConfirm = {
                                 dismissKeyboard()
                                 if (canCreate) onCreate()
@@ -918,7 +945,7 @@ private fun CreateListBottomSheet(
                             confirmEnabled = canCreate,
                         )
 
-                        ListSheetCard {
+                            TdaySheetCard {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -959,7 +986,7 @@ private fun CreateListBottomSheet(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clip(RoundedCornerShape(16.dp))
-                                                .background(colorScheme.surfaceVariant)
+                                                .background(TdaySheetDefaults.controlSurfaceColor())
                                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                                             contentAlignment = Alignment.Center,
                                         ) {
@@ -978,8 +1005,8 @@ private fun CreateListBottomSheet(
                             }
                         }
 
-                        ListSheetSectionTitle(stringResource(R.string.home_section_color))
-                        ListSheetCard {
+                            TdaySheetSectionTitle(stringResource(R.string.home_section_color))
+                            TdaySheetCard {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1014,8 +1041,8 @@ private fun CreateListBottomSheet(
                             }
                         }
 
-                        ListSheetSectionTitle(stringResource(R.string.home_section_icon))
-                        ListSheetCard {
+                            TdaySheetSectionTitle(stringResource(R.string.home_section_icon))
+                            TdaySheetCard {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1036,7 +1063,7 @@ private fun CreateListBottomSheet(
                                                 if (selected) {
                                                     selectedAccent.copy(alpha = 0.2f)
                                                 } else {
-                                                    colorScheme.surfaceVariant
+                                                    TdaySheetDefaults.controlSurfaceColor()
                                                 },
                                             )
                                             .border(
@@ -1064,137 +1091,11 @@ private fun CreateListBottomSheet(
                         }
 
                         Spacer(Modifier.height(4.dp))
+                        }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ListSheetHeader(
-    onClose: () -> Unit,
-    onConfirm: () -> Unit,
-    confirmEnabled: Boolean,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ListSheetActionButton(
-            icon = Icons.Rounded.Close,
-            contentDescription = stringResource(R.string.action_close),
-            enabled = true,
-            accentColor = Color(0xFFE35A5A),
-            onClick = onClose,
-        )
-
-        Text(
-            text = stringResource(R.string.home_new_list),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.ExtraBold,
-        )
-
-        ListSheetActionButton(
-            icon = Icons.Rounded.Check,
-            contentDescription = stringResource(R.string.action_create_list),
-            enabled = confirmEnabled,
-            accentColor = Color(0xFF2FA35B),
-            onClick = onConfirm,
-        )
-    }
-}
-
-@Composable
-private fun ListSheetActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    enabled: Boolean,
-    accentColor: Color,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val colorScheme = MaterialTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.93f else 1f,
-        label = "listSheetHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed && enabled) 2.dp else 0.dp,
-        label = "listSheetHeaderButtonOffsetY",
-    )
-    val containerColor = colorScheme.surfaceVariant
-    val iconTint = colorScheme.onBackground.copy(alpha = if (enabled) 1f else 0.55f)
-    val borderColor = if (enabled) {
-        accentColor.copy(alpha = 0.55f)
-    } else {
-        accentColor.copy(alpha = 0.3f)
-    }
-
-    Card(
-        modifier = Modifier
-            .size(TdayDimens.FabSize)
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .border(
-                width = 1.5.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(999.dp),
-            ),
-        onClick = {
-            if (enabled) performGentleHaptic(view)
-            onClick()
-        },
-        enabled = enabled,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(999.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (enabled) TdayDimens.FabElevation else 0.dp,
-            pressedElevation = if (enabled) TdayDimens.FabPressedElevation else 0.dp,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = iconTint,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ListSheetSectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.ExtraBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 4.dp),
-    )
-}
-
-@Composable
-private fun ListSheetCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(modifier = Modifier.fillMaxWidth(), content = content)
     }
 }
 
@@ -1595,17 +1496,6 @@ private fun HomeTodayCard(
                     onDrawWithContent { drawRect(glow); drawRect(pearl); drawContent() }
                 },
         ) {
-            Box(modifier = Modifier.matchParentSize()) {
-                Icon(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .offset(x = 22.dp, y = 12.dp)
-                        .size(124.dp),
-                    imageVector = Icons.Rounded.WbSunny,
-                    contentDescription = null,
-                    tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
-                )
-            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1613,26 +1503,18 @@ private fun HomeTodayCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        Icons.Rounded.WbSunny,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
-                    Text(
-                        text = dateLabel,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontFamily = TdayFontFamily,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        lineHeight = 28.sp,
-                    )
-                }
+                Text(
+                    text = dateLabel,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontFamily = TdayFontFamily,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    lineHeight = 28.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     text = count.toString(),
                     style = MaterialTheme.typography.headlineLarge,
@@ -1656,6 +1538,8 @@ private fun HomeTodayTaskRow(
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -1666,6 +1550,19 @@ private fun HomeTodayTaskRow(
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
     var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
+    fun claimSwipeSlot() {
+        if (latestOpenSwipeTaskId.value != todo.id) {
+            onOpenSwipeTaskIdChange(todo.id)
+        }
+    }
+
+    fun closeSwipeSlot() {
+        swipeRevealState.close()
+        if (latestOpenSwipeTaskId.value == todo.id) {
+            onOpenSwipeTaskIdChange(null)
+        }
+    }
     val animatedOffsetX by animateTaskSwipeOffsetAsState(
         state = swipeRevealState,
         label = "homeTodaySwipeOffset",
@@ -1686,7 +1583,7 @@ private fun HomeTodayTaskRow(
         label = "homeTodayTitleStrikeProgress",
     )
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
-    val dueText = todo.due?.let(HOME_TODAY_DUE_FORMATTER::format).orEmpty()
+    val dueText = todo.due?.let(HOME_TODAY_DUE_FORMATTER::format)
     val rowShape = RoundedCornerShape(16.dp)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val listIndicatorColor = listColorAccent(listMeta?.color)
@@ -1696,10 +1593,17 @@ private fun HomeTodayTaskRow(
         if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(
             alpha = 0.8f
         )
-    val subtitleText = if (isOverdue) {
-        stringResource(R.string.todos_due_overdue_text, dueText)
-    } else {
-        stringResource(R.string.todos_due_text, dueText)
+    val subtitleText = dueText?.let { text ->
+        if (isOverdue) {
+            stringResource(R.string.todos_due_overdue_text, text)
+        } else {
+            stringResource(R.string.todos_due_text, text)
+        }
+    }
+    LaunchedEffect(openSwipeTaskId, todo.id) {
+        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
+            swipeRevealState.close()
+        }
     }
 
     Column(
@@ -1735,8 +1639,8 @@ private fun HomeTodayTaskRow(
                             view,
                             HapticFeedbackConstantsCompat.CLOCK_TICK
                         )
+                        closeSwipeSlot()
                         onEdit()
-                        swipeRevealState.close()
                     },
                 )
                 TaskSwipeActionButton(
@@ -1752,8 +1656,8 @@ private fun HomeTodayTaskRow(
                             view,
                             HapticFeedbackConstantsCompat.CLOCK_TICK
                         )
+                        closeSwipeSlot()
                         onDelete()
-                        swipeRevealState.close()
                     },
                 )
             }
@@ -1765,10 +1669,21 @@ private fun HomeTodayTaskRow(
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
+                            if (delta < 0f || swipeRevealState.isOpenOrDragging) {
+                                claimSwipeSlot()
+                            }
                             swipeRevealState.dragBy(delta)
+                            if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
+                                onOpenSwipeTaskIdChange(null)
+                            }
                         },
                         onDragStopped = { velocity ->
                             swipeRevealState.settle(velocity)
+                            if (swipeRevealState.isOpenOrDragging) {
+                                claimSwipeSlot()
+                            } else if (latestOpenSwipeTaskId.value == todo.id) {
+                                onOpenSwipeTaskIdChange(null)
+                            }
                         },
                     )
                     .clickable(
@@ -1776,10 +1691,14 @@ private fun HomeTodayTaskRow(
                         indication = null,
                     ) {
                         if (swipeRevealState.isOpenOrDragging) {
-                            swipeRevealState.close()
+                            closeSwipeSlot()
                         } else if (!swipeRevealState.isHinting && !pendingCompletion) {
+                            claimSwipeSlot()
                             coroutineScope.launch {
                                 swipeRevealState.playHint()
+                                if (latestOpenSwipeTaskId.value == todo.id && !swipeRevealState.isOpenOrDragging) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
                             }
                         }
                     },
@@ -1805,7 +1724,7 @@ private fun HomeTodayTaskRow(
                                 enabled = !pendingCompletion,
                             ) {
                                 if (!pendingCompletion) {
-                                    swipeRevealState.close()
+                                    closeSwipeSlot()
                                     localChecked = true
                                     pendingCompletion = true
                                     coroutineScope.launch {
@@ -1873,15 +1792,17 @@ private fun HomeTodayTaskRow(
                             overflow = TextOverflow.Ellipsis,
                             onTextLayout = { titleLayoutResult = it },
                         )
-                        Text(
-                            text = subtitleText,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = TdayFontFamily,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 18.sp,
-                            color = subtitleColor,
-                        )
+                        subtitleText?.let { text ->
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = TdayFontFamily,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 18.sp,
+                                color = subtitleColor,
+                            )
+                        }
                     }
 
                     if (listMeta != null || priorityIcon != null) {
@@ -2359,16 +2280,16 @@ private fun performGentleHaptic(view: android.view.View) {
 @Composable
 private fun priorityColor(priority: String): Color {
     return when (priority.lowercase(Locale.getDefault())) {
-        "high", "urgent", "important" -> Color(0xFFE56A6A)
-        "medium" -> Color(0xFFE3B368)
-        else -> Color(0xFF6FBF86)
+        "high", "urgent", "important" -> Color(0xFFFF3B30)
+        "medium" -> Color(0xFFFF9500)
+        else -> Color(0xFF007AFF)
     }
 }
 
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
         "medium" -> Icons.Rounded.Flag
-        "high", "urgent", "important" -> Icons.Rounded.PriorityHigh
+        "high", "urgent", "important" -> Icons.Rounded.Flag
         else -> null
     }
 }

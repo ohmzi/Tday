@@ -142,6 +142,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -414,12 +415,19 @@ fun CalendarScreen(
         remember { mutableStateMapOf<String, CalendarDateDropTargetBounds>() }
     var activeDropDateIso by remember { mutableStateOf<String?>(null) }
     var pendingRescheduleDrop by remember { mutableStateOf<CalendarTaskRescheduleDrop?>(null) }
+    var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(selectedViewMode) {
         if (selectedViewMode == CalendarViewMode.DAY) {
             draggedCalendarTodoId = null
             activeCalendarDrag = null
             activeDropDateIso = null
             calendarDropTargetBounds.clear()
+        }
+    }
+    LaunchedEffect(uiState.items, openSwipeTaskId) {
+        val openId = openSwipeTaskId ?: return@LaunchedEffect
+        if (uiState.items.none { it.id == openId }) {
+            openSwipeTaskId = null
         }
     }
     val editTarget = remember(editTargetId, uiState.items) {
@@ -696,6 +704,8 @@ fun CalendarScreen(
                             onInfo = { editTargetId = todo.id },
                             onDelete = { onDelete(todo) },
                             dragging = calendarTaskRescheduleEnabled && draggedCalendarTodo?.id == todo.id,
+                            openSwipeTaskId = openSwipeTaskId,
+                            onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
                             onDragStart = { position ->
                                 activeDropDateIso = null
                                 draggedCalendarTodoId = todo.id
@@ -2061,13 +2071,15 @@ private fun CalendarTaskDragPreview(
                     color = colorScheme.onSurface,
                     maxLines = 1,
                 )
-                Text(
-                    text = todo.due?.let(CalendarTaskDragDueTimeFormatter::format) ?: "Floater",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
+                todo.due?.let(CalendarTaskDragDueTimeFormatter::format)?.let { dueText ->
+                    Text(
+                        text = dueText,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
             }
             if (listMeta != null) {
                 Icon(
@@ -2101,6 +2113,8 @@ private fun CalendarTodoRow(
     onInfo: () -> Unit,
     onDelete: () -> Unit,
     dragging: Boolean,
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
     onDragStart: (Offset) -> Unit,
     onDragMove: (Offset) -> Unit,
     onDragEnd: (Offset?) -> Unit,
@@ -2122,6 +2136,19 @@ private fun CalendarTodoRow(
     var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
+    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
+    fun claimSwipeSlot() {
+        if (latestOpenSwipeTaskId.value != todo.id) {
+            onOpenSwipeTaskIdChange(todo.id)
+        }
+    }
+
+    fun closeSwipeSlot() {
+        targetOffsetX = 0f
+        if (latestOpenSwipeTaskId.value == todo.id) {
+            onOpenSwipeTaskIdChange(null)
+        }
+    }
     val animatedOffsetX by animateFloatAsState(
         targetValue = targetOffsetX,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -2150,7 +2177,6 @@ private fun CalendarTodoRow(
     )
     val dueText = todo.due
         ?.let { DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(it) }
-        ?: "Floater"
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = listMeta != null
     val priorityIcon = priorityIconFor(todo.priority)
@@ -2159,6 +2185,12 @@ private fun CalendarTodoRow(
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
     val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    LaunchedEffect(openSwipeTaskId, todo.id) {
+        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && targetOffsetX != 0f) {
+            targetOffsetX = 0f
+            swipeHinting = false
+        }
+    }
 
     Column(
         modifier = modifier
@@ -2192,8 +2224,8 @@ private fun CalendarTodoRow(
                     revealDelay = 0.62f,
                     onClick = {
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        closeSwipeSlot()
                         onInfo()
-                        targetOffsetX = 0f
                     },
                 )
                 CalendarSwipeActionButton(
@@ -2206,7 +2238,7 @@ private fun CalendarTodoRow(
                     revealDelay = 0.04f,
                     onClick = {
                         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                        targetOffsetX = 0f
+                        closeSwipeSlot()
                         onDelete()
                     },
                 )
@@ -2224,7 +2256,7 @@ private fun CalendarTodoRow(
                             Modifier.pointerInput(todo.id) {
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = { localOffset ->
-                                        targetOffsetX = 0f
+                                        closeSwipeSlot()
                                         val startPosition = rowOriginInRoot + localOffset
                                         dragPointerPosition = startPosition
                                         onDragStart(startPosition)
@@ -2258,10 +2290,16 @@ private fun CalendarTodoRow(
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
+                            if (delta < 0f || targetOffsetX != 0f) {
+                                claimSwipeSlot()
+                            }
                             targetOffsetX = (targetOffsetX + delta).coerceIn(
                                 -maxElasticDragPx,
                                 0f,
                             )
+                            if (targetOffsetX == 0f && latestOpenSwipeTaskId.value == todo.id) {
+                                onOpenSwipeTaskIdChange(null)
+                            }
                         },
                         onDragStopped = { velocity ->
                             val flingOpen = velocity < -1450f
@@ -2271,6 +2309,11 @@ private fun CalendarTodoRow(
                             } else {
                                 0f
                             }
+                            if (targetOffsetX != 0f) {
+                                claimSwipeSlot()
+                            } else if (latestOpenSwipeTaskId.value == todo.id) {
+                                onOpenSwipeTaskIdChange(null)
+                            }
                         },
                     )
                     .clickable(
@@ -2278,15 +2321,19 @@ private fun CalendarTodoRow(
                         indication = null,
                     ) {
                         if (targetOffsetX != 0f) {
-                            targetOffsetX = 0f
+                            closeSwipeSlot()
                         } else if (!swipeHinting && !pendingCompletion) {
                             swipeHinting = true
+                            claimSwipeSlot()
                             coroutineScope.launch {
                                 targetOffsetX = -swipeHintOffsetPx
                                 delay(150)
                                 targetOffsetX = 0f
                                 delay(360)
                                 swipeHinting = false
+                                if (latestOpenSwipeTaskId.value == todo.id && targetOffsetX == 0f) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
                             }
                         }
                     },
@@ -2319,7 +2366,7 @@ private fun CalendarTodoRow(
                         enabled = !pendingCompletion,
                         onClick = {
                             ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-                            targetOffsetX = 0f
+                            closeSwipeSlot()
                             localChecked = true
                             pendingCompletion = true
                             coroutineScope.launch {
@@ -2367,11 +2414,13 @@ private fun CalendarTodoRow(
                             maxLines = 2,
                             onTextLayout = { titleLayoutResult = it },
                         )
-                        Text(
-                            text = dueText,
-                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                        dueText?.let { text ->
+                            Text(
+                                text = text,
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                     if (showListIndicator || showPriorityIcon) {
                         Row(
@@ -2443,7 +2492,6 @@ private fun CalendarCompletedTodoRow(
     )
     val dueText = item.due
         ?.let { DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(it) }
-        ?: "Floater"
     val listMeta = item.resolveListSummary(lists)
     val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
         ?: item.listColor?.let(::listAccentColor)
@@ -2525,11 +2573,13 @@ private fun CalendarCompletedTodoRow(
                         },
                         maxLines = 2,
                     )
-                    Text(
-                        text = dueText,
-                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    dueText?.let { text ->
+                        Text(
+                            text = text,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
                 if (showPriorityIcon) {
                     Row(
@@ -2716,16 +2766,16 @@ private fun buildMonthCells(month: YearMonth): List<CalendarDayCellModel> {
 
 private fun priorityColor(priority: String): Color {
     return when (priority.lowercase(Locale.getDefault())) {
-        "high", "urgent", "important" -> Color(0xFFE56A6A)
-        "medium" -> Color(0xFFE3B368)
-        else -> Color(0xFF6FBF86)
+        "high", "urgent", "important" -> Color(0xFFFF3B30)
+        "medium" -> Color(0xFFFF9500)
+        else -> Color(0xFF007AFF)
     }
 }
 
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
         "medium" -> Icons.Rounded.Flag
-        "high", "urgent", "important" -> Icons.Rounded.PriorityHigh
+        "high", "urgent", "important" -> Icons.Rounded.Flag
         else -> null
     }
 }

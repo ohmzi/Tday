@@ -79,10 +79,13 @@ private struct CreateListSheetHeaderHeightKey: PreferenceKey {
     }
 }
 
+private let homeScrollTopID = "home-scroll-top"
+
 struct HomeScreen: View {
     let onRootFeedTabSelected: (RootFeedTab) -> Void
     let showsRootControls: Bool
     let createTaskRequestID: Int
+    let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
     let onNavigate: (AppRoute) -> Void
@@ -100,12 +103,14 @@ struct HomeScreen: View {
     @State private var showingCreateList = false
     @State private var editingTodo: TodoItem?
     @State private var homeScrollOffset: CGFloat = 0
+    @State private var openSwipeTaskID: String?
 
     init(
         container: AppContainer,
         onRootFeedTabSelected: @escaping (RootFeedTab) -> Void = { _ in },
         showsRootControls: Bool = true,
         createTaskRequestID: Int = 0,
+        scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
         onNavigate: @escaping (AppRoute) -> Void
@@ -113,6 +118,7 @@ struct HomeScreen: View {
         self.onRootFeedTabSelected = onRootFeedTabSelected
         self.showsRootControls = showsRootControls
         self.createTaskRequestID = createTaskRequestID
+        self.scrollToTopRequestID = scrollToTopRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
         self.onNavigate = onNavigate
@@ -176,131 +182,142 @@ struct HomeScreen: View {
                         await viewModel.refresh()
                     }
                 ) {
-                    ScrollView(showsIndicators: false) {
-                        LazyVStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
-                            TimelineScrollOffsetObserver { homeScrollOffset = $0 }
-                                .frame(height: 0)
-                                .allowsHitTesting(false)
+                    ScrollViewReader { scrollProxy in
+                        ScrollView(showsIndicators: false) {
+                            LazyVStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
+                                TimelineScrollOffsetObserver { homeScrollOffset = $0 }
+                                    .frame(height: 0)
+                                    .allowsHitTesting(false)
+                                    .id(homeScrollTopID)
 
-                            HomeTopBar(
-                                totalWidth: proxy.size.width - (HomeMetrics.screenPadding * 2),
-                                searchExpanded: $searchExpanded,
-                                searchQuery: $searchQuery,
-                                searchFieldFocused: $searchFieldFocused,
-                                onSearchClose: {
-                                    closeSearch()
-                                },
-                                onCreateList: {
-                                    closeSearch()
-                                    showingCreateList = true
-                                },
-                                onOpenSettings: {
-                                    closeSearch()
-                                    onNavigate(.settings)
+                                HomeTopBar(
+                                    totalWidth: proxy.size.width - (HomeMetrics.screenPadding * 2),
+                                    searchExpanded: $searchExpanded,
+                                    searchQuery: $searchQuery,
+                                    searchFieldFocused: $searchFieldFocused,
+                                    onSearchClose: {
+                                        closeSearch()
+                                    },
+                                    onCreateList: {
+                                        closeSearch()
+                                        showingCreateList = true
+                                    },
+                                    onOpenSettings: {
+                                        closeSearch()
+                                        onNavigate(.settings)
+                                    }
+                                )
+                                .onTopPartialScrollSnap(
+                                    anchorDistance: HomeMetrics.titleAnchorDistance,
+                                    isDisabled: searchExpanded
+                                )
+
+                                HomeTodayCard(
+                                    count: viewModel.summary.todayCount,
+                                    action: {
+                                        closeSearch()
+                                        onNavigate(.todayTodos)
+                                    }
+                                )
+
+                                if !viewModel.todayTodos.isEmpty {
+                                    VStack(spacing: 0) {
+                                        ForEach(viewModel.todayTodos) { todo in
+                                            homeTodayTaskRow(todo)
+                                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                        }
+                                    }
+                                    .animation(
+                                        .spring(response: 0.34, dampingFraction: 0.9),
+                                        value: viewModel.todayTodos.map(\.id)
+                                    )
                                 }
-                            )
-                            .onTopPartialScrollSnap(
-                                anchorDistance: HomeMetrics.titleAnchorDistance,
-                                isDisabled: searchExpanded
-                            )
 
-                            HomeTodayCard(
-                                count: viewModel.summary.todayCount,
-                                action: {
-                                    closeSearch()
-                                    onNavigate(.todayTodos)
-                                }
-                            )
+                                HomeCategoryBoard(
+                                    overdueCount: overdueCount,
+                                    scheduledCount: viewModel.summary.scheduledCount,
+                                    allCount: viewModel.summary.allCount,
+                                    priorityCount: viewModel.summary.priorityCount,
+                                    completedCount: viewModel.summary.completedCount,
+                                    calendarCount: viewModel.summary.scheduledCount,
+                                    onOpenOverdue: {
+                                        closeSearch()
+                                        onNavigate(.overdueTodos)
+                                    },
+                                    onOpenScheduled: {
+                                        closeSearch()
+                                        onNavigate(.scheduledTodos)
+                                    },
+                                    onOpenAll: {
+                                        closeSearch()
+                                        onNavigate(.allTodos(highlightTodoId: nil))
+                                    },
+                                    onOpenPriority: {
+                                        closeSearch()
+                                        onNavigate(.priorityTodos)
+                                    },
+                                    onOpenCompleted: {
+                                        closeSearch()
+                                        onNavigate(.completed)
+                                    },
+                                    onOpenCalendar: {
+                                        closeSearch()
+                                        onNavigate(.calendar)
+                                    }
+                                )
 
-                            if !viewModel.todayTodos.isEmpty {
-                                VStack(spacing: 0) {
-                                    ForEach(viewModel.todayTodos) { todo in
-                                        homeTodayTaskRow(todo)
-                                            .transition(.opacity.combined(with: .move(edge: .top)))
+                                if !viewModel.summary.lists.isEmpty {
+                                    HomeListsSection(
+                                        lists: viewModel.summary.lists,
+                                        displayName: displayName(for:)
+                                    ) { list, name in
+                                        closeSearch()
+                                        onNavigate(.listTodos(listId: list.id, listName: name))
                                     }
                                 }
-                                .animation(
-                                    .spring(response: 0.34, dampingFraction: 0.9),
-                                    value: viewModel.todayTodos.map(\.id)
-                                )
-                            }
 
-                            HomeCategoryBoard(
-                                overdueCount: overdueCount,
-                                scheduledCount: viewModel.summary.scheduledCount,
-                                allCount: viewModel.summary.allCount,
-                                priorityCount: viewModel.summary.priorityCount,
-                                completedCount: viewModel.summary.completedCount,
-                                calendarCount: viewModel.summary.scheduledCount,
-                                onOpenOverdue: {
-                                    closeSearch()
-                                    onNavigate(.overdueTodos)
-                                },
-                                onOpenScheduled: {
-                                    closeSearch()
-                                    onNavigate(.scheduledTodos)
-                                },
-                                onOpenAll: {
-                                    closeSearch()
-                                    onNavigate(.allTodos(highlightTodoId: nil))
-                                },
-                                onOpenPriority: {
-                                    closeSearch()
-                                    onNavigate(.priorityTodos)
-                                },
-                                onOpenCompleted: {
-                                    closeSearch()
-                                    onNavigate(.completed)
-                                },
-                                onOpenCalendar: {
-                                    closeSearch()
-                                    onNavigate(.calendar)
+                                if let errorMessage = viewModel.errorMessage {
+                                    ErrorRetryView(message: errorMessage) {
+                                        Task { await viewModel.refresh() }
+                                    }
                                 }
-                            )
 
-                            if !viewModel.summary.lists.isEmpty {
-                                HomeListsSection(
-                                    lists: viewModel.summary.lists,
-                                    displayName: displayName(for:)
-                                ) { list, name in
-                                    closeSearch()
-                                    onNavigate(.listTodos(listId: list.id, listName: name))
-                                }
                             }
-
-                            if let errorMessage = viewModel.errorMessage {
-                                ErrorRetryView(message: errorMessage) {
-                                    Task { await viewModel.refresh() }
-                                }
-                            }
+                            .padding(.horizontal, HomeMetrics.screenPadding)
+                            .padding(.top, HomeMetrics.screenPadding)
 
                         }
-                        .padding(.horizontal, HomeMetrics.screenPadding)
-                        .padding(.top, HomeMetrics.screenPadding)
-                    }
-                    .scrollBounceBehavior(.always, axes: .vertical)
-                    .safeAreaInset(edge: .bottom) {
-                        if showsRootControls {
-                            HStack(alignment: .bottom) {
-                                RootFeedDock(
-                                    activeTab: .home,
-                                    collapsed: shouldCollapseRootDock,
-                                    onSelect: onRootFeedTabSelected
-                                )
-                                .padding(.leading, 18)
-                                .padding(.vertical, 8)
+                        .scrollBounceBehavior(.always, axes: .vertical)
+                        .safeAreaInset(edge: .bottom) {
+                            if showsRootControls {
+                                HStack(alignment: .bottom) {
+                                    RootFeedDock(
+                                        activeTab: .home,
+                                        collapsed: shouldCollapseRootDock,
+                                        onSelect: onRootFeedTabSelected
+                                    )
+                                    .padding(.leading, 18)
+                                    .padding(.vertical, 8)
 
-                                Spacer(minLength: 12)
+                                    Spacer(minLength: 12)
 
-                                TaskFloatingActionButton {
-                                    closeSearch()
-                                    showingCreateTask = true
+                                    TaskFloatingActionButton {
+                                        closeSearch()
+                                        showingCreateTask = true
+                                    }
+                                    .padding(.trailing, 18)
+                                    .padding(.vertical, 8)
                                 }
-                                .padding(.trailing, 18)
-                                .padding(.vertical, 8)
+                            } else {
+                                Color.clear.frame(height: 80)
                             }
-                        } else {
-                            Color.clear.frame(height: 80)
+                        }
+                        .onChange(of: scrollToTopRequestID) { _, requestID in
+                            guard requestID > 0 else { return }
+                            closeSearch()
+                            withAnimation(.easeInOut(duration: 0.34)) {
+                                scrollProxy.scrollTo(homeScrollTopID, anchor: .top)
+                            }
                         }
                     }
                 }
@@ -366,6 +383,10 @@ struct HomeScreen: View {
             closeSearch()
             showingCreateTask = true
         }
+        .onChange(of: viewModel.todayTodos.map(\.id)) { _, ids in
+            guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
+            self.openSwipeTaskID = nil
+        }
         .onAppear {
             onRootControlsVisibleChange(!searchExpanded)
             onRootDockCollapsedChange(shouldCollapseRootDock)
@@ -429,7 +450,8 @@ struct HomeScreen: View {
             lists: viewModel.lists,
             onComplete: { await viewModel.complete(todo) },
             onDelete: { Task { await viewModel.delete(todo) } },
-            onEdit: { editingTodo = todo }
+            onEdit: { editingTodo = todo },
+            openSwipeTaskID: $openSwipeTaskID
         )
     }
 
@@ -624,6 +646,7 @@ private struct HomeTodayTaskRow: View {
     let onComplete: () async -> Void
     let onDelete: () -> Void
     let onEdit: () -> Void
+    @Binding var openSwipeTaskID: String?
 
     @Environment(\.tdayColors) private var colors
 
@@ -635,8 +658,11 @@ private struct HomeTodayTaskRow: View {
 
     private var priorityIcon: String? { priorityIndicatorSymbolName(todo.priority) }
     private var isOverdue: Bool { !todo.completed && (todo.due ?? .distantFuture) < Date() }
-    private var dueText: String { todo.due?.formatted(date: .omitted, time: .shortened) ?? "" }
-    private var subtitleText: String { isOverdue ? "Overdue, \(dueText)" : "Due \(dueText)" }
+    private var dueText: String? { todo.due?.formatted(date: .omitted, time: .shortened) }
+    private var subtitleText: String? {
+        guard let dueText else { return nil }
+        return isOverdue ? "Overdue, \(dueText)" : "Due \(dueText)"
+    }
     private var subtitleColor: Color { isOverdue ? colors.error : colors.onSurfaceVariant.opacity(0.8) }
     private var isCompleting: Bool { completionPhase != .active }
     private var isFading: Bool { completionPhase == .fading }
@@ -649,6 +675,8 @@ private struct HomeTodayTaskRow: View {
     var body: some View {
         rowContent
             .todoTrailingSwipeActions(
+                rowID: todo.id,
+                openRowID: $openSwipeTaskID,
                 enabled: !isCompleting,
                 onEdit: onEdit,
                 onDelete: onDelete
@@ -679,9 +707,11 @@ private struct HomeTodayTaskRow: View {
                     strikeColor: colors.onSurface.opacity(0.65)
                 )
 
-                Text(subtitleText)
-                    .font(.tdayRounded(size: 13, weight: .semibold))
-                    .foregroundStyle(subtitleColor)
+                if let subtitleText {
+                    Text(subtitleText)
+                        .font(.tdayRounded(size: 13, weight: .semibold))
+                        .foregroundStyle(subtitleColor)
+                }
             }
 
             Spacer(minLength: 0)
@@ -709,6 +739,9 @@ private struct HomeTodayTaskRow: View {
 
     private func startCompletion() {
         guard completionPhase == .active else { return }
+        if openSwipeTaskID == todo.id {
+            openSwipeTaskID = nil
+        }
 
         withAnimation(.easeInOut(duration: 0.18)) {
             completionPhase = .checked
@@ -789,23 +822,15 @@ private struct HomeTodayCard: View {
                     )
                 )
 
-                Image(systemName: "sun.max.fill")
-                    .font(.system(size: HomeMetrics.tileWatermarkSize, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.15))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .offset(x: 28, y: 22)
-                    .clipped()
-
                 HStack {
-                    HStack(spacing: 10) {
-                        Image(systemName: "sun.max.fill")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(.white)
-                        Text(dateLabel)
-                            .font(.tdayRounded(size: 22, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
+                    Text(dateLabel)
+                        .font(.tdayRounded(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+
                     Spacer()
+
                     Text("\(count)")
                         .font(.tdayRounded(size: 34, weight: .black))
                         .foregroundStyle(.white)
@@ -1436,16 +1461,17 @@ struct CreateListSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            CreateListSheetHeader(
-                canCreate: canCreate,
+            TdaySheetHeader(
+                title: "New list",
+                closeAccessibilityLabel: "Close",
+                confirmAccessibilityLabel: "Create list",
+                isConfirmEnabled: canCreate,
                 onClose: { dismiss() },
                 onConfirm: {
                     onSubmit(trimmedName, color, iconKey)
                     dismiss()
                 }
             )
-            .padding(.horizontal, 18)
-            .padding(.top, 14)
             .background(
                 GeometryReader { proxy in
                     Color.clear
@@ -1455,7 +1481,7 @@ struct CreateListSheet: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
-                    CreateListSheetCard {
+                    TdaySheetCard {
                         VStack(spacing: 18) {
                             ZStack {
                                 Circle()
@@ -1491,8 +1517,8 @@ struct CreateListSheet: View {
                         .padding(.vertical, 18)
                     }
 
-                    CreateListSheetSectionTitle(text: "Color")
-                    CreateListSheetCard {
+                    TdaySheetSectionTitle(text: "Color")
+                    TdaySheetCard {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
                                 ForEach(homeListColorOptions, id: \.key) { option in
@@ -1525,8 +1551,8 @@ struct CreateListSheet: View {
                         }
                     }
 
-                    CreateListSheetSectionTitle(text: "Icon")
-                    CreateListSheetCard {
+                    TdaySheetSectionTitle(text: "Icon")
+                    TdaySheetCard {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(homeListIconOptions, id: \.key) { option in
@@ -1603,103 +1629,6 @@ struct CreateListSheet: View {
             .split(separator: " ")
             .map { $0.capitalized }
             .joined(separator: " ")
-    }
-}
-
-private struct CreateListSheetHeader: View {
-    let canCreate: Bool
-    let onClose: () -> Void
-    let onConfirm: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        HStack {
-            CreateListSheetActionButton(
-                icon: "xmark",
-                accentColor: Color(hex: 0xE35A5A),
-                enabled: true,
-                action: onClose
-            )
-
-            Spacer()
-
-            Text("New list")
-                .font(.tdayRounded(size: 24, weight: .heavy))
-                .foregroundStyle(colors.onSurface)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-
-            Spacer()
-
-            CreateListSheetActionButton(
-                icon: "checkmark",
-                accentColor: Color(hex: 0x2FA35B),
-                enabled: canCreate,
-                action: onConfirm
-            )
-        }
-    }
-}
-
-private struct CreateListSheetActionButton: View {
-    let icon: String
-    let accentColor: Color
-    let enabled: Bool
-    let action: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(colors.onSurface.opacity(enabled ? 1 : 0.55))
-                .frame(width: 56, height: 56)
-                .background(colors.bottomSheetControlSurface)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(accentColor.opacity(enabled ? 0.55 : 0.3), lineWidth: 1.5)
-                )
-        }
-        .buttonStyle(
-            TdayPressButtonStyle(
-                shadowColor: Color.black,
-                pressedShadowOpacity: 0.04,
-                normalShadowOpacity: enabled ? 0.16 : 0.06
-            )
-        )
-        .disabled(!enabled)
-    }
-}
-
-private struct CreateListSheetSectionTitle: View {
-    let text: String
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Text(text)
-            .font(.tdayRounded(size: 22, weight: .bold))
-            .foregroundStyle(colors.onSurfaceVariant)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
-    }
-}
-
-private struct CreateListSheetCard<Content: View>: View {
-    @Environment(\.tdayColors) private var colors
-
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        content
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(colors.bottomSheetSurface)
-            )
     }
 }
 

@@ -48,6 +48,7 @@
 		5DB03218BE341B7C186F01AE /* CalendarPagingScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E5A511171F96ABDEC46926 /* CalendarPagingScrollView.swift */; };
 		64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */; };
 		701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */; };
+		F2C4D6E8A1B3456790ABCDE0 /* TdaySheetChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */; };
 		72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */; };
 		765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D006E491513605369E7D5 /* DomainModels.swift */; };
 		846AE66C58EF435FB506E3E6 /* OnboardingWizardOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */; };
@@ -159,6 +160,7 @@
 		AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeStore.swift; sourceTree = "<group>"; };
 		AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorRetryView.swift; sourceTree = "<group>"; };
 		AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateTaskSheet.swift; sourceTree = "<group>"; };
+		F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChrome.swift; sourceTree = "<group>"; };
 		AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListViewModel.swift; sourceTree = "<group>"; };
 		B3F7D3043A1EFC1A4EBBDA02 /* Tday.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tday.entitlements; sourceTree = "<group>"; };
 		C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPreferenceStore.swift; sourceTree = "<group>"; };
@@ -425,6 +427,7 @@
 				AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */,
 				32538D5E9182018AFEAB8DEC /* PullToRefresh.swift */,
 				84798381A9E2DF3C9468ED8F /* SwipeActions.swift */,
+				F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */,
 			);
 			path = Component;
 			sourceTree = "<group>";
@@ -709,6 +712,7 @@
 				CFD25493E8027AACCC39FE21 /* CompletedViewModel.swift in Sources */,
 				01C535860D5694F91772B940 /* CookieStore.swift in Sources */,
 				701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */,
+				F2C4D6E8A1B3456790ABCDE0 /* TdaySheetChrome.swift in Sources */,
 				58BD5E982FB87AE6986E3E79 /* CreateTodoUseCase.swift in Sources */,
 				535CABAC18AD47FEF15D2C11 /* CredentialEnvelope.swift in Sources */,
 				765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */,
