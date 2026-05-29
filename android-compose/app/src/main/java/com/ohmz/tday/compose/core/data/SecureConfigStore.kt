@@ -32,6 +32,25 @@ class SecureConfigStore @Inject constructor(
 
     fun hasServerUrl(): Boolean = !getServerUrl().isNullOrBlank()
 
+    fun getAppDataMode(): AppDataMode {
+        val persisted = prefs.getString(KEY_APP_DATA_MODE, null)
+            ?.let { raw ->
+                runCatching { AppDataMode.valueOf(raw) }.getOrNull()
+            }
+        if (persisted != null) return persisted
+        return if (!getServerUrl().isNullOrBlank()) AppDataMode.SERVER else AppDataMode.UNSET
+    }
+
+    fun isLocalMode(): Boolean = getAppDataMode() == AppDataMode.LOCAL
+
+    fun setAppDataMode(mode: AppDataMode) {
+        prefs.edit().putString(KEY_APP_DATA_MODE, mode.name).apply()
+    }
+
+    fun clearAppDataMode() {
+        prefs.edit().remove(KEY_APP_DATA_MODE).apply()
+    }
+
     fun getServerUrl(): String? {
         val inMemory = runtimeServerUrl?.takeIf { it.isNotBlank() }
         if (inMemory != null) return inMemory
@@ -53,7 +72,10 @@ class SecureConfigStore @Inject constructor(
 
         runtimeServerUrl = normalized
         if (persist) {
-            prefs.edit().putString(KEY_SERVER_URL, normalized).apply()
+            prefs.edit()
+                .putString(KEY_SERVER_URL, normalized)
+                .putString(KEY_APP_DATA_MODE, AppDataMode.SERVER.name)
+                .apply()
         } else {
             prefs.edit().remove(KEY_SERVER_URL).apply()
         }
@@ -65,7 +87,10 @@ class SecureConfigStore @Inject constructor(
             ?: return Result.failure(IllegalStateException("Server URL is not configured"))
 
         runtimeServerUrl = current
-        prefs.edit().putString(KEY_SERVER_URL, current).apply()
+        prefs.edit()
+            .putString(KEY_SERVER_URL, current)
+            .putString(KEY_APP_DATA_MODE, AppDataMode.SERVER.name)
+            .apply()
         return Result.success(current)
     }
 
@@ -254,5 +279,6 @@ class SecureConfigStore @Inject constructor(
         const val KEY_LIST_ICON_MAP = "list_icon_map"
         const val KEY_OFFLINE_SYNC_STATE = "offline_sync_state_v1"
         const val KEY_CACHED_SESSION_USER = "cached_session_user_v1"
+        const val KEY_APP_DATA_MODE = "app_data_mode_v1"
     }
 }

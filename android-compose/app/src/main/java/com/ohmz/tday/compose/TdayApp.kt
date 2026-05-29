@@ -314,7 +314,7 @@ fun TdayApp(
                 ) {
                     val authViewModel: AuthViewModel = hiltViewModel()
                     val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-                    val showOnboardingWizard = !appUiState.authenticated
+                    val showOnboardingWizard = !appUiState.isWorkspaceAvailable
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         Box(
@@ -328,7 +328,7 @@ fun TdayApp(
                                     },
                                 ),
                         ) {
-                            if (appUiState.authenticated) {
+                            if (appUiState.isWorkspaceAvailable) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     when (rootFeedTab) {
                                         RootFeedTab.HOME -> {
@@ -341,6 +341,7 @@ fun TdayApp(
                                             HomeScreen(
                                                 uiState = homeUiState,
                                                 onRefresh = homeViewModel::refresh,
+                                                pullRefreshEnabled = !appUiState.isLocalMode,
                                                 onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
                                                 onOpenOverdue = { navController.navigate(AppRoute.OverdueTodos.route) },
                                                 onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
@@ -414,6 +415,7 @@ fun TdayApp(
                                                 mode = TodoListMode.FLOATER,
                                                 onBack = { rootFeedTab = RootFeedTab.HOME },
                                                 onTaskDeleted = ::showTaskDeletedToast,
+                                                pullRefreshEnabled = !appUiState.isLocalMode,
                                                 onOpenFloaterList = { id, name ->
                                                     navController.navigate(
                                                         AppRoute.FloaterListTodos.create(
@@ -503,6 +505,11 @@ fun TdayApp(
                                         serverCanResetTrust = appUiState.canResetServerTrust,
                                         pendingApprovalMessage = appUiState.pendingApprovalMessage,
                                         authUiState = authUiState,
+                                        onUseLocalMode = {
+                                            authViewModel.clearStatus()
+                                            appViewModel.clearPendingApprovalNotice()
+                                            appViewModel.useLocalMode()
+                                        },
                                         onConnectServer = { rawUrl, onResult ->
                                             appViewModel.saveServerUrl(
                                                 rawUrl = rawUrl,
@@ -559,6 +566,7 @@ fun TdayApp(
 
                         val authenticatedVersionCheck = appUiState.versionCheckResult
                         if (appUiState.authenticated &&
+                            !appUiState.isLocalMode &&
                             (authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired ||
                                 authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired)
                         ) {
@@ -594,6 +602,7 @@ fun TdayApp(
                         mode = TodoListMode.TODAY,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
+                        pullRefreshEnabled = !appUiState.isLocalMode,
                     )
                 }
 
@@ -605,6 +614,7 @@ fun TdayApp(
                         mode = TodoListMode.OVERDUE,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
+                        pullRefreshEnabled = !appUiState.isLocalMode,
                     )
                 }
 
@@ -616,6 +626,7 @@ fun TdayApp(
                         mode = TodoListMode.SCHEDULED,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
+                        pullRefreshEnabled = !appUiState.isLocalMode,
                     )
                 }
 
@@ -646,6 +657,7 @@ fun TdayApp(
                         highlightTodoId = highlightTodoId,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
+                        pullRefreshEnabled = !appUiState.isLocalMode,
                     )
                 }
 
@@ -657,6 +669,7 @@ fun TdayApp(
                         mode = TodoListMode.PRIORITY,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
+                        pullRefreshEnabled = !appUiState.isLocalMode,
                     )
                 }
 
@@ -678,6 +691,7 @@ fun TdayApp(
                         listName = listName,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
+                        pullRefreshEnabled = !appUiState.isLocalMode,
                         onListDeleted = {
                             navController.navigate(AppRoute.Home.route) {
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
@@ -705,6 +719,7 @@ fun TdayApp(
                         listName = listName,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
+                        pullRefreshEnabled = !appUiState.isLocalMode,
                         onListDeleted = {
                             rootFeedTab = RootFeedTab.FLOATER
                             navController.navigate(AppRoute.Home.route) {
@@ -782,6 +797,7 @@ fun TdayApp(
                     }
                     SettingsScreen(
                         user = appUiState.user,
+                        isLocalMode = appUiState.isLocalMode,
                         selectedThemeMode = appUiState.themeMode,
                         selectedReminder = appUiState.selectedReminder,
                         adminAiSummaryEnabled = appUiState.adminAiSummaryEnabled,
@@ -822,7 +838,7 @@ fun TdayApp(
             }
 
             OfflineBanner(
-                visible = appUiState.isOffline && appUiState.authenticated,
+                visible = appUiState.isOffline && appUiState.authenticated && !appUiState.isLocalMode,
                 pendingMutationCount = appUiState.pendingMutationCount,
                 noticeKey = appUiState.offlineNoticeId,
                 modifier = Modifier.align(Alignment.TopCenter),
@@ -879,14 +895,14 @@ private fun HandleStartupNavigation(
 ) {
     LaunchedEffect(
         appUiState.loading,
-        appUiState.authenticated,
+        appUiState.isWorkspaceAvailable,
         currentRoute,
         isStartupSplashHeld,
     ) {
         if (appUiState.loading) return@LaunchedEffect
         if (isStartupSplashHeld) return@LaunchedEffect
 
-        if (appUiState.authenticated) {
+        if (appUiState.isWorkspaceAvailable) {
             val unauthenticatedRoutes = setOf(
                 AppRoute.Splash.route,
                 AppRoute.Login.route,
@@ -987,6 +1003,7 @@ private fun TodosRoute(
     scrollToTopRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
+    pullRefreshEnabled: Boolean = true,
 ) {
     val viewModel: TodoListViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -1036,6 +1053,7 @@ private fun TodosRoute(
         onRootFeedTabSelected = onRootFeedTabSelected,
         showRootFeedDock = showRootFeedDock,
         showCreateTaskButton = showCreateTaskButton,
+        pullRefreshEnabled = pullRefreshEnabled,
         usesRootFeedHeader = usesRootFeedHeader,
         createTaskRequestKey = createTaskRequestKey,
         scrollToTopRequestKey = scrollToTopRequestKey,

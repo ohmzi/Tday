@@ -68,6 +68,8 @@ class FloaterListRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         runCatching {
             requireApiBody(
                 api.createFloaterList(
@@ -158,6 +160,7 @@ class FloaterListRepository @Inject constructor(
             iconKey?.takeIf { it.isNotBlank() }?.let {
                 secureConfigStore.saveListIcon(listId, it)
             }
+            if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
         }
@@ -188,6 +191,13 @@ class FloaterListRepository @Inject constructor(
                 pendingMutations = state.pendingMutations
                     .filterNot { it.kind == MutationKind.UPDATE_FLOATER_LIST && it.targetId == listId } + pendingMutation,
             )
+        }
+
+        if (syncManager.isLocalMode()) {
+            iconKey?.takeIf { it.isNotBlank() }?.let {
+                secureConfigStore.saveListIcon(listId, it)
+            }
+            return
         }
 
         val immediateError = runCatching {
@@ -268,6 +278,8 @@ class FloaterListRepository @Inject constructor(
         }
 
         onOptimisticDelete()
+
+        if (syncManager.isLocalMode()) return
 
         if (isLocalOnly) {
             syncManager.syncCachedData(force = true, replayPendingMutations = true)

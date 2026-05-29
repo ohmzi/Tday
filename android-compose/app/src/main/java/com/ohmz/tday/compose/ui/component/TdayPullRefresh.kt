@@ -57,8 +57,18 @@ fun TdayPullToRefreshBox(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.TopStart,
+    enabled: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    if (!enabled) {
+        Box(
+            modifier = modifier,
+            contentAlignment = contentAlignment,
+            content = content,
+        )
+        return
+    }
+
     val state = rememberPullToRefreshState()
     val pullProgress = state.distanceFraction.coerceIn(0f, 1f)
     val contentPullProgress = state.distanceFraction.coerceIn(0f, 1.25f)

@@ -14,6 +14,7 @@
 		041712E33446975E528F050E /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */; };
 		04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */; };
 		0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */; };
+		07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E4F3B64B40942F48202C32E /* AppDataMode.swift */; };
 		0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE0A20E66DEF6FD2146DB10 /* SettingsRepository.swift */; };
 		0BA0A83365B9CF5E63B5A9AA /* SnackbarManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 133161412A6BD2A0C04F745A /* SnackbarManager.swift */; };
 		1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */; };
@@ -105,6 +106,7 @@
 		0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProbeDecryptor.swift; sourceTree = "<group>"; };
 		055D0F0501B287B70456AF4B /* TodoRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRepository.swift; sourceTree = "<group>"; };
 		0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFloatingActionButton.swift; sourceTree = "<group>"; };
+		0E4F3B64B40942F48202C32E /* AppDataMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataMode.swift; sourceTree = "<group>"; };
 		A9F10101A9F10101A9F10101 /* RootFeedDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedDock.swift; sourceTree = "<group>"; };
 		133161412A6BD2A0C04F745A /* SnackbarManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnackbarManager.swift; sourceTree = "<group>"; };
 		15B9BC191869EBEA7E8340E6 /* NavigationBackHistoryTitle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBackHistoryTitle.swift; sourceTree = "<group>"; };
@@ -435,6 +437,7 @@
 		967A6B5FC45694B849B1972E /* Data */ = {
 			isa = PBXGroup;
 			children = (
+				0E4F3B64B40942F48202C32E /* AppDataMode.swift */,
 				6CF6FD5D2845A10D7052467D /* AppContainer.swift */,
 				E867FA22FEB66EDCE837CF6D /* SecureStore.swift */,
 				D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */,
@@ -695,6 +698,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B648A67EAD215BE5B74F7460 /* ApiModels.swift in Sources */,
+				07D1F4A0C9434C54853E9D29 /* AppDataMode.swift in Sources */,
 				5B82443B89507719EDD7215C /* AppContainer.swift in Sources */,
 				A316B4B3BB1AEA5FDF9998DF /* AppRootView.swift in Sources */,
 				D1EC81F59DDFE7F8A10D1D30 /* AppRoute.swift in Sources */,

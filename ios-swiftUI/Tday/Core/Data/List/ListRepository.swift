@@ -64,6 +64,10 @@ final class ListRepository {
             return nextState
         }
 
+        if syncManager.isLocalMode {
+            return
+        }
+
         do {
             let response = try await api.createList(
                 payload: CreateListRequest(name: normalizedName, color: color, iconKey: iconKey)
@@ -149,6 +153,9 @@ final class ListRepository {
                 }
                 return nextState
             }
+            if syncManager.isLocalMode {
+                return
+            }
             _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
             return
         }
@@ -189,6 +196,9 @@ final class ListRepository {
                 )
             )
             return nextState
+        }
+        if syncManager.isLocalMode {
+            return
         }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
@@ -249,6 +259,10 @@ final class ListRepository {
         }
 
         onOptimisticDelete()
+
+        if syncManager.isLocalMode {
+            return
+        }
 
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {

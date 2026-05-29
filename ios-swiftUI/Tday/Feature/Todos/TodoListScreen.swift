@@ -561,6 +561,7 @@ struct TodoListScreen: View {
     let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
+    let pullRefreshEnabled: Bool
     let onOpenFloaterList: (String, String) -> Void
     let onOpenSettings: () -> Void
     @State private var viewModel: TodoListViewModel
@@ -597,6 +598,7 @@ struct TodoListScreen: View {
         rootFeedTab: RootFeedTab? = nil,
         onRootFeedTabSelected: ((RootFeedTab) -> Void)? = nil,
         showsRootControls: Bool = true,
+        pullRefreshEnabled: Bool = true,
         usesRootFeedHeader: Bool = false,
         createTaskRequestID: Int = 0,
         scrollToTopRequestID: Int = 0,
@@ -611,6 +613,7 @@ struct TodoListScreen: View {
         self.rootFeedTab = rootFeedTab
         self.onRootFeedTabSelected = onRootFeedTabSelected
         self.showsRootControls = showsRootControls
+        self.pullRefreshEnabled = pullRefreshEnabled
         self.usesRootFeedHeader = usesRootFeedHeader
         self.createTaskRequestID = createTaskRequestID
         self.scrollToTopRequestID = scrollToTopRequestID
@@ -768,7 +771,7 @@ struct TodoListScreen: View {
 
     var body: some View {
         modeContent
-        .tdayPullToRefresh(isRefreshing: viewModel.isLoading) {
+        .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
             await viewModel.refresh()
         }
         .coordinateSpace(name: todoTimelineDragCoordinateSpace)

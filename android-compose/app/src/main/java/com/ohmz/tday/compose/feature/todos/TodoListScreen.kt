@@ -289,6 +289,7 @@ fun TodoListScreen(
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
+    pullRefreshEnabled: Boolean = true,
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
     scrollToTopRequestKey: Int = 0,
@@ -799,6 +800,7 @@ fun TodoListScreen(
             TdayPullToRefreshBox(
                 isRefreshing = uiState.isLoading,
                 onRefresh = onRefresh,
+                enabled = pullRefreshEnabled,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),

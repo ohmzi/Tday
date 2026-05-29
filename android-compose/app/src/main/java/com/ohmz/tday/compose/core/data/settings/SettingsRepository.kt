@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.core.data.settings
 
+import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.model.AdminSettingsResponse
@@ -12,12 +13,16 @@ import javax.inject.Singleton
 class SettingsRepository @Inject constructor(
     private val api: TdayApiService,
     private val cacheManager: OfflineCacheManager,
+    private val secureConfigStore: SecureConfigStore,
 ) {
     fun isAiSummaryEnabledSnapshot(): Boolean {
+        if (secureConfigStore.isLocalMode()) return false
         return cacheManager.loadOfflineState().aiSummaryEnabled
     }
 
     suspend fun refreshAiSummaryEnabled(): Boolean {
+        if (secureConfigStore.isLocalMode()) return false
+
         return runCatching {
             val enabled = requireApiBody(
                 api.getAppSettings(),
@@ -33,6 +38,8 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun fetchAdminAiSummaryEnabled(): Boolean {
+        if (secureConfigStore.isLocalMode()) return false
+
         val enabled = requireApiBody(
             api.getAdminSettings(),
             "Could not load admin settings",
@@ -44,6 +51,10 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun updateAdminAiSummaryEnabled(enabled: Boolean): AdminSettingsResponse {
+        if (secureConfigStore.isLocalMode()) {
+            throw IllegalStateException("Admin settings are unavailable in local mode")
+        }
+
         val response = requireApiBody(
             api.patchAdminSettings(
                 UpdateAdminSettingsRequest(aiSummaryEnabled = enabled),
