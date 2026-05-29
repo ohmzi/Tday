@@ -1,0 +1,8 @@
+ALTER TABLE todos
+    ALTER COLUMN due DROP NOT NULL;
+
+ALTER TABLE completedtodo
+    ALTER COLUMN due DROP NOT NULL;
+
+ALTER TABLE completedtodo
+    ALTER COLUMN "completedOnTime" DROP NOT NULL;

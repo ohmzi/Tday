@@ -284,12 +284,6 @@ fun HomeScreen(
     var listColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR) }
     var listIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
-    var hasCapturedInitialListSnapshot by rememberSaveable { mutableStateOf(false) }
-    var hasShownListDataOnce by rememberSaveable { mutableStateOf(false) }
-    var lastListStructureSignature by rememberSaveable { mutableStateOf("") }
-    var lastListIdsSignature by rememberSaveable { mutableStateOf("") }
-    var visibleListStage by rememberSaveable { mutableIntStateOf(0) }
-    var animateListCascade by rememberSaveable { mutableStateOf(false) }
     var searchResultOpening by rememberSaveable { mutableStateOf(false) }
     val searchResultScope = rememberCoroutineScope()
     val closeSearch = {
@@ -344,22 +338,6 @@ fun HomeScreen(
             closeSearch()
         }
     }
-    val listStructureSignature = remember(uiState.summary.lists) {
-        uiState.summary.lists.joinToString(separator = "|") { list ->
-            buildString {
-                append(list.id)
-                append(':')
-                append(list.name)
-                append(':')
-                append(list.color.orEmpty())
-                append(':')
-                append(list.iconKey.orEmpty())
-            }
-        }
-    }
-    val listIdsSignature = remember(uiState.summary.lists) {
-        uiState.summary.lists.joinToString(separator = "|") { it.id }
-    }
     val listById = remember(uiState.summary.lists) { uiState.summary.lists.associateBy { it.id } }
     val normalizedSearchQuery = remember(searchQuery) { searchQuery.trim().lowercase(Locale.getDefault()) }
     val overdueCount = remember(uiState.searchableTodos) {
@@ -390,8 +368,14 @@ fun HomeScreen(
     val showSearchResultsOverlay = searchExpanded && searchQuery.isNotBlank()
     val density = LocalDensity.current
     val listState = rememberLazyListState()
+    val hasScrollableContent =
+        listState.canScrollForward || listState.canScrollBackward
+    val dockCollapseThresholdPx = with(density) { RootFeedDockCollapseThreshold.roundToPx() }
+    val hasScrolledPastDockCollapseThreshold =
+        listState.firstVisibleItemIndex > 0 ||
+                listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
     val dockCollapsed =
-        listState.isScrollInProgress || listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 18
+        hasScrollableContent && hasScrolledPastDockCollapseThreshold
     LaunchedEffect(dockCollapsed) {
         onRootDockCollapsedChange(dockCollapsed)
     }
@@ -410,69 +394,6 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(listStructureSignature) {
-        val lists = uiState.summary.lists
-        val targetFinalStage = if (lists.isEmpty()) 0 else lists.size + 1
-        if (!hasCapturedInitialListSnapshot) {
-            visibleListStage = targetFinalStage
-            animateListCascade = false
-            hasCapturedInitialListSnapshot = true
-            hasShownListDataOnce = lists.isNotEmpty()
-            lastListStructureSignature = listStructureSignature
-            lastListIdsSignature = listIdsSignature
-            return@LaunchedEffect
-        }
-
-        if (listStructureSignature == lastListStructureSignature) {
-            visibleListStage = targetFinalStage
-            animateListCascade = false
-            return@LaunchedEffect
-        }
-
-        val previousListIds = lastListIdsSignature
-            .split('|')
-            .filter { it.isNotBlank() }
-        val currentListIds = lists.map { it.id }
-        val isDeletionOnly = previousListIds.isNotEmpty() &&
-                currentListIds.size < previousListIds.size &&
-                currentListIds.all { it in previousListIds }
-        val isMetadataOnlyChange = previousListIds == currentListIds
-
-        lastListStructureSignature = listStructureSignature
-        lastListIdsSignature = listIdsSignature
-        if (lists.isEmpty()) {
-            visibleListStage = 0
-            animateListCascade = false
-            return@LaunchedEffect
-        }
-
-        if (!hasShownListDataOnce) {
-            visibleListStage = targetFinalStage
-            animateListCascade = false
-            hasShownListDataOnce = true
-            return@LaunchedEffect
-        }
-
-        if (isDeletionOnly || isMetadataOnlyChange) {
-            visibleListStage = targetFinalStage
-            animateListCascade = false
-            return@LaunchedEffect
-        }
-
-        animateListCascade = true
-        visibleListStage = 0
-        delay(70)
-        visibleListStage = 1
-        delay(75)
-        lists.forEachIndexed { index, _ ->
-            visibleListStage = index + 2
-            delay(60)
-        }
-        // Stop wrapping rows with entry animation once the cascade has completed.
-        // This prevents rows from re-animating when they are recomposed during scroll.
-        visibleListStage = targetFinalStage
-        animateListCascade = false
-    }
     LaunchedEffect(showSearchResultsOverlay) {
         if (!showSearchResultsOverlay) {
             searchResultsBounds = null
@@ -649,57 +570,23 @@ fun HomeScreen(
 
                     if (uiState.summary.lists.isNotEmpty()) {
                         item {
-                            if (visibleListStage >= 1) {
-                                if (animateListCascade) {
-                                    TopDownCascadeReveal {
-                                        MyListsHeader()
-                                    }
-                                } else {
-                                    MyListsHeader()
-                                }
-                            }
+                            MyListsHeader()
                         }
                         itemsIndexed(
                             items = uiState.summary.lists,
                             key = { _, list -> list.id },
                             contentType = { _, _ -> "list_row" },
-                        ) { index, list ->
-                            if (visibleListStage >= index + 2) {
-                                val listRowPlacementModifier = Modifier.animateItem(
-                                    fadeInSpec = tween(durationMillis = 180),
-                                    placementSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMediumLow,
-                                    ),
-                                    fadeOutSpec = tween(durationMillis = 130),
-                                )
-                                if (animateListCascade) {
-                                    TopDownCascadeReveal(modifier = listRowPlacementModifier) {
-                                        ListRow(
-                                            name = list.name,
-                                            colorKey = list.color,
-                                            iconKey = list.iconKey,
-                                            count = list.todoCount,
-                                            onClick = {
-                                                closeSearch()
-                                                onOpenList(list.id, capitalizeFirstListLetter(list.name))
-                                            },
-                                        )
-                                    }
-                                } else {
-                                    ListRow(
-                                        modifier = listRowPlacementModifier,
-                                        name = list.name,
-                                        colorKey = list.color,
-                                        iconKey = list.iconKey,
-                                        count = list.todoCount,
-                                        onClick = {
-                                            closeSearch()
-                                            onOpenList(list.id, capitalizeFirstListLetter(list.name))
-                                        },
-                                    )
-                                }
-                            }
+                        ) { _, list ->
+                            ListRow(
+                                name = list.name,
+                                colorKey = list.color,
+                                iconKey = list.iconKey,
+                                count = list.todoCount,
+                                onClick = {
+                                    closeSearch()
+                                    onOpenList(list.id, capitalizeFirstListLetter(list.name))
+                                },
+                            )
                         }
                     }
 
@@ -2123,39 +2010,6 @@ private fun calendarTileColor(colorScheme: ColorScheme): Color {
 }
 
 @Composable
-private fun TopDownCascadeReveal(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    var revealed by remember { mutableStateOf(false) }
-    val alpha by animateFloatAsState(
-        targetValue = if (revealed) 1f else 0f,
-        animationSpec = tween(durationMillis = 320),
-        label = "listCascadeAlpha",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (revealed) 0.dp else (-14).dp,
-        animationSpec = tween(durationMillis = 320),
-        label = "listCascadeOffsetY",
-    )
-
-    LaunchedEffect(Unit) {
-        revealed = true
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                this.alpha = alpha
-                translationY = offsetY.toPx()
-            },
-    ) {
-        content()
-    }
-}
-
-@Composable
 private fun CategoryCard(
     modifier: Modifier,
     color: Color,
@@ -2501,6 +2355,7 @@ private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_MOTION_MS = 320
 private const val SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS = 260L
+private val RootFeedDockCollapseThreshold = 44.dp
 
 private fun performGentleHaptic(view: android.view.View) {
     ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)

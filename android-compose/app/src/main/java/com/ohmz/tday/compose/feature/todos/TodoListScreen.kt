@@ -105,6 +105,7 @@ import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.material.icons.rounded.Mood
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Pets
@@ -233,6 +234,7 @@ private val TimelineDateGroupSpacing = 6.dp
 private val TimelineSectionTopSpacing = 6.dp
 private val TimelineHeaderBodySpacing = 2.dp
 private val TimelineCollapsedSectionSpacing = 4.dp
+private val RootFeedDockCollapseThreshold = 44.dp
 
 private fun timelineTaskBottomSpacing(
     itemIndex: Int,
@@ -267,6 +269,7 @@ fun TodoListScreen(
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
+    usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
@@ -278,6 +281,9 @@ fun TodoListScreen(
     val selectedListColorKey = selectedList?.color
     val usesTodayStyle =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.ANYTIME || uiState.mode == TodoListMode.LIST
+    val isAnytimeScreen = uiState.mode == TodoListMode.ANYTIME || uiState.title.trim() == "Anytime"
+    val usesRootFeedChrome =
+        usesRootFeedHeader || isAnytimeScreen
     val titleColor = modeAccentColor(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -324,8 +330,16 @@ fun TodoListScreen(
     val timelineAnimationsEnabled =
         uiState.mode != TodoListMode.TODAY || timelineAnimationsReady
     val listState = rememberLazyListState()
+    val hasScrollableContent =
+        listState.canScrollForward || listState.canScrollBackward
+    val dockCollapseThresholdPx = with(LocalDensity.current) {
+        RootFeedDockCollapseThreshold.roundToPx()
+    }
+    val hasScrolledPastDockCollapseThreshold =
+        listState.firstVisibleItemIndex > 0 ||
+                listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
     val dockCollapsed =
-        listState.isScrollInProgress || listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 18
+        hasScrollableContent && hasScrolledPastDockCollapseThreshold
     LaunchedEffect(dockCollapsed) {
         onRootDockCollapsedChange(dockCollapsed)
     }
@@ -545,58 +559,63 @@ fun TodoListScreen(
     Scaffold(
         containerColor = colorScheme.background,
         topBar = {
-            if (usesTodayStyle) {
-                TodayTopBar(
-                    onBack = onBack,
-                    collapseProgress = todayTitleScrollBehavior.collapseProgress,
-                    title = uiState.title,
-                    titleColor = titleColor,
-                    showActionButton = showTopBarActionButton,
-                    actionIcon = if (canSummarizeCurrentMode) {
-                        Icons.Rounded.AutoAwesome
-                    } else {
-                        Icons.Rounded.MoreHoriz
-                    },
-                    actionContentDescription = if (canSummarizeCurrentMode) {
-                        stringResource(R.string.todos_summarize)
-                    } else {
-                        stringResource(R.string.action_more_options)
-                    },
-                    onAction = {
-                        if (canSummarizeCurrentMode) {
-                            showSummarySheet = true
-                        } else if (selectedList != null) {
-                            listSettingsTargetId = selectedList.id
-                            listSettingsName = selectedList.name
-                            listSettingsColor = normalizedListColorKey(selectedList.color)
-                            listSettingsIconKey = selectedList.iconKey
-                                ?.takeIf { isSupportedListIconKey(it) }
-                                ?: DEFAULT_LIST_ICON_KEY
-                            listSettingsColorTouched = false
-                            listSettingsIconTouched = false
-                            showListSettingsSheet = true
-                        }
-                    },
-                )
-            } else {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = uiState.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = titleColor,
-                        )
-                    },
-                    navigationIcon = {
-                        TodayHeaderButton(
-                            onClick = onBack,
-                            icon = Icons.Rounded.ChevronLeft,
-                            contentDescription = stringResource(R.string.action_back),
-                            isBackButton = true,
-                        )
-                    },
-                )
+            when {
+                usesRootFeedChrome -> Unit
+                usesTodayStyle -> {
+                    TodayTopBar(
+                        onBack = onBack,
+                        collapseProgress = todayTitleScrollBehavior.collapseProgress,
+                        title = uiState.title,
+                        titleColor = titleColor,
+                        showActionButton = showTopBarActionButton,
+                        actionIcon = if (canSummarizeCurrentMode) {
+                            Icons.Rounded.AutoAwesome
+                        } else {
+                            Icons.Rounded.MoreHoriz
+                        },
+                        actionContentDescription = if (canSummarizeCurrentMode) {
+                            stringResource(R.string.todos_summarize)
+                        } else {
+                            stringResource(R.string.action_more_options)
+                        },
+                        onAction = {
+                            if (canSummarizeCurrentMode) {
+                                showSummarySheet = true
+                            } else if (selectedList != null) {
+                                listSettingsTargetId = selectedList.id
+                                listSettingsName = selectedList.name
+                                listSettingsColor = normalizedListColorKey(selectedList.color)
+                                listSettingsIconKey = selectedList.iconKey
+                                    ?.takeIf { isSupportedListIconKey(it) }
+                                    ?: DEFAULT_LIST_ICON_KEY
+                                listSettingsColorTouched = false
+                                listSettingsIconTouched = false
+                                showListSettingsSheet = true
+                            }
+                        },
+                    )
+                }
+
+                else -> {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = uiState.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = titleColor,
+                            )
+                        },
+                        navigationIcon = {
+                            TodayHeaderButton(
+                                onClick = onBack,
+                                icon = Icons.Rounded.ChevronLeft,
+                                contentDescription = stringResource(R.string.action_back),
+                                isBackButton = true,
+                            )
+                        },
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -641,15 +660,24 @@ fun TodoListScreen(
                             },
                         ),
                     state = listState,
-                    contentPadding = if (usesTodayStyle) {
-                        PaddingValues(horizontal = 18.dp, vertical = 2.dp)
-                    } else {
-                        PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                    contentPadding = when {
+                        usesRootFeedChrome -> PaddingValues(18.dp)
+                        usesTodayStyle -> PaddingValues(horizontal = 18.dp, vertical = 2.dp)
+                        else -> PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                     },
                     verticalArrangement = Arrangement.spacedBy(
                         if (showSectionedTimeline) 0.dp else timelineItemSpacing,
                     ),
                 ) {
+                    if (usesRootFeedChrome) {
+                        item(
+                            key = "root-feed-title",
+                            contentType = "root-feed-title",
+                        ) {
+                            RootFeedTitleRow(title = uiState.title)
+                        }
+                    }
+
                     if (!showSectionedTimeline && uiState.items.isEmpty() && uiState.isLoading) {
                         item {
                             Card(
@@ -689,62 +717,64 @@ fun TodoListScreen(
                                 canDropTodoInTimelineSection(todo, section)
                             } == true
 
-                            item(
-                                key = "timeline-header-${section.key}",
-                                contentType = "timeline-header",
-                            ) {
-                                var headerModifier: Modifier = Modifier
-                                if (timelineAnimationsEnabled) {
-                                    headerModifier = headerModifier.animateItem(
-                                        fadeInSpec = null,
-                                        placementSpec = tween(
-                                            durationMillis = 320,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                        fadeOutSpec = null,
+                            if (!usesRootFeedChrome) {
+                                item(
+                                    key = "timeline-header-${section.key}",
+                                    contentType = "timeline-header",
+                                ) {
+                                    var headerModifier: Modifier = Modifier
+                                    if (timelineAnimationsEnabled) {
+                                        headerModifier = headerModifier.animateItem(
+                                            fadeInSpec = null,
+                                            placementSpec = tween(
+                                                durationMillis = 320,
+                                                easing = FastOutSlowInEasing,
+                                            ),
+                                            fadeOutSpec = null,
+                                        )
+                                    }
+                                    TimelineSectionHeader(
+                                        modifier = headerModifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 1.dp)
+                                            .timelineInAppDropTarget(
+                                                targetId = "header-${section.key}",
+                                                section = section,
+                                                enabled = isDropEligibleSection,
+                                                dropTargets = timelineDropTargetBounds,
+                                            )
+                                            .padding(top = if (sectionIndex == 0) 0.dp else TimelineSectionTopSpacing),
+                                        section = section,
+                                        useMinimalStyle = usesTodayStyle,
+                                        isCollapsed = isCollapsed,
+                                        isDropTarget = isActiveDropSection && isDropEligibleSection,
+                                        bottomSpacing = if (isCollapsed) {
+                                            TimelineCollapsedSectionSpacing
+                                        } else {
+                                            timelineHeaderBodySpacing
+                                        },
+                                        onHeaderClick = if (sectionCanCollapse) {
+                                            {
+                                                collapsedSectionKeys =
+                                                    if (isCollapsed) {
+                                                        collapsedSectionKeys - section.key
+                                                    } else {
+                                                        collapsedSectionKeys + section.key
+                                                    }
+                                            }
+                                        } else {
+                                            null
+                                        },
+                                        onTapForQuickAdd = section.quickAddDefaults
+                                            ?.takeUnless { sectionModeCanCollapse }
+                                            ?.let { dueEpochMs ->
+                                                {
+                                                    quickAddDueEpochMs = dueEpochMs
+                                                    showCreateTaskSheet = true
+                                                }
+                                            },
                                     )
                                 }
-                                TimelineSectionHeader(
-                                    modifier = headerModifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 1.dp)
-                                        .timelineInAppDropTarget(
-                                            targetId = "header-${section.key}",
-                                            section = section,
-                                            enabled = isDropEligibleSection,
-                                            dropTargets = timelineDropTargetBounds,
-                                        )
-                                        .padding(top = if (sectionIndex == 0) 0.dp else TimelineSectionTopSpacing),
-                                    section = section,
-                                    useMinimalStyle = usesTodayStyle,
-                                    isCollapsed = isCollapsed,
-                                    isDropTarget = isActiveDropSection && isDropEligibleSection,
-                                    bottomSpacing = if (isCollapsed) {
-                                        TimelineCollapsedSectionSpacing
-                                    } else {
-                                        timelineHeaderBodySpacing
-                                    },
-                                    onHeaderClick = if (sectionCanCollapse) {
-                                        {
-                                            collapsedSectionKeys =
-                                                if (isCollapsed) {
-                                                    collapsedSectionKeys - section.key
-                                                } else {
-                                                    collapsedSectionKeys + section.key
-                                                }
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                    onTapForQuickAdd = section.quickAddDefaults
-                                        ?.takeUnless { sectionModeCanCollapse }
-                                        ?.let { dueEpochMs ->
-                                            {
-                                                quickAddDueEpochMs = dueEpochMs
-                                                showCreateTaskSheet = true
-                                            }
-                                        },
-                                )
                             }
 
                             if (canRescheduleTasks && isActiveDropSection && isDropEligibleSection && section.targetDate != null) {
@@ -1227,6 +1257,59 @@ private fun ListDeleteConfirmationDialog(
             }
         }
     }
+}
+
+@Composable
+private fun RootFeedTitleRow(
+    title: String,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDaytime = rememberTodoRootIsDaytime()
+    val titleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val titleIconTint = if (isDaytime) Color(0xFFF4C542) else Color(0xFFA8B8E8)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .padding(start = 2.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = titleIcon,
+                contentDescription = null,
+                tint = titleIconTint,
+                modifier = Modifier.size(26.dp),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onBackground,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun rememberTodoRootIsDaytime(): Boolean {
+    var hour by remember { mutableStateOf(LocalTime.now().hour) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = LocalTime.now()
+            val millisToNextMinute = ((60 - now.second) * 1000L) - (now.nano / 1_000_000L)
+            delay(millisToNextMinute.coerceAtLeast(500L))
+            hour = LocalTime.now().hour
+        }
+    }
+
+    return hour in 6 until 18
 }
 
 @Composable

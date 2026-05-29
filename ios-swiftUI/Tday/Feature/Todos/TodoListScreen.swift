@@ -54,6 +54,8 @@ enum TodoTimelineMetrics {
     static let sectionTopSpacing: CGFloat = 6
     static let sectionHeaderBottomPadding: CGFloat = 2
     static let titleCollapseDistance: CGFloat = 64
+    static let rootFeedTitleTopInset: CGFloat = 32
+    static let rootDockCollapseThreshold: CGFloat = 44
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
     static let topBarButtonIconSize: CGFloat = 24
@@ -82,6 +84,11 @@ enum TodoTimelineMetrics {
 }
 
 private let todoDropPlaceholderAnimation = Animation.spring(response: 0.28, dampingFraction: 0.88, blendDuration: 0.02)
+
+private func isTodoRootDaytime(_ date: Date) -> Bool {
+    let hour = Calendar.current.component(.hour, from: date)
+    return (6..<18).contains(hour)
+}
 
 struct TimelinePinnedSectionHeaderBackground: ViewModifier {
     @Environment(\.tdayColors) private var colors
@@ -213,12 +220,40 @@ struct TimelineTopBarAction {
     }
 }
 
+private struct RootFeedTitleRow: View {
+    let title: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        let daytime = isTodoRootDaytime(Date())
+        let iconColor = daytime
+            ? Color(red: 244.0 / 255.0, green: 197.0 / 255.0, blue: 66.0 / 255.0)
+            : Color(red: 168.0 / 255.0, green: 184.0 / 255.0, blue: 232.0 / 255.0)
+
+        HStack(spacing: 8) {
+            Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
+                .font(.system(size: 26, weight: .regular))
+                .foregroundStyle(iconColor)
+
+            Text(title)
+                .font(.tdayRounded(size: 32, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 2)
+        .frame(height: 56)
+    }
+}
+
 struct TodoListScreen: View {
     let highlightedTodoId: String?
     let onListDeleted: () -> Void
     let rootFeedTab: RootFeedTab?
     let onRootFeedTabSelected: ((RootFeedTab) -> Void)?
     let showsRootControls: Bool
+    let usesRootFeedHeader: Bool
     let createTaskRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
@@ -250,6 +285,7 @@ struct TodoListScreen: View {
         rootFeedTab: RootFeedTab? = nil,
         onRootFeedTabSelected: ((RootFeedTab) -> Void)? = nil,
         showsRootControls: Bool = true,
+        usesRootFeedHeader: Bool = false,
         createTaskRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
@@ -260,6 +296,7 @@ struct TodoListScreen: View {
         self.rootFeedTab = rootFeedTab
         self.onRootFeedTabSelected = onRootFeedTabSelected
         self.showsRootControls = showsRootControls
+        self.usesRootFeedHeader = usesRootFeedHeader
         self.createTaskRequestID = createTaskRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
@@ -292,6 +329,10 @@ struct TodoListScreen: View {
         isTodayMode || isMinimalTimelineMode
     }
 
+    private var showsTimelineNavigationTopBar: Bool {
+        usesHeroTimelineMode && !usesRootFeedHeader
+    }
+
     private var modeAccentColor: Color {
         todoModeAccentColor(viewModel.mode, listColorKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.color)
     }
@@ -307,6 +348,10 @@ struct TodoListScreen: View {
         let distance = TodoTimelineMetrics.titleCollapseDistance
         guard distance > 0 else { return 0 }
         return min(max(timelineScrollOffset / distance, 0), 1)
+    }
+
+    private var shouldCollapseRootDock: Bool {
+        max(timelineScrollOffset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold
     }
 
     private var timelineItemAnimationKey: String {
@@ -411,9 +456,10 @@ struct TodoListScreen: View {
             inlineTitleColor: colors.onSurface,
             backgroundColor: colors.background
         )
-        .navigationTitle(usesHeroTimelineMode ? "" : viewModel.title)
+        .navigationTitle((usesRootFeedHeader || usesHeroTimelineMode) ? "" : viewModel.title)
+        .navigationBarBackButtonHidden(usesRootFeedHeader)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(usesHeroTimelineMode ? .hidden : .visible, for: .navigationBar)
+        .toolbar((usesRootFeedHeader || usesHeroTimelineMode) ? .hidden : .visible, for: .navigationBar)
         .toolbar {
             navigationToolbarContent
         }
@@ -431,7 +477,7 @@ struct TodoListScreen: View {
             }
         }
         .onChange(of: timelineScrollOffset, initial: true) { _, offset in
-            onRootDockCollapsedChange(offset > 18)
+            onRootDockCollapsedChange(max(offset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold)
         }
         .onChange(of: createTaskRequestID) { _, requestID in
             guard requestID > 0 else { return }
@@ -439,7 +485,7 @@ struct TodoListScreen: View {
         }
         .onAppear {
             onRootControlsVisibleChange(true)
-            onRootDockCollapsedChange(timelineScrollOffset > 18)
+            onRootDockCollapsedChange(shouldCollapseRootDock)
         }
         .onDisappear {
             onRootControlsVisibleChange(true)
@@ -506,7 +552,7 @@ struct TodoListScreen: View {
 
     @ViewBuilder
     private var timelineTopInset: some View {
-        if usesHeroTimelineMode {
+        if showsTimelineNavigationTopBar {
             TimelineTopBar(
                 title: viewModel.title,
                 accentColor: modeAccentColor,
@@ -517,20 +563,51 @@ struct TodoListScreen: View {
         }
     }
 
-    private var timelineHeroTitleRow: some View {
+    private var timelineHeroTitleCollapseProgress: CGFloat {
+        usesRootFeedHeader ? 0 : titleCollapseProgress
+    }
+
+    private var timelineHeroTitleRowBase: some View {
         TimelineExpandedTitleRow(
             title: viewModel.title,
             accentColor: modeAccentColor,
-            collapseProgress: titleCollapseProgress
+            collapseProgress: timelineHeroTitleCollapseProgress
         )
         .background {
             TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
                 .frame(width: 0, height: 0)
         }
-        .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
         .listRowBackground(colors.background)
         .listRowSeparator(.hidden)
+    }
+
+    private var rootFeedTitleRow: some View {
+        RootFeedTitleRow(title: viewModel.title)
+            .background {
+                TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
+                    .frame(width: 0, height: 0)
+            }
+            .listRowInsets(
+                EdgeInsets(
+                    top: TodoTimelineMetrics.rootFeedTitleTopInset,
+                    leading: TodoTimelineMetrics.horizontalPadding,
+                    bottom: 0,
+                    trailing: TodoTimelineMetrics.horizontalPadding
+                )
+            )
+            .listRowBackground(colors.background)
+            .listRowSeparator(.hidden)
+    }
+
+    @ViewBuilder
+    private var timelineHeroTitleRow: some View {
+        if usesRootFeedHeader {
+            rootFeedTitleRow
+        } else {
+            timelineHeroTitleRowBase
+                .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
+        }
     }
 
     private var floatingActionButtonDock: some View {
@@ -538,7 +615,7 @@ struct TodoListScreen: View {
             if showsRootControls, let rootFeedTab, let onRootFeedTabSelected {
                 RootFeedDock(
                     activeTab: rootFeedTab,
-                    collapsed: timelineScrollOffset > 18,
+                    collapsed: shouldCollapseRootDock,
                     onSelect: onRootFeedTabSelected
                 )
                 .padding(.leading, 18)
@@ -1380,46 +1457,48 @@ struct TodoListScreen: View {
                 }
             }
         } header: {
-            TimelineSectionHeader(
-                title: section.title,
-                isActiveDropTarget: isActiveDropSection,
-                isCollapsible: canCollapseSection,
-                isCollapsed: isCollapsed,
-                onTap: canCollapseSection ? {
-                    toggleTimelineSection(section)
-                } : nil
-            )
-            .id(timelineSectionScrollID(section.id))
-            .padding(.top, isFirstSection ? 0 : TodoTimelineMetrics.sectionTopSpacing)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .todoInAppDropTargetFrame(
-                targetID: "minimal-header-\(section.id)",
-                section: section,
-                enabled: viewModel.mode.supportsTaskReschedule && isDropEligibleSection
-            )
-            .timelinePinnedSectionHeaderBackground()
-            .scheduledTodoDropTarget(
-                section: section,
-                draggedTodo: draggedTodo,
-                resolveTodo: resolveTodoForDrop,
-                onMove: { todo, targetDate in
-                    requestReschedule(todo, to: targetDate)
-                },
-                canMoveTodo: canDropTodo,
-                onSectionChange: { sectionId in
-                    setActiveDropSection(sectionId)
-                }
-            )
-            .listRowInsets(
-                EdgeInsets(
-                    top: 0,
-                    leading: 0,
-                    bottom: 0,
-                    trailing: 0
+            if !usesRootFeedHeader {
+                TimelineSectionHeader(
+                    title: section.title,
+                    isActiveDropTarget: isActiveDropSection,
+                    isCollapsible: canCollapseSection,
+                    isCollapsed: isCollapsed,
+                    onTap: canCollapseSection ? {
+                        toggleTimelineSection(section)
+                    } : nil
                 )
-            )
-            .listRowSeparator(.hidden)
+                .id(timelineSectionScrollID(section.id))
+                .padding(.top, isFirstSection ? 0 : TodoTimelineMetrics.sectionTopSpacing)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .todoInAppDropTargetFrame(
+                    targetID: "minimal-header-\(section.id)",
+                    section: section,
+                    enabled: viewModel.mode.supportsTaskReschedule && isDropEligibleSection
+                )
+                .timelinePinnedSectionHeaderBackground()
+                .scheduledTodoDropTarget(
+                    section: section,
+                    draggedTodo: draggedTodo,
+                    resolveTodo: resolveTodoForDrop,
+                    onMove: { todo, targetDate in
+                        requestReschedule(todo, to: targetDate)
+                    },
+                    canMoveTodo: canDropTodo,
+                    onSectionChange: { sectionId in
+                        setActiveDropSection(sectionId)
+                    }
+                )
+                .listRowInsets(
+                    EdgeInsets(
+                        top: 0,
+                        leading: 0,
+                        bottom: 0,
+                        trailing: 0
+                    )
+                )
+                .listRowSeparator(.hidden)
+            }
         }
     }
 
