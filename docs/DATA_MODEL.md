@@ -6,7 +6,7 @@ This document describes the durable and local data structures that define T'Day.
 
 | Layer | Files | Purpose |
 |-------|-------|---------|
-| Shared contracts | `shared/src/commonMain/kotlin/com/ohmz/tday/shared/model/` | Serializable DTOs, request/response bodies, enums, and validators consumed across platforms |
+| Shared contracts | `shared/src/commonMain/kotlin/com/ohmz/tday/shared/{model,routes,validation}/` | Serializable DTOs, request/response bodies, enums, route constants, and validators consumed across platforms |
 | Backend tables | `tday-backend/src/main/kotlin/com/ohmz/tday/db/tables/` | PostgreSQL schema mapping through Exposed |
 | Backend migrations | `tday-backend/src/main/resources/db/migration/` | Flyway SQL history and clean-install schema |
 | Android cache | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/data/db/` and `core/data/OfflineSyncModels.kt` | Room entities plus cache records used by repositories |
@@ -27,7 +27,7 @@ This document describes the durable and local data structures that define T'Day.
 | Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters. |
 | Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences. |
 | App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as AI summary availability. |
-| Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `CronLogs` | Internal models | Security, throttling, diagnostics, and operational state. |
+| Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
 
 ## Scheduling Rules
 
