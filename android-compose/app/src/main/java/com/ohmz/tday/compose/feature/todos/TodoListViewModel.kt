@@ -1,8 +1,10 @@
 package com.ohmz.tday.compose.feature.todos
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.list.FloaterListRepository
@@ -22,6 +24,7 @@ import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +36,7 @@ import javax.inject.Inject
 
 data class TodoListUiState(
     val isLoading: Boolean = false,
-    val title: String = "Tasks",
+    val title: String = "",
     val mode: TodoListMode = TodoListMode.TODAY,
     val listId: String? = null,
     val hasHydratedSnapshot: Boolean = false,
@@ -58,9 +61,12 @@ class TodoListViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(TodoListUiState())
+    private val _uiState = MutableStateFlow(
+        TodoListUiState(title = appContext.getString(R.string.todos_title_tasks)),
+    )
     val uiState: StateFlow<TodoListUiState> = _uiState.asStateFlow()
     private var hasLoadedMode = false
 
@@ -94,13 +100,13 @@ class TodoListViewModel @Inject constructor(
                     false
                 },
                 title = when (mode) {
-                    TodoListMode.TODAY -> "Today"
-                    TodoListMode.OVERDUE -> "Overdue"
-                    TodoListMode.SCHEDULED -> "Scheduled"
-                    TodoListMode.ALL -> "All Tasks"
-                    TodoListMode.PRIORITY -> "Priority"
-                    TodoListMode.FLOATER -> listName ?: "Floater"
-                    TodoListMode.LIST -> listName ?: "List"
+                    TodoListMode.TODAY -> appContext.getString(R.string.todos_title_today)
+                    TodoListMode.OVERDUE -> appContext.getString(R.string.todos_title_overdue)
+                    TodoListMode.SCHEDULED -> appContext.getString(R.string.todos_title_scheduled)
+                    TodoListMode.ALL -> appContext.getString(R.string.todos_title_all_tasks)
+                    TodoListMode.PRIORITY -> appContext.getString(R.string.todos_title_priority)
+                    TodoListMode.FLOATER -> listName ?: appContext.getString(R.string.todos_title_floater)
+                    TodoListMode.LIST -> listName ?: appContext.getString(R.string.todos_title_list)
                 },
                 aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
                 summaryText = null,
@@ -119,12 +125,14 @@ class TodoListViewModel @Inject constructor(
         val current = _uiState.value
         if (current.isSummarizing) return
         if (!current.aiSummaryEnabled) {
-            _uiState.update { it.copy(summaryError = "AI summary is disabled by admin") }
+            _uiState.update {
+                it.copy(summaryError = appContext.getString(R.string.todos_summary_admin_disabled))
+            }
             return
         }
         if (current.mode == TodoListMode.LIST || current.mode == TodoListMode.OVERDUE || current.mode == TodoListMode.FLOATER) {
             _uiState.update {
-                it.copy(summaryError = "Summary is available only for Today, Scheduled, All, and Priority")
+                it.copy(summaryError = appContext.getString(R.string.todos_summary_modes_unavailable))
             }
             return
         }
@@ -160,7 +168,10 @@ class TodoListViewModel @Inject constructor(
                     } else {
                         it.copy(
                             isSummarizing = false,
-                            summaryError = error.userFacingMessage("Could not summarize tasks."),
+                            summaryError = error.userFacingMessage(
+                                appContext,
+                                R.string.error_summarize_tasks_failed,
+                            ),
                         )
                     }
                 }
@@ -250,7 +261,7 @@ class TodoListViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
-                        errorMessage = error.userFacingMessage("Failed to load tasks."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_load_tasks_failed),
                     )
                 }
             }
@@ -296,7 +307,9 @@ class TodoListViewModel @Inject constructor(
                     }
                 }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
             }.onFailure { error ->
-                _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not create task.")) }
+                _uiState.update {
+                    it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_task_failed))
+                }
             }
         }
     }
@@ -349,7 +362,7 @@ class TodoListViewModel @Inject constructor(
                 }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage("Could not update task."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
                 )
             }
         }
@@ -428,7 +441,7 @@ class TodoListViewModel @Inject constructor(
                 }.onFailure { refreshInternal(forceSync = false, showLoading = false) }
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage("Could not update task."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
                 )
             }
         }
@@ -456,7 +469,7 @@ class TodoListViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         items = previousItems,
-                        errorMessage = error.userFacingMessage("Could not complete task."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_complete_task_failed),
                     )
                 }
             }
@@ -500,7 +513,7 @@ class TodoListViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         items = previousItems,
-                        errorMessage = error.userFacingMessage("Could not delete task."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed),
                     )
                 }
             }
@@ -577,7 +590,7 @@ class TodoListViewModel @Inject constructor(
             }.onFailure { error ->
                 Log.e(TAG, "updateListSettings failed listId=$resolvedListId", error)
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage("Could not update list."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_list_failed),
                 )
             }
         }
@@ -610,7 +623,7 @@ class TodoListViewModel @Inject constructor(
                 )
             }.onFailure { error ->
                 _uiState.update {
-                    it.copy(errorMessage = error.userFacingMessage("Could not create list."))
+                    it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_list_failed))
                 }
             }
         }
@@ -656,7 +669,7 @@ class TodoListViewModel @Inject constructor(
             }.onFailure { error ->
                 Log.e(TAG, "deleteList failed listId=$resolvedListId", error)
                 _uiState.update {
-                    it.copy(errorMessage = error.userFacingMessage("Could not delete list."))
+                    it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_delete_list_failed))
                 }
                 hydrateFromCache(
                     mode = _uiState.value.mode,

@@ -1,7 +1,10 @@
 package com.ohmz.tday.compose.feature.app
 
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.ServerProbeException
@@ -28,6 +31,7 @@ import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.feature.release.GitHubRelease
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
@@ -112,6 +116,7 @@ class AppViewModel @Inject constructor(
     private val connectivityObserver: ConnectivityObserver,
     private val appVersionManager: AppVersionManager,
     private val systemCredentialService: SystemCredentialServicing,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -415,7 +420,10 @@ class AppViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAdminAiSummaryLoading = false,
-                            adminAiSummaryError = friendlyAdminError(error, "Could not load admin settings"),
+                            adminAiSummaryError = friendlyAdminError(
+                                error,
+                                R.string.error_load_admin_settings_failed,
+                            ),
                         )
                     }
                 }
@@ -458,7 +466,10 @@ class AppViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAdminAiSummarySaving = false,
-                            adminAiSummaryError = friendlyAdminError(error, "Could not update admin settings"),
+                            adminAiSummaryError = friendlyAdminError(
+                                error,
+                                R.string.error_update_admin_settings_failed,
+                            ),
                         )
                     }
                     refreshAdminAiSummarySetting()
@@ -553,7 +564,7 @@ class AppViewModel @Inject constructor(
                 }
                 onSuccess()
             }.onFailure { error ->
-                val message = error.userFacingMessage("Could not reset trusted server.")
+                val message = error.userFacingMessage(appContext, R.string.error_reset_trusted_server_failed)
                 _uiState.update {
                     it.copy(
                         error = message,
@@ -843,7 +854,7 @@ class AppViewModel @Inject constructor(
         suppressAuthenticationExpired: Boolean = false,
     ) {
         if (shouldTreatSyncFailureAsOffline(error, suppressAuthenticationExpired)) return
-        snackbarManager.showError(error.userFacingMessage()) {
+        snackbarManager.showError(error.userFacingMessage(appContext)) {
             if (error !is ApiCallException || error.statusCode != 401) syncNow()
         }
     }
@@ -946,8 +957,8 @@ class AppViewModel @Inject constructor(
         return user?.role?.equals("ADMIN", ignoreCase = true) == true
     }
 
-    private fun friendlyAdminError(error: Throwable, fallback: String): String {
-        return error.userFacingMessage(fallback)
+    private fun friendlyAdminError(error: Throwable, @StringRes fallbackRes: Int): String {
+        return error.userFacingMessage(appContext, fallbackRes)
     }
 
     private suspend fun probeAndSaveWithAutomaticTrustRecovery(
@@ -973,11 +984,12 @@ class AppViewModel @Inject constructor(
 
     private fun toServerSetupMessage(error: Throwable): String {
         return when (error) {
-            is TimeoutCancellationException -> "Server probe timed out. Check URL and network, then try again."
-            is ServerProbeException.InvalidUrl -> "Invalid server URL."
-            is ServerProbeException.InsecureTransport -> "Use HTTPS for remote server URLs."
+            is TimeoutCancellationException -> appContext.getString(R.string.server_setup_error_probe_timeout)
+            is ServerProbeException.InvalidUrl -> appContext.getString(R.string.server_setup_error_invalid_url)
+            is ServerProbeException.InsecureTransport ->
+                appContext.getString(R.string.server_setup_error_insecure_transport)
             is ServerProbeException.NotTdayServer ->
-                "Server is reachable but does not appear to be a T'Day server."
+                appContext.getString(R.string.server_setup_error_not_tday_server)
             is AutomaticTrustRefreshFailedException ->
                 staleServerTrustMessage()
             is ServerProbeException.CertificateChanged ->
@@ -986,9 +998,9 @@ class AppViewModel @Inject constructor(
                 if (isServerTrustMismatch(error)) {
                     automaticTrustRefreshMessage()
                 } else {
-                    error.userFacingMessage("Could not connect to server.")
+                    error.userFacingMessage(appContext, R.string.error_connect_server_failed)
                 }
-            else -> error.userFacingMessage("Could not connect to server.")
+            else -> error.userFacingMessage(appContext, R.string.error_connect_server_failed)
         }
     }
 
@@ -1001,11 +1013,11 @@ class AppViewModel @Inject constructor(
     }
 
     private fun automaticTrustRefreshMessage(): String {
-        return "Saved server trust changed. Trying again with a refreshed certificate."
+        return appContext.getString(R.string.server_setup_trust_refreshing)
     }
 
     private fun staleServerTrustMessage(): String {
-        return "The app could not recover from a saved server trust mismatch automatically. Clear app storage or reinstall the app, then try again."
+        return appContext.getString(R.string.server_setup_trust_refresh_failed)
     }
 
     private class AutomaticTrustRefreshFailedException(
