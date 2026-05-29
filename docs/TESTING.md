@@ -158,7 +158,8 @@ npm run test -- tests/guardrails/security.test.ts
 | `commit-msg` hook script exists and strips `Made-with` trailers | Automated trailer cleanup |
 | `install-hooks.sh` exists | Hook installation is documented and scriptable |
 | All required documentation files exist | Complete project documentation |
-| Version synchronizes from `package.json` to Android | Single source of version truth |
+| Version mirrors synchronize from `package.json` to iOS metadata and env examples | Single source of version truth |
+| `postversion` stages every checked-in version mirror | Release bumps include all generated metadata |
 
 #### `i18n-parity.test.ts` — Locale Key Parity
 

@@ -145,7 +145,7 @@ These rules apply across **both** TypeScript and Kotlin. Language-specific detai
 
 ### Single Source of Version
 
-The app version is defined **once** in `tday-web/package.json`. Every other system reads from it — never duplicate or hardcode a version elsewhere.
+The app version is defined **once** in `tday-web/package.json`. Build-time consumers read it directly, and checked-in mirrors are generated from it. Never hand-edit a version mirror when the package version is the real change.
 
 | Consumer | How it reads the version |
 |----------|------------------------|
@@ -153,12 +153,15 @@ The app version is defined **once** in `tday-web/package.json`. Every other syst
 | **CI/CD (release.yml)** | `node -p "require('./tday-web/package.json').version"` → Docker tags, Git tags, GitHub release, and generated release metadata files |
 | **Android (Gradle)** | `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and `versionCode` |
 | **Android runtime** | `BuildConfig.VERSION_NAME` (sent in `X-Tday-App-Version` header) |
+| **iOS runtime/project metadata** | `scripts/sync-ios-version.sh` mirrors the package version into `Info.plist`, Xcode project metadata, and `project.yml` |
+| **Backend compatibility templates** | `scripts/sync-ios-version.sh` mirrors the package version into `.env.example` and `tday-backend/.env.example`; live deployment env files remain operator-owned |
 
 **Rules:**
 
-- To bump the version, edit **only** `tday-web/package.json`. All other systems derive from it.
+- To bump the version, edit **only** `tday-web/package.json`. All other systems derive from it directly or through the sync script.
 - Use `npm version patch|minor|major` in the `tday-web/` directory to bump.
 - Never set `versionName` or `versionCode` directly in `build.gradle.kts`.
+- Do not hand-edit iOS marketing versions or example `TDAY_APP_VERSION` values for a release; run the sync script or use the package `postversion` hook.
 - `versionCode` is computed as `major * 10000 + minor * 100 + patch` (e.g., `1.6.0` → `10600`).
 
 ### No Hardcoded Colors or Dimensions
