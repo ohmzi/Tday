@@ -20,6 +20,12 @@ val TdayTodoModeScheduledAccent = Color(0xFFF29F38)
 val TdayTodoModeAllAccent = Color(0xFF5E6878)
 val TdayTodoModePriorityAccent = Color(0xFFE65E52)
 val TdayCompletedTitleAccent = TdayTodoModeAllAccent
+val TdayTitleIconDayAccent = Color(0xFFF4C542)
+val TdayTitleIconNightAccent = Color(0xFFA8B8E8)
+val TdayTaskCompleteAccent = Color(0xFF6FBF86)
+val TdaySwipeEditBackground = Color(0xFF4C7DDE)
+val TdaySwipeDeleteBackground = Color(0xFFFF453A)
+val TdayStatusSuccess = Color(0xFF4CAF50)
 
 val TdayListColorOptions = listOf(
     TdayListColorOption("PINK", Color(0xFFC987A5)),

@@ -90,6 +90,9 @@ import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
+import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
+import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
@@ -631,7 +634,7 @@ private fun CompletedSwipeRow(
                         contentDescription = stringResource(R.string.action_edit_task),
                         label = stringResource(R.string.action_edit),
                         tint = Color.White,
-                        background = Color(0xFF4C7DDE),
+                        background = TdaySwipeEditBackground,
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.62f,
                         onClick = {
@@ -648,7 +651,7 @@ private fun CompletedSwipeRow(
                         contentDescription = stringResource(R.string.action_delete_task),
                         label = stringResource(R.string.action_delete),
                         tint = Color.White,
-                        background = Color(0xFFFF453A),
+                        background = TdaySwipeDeleteBackground,
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.04f,
                         onClick = {
@@ -720,7 +723,7 @@ private fun CompletedSwipeRow(
                             },
                             contentDescription = stringResource(R.string.label_undo_complete),
                             tint = if (showCompletedCheckmark) {
-                                Color(0xFF6FBF86)
+                                TdayTaskCompleteAccent
                             } else {
                                 colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                             },

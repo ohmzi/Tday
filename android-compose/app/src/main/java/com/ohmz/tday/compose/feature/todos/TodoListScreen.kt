@@ -175,6 +175,11 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
 import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
+import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
+import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
+import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconNightAccent
 import com.ohmz.tday.compose.ui.theme.TdayTodoModeAllAccent
 import com.ohmz.tday.compose.ui.theme.TdayTodoModeOverdueAccent
 import com.ohmz.tday.compose.ui.theme.TdayTodoModePriorityAccent
@@ -1470,7 +1475,7 @@ private fun RootFeedTitleRow(
     val colorScheme = MaterialTheme.colorScheme
     val isDaytime = rememberTodoRootIsDaytime()
     val titleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
-    val titleIconTint = if (isDaytime) Color(0xFFF4C542) else Color(0xFFA8B8E8)
+    val titleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
 
     Box(
         modifier = Modifier
@@ -1517,7 +1522,7 @@ private fun RootFeedSearchHeaderRow(
     val focusRequester = remember { FocusRequester() }
     val isDaytime = rememberTodoRootIsDaytime()
     val titleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
-    val titleIconTint = if (isDaytime) Color(0xFFF4C542) else Color(0xFFA8B8E8)
+    val titleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
@@ -3364,7 +3369,7 @@ private const val TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
 private const val TASK_COMPLETION_FADE_MS = 260L
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 56.dp
-private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
+private val TASK_CHECKMARK_GREEN = TdayTaskCompleteAccent
 private val TODO_DUE_TIME_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
 private val TODO_DUE_DATE_TIME_FORMATTER: DateTimeFormatter =
@@ -3646,7 +3651,7 @@ private fun SwipeTaskRow(
                         contentDescription = stringResource(R.string.action_edit_task),
                         label = stringResource(R.string.action_edit),
                         tint = Color.White,
-                        background = Color(0xFF4C7DDE),
+                        background = TdaySwipeEditBackground,
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.62f,
                         onClick = {
@@ -3663,7 +3668,7 @@ private fun SwipeTaskRow(
                         contentDescription = stringResource(R.string.action_delete_task),
                         label = stringResource(R.string.action_delete),
                         tint = Color.White,
-                        background = Color(0xFFFF453A),
+                        background = TdaySwipeDeleteBackground,
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.04f,
                         onClick = {

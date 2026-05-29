@@ -108,6 +108,34 @@ describeAndroid("Android theme compliance", () => {
     expect(content).toContain("object TdayDimens");
     expect(content).toContain("Dp");
   });
+
+  it("should route shared semantic colors through the theme layer", () => {
+    const SHARED_COLOR_LITERALS = [
+      "Color(0xFFF4C542)",
+      "Color(0xFFA8B8E8)",
+      "Color(0xFF6FBF86)",
+      "Color(0xFF4C7DDE)",
+      "Color(0xFFFF453A)",
+      "Color(0xFF4CAF50)",
+    ];
+    const violations: string[] = [];
+
+    for (const file of NON_THEME_KT) {
+      const content = readSource(file);
+      const lines = content.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const literal = SHARED_COLOR_LITERALS.find((value) =>
+          line.includes(value),
+        );
+        if (literal) {
+          violations.push(`${relPath(file)}:${i + 1} → ${literal}`);
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
 });
 
 describeAndroid("Android string resources", () => {
