@@ -97,5 +97,9 @@ navigation rules while keeping Android Compose idioms.
 
 - Theme mode can be changed in Settings: `System`, `Light`, or `Dark`.
 - Selection is applied immediately and is cleared when unauthenticated data wipe runs.
-- New shared colors/dimensions belong in `ui/theme/Color.kt` or `ui/theme/Dimens.kt` before screen
-  code uses them.
+- New shared dimensions belong in `ui/theme/Dimens.kt` before screen code uses them.
+- New Material palette values belong in `ui/theme/Color.kt`; repeated domain colors belong in
+  `ui/theme/TdaySemanticColors.kt` (`tdayPriorityColor`, `tdayListAccentColor`,
+  `TdayListColorOptions`, mode accents, and related semantic tokens).
+- User-facing Android copy belongs in `res/values/strings.xml`; repeated copy such as splash
+  taglines should use string arrays rather than Kotlin lists.
