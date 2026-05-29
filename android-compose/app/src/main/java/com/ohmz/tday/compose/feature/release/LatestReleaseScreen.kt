@@ -631,7 +631,7 @@ private fun InstalledVersionRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         VersionBadge(
-            text = "v$currentVersion",
+            text = stringResource(R.string.label_version_name, currentVersion),
             backgroundColor = colorScheme.primary.copy(alpha = 0.08f),
             textColor = colorScheme.primary,
         )
