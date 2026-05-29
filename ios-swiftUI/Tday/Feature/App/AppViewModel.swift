@@ -323,7 +323,7 @@ final class AppViewModel {
 
     func navigate(to route: AppRoute) {
         switch route {
-        case .home:
+        case .home, .anytimeTodos:
             navigationPath = []
         default:
             navigationPath.append(route)

@@ -31,10 +31,7 @@ struct AppRootView: View {
                 let showOnboardingOverlay = !appViewModel.authenticated && appViewModel.versionCheckResult == .compatible
 
                 NavigationStack(
-                    path: Binding(
-                        get: { appViewModel.navigationPath },
-                        set: { appViewModel.navigationPath = $0 }
-                    )
+                    path: rootNavigationPath
                 ) {
                     TdayBackground {
                         ZStack(alignment: .bottom) {
@@ -60,6 +57,7 @@ struct AppRootView: View {
                                     rootFeedTab: .anytime,
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
+                                    usesRootFeedHeader: true,
                                     createTaskRequestID: rootCreateTaskRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 }
@@ -74,6 +72,8 @@ struct AppRootView: View {
                     .blur(radius: showOnboardingOverlay ? 6 : 0)
                     .scaleEffect(showOnboardingOverlay ? 0.992 : 1)
                     .animation(.easeInOut(duration: 0.22), value: showOnboardingOverlay)
+                    .navigationBarBackButtonHidden(true)
+                    .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: AppRoute.self) { route in
                         switch route {
                         case .home:
@@ -94,15 +94,12 @@ struct AppRootView: View {
                         case .priorityTodos:
                             TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil)
                         case .anytimeTodos:
-                            TodoListScreen(
-                                container: container,
-                                mode: .anytime,
-                                listId: nil,
-                                listName: nil,
-                                highlightedTodoId: nil,
-                                rootFeedTab: .anytime,
-                                onRootFeedTabSelected: handleRootFeedTabSelection
-                            )
+                            Color.clear
+                                .navigationBarBackButtonHidden(true)
+                                .toolbar(.hidden, for: .navigationBar)
+                                .onAppear {
+                                    selectRootFeedTab(.anytime)
+                                }
                         case let .listTodos(listId, listName):
                             TodoListScreen(
                                 container: container,
@@ -123,6 +120,9 @@ struct AppRootView: View {
                         case .latestRelease:
                             LatestReleaseScreen(viewModel: appViewModel)
                         }
+                    }
+                    .onChange(of: appViewModel.navigationPath) { _, path in
+                        normalizeRootNavigationPath(path)
                     }
                     .overlay(alignment: .top) {
                         OfflineBanner(
@@ -240,19 +240,65 @@ struct AppRootView: View {
     private func handleRoute(_ route: AppRoute) {
         switch route {
         case .home:
-            rootFeedTab = .home
-            appViewModel.navigate(to: .home)
+            selectRootFeedTab(.home)
         case .anytimeTodos:
-            rootFeedTab = .anytime
-            appViewModel.navigate(to: .home)
+            selectRootFeedTab(.anytime)
         default:
             appViewModel.navigate(to: route)
         }
     }
 
     private func handleRootFeedTabSelection(_ tab: RootFeedTab) {
+        selectRootFeedTab(tab)
+    }
+
+    private func selectRootFeedTab(_ tab: RootFeedTab) {
         rootFeedTab = tab
-        appViewModel.navigate(to: .home)
+        appViewModel.navigationPath = []
+    }
+
+    private var rootNavigationPath: Binding<[AppRoute]> {
+        Binding(
+            get: { sanitizedNavigationPath(appViewModel.navigationPath) },
+            set: { newPath in
+                setNavigationPath(newPath)
+            }
+        )
+    }
+
+    private func setNavigationPath(_ newPath: [AppRoute]) {
+        if let rootTab = rootFeedTabRoute(in: newPath) {
+            selectRootFeedTab(rootTab)
+            return
+        }
+
+        appViewModel.navigationPath = newPath
+    }
+
+    private func sanitizedNavigationPath(_ path: [AppRoute]) -> [AppRoute] {
+        path.filter { route in
+            !route.isRootFeedRoute
+        }
+    }
+
+    private func rootFeedTabRoute(in path: [AppRoute]) -> RootFeedTab? {
+        for route in path.reversed() {
+            if let tab = route.rootFeedTab {
+                return tab
+            }
+        }
+
+        return nil
+    }
+
+    private func normalizeRootNavigationPath(_ path: [AppRoute]) {
+        guard let rootTab = rootFeedTabRoute(in: path) else {
+            return
+        }
+
+        DispatchQueue.main.async {
+            selectRootFeedTab(rootTab)
+        }
     }
 
     private var rootFloatingControls: some View {
@@ -288,6 +334,23 @@ struct AppRootView: View {
         }
         handleDeepLink(url)
         notificationDeepLinkRouter.clearPendingURL()
+    }
+}
+
+private extension AppRoute {
+    var rootFeedTab: RootFeedTab? {
+        switch self {
+        case .home:
+            return .home
+        case .anytimeTodos:
+            return .anytime
+        default:
+            return nil
+        }
+    }
+
+    var isRootFeedRoute: Bool {
+        rootFeedTab != nil
     }
 }
 

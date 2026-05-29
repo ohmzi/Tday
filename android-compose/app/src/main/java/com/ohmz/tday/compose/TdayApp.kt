@@ -402,6 +402,7 @@ fun TdayApp(
                                                 onTaskDeleted = ::showTaskDeletedToast,
                                                 showRootFeedDock = false,
                                                 showCreateTaskButton = false,
+                                                usesRootFeedHeader = true,
                                                 createTaskRequestKey = rootCreateTaskRequestKey,
                                                 onRootDockCollapsedChange = {
                                                     rootDockCollapsed = it
@@ -549,27 +550,14 @@ fun TdayApp(
                     route = AppRoute.AnytimeTodos.route,
                     deepLinks = listOf(navDeepLink { uriPattern = "tday://anytime" }),
                 ) {
-                    TodosRoute(
-                        mode = TodoListMode.ANYTIME,
-                        onBack = {
-                            navController.navigate(AppRoute.Home.route) {
-                                popUpTo(AppRoute.Home.route) { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        },
-                        onTaskDeleted = ::showTaskDeletedToast,
-                        rootFeedTab = RootFeedTab.ANYTIME,
-                        onRootFeedTabSelected = { tab ->
-                            when (tab) {
-                                RootFeedTab.HOME -> navController.navigate(AppRoute.Home.route) {
-                                    popUpTo(AppRoute.Home.route) { inclusive = false }
-                                    launchSingleTop = true
-                                }
-
-                                RootFeedTab.ANYTIME -> Unit
-                            }
-                        },
-                    )
+                    LaunchedEffect(Unit) {
+                        rootFeedTab = RootFeedTab.ANYTIME
+                        navController.navigate(AppRoute.Home.route) {
+                            popUpTo(AppRoute.Home.route) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
+                    Box(modifier = Modifier.fillMaxSize())
                 }
 
                 composable(
@@ -938,6 +926,7 @@ private fun TodosRoute(
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
+    usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
@@ -987,6 +976,7 @@ private fun TodosRoute(
         onRootFeedTabSelected = onRootFeedTabSelected,
         showRootFeedDock = showRootFeedDock,
         showCreateTaskButton = showCreateTaskButton,
+        usesRootFeedHeader = usesRootFeedHeader,
         createTaskRequestKey = createTaskRequestKey,
         onRootDockCollapsedChange = onRootDockCollapsedChange,
         onRootControlsVisibleChange = onRootControlsVisibleChange,
