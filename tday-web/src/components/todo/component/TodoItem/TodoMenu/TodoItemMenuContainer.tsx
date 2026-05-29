@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from "react";
 import TodoItemMeatballMenu from "./TodoItemMeatballMenu";
 import { TodoItemType } from "@/types";
-import InlineMenuLoading from "../../Loading/InlineMenuLoading";
+import InlineMenuLoading from "@/components/todo/component/Loading/InlineMenuLoading";
 const TodoItemSideMenu = lazy(() => import("./TodoItemSideMenu"));
 
 const TodoItemMenuContainer = ({

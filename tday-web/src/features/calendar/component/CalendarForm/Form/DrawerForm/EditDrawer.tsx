@@ -18,12 +18,12 @@ import {
     DrawerClose,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { DateDrawerMenu } from "../../FormFields/Drawers/DateDrawer/DateDrawerMenu";
-import RepeatDrawerMenu from "../../FormFields/Drawers/RepeatDrawer/RepeatDrawerMenu";
+import { DateDrawerMenu } from "@/features/calendar/component/CalendarForm/FormFields/Drawers/DateDrawer/DateDrawerMenu";
+import RepeatDrawerMenu from "@/features/calendar/component/CalendarForm/FormFields/Drawers/RepeatDrawer/RepeatDrawerMenu";
 import { useEditCalendarTodo } from "@/features/calendar/query/update-calendar-todo";
-import ConfirmEditAllDrawer from "../../../ConfirmationModals/ConfirmEditAllDrawer";
-import ConfirmCancelEditDrawer from "../../../ConfirmationModals/ConfirmCancelEditDrawer";
-import ListDrawer from "../../FormFields/Drawers/ListDrawer/ListDrawer";
+import ConfirmEditAllDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmEditAllDrawer";
+import ConfirmCancelEditDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEditDrawer";
+import ListDrawer from "@/features/calendar/component/CalendarForm/FormFields/Drawers/ListDrawer/ListDrawer";
 import ListDot from "@/components/ListDot";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import NLPTitleInput from "@/components/todo/component/TodoForm/NLPTitleInput";
