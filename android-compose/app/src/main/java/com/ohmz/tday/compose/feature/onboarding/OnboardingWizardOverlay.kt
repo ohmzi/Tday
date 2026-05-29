@@ -86,6 +86,7 @@ import com.ohmz.tday.compose.core.data.auth.LoginCredentialSource
 import com.ohmz.tday.compose.core.data.auth.SystemCredential
 import com.ohmz.tday.compose.feature.auth.AuthUiState
 import com.ohmz.tday.compose.feature.auth.LoginCredentialCoordinator
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -444,7 +445,7 @@ fun OnboardingWizardOverlay(
                         Icon(
                             imageVector = Icons.Rounded.WbSunny,
                             contentDescription = null,
-                            tint = Color(0xFFF4C542),
+                            tint = TdayTitleIconDayAccent,
                             modifier = Modifier.size(27.dp),
                         )
                         Text(

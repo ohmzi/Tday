@@ -80,6 +80,7 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -499,22 +500,26 @@ private fun ReleaseOverviewCard(
             publishedAt = latestRelease?.publishedAt ?: currentRelease?.publishedAt,
         )
         ReleaseVersionLine(
-            label = if (hasUpdate) "Installed" else stringResource(R.string.release_installed_version),
-            version = "v$currentVersion",
+            label = if (hasUpdate) {
+                stringResource(R.string.release_installed_label)
+            } else {
+                stringResource(R.string.release_installed_version)
+            },
+            version = stringResource(R.string.label_version_name, currentVersion),
             tint = colorScheme.primary,
         )
         if (backendVersion != null) {
             val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
                 versionCheckResult == null
             ReleaseVersionLine(
-                label = "Server",
-                version = "v$backendVersion",
-                tint = if (isCompatible) Color(0xFF4CAF50) else colorScheme.error,
+                label = stringResource(R.string.label_server),
+                version = stringResource(R.string.label_version_name, backendVersion),
+                tint = if (isCompatible) TdayStatusSuccess else colorScheme.error,
             )
         }
         latestRelease?.takeIf { hasUpdate }?.let {
             ReleaseVersionLine(
-                label = "Latest",
+                label = stringResource(R.string.release_latest_label),
                 version = it.tagName,
                 tint = colorScheme.tertiary,
             )

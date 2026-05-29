@@ -34,6 +34,7 @@
     <string name="label_priority_task">Priority task</string>
     <string name="label_loading">Loading…</string>
     <string name="label_version_name">v%1$s</string>
+    <string name="label_server">Server</string>
 
     <!-- Home screen -->
     <string name="home_title">T\'Day</string>
@@ -113,7 +114,6 @@
     <string name="settings_ai_unavailable_title">AI Summary Unavailable</string>
     <string name="settings_default_reminder">Default reminder</string>
     <string name="settings_update_available_version">v%1$s available</string>
-    <string name="settings_server_label">Server</string>
     <string name="settings_server_compatible">Compatible</string>
     <string name="settings_server_incompatible">Incompatible</string>
 
@@ -334,6 +334,8 @@
     <string name="release_title">App Version</string>
     <string name="release_error">Unable to fetch release information. Please check your connection and try again.</string>
     <string name="release_installed_version">Installed Version</string>
+    <string name="release_installed_label">Installed</string>
+    <string name="release_latest_label">Latest</string>
     <string name="release_update_available">Update Available</string>
     <string name="release_up_to_date">Latest</string>
     <string name="release_up_to_date_message">You\'re running the latest version</string>
