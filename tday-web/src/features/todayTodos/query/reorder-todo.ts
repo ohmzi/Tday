@@ -1,6 +1,7 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
 
 export type changeMapType = {
   id: string;
@@ -13,7 +14,7 @@ export const useReorderTodo = () => {
   const { mutate: reorderMutateFn, isPending: reorderPending } = useMutation({
     mutationFn: async (changeMap: changeMapType[]) => {
       changeMap = changeMap.map(({ id, order }) => {
-        const todoId = id.split(":")[0];
+        const todoId = canonicalTodoId(id);
         return { id: todoId, order };
       });
 
