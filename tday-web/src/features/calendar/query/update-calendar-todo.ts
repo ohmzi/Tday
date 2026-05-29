@@ -1,55 +1,13 @@
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
-import { todoSchema } from "@/schema";
+import {
+  patchTodo,
+  type TodoItemPatchInput,
+} from "@/lib/todo/patch-todo";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 
-interface TodoItemTypeWithChecksum extends TodoItemType {
-  dateRangeChecksum?: string;
-  rruleChecksum?: string;
-}
-
-async function patchCalendarTodo({
-  dateRangeChecksum,
-  rruleChecksum,
-  ...todo
-}: TodoItemTypeWithChecksum) {
-  if (!todo.id) {
-    throw new Error("this todo is missing");
-  }
-
-  //validate input
-  const parsedObj = todoSchema.safeParse({
-    title: todo.title,
-    description: todo.description,
-    priority: todo.priority,
-    due: todo.due,
-    rrule: todo.rrule,
-    listID: todo.listID ?? null,
-  });
-  if (!parsedObj.success) {
-    console.warn(parsedObj.error.errors[0]);
-    return;
-  }
-
-  const rruleChanged = rruleChecksum !== todo.rrule;
-  const dateChanged =
-    dateRangeChecksum !== todo.due.toISOString();
-
-  const todoId = todo.id.split(":")[0];
-  await api.PATCH({
-    url: "/api/todo",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...parsedObj.data,
-      id: todoId,
-      instanceDate: todo.instanceDate?.getTime(),
-      rruleChanged,
-      dateChanged,
-    }),
-  });
-}
+type TodoItemTypeWithChecksum = TodoItemPatchInput;
 
 export const useEditCalendarTodo = () => {
   const { toast } = useToast();
@@ -57,7 +15,11 @@ export const useEditCalendarTodo = () => {
   const queryClient = useQueryClient();
 
   const { mutate: editCalendarTodo, status: editTodoStatus } = useMutation({
-    mutationFn: (params: TodoItemTypeWithChecksum) => patchCalendarTodo(params),
+    mutationFn: (params: TodoItemTypeWithChecksum) =>
+      patchTodo(params, {
+        instanceDate: params.instanceDate?.getTime(),
+        listID: params.listID ?? null,
+      }),
     onMutate: async (newTodo) => {
       await queryClient.cancelQueries({
         queryKey: ["calendarTodo"],
