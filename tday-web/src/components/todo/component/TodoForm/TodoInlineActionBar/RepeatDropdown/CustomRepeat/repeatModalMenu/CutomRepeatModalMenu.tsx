@@ -16,7 +16,7 @@ import { useTodoForm } from "@/providers/TodoFormProvider";
 import { useState } from "react";
 import { Options, RRule } from "rrule";
 import { useTranslation } from "react-i18next";
-import { Indicator } from "../../RepeatDropdownMenu";
+import { Indicator } from "@/components/todo/component/TodoForm/TodoInlineActionBar/RepeatDropdown/RepeatDropdownMenu";
 
 const CustomRepeatModalMenu = ({ className }: { className?: string }) => {
   const { t: appDict } = useTranslation("app");

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import Meatball from "@/components/ui/icon/meatball";
 import { useState, lazy, Suspense, type Dispatch, type SetStateAction } from "react";
 import { TodoItemType } from "@/types";
-import DropdownMenuLoading from "../../Loading/DropdownMenuLoading";
+import DropdownMenuLoading from "@/components/todo/component/Loading/DropdownMenuLoading";
 
 const MenuContent = lazy(() => import("./TodoItemMeatballMenuContent"));
 

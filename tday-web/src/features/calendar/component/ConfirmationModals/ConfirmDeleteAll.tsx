@@ -1,6 +1,6 @@
 import React from "react";
-import { useDeleteCalendarTodo } from "../../query/delete-calendar-todo";
-import { useDeleteCalendarInstanceTodo } from "../../query/delete-calendar-instance-todo";
+import { useDeleteCalendarTodo } from "@/features/calendar/query/delete-calendar-todo";
+import { useDeleteCalendarInstanceTodo } from "@/features/calendar/query/delete-calendar-instance-todo";
 import { TodoItemType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";

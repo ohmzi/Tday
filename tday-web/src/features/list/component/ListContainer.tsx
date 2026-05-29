@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import CreateTodoBtn from "./CreateTodoBtn";
-import TodoListLoading from "../../../components/todo/component/TodoListLoading";
+import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoFilterBar from "./TodoFilterBar";

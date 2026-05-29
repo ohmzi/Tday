@@ -6,10 +6,10 @@ import { TodoItemType } from "@/types";
 
 type ModalDateRange = { from: Date; to: Date };
 import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
-import DateDropdownMenu from "../../FormFields/Dropdowns/DateDropdown/DateDropdownMenu";
-import PriorityDropdownMenu from "../../FormFields/Dropdowns/PriorityDropdown/PriorityDropdown";
-import RepeatDropdownMenu from "../../FormFields/Dropdowns/RepeatDropdown/RepeatDropdownMenu";
-import ConfirmCancelEditDialog from "../../../ConfirmationModals/ConfirmCancelEdit";
+import DateDropdownMenu from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/DateDropdown/DateDropdownMenu";
+import PriorityDropdownMenu from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/PriorityDropdown/PriorityDropdown";
+import RepeatDropdownMenu from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/RepeatDropdown/RepeatDropdownMenu";
+import ConfirmCancelEditDialog from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEdit";
 import {
   Modal,
   ModalOverlay,
