@@ -12,6 +12,7 @@ private enum HomeMetrics {
     static let tileInnerPadding: CGFloat = 12
     static let todayCardHeight: CGFloat = 70
     static let listRowHeight: CGFloat = 70
+    static let rootDockCollapseThreshold: CGFloat = 44
     static let listContainerColorWeight: CGFloat = 0.66
     static let tileWatermarkSize: CGFloat = 116
     static let tileWatermarkTrailingInset: CGFloat = 22
@@ -152,6 +153,10 @@ struct HomeScreen: View {
         searchExpanded && !normalizedSearchQuery.isEmpty
     }
 
+    private var shouldCollapseRootDock: Bool {
+        max(homeScrollOffset, 0) > HomeMetrics.rootDockCollapseThreshold
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let fallbackSearchBarFrame = CGRect(
@@ -279,7 +284,7 @@ struct HomeScreen: View {
                             HStack(alignment: .bottom) {
                                 RootFeedDock(
                                     activeTab: .home,
-                                    collapsed: homeScrollOffset > 18,
+                                    collapsed: shouldCollapseRootDock,
                                     onSelect: onRootFeedTabSelected
                                 )
                                 .padding(.leading, 18)
@@ -354,7 +359,7 @@ struct HomeScreen: View {
             }
         }
         .onChange(of: homeScrollOffset, initial: true) { _, offset in
-            onRootDockCollapsedChange(offset > 18)
+            onRootDockCollapsedChange(max(offset, 0) > HomeMetrics.rootDockCollapseThreshold)
         }
         .onChange(of: createTaskRequestID) { _, requestID in
             guard requestID > 0 else { return }
@@ -363,7 +368,7 @@ struct HomeScreen: View {
         }
         .onAppear {
             onRootControlsVisibleChange(!searchExpanded)
-            onRootDockCollapsedChange(homeScrollOffset > 18)
+            onRootDockCollapsedChange(shouldCollapseRootDock)
         }
         .onDisappear {
             onRootControlsVisibleChange(true)
@@ -1039,10 +1044,6 @@ private struct HomeListsSection: View {
     let displayName: (String) -> String
     let onOpenList: (ListSummary, String) -> Void
 
-    private var listIDs: [String] {
-        lists.map(\.id)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: HomeMetrics.sectionSpacing) {
             HomeListsHeader()
@@ -1057,15 +1058,8 @@ private struct HomeListsSection: View {
                 ) {
                     onOpenList(list, name)
                 }
-                .transition(
-                    .asymmetric(
-                        insertion: .opacity.combined(with: .move(edge: .top)),
-                        removal: .opacity.combined(with: .scale(scale: 0.98, anchor: .top))
-                    )
-                )
             }
         }
-        .animation(.spring(response: 0.34, dampingFraction: 0.88), value: listIDs)
     }
 }
 
