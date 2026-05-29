@@ -54,6 +54,50 @@
     <string name="home_section_color">Color</string>
     <string name="home_section_icon">Icon</string>
     <string name="home_list_icon_option">Select %1$s list icon</string>
+    <string name="home_locked_list_name">Sign in to load your lists</string>
+
+    <string-array name="splash_taglines">
+        <item>Your server remembers, so you don’t have to</item>
+        <item>Hosted by you, haunted by deadlines</item>
+        <item>Because ‘I’ll remember later’ is always a lie</item>
+        <item>Self-hosted sanity, one task at a time</item>
+        <item>Nagging you from your own hardware</item>
+        <item>Your data, your server, your no-excuse zone</item>
+        <item>Making procrastination slightly harder since v0.1</item>
+        <item>Running on your server, running your life</item>
+        <item>Because sticky notes don’t have push notifications</item>
+        <item>Turning ‘I forgot’ into ‘I got this’</item>
+        <item>Your personal nudge machine</item>
+        <item>Self-hosted, self-organized… well, getting there</item>
+        <item>Where forgotten tasks go to get found</item>
+        <item>Adulting, but make it self-hosted</item>
+        <item>Taming chaos from a server near you</item>
+        <item>Future you says thanks in advance</item>
+        <item>The cloud is just someone else’s server. This one’s yours.</item>
+        <item>Organizing your life, no landlord required</item>
+        <item>Zero trust… except your own server</item>
+        <item>Syncing your tasks, judging your priorities</item>
+        <item>Today called. It wants a plan.</item>
+        <item>Making later file a formal request</item>
+        <item>Turning chaos into checkboxes</item>
+        <item>Your tasks are lining up nicely</item>
+        <item>A private server with opinions about your priorities</item>
+        <item>For when your brain opens too many tabs</item>
+        <item>Scheduling the chaos before it schedules you</item>
+        <item>Your lists have entered their productive era</item>
+        <item>A tiny operations desk for future you</item>
+        <item>Because vibes are not a task strategy</item>
+        <item>Private tasks. Better mornings.</item>
+        <item>Making your backlog feel seen, then sorted</item>
+        <item>Where scattered thoughts get assigned seating</item>
+        <item>Your priorities just got a home address</item>
+        <item>Sync first, panic later</item>
+        <item>Calendar drama, now with containment</item>
+        <item>Deadlines hate this one self-hosted trick</item>
+        <item>Helping your day stop freelancing</item>
+        <item>Your reminders came prepared</item>
+        <item>Turning I should into scheduled</item>
+    </string-array>
 
     <!-- Settings screen -->
     <string name="settings_title">Settings</string>
