@@ -4,9 +4,15 @@ This document captures maintenance expectations for T'Day so the repo stays easy
 
 ## Documentation Audit
 
-The markdown inventory was checked on 2026-05-29 with `git log -1 --date=short -- <file>`.
+The markdown inventory was checked on 2026-05-29 with:
 
-### Markdown Inventory At Audit Start
+```bash
+git ls-files '*.md' | while read f; do git log -1 --date=short --format="$f | %ad | %h | %s" -- "$f"; done
+```
+
+The table below records the latest markdown owner commit observed during this documentation/codebase alignment pass. The `docs/REPO_HOUSEKEEPING.md` row reflects the commit before this inventory refresh; this file's own latest hash changes when the refresh is committed.
+
+### Latest Reviewed Markdown Inventory
 
 | File | Last commit date | Commit |
 |------|------------------|--------|
@@ -14,26 +20,26 @@ The markdown inventory was checked on 2026-05-29 with `git log -1 --date=short -
 | `.github/ISSUE_TEMPLATE/feature_request.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `.github/PULL_REQUEST_TEMPLATE.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `AGENTS.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `CONTRIBUTING.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `README.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `SECURITY.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `CONTRIBUTING.md` | 2026-05-29 | `0a671fc` Tighten web API and repo hygiene |
+| `README.md` | 2026-05-29 | `c899960` Refresh README project structure |
+| `SECURITY.md` | 2026-05-29 | `e6cb6c1` Document security event catalog |
 | `android-compose/README.md` | 2026-05-29 | `df1fd00` Centralize Android list icon visuals |
-| `docs/API_GUIDELINES.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `docs/ARCHITECTURE.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `docs/CODING_STANDARDS.md` | 2026-05-29 | `df1fd00` Centralize Android list icon visuals |
-| `docs/DATA_MODEL.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `docs/DEPLOYMENT.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/API_GUIDELINES.md` | 2026-05-29 | `e994726` Clarify API cache behavior |
+| `docs/ARCHITECTURE.md` | 2026-05-29 | `285a73e` Refresh file metadata architecture notes |
+| `docs/CODING_STANDARDS.md` | 2026-05-29 | `d8940a0` Sync version mirrors from package |
+| `docs/DATA_MODEL.md` | 2026-05-29 | `285a73e` Refresh file metadata architecture notes |
+| `docs/DEPLOYMENT.md` | 2026-05-29 | `d8940a0` Sync version mirrors from package |
 | `docs/PRODUCT_DIRECTION.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `docs/REMOTE_ACCESS.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `docs/REPO_HOUSEKEEPING.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/REPO_HOUSEKEEPING.md` | 2026-05-29 | `c28fdc4` Refresh markdown audit guidance |
 | `docs/TELEMETRY.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `docs/TESTING.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/TESTING.md` | 2026-05-29 | `e6cb6c1` Document security event catalog |
 | `docs/adr/001-next-js-monolith-with-native-mobile.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `docs/adr/002-postgresql-with-exposed.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `docs/adr/003-jwe-jwt-sessions.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `docs/adr/004-local-ai-via-ollama.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `docs/adr/005-offline-first-android-with-sync.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `docs/adr/006-rfc5545-recurrence.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/adr/006-rfc5545-recurrence.md` | 2026-05-29 | `7d1ca40` Refresh recurrence ADR testing note |
 | `docs/adr/007-local-mode-and-floater-workspace.md` | 2026-05-29 | `1c5effd` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `docs/remote-access/cloudflare-tunnel.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `docs/remote-access/frp.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
@@ -42,22 +48,31 @@ The markdown inventory was checked on 2026-05-29 with `git log -1 --date=short -
 | `docs/remote-access/tailscale.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `docs/remote-access/wireguard.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 | `docs/remote-access/zerotier.md` | 2026-05-29 | `1c5effd` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `docs/security/cloudflare-auth-hardening.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
-| `docs/security/operations-hardening.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
+| `docs/security/cloudflare-auth-hardening.md` | 2026-05-29 | `e6cb6c1` Document security event catalog |
+| `docs/security/operations-hardening.md` | 2026-05-29 | `e6cb6c1` Document security event catalog |
 | `ios-swiftUI/README.md` | 2026-05-29 | `a057c1b` docs: update project documentation to reflect Local Mode, Floater tasks, and mobile parity |
 
 ### Summary By Area
 
 | Area | Last updated before this refresh | Notes |
 |------|----------------------------------|-------|
-| Root README / agent guide | 2026-05-29 | Refreshed for Local Mode, RootFeedDock, Floater/Anytime, mobile parity, and agent expectations. |
-| Contributing / testing / ADR base | 2026-05-29 | Updated around current monorepo structure, verification expectations, and decision record links. |
-| Architecture / API / data docs | 2026-05-29 | Covers floater APIs, Room cache, SwiftData cache, local mode, sync mutations, and mobile data flow. |
-| Deployment / telemetry / security | 2026-05-29 | Covers mobile local/server mode context, credential handling, telemetry boundaries, and operations hardening. |
+| Root README / agent guide | 2026-05-29 | Refreshed for current repo shape, Local Mode, RootFeedDock, Floater/Anytime, mobile parity, and agent expectations. |
+| Contributing / testing / ADR base | 2026-05-29 | Updated around current monorepo structure, verification expectations, guardrails, and decision record links. |
+| Architecture / API / data docs | 2026-05-29 | Covers floater APIs, Room cache, SwiftData cache, local mode, sync mutations, shared route constants, file metadata status, and mobile data flow. |
+| Deployment / telemetry / security | 2026-05-29 | Covers mobile local/server mode context, credential handling, version mirrors, telemetry boundaries, security event monitoring, and operations hardening. |
 | Android README | 2026-05-29 | Covers Room cache, RootFeedDock, Floater, Local Mode, widgets, in-app updates, and shared list icon resources. |
 | iOS README | 2026-05-29 | Covers Local Mode, RootFeedDock, Floater, SwiftData cache, and current native app structure. |
 | Issue/PR templates | 2026-05-29 | Includes mobile parity, data contract, Local Mode, and docs-impact prompts. |
 | Remote access guides | 2026-05-29 | Scoped to ingress setup; update only when ports, host binding, certificate trust, or recommended ingress changes. |
+
+### Codebase Alignment Covered In This Pass
+
+- Web todo mutation helpers now centralize patch payload, checksum, and id validation rules, with imports kept on repo aliases instead of deep relative paths.
+- Android UI cleanup moved user-facing display copy into resources and reusable colors into the theme layer.
+- Deployment/version docs now match the actual `tday-web/package.json` source of truth, iOS metadata mirrors, and backend compatibility templates.
+- Security monitoring docs now list the event codes actually emitted by the backend auth/session/rate-limit pipeline.
+- API and architecture docs now distinguish fetch `cache: "no-store"` behavior from response cache headers and describe file metadata as reserved legacy structure rather than active upload storage.
+- Testing docs now match the current guardrail/unit test layout and the guardrails added during this audit.
 
 ## Recent Product Changes Audited
 
