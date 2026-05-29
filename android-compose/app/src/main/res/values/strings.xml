@@ -161,6 +161,13 @@
     <string name="onboarding_validation_password_special">Password must include at least one special character</string>
     <string name="onboarding_validation_password_mismatch">Passwords do not match</string>
 
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">Account pending admin approval.</string>
+    <string name="auth_password_manager_save_server_url_failed">Android Password Manager could not save this server URL. Check that a password manager is enabled.</string>
+    <string name="auth_password_manager_save_login_failed">Android Password Manager could not save this login. Check that a password manager is enabled.</string>
+    <string name="auth_error_incorrect_credentials">Incorrect email or password</string>
+    <string name="auth_error_server_unreachable">Cannot reach server. Check your server URL and try again.</string>
+
     <!-- Todo list screen -->
     <string name="todos_summarize">Summarize tasks</string>
     <string name="todos_empty_today">No tasks for today</string>
