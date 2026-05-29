@@ -410,6 +410,7 @@ class CacheMappersTest {
         priority = "High",
         due = dueInstant.toString(),
         completedAt = completedInstant.toString(),
+        completedOnTime = true,
         listID = "list-1",
     )
 

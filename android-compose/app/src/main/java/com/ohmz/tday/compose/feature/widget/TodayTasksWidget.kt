@@ -143,7 +143,7 @@ private fun TaskRow(task: CachedTodoRecord) {
         .withZone(ZoneId.systemDefault())
     val dueText = task.dueEpochMs
         ?.let { timeFormatter.format(Instant.ofEpochMilli(it)) }
-        ?: "Anytime"
+        ?: "Floater"
     val priorityColor = when (task.priority.lowercase()) {
         "high" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFE53935))
         "medium" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFFB8C00))

@@ -15,7 +15,7 @@ object Todos : Table("todos") {
     val pinned = bool("pinned").default(false)
     val order = integer("order").autoIncrement()
     val priority = pgEnum<Priority>("priority", "\"Priority\"")
-    val due = datetime("due").nullable()
+    val due = datetime("due")
     val exdates = registerColumn<List<LocalDateTime>>("exdates", TimestampArrayColumnType())
     val rrule = text("rrule").nullable()
     val timeZone = varchar("timeZone", 64).default("UTC")
