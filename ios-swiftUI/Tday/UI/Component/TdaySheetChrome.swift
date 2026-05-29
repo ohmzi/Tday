@@ -151,6 +151,69 @@ struct TdaySheetOverlayCard<Content: View>: View {
     }
 }
 
+struct TdayCenteredSelectorCard<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        TdaySheetOverlayCard {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title)
+                    .font(.tdayRounded(size: 18, weight: .heavy))
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 12)
+
+                content
+            }
+            .padding(.bottom, 14)
+            .frame(maxWidth: 330)
+        }
+    }
+}
+
+struct TdayCenteredSelectorRow: View {
+    let title: String
+    let swatchColor: Color
+    let selected: Bool
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Circle()
+                    .fill(swatchColor)
+                    .frame(width: 10, height: 10)
+
+                Text(title)
+                    .font(.tdayRounded(size: 18, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+
+                Spacer(minLength: 12)
+
+                if selected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(colors.primary)
+                } else {
+                    Color.clear
+                        .frame(width: 18, height: 18)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct TdaySheetDivider: View {
     var horizontalPadding: CGFloat = 18
     var opacity: Double = 0.18

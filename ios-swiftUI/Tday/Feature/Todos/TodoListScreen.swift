@@ -56,6 +56,7 @@ enum TodoTimelineMetrics {
     static let sectionHeaderBottomPadding: CGFloat = 2
     static let titleCollapseDistance: CGFloat = 64
     static let rootFeedTitleTopInset: CGFloat = 32
+    static let rootFeedTitleBottomInset: CGFloat = 12
     static let timelineBottomSpacerHeight: CGFloat = 120
     static let rootFloaterBottomSpacerHeight: CGFloat = 12
     static let rootDockCollapseThreshold: CGFloat = 44
@@ -1014,7 +1015,7 @@ struct TodoListScreen: View {
                 EdgeInsets(
                     top: TodoTimelineMetrics.rootFeedTitleTopInset,
                     leading: TodoTimelineMetrics.horizontalPadding,
-                    bottom: 0,
+                    bottom: TodoTimelineMetrics.rootFeedTitleBottomInset,
                     trailing: TodoTimelineMetrics.horizontalPadding
                 )
             )
