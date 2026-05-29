@@ -54,10 +54,11 @@ struct RootFeedDock: View {
 
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: RootFeedDockMetrics.cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                    .fill(colors.surfaceVariant.opacity(colors.isDark ? 0.62 : 0.50))
                     .background(
                         RoundedRectangle(cornerRadius: RootFeedDockMetrics.cornerRadius, style: .continuous)
-                            .fill(colors.surfaceVariant.opacity(colors.isDark ? 0.76 : 0.68))
+                            .fill(.ultraThinMaterial)
+                            .opacity(colors.isDark ? 0.44 : 0.34)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: RootFeedDockMetrics.cornerRadius, style: .continuous)
@@ -66,7 +67,12 @@ struct RootFeedDock: View {
 
                 ZStack(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: RootFeedDockMetrics.selectorCornerRadius, style: .continuous)
-                        .fill(colors.isDark ? colors.background.opacity(0.90) : colors.surface.opacity(0.98))
+                        .fill(colors.isDark ? colors.background.opacity(0.82) : colors.surface.opacity(0.90))
+                        .background(
+                            RoundedRectangle(cornerRadius: RootFeedDockMetrics.selectorCornerRadius, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                                .opacity(colors.isDark ? 0.30 : 0.24)
+                        )
                         .overlay(
                             RoundedRectangle(cornerRadius: RootFeedDockMetrics.selectorCornerRadius, style: .continuous)
                                 .fill(accentColor.opacity(colors.isDark ? 0.04 : 0.06))
