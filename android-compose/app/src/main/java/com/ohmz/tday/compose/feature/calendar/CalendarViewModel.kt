@@ -1,7 +1,9 @@
 package com.ohmz.tday.compose.feature.calendar
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
@@ -19,6 +21,7 @@ import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +47,7 @@ class CalendarViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -164,7 +168,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
-                        errorMessage = error.userFacingMessage("Failed to load calendar."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_load_calendar_failed),
                     )
                 }
             }
@@ -181,7 +185,7 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
-                    current.copy(errorMessage = error.userFacingMessage("Could not create task."))
+                    current.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_task_failed))
                 }
             }
         }
@@ -205,7 +209,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         items = previousItems,
-                        errorMessage = error.userFacingMessage("Could not complete task."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_complete_task_failed),
                     )
                 }
             }
@@ -230,7 +234,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         completedItems = previousCompletedItems,
-                        errorMessage = error.userFacingMessage("Could not restore task."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_restore_task_failed),
                     )
                 }
             }
@@ -271,7 +275,7 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage("Could not update task."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
                 )
             }
         }
@@ -331,7 +335,7 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage("Could not update task."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
                 )
             }
         }
@@ -356,7 +360,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         items = previousItems,
-                        errorMessage = error.userFacingMessage("Could not delete task."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed),
                     )
                 }
             }
