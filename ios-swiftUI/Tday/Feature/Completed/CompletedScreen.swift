@@ -15,6 +15,7 @@ struct CompletedScreen: View {
     @State private var editingItem: CompletedItem?
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String> = []
+    @State private var openSwipeTaskID: String?
 
     init(container: AppContainer) {
         _viewModel = State(initialValue: CompletedViewModel(container: container))
@@ -44,6 +45,9 @@ struct CompletedScreen: View {
 
     var body: some View {
         completedTimelineContent
+            .tdayPullToRefresh(isRefreshing: viewModel.isLoading) {
+                await viewModel.refresh()
+            }
             .background(colors.background)
             .overlay {
                 if viewModel.items.isEmpty, !viewModel.isLoading {
@@ -74,6 +78,10 @@ struct CompletedScreen: View {
                     onBack: { dismiss() },
                     action: nil
                 )
+            }
+            .onChange(of: viewModel.items.map(\.id)) { _, ids in
+                guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
+                self.openSwipeTaskID = nil
             }
             .sheet(item: $editingItem) { item in
                 CreateTaskSheet(
@@ -258,7 +266,8 @@ struct CompletedScreen: View {
             },
             onEdit: {
                 editingItem = item
-            }
+            },
+            openSwipeTaskID: $openSwipeTaskID
         )
     }
 }
@@ -269,6 +278,7 @@ private struct CompletedTimelineRow: View {
     let onUncomplete: () async -> Void
     let onDelete: () async -> Void
     let onEdit: () -> Void
+    @Binding var openSwipeTaskID: String?
 
     @Environment(\.tdayColors) private var colors
     @State private var restorePhase = CompletedRestorePhase.completed
@@ -371,6 +381,8 @@ private struct CompletedTimelineRow: View {
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .allowsHitTesting(!isRestoring)
         .todoTrailingSwipeActions(
+            rowID: item.id,
+            openRowID: $openSwipeTaskID,
             enabled: !isRestoring,
             onEdit: onEdit,
             onDelete: {
@@ -382,6 +394,9 @@ private struct CompletedTimelineRow: View {
     private func startRestore() {
         guard restorePhase == .completed else {
             return
+        }
+        if openSwipeTaskID == item.id {
+            openSwipeTaskID = nil
         }
 
         UIImpactFeedbackGenerator(style: .light).impactOccurred()

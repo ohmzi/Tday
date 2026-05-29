@@ -142,7 +142,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -157,6 +156,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -224,7 +224,12 @@ import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
+import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import com.ohmz.tday.compose.ui.component.TdaySheetCard
+import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
+import com.ohmz.tday.compose.ui.component.TdaySheetHeader
+import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -286,6 +291,7 @@ fun TodoListScreen(
     showCreateTaskButton: Boolean = true,
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
+    scrollToTopRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
@@ -296,11 +302,13 @@ fun TodoListScreen(
     val selectedListColorKey = selectedList?.color
     val usesTodayStyle =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
-    val isFloaterScreen = uiState.mode == TodoListMode.FLOATER || uiState.title.trim() == "Floater"
     val isRootFloaterScreen =
         uiState.mode == TodoListMode.FLOATER && uiState.listId.isNullOrBlank()
+    val isListDetailScreen =
+        uiState.mode == TodoListMode.LIST ||
+                (uiState.mode == TodoListMode.FLOATER && !uiState.listId.isNullOrBlank())
     val usesRootFeedChrome =
-        usesRootFeedHeader || isFloaterScreen
+        usesRootFeedHeader || isRootFloaterScreen
     val titleColor = modeAccentColor(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -395,6 +403,9 @@ fun TodoListScreen(
                 uiState.mode == TodoListMode.PRIORITY ||
                 uiState.mode == TodoListMode.LIST
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
+    var openSwipeTaskId by rememberSaveable(uiState.mode, uiState.listId) {
+        mutableStateOf<String?>(null)
+    }
     var rootFloaterSearchExpanded by rememberSaveable { mutableStateOf(false) }
     var rootFloaterSearchQuery by rememberSaveable { mutableStateOf("") }
     val normalizedRootFloaterSearchQuery = remember(rootFloaterSearchQuery) {
@@ -434,6 +445,19 @@ fun TodoListScreen(
     val closeRootFloaterSearch = {
         rootFloaterSearchExpanded = false
         rootFloaterSearchQuery = ""
+    }
+    LaunchedEffect(scrollToTopRequestKey) {
+        if (scrollToTopRequestKey <= 0 || !isRootFloaterScreen) return@LaunchedEffect
+        closeRootFloaterSearch()
+        if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+            listState.animateScrollToItem(index = 0, scrollOffset = 0)
+        }
+    }
+    LaunchedEffect(uiState.items, openSwipeTaskId) {
+        val openId = openSwipeTaskId ?: return@LaunchedEffect
+        if (uiState.items.none { it.id == openId }) {
+            openSwipeTaskId = null
+        }
     }
     var lastHandledCreateTaskRequestKey by rememberSaveable {
         mutableStateOf(createTaskRequestKey)
@@ -519,7 +543,7 @@ fun TodoListScreen(
             uiState.mode != TodoListMode.OVERDUE &&
                 uiState.mode != TodoListMode.FLOATER &&
             uiState.aiSummaryEnabled
-    val showTopBarActionButton = canSummarizeCurrentMode || uiState.mode == TodoListMode.LIST
+    val showTopBarActionButton = canSummarizeCurrentMode || isListDetailScreen
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
         targetValue = if (fabPressed) 0.93f else 1f,
@@ -1043,6 +1067,8 @@ fun TodoListScreen(
                                                 editTargetTodoId = todo.id
                                             },
                                             draggedTodo = sectionDraggedTodo,
+                                            openSwipeTaskId = openSwipeTaskId,
+                                            onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
                                             onDragTodoStart = if (canRescheduleTasks) {
                                                 { position ->
                                                     activeDropSectionKey = null
@@ -1153,7 +1179,16 @@ fun TodoListScreen(
                 RootFeedDock(
                     activeTab = rootFeedTab,
                     collapsed = dockCollapsed,
-                    onTabSelected = onRootFeedTabSelected,
+                    onTabSelected = { tab ->
+                        if (tab == rootFeedTab && isRootFloaterScreen) {
+                            screenScope.launch {
+                                closeRootFloaterSearch()
+                                listState.animateScrollToItem(index = 0, scrollOffset = 0)
+                            }
+                        } else {
+                            onRootFeedTabSelected(tab)
+                        }
+                    },
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .zIndex(8f),
@@ -1320,7 +1355,7 @@ fun TodoListScreen(
     val selectedListId = listSettingsTargetId ?: uiState.listId
     if (
         showListSettingsSheet &&
-        uiState.mode == TodoListMode.LIST &&
+        isListDetailScreen &&
         !selectedListId.isNullOrBlank()
     ) {
         ListSettingsBottomSheet(
@@ -1361,7 +1396,7 @@ fun TodoListScreen(
     val deleteConfirmationListId = selectedListId
     if (
         showDeleteListConfirmation &&
-        uiState.mode == TodoListMode.LIST &&
+        isListDetailScreen &&
         !deleteConfirmationListId.isNullOrBlank()
     ) {
         ListDeleteConfirmationDialog(
@@ -1382,17 +1417,8 @@ private fun ListDeleteConfirmationDialog(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val dialogContainerColor = if (isDarkTheme) {
-        colorScheme.surface.copy(alpha = 0.98f)
-    } else {
-        colorScheme.surface
-    }
-    val scrimColor = if (isDarkTheme) {
-        Color.Black.copy(alpha = 0.68f)
-    } else {
-        Color.Black.copy(alpha = 0.36f)
-    }
+    val dialogContainerColor = TdaySheetDefaults.surfaceColor()
+    val scrimColor = TdaySheetDefaults.scrimColor()
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -1419,7 +1445,8 @@ private fun ListDeleteConfirmationDialog(
                         indication = null,
                         onClick = {},
                     ),
-                shape = RoundedCornerShape(30.dp),
+                shape = TdaySheetDefaults.OverlayShape,
+                border = BorderStroke(1.dp, TdaySheetDefaults.cardStrokeColor()),
                 colors = CardDefaults.cardColors(containerColor = dialogContainerColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
             ) {
@@ -2066,22 +2093,10 @@ private fun SummaryBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colorScheme = MaterialTheme.colorScheme
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val sheetContainerColor = if (isDarkTheme) colorScheme.surface else colorScheme.background
-    val sheetScrimColor = if (isDarkTheme) {
-        Color.Black.copy(alpha = 0.68f)
-    } else {
-        Color.Black.copy(alpha = 0.40f)
-    }
 
-    ModalBottomSheet(
+    TdayModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        dragHandle = null,
-        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-        containerColor = sheetContainerColor,
-        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
-        scrimColor = sheetScrimColor,
     ) {
         Column(
             modifier = Modifier
@@ -2090,25 +2105,13 @@ private fun SummaryBottomSheet(
                 .padding(horizontal = 18.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.todos_summary_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onBackground,
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.todos_summary_close),
-                        tint = colorScheme.onBackground,
-                    )
-                }
-            }
+            TdaySheetHeader(
+                title = stringResource(R.string.todos_summary_title),
+                leftIcon = Icons.Rounded.Close,
+                leftContentDescription = stringResource(R.string.todos_summary_close),
+                onLeftClick = onDismiss,
+                showConfirmAction = false,
+            )
 
             if (isLoading) {
                 Row(
@@ -2129,11 +2132,8 @@ private fun SummaryBottomSheet(
             }
 
             if (!summaryText.isNullOrBlank()) {
-                Card(
+                TdaySheetCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 ) {
                     Text(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
@@ -2215,22 +2215,10 @@ private fun ListSettingsBottomSheet(
     val selectedAccent = listAccentColor(listColor)
     val selectedIcon = listIconForKey(listIconKey)
     val canSave = listName.isNotBlank()
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val sheetContainerColor = if (isDarkTheme) colorScheme.surface else colorScheme.background
-    val sheetScrimColor = if (isDarkTheme) {
-        Color.Black.copy(alpha = 0.68f)
-    } else {
-        Color.Black.copy(alpha = 0.40f)
-    }
 
-    ModalBottomSheet(
+    TdayModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        dragHandle = null,
-        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-        containerColor = sheetContainerColor,
-        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
-        scrimColor = sheetScrimColor,
     ) {
         Box(
             modifier = Modifier
@@ -2244,54 +2232,26 @@ private fun ListSettingsBottomSheet(
                     .padding(horizontal = 18.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    ListSettingsActionButton(
-                        icon = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.action_close),
-                        enabled = true,
-                        accentColor = Color(0xFFE35A5A),
-                        onClick = {
-                            focusManager.clearFocus(force = true)
-                            onDismiss()
-                        },
-                    )
-
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = colorScheme.onBackground,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-
-                    ListSettingsActionButton(
-                        icon = Icons.Rounded.Check,
-                        contentDescription = stringResource(R.string.todos_save_list_settings),
-                        enabled = canSave,
-                        accentColor = Color(0xFF2FA35B),
-                        onClick = {
-                            focusManager.clearFocus(force = true)
-                            if (canSave) onSave()
-                        },
-                    )
-                }
-
-                Text(
-                    text = stringResource(R.string.home_section_list),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp),
+                TdaySheetHeader(
+                    title = title,
+                    leftIcon = Icons.Rounded.Close,
+                    leftContentDescription = stringResource(R.string.action_close),
+                    onLeftClick = {
+                        focusManager.clearFocus(force = true)
+                        onDismiss()
+                    },
+                    confirmContentDescription = stringResource(R.string.todos_save_list_settings),
+                    onConfirm = {
+                        focusManager.clearFocus(force = true)
+                        if (canSave) onSave()
+                    },
+                    confirmEnabled = canSave,
                 )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                ) {
+
+                TdaySheetSectionTitle(
+                    text = stringResource(R.string.home_section_list),
+                )
+                TdaySheetCard {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2352,7 +2312,8 @@ private fun ListSettingsBottomSheet(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(
-                                            colorScheme.surfaceVariant, RoundedCornerShape(16.dp)
+                                            TdaySheetDefaults.controlSurfaceColor(),
+                                            RoundedCornerShape(16.dp)
                                         )
                                         .padding(horizontal = 14.dp, vertical = 12.dp),
                                     contentAlignment = Alignment.Center,
@@ -2378,19 +2339,10 @@ private fun ListSettingsBottomSheet(
                     }
                 }
 
-                Text(
+                TdaySheetSectionTitle(
                     text = stringResource(R.string.home_section_color),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp),
                 )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                ) {
+                TdaySheetCard {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2432,19 +2384,10 @@ private fun ListSettingsBottomSheet(
                     }
                 }
 
-                Text(
+                TdaySheetSectionTitle(
                     text = stringResource(R.string.home_section_icon),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp),
                 )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                ) {
+                TdaySheetCard {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2463,7 +2406,7 @@ private fun ListSettingsBottomSheet(
                                         color = if (selected) {
                                             selectedAccent.copy(alpha = 0.2f)
                                         } else {
-                                            colorScheme.surfaceVariant
+                                            TdaySheetDefaults.controlSurfaceColor()
                                         },
                                         shape = CircleShape,
                                     )
@@ -2533,7 +2476,11 @@ private fun ListSettingsDeleteButton(
         interactionSource = interactionSource,
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.5.dp, colorScheme.error.copy(alpha = 0.45f)),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.errorContainer.copy(alpha = 0.22f)),
+        colors = CardDefaults.cardColors(
+            containerColor = colorScheme.error.copy(
+                alpha = if (TdaySheetDefaults.isDarkTheme()) 0.14f else 0.04f,
+            ),
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
         Row(
@@ -2553,78 +2500,6 @@ private fun ListSettingsDeleteButton(
                 style = MaterialTheme.typography.titleMedium,
                 color = colorScheme.error,
                 fontWeight = FontWeight.ExtraBold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ListSettingsActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    enabled: Boolean,
-    accentColor: Color,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val colorScheme = MaterialTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.93f else 1f,
-        label = "listSettingsHeaderButtonScale",
-    )
-    val elevation by animateDpAsState(
-        targetValue = when {
-            pressed && enabled -> 2.dp
-            enabled -> 8.dp
-            else -> 5.dp
-        },
-        label = "listSettingsHeaderButtonElevation",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed && enabled) 1.dp else 0.dp,
-        label = "listSettingsHeaderButtonOffsetY",
-    )
-    val iconTint = colorScheme.onBackground.copy(alpha = if (enabled) 1f else 0.55f)
-
-    Card(
-        modifier = Modifier
-            .size(54.dp)
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .border(
-                width = 1.5.dp,
-                color = accentColor.copy(alpha = if (enabled) 0.55f else 0.3f),
-                shape = CircleShape,
-            ),
-        onClick = {
-            if (enabled) {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-            }
-            onClick()
-        },
-        enabled = enabled,
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = elevation,
-            pressedElevation = elevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = iconTint,
-                modifier = Modifier.size(22.dp),
             )
         }
     }
@@ -2819,13 +2694,15 @@ private fun TimelineTaskDragPreview(
                     color = colorScheme.onSurface,
                     maxLines = 1,
                 )
-                Text(
-                    text = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Floater",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
+                todo.due?.let(TODO_DUE_TIME_FORMATTER::format)?.let { dueText ->
+                    Text(
+                        text = dueText,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
             }
             if (showListIndicator) {
                 Icon(
@@ -2861,6 +2738,8 @@ private fun TimelineTaskRow(
     onDelete: () -> Unit,
     onInfo: () -> Unit,
     draggedTodo: TodoItem? = null,
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
     onDragTodoStart: ((Offset) -> Unit)? = null,
     onDragTodoMove: (Offset) -> Unit = {},
     onDragTodoEnd: (Offset?) -> Unit = {},
@@ -2886,6 +2765,8 @@ private fun TimelineTaskRow(
                 onDragMove = onDragTodoMove,
                 onDragEnd = onDragTodoEnd,
                 onDragCancel = onDragTodoCancel,
+                openSwipeTaskId = openSwipeTaskId,
+                onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
             )
         } else if (
             useMinimalStyle &&
@@ -2915,6 +2796,8 @@ private fun TimelineTaskRow(
                 onDragMove = onDragTodoMove,
                 onDragEnd = onDragTodoEnd,
                 onDragCancel = onDragTodoCancel,
+                openSwipeTaskId = openSwipeTaskId,
+                onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
             )
         } else if (useMinimalStyle) {
             TodayTodoRow(
@@ -3547,6 +3430,8 @@ private fun AllTaskSwipeRow(
     onDragMove: (Offset) -> Unit = {},
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -3568,6 +3453,8 @@ private fun AllTaskSwipeRow(
         onDragMove = onDragMove,
         onDragEnd = onDragEnd,
         onDragCancel = onDragCancel,
+        openSwipeTaskId = openSwipeTaskId,
+        onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
     )
 }
 
@@ -3589,6 +3476,8 @@ private fun TodayTaskSwipeRow(
     onDragMove: (Offset) -> Unit = {},
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -3610,6 +3499,8 @@ private fun TodayTaskSwipeRow(
         onDragMove = onDragMove,
         onDragEnd = onDragEnd,
         onDragCancel = onDragCancel,
+        openSwipeTaskId = openSwipeTaskId,
+        onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
     )
 }
 
@@ -3636,6 +3527,8 @@ private fun SwipeTaskRow(
     onDragMove: (Offset) -> Unit = {},
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -3648,6 +3541,19 @@ private fun SwipeTaskRow(
     var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
+    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
+    fun claimSwipeSlot() {
+        if (latestOpenSwipeTaskId.value != todo.id) {
+            onOpenSwipeTaskIdChange(todo.id)
+        }
+    }
+
+    fun closeSwipeSlot() {
+        swipeRevealState.close()
+        if (latestOpenSwipeTaskId.value == todo.id) {
+            onOpenSwipeTaskIdChange(null)
+        }
+    }
     val highlightAnim = remember(todo.id) { Animatable(0f) }
     val visuallyChecked = localChecked || (keepCompletedInline && todo.completed)
     val visuallyStruck = localStruck || (keepCompletedInline && todo.completed)
@@ -3677,16 +3583,22 @@ private fun SwipeTaskRow(
         animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
         label = "swipeTaskTitleStrikeProgress",
     )
-    val dueTimeText = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Floater"
-    val dueDateTimeText = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format) ?: "Floater"
     val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
-    val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
-    val dueSubtitleText = if (isOverdue) {
-        stringResource(R.string.todos_due_overdue_text, dueBodyText)
-    } else if (showDuePrefix) {
-        stringResource(R.string.todos_due_text, dueBodyText)
-    } else {
-        dueBodyText
+    val dueBodyText = todo.due?.let {
+        if (showDueDateInSubtitle) {
+            TODO_DUE_DATE_TIME_FORMATTER.format(it)
+        } else {
+            TODO_DUE_TIME_FORMATTER.format(it)
+        }
+    }
+    val dueSubtitleText = dueBodyText?.let { text ->
+        if (isOverdue) {
+            stringResource(R.string.todos_due_overdue_text, text)
+        } else if (showDuePrefix) {
+            stringResource(R.string.todos_due_text, text)
+        } else {
+            text
+        }
     }
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
@@ -3726,9 +3638,14 @@ private fun SwipeTaskRow(
     val priorityIcon = priorityIconFor(todo.priority)
     val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = listAccentColor(listMeta?.color)
+    LaunchedEffect(openSwipeTaskId, todo.id) {
+        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
+            swipeRevealState.close()
+        }
+    }
     LaunchedEffect(flashHighlight) {
         if (!flashHighlight) return@LaunchedEffect
-        swipeRevealState.close()
+        closeSwipeSlot()
         highlightAnim.stop()
         highlightAnim.snapTo(0f)
         repeat(2) { pulseIndex ->
@@ -3780,8 +3697,8 @@ private fun SwipeTaskRow(
                                 view,
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
+                            closeSwipeSlot()
                             onInfo()
-                            swipeRevealState.close()
                         },
                     )
                     TaskSwipeActionButton(
@@ -3797,8 +3714,8 @@ private fun SwipeTaskRow(
                                 view,
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
+                            closeSwipeSlot()
                             onDelete()
-                            swipeRevealState.close()
                         },
                     )
                 }
@@ -3815,7 +3732,7 @@ private fun SwipeTaskRow(
                                 Modifier.pointerInput(todo.id, dragEnabled) {
                                     detectDragGesturesAfterLongPress(
                                         onDragStart = { localOffset ->
-                                            swipeRevealState.close()
+                                            closeSwipeSlot()
                                             val startPosition = rowOriginInRoot + localOffset
                                             dragPointerPosition = startPosition
                                             onDragStart?.invoke(startPosition)
@@ -3849,10 +3766,21 @@ private fun SwipeTaskRow(
                         .draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
+                                if (delta < 0f || swipeRevealState.isOpenOrDragging) {
+                                    claimSwipeSlot()
+                                }
                                 swipeRevealState.dragBy(delta)
+                                if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
                             },
                             onDragStopped = { velocity ->
                                 swipeRevealState.settle(velocity)
+                                if (swipeRevealState.isOpenOrDragging) {
+                                    claimSwipeSlot()
+                                } else if (latestOpenSwipeTaskId.value == todo.id) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
                             },
                         )
                         .clickable(
@@ -3860,10 +3788,14 @@ private fun SwipeTaskRow(
                             indication = null,
                         ) {
                             if (swipeRevealState.isOpenOrDragging) {
-                                swipeRevealState.close()
+                                closeSwipeSlot()
                             } else if (!swipeRevealState.isHinting && !pendingCompletion && !dragging) {
+                                claimSwipeSlot()
                                 coroutineScope.launch {
                                     swipeRevealState.playHint()
+                                    if (latestOpenSwipeTaskId.value == todo.id && !swipeRevealState.isOpenOrDragging) {
+                                        onOpenSwipeTaskIdChange(null)
+                                    }
                                 }
                             }
                         },
@@ -3913,7 +3845,7 @@ private fun SwipeTaskRow(
                                         view,
                                         HapticFeedbackConstantsCompat.CLOCK_TICK,
                                     )
-                                    swipeRevealState.close()
+                                    closeSwipeSlot()
                                     localChecked = true
                                     pendingCompletion = true
                                     coroutineScope.launch {
@@ -3962,7 +3894,7 @@ private fun SwipeTaskRow(
                                     maxLines = 2,
                                     onTextLayout = { titleLayoutResult = it },
                                 )
-                                if (showDueText) {
+                                if (showDueText && dueSubtitleText != null) {
                                     Text(
                                         text = dueSubtitleText,
                                         color = if (isOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -4016,12 +3948,14 @@ private fun TodayTodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val dueText = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Floater"
     val isDetailOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
-    val detailDueText = if (isDetailOverdue) {
-        stringResource(R.string.todos_due_overdue_text, dueText)
-    } else {
-        dueText
+    val detailDueText = todo.due?.let { due ->
+        val dueText = TODO_DUE_TIME_FORMATTER.format(due)
+        if (isDetailOverdue) {
+            stringResource(R.string.todos_due_overdue_text, dueText)
+        } else {
+            dueText
+        }
     }
 
     Column(
@@ -4058,11 +3992,15 @@ private fun TodayTodoRow(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                     )
-                    Text(
-                        text = detailDueText,
-                        color = if (isDetailOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    detailDueText?.let { text ->
+                        Text(
+                            text = text,
+                            color = if (isDetailOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.8f
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
 
@@ -4090,7 +4028,7 @@ private fun TodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format) ?: "Floater"
+    val due = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
@@ -4124,11 +4062,13 @@ private fun TodoRow(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.ExtraBold,
                     )
-                    Text(
-                        text = due,
-                        color = colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    due?.let { text ->
+                        Text(
+                            text = text,
+                            color = colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
 
@@ -4180,16 +4120,16 @@ private fun CircularCheckToggleIcon(
 @Composable
 private fun priorityColor(priority: String): Color {
     return when (priority.lowercase()) {
-        "high", "urgent", "important" -> Color(0xFFE56A6A)
-        "medium" -> Color(0xFFE3B368)
-        else -> Color(0xFF6FBF86)
+        "high", "urgent", "important" -> Color(0xFFFF3B30)
+        "medium" -> Color(0xFFFF9500)
+        else -> Color(0xFF007AFF)
     }
 }
 
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
         "medium" -> Icons.Rounded.Flag
-        "high", "urgent", "important" -> Icons.Rounded.PriorityHigh
+        "high", "urgent", "important" -> Icons.Rounded.Flag
         else -> null
     }
 }
@@ -4214,7 +4154,10 @@ private fun modeAccentColor(
         TodoListMode.SCHEDULED -> Color(0xFFF29F38)
         TodoListMode.ALL -> Color(0xFF5E6878)
         TodoListMode.PRIORITY -> Color(0xFFE65E52)
-        TodoListMode.FLOATER -> Color(0xFF4D8F83)
+        TodoListMode.FLOATER -> listColorKey
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::listAccentColor)
+            ?: Color(0xFF4D8F83)
         TodoListMode.LIST -> listAccentColor(listColorKey)
     }
 }

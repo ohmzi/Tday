@@ -132,15 +132,16 @@ struct CreateTaskSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            CreateTaskSheetHeader(
+            TdaySheetHeader(
                 title: titleText,
-                submitAccessibilityLabel: submitText,
-                isSubmitEnabled: !isSubmitting && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                onCancel: {
+                closeAccessibilityLabel: "Cancel",
+                confirmAccessibilityLabel: submitText,
+                isConfirmEnabled: !isSubmitting && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                onClose: {
                     onDismiss()
                     dismiss()
                 },
-                onSubmit: {
+                onConfirm: {
                     Task {
                         await submit()
                     }
@@ -158,14 +159,14 @@ struct CreateTaskSheet: View {
                     CreateTaskSheetTextCard(title: $title, notes: $notes)
 
                     if showScheduleControls {
-                        CreateTaskSheetSectionTitle(text: "Schedule")
-                        CreateTaskSheetGroupCard {
+                        TdaySheetSectionTitle(text: "Schedule")
+                        TdaySheetCard {
                             CreateTaskSheetScheduleToggleRow(
                                 isOn: $scheduleEnabled
                             )
 
                             if scheduleEnabled {
-                                CreateTaskSheetDivider()
+                                TdaySheetDivider()
 
                                 CreateTaskSheetDueRow(
                                     dueDate: $dueDate,
@@ -177,8 +178,8 @@ struct CreateTaskSheet: View {
                         }
                     }
 
-                    CreateTaskSheetSectionTitle(text: "Details")
-                    CreateTaskSheetGroupCard {
+                    TdaySheetSectionTitle(text: "Details")
+                    TdaySheetCard {
                         CreateTaskSheetSelectorTriggerRow(
                             iconName: "list.bullet",
                             title: "List",
@@ -186,7 +187,7 @@ struct CreateTaskSheet: View {
                             onTap: { activeSelector = .list }
                         )
 
-                        CreateTaskSheetDivider()
+                        TdaySheetDivider()
 
                         CreateTaskSheetSelectorTriggerRow(
                             iconName: "text.badge.checkmark",
@@ -196,7 +197,7 @@ struct CreateTaskSheet: View {
                         )
 
                         if showScheduleControls {
-                            CreateTaskSheetDivider()
+                            TdaySheetDivider()
 
                             CreateTaskSheetSelectorTriggerRow(
                                 iconName: "repeat",
@@ -339,7 +340,7 @@ struct CreateTaskSheet: View {
                     }
 
                     ForEach(lists) { list in
-                        CreateTaskSheetSelectorDivider()
+                        TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
                         CreateTaskSheetSelectorRow(
                             title: list.name,
                             swatchColor: createTaskSheetListSwatchColor(list.color),
@@ -353,7 +354,7 @@ struct CreateTaskSheet: View {
                 case .priority:
                     ForEach(Array(priorityOptions.enumerated()), id: \.element) { index, option in
                         if index > 0 {
-                            CreateTaskSheetSelectorDivider()
+                            TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
                         }
                         CreateTaskSheetSelectorRow(
                             title: option,
@@ -368,7 +369,7 @@ struct CreateTaskSheet: View {
                 case .recurrence:
                     ForEach(Array(repeatOptions.enumerated()), id: \.element.label) { index, option in
                         if index > 0 {
-                            CreateTaskSheetSelectorDivider()
+                            TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
                         }
                         CreateTaskSheetSelectorRow(
                             title: option.label,
@@ -437,14 +438,14 @@ private struct CreateTaskSheetTextCard: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        CreateTaskSheetGroupCard {
+        TdaySheetCard {
             CreateTaskSheetTextField(
                 placeholder: "Title",
                 text: $title,
                 lineLimit: 1 ... 1
             )
 
-            CreateTaskSheetDivider()
+            TdaySheetDivider()
 
             CreateTaskSheetTextField(
                 placeholder: "Notes",
@@ -497,34 +498,6 @@ private struct CreateTaskSheetTextField: View {
         .padding(.horizontal, 18)
         .padding(.vertical, 15)
         .frame(minHeight: 56)
-    }
-}
-
-private struct CreateTaskSheetSectionTitle: View {
-    let text: String
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Text(text)
-            .font(.tdayRounded(size: 22, weight: .bold))
-            .foregroundStyle(colors.onSurfaceVariant)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
-    }
-}
-
-private struct CreateTaskSheetGroupCard<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        VStack(spacing: 0) {
-            content
-        }
-        .frame(maxWidth: .infinity)
-        .background(colors.bottomSheetSurface, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 }
 
@@ -768,20 +741,20 @@ private struct CreateTaskSheetSelectorCard<Content: View>: View {
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(.tdayRounded(size: 18, weight: .heavy))
-                .foregroundStyle(colors.onSurfaceVariant)
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 12)
+        TdaySheetOverlayCard {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title)
+                    .font(.tdayRounded(size: 18, weight: .heavy))
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 12)
 
-            content
+                content
+            }
+            .padding(.bottom, 14)
+            .frame(maxWidth: 330)
         }
-        .padding(.bottom, 14)
-        .frame(maxWidth: 330)
-        .background(colors.bottomSheetSurface, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
-        .shadow(color: Color.black.opacity(0.18), radius: 24, x: 0, y: 18)
     }
 }
 
@@ -821,107 +794,6 @@ private struct CreateTaskSheetSelectorRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct CreateTaskSheetSelectorDivider: View {
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Rectangle()
-            .fill(colors.onSurfaceVariant.opacity(0.16))
-            .frame(height: 1)
-            .padding(.horizontal, 20)
-    }
-}
-
-private struct CreateTaskSheetDivider: View {
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Rectangle()
-            .fill(colors.onSurfaceVariant.opacity(0.18))
-            .frame(height: 1)
-            .padding(.horizontal, 18)
-    }
-}
-
-private struct CreateTaskSheetHeader: View {
-    let title: String
-    let submitAccessibilityLabel: String
-    let isSubmitEnabled: Bool
-    let onCancel: () -> Void
-    let onSubmit: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        HStack {
-            CreateTaskSheetHeaderButton(
-                systemName: "xmark",
-                accessibilityLabel: "Cancel",
-                accentColor: Color(red: 227.0 / 255.0, green: 90.0 / 255.0, blue: 90.0 / 255.0),
-                isEnabled: true,
-                action: onCancel
-            )
-
-            Spacer(minLength: 0)
-
-            Text(title)
-                .font(.tdayRounded(size: 24, weight: .heavy))
-                .foregroundStyle(colors.onSurface)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-
-            Spacer(minLength: 0)
-
-            CreateTaskSheetHeaderButton(
-                systemName: "checkmark",
-                accessibilityLabel: submitAccessibilityLabel,
-                accentColor: Color(red: 47.0 / 255.0, green: 163.0 / 255.0, blue: 91.0 / 255.0),
-                isEnabled: isSubmitEnabled,
-                action: onSubmit
-            )
-        }
-        .padding(.horizontal, 18)
-        .padding(.top, 14)
-        .padding(.bottom, 14)
-        .background(colors.bottomSheetBackground)
-    }
-}
-
-private struct CreateTaskSheetHeaderButton: View {
-    let systemName: String
-    let accessibilityLabel: String
-    let accentColor: Color
-    let isEnabled: Bool
-    let action: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(colors.onSurface.opacity(isEnabled ? 1 : 0.55))
-                .frame(width: 56, height: 56)
-                .background(colors.bottomSheetControlSurface, in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(accentColor.opacity(isEnabled ? 0.55 : 0.3), lineWidth: 1.5)
-                }
-                .contentShape(Circle())
-        }
-        .buttonStyle(
-            TdayPressButtonStyle(
-                shadowColor: Color.black,
-                pressedShadowOpacity: 0.04,
-                normalShadowOpacity: isEnabled ? 0.16 : 0.06
-            )
-        )
-        .disabled(!isEnabled)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityAddTraits(.isButton)
     }
 }
 

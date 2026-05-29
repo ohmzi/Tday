@@ -166,6 +166,7 @@ struct CalendarScreen: View {
     @State private var activeDropDate: Date?
     @State private var dateDropTargetFrames: [String: CalendarDateDropTargetFrame] = [:]
     @State private var pendingRescheduleDrop: CalendarTaskRescheduleDrop?
+    @State private var openSwipeTaskID: String?
 
     init(container: AppContainer) {
         _viewModel = State(initialValue: CalendarViewModel(container: container))
@@ -289,7 +290,12 @@ struct CalendarScreen: View {
                             list: todo.listId.flatMap { listId in
                                 viewModel.lists.first(where: { $0.id == listId })
                             },
-                            onComplete: { Task { await viewModel.complete(todo) } }
+                            onComplete: {
+                                if openSwipeTaskID == todo.id {
+                                    openSwipeTaskID = nil
+                                }
+                                Task { await viewModel.complete(todo) }
+                            }
                         )
                         .opacity(draggedTodo?.id == todo.id && activeDropDate != nil ? 0.55 : 1)
                         .background(colors.background)
@@ -304,6 +310,8 @@ struct CalendarScreen: View {
                             )
                         )
                         .todoTrailingSwipeActions(
+                            rowID: todo.id,
+                            openRowID: $openSwipeTaskID,
                             onEdit: {
                                 editingTodo = todo
                             },
@@ -336,6 +344,9 @@ struct CalendarScreen: View {
         .environment(\.defaultMinListRowHeight, 1)
         .disableVerticalScrollBounce()
         .background(colors.background)
+        .tdayPullToRefresh(isRefreshing: viewModel.isLoading) {
+            await viewModel.refresh()
+        }
         .onPreferenceChange(CalendarDateDropTargetFramePreferenceKey.self) { frames in
             dateDropTargetFrames = frames
         }
@@ -343,6 +354,10 @@ struct CalendarScreen: View {
             if mode == .day {
                 cancelInAppDrag()
             }
+        }
+        .onChange(of: viewModel.items.map(\.id)) { _, ids in
+            guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
+            self.openSwipeTaskID = nil
         }
         .overlay(alignment: .topLeading) {
             GeometryReader { proxy in
@@ -603,6 +618,7 @@ struct CalendarScreen: View {
     }
 
     private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
+        openSwipeTaskID = nil
         if draggedTodo?.id != todo.id {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
@@ -2527,10 +2543,12 @@ private struct CalendarTaskDragPreview: View {
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
 
-                Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Floater")
-                    .font(.tdayRounded(size: 12, weight: .semibold))
-                    .foregroundStyle(colors.onSurfaceVariant)
-                    .lineLimit(1)
+                if let due = todo.due {
+                    Text(due.formatted(date: .omitted, time: .shortened))
+                        .font(.tdayRounded(size: 12, weight: .semibold))
+                        .foregroundStyle(colors.onSurfaceVariant)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 0)
@@ -2607,9 +2625,11 @@ private struct CalendarPendingTaskRow: View {
                         strikeColor: colors.onSurface.opacity(0.65)
                     )
 
-                    Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Floater")
-                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
-                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
+                    if let due = todo.due {
+                        Text(due.formatted(date: .omitted, time: .shortened))
+                            .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowSubtitleSize, weight: .semibold))
+                            .foregroundStyle(colors.onSurfaceVariant.opacity(0.8))
+                    }
                 }
 
                 Spacer(minLength: 0)

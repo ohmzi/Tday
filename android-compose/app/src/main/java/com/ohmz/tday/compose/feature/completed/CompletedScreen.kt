@@ -49,7 +49,6 @@ import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.LocalBar
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.PriorityHigh
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
@@ -64,10 +63,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -160,8 +161,15 @@ fun CompletedScreen(
         mutableStateOf(emptySet<String>())
     }
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     val editTarget = remember(editTargetId, uiState.items) {
         editTargetId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+    }
+    LaunchedEffect(uiState.items, openSwipeTaskId) {
+        val openId = openSwipeTaskId ?: return@LaunchedEffect
+        if (uiState.items.none { it.id == openId }) {
+            openSwipeTaskId = null
+        }
     }
 
     Scaffold(
@@ -260,6 +268,8 @@ fun CompletedScreen(
                                         onInfo = { editTargetId = completed.id },
                                         onDelete = { onDelete(completed) },
                                         onUncomplete = { onUncomplete(completed) },
+                                        openSwipeTaskId = openSwipeTaskId,
+                                        onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
                                     )
                                 }
                             }
@@ -515,6 +525,8 @@ private fun CompletedSwipeRow(
     onInfo: () -> Unit,
     onDelete: () -> Unit,
     onUncomplete: () -> Unit,
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -522,6 +534,19 @@ private fun CompletedSwipeRow(
     val swipeRevealState = rememberTaskSwipeRevealState(item.id)
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
     var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
+    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
+    fun claimSwipeSlot() {
+        if (latestOpenSwipeTaskId.value != item.id) {
+            onOpenSwipeTaskIdChange(item.id)
+        }
+    }
+
+    fun closeSwipeSlot() {
+        swipeRevealState.close()
+        if (latestOpenSwipeTaskId.value == item.id) {
+            onOpenSwipeTaskIdChange(null)
+        }
+    }
     val animatedOffsetX by animateTaskSwipeOffsetAsState(
         state = swipeRevealState,
         label = "completedSwipeOffset",
@@ -582,6 +607,11 @@ private fun CompletedSwipeRow(
     val showPriorityIcon = priorityIcon != null
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
+    LaunchedEffect(openSwipeTaskId, item.id) {
+        if (openSwipeTaskId != null && openSwipeTaskId != item.id && swipeRevealState.isOpenOrDragging) {
+            swipeRevealState.close()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -594,11 +624,11 @@ private fun CompletedSwipeRow(
             },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(CompletedSwipeRowHeight),
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(CompletedSwipeRowHeight),
+        ) {
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -619,8 +649,8 @@ private fun CompletedSwipeRow(
                                 view,
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
+                            closeSwipeSlot()
                             onInfo()
-                            swipeRevealState.close()
                         },
                     )
                     TaskSwipeActionButton(
@@ -636,8 +666,8 @@ private fun CompletedSwipeRow(
                                 view,
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
+                            closeSwipeSlot()
                             onDelete()
-                            swipeRevealState.close()
                         },
                     )
                 }
@@ -649,10 +679,21 @@ private fun CompletedSwipeRow(
                         .draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
+                                if (delta < 0f || swipeRevealState.isOpenOrDragging) {
+                                    claimSwipeSlot()
+                                }
                                 swipeRevealState.dragBy(delta)
+                                if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == item.id) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
                             },
                             onDragStopped = { velocity ->
                                 swipeRevealState.settle(velocity)
+                                if (swipeRevealState.isOpenOrDragging) {
+                                    claimSwipeSlot()
+                                } else if (latestOpenSwipeTaskId.value == item.id) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
                             },
                         )
                         .clickable(
@@ -660,10 +701,14 @@ private fun CompletedSwipeRow(
                             indication = null,
                         ) {
                             if (swipeRevealState.isOpenOrDragging) {
-                                swipeRevealState.close()
+                                closeSwipeSlot()
                             } else if (!swipeRevealState.isHinting && !isRestoring) {
+                                claimSwipeSlot()
                                 coroutineScope.launch {
                                     swipeRevealState.playHint()
+                                    if (latestOpenSwipeTaskId.value == item.id && !swipeRevealState.isOpenOrDragging) {
+                                        onOpenSwipeTaskIdChange(null)
+                                    }
                                 }
                             }
                         },
@@ -695,7 +740,7 @@ private fun CompletedSwipeRow(
                                     view,
                                     HapticFeedbackConstantsCompat.CLOCK_TICK,
                                 )
-                                swipeRevealState.close()
+                                closeSwipeSlot()
                                 coroutineScope.launch {
                                     restorePhase = CompletedRestorePhase.Unchecked
                                     delay(COMPLETED_RESTORE_STEP_MS)
@@ -857,16 +902,16 @@ private fun EmptyCompletedState(
 @Composable
 private fun priorityColor(priority: String): Color {
     return when (priority.lowercase()) {
-        "high", "urgent", "important" -> Color(0xFFE56A6A)
-        "medium" -> Color(0xFFE3B368)
-        else -> Color(0xFF6FBF86)
+        "high", "urgent", "important" -> Color(0xFFFF3B30)
+        "medium" -> Color(0xFFFF9500)
+        else -> Color(0xFF007AFF)
     }
 }
 
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
         "medium" -> Icons.Rounded.Flag
-        "high", "urgent", "important" -> Icons.Rounded.PriorityHigh
+        "high", "urgent", "important" -> Icons.Rounded.Flag
         else -> null
     }
 }

@@ -31,12 +31,16 @@ extension View {
     }
 
     func todoTrailingSwipeActions(
+        rowID: String,
+        openRowID: Binding<String?>,
         enabled: Bool = true,
         onEdit: @escaping () -> Void,
         onDelete: @escaping () -> Void
     ) -> some View {
         modifier(
             TodoTrailingSwipeActionsModifier(
+                rowID: rowID,
+                openRowID: openRowID,
                 enabled: enabled,
                 onEdit: onEdit,
                 onDelete: onDelete
@@ -46,6 +50,8 @@ extension View {
 }
 
 private struct TodoTrailingSwipeActionsModifier: ViewModifier {
+    let rowID: String
+    @Binding var openRowID: String?
     let enabled: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -68,6 +74,8 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                 .background(
                     HorizontalSwipePanObserver(
                         enabled: enabled,
+                        rowID: rowID,
+                        openRowID: $openRowID,
                         revealWidth: revealWidth,
                         openVelocityThreshold: openVelocityThreshold,
                         offsetX: $offsetX
@@ -79,6 +87,11 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         closeActions()
                     } else {
                         revealHint()
+                    }
+                }
+                .onChange(of: openRowID) { _, activeID in
+                    if activeID != rowID && offsetX != 0 {
+                        closeActions(clearOpenRow: false)
                     }
                 }
                 .onChange(of: enabled) { _, isEnabled in
@@ -116,9 +129,18 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
         }
     }
 
-    private func closeActions() {
+    private func claimRow() {
+        if openRowID != rowID {
+            openRowID = rowID
+        }
+    }
+
+    private func closeActions(clearOpenRow: Bool = true) {
         withAnimation(.interactiveSpring(response: 0.26, dampingFraction: 0.86)) {
             offsetX = 0
+        }
+        if clearOpenRow && openRowID == rowID {
+            openRowID = nil
         }
     }
 
@@ -126,6 +148,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
         guard !isHinting else { return }
 
         isHinting = true
+        claimRow()
         Task { @MainActor in
             withAnimation(.spring(response: 0.26, dampingFraction: 0.78)) {
                 offsetX = -28
@@ -136,18 +159,23 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
             }
             try? await Task.sleep(nanoseconds: 340_000_000)
             isHinting = false
+            if openRowID == rowID && offsetX == 0 {
+                openRowID = nil
+            }
         }
     }
 }
 
 private struct HorizontalSwipePanObserver: UIViewRepresentable {
     let enabled: Bool
+    let rowID: String
+    @Binding var openRowID: String?
     let revealWidth: CGFloat
     let openVelocityThreshold: CGFloat
     @Binding var offsetX: CGFloat
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(offsetX: $offsetX)
+        Coordinator(rowID: rowID, openRowID: $openRowID, offsetX: $offsetX)
     }
 
     func makeUIView(context: Context) -> UIView {
@@ -159,6 +187,8 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {
         context.coordinator.enabled = enabled
+        context.coordinator.rowID = rowID
+        context.coordinator.openRowID = $openRowID
         context.coordinator.revealWidth = revealWidth
         context.coordinator.openVelocityThreshold = openVelocityThreshold
         context.coordinator.offsetX = $offsetX
@@ -169,6 +199,8 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var enabled = true
+        var rowID: String
+        var openRowID: Binding<String?>
         var revealWidth: CGFloat = 152
         var openVelocityThreshold: CGFloat = -180
         var offsetX: Binding<CGFloat>
@@ -185,7 +217,9 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
             return recognizer
         }()
 
-        init(offsetX: Binding<CGFloat>) {
+        init(rowID: String, openRowID: Binding<String?>, offsetX: Binding<CGFloat>) {
+            self.rowID = rowID
+            self.openRowID = openRowID
             self.offsetX = offsetX
         }
 
@@ -241,18 +275,30 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
             switch recognizer.state {
             case .began:
                 dragStartOffsetX = offsetX.wrappedValue
+                if dragStartOffsetX != 0 {
+                    openRowID.wrappedValue = rowID
+                }
             case .changed:
                 let translation = recognizer.translation(in: scrollView)
                 let proposed = dragStartOffsetX + translation.x
                 if proposed < 0 {
+                    openRowID.wrappedValue = rowID
                     offsetX.wrappedValue = max(-revealWidth * 1.12, min(0, proposed))
                 } else {
                     offsetX.wrappedValue = 0
+                    if openRowID.wrappedValue == rowID {
+                        openRowID.wrappedValue = nil
+                    }
                 }
             case .ended, .cancelled, .failed:
                 let velocityX = recognizer.velocity(in: scrollView).x
                 let shouldOpen = offsetX.wrappedValue < -(revealWidth * 0.32) ||
                     velocityX < openVelocityThreshold
+                if shouldOpen {
+                    openRowID.wrappedValue = rowID
+                } else if openRowID.wrappedValue == rowID {
+                    openRowID.wrappedValue = nil
+                }
                 withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
                     offsetX.wrappedValue = shouldOpen ? -revealWidth : 0
                 }

@@ -157,6 +157,8 @@ fun TdayApp(
     var isStartupSplashHeld by remember { mutableStateOf(false) }
     var rootFeedTab by rememberSaveable { mutableStateOf(RootFeedTab.HOME) }
     var rootCreateTaskRequestKey by rememberSaveable { mutableStateOf(0) }
+    var rootHomeScrollToTopRequestKey by remember { mutableStateOf(0) }
+    var rootFloaterScrollToTopRequestKey by remember { mutableStateOf(0) }
     var rootDockCollapsed by rememberSaveable { mutableStateOf(false) }
     var rootControlsVisible by rememberSaveable { mutableStateOf(true) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -181,6 +183,17 @@ fun TdayApp(
 
     fun showTaskDeletedToast() {
         showSystemToast(context, taskDeletedToastMessage)
+    }
+
+    fun handleRootFeedTabSelection(tab: RootFeedTab) {
+        if (rootFeedTab == tab) {
+            when (tab) {
+                RootFeedTab.HOME -> rootHomeScrollToTopRequestKey += 1
+                RootFeedTab.FLOATER -> rootFloaterScrollToTopRequestKey += 1
+            }
+        } else {
+            rootFeedTab = tab
+        }
     }
 
     HandleStartupNavigation(
@@ -386,6 +399,7 @@ fun TdayApp(
                                                 showRootFeedDock = false,
                                                 showCreateTaskButton = false,
                                                 createTaskRequestKey = rootCreateTaskRequestKey,
+                                                scrollToTopRequestKey = rootHomeScrollToTopRequestKey,
                                                 onRootDockCollapsedChange = {
                                                     rootDockCollapsed = it
                                                 },
@@ -415,6 +429,7 @@ fun TdayApp(
                                                 showCreateTaskButton = false,
                                                 usesRootFeedHeader = true,
                                                 createTaskRequestKey = rootCreateTaskRequestKey,
+                                                scrollToTopRequestKey = rootFloaterScrollToTopRequestKey,
                                                 onRootDockCollapsedChange = {
                                                     rootDockCollapsed = it
                                                 },
@@ -429,7 +444,7 @@ fun TdayApp(
                                         RootFeedDock(
                                             activeTab = rootFeedTab,
                                             collapsed = rootDockCollapsed,
-                                            onTabSelected = { tab -> rootFeedTab = tab },
+                                            onTabSelected = ::handleRootFeedTabSelection,
                                             modifier = Modifier
                                                 .align(Alignment.BottomStart)
                                                 .zIndex(8f),
@@ -690,7 +705,13 @@ fun TdayApp(
                         listName = listName,
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
-                        usesRootFeedHeader = true,
+                        onListDeleted = {
+                            rootFeedTab = RootFeedTab.FLOATER
+                            navController.navigate(AppRoute.Home.route) {
+                                popUpTo(AppRoute.Home.route) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        },
                     )
                 }
 
@@ -963,6 +984,7 @@ private fun TodosRoute(
     showCreateTaskButton: Boolean = true,
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
+    scrollToTopRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
@@ -1016,6 +1038,7 @@ private fun TodosRoute(
         showCreateTaskButton = showCreateTaskButton,
         usesRootFeedHeader = usesRootFeedHeader,
         createTaskRequestKey = createTaskRequestKey,
+        scrollToTopRequestKey = scrollToTopRequestKey,
         onRootDockCollapsedChange = onRootDockCollapsedChange,
         onRootControlsVisibleChange = onRootControlsVisibleChange,
     )
