@@ -303,9 +303,10 @@ Floater lists group floaters.
 | GET | `/apple-app-site-association` | iOS association fallback path | Public |
 | GET | `/.well-known/assetlinks.json` | Android app links association | Public |
 
-## Cache Headers
+## Cache Behavior
 
-- Private API responses include `Cache-Control: no-store` (set by the web API client).
+- The web API client sends private API requests with `cache: "no-store"` so browser fetch caching does not serve stale authenticated data.
+- Routes that return compatibility or discovery metadata, such as `/api/mobile/probe`, should set explicit `Cache-Control: no-store` response headers.
 - Security headers (CSP, HSTS, etc.) are applied by the Ktor `SecurityHeaders` plugin.
 - Static SPA assets are served from the filesystem when `STATIC_FILES_DIR` is set.
 
