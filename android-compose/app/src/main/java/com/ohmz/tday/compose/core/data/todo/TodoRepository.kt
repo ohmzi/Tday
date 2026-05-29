@@ -702,33 +702,14 @@ class TodoRepository @Inject constructor(
 
         cacheManager.updateOfflineState { state ->
             val isLocalOnly = canonicalId.startsWith(LOCAL_TODO_PREFIX)
-            val prunedTodos = state.todos.filterNot { it.canonicalId == canonicalId }
-            val prunedCompleted = state.completedItems.filterNot { it.originalTodoId == canonicalId }
-
-            if (isLocalOnly) {
-                state.copy(
-                    todos = prunedTodos,
-                    completedItems = prunedCompleted,
-                    pendingMutations = state.pendingMutations.filterNot { it.targetId == canonicalId },
-                )
-            } else {
-                state.copy(
-                    todos = prunedTodos,
-                    completedItems = prunedCompleted,
-                    pendingMutations = state.pendingMutations
-                        .filterNot {
-                            it.kind == MutationKind.DELETE_TODO &&
-                                it.targetId == canonicalId &&
-                                it.instanceDateEpochMs == instanceDateEpochMs
-                        } + PendingMutationRecord(
-                        mutationId = mutationId,
-                        kind = MutationKind.DELETE_TODO,
-                        targetId = canonicalId,
-                        timestampEpochMs = timestampMs,
-                        instanceDateEpochMs = instanceDateEpochMs,
-                    ),
-                )
-            }
+            state.withDeletedTodoCached(
+                canonicalId = canonicalId,
+                instanceDateEpochMs = instanceDateEpochMs,
+                isRecurringInstanceDelete = isRecurringInstanceDelete,
+                isLocalOnly = isLocalOnly,
+                mutationId = mutationId,
+                timestampEpochMs = timestampMs,
+            )
         }
 
         if (syncManager.isLocalMode()) return
@@ -1174,4 +1155,57 @@ class TodoRepository @Inject constructor(
     private companion object {
         const val LOG_TAG = "TodoRepository"
     }
+}
+
+internal fun OfflineSyncState.withDeletedTodoCached(
+    canonicalId: String,
+    instanceDateEpochMs: Long?,
+    isRecurringInstanceDelete: Boolean,
+    isLocalOnly: Boolean,
+    mutationId: String,
+    timestampEpochMs: Long,
+): OfflineSyncState {
+    fun matchesTodo(record: CachedTodoRecord): Boolean {
+        if (record.canonicalId != canonicalId) return false
+        return !isRecurringInstanceDelete || record.instanceDateEpochMs == instanceDateEpochMs
+    }
+
+    fun matchesCompleted(recordOriginalTodoId: String?, recordInstanceDateEpochMs: Long?): Boolean {
+        if (recordOriginalTodoId != canonicalId) return false
+        return !isRecurringInstanceDelete || recordInstanceDateEpochMs == instanceDateEpochMs
+    }
+
+    val prunedTodos = todos.filterNot(::matchesTodo)
+    val prunedCompleted = completedItems.filterNot {
+        matchesCompleted(it.originalTodoId, it.instanceDateEpochMs)
+    }
+
+    if (isLocalOnly) {
+        return copy(
+            todos = prunedTodos,
+            completedItems = prunedCompleted,
+            pendingMutations = if (isRecurringInstanceDelete) {
+                pendingMutations
+            } else {
+                pendingMutations.filterNot { it.targetId == canonicalId }
+            },
+        )
+    }
+
+    return copy(
+        todos = prunedTodos,
+        completedItems = prunedCompleted,
+        pendingMutations = pendingMutations
+            .filterNot {
+                it.kind == MutationKind.DELETE_TODO &&
+                    it.targetId == canonicalId &&
+                    it.instanceDateEpochMs == instanceDateEpochMs
+            } + PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.DELETE_TODO,
+            targetId = canonicalId,
+            timestampEpochMs = timestampEpochMs,
+            instanceDateEpochMs = instanceDateEpochMs,
+        ),
+    )
 }

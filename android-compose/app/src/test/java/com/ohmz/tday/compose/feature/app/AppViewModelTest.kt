@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.app
 
+import android.content.Context
 import app.cash.turbine.test
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.AppDataMode
@@ -57,7 +58,8 @@ class AppViewModelTest {
     private val connectivityObserver = mockk<ConnectivityObserver>()
     private val appVersionManager = mockk<AppVersionManager>()
     private val systemCredentialService = mockk<SystemCredentialServicing>()
-    private val snackbarManager = SnackbarManager()
+    private val appContext = mockk<Context>(relaxed = true)
+    private val snackbarManager = SnackbarManager(appContext)
 
     private val versionState = MutableStateFlow(
         AppVersionManager.VersionState(isLoadingReleases = false),
@@ -74,6 +76,7 @@ class AppViewModelTest {
 
     @Before
     fun setUp() {
+        every { appContext.getString(any()) } answers { "res-${firstArg<Int>()}" }
         every { themePreferenceStore.getThemeMode() } returns AppThemeMode.SYSTEM
         every { reminderPreferenceStore.getDefaultReminder() } returns ReminderOption.DEFAULT
         every { appVersionManager.state } returns versionState
@@ -254,5 +257,6 @@ class AppViewModelTest {
             connectivityObserver = connectivityObserver,
             appVersionManager = appVersionManager,
             systemCredentialService = systemCredentialService,
+            appContext = appContext,
         )
 }
