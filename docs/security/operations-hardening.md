@@ -21,14 +21,19 @@ These controls protect Server Mode infrastructure. Local Mode mobile data remain
    - `auth_lockout`
    - `auth_limit_ip`
    - `auth_limit_email`
+   - `auth_captcha_failed`
+   - `register_captcha_failed`
+   - `auth_captcha_misconfigured`
+   - `auth_credential_envelope_invalid`
    - `auth_alert_ip_concentration`
    - `auth_alert_lockout_burst`
    - `auth_signal_anomaly`
-   - `auth_captcha_misconfigured`
    - `auth_session_absolute_expired`
    - `auth_session_renewed`
    - `auth_session_token_version_mismatch`
+   - `auth_session_user_missing`
    - `request_rate_limit_triggered`
+6. Inspect the `reason` detail on `request_rate_limit_triggered`; expected values are `api_rate_limit`, `infra_rate_limit`, `summary_rate_limit`, `change_password_rate_limit`, and `websocket_rate_limit`.
 
 ## Field Encryption At Rest
 
