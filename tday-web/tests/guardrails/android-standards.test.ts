@@ -110,6 +110,36 @@ describeAndroid("Android theme compliance", () => {
   });
 });
 
+describeAndroid("Android string resources", () => {
+  it("should not hardcode user-facing Compose or Toast text", () => {
+    const TEXT_LITERAL =
+      /(?:Text\s*\(\s*|text\s*=\s*|contentDescription\s*=\s*|Toast\.makeText\([^,]+,\s*)("(?:(?:\\")|[^"])*")/g;
+    const violations: string[] = [];
+
+    for (const file of NON_THEME_KT) {
+      const content = readSource(file);
+      const lines = content.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trimStart().startsWith("//")) continue;
+
+        for (const match of line.matchAll(TEXT_LITERAL)) {
+          const literal = match[1];
+          const staticText = literal
+            .slice(1, -1)
+            .replace(/\$\{[^}]*\}|\$[A-Za-z_]\w*/g, "");
+
+          if (/[A-Za-z]/.test(staticText)) {
+            violations.push(`${relPath(file)}:${i + 1} → ${line.trim()}`);
+          }
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+});
+
 describeAndroid("Android ViewModel conventions", () => {
   it("ViewModels should use viewModelScope for coroutine launches", () => {
     for (const file of VM_KT) {
