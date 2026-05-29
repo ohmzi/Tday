@@ -147,6 +147,7 @@ private struct CalendarTaskRescheduleDrop: Equatable {
 }
 
 struct CalendarScreen: View {
+    private let pullRefreshEnabled: Bool
     @State private var viewModel: CalendarViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
@@ -168,7 +169,8 @@ struct CalendarScreen: View {
     @State private var pendingRescheduleDrop: CalendarTaskRescheduleDrop?
     @State private var openSwipeTaskID: String?
 
-    init(container: AppContainer) {
+    init(container: AppContainer, pullRefreshEnabled: Bool = true) {
+        self.pullRefreshEnabled = pullRefreshEnabled
         _viewModel = State(initialValue: CalendarViewModel(container: container))
     }
 
@@ -279,7 +281,7 @@ struct CalendarScreen: View {
         .environment(\.defaultMinListRowHeight, 1)
         .disableVerticalScrollBounce()
         .background(colors.background)
-        .tdayPullToRefresh(isRefreshing: viewModel.isLoading) {
+        .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
             await viewModel.refresh()
         }
         .onPreferenceChange(CalendarDateDropTargetFramePreferenceKey.self) { frames in

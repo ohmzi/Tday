@@ -30,7 +30,7 @@ struct AppRootView: View {
             if !appViewModel.hasCompletedInitialBootstrap || isLaunchSplashHeld {
                 AppLaunchSplashView(isHeld: $isLaunchSplashHeld)
             } else {
-                let showOnboardingOverlay = !appViewModel.authenticated && appViewModel.versionCheckResult == .compatible
+                let showOnboardingOverlay = !appViewModel.isWorkspaceAvailable && appViewModel.versionCheckResult == .compatible
 
                 NavigationStack(
                     path: rootNavigationPath
@@ -46,7 +46,8 @@ struct AppRootView: View {
                                     createTaskRequestID: rootCreateTaskRequestID,
                                     scrollToTopRequestID: rootHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
-                                    onRootControlsVisibleChange: { rootControlsVisible = $0 }
+                                    onRootControlsVisibleChange: { rootControlsVisible = $0 },
+                                    pullRefreshEnabled: !appViewModel.isLocalMode
                                 ) { route in
                                     handleRoute(route)
                                 }
@@ -60,6 +61,7 @@ struct AppRootView: View {
                                     rootFeedTab: .floater,
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
+                                    pullRefreshEnabled: !appViewModel.isLocalMode,
                                     usesRootFeedHeader: true,
                                     createTaskRequestID: rootCreateTaskRequestID,
                                     scrollToTopRequestID: rootFloaterScrollToTopRequestID,
@@ -74,7 +76,7 @@ struct AppRootView: View {
                                 )
                             }
 
-                            if appViewModel.authenticated, rootControlsVisible {
+                            if appViewModel.isWorkspaceAvailable, rootControlsVisible {
                                 rootFloatingControls
                             }
                         }
@@ -89,20 +91,21 @@ struct AppRootView: View {
                         case .home:
                             HomeScreen(
                                 container: container,
-                                onRootFeedTabSelected: handleRootFeedTabSelection
+                                onRootFeedTabSelected: handleRootFeedTabSelection,
+                                pullRefreshEnabled: !appViewModel.isLocalMode
                             ) { nextRoute in
                                 handleRoute(nextRoute)
                             }
                         case .todayTodos:
-                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil)
+                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .overdueTodos:
-                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil)
+                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .scheduledTodos:
-                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil)
+                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case let .allTodos(highlightTodoId):
-                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId)
+                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .priorityTodos:
-                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil)
+                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .floaterTodos:
                             Color.clear
                                 .navigationBarBackButtonHidden(true)
@@ -117,6 +120,7 @@ struct AppRootView: View {
                                 listId: listId,
                                 listName: listName,
                                 highlightedTodoId: nil,
+                                pullRefreshEnabled: !appViewModel.isLocalMode,
                                 onListDeleted: {
                                     handleRoute(.floaterTodos)
                                 }
@@ -128,14 +132,15 @@ struct AppRootView: View {
                                 listId: listId,
                                 listName: listName,
                                 highlightedTodoId: nil,
+                                pullRefreshEnabled: !appViewModel.isLocalMode,
                                 onListDeleted: {
                                     appViewModel.navigate(to: .home)
                                 }
                             )
                         case .completed:
-                            CompletedScreen(container: container)
+                            CompletedScreen(container: container, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .calendar:
-                            CalendarScreen(container: container)
+                            CalendarScreen(container: container, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .settings:
                             SettingsScreen(viewModel: appViewModel)
                         case .latestRelease:
@@ -147,7 +152,7 @@ struct AppRootView: View {
                     }
                     .overlay(alignment: .top) {
                         OfflineBanner(
-                            visible: appViewModel.authenticated && appViewModel.isOffline,
+                            visible: appViewModel.authenticated && !appViewModel.isLocalMode && appViewModel.isOffline,
                             pendingMutationCount: appViewModel.pendingMutationCount,
                             noticeID: appViewModel.offlineNoticeID
                         )
@@ -168,7 +173,7 @@ struct AppRootView: View {
                         }
                     }
                     .overlay {
-                        if !appViewModel.authenticated {
+                        if !appViewModel.isWorkspaceAvailable {
                             let isVersionBlocking = appViewModel.versionCheckResult != .compatible
 
                             if isVersionBlocking {
@@ -206,6 +211,11 @@ struct AppRootView: View {
                                         }
                                         return success
                                     },
+                                    onUseLocalMode: {
+                                        authViewModel.clearStatus()
+                                        appViewModel.clearPendingApprovalNotice()
+                                        await appViewModel.useLocalMode()
+                                    },
                                     onClearAuthStatus: {
                                         authViewModel.clearStatus()
                                         appViewModel.clearPendingApprovalNotice()
@@ -214,7 +224,7 @@ struct AppRootView: View {
                             }
                         }
 
-                        if appViewModel.authenticated && appViewModel.versionCheckResult != .compatible {
+                        if appViewModel.authenticated && !appViewModel.isLocalMode && appViewModel.versionCheckResult != .compatible {
                             UpdateRequiredView(
                                 versionCheckResult: appViewModel.versionCheckResult,
                                 onRetry: {

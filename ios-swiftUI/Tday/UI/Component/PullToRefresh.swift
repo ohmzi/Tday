@@ -3,21 +3,28 @@ import UIKit
 
 struct PullToRefreshContainer<Content: View>: View {
     let isRefreshing: Bool
+    let isEnabled: Bool
     let action: @Sendable () async -> Void
     private let content: Content
 
     init(
         isRefreshing: Bool,
+        isEnabled: Bool = true,
         action: @escaping @Sendable () async -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isRefreshing = isRefreshing
+        self.isEnabled = isEnabled
         self.action = action
         self.content = content()
     }
 
     var body: some View {
-        RefreshContainerBody(isRefreshing: isRefreshing, action: action) {
+        if isEnabled {
+            RefreshContainerBody(isRefreshing: isRefreshing, action: action) {
+                content
+            }
+        } else {
             content
         }
     }
@@ -26,9 +33,10 @@ struct PullToRefreshContainer<Content: View>: View {
 extension View {
     func tdayPullToRefresh(
         isRefreshing: Bool,
+        isEnabled: Bool = true,
         action: @escaping @Sendable () async -> Void
     ) -> some View {
-        PullToRefreshContainer(isRefreshing: isRefreshing, action: action) {
+        PullToRefreshContainer(isRefreshing: isRefreshing, isEnabled: isEnabled, action: action) {
             self
         }
     }

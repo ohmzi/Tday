@@ -252,6 +252,7 @@ fun HomeScreen(
     onUpdateTask: (todo: com.ohmz.tday.compose.core.model.TodoItem, payload: CreateTaskPayload) -> Unit,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
+    pullRefreshEnabled: Boolean = true,
     createTaskRequestKey: Int = 0,
     scrollToTopRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
@@ -443,6 +444,7 @@ fun HomeScreen(
                 TdayPullToRefreshBox(
                     isRefreshing = uiState.isLoading,
                     onRefresh = onRefresh,
+                    enabled = pullRefreshEnabled,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),

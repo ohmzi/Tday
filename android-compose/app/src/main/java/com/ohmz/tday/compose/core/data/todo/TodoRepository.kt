@@ -144,6 +144,8 @@ class TodoRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(
                 LOCAL_FLOATER_LIST_PREFIX
             )
@@ -230,6 +232,8 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
+
+        if (syncManager.isLocalMode()) return
 
         if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(
                 LOCAL_FLOATER_LIST_PREFIX
@@ -345,6 +349,7 @@ class TodoRepository @Inject constructor(
                     },
                 )
             }
+            if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
         }
@@ -376,6 +381,8 @@ class TodoRepository @Inject constructor(
                     } + pendingMutation,
             )
         }
+
+        if (syncManager.isLocalMode()) return
 
         if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(
                 LOCAL_FLOATER_LIST_PREFIX
@@ -497,6 +504,7 @@ class TodoRepository @Inject constructor(
                     },
                 )
             }
+            if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
         }
@@ -520,6 +528,8 @@ class TodoRepository @Inject constructor(
                     .filterNot { it.kind == MutationKind.UPDATE_FLOATER && it.targetId == canonicalId } + pendingMutation,
             )
         }
+
+        if (syncManager.isLocalMode()) return
 
         if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(LOCAL_LIST_PREFIX)) {
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
@@ -630,6 +640,8 @@ class TodoRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         if (isLocalOnly) {
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
@@ -719,6 +731,8 @@ class TodoRepository @Inject constructor(
             }
         }
 
+        if (syncManager.isLocalMode()) return
+
         if (canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
 
         runCatching {
@@ -781,6 +795,8 @@ class TodoRepository @Inject constructor(
                 )
             }
         }
+
+        if (syncManager.isLocalMode()) return
 
         if (canonicalId.startsWith(LOCAL_FLOATER_PREFIX)) return
 
@@ -851,6 +867,8 @@ class TodoRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         if (todo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
 
         runCatching {
@@ -919,6 +937,8 @@ class TodoRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         if (floater.canonicalId.startsWith(LOCAL_FLOATER_PREFIX)) return
 
         runCatching {
@@ -937,6 +957,10 @@ class TodoRepository @Inject constructor(
         mode: TodoListMode,
         listId: String? = null,
     ): TodoSummaryResponse {
+        if (syncManager.isLocalMode()) {
+            throw IllegalStateException("AI summary is unavailable in local mode")
+        }
+
         val modeValue = when (mode) {
             TodoListMode.TODAY -> "today"
             TodoListMode.OVERDUE -> throw IllegalStateException(
@@ -964,6 +988,7 @@ class TodoRepository @Inject constructor(
     ): TodoTitleNlpResponse? {
         val trimmedText = text.trim()
         if (trimmedText.isBlank()) return null
+        if (syncManager.isLocalMode()) return null
 
         val timezoneOffsetMinutes = ZoneId.systemDefault()
             .rules
