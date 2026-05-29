@@ -15,7 +15,8 @@ The Cursor IDE silently appends `Made-with: Cursor` trailers to commits created 
 1. **NEVER use `git commit`** directly — Cursor intercepts it and injects trailers.
 2. **ALWAYS use `git commit-tree`** (a plumbing command Cursor cannot intercept) to create commits.
 3. **NEVER use `--no-verify`** to bypass hooks.
-4. **NEVER include** `Made-with:`, `Co-authored-by: Cursor`, `Generated-by:`, or similar AI attribution in commit messages or PR descriptions.
+4. **NEVER use destructive cleanup commands** such as `git reset --hard` to move the branch after creating the commit.
+5. **NEVER include** `Made-with:`, `Co-authored-by: Cursor`, `Generated-by:`, or similar AI attribution in commit messages or PR descriptions.
 
 ## How to Commit (Required Pattern)
 
@@ -30,13 +31,15 @@ TREE=$(git write-tree)
 COMMIT_MSG="Your commit message here"
 NEW_COMMIT=$(echo "$COMMIT_MSG" | git commit-tree "$TREE" -p HEAD)
 
-# 4. Move the branch pointer
-git reset --hard "$NEW_COMMIT"
+# 4. Move the current branch pointer without rewriting the worktree
+BRANCH=$(git symbolic-ref --short HEAD)
+git update-ref "refs/heads/$BRANCH" "$NEW_COMMIT"
 ```
 
 For multi-line messages use a heredoc:
 
 ```bash
+TREE=$(git write-tree)
 NEW_COMMIT=$(cat <<'EOF' | git commit-tree "$TREE" -p HEAD
 feat(api): add batch completion endpoint
 
@@ -44,7 +47,8 @@ Allows clients to mark multiple todos as complete in a single request,
 reducing round-trips for bulk operations.
 EOF
 )
-git reset --hard "$NEW_COMMIT"
+BRANCH=$(git symbolic-ref --short HEAD)
+git update-ref "refs/heads/$BRANCH" "$NEW_COMMIT"
 ```
 
 ## Verification
