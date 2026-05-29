@@ -1317,11 +1317,9 @@ private struct HomeIconButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .tdayPressEffect(
+            .tdayToolbarButtonEffect(
                 isPressed: configuration.isPressed,
-                shadowColor: Color.black,
-                pressedShadowOpacity: compact ? 0 : 0.14,
-                normalShadowOpacity: compact ? 0 : 0.24
+                shadowsEnabled: !compact
             )
     }
 }

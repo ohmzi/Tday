@@ -98,6 +98,18 @@ struct TdayPressButtonStyle: ButtonStyle {
     }
 }
 
+struct TdayToolbarButtonStyle: ButtonStyle {
+    var shadowsEnabled = true
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .tdayToolbarButtonEffect(
+                isPressed: configuration.isPressed,
+                shadowsEnabled: shadowsEnabled
+            )
+    }
+}
+
 extension View {
     func tdayPressEffect(
         isPressed: Bool,
@@ -115,6 +127,18 @@ extension View {
         )
     }
 
+    func tdayToolbarButtonEffect(
+        isPressed: Bool,
+        shadowsEnabled: Bool = true
+    ) -> some View {
+        modifier(
+            TdayToolbarButtonEffectModifier(
+                isPressed: isPressed,
+                shadowsEnabled: shadowsEnabled
+            )
+        )
+    }
+
     func tdayRippleEffect(
         isPressed: Bool,
         rippleColor: Color? = nil
@@ -125,6 +149,61 @@ extension View {
                 rippleColor: rippleColor
             )
         )
+    }
+}
+
+private struct TdayToolbarButtonEffectModifier: ViewModifier {
+    let isPressed: Bool
+    let shadowsEnabled: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .tdayRippleEffect(isPressed: isPressed)
+            .scaleEffect(isPressed ? 0.95 : 1)
+            .offset(y: isPressed ? 1 : 0)
+            .shadow(
+                color: Color.black.opacity(ambientShadowOpacity),
+                radius: ambientShadowRadius,
+                x: 0,
+                y: ambientShadowOffsetY
+            )
+            .shadow(
+                color: Color.black.opacity(keyShadowOpacity),
+                radius: keyShadowRadius,
+                x: 0,
+                y: keyShadowOffsetY
+            )
+            .animation(.easeOut(duration: 0.14), value: isPressed)
+    }
+
+    private var ambientShadowOpacity: Double {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 0.035 : 0.08
+    }
+
+    private var keyShadowOpacity: Double {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 0.03 : 0.045
+    }
+
+    private var ambientShadowRadius: CGFloat {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 8 : 24
+    }
+
+    private var keyShadowRadius: CGFloat {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 3 : 6
+    }
+
+    private var ambientShadowOffsetY: CGFloat {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 4 : 12
+    }
+
+    private var keyShadowOffsetY: CGFloat {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 2 : 4
     }
 }
 
