@@ -7,10 +7,13 @@ function getFormatter(
   options: Intl.DateTimeFormatOptions,
 ): Intl.DateTimeFormat {
   const key = `${locale}-${JSON.stringify(options)}`;
-  if (!formatterCache.has(key)) {
-    formatterCache.set(key, new Intl.DateTimeFormat(locale, options));
+  const cachedFormatter = formatterCache.get(key);
+  if (cachedFormatter) {
+    return cachedFormatter;
   }
-  return formatterCache.get(key)!;
+  const formatter = new Intl.DateTimeFormat(locale, options);
+  formatterCache.set(key, formatter);
+  return formatter;
 }
 
 // Translation keys for relative dates

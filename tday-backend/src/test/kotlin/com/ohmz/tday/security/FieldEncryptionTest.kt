@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import java.util.Base64
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -60,7 +61,7 @@ class FieldEncryptionTest {
     fun `encryptIfSensitive only encrypts sensitive fields`() {
         val svc = encryptionService()
         val encrypted = svc.encryptIfSensitive("description", "test data")
-        assertTrue(svc.isEncrypted(encrypted!!))
+        assertTrue(svc.isEncrypted(assertNotNull(encrypted)))
 
         val notEncrypted = svc.encryptIfSensitive("title", "test data")
         assertEquals("test data", notEncrypted)
