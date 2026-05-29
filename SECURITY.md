@@ -108,7 +108,7 @@ Every response includes (via `SecurityHeaders.kt`):
 - Production secrets should come from a secrets manager or mounted files.
 - The Ktor backend (`AppConfig.kt`) supports `_FILE` suffix for all sensitive variables:
   `AUTH_SECRET`, `DATABASE_URL`, `AUTH_CAPTCHA_SECRET`, `DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEYS`, `DATA_ENCRYPTION_AAD`.
-- Never commit real secrets. `.env.example` and `.env.docker` contain placeholder values only.
+- Never commit real secrets. `.env.example` contains placeholder values only; `.env.docker` is a local ignored runtime file created from that template.
 - Rotate secrets on a fixed schedule (recommended: 60-90 days).
 
 ## Dependency Security
