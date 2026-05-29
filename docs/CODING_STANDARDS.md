@@ -158,7 +158,7 @@ The app version is defined **once** in `tday-web/package.json`. Every other syst
 Colors and spacing/sizing values must come from the project's centralized design tokens — never as inline hex codes, raw pixel/dp literals, or arbitrary magic numbers.
 
 - **Web**: Use Tailwind utility classes that map to CSS custom properties defined in `src/globals.css` (e.g., `bg-card`, `text-foreground`, `border-border`). Never write inline `style={{ color: "#2A6DC2" }}` or raw `hsl(...)` values. If a new semantic color is needed, add a CSS variable in `globals.css` under `:root` and `.dark`, map it in the `@theme inline` block, then use the Tailwind class.
-- **Android**: Use `MaterialTheme.colorScheme.*` for all colors in Composables. If a color is not in the Material scheme, add it as a named constant in `ui/theme/Color.kt` — never write `Color(0xFF...)` directly in a screen or component file.
+- **Android**: Use `MaterialTheme.colorScheme.*` for Material surfaces and text in Composables. If a reusable product color is not in the Material scheme, add it to the Android theme layer instead of a screen file: app-wide palette values live in `ui/theme/Color.kt`, while domain colors such as priority, list palette, root-feed, mode, and completed accents live in `ui/theme/TdaySemanticColors.kt`. Never write `Color(0xFF...)` directly in a screen or component file.
 - **Android dimensions**: Use the centralized `TdayDimens` object (`ui/theme/Dimens.kt`) for all spacing, sizing, corner radius, and elevation values. Never write raw `.dp` literals like `padding(18.dp)` directly in screens — use `TdayDimens.SpacingMd` or similar.
 - **iOS**: Use `tdayColors`, `TdayTheme`, shared metrics, and feature-scoped constants that already belong to the local component. New repeated colors/metrics should move into `UI/Theme/` or a narrow shared component metrics type.
 
@@ -191,7 +191,7 @@ Card(
 All user-facing strings must live in a single centralized source — never inline in component code, screen layouts, or route handlers. This applies to labels, button text, error messages shown to users, placeholders, tooltips, and any other text the user sees.
 
 - **Web**: Use **i18next** translation keys backed by `tday-web/public/locales/<lng>/translation.json`, with `tday-web/messages/en.json` kept as the bundled English fallback. Components access strings via `useTranslation()`.
-- **Android**: Use Android string resources (`res/values/strings.xml`). Screens access strings via `stringResource(R.string.*)`.
+- **Android**: Use Android string resources (`res/values/strings.xml`, including string arrays for repeated copy such as splash taglines). Screens access strings via `stringResource(R.string.*)` or `stringArrayResource(R.array.*)`.
 - **iOS**: Follow the current local SwiftUI string patterns until a broader localization layer exists. Avoid scattering repeated labels; extract repeated app language into narrow constants or shared helpers when it appears in multiple places.
 - Internal log messages and developer-facing error strings (not shown to users) are exempt.
 - When adding a new screen or feature, add its strings to the centralized source **first**, then reference the keys.
