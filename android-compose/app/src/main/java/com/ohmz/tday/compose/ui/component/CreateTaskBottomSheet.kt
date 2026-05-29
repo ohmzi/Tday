@@ -38,7 +38,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.LowPriority
@@ -856,7 +855,7 @@ private fun <T> SheetDropdownRow(
         )
 
         if (selectorOpen) {
-            CenteredSelectorDialog(
+            TdayCenteredSelectorDialog(
                 title = title,
                 options = options,
                 optionLabel = optionLabel,
@@ -868,128 +867,6 @@ private fun <T> SheetDropdownRow(
                     selectorOpen = false
                 },
             )
-        }
-    }
-}
-
-@Composable
-private fun <T> CenteredSelectorDialog(
-    title: String,
-    options: List<T>,
-    optionLabel: (T) -> String,
-    optionSwatchColor: (T) -> Color,
-    isSelected: (T) -> Boolean,
-    onDismiss: () -> Unit,
-    onOptionSelected: (T) -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val containerColor = TdaySheetDefaults.surfaceColor()
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(TdaySheetDefaults.scrimColor())
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(0.74f)
-                    .heightIn(max = 380.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {},
-                    ),
-                shape = TdaySheetDefaults.SelectorShape,
-                colors = CardDefaults.cardColors(containerColor = containerColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(vertical = 10.dp),
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                    )
-
-                    options.forEachIndexed { index, option ->
-                        if (index > 0) {
-                            RowDivider()
-                        }
-                        CenteredSelectorRow(
-                            title = optionLabel(option),
-                            swatchColor = optionSwatchColor(option),
-                            selected = isSelected(option),
-                            onClick = { onOptionSelected(option) },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CenteredSelectorRow(
-    title: String,
-    swatchColor: Color,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .background(
-                    color = swatchColor,
-                    shape = RoundedCornerShape(999.dp),
-                ),
-        )
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = colorScheme.onSurface,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-
-        if (selected) {
-            Icon(
-                imageVector = Icons.Rounded.Check,
-                contentDescription = null,
-                tint = colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
-        } else {
-            Spacer(modifier = Modifier.size(20.dp))
         }
     }
 }
