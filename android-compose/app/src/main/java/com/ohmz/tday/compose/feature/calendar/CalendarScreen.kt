@@ -194,6 +194,8 @@ import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
+import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -2085,7 +2087,7 @@ private fun CalendarTaskDragPreview(
                 Icon(
                     imageVector = listIconForKey(listMeta.iconKey),
                     contentDescription = null,
-                    tint = listAccentColor(listMeta.color),
+                    tint = tdayListAccentColor(listMeta.color),
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -2093,7 +2095,7 @@ private fun CalendarTaskDragPreview(
                 Icon(
                     imageVector = priorityIcon,
                     contentDescription = null,
-                    tint = priorityColor(todo.priority),
+                    tint = tdayPriorityColor(todo.priority),
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -2181,7 +2183,7 @@ private fun CalendarTodoRow(
     val showListIndicator = listMeta != null
     val priorityIcon = priorityIconFor(todo.priority)
     val showPriorityIcon = priorityIcon != null
-    val listIndicatorColor = listAccentColor(listMeta?.color)
+    val listIndicatorColor = tdayListAccentColor(listMeta?.color)
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
     val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
@@ -2440,7 +2442,7 @@ private fun CalendarTodoRow(
                                 Icon(
                                     imageVector = priorityIcon,
                                     contentDescription = stringResource(R.string.label_priority_task),
-                                    tint = priorityColor(todo.priority),
+                                    tint = tdayPriorityColor(todo.priority),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
@@ -2493,8 +2495,8 @@ private fun CalendarCompletedTodoRow(
     val dueText = item.due
         ?.let { DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(it) }
     val listMeta = item.resolveListSummary(lists)
-    val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
-        ?: item.listColor?.let(::listAccentColor)
+    val listIndicatorColor = listMeta?.color?.let(::tdayListAccentColor)
+        ?: item.listColor?.let(::tdayListAccentColor)
         ?: colorScheme.onSurfaceVariant.copy(alpha = 0.86f)
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
     val priorityIcon = priorityIconFor(item.priority)
@@ -2598,7 +2600,7 @@ private fun CalendarCompletedTodoRow(
                         Icon(
                             imageVector = priorityIcon ?: Icons.Rounded.Flag,
                             contentDescription = stringResource(R.string.label_priority_task),
-                            tint = priorityColor(item.priority),
+                            tint = tdayPriorityColor(item.priority),
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -2764,14 +2766,6 @@ private fun buildMonthCells(month: YearMonth): List<CalendarDayCellModel> {
     }
 }
 
-private fun priorityColor(priority: String): Color {
-    return when (priority.lowercase(Locale.getDefault())) {
-        "high", "urgent", "important" -> Color(0xFFFF3B30)
-        "medium" -> Color(0xFFFF9500)
-        else -> Color(0xFF007AFF)
-    }
-}
-
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
         "medium" -> Icons.Rounded.Flag
@@ -2783,27 +2777,6 @@ private fun priorityIconFor(priority: String): ImageVector? {
 private fun CompletedItem.resolveListSummary(lists: List<ListSummary>): ListSummary? {
     val name = listName?.trim()?.lowercase(Locale.getDefault()) ?: return null
     return lists.firstOrNull { it.name.trim().lowercase(Locale.getDefault()) == name }
-}
-
-private fun listAccentColor(colorKey: String?): Color {
-    return when (colorKey) {
-        "PINK" -> Color(0xFFC987A5)
-        "GOLD" -> Color(0xFFC7AA63)
-        "DEEP_BLUE" -> Color(0xFF6F86C6)
-        "CORAL" -> Color(0xFFD39A82)
-        "TEAL" -> Color(0xFF67AAA7)
-        "SLATE", "GRAY" -> Color(0xFF7F8996)
-        "BLUE" -> Color(0xFF6F9FCE)
-        "PURPLE" -> Color(0xFF9A86CF)
-        "ROSE" -> Color(0xFFC98299)
-        "LIGHT_RED" -> Color(0xFFD58D8D)
-        "BRICK" -> Color(0xFFAD786E)
-        "YELLOW" -> Color(0xFFCFB866)
-        "LIME", "GREEN" -> Color(0xFF8DBB73)
-        "ORANGE" -> Color(0xFFD69B63)
-        "RED" -> Color(0xFFD97873)
-        else -> Color(0xFFC987A5)
-    }
 }
 
 private fun listIconForKey(iconKey: String?): ImageVector {
