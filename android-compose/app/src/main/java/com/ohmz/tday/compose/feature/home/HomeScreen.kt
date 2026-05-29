@@ -163,6 +163,11 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFontFamily
 import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
 import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
+import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
+import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
+import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconNightAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
@@ -1104,7 +1109,7 @@ private fun TopSearchBar(
     val focusRequester = remember { FocusRequester() }
     val isDaytime = rememberIsDaytime()
     val homeTitleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
-    val homeTitleIconTint = if (isDaytime) Color(0xFFF4C542) else Color(0xFFA8B8E8)
+    val homeTitleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
@@ -1580,7 +1585,7 @@ private fun HomeTodayTaskRow(
                     contentDescription = stringResource(R.string.action_edit_task),
                     label = stringResource(R.string.action_edit),
                     tint = Color.White,
-                    background = Color(0xFF4C7DDE),
+                    background = TdaySwipeEditBackground,
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.62f,
                     onClick = {
@@ -1597,7 +1602,7 @@ private fun HomeTodayTaskRow(
                     contentDescription = stringResource(R.string.action_delete_task),
                     label = stringResource(R.string.action_delete),
                     tint = Color.White,
-                    background = Color(0xFFFF453A),
+                    background = TdaySwipeDeleteBackground,
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.04f,
                     onClick = {
@@ -1695,7 +1700,7 @@ private fun HomeTodayTaskRow(
                             } else {
                                 stringResource(R.string.label_mark_complete)
                             },
-                            tint = if (localChecked) Color(0xFF6FBF86) else colorScheme.onSurfaceVariant.copy(
+                            tint = if (localChecked) TdayTaskCompleteAccent else colorScheme.onSurfaceVariant.copy(
                                 alpha = 0.78f
                             ),
                             modifier = Modifier.size(24.dp),
