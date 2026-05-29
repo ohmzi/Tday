@@ -9,7 +9,7 @@ All API routes live under `/api/`. The web SPA consumes them via same-origin req
 ## Authentication
 
 - All routes require a valid JWE session unless listed as public.
-- Public routes: `/api/auth/*` (CSRF, register, login-challenge, credentials-key, callback), `/api/mobile/probe`, `/.well-known/apple-app-site-association`, `/health`.
+- Public routes: `/api/auth/*` (CSRF, register, login-challenge, credentials-key, callback), `/api/mobile/probe`, `/.well-known/apple-app-site-association`, `/apple-app-site-association`, `/.well-known/assetlinks.json`, `/health`.
 - Authentication is enforced by a **Ktor pipeline intercept** in `Security.kt`:
   1. Reads a JWE token from `Authorization: Bearer` header or session cookies.
   2. Decodes and validates claims (expiry, `tokenVersion`, role, approval status).
@@ -148,6 +148,8 @@ route("/api/todo") {
 ```
 
 Services return `Either<AppError, T>` (Arrow) for typed error handling. Routes fold the result into HTTP responses.
+
+Shared route constants live in `shared/src/commonMain/kotlin/com/ohmz/tday/shared/routes/ApiRoutes.kt`. Add or update those constants with backend route changes so backend, Android, and iOS have one contract reference point.
 
 ## Tenant Isolation
 
@@ -293,11 +295,13 @@ Floater lists group floaters.
 |--------|------|---------|------|
 | GET | `/api/mobile/probe` | Server discovery, compatibility/version metadata, optional encrypted probe payload | Public |
 
-### Apple App Site Association
+### App Association Files
 
 | Method | Path | Purpose | Auth |
 |--------|------|---------|------|
 | GET | `/.well-known/apple-app-site-association` | iOS webcredentials/deep-link association | Public |
+| GET | `/apple-app-site-association` | iOS association fallback path | Public |
+| GET | `/.well-known/assetlinks.json` | Android app links association | Public |
 
 ## Cache Headers
 
