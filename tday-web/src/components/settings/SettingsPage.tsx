@@ -35,6 +35,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
+import type { SupportedLocale } from "@/i18n";
 
 const localeOptions = [
   { code: "en", label: "English" },
@@ -48,7 +49,7 @@ const localeOptions = [
   { code: "ms", label: "Malay" },
   { code: "it", label: "Italian" },
   { code: "pt", label: "Portuguese" },
-] as const;
+] as const satisfies readonly { code: SupportedLocale; label: string }[];
 
 export default function SettingsPage() {
   const locale = useLocale();
@@ -239,7 +240,7 @@ export default function SettingsPage() {
                   <DropdownMenuItem key={option.code} asChild>
                     <Link
                       href={pathname}
-                      locale={option.code as any}
+                      locale={option.code}
                       className={cn("flex w-full items-center justify-between", isActive && "font-medium")}
                     >
                       <span>{option.label}</span>

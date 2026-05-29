@@ -28,11 +28,11 @@ class PasswordProofTest {
         val email = "proof.user@example.com"
         val password = "TopSecret#123"
         val storedHash = passwordService.hashPassword(password)
-        val parsed = passwordService.parsePasswordHash(storedHash)!!
+        val parsed = assertNotNull(passwordService.parsePasswordHash(storedHash))
 
         val challenge = proof.issueChallenge(email, storedHash)
 
-        val hashKey = parsed.hashHex.hexToBytes()!!
+        val hashKey = assertNotNull(parsed.hashHex.hexToBytes())
         val message = "login:${challenge.challengeId}:${email.trim().lowercase()}"
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(hashKey, "HmacSHA256"))
@@ -62,8 +62,8 @@ class PasswordProofTest {
         val challenge = proof.issueChallenge("consume@example.com", storedHash)
         proof.consume(challenge.challengeId)
 
-        val parsed = passwordService.parsePasswordHash(storedHash)!!
-        val hashKey = parsed.hashHex.hexToBytes()!!
+        val parsed = assertNotNull(passwordService.parsePasswordHash(storedHash))
+        val hashKey = assertNotNull(parsed.hashHex.hexToBytes())
         val message = "login:${challenge.challengeId}:consume@example.com"
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(hashKey, "HmacSHA256"))
