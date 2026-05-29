@@ -1,9 +1,9 @@
 import React, { useEffect, useState, lazy, Suspense } from "react";
 import Plus from "@/components/ui/icon/plus";
-import TodoFormLoading from "../../../components/todo/component/TodoForm/TodoFormLoading";
+import TodoFormLoading from "@/components/todo/component/TodoForm/TodoFormLoading";
 import { useTranslation } from "react-i18next";
 const TodoForm = lazy(
-  () => import("../../../components/todo/component/TodoForm/TodoFormContainer"),
+  () => import("@/components/todo/component/TodoForm/TodoFormContainer"),
 );
 
 const CreateTodoBtn = () => {
