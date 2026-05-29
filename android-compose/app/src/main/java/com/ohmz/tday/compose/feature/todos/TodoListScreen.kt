@@ -230,7 +230,18 @@ import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
+import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
+import com.ohmz.tday.compose.ui.theme.TdayTodoModeAllAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodoModeOverdueAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodoModePriorityAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodoModeScheduledAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodoModeTodayAccent
+import com.ohmz.tday.compose.ui.theme.normalizeTdayListColorKey
+import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
+import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -506,12 +517,12 @@ fun TodoListScreen(
     var showSummarySheet by rememberSaveable(uiState.mode) { mutableStateOf(false) }
     var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var listSettingsName by rememberSaveable { mutableStateOf("") }
-    var listSettingsColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR_KEY) }
+    var listSettingsColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var listSettingsIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
     var listSettingsColorTouched by rememberSaveable { mutableStateOf(false) }
     var listSettingsIconTouched by rememberSaveable { mutableStateOf(false) }
     var createListName by rememberSaveable { mutableStateOf("") }
-    var createListColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR_KEY) }
+    var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var createListIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val editTargetTodo = remember(editTargetTodoId, uiState.items) {
@@ -737,7 +748,7 @@ fun TodoListScreen(
                             } else if (selectedList != null) {
                                 listSettingsTargetId = selectedList.id
                                 listSettingsName = selectedList.name
-                                listSettingsColor = normalizedListColorKey(selectedList.color)
+                                listSettingsColor = normalizeTdayListColorKey(selectedList.color)
                                 listSettingsIconKey = selectedList.iconKey
                                     ?.takeIf { isSupportedListIconKey(it) }
                                     ?: DEFAULT_LIST_ICON_KEY
@@ -1345,7 +1356,7 @@ fun TodoListScreen(
                 if (normalizedName.isNotBlank()) {
                     onCreateList(normalizedName, createListColor, createListIconKey)
                     createListName = ""
-                    createListColor = DEFAULT_LIST_COLOR_KEY
+                    createListColor = TDAY_DEFAULT_LIST_COLOR_KEY
                     createListIconKey = DEFAULT_LIST_ICON_KEY
                     showCreateListSheet = false
                 }
@@ -1779,7 +1790,7 @@ private fun RootFloaterSearchResultsCard(
                         Icon(
                             imageVector = listIconForKey(listMeta?.iconKey),
                             contentDescription = null,
-                            tint = listAccentColor(listMeta?.color).copy(alpha = 0.92f),
+                            tint = tdayListAccentColor(listMeta?.color).copy(alpha = 0.92f),
                             modifier = Modifier.size(17.dp),
                         )
                         Column(modifier = Modifier.weight(1f)) {
@@ -1844,7 +1855,7 @@ private fun FloaterListRow(
         targetValue = if (isPressed) 2.dp else 8.dp,
         label = "floaterListRowElevation",
     )
-    val accent = listAccentColor(colorKey)
+    val accent = tdayListAccentColor(colorKey)
     val icon = listIconForKey(iconKey)
     val containerColor =
         lerpColor(colorScheme.surfaceVariant, accent, FLOATER_LIST_CONTAINER_COLOR_WEIGHT)
@@ -2214,7 +2225,7 @@ private fun ListSettingsBottomSheet(
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val colorScheme = MaterialTheme.colorScheme
-    val selectedAccent = listAccentColor(listColor)
+    val selectedAccent = tdayListAccentColor(listColor)
     val selectedIcon = listIconForKey(listIconKey)
     val canSave = listName.isNotBlank()
 
@@ -2352,9 +2363,10 @@ private fun ListSettingsBottomSheet(
                             .padding(horizontal = 14.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        LIST_SETTINGS_COLOR_KEYS.forEach { colorKey ->
+                        TdayListColorOptions.forEach { option ->
+                            val colorKey = option.key
                             val selected = listColor == colorKey
-                            val swatchColor = listAccentColor(colorKey)
+                            val swatchColor = option.color
                             val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
@@ -2710,7 +2722,7 @@ private fun TimelineTaskDragPreview(
                 Icon(
                     imageVector = listIconForKey(listMeta?.iconKey),
                     contentDescription = null,
-                    tint = listAccentColor(listMeta?.color),
+                    tint = tdayListAccentColor(listMeta?.color),
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -2718,7 +2730,7 @@ private fun TimelineTaskDragPreview(
                 Icon(
                     imageVector = priorityIcon,
                     contentDescription = null,
-                    tint = priorityColor(todo.priority),
+                    tint = tdayPriorityColor(todo.priority),
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -3639,7 +3651,7 @@ private fun SwipeTaskRow(
     }
     val priorityIcon = priorityIconFor(todo.priority)
     val showPriorityIcon = priorityIcon != null
-    val listIndicatorColor = listAccentColor(listMeta?.color)
+    val listIndicatorColor = tdayListAccentColor(listMeta?.color)
     LaunchedEffect(openSwipeTaskId, todo.id) {
         if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
             swipeRevealState.close()
@@ -3923,7 +3935,7 @@ private fun SwipeTaskRow(
                                     Icon(
                                         imageVector = priorityIcon,
                                         contentDescription = stringResource(R.string.label_priority_task),
-                                        tint = priorityColor(todo.priority),
+                                        tint = tdayPriorityColor(todo.priority),
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
@@ -4119,15 +4131,6 @@ private fun CircularCheckToggleIcon(
     }
 }
 
-@Composable
-private fun priorityColor(priority: String): Color {
-    return when (priority.lowercase()) {
-        "high", "urgent", "important" -> Color(0xFFFF3B30)
-        "medium" -> Color(0xFFFF9500)
-        else -> Color(0xFF007AFF)
-    }
-}
-
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
         "medium" -> Icons.Rounded.Flag
@@ -4151,54 +4154,21 @@ private fun modeAccentColor(
     listColorKey: String?,
 ): Color {
     return when (mode) {
-        TodoListMode.TODAY -> Color(0xFF5C9FE7)
-        TodoListMode.OVERDUE -> Color(0xFFDA7661)
-        TodoListMode.SCHEDULED -> Color(0xFFF29F38)
-        TodoListMode.ALL -> Color(0xFF5E6878)
-        TodoListMode.PRIORITY -> Color(0xFFE65E52)
+        TodoListMode.TODAY -> TdayTodoModeTodayAccent
+        TodoListMode.OVERDUE -> TdayTodoModeOverdueAccent
+        TodoListMode.SCHEDULED -> TdayTodoModeScheduledAccent
+        TodoListMode.ALL -> TdayTodoModeAllAccent
+        TodoListMode.PRIORITY -> TdayTodoModePriorityAccent
         TodoListMode.FLOATER -> listColorKey
             ?.takeIf { it.isNotBlank() }
-            ?.let(::listAccentColor)
-            ?: Color(0xFF4D8F83)
-        TodoListMode.LIST -> listAccentColor(listColorKey)
-    }
-}
-
-private fun listAccentColor(colorKey: String?): Color {
-    return when (colorKey) {
-        "PINK" -> Color(0xFFC987A5)
-        "GOLD" -> Color(0xFFC7AA63)
-        "DEEP_BLUE" -> Color(0xFF6F86C6)
-        "CORAL" -> Color(0xFFD39A82)
-        "TEAL" -> Color(0xFF67AAA7)
-        "SLATE", "GRAY" -> Color(0xFF7F8996)
-        "BLUE" -> Color(0xFF6F9FCE)
-        "PURPLE" -> Color(0xFF9A86CF)
-        "ROSE" -> Color(0xFFC98299)
-        "LIGHT_RED" -> Color(0xFFD58D8D)
-        "BRICK" -> Color(0xFFAD786E)
-        "YELLOW" -> Color(0xFFCFB866)
-        "LIME", "GREEN" -> Color(0xFF8DBB73)
-        "ORANGE" -> Color(0xFFD69B63)
-        "RED" -> Color(0xFFD97873)
-        else -> Color(0xFFC987A5)
+            ?.let(::tdayListAccentColor)
+            ?: TdayFloaterAccent
+        TodoListMode.LIST -> tdayListAccentColor(listColorKey)
     }
 }
 
 private fun listIconForKey(iconKey: String?): ImageVector {
     return LIST_SETTINGS_ICON_OPTIONS.firstOrNull { it.key == iconKey }?.icon ?: Icons.Rounded.Inbox
-}
-
-private fun isSupportedListColor(colorKey: String): Boolean {
-    return LIST_SETTINGS_COLOR_KEYS.contains(colorKey)
-}
-
-private fun normalizedListColorKey(colorKey: String?): String {
-    return when (colorKey) {
-        "GREEN" -> "LIME"
-        "GRAY" -> "SLATE"
-        else -> colorKey?.takeIf { isSupportedListColor(it) } ?: DEFAULT_LIST_COLOR_KEY
-    }
 }
 
 private fun isSupportedListIconKey(iconKey: String): Boolean {
@@ -4210,27 +4180,8 @@ private data class ListSettingsIconOption(
     val icon: ImageVector,
 )
 
-private const val DEFAULT_LIST_COLOR_KEY = "PINK"
 private const val DEFAULT_LIST_ICON_KEY = "inbox"
 private const val FLOATER_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
-
-private val LIST_SETTINGS_COLOR_KEYS = listOf(
-    "PINK",
-    "GOLD",
-    "DEEP_BLUE",
-    "CORAL",
-    "TEAL",
-    "SLATE",
-    "BLUE",
-    "PURPLE",
-    "ROSE",
-    "LIGHT_RED",
-    "BRICK",
-    "YELLOW",
-    "LIME",
-    "ORANGE",
-    "RED",
-)
 
 private val LIST_SETTINGS_ICON_OPTIONS = listOf(
     ListSettingsIconOption("inbox", Icons.Rounded.Inbox),

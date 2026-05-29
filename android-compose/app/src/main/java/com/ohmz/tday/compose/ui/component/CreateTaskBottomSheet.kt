@@ -88,6 +88,8 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
+import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
@@ -483,7 +485,7 @@ fun CreateTaskBottomSheet(
                                         value = selectedPriority,
                                         options = listOf("Low", "Medium", "High"),
                                         optionLabel = { option -> option },
-                                        optionSwatchColor = { option -> prioritySwatchColor(option) },
+                                        optionSwatchColor = { option -> tdayPriorityColor(option) },
                                         isSelected = { option -> selectedPriority == option },
                                         onOptionSelected = { option -> selectedPriority = option },
                                     )
@@ -873,33 +875,9 @@ private fun <T> SheetDropdownRow(
 
 private fun listColorSwatchForSelector(raw: String?, fallback: Color): Color {
     if (raw.isNullOrBlank()) return fallback
-    return when (raw.trim().uppercase()) {
-        "PINK" -> Color(0xFFC987A5)
-        "GOLD" -> Color(0xFFC7AA63)
-        "DEEP_BLUE" -> Color(0xFF6F86C6)
-        "CORAL" -> Color(0xFFD39A82)
-        "TEAL" -> Color(0xFF67AAA7)
-        "SLATE", "GRAY" -> Color(0xFF7F8996)
-        "BLUE" -> Color(0xFF6F9FCE)
-        "PURPLE" -> Color(0xFF9A86CF)
-        "ROSE" -> Color(0xFFC98299)
-        "LIGHT_RED" -> Color(0xFFD58D8D)
-        "BRICK" -> Color(0xFFAD786E)
-        "YELLOW" -> Color(0xFFCFB866)
-        "LIME", "GREEN" -> Color(0xFF8DBB73)
-        "ORANGE" -> Color(0xFFD69B63)
-        "RED" -> Color(0xFFD97873)
-        else -> runCatching { Color(AndroidColor.parseColor(raw)) }
+    return tdayListAccentColorOrNull(raw)
+        ?: runCatching { Color(AndroidColor.parseColor(raw)) }
             .getOrDefault(fallback)
-    }
-}
-
-private fun prioritySwatchColor(priority: String): Color {
-    return when (priority.lowercase()) {
-        "high" -> Color(0xFFFF3B30)
-        "medium" -> Color(0xFFFF9500)
-        else -> Color(0xFF007AFF)
-    }
 }
 
 private fun repeatSwatchColor(preset: RepeatPreset): Color {

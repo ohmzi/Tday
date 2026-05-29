@@ -102,7 +102,10 @@ import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
+import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -599,8 +602,8 @@ private fun CompletedSwipeRow(
         .withZone(ZoneId.systemDefault())
         .format(item.completedAt ?: item.due ?: Instant.EPOCH)
     val listMeta = item.resolveListSummary(lists)
-    val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
-        ?: item.listColor?.let(::listAccentColor)
+    val listIndicatorColor = listMeta?.color?.let(::tdayListAccentColor)
+        ?: item.listColor?.let(::tdayListAccentColor)
         ?: colorScheme.onSurfaceVariant.copy(alpha = 0.86f)
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
     val priorityIcon = priorityIconFor(item.priority)
@@ -819,7 +822,7 @@ private fun CompletedSwipeRow(
                                 Icon(
                                     imageVector = priorityIcon ?: Icons.Rounded.Flag,
                                     contentDescription = stringResource(R.string.label_priority_task),
-                                    tint = priorityColor(item.priority),
+                                    tint = tdayPriorityColor(item.priority),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
@@ -899,15 +902,6 @@ private fun EmptyCompletedState(
     }
 }
 
-@Composable
-private fun priorityColor(priority: String): Color {
-    return when (priority.lowercase()) {
-        "high", "urgent", "important" -> Color(0xFFFF3B30)
-        "medium" -> Color(0xFFFF9500)
-        else -> Color(0xFF007AFF)
-    }
-}
-
 private fun priorityIconFor(priority: String): ImageVector? {
     return when (priority.trim().lowercase(Locale.getDefault())) {
         "medium" -> Icons.Rounded.Flag
@@ -942,27 +936,6 @@ private fun CompletedItem.toEditableTodo(lists: List<ListSummary>): TodoItem {
         listId = resolvedListId,
         updatedAt = completedAt,
     )
-}
-
-private fun listAccentColor(colorKey: String?): Color {
-    return when (colorKey?.trim()?.uppercase(Locale.getDefault())) {
-        "PINK" -> Color(0xFFC987A5)
-        "GOLD" -> Color(0xFFC7AA63)
-        "DEEP_BLUE" -> Color(0xFF6F86C6)
-        "CORAL" -> Color(0xFFD39A82)
-        "TEAL" -> Color(0xFF67AAA7)
-        "SLATE", "GRAY" -> Color(0xFF7F8996)
-        "BLUE" -> Color(0xFF6F9FCE)
-        "PURPLE" -> Color(0xFF9A86CF)
-        "ROSE" -> Color(0xFFC98299)
-        "LIGHT_RED" -> Color(0xFFD58D8D)
-        "BRICK" -> Color(0xFFAD786E)
-        "YELLOW" -> Color(0xFFCFB866)
-        "LIME", "GREEN" -> Color(0xFF8DBB73)
-        "ORANGE" -> Color(0xFFD69B63)
-        "RED" -> Color(0xFFD97873)
-        else -> Color(0xFFC987A5)
-    }
 }
 
 private fun listIconForKey(iconKey: String?): ImageVector {
@@ -1049,7 +1022,7 @@ private fun buildCompletedTimelineSections(
         }
 }
 
-private val COMPLETED_TITLE_COLOR = Color(0xFF5E6878)
+private val COMPLETED_TITLE_COLOR = TdayCompletedTitleAccent
 private val COMPLETED_SECTION_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
 private val COMPLETED_ROW_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 private const val COMPLETED_TITLE_COLLAPSE_DISTANCE_DP = 180f
