@@ -162,6 +162,17 @@ fun OnboardingWizardOverlay(
     val passwordFocusRequester = remember { FocusRequester() }
     val registerPasswordFocusRequester = remember { FocusRequester() }
     val registerConfirmFocusRequester = remember { FocusRequester() }
+    val connectErrorFallback = stringResource(R.string.onboarding_error_connect_fallback)
+    val resetTrustErrorFallback = stringResource(R.string.onboarding_error_reset_trust_fallback)
+    val appOutdatedError = stringResource(R.string.error_app_outdated)
+    val firstNameMinError = stringResource(R.string.onboarding_validation_first_name_min)
+    val emailRequiredError = stringResource(R.string.onboarding_validation_email_required)
+    val emailInvalidError = stringResource(R.string.onboarding_validation_email_invalid)
+    val passwordRequiredError = stringResource(R.string.onboarding_validation_password_required)
+    val passwordMinError = stringResource(R.string.onboarding_validation_password_min)
+    val passwordUppercaseError = stringResource(R.string.onboarding_validation_password_uppercase)
+    val passwordSpecialError = stringResource(R.string.onboarding_validation_password_special)
+    val passwordMismatchError = stringResource(R.string.onboarding_validation_password_mismatch)
 
     val finishServerConnection: (String) -> Unit = { savedServerUrl ->
         coroutineScope.launch {
@@ -197,7 +208,8 @@ fun OnboardingWizardOverlay(
                 step = WizardStep.SERVER
                 serverError = onboardingServerErrorMessage(
                     error = error,
-                    fallback = "Could not connect to server.",
+                    fallback = connectErrorFallback,
+                    appOutdatedMessage = appOutdatedError,
                 )
             }
         }
@@ -221,35 +233,35 @@ fun OnboardingWizardOverlay(
 
         when {
             normalizedFirst.length < 2 -> {
-                localAuthError = "First name must be at least 2 characters"
+                localAuthError = firstNameMinError
                 return@createAccount
             }
             normalizedEmail.isBlank() -> {
-                localAuthError = "Email is required"
+                localAuthError = emailRequiredError
                 return@createAccount
             }
             !EMAIL_REGEX.matches(normalizedEmail) -> {
-                localAuthError = "Please enter a valid email address"
+                localAuthError = emailInvalidError
                 return@createAccount
             }
             registerPassword.isBlank() || confirmRegisterPassword.isBlank() -> {
-                localAuthError = "Password and confirmation are required"
+                localAuthError = passwordRequiredError
                 return@createAccount
             }
             registerPassword.length < 8 -> {
-                localAuthError = "Password must be at least 8 characters"
+                localAuthError = passwordMinError
                 return@createAccount
             }
             !hasUppercase -> {
-                localAuthError = "Password must include at least one uppercase letter"
+                localAuthError = passwordUppercaseError
                 return@createAccount
             }
             !hasSpecial -> {
-                localAuthError = "Password must include at least one special character"
+                localAuthError = passwordSpecialError
                 return@createAccount
             }
             registerPassword != confirmRegisterPassword -> {
-                localAuthError = "Passwords do not match"
+                localAuthError = passwordMismatchError
                 return@createAccount
             }
         }
@@ -436,7 +448,7 @@ fun OnboardingWizardOverlay(
                             modifier = Modifier.size(27.dp),
                         )
                         Text(
-                            text = "T'Day",
+                            text = stringResource(R.string.app_name),
                             style = MaterialTheme.typography.headlineMedium,
                             color = colorScheme.onSurface,
                             fontWeight = FontWeight.Black,
@@ -577,14 +589,16 @@ fun OnboardingWizardOverlay(
                                                                     step = WizardStep.SERVER
                                                                     serverError = onboardingServerErrorMessage(
                                                                         error = error,
-                                                                        fallback = "Could not connect to server.",
+                                                                        fallback = connectErrorFallback,
+                                                                        appOutdatedMessage = appOutdatedError,
                                                                     )
                                                                 }
                                                             }
                                                         }.onFailure { error ->
                                                             serverError = onboardingServerErrorMessage(
                                                                 error = error,
-                                                                fallback = "Could not reset trusted server.",
+                                                                fallback = resetTrustErrorFallback,
+                                                                appOutdatedMessage = appOutdatedError,
                                                             )
                                                         }
                                                     }
@@ -1040,11 +1054,12 @@ private fun Modifier.tdayAutofill(
 private fun onboardingServerErrorMessage(
     error: Throwable,
     fallback: String,
+    appOutdatedMessage: String,
 ): String {
     val message = error.message?.trim().orEmpty()
     if (message.isBlank()) return fallback
     if (message.contains("serial", ignoreCase = true)) {
-        return "This version of the app is out of date. Please update to continue."
+        return appOutdatedMessage
     }
     return message
 }
