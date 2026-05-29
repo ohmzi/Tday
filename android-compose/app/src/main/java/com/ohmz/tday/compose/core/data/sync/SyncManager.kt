@@ -82,7 +82,9 @@ class SyncManager @Inject constructor(
     val offlineSyncSuccesses: SharedFlow<Unit> = offlineSyncSuccessMutable.asSharedFlow()
 
     fun hasPendingMutations(): Boolean =
-        cacheManager.loadOfflineState().pendingMutations.isNotEmpty()
+        !isLocalMode() && cacheManager.loadOfflineState().pendingMutations.isNotEmpty()
+
+    fun isLocalMode(): Boolean = secureConfigStore.isLocalMode()
 
     suspend fun syncCachedData(
         force: Boolean = false,
@@ -90,6 +92,25 @@ class SyncManager @Inject constructor(
         notifyOfflineFailure: Boolean = true,
         connectionProbeTimeoutMs: Long? = null,
     ): Result<Unit> {
+        if (isLocalMode()) {
+            cacheManager.updateOfflineState { state ->
+                if (state.pendingMutations.isEmpty() &&
+                    state.lastSuccessfulSyncEpochMs == 0L &&
+                    state.lastSyncAttemptEpochMs == 0L
+                ) {
+                    state
+                } else {
+                    state.copy(
+                        lastSuccessfulSyncEpochMs = 0L,
+                        lastSyncAttemptEpochMs = 0L,
+                        pendingMutations = emptyList(),
+                    )
+                }
+            }
+            runCatching { TodayTasksWidget().updateAll(context) }
+            return Result.success(Unit)
+        }
+
         val result = runCatching {
             var contactedServer = false
             if (connectionProbeTimeoutMs != null) {

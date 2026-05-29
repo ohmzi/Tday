@@ -55,7 +55,7 @@ final class AppContainer {
             PendingMutationEntity.self,
             SyncMetadataEntity.self
         )
-        cacheManager = OfflineCacheManager(modelContainer: modelContainer)
+        cacheManager = OfflineCacheManager(modelContainer: modelContainer, secureStore: secureStore)
         serverConfigRepository = ServerConfigRepository(
             secureStore: secureStore,
             serverURLState: serverURLState,
@@ -71,12 +71,12 @@ final class AppContainer {
             themeStore: themeStore,
             reminderPreferenceStore: reminderPreferenceStore
         )
-        syncManager = SyncManager(api: apiService, cacheManager: cacheManager)
+        syncManager = SyncManager(api: apiService, cacheManager: cacheManager, secureStore: secureStore)
         todoRepository = TodoRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         listRepository = ListRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         floaterListRepository = FloaterListRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         completedRepository = CompletedRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
-        settingsRepository = SettingsRepository(api: apiService, cacheManager: cacheManager)
+        settingsRepository = SettingsRepository(api: apiService, cacheManager: cacheManager, secureStore: secureStore)
         realtimeClient = RealtimeClient(configuration: networkConfiguration)
         reminderScheduler = TaskReminderScheduler(reminderPreferenceStore: reminderPreferenceStore)
         snackbarManager = SnackbarManager()

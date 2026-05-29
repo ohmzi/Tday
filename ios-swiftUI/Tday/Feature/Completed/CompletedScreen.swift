@@ -9,6 +9,7 @@ private enum CompletedRestorePhase {
 }
 
 struct CompletedScreen: View {
+    private let pullRefreshEnabled: Bool
     @State private var viewModel: CompletedViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
@@ -17,7 +18,8 @@ struct CompletedScreen: View {
     @State private var collapsedSectionIDs: Set<String> = []
     @State private var openSwipeTaskID: String?
 
-    init(container: AppContainer) {
+    init(container: AppContainer, pullRefreshEnabled: Bool = true) {
+        self.pullRefreshEnabled = pullRefreshEnabled
         _viewModel = State(initialValue: CompletedViewModel(container: container))
     }
 
@@ -45,7 +47,7 @@ struct CompletedScreen: View {
 
     var body: some View {
         completedTimelineContent
-            .tdayPullToRefresh(isRefreshing: viewModel.isLoading) {
+            .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
                 await viewModel.refresh()
             }
             .background(colors.background)
