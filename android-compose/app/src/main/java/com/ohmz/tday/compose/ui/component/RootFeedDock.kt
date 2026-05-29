@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.ui.component
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -54,12 +55,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayRootFeedAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import kotlinx.coroutines.delay
 
 enum class RootFeedTab {
@@ -68,20 +70,20 @@ enum class RootFeedTab {
 }
 
 private val RootFeedTabs = listOf(RootFeedTab.HOME, RootFeedTab.FLOATER)
-private val RootFeedSliderAccent = Color(0xFF7D67B6)
-private val RootFeedDockHeight = 58.dp
+private val RootFeedDockHeight = TdayDimens.RootFeedDockHeight
 private val RootFeedDockCollapsedWidth = RootFeedDockHeight
-private val RootFeedDockInnerPadding = 5.dp
-private val RootFeedDockTabWidth = 102.dp
+private val RootFeedDockInnerPadding = TdayDimens.RootFeedDockInnerPadding
+private val RootFeedDockTabWidth = TdayDimens.RootFeedDockTabWidth
 private val RootFeedDockExpandedWidth =
     (RootFeedDockTabWidth * RootFeedTabs.size) + (RootFeedDockInnerPadding * 2)
-private val RootFeedDockShape = RoundedCornerShape(22.dp)
-private val RootFeedDockSelectorShape = RoundedCornerShape(18.dp)
+private val RootFeedDockShape = RoundedCornerShape(TdayDimens.RootFeedDockRadius)
+private val RootFeedDockSelectorShape = RoundedCornerShape(TdayDimens.RootFeedDockSelectorRadius)
 
-private fun RootFeedTab.label(): String {
+@StringRes
+private fun RootFeedTab.labelRes(): Int {
     return when (this) {
-        RootFeedTab.HOME -> "Home"
-        RootFeedTab.FLOATER -> "Floater"
+        RootFeedTab.HOME -> R.string.root_feed_tab_home
+        RootFeedTab.FLOATER -> R.string.root_feed_tab_floater
     }
 }
 
@@ -96,7 +98,7 @@ private fun RootFeedTab.icon(): ImageVector {
 fun RootCreateTaskButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = Color(0xFF6EA8E1),
+    backgroundColor: Color = TdayTodayBlue,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
 ) {
     val view = LocalView.current
@@ -109,7 +111,7 @@ fun RootCreateTaskButton(
         },
         interactionSource = interactionSource,
         shape = CircleShape,
-        border = BorderStroke(1.dp, backgroundColor.copy(alpha = 0.72f)),
+        border = BorderStroke(TdayDimens.BorderWidth, backgroundColor.copy(alpha = 0.72f)),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.FabElevation,
@@ -124,7 +126,7 @@ fun RootCreateTaskButton(
                 imageVector = Icons.Rounded.Add,
                 contentDescription = stringResource(R.string.action_create_task),
                 tint = Color.White,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(TdayDimens.FabIconSize),
             )
         }
     }
@@ -194,13 +196,16 @@ fun RootFeedDock(
     Box(
         modifier = modifier
             .navigationBarsPadding()
-            .padding(start = 18.dp, bottom = 18.dp)
+            .padding(
+                start = TdayDimens.RootFeedDockOuterPaddingStart,
+                bottom = TdayDimens.RootFeedDockOuterPaddingBottom,
+            )
             .width(dockWidth)
             .height(RootFeedDockHeight)
             .clip(RootFeedDockShape)
             .background(trackColor, RootFeedDockShape)
             .border(
-                width = 1.dp,
+                width = TdayDimens.BorderWidth,
                 color = trackBorderColor,
                 shape = RootFeedDockShape,
             )
@@ -215,7 +220,7 @@ fun RootFeedDock(
             }
             val selectorWidthTarget = tabWidthTarget
             val selectorOffsetTarget = if (activeIndex == 0) {
-                0.dp
+                TdayDimens.SpacingNone
             } else {
                 maxWidth - selectorWidthTarget
             }
@@ -250,25 +255,25 @@ fun RootFeedDock(
                     .offset(x = selectorOffset)
                     .width(selectorWidth)
                     .fillMaxHeight()
-                    .padding(2.dp)
+                    .padding(TdayDimens.RootFeedDockSelectorInset)
                     .graphicsLayer {
                         scaleX = selectorScale
                         scaleY = selectorScale
                     }
                     .shadow(
-                        elevation = 12.dp,
+                        elevation = TdayDimens.RootFeedDockSelectorElevation,
                         shape = RootFeedDockSelectorShape,
-                        ambientColor = RootFeedSliderAccent.copy(alpha = 0.16f),
+                        ambientColor = TdayRootFeedAccent.copy(alpha = 0.16f),
                         spotColor = Color.Black.copy(alpha = 0.14f),
                     )
                     .clip(RootFeedDockSelectorShape)
                     .background(selectorContainerColor, RootFeedDockSelectorShape)
                     .background(
-                        RootFeedSliderAccent.copy(alpha = if (isDarkTheme) 0.04f else 0.06f),
+                        TdayRootFeedAccent.copy(alpha = if (isDarkTheme) 0.04f else 0.06f),
                         RootFeedDockSelectorShape,
                     )
                     .border(
-                        width = 1.dp,
+                        width = TdayDimens.BorderWidth,
                         color = selectorBorderColor,
                         shape = RootFeedDockSelectorShape,
                     )
@@ -377,7 +382,7 @@ fun RootFeedDock(
                         contentDescription = null,
                         tint = animatedContentColor,
                         modifier = Modifier
-                            .size(22.dp)
+                            .size(TdayDimens.RootFeedDockIconSize)
                             .graphicsLayer {
                                 alpha = iconAlpha * tabAlpha
                                 scaleX = contentScale * (1f - (0.08f * expansionProgress))
@@ -385,7 +390,7 @@ fun RootFeedDock(
                             },
                     )
                     Text(
-                        text = tab.label(),
+                        text = stringResource(tab.labelRes()),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = if (selected) FontWeight.Black else FontWeight.ExtraBold,
                         color = animatedContentColor,
