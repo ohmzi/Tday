@@ -572,8 +572,8 @@ fun HomeScreen(
                     item { Spacer(Modifier.height(80.dp)) }
                     }
 
-                    if (showSearchResultsOverlay && searchBarBounds != null) {
-                        val searchBarRect = searchBarBounds!!
+                    val searchBarRect = searchBarBounds
+                    if (showSearchResultsOverlay && searchBarRect != null) {
                         val overlayLeft = with(density) { (searchBarRect.left - rootInRoot.x).toDp() }
                         val overlayTop = with(density) { (searchBarRect.bottom - rootInRoot.y).toDp() } + 8.dp
                         val overlayWidth = with(density) { searchBarRect.width.toDp() }

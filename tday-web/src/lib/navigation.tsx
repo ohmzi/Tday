@@ -31,16 +31,17 @@ type LinkProps = Omit<ComponentProps<typeof RouterLink>, "to"> & {
 };
 
 export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
-  { href, to, locale, prefetch: _, ...rest },
+  { href, to, locale, prefetch, ...rest },
   ref,
 ) {
+  void prefetch;
   const params = useParams();
   const currentLocale = resolveLocale(params);
   const targetLocale = locale || currentLocale;
   const path = href ?? to ?? "";
   const localizedPath = localizePath(path, targetLocale);
 
-  return <RouterLink ref={ref} to={localizedPath} {...(rest as any)} />;
+  return <RouterLink ref={ref} to={localizedPath} {...rest} />;
 });
 
 export function useRouter() {

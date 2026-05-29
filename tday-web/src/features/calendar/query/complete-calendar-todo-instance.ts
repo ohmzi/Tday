@@ -21,12 +21,13 @@ export const useCompleteCalendarTodoInstance = () => {
 
     onMutate: async ({ todoItem }: { todoItem: TodoItemType }) => {
       await queryClient.cancelQueries({ queryKey: ["calendarTodo"] });
+      const instanceDateMs = todoItem.instanceDate?.getTime();
 
       const oldTodos = queryClient.getQueryData<TodoItemType[]>([
         "calendarTodo",
       ]);
 
-      if (todoItem.instanceDate) {
+      if (instanceDateMs != null) {
         queryClient.setQueriesData<TodoItemType[]>(
           {
             queryKey: ["calendarTodo"],
@@ -34,8 +35,7 @@ export const useCompleteCalendarTodoInstance = () => {
           (old) =>
             old?.filter(
               (todo) =>
-                todo.instanceDate?.getTime() !==
-                todoItem.instanceDate!.getTime(),
+                todo.instanceDate?.getTime() !== instanceDateMs,
             ),
         );
       }

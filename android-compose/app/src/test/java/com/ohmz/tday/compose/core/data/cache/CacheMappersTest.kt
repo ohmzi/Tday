@@ -155,7 +155,7 @@ class CacheMappersTest {
 
         assertEquals("abc123", item.canonicalId)
         assertNotNull(item.instanceDate)
-        assertEquals(1718444400000L, item.instanceDate!!.toEpochMilli())
+        assertEquals(1718444400000L, requireNotNull(item.instanceDate).toEpochMilli())
     }
 
     @Test
