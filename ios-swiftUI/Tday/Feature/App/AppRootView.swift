@@ -10,6 +10,8 @@ struct AppRootView: View {
     @State private var isLaunchSplashHeld = false
     @State private var rootFeedTab: RootFeedTab = .home
     @State private var rootCreateTaskRequestID = 0
+    @State private var rootHomeScrollToTopRequestID = 0
+    @State private var rootFloaterScrollToTopRequestID = 0
     @State private var rootDockCollapsed = false
     @State private var rootControlsVisible = true
     @Environment(\.scenePhase) private var scenePhase
@@ -42,6 +44,7 @@ struct AppRootView: View {
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
                                     createTaskRequestID: rootCreateTaskRequestID,
+                                    scrollToTopRequestID: rootHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 }
                                 ) { route in
@@ -59,6 +62,7 @@ struct AppRootView: View {
                                     showsRootControls: false,
                                     usesRootFeedHeader: true,
                                     createTaskRequestID: rootCreateTaskRequestID,
+                                    scrollToTopRequestID: rootFloaterScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
                                     onOpenFloaterList: { listId, listName in
@@ -113,7 +117,9 @@ struct AppRootView: View {
                                 listId: listId,
                                 listName: listName,
                                 highlightedTodoId: nil,
-                                usesRootFeedHeader: true
+                                onListDeleted: {
+                                    handleRoute(.floaterTodos)
+                                }
                             )
                         case let .listTodos(listId, listName):
                             TodoListScreen(
@@ -264,12 +270,25 @@ struct AppRootView: View {
     }
 
     private func handleRootFeedTabSelection(_ tab: RootFeedTab) {
+        if tab == rootFeedTab {
+            requestRootFeedScrollToTop(for: tab)
+            return
+        }
         selectRootFeedTab(tab)
     }
 
     private func selectRootFeedTab(_ tab: RootFeedTab) {
         rootFeedTab = tab
         appViewModel.navigationPath = []
+    }
+
+    private func requestRootFeedScrollToTop(for tab: RootFeedTab) {
+        switch tab {
+        case .home:
+            rootHomeScrollToTopRequestID += 1
+        case .floater:
+            rootFloaterScrollToTopRequestID += 1
+        }
     }
 
     private var rootNavigationPath: Binding<[AppRoute]> {
