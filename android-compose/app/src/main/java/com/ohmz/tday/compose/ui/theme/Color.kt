@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val TdayTodayBlue = Color(0xFF6EA8E1)
+val TdayRootFeedAccent = Color(0xFF7D67B6)
 
 val TdayDarkBackground = Color(0xFF050507)
 val TdayDarkSurface = Color(0xFF171A22)
