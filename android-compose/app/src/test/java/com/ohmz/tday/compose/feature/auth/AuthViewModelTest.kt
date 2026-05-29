@@ -35,11 +35,13 @@ class AuthViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private val credentialContext = mockk<Context>(relaxed = true)
+    private val appContext = mockk<Context>(relaxed = true)
     private val authRepository = mockk<AuthRepository>()
     private val credentialService = FakeSystemCredentialService()
 
     @Before
     fun setUp() {
+        every { appContext.getString(any()) } answers { "res-${firstArg<Int>()}" }
         every { authRepository.getLastEmail() } returns null
         credentialService.reset()
     }
@@ -170,7 +172,8 @@ class AuthViewModelTest {
         AuthViewModel(
             authRepository = authRepository,
             systemCredentialService = credentialService,
-            snackbarManager = SnackbarManager(),
+            snackbarManager = SnackbarManager(appContext),
+            appContext = appContext,
         )
 }
 
