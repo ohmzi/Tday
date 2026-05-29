@@ -91,6 +91,7 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
@@ -931,7 +932,7 @@ private fun listColorSwatchForSelector(raw: String?, fallback: Color): Color {
 private fun repeatSwatchColor(preset: RepeatPreset): Color {
     return when (preset) {
         RepeatPreset.NONE -> Color(0xFFB7BCC8)
-        RepeatPreset.DAILY -> Color(0xFF6FBF86)
+        RepeatPreset.DAILY -> TdayTaskCompleteAccent
         RepeatPreset.WEEKLY -> Color(0xFF6FA6E8)
         RepeatPreset.WEEKDAYS -> Color(0xFF8C7AE6)
         RepeatPreset.MONTHLY -> Color(0xFFE3B368)

@@ -69,6 +69,7 @@ import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 
 @Composable
 fun SettingsScreen(
@@ -219,7 +220,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = stringResource(R.string.settings_server_label),
+                            text = stringResource(R.string.label_server),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
@@ -244,7 +245,7 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (isCompatible) {
-                                    Color(0xFF4CAF50)
+                                    TdayStatusSuccess
                                 } else {
                                     colorScheme.error
                                 },
