@@ -3,6 +3,17 @@ package com.ohmz.tday.shared.routes
 object ApiRoutes {
     const val ApiPrefix = "/api"
 
+    object Auth {
+        const val Base = "$ApiPrefix/auth"
+        const val Csrf = "$Base/csrf"
+        const val Register = "$Base/register"
+        const val LoginChallenge = "$Base/login-challenge"
+        const val CredentialsKey = "$Base/credentials-key"
+        const val CredentialsCallback = "$Base/callback/credentials"
+        const val Session = "$Base/session"
+        const val Logout = "$Base/logout"
+    }
+
     object Todo {
         const val Base = "$ApiPrefix/todo"
         const val Complete = "$Base/complete"
@@ -19,12 +30,38 @@ object ApiRoutes {
         const val Base = "$ApiPrefix/list"
     }
 
+    object Floater {
+        const val Base = "$ApiPrefix/floater"
+        const val Complete = "$Base/complete"
+        const val Uncomplete = "$Base/uncomplete"
+        const val Prioritize = "$Base/prioritize"
+        const val Reorder = "$Base/reorder"
+    }
+
+    object FloaterList {
+        const val Base = "$ApiPrefix/floaterList"
+    }
+
     object Completed {
         const val Base = "$ApiPrefix/completedTodo"
     }
 
+    object CompletedFloater {
+        const val Base = "$ApiPrefix/completedFloater"
+    }
+
     object Preferences {
         const val Base = "$ApiPrefix/preferences"
+    }
+
+    object User {
+        const val Base = "$ApiPrefix/user"
+        const val Profile = "$Base/profile"
+        const val ChangePassword = "$Base/change-password"
+    }
+
+    object Timezone {
+        const val Base = "$ApiPrefix/timezone"
     }
 
     object AppSettings {
@@ -33,6 +70,7 @@ object ApiRoutes {
 
     object Admin {
         const val Settings = "$ApiPrefix/admin/settings"
+        const val Users = "$ApiPrefix/admin/users"
     }
 
     object Mobile {
