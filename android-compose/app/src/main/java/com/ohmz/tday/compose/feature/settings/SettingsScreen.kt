@@ -25,15 +25,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -68,6 +65,7 @@ import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -602,41 +600,38 @@ private fun ReminderSelector(
             }
         }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            ReminderOption.entries.forEach { option ->
-                val isSelected = option == selectedReminder
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = option.label,
-                            fontWeight = FontWeight.ExtraBold,
-                        )
-                    },
-                    onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK,
-                        )
-                        onReminderSelected(option)
-                        expanded = false
-                    },
-                    trailingIcon = if (isSelected) {
-                        {
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = colorScheme.secondary,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                )
-            }
+        if (expanded) {
+            TdayCenteredSelectorDialog(
+                title = "Default reminder",
+                options = ReminderOption.entries,
+                optionLabel = { option -> option.label },
+                optionSwatchColor = { option -> reminderSwatchColor(option) },
+                isSelected = { option -> option == selectedReminder },
+                onDismiss = { expanded = false },
+                onOptionSelected = { option ->
+                    ViewCompat.performHapticFeedback(
+                        view,
+                        HapticFeedbackConstantsCompat.CLOCK_TICK,
+                    )
+                    onReminderSelected(option)
+                    expanded = false
+                },
+            )
         }
+    }
+}
+
+private fun reminderSwatchColor(option: ReminderOption): Color {
+    return when (option) {
+        ReminderOption.NONE -> Color(0xFFB7BCC8)
+        ReminderOption.AT_TIME -> Color(0xFF6EA8E1)
+        ReminderOption.MINUTES_5 -> Color(0xFF7088C8)
+        ReminderOption.MINUTES_10 -> Color(0xFF7D67B6)
+        ReminderOption.MINUTES_15 -> Color(0xFFC7AA63)
+        ReminderOption.MINUTES_30 -> Color(0xFFD39A82)
+        ReminderOption.HOURS_1 -> Color(0xFF8DBB73)
+        ReminderOption.HOURS_2 -> Color(0xFF67AAA7)
+        ReminderOption.DAYS_1 -> Color(0xFF9A86CF)
+        ReminderOption.DAYS_2 -> Color(0xFFC98299)
     }
 }

@@ -260,76 +260,11 @@ struct CalendarScreen: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
-                animatedCalendarModeCard
-                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: CalendarModeCardMetrics.shadowBleed, trailing: TodoTimelineMetrics.horizontalPadding))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-
-            if let errorMessage = viewModel.errorMessage {
-                Section {
-                    ErrorRetryView(message: errorMessage) {
-                        Task { await viewModel.refresh() }
-                    }
-                    .listRowBackground(Color.clear)
-                }
-            }
-
-            Text("Tasks due \(selectedDateHeaderText)")
-                .font(.tdayRounded(size: 22, weight: .heavy))
-                .foregroundStyle(colors.onSurface)
-                .textCase(nil)
-                .listRowInsets(EdgeInsets(top: 8, leading: TodoTimelineMetrics.horizontalPadding, bottom: 4, trailing: TodoTimelineMetrics.horizontalPadding))
-                .timelinePinnedSectionHeaderBackground()
-
-            if !pendingItems.isEmpty {
-                VStack(spacing: CalendarTaskListMetrics.rowSpacing) {
-                    ForEach(pendingItems) { todo in
-                        CalendarPendingTaskRow(
-                            todo: todo,
-                            list: todo.listId.flatMap { listId in
-                                viewModel.lists.first(where: { $0.id == listId })
-                            },
-                            onComplete: {
-                                if openSwipeTaskID == todo.id {
-                                    openSwipeTaskID = nil
-                                }
-                                Task { await viewModel.complete(todo) }
-                            }
-                        )
-                        .opacity(draggedTodo?.id == todo.id && activeDropDate != nil ? 0.55 : 1)
-                        .background(colors.background)
-                        .modifier(
-                            CalendarInAppDragModifier(
-                                enabled: calendarTaskRescheduleEnabled,
-                                todo: todo,
-                                onStart: beginInAppDrag,
-                                onMove: updateInAppDrag,
-                                onEnd: finishInAppDrag,
-                                onCancel: cancelInAppDrag
-                            )
-                        )
-                        .todoTrailingSwipeActions(
-                            rowID: todo.id,
-                            openRowID: $openSwipeTaskID,
-                            onEdit: {
-                                editingTodo = todo
-                            },
-                            onDelete: {
-                                Task { await viewModel.delete(todo) }
-                            }
-                        )
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-                }
-                .animation(
-                    .spring(response: 0.34, dampingFraction: 0.9),
-                    value: pendingItems.map(\.id)
-                )
-                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                .listRowBackground(colors.background)
-                .listRowSeparator(.hidden)
-                .listSectionSeparator(.hidden)
+                calendarModeAndTaskSection
+                    .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                    .listRowBackground(colors.background)
+                    .listRowSeparator(.hidden)
+                    .listSectionSeparator(.hidden)
             }
         }
         .listRowBackground(colors.background)
@@ -465,6 +400,80 @@ struct CalendarScreen: View {
                 action: jumpToToday
             ),
         )
+    }
+
+    private var calendarModeAndTaskSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            animatedCalendarModeCard
+                .padding(.bottom, CalendarModeCardMetrics.shadowBleed)
+
+            if let errorMessage = viewModel.errorMessage {
+                ErrorRetryView(message: errorMessage) {
+                    Task { await viewModel.refresh() }
+                }
+                .padding(.bottom, 12)
+            }
+
+            Text("Tasks due \(selectedDateHeaderText)")
+                .font(.tdayRounded(size: 22, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .textCase(nil)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+
+            pendingTaskRows
+        }
+        .animation(calendarModeResizeAnimation, value: calendarCardHeight)
+    }
+
+    @ViewBuilder
+    private var pendingTaskRows: some View {
+        if !pendingItems.isEmpty {
+            VStack(spacing: CalendarTaskListMetrics.rowSpacing) {
+                ForEach(pendingItems) { todo in
+                    CalendarPendingTaskRow(
+                        todo: todo,
+                        list: todo.listId.flatMap { listId in
+                            viewModel.lists.first(where: { $0.id == listId })
+                        },
+                        onComplete: {
+                            if openSwipeTaskID == todo.id {
+                                openSwipeTaskID = nil
+                            }
+                            Task { await viewModel.complete(todo) }
+                        }
+                    )
+                    .opacity(draggedTodo?.id == todo.id && activeDropDate != nil ? 0.55 : 1)
+                    .background(colors.background)
+                    .modifier(
+                        CalendarInAppDragModifier(
+                            enabled: calendarTaskRescheduleEnabled,
+                            todo: todo,
+                            onStart: beginInAppDrag,
+                            onMove: updateInAppDrag,
+                            onEnd: finishInAppDrag,
+                            onCancel: cancelInAppDrag
+                        )
+                    )
+                    .todoTrailingSwipeActions(
+                        rowID: todo.id,
+                        openRowID: $openSwipeTaskID,
+                        onEdit: {
+                            editingTodo = todo
+                        },
+                        onDelete: {
+                            Task { await viewModel.delete(todo) }
+                        }
+                    )
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .animation(
+                .spring(response: 0.34, dampingFraction: 0.9),
+                value: pendingItems.map(\.id)
+            )
+        }
     }
 
     private var animatedCalendarModeCard: some View {
