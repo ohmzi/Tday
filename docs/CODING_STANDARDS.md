@@ -55,6 +55,14 @@ Some AI-assisted editors (Cursor, Copilot, etc.) **silently inject trailers** in
 - Replace repeated literals and thresholds with named constants close to their domain.
 - Keep files navigable. When a screen or service grows multiple independent concerns, split along feature, state, transport, validation, or rendering boundaries.
 
+### Durable Implementation
+
+- Build the smallest complete change that leaves the surrounding code easier to reason about.
+- Prefer steady, named structures over clever one-off shortcuts. A future contributor should be able to find the owner of a rule by following the domain names.
+- Keep special cases close to the feature that owns them, but do not let the same exception spread across platforms, services, or screens.
+- When a fix exposes messy structure, clean the part you touched enough that the next change has a clearer path.
+- Leave no ambiguous leftovers: remove dead code, stale comments, orphaned resources, and outdated docs in the same change that makes them obsolete.
+
 ### DRY — Extract Reusable Logic into Utilities
 
 If a piece of logic appears (or could appear) in more than one place, extract it into a utility function, hook, or extension. Duplicate code is a maintenance hazard — when the logic needs to change, every copy must be found and updated.
@@ -155,11 +163,11 @@ The app version is defined **once** in `tday-web/package.json`. Every other syst
 
 ### No Hardcoded Colors or Dimensions
 
-Colors and spacing/sizing values must come from the project's centralized design tokens — never as inline hex codes, raw pixel/dp literals, or arbitrary magic numbers.
+Colors and spacing/sizing values should be named and owned by the smallest sensible design layer. Shared product language belongs in shared tokens; feature-specific visual systems may keep narrow local constants when they describe one component or screen.
 
 - **Web**: Use Tailwind utility classes that map to CSS custom properties defined in `src/globals.css` (e.g., `bg-card`, `text-foreground`, `border-border`). Never write inline `style={{ color: "#2A6DC2" }}` or raw `hsl(...)` values. If a new semantic color is needed, add a CSS variable in `globals.css` under `:root` and `.dark`, map it in the `@theme inline` block, then use the Tailwind class.
-- **Android**: Use `MaterialTheme.colorScheme.*` for Material surfaces and text in Composables. If a reusable product color is not in the Material scheme, add it to the Android theme layer instead of a screen file: app-wide palette values live in `ui/theme/Color.kt`, while domain colors such as priority, list palette, root-feed, mode, and completed accents live in `ui/theme/TdaySemanticColors.kt`. Never write `Color(0xFF...)` directly in a screen or component file.
-- **Android dimensions**: Use the centralized `TdayDimens` object (`ui/theme/Dimens.kt`) for all spacing, sizing, corner radius, and elevation values. Never write raw `.dp` literals like `padding(18.dp)` directly in screens — use `TdayDimens.SpacingMd` or similar.
+- **Android**: Use `MaterialTheme.colorScheme.*` for Material surfaces and text in Composables. If a reusable product color is not in the Material scheme, add it to the Android theme layer instead of a screen file: app-wide palette values live in `ui/theme/Color.kt`, while domain colors such as priority, list palette, root-feed, mode, completed, and recurring-task accents live in `ui/theme/TdaySemanticColors.kt`. Feature-only illustration colors may stay as private named constants next to that illustration.
+- **Android dimensions**: Use `TdayDimens` (`ui/theme/Dimens.kt`) for shared spacing, sizing, corner radius, and elevation values. A screen or component may use private named `Dp` constants for local layout geometry, animation offsets, or illustration metrics. Do not scatter anonymous `.dp` literals through new UI; either use `TdayDimens` or name the value in the owning file.
 - **iOS**: Use `tdayColors`, `TdayTheme`, shared metrics, and feature-scoped constants that already belong to the local component. New repeated colors/metrics should move into `UI/Theme/` or a narrow shared component metrics type.
 
 ```kotlin
@@ -170,7 +178,10 @@ Card(
     modifier = Modifier.padding(TdayDimens.SpacingMd),
 )
 
-// Bad: hardcoded color and magic dimension
+// Also good: local metrics for one component's geometry
+private val EmptyStateIconSize = 86.dp
+
+// Bad: anonymous color and magic dimension in the render path
 Card(
     shape = RoundedCornerShape(18.dp),
     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
