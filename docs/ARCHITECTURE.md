@@ -77,7 +77,7 @@ The application is organized around these core domains:
 | **Floaters** | Unscheduled Anytime task CRUD, priorities, ordering | `Floater`, `CompletedFloater` |
 | **Lists** | Scheduled-task project grouping with colors and icons | `List` |
 | **Floater Lists** | Floater project grouping with colors and icons | `FloaterList` |
-| **Files** | S3-backed file storage | `File` |
+| **Files** | Reserved/legacy file metadata retained for cleanup paths; no active upload/download API | `File` |
 | **Preferences** | Sort/group/direction settings per user | `UserPreferences` |
 | **Admin** | App configuration, user management | `AppConfig` |
 | **Operations** | Cron jobs, event logging | `CronLog`, `eventLog` |
@@ -197,7 +197,7 @@ The primary error path uses the `AppError` sealed interface with `Either<AppErro
 - **React Router 7** with locale-prefixed URLs (`/:locale/app/*`)
 - **TanStack React Query 5** for server state
 - **Tailwind CSS 4** with Radix UI primitives (shadcn-style)
-- Native `fetch` API client with cookie-based auth
+- Shared `fetch` API client wrapper with cookie-based auth
 
 ### Directory Structure
 
@@ -232,7 +232,7 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 - `api.GET/POST/PATCH/DELETE` functions in `lib/api-client.ts` with `ApiError` typing
 - All HTTP calls (including auth and preferences) route through the shared API client
 - `credentials: "same-origin"` for cookie-based sessions
-- `Cache-Control: no-store` on all requests
+- Browser `fetch` cache mode set to `no-store` on all private API requests
 - Dev: Vite proxy forwards `/api` to `http://localhost:8080`
 - Production: Ktor serves the SPA as static files from `STATIC_FILES_DIR`
 
@@ -436,7 +436,7 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 ## Caching Strategy
 
-- **Web**: No application-level cache layer. API requests use `Cache-Control: no-store`. TanStack React Query provides client-side cache with 60-second stale time.
+- **Web**: No application-level persistence cache. The shared API client uses browser `fetch` with `cache: "no-store"` for private API requests. TanStack React Query provides in-memory client-side cache with 60-second stale time.
 - **Android**: Room-backed local cache for todos, floaters, lists, completed history, pending mutations, and sync metadata. Encrypted preferences still protect credentials, cookies, server config, trust data, theme/reminder preferences, and legacy cache migration input. Cache is the source of truth for screens; network sync updates it periodically, on foreground reconnect, realtime events, and user refresh in Server Mode.
 - **iOS**: SwiftData-backed local cache with mirrored `OfflineSyncState` records. Keychain-backed stores protect server config, cookies, credentials, mode state, theme, and reminders. Cache changes notify ViewModels and widget snapshot storage.
 

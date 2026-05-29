@@ -27,6 +27,7 @@ This document describes the durable and local data structures that define T'Day.
 | Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters. |
 | Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences. |
 | App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as AI summary availability. |
+| File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
 | Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
 
 ## Scheduling Rules
