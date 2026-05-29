@@ -5,9 +5,11 @@ This document covers everything a developer needs to know before writing code, o
 ## Table of Contents
 
 - [Development Setup](#development-setup)
+- [Product Direction](#product-direction)
 - [Branch Strategy](#branch-strategy)
 - [Commit Messages](#commit-messages)
 - [Pull Request Process](#pull-request-process)
+- [Documentation Expectations](#documentation-expectations)
 - [Coding Conventions](#coding-conventions)
 - [Linting and Formatting](#linting-and-formatting)
 - [Testing](#testing)
@@ -39,8 +41,15 @@ bash scripts/install-hooks.sh  # install git hooks (required, one-time)
 
 1. Open `android-compose/` in Android Studio.
 2. Ensure Android SDK 35 is installed.
-3. Set the server URL at first launch to point to your local or remote T'Day instance.
+3. Choose Local Mode for offline-only testing, or set the server URL at first launch to point to your local or remote T'Day instance.
 4. Run on emulator or physical device.
+
+### iOS (SwiftUI)
+
+1. Open `ios-swiftUI/TdayApp.xcodeproj` in Xcode.
+2. Select the `Tday` scheme.
+3. Run on an iOS 17+ simulator or physical device.
+4. Choose Local Mode for offline-only testing, or connect to a self-hosted server.
 
 ### Database
 
@@ -58,6 +67,17 @@ docker run -d --name tday_dev_db \
 docker compose up -d --build
 docker exec -it tday_ollama ollama pull qwen2.5:0.5b
 ```
+
+## Product Direction
+
+Read [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md) before changing product behavior. The short version:
+
+- T'Day is a quiet private planner with web, backend, Android, and iOS surfaces.
+- Mobile is local-first and cross-platform parity matters.
+- Scheduled `Todo` items and unscheduled `Floater` items are separate domain concepts.
+- Local Mode is a first-class Android/iOS workspace that does not require a server.
+- Server Mode writes optimistically to local cache and replays pending mutations to the backend.
+- Documentation should move with behavior, data shape, architecture, and verification changes.
 
 ## Branch Strategy
 
@@ -119,10 +139,12 @@ docs: add architecture decision record for offline sync
 2. Make your changes following [coding standards](docs/CODING_STANDARDS.md).
 3. Ensure lint passes: `cd tday-web && npm run lint`.
 4. Ensure tests pass: `cd tday-web && npm run test` and `./gradlew :tday-backend:test`.
-5. Open a PR against `develop` using the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
-6. Request review from at least one maintainer.
-7. Address all review comments.
-8. Squash-merge when approved.
+5. For Android changes, run `cd android-compose && ./gradlew :app:compileDebugKotlin` and targeted tests when practical.
+6. For iOS changes, run the `Tday` scheme build/test in Xcode or the `xcodebuild` command from [`docs/TESTING.md`](docs/TESTING.md).
+7. Open a PR against `develop` using the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
+8. Request review from at least one maintainer.
+9. Address all review comments.
+10. Squash-merge when approved.
 
 **CI enforcement:** PRs to `master` run lint and the full test suite automatically. The Docker image will **not** be built or released unless all tests pass. See [Deployment > Test-Before-Build Policy](docs/DEPLOYMENT.md#test-before-build-policy).
 
@@ -131,6 +153,7 @@ docs: add architecture decision record for offline sync
 - Aim for < 400 lines changed per PR.
 - Split large features into incremental PRs.
 - Refactoring PRs should not include behavior changes.
+- Cross-platform mobile changes should stay behaviorally paired even when implementation differs.
 
 ### Review Checklist (for reviewers)
 
@@ -139,12 +162,30 @@ docs: add architecture decision record for offline sync
 - [ ] Error handling covers failure paths.
 - [ ] New API endpoints follow [API guidelines](docs/API_GUIDELINES.md).
 - [ ] Database changes include a Flyway migration and are backward-compatible.
+- [ ] Shared DTO, Android Room, iOS SwiftData, and sync mappers are updated if the data shape changed.
 - [ ] Tests cover the happy path and at least one error path.
 - [ ] No console.log / Log.d left from debugging.
+
+## Documentation Expectations
+
+Documentation is part of the change when a future contributor would otherwise have to rediscover the rule.
+
+| Change | Docs to update |
+|--------|----------------|
+| Product surface, navigation, Local Mode, or cross-platform UX rule | `README.md`, `docs/PRODUCT_DIRECTION.md`, platform READMEs |
+| Backend table, shared DTO, local cache record, mutation kind | `docs/DATA_MODEL.md`, `docs/ARCHITECTURE.md`, `docs/API_GUIDELINES.md` |
+| Route or response contract | `docs/API_GUIDELINES.md`, shared models, tests |
+| Coding pattern or guardrail | `docs/CODING_STANDARDS.md`, guardrail tests |
+| Verification workflow or CI expectation | `docs/TESTING.md`, `.github/PULL_REQUEST_TEMPLATE.md` |
+| Deployment, versioning, signing, ingress, telemetry, security | The matching doc under `docs/`, `SECURITY.md`, or platform README |
+
+Use [`docs/REPO_HOUSEKEEPING.md`](docs/REPO_HOUSEKEEPING.md) for generated-file rules, markdown maintenance, and cleanup expectations.
 
 ## Coding Conventions
 
 See [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) for the full rules. Key highlights:
+
+Across all codebases, prefer readable, narrow units with explicit names and clear dependency direction. UI renders state, ViewModels/controllers coordinate, repositories/services own data work, and transport/storage details stay behind injected collaborators.
 
 ### TypeScript (Frontend)
 
@@ -160,6 +201,13 @@ See [`docs/CODING_STANDARDS.md`](docs/CODING_STANDARDS.md) for the full rules. K
 - All Android ViewModels use `@HiltViewModel` with constructor injection.
 - Use `runCatching` for operations that can fail.
 - Constants in `companion object` with `UPPER_SNAKE_CASE`.
+
+### Swift (iOS)
+
+- Use SwiftUI, Observation, SwiftData, URLSession, Keychain/cookie handling, and the existing `AppContainer` dependency graph.
+- Keep feature code in `ios-swiftUI/Tday/Feature/<Feature>/` and shared app logic in `Core/`.
+- Mirror product behavior with Android while keeping platform-native UI, gestures, and system integrations.
+- Update SwiftData entities and cache mappers whenever offline state changes.
 
 ## Linting and Formatting
 
@@ -212,6 +260,16 @@ npm run test                   # all Vitest suites
 - Tests go in `app/src/test/` (unit) and `app/src/androidTest/` (instrumented).
 - Test naming: `should <expected behavior> when <condition>`.
 
+### iOS
+
+```bash
+xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'
+```
+
+- Tests live in `ios-swiftUI/Tests/`.
+- Prefer focused tests for repository/cache mapping, sync behavior, and core helpers.
+- For UI polish without tests, build the app and do a simulator/device spot check when practical.
+
 ## Before Merging Checklist
 
 Every PR must satisfy these before merge:
@@ -219,13 +277,16 @@ Every PR must satisfy these before merge:
 - [ ] `cd tday-web && npm run lint` passes with no warnings.
 - [ ] `cd tday-web && npm run test` passes with no failures (including guardrail tests).
 - [ ] `./gradlew :tday-backend:test` passes with no failures.
+- [ ] Android build/tests run for Android changes, or the skip reason is documented.
+- [ ] iOS build/tests run for iOS changes, or the skip reason is documented.
 - [ ] CI pipeline passes (lint + tests are enforced automatically on PRs to `master`).
 - [ ] No secrets or credentials in the diff.
 - [ ] No AI tool attribution in commits or PR description — no `Co-authored-by`, `Made-with`, or any trailer/text referencing Cursor, Codex, Copilot, ChatGPT, Claude, etc.
 - [ ] Backward compatibility maintained (or migration provided).
 - [ ] Flyway migration SQL and corresponding Exposed table changes reviewed if schema changed.
+- [ ] Shared DTOs, Android Room, iOS SwiftData, and sync mappers reviewed if data shape changed.
 - [ ] Error handling and logging added where appropriate.
 - [ ] API changes documented in the PR description.
-- [ ] Android changes tested on emulator or device.
+- [ ] Android/iOS parity checked for mobile user-facing changes.
 
 **Note:** The release pipeline will not build or push a Docker image unless all tests pass. Broken tests block the entire release.

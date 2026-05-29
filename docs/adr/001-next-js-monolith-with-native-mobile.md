@@ -15,8 +15,9 @@ T'Day needs a web interface, REST API, real-time WebSocket support, and mobile c
 
 - Use **Ktor 3 (Netty)** as the backend API server, with **Koin** for DI and **Exposed** for database access.
 - Use **Vite + React 18 + TypeScript** as a standalone SPA (`tday-web/`), served as static files by the Ktor backend in production.
-- Use a **Kotlin Multiplatform `shared` module** for DTOs, enums, and validators consumed by the backend, Android, and iOS.
+- Use a **Kotlin Multiplatform `shared` module** for DTOs, enums, and validators consumed by the backend and Android, with iOS mirroring the contracts in Swift models and contract tests.
 - Build **native mobile clients**: Android (Kotlin + Jetpack Compose) and iOS (SwiftUI) that consume the same REST API.
+- Treat native mobile as local-first clients with Local Mode, optimistic Server Mode writes, and platform databases (Room on Android, SwiftData on iOS).
 - Package everything into a **single Docker image** via a multi-stage build (Node → Gradle → JRE).
 
 ## Rationale
@@ -24,11 +25,12 @@ T'Day needs a web interface, REST API, real-time WebSocket support, and mobile c
 - **Single deployment unit** — one container runs the JVM backend and serves the SPA static files. Simple infrastructure.
 - **KMP code sharing** — shared types eliminate model drift between backend and clients.
 - **Vite SPA** — fast HMR in development, simple static build for production. React Query handles server state efficiently.
-- **Native mobile** — better UX, offline support, and push notifications compared to a WebView wrapper.
+- **Native mobile** — better UX, Local Mode, offline support, reminders, widgets, and native gestures compared to a WebView wrapper.
 - **Ktor** — lightweight, coroutine-native, and well-suited for the project's scale.
 
 ## Consequences
 
 - **Positive**: Faster development with shared types, single-container deployment, independently deployable mobile clients, strong type safety end-to-end.
 - **Negative**: Scaling the API independently of the frontend requires refactoring. The API surface must remain stable for mobile clients.
+- **Documentation follow-up**: Mobile product/data decisions are tracked in ADR 005 and ADR 007.
 - **Accepted risk**: If traffic grows significantly, the backend may need horizontal scaling. Acceptable for a personal/small-team product.

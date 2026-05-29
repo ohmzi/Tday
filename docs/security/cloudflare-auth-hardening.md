@@ -2,6 +2,8 @@
 
 Use these edge rules in front of the Docker-hosted T'Day backend.
 
+This applies to Server Mode traffic. Local Mode mobile workspaces do not call the backend and are outside Cloudflare edge controls.
+
 ## Rate-limit rules
 
 1. Path: `/api/auth/callback/credentials`

@@ -16,6 +16,7 @@ T'Day offers AI-powered task summaries. Options for the AI backend:
 - Use **Ollama** as a local AI runtime, deployed as a Docker Compose service alongside the app.
 - Default model: `qwen2.5:0.5b` (small footprint, fast inference for task summaries).
 - Feature is globally toggleable via admin settings (`AppConfig.aiSummaryEnabled`).
+- Mobile clients read the server setting in Server Mode. Local Mode should not imply an Ollama dependency unless a future on-device/local integration is explicitly designed.
 
 ## Rationale
 

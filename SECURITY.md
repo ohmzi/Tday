@@ -1,5 +1,7 @@
 # Security Policy
 
+For product/data context, see [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md) and [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md). Security rules apply to Server Mode; Local Mode stays on-device unless a future explicit migration/import flow is designed.
+
 ## Reporting Vulnerabilities
 
 If you discover a security vulnerability, please report it privately. Do **not** open a public issue.
@@ -91,8 +93,11 @@ Every response includes (via `SecurityHeaders.kt`):
 
 ### Mobile Client Security
 
-- Server URL and credentials stored in Android `EncryptedSharedPreferences`.
-- Session cookies persist in an encrypted cookie store.
+- Android server URL and credentials are stored in `EncryptedSharedPreferences`.
+- iOS server config, credentials, cookies, and mode state are stored through Keychain-backed `SecureStore`.
+- Session cookies persist in encrypted platform stores.
+- Android task data is cached in Room; iOS task data is cached in SwiftData. Both caches are local app data and are cleared through logout/session invalidation flows where appropriate.
+- Local Mode does not send task/list/floater data to a server and should not silently migrate local-only data into Server Mode.
 - Optional public-key fingerprint pinning for self-hosted servers.
 - All local user data (credentials, cache, cookies) is wiped on logout or session invalidation.
 - Custom client headers (`X-Tday-Client`, `X-Tday-App-Version`, `X-Tday-Device-Id`) for audit trails.

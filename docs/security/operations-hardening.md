@@ -2,6 +2,8 @@
 
 Use this for self-hosted production deployments.
 
+These controls protect Server Mode infrastructure. Local Mode mobile data remains on-device unless a future explicit migration/import flow is designed.
+
 ## Secrets Management
 
 1. Store `AUTH_SECRET`, `DATABASE_URL`, `AUTH_CAPTCHA_SECRET`, and `AUTH_CREDENTIALS_PRIVATE_KEY` in a secret manager.
