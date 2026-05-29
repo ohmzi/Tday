@@ -41,6 +41,8 @@
     <string name="home_category_priority">Priority</string>
     <string name="home_category_completed">Completed</string>
     <string name="home_category_calendar">Calendar</string>
+    <string name="root_feed_tab_home">Home</string>
+    <string name="root_feed_tab_floater">Floater</string>
     <string name="home_search_placeholder">Search</string>
     <string name="home_search_no_results">No matching tasks</string>
     <string name="home_my_lists">My Lists</string>
