@@ -150,6 +150,27 @@ describe("TypeScript coding standards", () => {
       expect(violations).toEqual([]);
     });
   });
+
+  describe("no deep relative imports in source", () => {
+    it("should use the @/ alias instead of ../../ imports", () => {
+      const DEEP_RELATIVE_IMPORT =
+        /(?:from\s+|import\s*\(\s*)["']\.\.\/(?:\.\.\/)+/;
+      const violations: string[] = [];
+
+      for (const file of TS_FILES) {
+        const content = readSource(file);
+        const lines = content.split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (DEEP_RELATIVE_IMPORT.test(line)) {
+            violations.push(`${relPath(file)}:${i + 1} → ${line.trim()}`);
+          }
+        }
+      }
+
+      expect(violations).toEqual([]);
+    });
+  });
 });
 
 describe("Kotlin coding standards", () => {
