@@ -91,11 +91,12 @@ Tday/
 ├── tday-web/                  # Vite SPA (React + TypeScript + Tailwind)
 │   ├── src/
 │   │   ├── components/        # Shared React components
-│   │   ├── features/          # Feature modules (calendar, list, todos)
+│   │   ├── features/          # Feature modules (calendar, completed, list, release, today)
 │   │   ├── hooks/             # Shared React hooks
-│   │   ├── lib/               # Client utilities (security, dates, API client)
+│   │   ├── lib/               # Client utilities (security, dates, API, todo helpers)
 │   │   ├── pages/             # Route pages
-│   │   └── providers/         # React context providers
+│   │   ├── providers/         # React context providers
+│   │   └── types/             # Web-only TypeScript domain/UI types
 │   ├── messages/              # Bundled default locale fallback (`en.json`)
 │   ├── public/                # Static assets and lazy-loaded locale bundles
 │   └── tests/                 # Vitest guardrail and unit suites
@@ -112,9 +113,13 @@ Tday/
 │           ├── security/      # Auth, encryption, throttling
 │           └── services/      # Business logic
 ├── shared/                    # KMP DTOs, enums, validators, and route constants
-├── android-compose/           # Native Android client (Compose, Room, Hilt)
-├── ios-swiftUI/               # Native iOS client (SwiftUI, SwiftData, Observation)
+├── android-compose/           # Native Android client (Compose, Room, Hilt, Glance widget)
+├── ios-swiftUI/               # Native iOS client (SwiftUI, SwiftData, Observation, WidgetKit target)
+│   ├── Tday/                  # Main iOS app
+│   ├── TdayWidget/            # Widget target and snapshots
+│   └── Tests/                 # iOS test target
 ├── scripts/                   # Git hooks, version sync, operational helpers
+├── docker/                    # Container runtime helper config
 ├── docs/                      # Product, architecture, data, coding, testing, deployment
 ├── Dockerfile.backend         # Multi-stage Docker build (Vite + Ktor)
 └── docker-compose.yaml        # Full stack orchestration
