@@ -247,6 +247,7 @@
     <string name="offline_banner_pending_one">1 change waiting to sync</string>
     <string name="offline_banner_pending_many">%1$d changes waiting to sync</string>
     <string name="error_auth_expired">Session expired. Please sign in again.</string>
+    <string name="error_app_outdated">This version of the app is out of date. Please update to continue.</string>
     <string name="error_server">Server error. Please try again later.</string>
     <string name="error_connectivity_title">No Internet Connection</string>
     <string name="error_connectivity">Unable to connect. Please check your network connection and try again.</string>
