@@ -131,7 +131,8 @@ The **single source of truth** for the app version is `tday-web/package.json`. A
 
 - **CI/CD**: Reads `tday-web/package.json` → Docker image tags (`:v1.6.0`, `:latest`), Git tags, GitHub releases.
 - **Android**: `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and computed `versionCode`.
-- **iOS**: A `postversion` npm hook runs `scripts/sync-ios-version.sh`, which writes the version into `ios-swiftUI/Tday/Info.plist` and stages the change automatically.
+- **iOS**: A `postversion` npm hook runs `scripts/sync-ios-version.sh`, which mirrors the version into `ios-swiftUI/Tday/Info.plist`, Xcode project metadata, and `project.yml`, then stages those files automatically.
+- **Backend compatibility templates**: The same sync script mirrors the package version into `.env.example` and `tday-backend/.env.example`. Live deployment env files such as `.env.docker` stay operator-owned and must be updated deliberately when the server should require a new app version.
 - **Runtime**: Android sends `BuildConfig.VERSION_NAME` and iOS sends `CFBundleShortVersionString` in the `X-Tday-App-Version` HTTP header.
 
 To bump the version before merging to `master`:
@@ -143,9 +144,9 @@ npm version minor   # 1.6.0 → 1.7.0
 npm version major   # 1.6.0 → 2.0.0
 ```
 
-The `postversion` hook syncs the iOS `Info.plist` and stages it, so the version-bump commit includes the plist change.
+The `postversion` hook syncs the iOS metadata and backend compatibility templates, then stages those files so the version-bump commit includes every checked-in mirror.
 
-**Never** set version numbers directly in `build.gradle.kts` or any other file. Edit only `tday-web/package.json`.
+**Never** set release version numbers directly in `build.gradle.kts`, iOS project files, or example env templates. Edit only `tday-web/package.json` for a version bump and let the sync hook update the mirrors.
 
 ### Version Reference
 
@@ -172,6 +173,7 @@ Every file that contains or controls a version number, grouped by platform.
 | File | What | Notes |
 |------|------|-------|
 | `ios-swiftUI/Tday/Info.plist` (`CFBundleShortVersionString`) | Marketing version (e.g. `1.21.0`) | Auto-synced by `scripts/sync-ios-version.sh` on `npm version`. |
+| `ios-swiftUI/project.yml` / `TdayApp.xcodeproj/project.pbxproj` (`MARKETING_VERSION`) | Xcode project metadata | Auto-synced by `scripts/sync-ios-version.sh` on `npm version`; keep both aligned when regenerating the project. |
 | `ios-swiftUI/Tday/Info.plist` (`CFBundleVersion`) | Build number | Incremented manually for App Store submissions. |
 | `ios-swiftUI/.../SentryConfiguration.swift` | Sentry release (`tday-ios@<version>`) | Uses `CFBundleShortVersionString`. |
 
@@ -191,11 +193,11 @@ Local Mode does not require this probe. Server Mode Android and iOS clients use 
 | File | Purpose | Notes |
 |------|---------|-------|
 | `.env.docker` | **Live value** used by the running Docker container | This is the file that actually controls what the server reports. Update here and recreate the container to take effect. |
-| `.env.example` | Template for new deployments (project root) | Keep in sync with `.env.docker` when bumping. |
-| `tday-backend/.env.example` | Template for local backend development | Keep in sync with `.env.docker` when bumping. |
+| `.env.example` | Template for new deployments (project root) | Auto-synced to the package version; copy the value into live env files when that version should be required. |
+| `tday-backend/.env.example` | Template for local backend development | Auto-synced to the package version; copy the value into live env files when that version should be required. |
 | `tday-backend/.../AppConfig.kt` (`probeAppVersion`) | Reads `TDAY_APP_VERSION` at startup | No hardcoded version; purely env-driven. |
 
-**Updating `TDAY_APP_VERSION`:** After releasing a new app version, update the value in `.env.docker` (and the two `.env.example` files) to match the newly released version, then recreate the backend container:
+**Updating live `TDAY_APP_VERSION`:** After releasing a new app version, update the value in `.env.docker` to match the newly released version, then recreate the backend container:
 
 ```bash
 # After editing .env.docker
@@ -217,7 +219,7 @@ Distributable Android release builds must use the same release keystore every ti
 
 - The iOS app uses `ios-swiftUI/TdayApp.xcodeproj`, automatic signing, and the `Tday` scheme.
 - `/.well-known/apple-app-site-association` is served by the backend for webcredentials/deep-link support.
-- `CFBundleShortVersionString` is synced from `tday-web/package.json` by `scripts/sync-ios-version.sh` during `npm version`.
+- `CFBundleShortVersionString`, iOS `MARKETING_VERSION`, and example `TDAY_APP_VERSION` values are synced from `tday-web/package.json` by `scripts/sync-ios-version.sh` during `npm version`.
 - `CFBundleVersion` remains the App Store build number and is incremented manually when needed.
 
 ## Configuration
