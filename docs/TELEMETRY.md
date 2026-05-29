@@ -4,6 +4,8 @@ T'Day uses [Sentry](https://sentry.io) for crash reporting and performance
 monitoring across all four platforms (backend, web, Android, iOS). This document
 explains exactly what is collected, what is not, and why.
 
+Telemetry is crash/performance reporting only. It is not a product analytics system and it does not change the Local Mode data boundary described in [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md).
+
 ## TL;DR
 
 - Sentry tells us **when the app crashes and where in the code it happened**.
@@ -37,6 +39,7 @@ The following data is **never** sent to Sentry:
 | Excluded Data | How It's Enforced |
 |---------------|-------------------|
 | Task titles, descriptions, notes, or any user content | Sentry only receives stack traces and HTTP metadata — request/response bodies are never attached |
+| Local Mode task/list/floater content | Local Mode data remains on-device; crash reports do not include local cache records |
 | Email addresses, usernames, display names | `sendDefaultPii = false` on every SDK; `beforeSend` callback strips any residual user fields |
 | IP addresses | Explicitly nulled in every `beforeSend` callback across all four platforms |
 | Cookies, auth tokens, session IDs | `sendDefaultPii = false` prevents header capture; sensitive headers are never attached |
@@ -90,6 +93,8 @@ The relevant code paths:
 - Android: `TdayApplication.kt` → `SentryAndroid.init { ... }`
 - Web: `main.tsx` → `Sentry.init({ ... })`
 - iOS: `SentryConfiguration.swift` → `SentrySDK.start { ... }`
+
+When adding a new Sentry breadcrumb, tag, or transaction name, keep it structural: route names, screen names, status codes, durations, and release versions are allowed; user-created task/list/floater text is not.
 
 ## Self-Hosted Users
 

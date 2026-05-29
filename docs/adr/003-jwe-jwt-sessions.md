@@ -25,6 +25,7 @@ Options considered:
 - Implement **token versioning** (`tokenVersion` on User model) for server-side revocation.
 - Support **credential envelope encryption** for enhanced credential transit security (RSA).
 - Use authjs-compatible cookie names (`__Secure-authjs.session-token` in production, `authjs.session-token` otherwise) for browser and mobile session delivery.
+- Local Mode on mobile does not create a server session and must not require JWE cookies.
 
 ## Rationale
 
@@ -33,6 +34,7 @@ Options considered:
 - The Ktor pipeline intercept validates every request by checking `tokenVersion`, expiry, role, and approval status against the database — providing near-real-time enforcement.
 - Credential envelope encryption (optional RSA) adds defense-in-depth for credential transit.
 - Cookie-based session delivery works for both the web SPA and mobile clients (which implement the CSRF + callback flow).
+- Local Mode is intentionally outside the auth system; it protects user expectations by keeping local-only data on-device.
 - Using Nimbus JOSE JWT + BouncyCastle gives full control over token format, encryption algorithm, and key management.
 
 ## Consequences

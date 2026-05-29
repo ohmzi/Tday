@@ -2,6 +2,8 @@
 
 Self-hosted VPN using a relay VPS. You run WireGuard on both a small public VPS and the T'Day server — devices connect to the VPS and route traffic through the VPN to reach T'Day. Full control, no third-party dependencies.
 
+This guide is only needed for Server Mode. Local Mode on Android and iOS works without remote access.
+
 ## Overview
 
 | | |

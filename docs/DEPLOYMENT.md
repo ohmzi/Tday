@@ -1,6 +1,6 @@
 # Deployment
 
-How T'Day is built, deployed, and operated in production.
+How T'Day is built, deployed, and operated in production. Product direction and data boundaries are documented in [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) and [`DATA_MODEL.md`](DATA_MODEL.md).
 
 ## Environments
 
@@ -8,6 +8,8 @@ How T'Day is built, deployed, and operated in production.
 |-------------|--------|-----|------------|
 | Production | `master` | `tday.ohmz.cloud` | Auto via GitHub Actions → Docker image to GHCR |
 | Development | `develop` | Local only | `docker compose up` or local dev servers |
+
+Mobile clients can also run in Local Mode without a deployed backend. Deployment work affects Server Mode, remote access, app compatibility checks, and server-backed sync.
 
 ## Docker
 
@@ -184,6 +186,8 @@ Every file that contains or controls a version number, grouped by platform.
 
 The `TDAY_APP_VERSION` environment variable tells the backend which app version it is compatible with. When `TDAY_UPDATE_REQUIRED=true`, clients that connect with a different version are shown an "Update Required" or "Server Update Needed" screen.
 
+Local Mode does not require this probe. Server Mode Android and iOS clients use `/api/mobile/probe` plus the `X-Tday-App-Version` header to decide whether the installed app and server can safely sync.
+
 | File | Purpose | Notes |
 |------|---------|-------|
 | `.env.docker` | **Live value** used by the running Docker container | This is the file that actually controls what the server reports. Update here and recreate the container to take effect. |
@@ -208,6 +212,13 @@ Distributable Android release builds must use the same release keystore every ti
 - For a local-only build that is not meant to update an existing release-signed install, you can opt in explicitly with `-PallowDebugSignedRelease=true`.
 - The Android app can download a release APK in-app and hand it directly to the system installer. The first sideloaded update still requires enabling "Install unknown apps" for T'Day in Android settings.
 - Historical note: GitHub Android APKs published before the stable signing fix on April 1, 2026 may have been signed with ephemeral debug certificates from CI runners. Devices on one of those installs must uninstall once and reinstall `v1.8.1` or newer before sideloaded updates will work again.
+
+### iOS Signing and Associated Domains
+
+- The iOS app uses `ios-swiftUI/TdayApp.xcodeproj`, automatic signing, and the `Tday` scheme.
+- `/.well-known/apple-app-site-association` is served by the backend for webcredentials/deep-link support.
+- `CFBundleShortVersionString` is synced from `tday-web/package.json` by `scripts/sync-ios-version.sh` during `npm version`.
+- `CFBundleVersion` remains the App Store build number and is incremented manually when needed.
 
 ## Configuration
 
