@@ -18,7 +18,7 @@ enum RootFeedTab: Hashable {
         case .home:
             return "house.fill"
         case .floater:
-            return "tray.full.fill"
+            return "circle.dotted"
         }
     }
 }
@@ -82,6 +82,7 @@ struct RootFeedDock: View {
 
                     ForEach(Array(tabs.enumerated()), id: \.element) { index, tab in
                         let selected = tab == activeTab
+                        let foregroundColor = selected ? colors.onSurface : colors.onSurfaceVariant.opacity(0.82)
                         let expandedX = CGFloat(index) * tabWidth
                         let hiddenX = index < activeIndex ? -tabWidth : innerWidth
                         let tabX = selected ? selectorX : (isExpanded ? expandedX : hiddenX)
@@ -93,16 +94,35 @@ struct RootFeedDock: View {
                                 onSelect(tab)
                             }
                         } label: {
-                            Text(tab.title)
-                                .font(.tdayRounded(size: 13, weight: selected ? .black : .bold))
-                                .foregroundStyle(selected ? colors.onSurface : colors.onSurfaceVariant.opacity(0.82))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.82)
-                                .frame(width: tabWidth, height: innerHeight)
-                                .contentShape(RoundedRectangle(cornerRadius: RootFeedDockMetrics.selectorCornerRadius, style: .continuous))
+                            ZStack {
+                                Group {
+                                    if tab == .floater {
+                                        RootFeedFloaterIcon(color: foregroundColor)
+                                            .frame(width: 22, height: 22)
+                                    } else {
+                                        Image(systemName: tab.systemImage)
+                                            .font(.system(size: 18, weight: selected ? .black : .bold, design: .rounded))
+                                            .symbolRenderingMode(.hierarchical)
+                                            .foregroundStyle(foregroundColor)
+                                    }
+                                }
+                                    .opacity(selected && !isExpanded ? 1 : 0)
+                                    .scaleEffect(isExpanded ? 0.92 : 1)
+
+                                Text(tab.title)
+                                    .font(.tdayRounded(size: 13, weight: selected ? .black : .bold))
+                                    .foregroundStyle(foregroundColor)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.82)
+                                    .opacity(isExpanded ? 1 : 0)
+                                    .scaleEffect(isExpanded ? 1 : 0.94)
+                            }
+                            .frame(width: tabWidth, height: innerHeight)
+                            .contentShape(RoundedRectangle(cornerRadius: RootFeedDockMetrics.selectorCornerRadius, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         .disabled(!isExpanded && !selected)
+                        .accessibilityLabel(Text(tab.title))
                         .opacity(selected ? 1 : (isExpanded ? 1 : 0))
                         .frame(width: tabWidth, height: innerHeight)
                         .offset(x: tabX)
@@ -134,11 +154,42 @@ struct RootFeedDock: View {
     }
 }
 
+private struct RootFeedFloaterIcon: View {
+    let color: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            let side = min(proxy.size.width, proxy.size.height)
+            let scale = side / 24
+
+            ZStack {
+                Circle()
+                    .fill(color)
+                    .frame(width: 6.4 * scale, height: 6.4 * scale)
+                    .position(x: 7.2 * scale, y: 14.4 * scale)
+
+                Circle()
+                    .fill(color)
+                    .frame(width: 4.0 * scale, height: 4.0 * scale)
+                    .position(x: 14.8 * scale, y: 18.0 * scale)
+
+                Circle()
+                    .fill(color)
+                    .frame(width: 9.6 * scale, height: 9.6 * scale)
+                    .position(x: 15.2 * scale, y: 8.8 * scale)
+            }
+            .frame(width: side, height: side)
+            .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+        }
+        .aspectRatio(1, contentMode: .fit)
+    }
+}
+
 private enum RootFeedDockMetrics {
-    static let collapsedWidth: CGFloat = 112
     static let height: CGFloat = 52
+    static let collapsedWidth: CGFloat = height
     static let innerPadding: CGFloat = 5
-    static let tabWidth: CGFloat = collapsedWidth - (innerPadding * 2)
+    static let tabWidth: CGFloat = 102
     static let expandedWidth: CGFloat = (tabWidth * 2) + (innerPadding * 2)
     static let cornerRadius: CGFloat = 22
     static let selectorCornerRadius: CGFloat = 18
