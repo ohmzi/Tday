@@ -24,7 +24,7 @@ async function patchTodo({ todo }: { todo: TodoItemTypeWithDateChecksum }) {
     listID: todo.listID ?? null,
   });
   if (!parsedObj.success) {
-    console.log(parsedObj.error.errors[0]);
+    console.warn(parsedObj.error.errors[0]);
     return;
   }
   const dateChanged =
