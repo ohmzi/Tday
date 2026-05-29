@@ -46,7 +46,7 @@ fun Route.completedTodoRoutes() {
                 val due = body.due
                 if (due != null) {
                     if (due.isBlank()) {
-                        fields["due"] = null
+                        return@withAuth Either.Left(AppError.BadRequest("due is required"))
                     } else {
                         val parsed = parseTodoDateTime(due)
                             ?: return@withAuth Either.Left(

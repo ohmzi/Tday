@@ -12,7 +12,7 @@ enum class TodoListMode {
     SCHEDULED,
     ALL,
     PRIORITY,
-    ANYTIME,
+    FLOATER,
     LIST,
 }
 
@@ -59,7 +59,7 @@ fun TodoListMode.supportsTaskReschedule(): Boolean {
         TodoListMode.LIST,
             -> true
 
-        TodoListMode.ANYTIME,
+        TodoListMode.FLOATER,
         TodoListMode.TODAY,
         TodoListMode.OVERDUE,
             -> false
@@ -146,7 +146,7 @@ data class DashboardSummary(
     val scheduledCount: Int,
     val allCount: Int,
     val priorityCount: Int,
-    val anytimeCount: Int,
+    val floaterCount: Int,
     val completedCount: Int,
     val lists: List<ListSummary>,
 )

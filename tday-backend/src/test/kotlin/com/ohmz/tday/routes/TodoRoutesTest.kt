@@ -67,7 +67,7 @@ class TodoRoutesTest {
     }
 
     @Test
-    fun `create todo allows missing due date`() = testApplication {
+    fun `create todo rejects blank due date`() = testApplication {
         val todoService = RecordingTodoService()
 
         application {
@@ -76,23 +76,17 @@ class TodoRoutesTest {
 
         val response = client.post("/api/todo") {
             contentType(ContentType.Application.Json)
-            setBody(
-                json.encodeToString(
-                    CreateTodoRequest(
-                        title = "Anytime task",
-                        description = null,
-                        priority = "Low",
-                    ),
-                ),
-            )
+            setBody("""{"title":"Floater belongs elsewhere","description":null,"priority":"Low","due":""}""")
         }
 
-        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("due is required", payload.getValue("message").jsonPrimitive.content)
         assertNull(todoService.lastCreateDue)
     }
 
     @Test
-    fun `create todo requires due date for recurring tasks`() = testApplication {
+    fun `create todo rejects recurring task with blank due date`() = testApplication {
         val todoService = RecordingTodoService()
 
         application {
@@ -102,21 +96,22 @@ class TodoRoutesTest {
         val response = client.post("/api/todo") {
             contentType(ContentType.Application.Json)
             setBody(
-                json.encodeToString(
-                    CreateTodoRequest(
-                        title = "Repeating task",
-                        description = null,
-                        priority = "Low",
-                        rrule = "RRULE:FREQ=DAILY;INTERVAL=1",
-                    ),
-                ),
+                """
+                    {
+                      "title": "Repeating task",
+                      "description": null,
+                      "priority": "Low",
+                      "due": "",
+                      "rrule": "RRULE:FREQ=DAILY;INTERVAL=1"
+                    }
+                """.trimIndent(),
             )
         }
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
         val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
         assertEquals(
-            "due is required for recurring tasks",
+            "due is required",
             payload.getValue("message").jsonPrimitive.content,
         )
         assertNull(todoService.lastCreateDue)
@@ -154,7 +149,7 @@ class TodoRoutesTest {
     }
 
     @Test
-    fun `patch todo clears due and repeat when dateChanged true and due is missing`() = testApplication {
+    fun `patch todo rejects due clear when dateChanged true and due is missing`() = testApplication {
         val todoService = RecordingTodoService()
 
         application {
@@ -173,12 +168,10 @@ class TodoRoutesTest {
             )
         }
 
-        assertEquals(HttpStatusCode.OK, response.status)
-        val fields = todoService.lastUpdateFields ?: error("expected update fields")
-        assertTrue(fields.containsKey("due"))
-        assertNull(fields["due"])
-        assertTrue(fields.containsKey("rrule"))
-        assertNull(fields["rrule"])
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("due is required", payload.getValue("message").jsonPrimitive.content)
+        assertNull(todoService.lastUpdateFields)
     }
 
     @Test
@@ -207,7 +200,7 @@ class TodoRoutesTest {
         assertEquals(HttpStatusCode.BadRequest, response.status)
         val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
         assertEquals(
-            "due is required for recurring tasks",
+            "due is required",
             payload.getValue("message").jsonPrimitive.content,
         )
         assertNull(todoService.lastUpdateFields)
@@ -258,7 +251,7 @@ class TodoRoutesTest {
             title: String,
             description: String?,
             priority: String,
-            due: LocalDateTime?,
+            due: LocalDateTime,
             rrule: String?,
             listID: String?,
         ): Either<com.ohmz.tday.domain.AppError, TodoResponse> {
@@ -268,7 +261,7 @@ class TodoRoutesTest {
                 title = title,
                 description = description,
                 priority = priority,
-                due = due?.toString(),
+                due = due.toString(),
                 listID = listID,
                 completed = false,
                 pinned = false,

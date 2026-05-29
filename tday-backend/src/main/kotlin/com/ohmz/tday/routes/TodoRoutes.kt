@@ -24,7 +24,7 @@ private const val MSG = "message"
 private const val TODOS = "todos"
 private const val SUMMARY = "summary"
 private const val ERR_INVALID_DUE = "due must be a valid ISO-8601 datetime"
-private const val ERR_RECURRING_REQUIRES_DUE = "due is required for recurring tasks"
+private const val ERR_DUE_REQUIRED = "due is required"
 private const val ERR_INVALID_INSTANCE_DATE = "instanceDate must be a valid ISO-8601 datetime"
 
 fun Route.todoRoutes() {
@@ -51,13 +51,13 @@ private fun Route.todoCreateRoute(todoService: TodoService) {
                 val body = call.receive<TodoCreateRequest>()
                 validateCreateTodo.validateOrFail(body).bind()
                 val due = parseTodoDateTime(body.due)
-                if (!body.due.isNullOrBlank() && due == null) {
+                if (body.due.isBlank()) {
+                    raise(AppError.BadRequest(ERR_DUE_REQUIRED))
+                }
+                if (due == null) {
                     raise(AppError.BadRequest(ERR_INVALID_DUE))
                 }
                 val rrule = body.rrule?.takeIf { it.isNotBlank() }
-                if (rrule != null && due == null) {
-                    raise(AppError.BadRequest(ERR_RECURRING_REQUIRES_DUE))
-                }
                 val todo = todoService.create(user.id, body.title, body.description, body.priority, due, rrule, body.listID).bind()
                 CreateTodoResponse(message = "todo created", todo = todo)
             }
@@ -100,13 +100,9 @@ private fun Route.todoPatchRoute(todoService: TodoService) {
                 body.pinned?.let { fields["pinned"] = it }
                 body.completed?.let { fields["completed"] = it }
                 val requestedRrule = body.rrule?.takeIf { it.isNotBlank() }
-                if (body.dateChanged == true && body.due.isNullOrBlank() && requestedRrule != null) {
-                    raise(AppError.BadRequest(ERR_RECURRING_REQUIRES_DUE))
-                }
                 if (body.dateChanged == true) {
                     if (body.due.isNullOrBlank()) {
-                        fields["due"] = null
-                        fields["rrule"] = null
+                        raise(AppError.BadRequest(ERR_DUE_REQUIRED))
                     } else {
                         val parsed = parseTodoDateTime(body.due)
                             ?: raise(AppError.BadRequest(ERR_INVALID_DUE))

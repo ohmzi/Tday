@@ -236,7 +236,7 @@ fun HomeScreen(
     onOpenPriority: () -> Unit,
     onOpenCompleted: () -> Unit,
     onOpenCalendar: () -> Unit,
-    onOpenAnytime: () -> Unit,
+    onOpenFloater: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTaskFromSearch: (todoId: String) -> Unit,
     onOpenList: (listId: String, listName: String) -> Unit,
@@ -647,12 +647,7 @@ fun HomeScreen(
                                                 .semantics(mergeDescendants = true) {}
                                                 .heightIn(min = 48.dp)
                                                 .clickable {
-                                                    if (todo.due == null) {
-                                                        closeSearch()
-                                                        onOpenAnytime()
-                                                    } else {
-                                                        openTaskFromSearch(todo.id)
-                                                    }
+                                                    openTaskFromSearch(todo.id)
                                                 }
                                                 .padding(horizontal = 12.dp, vertical = 9.dp),
                                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -675,7 +670,7 @@ fun HomeScreen(
                                                 )
                                                 Text(
                                                     text = todo.due?.let(dueFormatter::format)
-                                                        ?: "Anytime",
+                                                        .orEmpty(),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.onSurfaceVariant,
                                                     maxLines = 1,
@@ -713,9 +708,9 @@ fun HomeScreen(
                     activeTab = RootFeedTab.HOME,
                     collapsed = dockCollapsed,
                     onTabSelected = { tab ->
-                        if (tab == RootFeedTab.ANYTIME) {
+                        if (tab == RootFeedTab.FLOATER) {
                             closeSearch()
-                            onOpenAnytime()
+                            onOpenFloater()
                         }
                     },
                     modifier = Modifier
@@ -1691,7 +1686,7 @@ private fun HomeTodayTaskRow(
         label = "homeTodayTitleStrikeProgress",
     )
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
-    val dueText = todo.due?.let(HOME_TODAY_DUE_FORMATTER::format) ?: "Anytime"
+    val dueText = todo.due?.let(HOME_TODAY_DUE_FORMATTER::format).orEmpty()
     val rowShape = RoundedCornerShape(16.dp)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val listIndicatorColor = listColorAccent(listMeta?.color)

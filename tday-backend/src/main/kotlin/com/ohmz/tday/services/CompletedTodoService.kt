@@ -68,7 +68,7 @@ class CompletedTodoServiceImpl(
                     stmt[CompletedTodos.description] = fieldEncryption.encryptIfSensitive("description", it as? String)
                 }
                 fields["priority"]?.let { stmt[CompletedTodos.priority] = Priority.valueOf(it as String) }
-                if (fields.containsKey("due")) stmt[CompletedTodos.due] = fields["due"] as? LocalDateTime
+                (fields["due"] as? LocalDateTime)?.let { stmt[CompletedTodos.due] = it }
                 if (fields.containsKey("rrule")) stmt[CompletedTodos.rrule] = fields["rrule"] as? String
                 fields["listID"]?.let { listId ->
                     stmt[CompletedTodos.listID] = listId as? String
@@ -88,7 +88,7 @@ class CompletedTodoServiceImpl(
         description = fieldEncryption.decryptIfEncrypted(this[CompletedTodos.description]),
         priority = this[CompletedTodos.priority].name,
         completedAt = this[CompletedTodos.completedAt].toString(),
-        due = this[CompletedTodos.due]?.toString(),
+        due = this[CompletedTodos.due].toString(),
         completedOnTime = this[CompletedTodos.completedOnTime],
         daysToComplete = this[CompletedTodos.daysToComplete].toDouble(),
         rrule = this[CompletedTodos.rrule],

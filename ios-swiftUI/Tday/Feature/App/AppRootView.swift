@@ -47,20 +47,26 @@ struct AppRootView: View {
                                 ) { route in
                                     handleRoute(route)
                                 }
-                            case .anytime:
+                            case .floater:
                                 TodoListScreen(
                                     container: container,
-                                    mode: .anytime,
+                                    mode: .floater,
                                     listId: nil,
                                     listName: nil,
                                     highlightedTodoId: nil,
-                                    rootFeedTab: .anytime,
+                                    rootFeedTab: .floater,
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
                                     usesRootFeedHeader: true,
                                     createTaskRequestID: rootCreateTaskRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
-                                    onRootControlsVisibleChange: { rootControlsVisible = $0 }
+                                    onRootControlsVisibleChange: { rootControlsVisible = $0 },
+                                    onOpenFloaterList: { listId, listName in
+                                        handleRoute(.floaterListTodos(listId: listId, listName: listName))
+                                    },
+                                    onOpenSettings: {
+                                        handleRoute(.settings)
+                                    }
                                 )
                             }
 
@@ -93,13 +99,22 @@ struct AppRootView: View {
                             TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId)
                         case .priorityTodos:
                             TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil)
-                        case .anytimeTodos:
+                        case .floaterTodos:
                             Color.clear
                                 .navigationBarBackButtonHidden(true)
                                 .toolbar(.hidden, for: .navigationBar)
                                 .onAppear {
-                                    selectRootFeedTab(.anytime)
+                                    selectRootFeedTab(.floater)
                                 }
+                        case let .floaterListTodos(listId, listName):
+                            TodoListScreen(
+                                container: container,
+                                mode: .floater,
+                                listId: listId,
+                                listName: listName,
+                                highlightedTodoId: nil,
+                                usesRootFeedHeader: true
+                            )
                         case let .listTodos(listId, listName):
                             TodoListScreen(
                                 container: container,
@@ -241,8 +256,8 @@ struct AppRootView: View {
         switch route {
         case .home:
             selectRootFeedTab(.home)
-        case .anytimeTodos:
-            selectRootFeedTab(.anytime)
+        case .floaterTodos:
+            selectRootFeedTab(.floater)
         default:
             appViewModel.navigate(to: route)
         }
@@ -342,8 +357,8 @@ private extension AppRoute {
         switch self {
         case .home:
             return .home
-        case .anytimeTodos:
-            return .anytime
+        case .floaterTodos:
+            return .floater
         default:
             return nil
         }
