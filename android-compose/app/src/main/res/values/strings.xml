@@ -19,7 +19,9 @@
     <string name="action_more">More</string>
     <string name="action_more_options">More options</string>
     <string name="action_save">Save</string>
+    <string name="action_save_task">Save task</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_done">Done</string>
     <string name="action_create">Create</string>
     <string name="action_ok">OK</string>
     <string name="action_sign_out">Sign out</string>
@@ -143,6 +145,32 @@
     <string name="todos_delete_list_message">This will delete this list, every task in it, and completed history for those tasks.</string>
     <string name="todos_due_overdue_text">Overdue, %1$s</string>
     <string name="todos_due_text">Due %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">New task</string>
+    <string name="create_task_title_edit">Edit task</string>
+    <string name="create_task_section_schedule">Schedule</string>
+    <string name="create_task_due">Due</string>
+    <string name="create_task_section_details">Details</string>
+    <string name="create_task_list">List</string>
+    <string name="create_task_no_list">No list</string>
+    <string name="create_task_priority">Priority</string>
+    <string name="create_task_priority_low">Low</string>
+    <string name="create_task_priority_medium">Medium</string>
+    <string name="create_task_priority_high">High</string>
+    <string name="create_task_repeat">Repeat</string>
+    <string name="create_task_repeat_none">No repeat</string>
+    <string name="create_task_repeat_daily">Daily</string>
+    <string name="create_task_repeat_weekly">Weekly</string>
+    <string name="create_task_repeat_weekdays">Weekdays</string>
+    <string name="create_task_repeat_monthly">Monthly</string>
+    <string name="create_task_repeat_yearly">Yearly</string>
+    <string name="create_task_title_placeholder">Title</string>
+    <string name="create_task_notes_placeholder">Notes</string>
+    <string name="create_task_schedule_enabled">Task has a due date</string>
+    <string name="create_task_schedule_disabled">Floater task</string>
+    <string name="create_task_select_date">Select date</string>
+    <string name="create_task_select_time">Select time</string>
 
     <!-- Completed screen -->
     <string name="completed_title">Completed</string>
