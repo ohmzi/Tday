@@ -327,10 +327,10 @@ struct CreateTaskSheet: View {
                     activeSelector = nil
                 }
 
-            CreateTaskSheetSelectorCard(title: selector.title) {
+            TdayCenteredSelectorCard(title: selector.title) {
                 switch selector {
                 case .list:
-                    CreateTaskSheetSelectorRow(
+                    TdayCenteredSelectorRow(
                         title: "No list",
                         swatchColor: colors.onSurfaceVariant.opacity(0.35),
                         selected: selectedListID == nil
@@ -341,7 +341,7 @@ struct CreateTaskSheet: View {
 
                     ForEach(lists) { list in
                         TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
-                        CreateTaskSheetSelectorRow(
+                        TdayCenteredSelectorRow(
                             title: list.name,
                             swatchColor: createTaskSheetListSwatchColor(list.color),
                             selected: selectedListID == list.id
@@ -356,7 +356,7 @@ struct CreateTaskSheet: View {
                         if index > 0 {
                             TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
                         }
-                        CreateTaskSheetSelectorRow(
+                        TdayCenteredSelectorRow(
                             title: option,
                             swatchColor: createTaskSheetPrioritySwatchColor(option),
                             selected: priority == option
@@ -371,7 +371,7 @@ struct CreateTaskSheet: View {
                         if index > 0 {
                             TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
                         }
-                        CreateTaskSheetSelectorRow(
+                        TdayCenteredSelectorRow(
                             title: option.label,
                             swatchColor: createTaskSheetRepeatSwatchColor(option.value),
                             selected: repeatRule == option.value
@@ -731,69 +731,6 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
-    }
-}
-
-private struct CreateTaskSheetSelectorCard<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        TdaySheetOverlayCard {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(title)
-                    .font(.tdayRounded(size: 18, weight: .heavy))
-                    .foregroundStyle(colors.onSurfaceVariant)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 12)
-
-                content
-            }
-            .padding(.bottom, 14)
-            .frame(maxWidth: 330)
-        }
-    }
-}
-
-private struct CreateTaskSheetSelectorRow: View {
-    let title: String
-    let swatchColor: Color
-    let selected: Bool
-    let action: () -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                Circle()
-                    .fill(swatchColor)
-                    .frame(width: 10, height: 10)
-
-                Text(title)
-                    .font(.tdayRounded(size: 18, weight: .heavy))
-                    .foregroundStyle(colors.onSurface)
-                    .lineLimit(1)
-
-                Spacer(minLength: 12)
-
-                if selected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(colors.primary)
-                } else {
-                    Color.clear
-                        .frame(width: 18, height: 18)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 

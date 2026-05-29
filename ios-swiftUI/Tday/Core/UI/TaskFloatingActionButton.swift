@@ -178,32 +178,32 @@ private struct TdayToolbarButtonEffectModifier: ViewModifier {
 
     private var ambientShadowOpacity: Double {
         guard shadowsEnabled else { return 0 }
-        return isPressed ? 0.035 : 0.08
+        return isPressed ? 0.025 : 0.045
     }
 
     private var keyShadowOpacity: Double {
         guard shadowsEnabled else { return 0 }
-        return isPressed ? 0.03 : 0.045
+        return isPressed ? 0.02 : 0.026
     }
 
     private var ambientShadowRadius: CGFloat {
         guard shadowsEnabled else { return 0 }
-        return isPressed ? 8 : 24
+        return isPressed ? 5 : 10
     }
 
     private var keyShadowRadius: CGFloat {
         guard shadowsEnabled else { return 0 }
-        return isPressed ? 3 : 6
+        return isPressed ? 2 : 3
     }
 
     private var ambientShadowOffsetY: CGFloat {
         guard shadowsEnabled else { return 0 }
-        return isPressed ? 4 : 12
+        return isPressed ? 2 : 4
     }
 
     private var keyShadowOffsetY: CGFloat {
         guard shadowsEnabled else { return 0 }
-        return isPressed ? 2 : 4
+        return isPressed ? 1 : 2
     }
 }
 
