@@ -1,6 +1,7 @@
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
 import { todoInstanceSchema } from "@/schema";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { endOfDay } from "date-fns";
@@ -20,7 +21,7 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
     console.error(parsedObj.error.errors[0]);
     return;
   }
-  const todoId = ghostTodo.id.split(":")[0];
+  const todoId = canonicalTodoId(ghostTodo.id);
 
   await api.PATCH({
     url: "/api/todo/instance",

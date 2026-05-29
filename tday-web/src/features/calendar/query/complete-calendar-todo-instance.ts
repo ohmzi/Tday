@@ -1,6 +1,7 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 export const useCompleteCalendarTodoInstance = () => {
   const { toast } = useToast();
@@ -8,7 +9,7 @@ export const useCompleteCalendarTodoInstance = () => {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async ({ todoItem }: { todoItem: TodoItemType }) => {
-      const todoId = todoItem.id.split(":")[0];
+      const todoId = canonicalTodoId(todoItem.id);
       await api.PATCH({
         url: "/api/todo/complete",
         headers: { "Content-Type": "application/json" },

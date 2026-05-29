@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api-client";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 export const useDeleteListTodo = () => {
@@ -12,7 +13,7 @@ export const useDeleteListTodo = () => {
             await api.DELETE({
                 url: "/api/todo",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: todo.id.split(":")[0] }),
+                body: JSON.stringify({ id: canonicalTodoId(todo.id) }),
             });
         },
         onMutate: async (todo: TodoItemType) => {
