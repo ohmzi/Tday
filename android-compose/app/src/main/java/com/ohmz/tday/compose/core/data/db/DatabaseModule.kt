@@ -21,7 +21,7 @@ object DatabaseModule {
             TdayDatabase::class.java,
             "tday_offline_cache.db",
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .fallbackToDestructiveMigration()
             .allowMainThreadQueries()
             .build()
     }
@@ -30,10 +30,19 @@ object DatabaseModule {
     fun provideTodoDao(db: TdayDatabase): TodoDao = db.todoDao()
 
     @Provides
+    fun provideFloaterDao(db: TdayDatabase): FloaterDao = db.floaterDao()
+
+    @Provides
     fun provideListDao(db: TdayDatabase): ListDao = db.listDao()
 
     @Provides
+    fun provideFloaterListDao(db: TdayDatabase): FloaterListDao = db.floaterListDao()
+
+    @Provides
     fun provideCompletedDao(db: TdayDatabase): CompletedDao = db.completedDao()
+
+    @Provides
+    fun provideCompletedFloaterDao(db: TdayDatabase): CompletedFloaterDao = db.completedFloaterDao()
 
     @Provides
     fun provideMutationDao(db: TdayDatabase): MutationDao = db.mutationDao()

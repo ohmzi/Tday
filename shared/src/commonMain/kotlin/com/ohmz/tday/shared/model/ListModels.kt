@@ -67,3 +67,68 @@ data class ListTodoDto(
     val completed: Boolean,
     val order: Int,
 )
+
+@Serializable
+data class FloaterListsResponse(
+    val lists: List<FloaterListDto> = emptyList(),
+)
+
+@Serializable
+data class CreateFloaterListRequest(
+    val name: String,
+    val color: String? = null,
+    val iconKey: String? = null,
+)
+
+@Serializable
+data class FloaterListDto(
+    val id: String,
+    val name: String,
+    val color: String? = null,
+    val todoCount: Int = 0,
+    val iconKey: String? = null,
+    val userID: String? = null,
+    val updatedAt: String? = null,
+    val createdAt: String? = null,
+)
+
+@Serializable
+data class CreateFloaterListResponse(
+    val message: String? = null,
+    val list: FloaterListDto? = null,
+)
+
+@Serializable
+data class FloaterListDetailResponse(
+    val list: FloaterListDto,
+    val floaters: List<FloaterListTodoDto> = emptyList(),
+)
+
+@Serializable
+data class UpdateFloaterListRequest(
+    val id: String,
+    val name: String? = null,
+    val color: String? = null,
+    val iconKey: String? = null,
+)
+
+@Serializable
+data class DeleteFloaterListRequest(
+    val id: String? = null,
+    val ids: List<String> = emptyList(),
+)
+
+@Serializable
+data class DeleteFloaterListResponse(
+    val message: String? = null,
+    val deletedIds: List<String> = emptyList(),
+)
+
+@Serializable
+data class FloaterListTodoDto(
+    val id: String,
+    val title: String,
+    val priority: String,
+    val completed: Boolean,
+    val order: Int,
+)

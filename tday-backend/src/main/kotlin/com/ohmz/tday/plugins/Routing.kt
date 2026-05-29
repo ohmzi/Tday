@@ -31,10 +31,13 @@ fun Application.configureRouting() {
 
         route("/api") {
             todoRoutes()
+            floaterRoutes()
             listRoutes()
+            floaterListRoutes()
             userRoutes()
             preferencesRoutes()
             completedTodoRoutes()
+            completedFloaterRoutes()
             timezoneRoutes()
             appSettingsRoutes()
             adminRoutes()

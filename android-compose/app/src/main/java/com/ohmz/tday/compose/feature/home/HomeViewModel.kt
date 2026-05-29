@@ -31,7 +31,7 @@ data class HomeUiState(
         scheduledCount = 0,
         allCount = 0,
         priorityCount = 0,
-        anytimeCount = 0,
+        floaterCount = 0,
         completedCount = 0,
         lists = emptyList(),
     ),

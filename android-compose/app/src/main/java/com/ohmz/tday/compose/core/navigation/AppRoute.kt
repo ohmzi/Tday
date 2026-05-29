@@ -7,7 +7,7 @@ sealed class AppRoute(val route: String) {
     data object ServerSetup : AppRoute("server-setup")
     data object Login : AppRoute("login")
     data object Home : AppRoute("home")
-    data object AnytimeTodos : AppRoute("anytime")
+    data object FloaterTodos : AppRoute("floater")
     data object TodayTodos : AppRoute("todos/today")
     data object OverdueTodos : AppRoute("todos/overdue")
     data object ScheduledTodos : AppRoute("todos/scheduled")
@@ -24,6 +24,11 @@ sealed class AppRoute(val route: String) {
     data object ListTodos : AppRoute("todos/list/{listId}/{listName}") {
         fun create(listId: String, listName: String): String {
             return "todos/list/$listId/${Uri.encode(listName)}"
+        }
+    }
+    data object FloaterListTodos : AppRoute("floater/list/{listId}/{listName}") {
+        fun create(listId: String, listName: String): String {
+            return "floater/list/$listId/${Uri.encode(listName)}"
         }
     }
 

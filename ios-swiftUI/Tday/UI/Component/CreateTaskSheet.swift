@@ -29,6 +29,7 @@ struct CreateTaskSheet: View {
     let submitText: String
     let initialPayload: CreateTaskPayload?
     let defaultScheduled: Bool
+    let showScheduleControls: Bool
     let onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?
     let onDismiss: () -> Void
     let onSubmit: (CreateTaskPayload) async -> Void
@@ -92,6 +93,7 @@ struct CreateTaskSheet: View {
         submitText: String,
         initialPayload: CreateTaskPayload?,
         defaultScheduled: Bool = true,
+        showScheduleControls: Bool = true,
         onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?,
         onDismiss: @escaping () -> Void,
         onSubmit: @escaping (CreateTaskPayload) async -> Void
@@ -101,6 +103,7 @@ struct CreateTaskSheet: View {
         self.submitText = submitText
         self.initialPayload = initialPayload
         self.defaultScheduled = defaultScheduled
+        self.showScheduleControls = showScheduleControls
         self.onParseTaskTitleNlp = onParseTaskTitleNlp
         self.onDismiss = onDismiss
         self.onSubmit = onSubmit
@@ -118,6 +121,7 @@ struct CreateTaskSheet: View {
             titleText: title,
             submitText: "Save",
             initialPayload: initialPayload,
+            showScheduleControls: true,
             onParseTaskTitleNlp: onParseTaskTitleNlp,
             onDismiss: {},
             onSubmit: { payload in
@@ -153,21 +157,23 @@ struct CreateTaskSheet: View {
                 VStack(spacing: 14) {
                     CreateTaskSheetTextCard(title: $title, notes: $notes)
 
-                    CreateTaskSheetSectionTitle(text: "Schedule")
-                    CreateTaskSheetGroupCard {
-                        CreateTaskSheetScheduleToggleRow(
-                            isOn: $scheduleEnabled
-                        )
-
-                        if scheduleEnabled {
-                            CreateTaskSheetDivider()
-
-                            CreateTaskSheetDueRow(
-                                dueDate: $dueDate,
-                                onDateTap: { activeSelector = .date },
-                                onTimeTap: { activeSelector = .time }
+                    if showScheduleControls {
+                        CreateTaskSheetSectionTitle(text: "Schedule")
+                        CreateTaskSheetGroupCard {
+                            CreateTaskSheetScheduleToggleRow(
+                                isOn: $scheduleEnabled
                             )
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+
+                            if scheduleEnabled {
+                                CreateTaskSheetDivider()
+
+                                CreateTaskSheetDueRow(
+                                    dueDate: $dueDate,
+                                    onDateTap: { activeSelector = .date },
+                                    onTimeTap: { activeSelector = .time }
+                                )
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
                         }
                     }
 
@@ -189,18 +195,20 @@ struct CreateTaskSheet: View {
                             onTap: { activeSelector = .priority }
                         )
 
-                        CreateTaskSheetDivider()
+                        if showScheduleControls {
+                            CreateTaskSheetDivider()
 
-                        CreateTaskSheetSelectorTriggerRow(
-                            iconName: "repeat",
-                            title: "Repeat",
-                            value: selectedRepeatLabel,
-                            isEnabled: scheduleEnabled,
-                            onTap: {
-                                guard scheduleEnabled else { return }
-                                activeSelector = .recurrence
-                            }
-                        )
+                            CreateTaskSheetSelectorTriggerRow(
+                                iconName: "repeat",
+                                title: "Repeat",
+                                value: selectedRepeatLabel,
+                                isEnabled: scheduleEnabled,
+                                onTap: {
+                                    guard scheduleEnabled else { return }
+                                    activeSelector = .recurrence
+                                }
+                            )
+                        }
                     }
                 }
                 .padding(.horizontal, 18)
@@ -252,15 +260,15 @@ struct CreateTaskSheet: View {
 
     private func hydrateFromInitialPayload() {
         guard let initialPayload else {
-            scheduleEnabled = defaultScheduled
-            repeatRule = defaultScheduled ? repeatRule : nil
+            scheduleEnabled = showScheduleControls && defaultScheduled
+            repeatRule = scheduleEnabled ? repeatRule : nil
             return
         }
         title = initialPayload.title
         notes = initialPayload.description ?? ""
         priority = initialPayload.priority
         selectedListID = initialPayload.listId
-        if let due = initialPayload.due {
+        if showScheduleControls, let due = initialPayload.due {
             dueDate = due
             scheduleEnabled = true
             repeatRule = initialPayload.rrule
@@ -271,7 +279,7 @@ struct CreateTaskSheet: View {
     }
 
     private func scheduleNlpParse() {
-        guard let onParseTaskTitleNlp else {
+        guard showScheduleControls, let onParseTaskTitleNlp else {
             return
         }
         parserTask?.cancel()
@@ -299,8 +307,8 @@ struct CreateTaskSheet: View {
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines),
             priority: priority,
-            due: scheduleEnabled ? dueDate : nil,
-            rrule: scheduleEnabled ? repeatRule : nil,
+            due: showScheduleControls && scheduleEnabled ? dueDate : nil,
+            rrule: showScheduleControls && scheduleEnabled ? repeatRule : nil,
             listId: selectedListID
         )
         await onSubmit(payload)
@@ -537,7 +545,7 @@ private struct CreateTaskSheetScheduleToggleRow: View {
                     Text("Schedule")
                         .font(.tdayRounded(size: 18, weight: .heavy))
                         .foregroundStyle(colors.onSurface)
-                    Text(isOn ? "Task has a due date" : "Anytime task")
+                    Text(isOn ? "Task has a due date" : "Floater task")
                         .font(.tdayRounded(size: 12, weight: .bold))
                         .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
                 }

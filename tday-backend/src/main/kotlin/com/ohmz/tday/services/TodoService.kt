@@ -27,7 +27,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 
 interface TodoService {
-    suspend fun create(userId: String, title: String, description: String?, priority: String, due: LocalDateTime?, rrule: String?, listID: String?): Either<AppError, TodoResponse>
+    suspend fun create(userId: String, title: String, description: String?, priority: String, due: LocalDateTime, rrule: String?, listID: String?): Either<AppError, TodoResponse>
     suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String): Either<AppError, List<TodoResponse>>
     suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int): Either<AppError, List<TodoResponse>>
     suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit>
@@ -48,7 +48,7 @@ class TodoServiceImpl(
 
     override suspend fun create(
         userId: String, title: String, description: String?,
-        priority: String, due: LocalDateTime?,
+        priority: String, due: LocalDateTime,
         rrule: String?, listID: String?,
     ): Either<AppError, TodoResponse> {
         val id = CuidGenerator.newCuid()
@@ -72,7 +72,7 @@ class TodoServiceImpl(
         cache.invalidateTodoCaches(userId)
         return TodoResponse(
             id = id, title = title, description = description,
-            priority = priority, due = due?.toString(),
+            priority = priority, due = due.toString(),
             rrule = rrule, timeZone = "UTC",
             completed = false, pinned = false, order = 0, listID = listID,
             userID = userId, createdAt = now.toString(), updatedAt = now.toString(),
@@ -129,7 +129,7 @@ class TodoServiceImpl(
                 fields["priority"]?.let { stmt[Todos.priority] = Priority.valueOf(it as String) }
                 fields["pinned"]?.let { stmt[Todos.pinned] = it as Boolean }
                 fields["completed"]?.let { stmt[Todos.completed] = it as Boolean }
-                if (fields.containsKey("due")) stmt[Todos.due] = fields["due"] as? LocalDateTime
+                (fields["due"] as? LocalDateTime)?.let { stmt[Todos.due] = it }
                 if (fields.containsKey("rrule")) stmt[Todos.rrule] = fields["rrule"] as? String
                 if (fields.containsKey("listID")) stmt[Todos.listID] = fields["listID"] as? String
                 stmt[Todos.updatedAt] = LocalDateTime.now()
@@ -182,7 +182,7 @@ class TodoServiceImpl(
                     it[CompletedTodos.priority] = todo[Todos.priority]
                     it[CompletedTodos.completedAt] = now
                     it[CompletedTodos.due] = todoDue
-                    it[CompletedTodos.completedOnTime] = todoDue?.let { due -> !now.isAfter(due) }
+                    it[CompletedTodos.completedOnTime] = !now.isAfter(todoDue)
                     it[CompletedTodos.daysToComplete] = BigDecimal.valueOf(daysToComplete).setScale(2, RoundingMode.HALF_UP)
                     it[CompletedTodos.rrule] = todo[Todos.rrule]
                     it[CompletedTodos.userID] = userId
@@ -360,7 +360,7 @@ class TodoServiceImpl(
         pinned = this[Todos.pinned],
         order = this[Todos.order],
         priority = this[Todos.priority].name,
-        due = this[Todos.due]?.toString(),
+        due = this[Todos.due].toString(),
         rrule = this[Todos.rrule],
         timeZone = this[Todos.timeZone],
         completed = this[Todos.completed],

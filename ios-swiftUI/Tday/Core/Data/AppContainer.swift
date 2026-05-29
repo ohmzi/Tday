@@ -22,6 +22,7 @@ final class AppContainer {
     let syncManager: SyncManager
     let todoRepository: TodoRepository
     let listRepository: ListRepository
+    let floaterListRepository: FloaterListRepository
     let completedRepository: CompletedRepository
     let settingsRepository: SettingsRepository
     let realtimeClient: RealtimeClient
@@ -46,8 +47,11 @@ final class AppContainer {
         apiService = TdayAPIService(configuration: networkConfiguration)
         modelContainer = try! ModelContainer(
             for: CachedTodoEntity.self,
+            CachedFloaterEntity.self,
             CachedListEntity.self,
+            CachedFloaterListEntity.self,
             CachedCompletedEntity.self,
+            CachedCompletedFloaterEntity.self,
             PendingMutationEntity.self,
             SyncMetadataEntity.self
         )
@@ -70,6 +74,7 @@ final class AppContainer {
         syncManager = SyncManager(api: apiService, cacheManager: cacheManager)
         todoRepository = TodoRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         listRepository = ListRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
+        floaterListRepository = FloaterListRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         completedRepository = CompletedRepository(api: apiService, cacheManager: cacheManager, syncManager: syncManager)
         settingsRepository = SettingsRepository(api: apiService, cacheManager: cacheManager)
         realtimeClient = RealtimeClient(configuration: networkConfiguration)

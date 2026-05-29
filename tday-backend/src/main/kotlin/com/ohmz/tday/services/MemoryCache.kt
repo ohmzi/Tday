@@ -14,6 +14,8 @@ interface CacheService {
     fun invalidateTodoCaches(userId: String)
     fun invalidateListCaches(userId: String)
     fun invalidateCompletedCaches(userId: String)
+    fun invalidateFloaterCaches(userId: String)
+    fun invalidateFloaterListCaches(userId: String)
 }
 
 class CacheServiceImpl : CacheService {
@@ -67,6 +69,18 @@ class CacheServiceImpl : CacheService {
 
     override fun invalidateCompletedCaches(userId: String) {
         invalidateUserEndpoint(userId, "completedTodo")
+    }
+
+    override fun invalidateFloaterCaches(userId: String) {
+        invalidateUserEndpoint(userId, "floater")
+        invalidateUserEndpoint(userId, "completedFloater")
+        invalidateUserEndpoint(userId, "floaterList")
+    }
+
+    override fun invalidateFloaterListCaches(userId: String) {
+        invalidateUserEndpoint(userId, "floaterList")
+        invalidateUserEndpoint(userId, "floater")
+        invalidateUserEndpoint(userId, "completedFloater")
     }
 
     private fun lazyCleanup() {

@@ -7,7 +7,7 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
     case scheduled = "SCHEDULED"
     case all = "ALL"
     case priority = "PRIORITY"
-    case anytime = "ANYTIME"
+    case floater = "FLOATER"
     case list = "LIST"
 
     var title: String {
@@ -22,8 +22,8 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
             return "All Tasks"
         case .priority:
             return "Priority"
-        case .anytime:
-            return "Anytime"
+        case .floater:
+            return "Floater"
         case .list:
             return "List"
         }
@@ -41,8 +41,8 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
             return "all"
         case .priority:
             return "priority"
-        case .anytime:
-            return "anytime"
+        case .floater:
+            return "floater"
         case .list:
             return "list"
         }
@@ -95,7 +95,7 @@ extension TodoListMode {
         switch self {
         case .scheduled, .all, .priority, .list:
             return true
-        case .today, .overdue, .anytime:
+        case .today, .overdue, .floater:
             return false
         }
     }
@@ -231,7 +231,7 @@ struct DashboardSummary: Equatable, Hashable, Codable {
     let scheduledCount: Int
     let allCount: Int
     let priorityCount: Int
-    let anytimeCount: Int
+    let floaterCount: Int
     let completedCount: Int
     let lists: [ListSummary]
 }

@@ -7,8 +7,11 @@ data class OfflineSyncState(
     val lastSuccessfulSyncEpochMs: Long = 0L,
     val lastSyncAttemptEpochMs: Long = 0L,
     val todos: List<CachedTodoRecord> = emptyList(),
+    val floaters: List<CachedFloaterRecord> = emptyList(),
     val completedItems: List<CachedCompletedRecord> = emptyList(),
+    val completedFloaters: List<CachedCompletedFloaterRecord> = emptyList(),
     val lists: List<CachedListRecord> = emptyList(),
+    val floaterLists: List<CachedFloaterListRecord> = emptyList(),
     val pendingMutations: List<PendingMutationRecord> = emptyList(),
     val aiSummaryEnabled: Boolean = true,
 )
@@ -30,7 +33,31 @@ data class CachedTodoRecord(
 )
 
 @Serializable
+data class CachedFloaterRecord(
+    val id: String,
+    val canonicalId: String,
+    val title: String,
+    val description: String? = null,
+    val priority: String = "Low",
+    val pinned: Boolean = false,
+    val completed: Boolean = false,
+    val listId: String? = null,
+    val updatedAtEpochMs: Long = 0L,
+)
+
+@Serializable
 data class CachedListRecord(
+    val id: String,
+    val name: String,
+    val color: String? = null,
+    val iconKey: String? = null,
+    val todoCount: Int = 0,
+    val updatedAtEpochMs: Long = 0L,
+    val createdAtEpochMs: Long = 0L,
+)
+
+@Serializable
+data class CachedFloaterListRecord(
     val id: String,
     val name: String,
     val color: String? = null,
@@ -51,6 +78,19 @@ data class CachedCompletedRecord(
     val completedAtEpochMs: Long = 0L,
     val rrule: String? = null,
     val instanceDateEpochMs: Long? = null,
+    val listId: String? = null,
+    val listName: String? = null,
+    val listColor: String? = null,
+)
+
+@Serializable
+data class CachedCompletedFloaterRecord(
+    val id: String,
+    val originalFloaterId: String? = null,
+    val title: String,
+    val description: String? = null,
+    val priority: String,
+    val completedAtEpochMs: Long = 0L,
     val listId: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
@@ -81,12 +121,20 @@ enum class MutationKind {
     CREATE_LIST,
     UPDATE_LIST,
     DELETE_LIST,
+    CREATE_FLOATER_LIST,
+    UPDATE_FLOATER_LIST,
+    DELETE_FLOATER_LIST,
     CREATE_TODO,
     UPDATE_TODO,
     DELETE_TODO,
+    CREATE_FLOATER,
+    UPDATE_FLOATER,
+    DELETE_FLOATER,
     SET_PINNED,
     SET_PRIORITY,
     COMPLETE_TODO,
     COMPLETE_TODO_INSTANCE,
     UNCOMPLETE_TODO,
+    COMPLETE_FLOATER,
+    UNCOMPLETE_FLOATER,
 }

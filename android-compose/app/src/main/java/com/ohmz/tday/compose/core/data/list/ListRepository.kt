@@ -263,7 +263,6 @@ class ListRepository @Inject constructor(
                 .filter { it.listId == normalizedListId }
                 .map { it.canonicalId }
                 .toSet()
-
             val prunedMutations = state.pendingMutations.filterNot { mutation ->
                 mutation.targetId == normalizedListId ||
                         mutation.listId == normalizedListId ||

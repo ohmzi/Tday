@@ -90,6 +90,14 @@ private func isTodoRootDaytime(_ date: Date) -> Bool {
     return (6..<18).contains(hour)
 }
 
+private func normalizedTodoSearchQuery(_ value: String) -> String {
+    value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
+}
+
+private func todoSearchText(_ value: String) -> String {
+    value.lowercased(with: .current)
+}
+
 struct TimelinePinnedSectionHeaderBackground: ViewModifier {
     @Environment(\.tdayColors) private var colors
 
@@ -247,6 +255,307 @@ private struct RootFeedTitleRow: View {
     }
 }
 
+private struct RootFeedSearchTitleRow: View {
+    let title: String
+    @Binding var searchExpanded: Bool
+    @Binding var searchQuery: String
+    var searchFieldFocused: FocusState<Bool>.Binding
+    let onSearchClose: () -> Void
+    let onCreateList: () -> Void
+    let onOpenSettings: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        let buttonSize = TodoTimelineMetrics.topBarButtonFrame
+        let buttonGap: CGFloat = 8
+
+        GeometryReader { proxy in
+            let totalWidth = proxy.size.width
+            let searchWidth = searchExpanded ? max(buttonSize, totalWidth) : buttonSize
+            let collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
+            let searchOffsetX = searchExpanded ? 0 : collapsedSearchOffset
+            let daytime = isTodoRootDaytime(Date())
+            let iconColor = daytime
+                ? Color(red: 244.0 / 255.0, green: 197.0 / 255.0, blue: 66.0 / 255.0)
+                : Color(red: 168.0 / 255.0, green: 184.0 / 255.0, blue: 232.0 / 255.0)
+
+            ZStack(alignment: .trailing) {
+                HStack(spacing: 8) {
+                    Image(systemName: daytime ? "sun.max.fill" : "moon.stars.fill")
+                        .font(.system(size: 26, weight: .regular))
+                        .foregroundStyle(iconColor)
+
+                    Text(title)
+                        .font(.tdayRounded(size: 32, weight: .heavy))
+                        .foregroundStyle(colors.onSurface)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 2)
+                .opacity(searchExpanded ? 0 : 1)
+                .allowsHitTesting(false)
+
+                HStack(spacing: buttonGap) {
+                    RootFeedHeaderIconButton(icon: "text.badge.plus", action: onCreateList)
+                        .accessibilityLabel("Create list")
+                    RootFeedHeaderIconButton(icon: "ellipsis", action: onOpenSettings)
+                        .accessibilityLabel("More")
+                }
+                .opacity(searchExpanded ? 0 : 1)
+                .allowsHitTesting(!searchExpanded)
+
+                ZStack {
+                    Button {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                            searchExpanded = true
+                        }
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(colors.onSurface)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .buttonStyle(
+                        TdayPressButtonStyle(
+                            shadowColor: Color.black,
+                            pressedShadowOpacity: 0.08,
+                            normalShadowOpacity: 0.16
+                        )
+                    )
+                    .opacity(searchExpanded ? 0 : 1)
+                    .allowsHitTesting(!searchExpanded)
+                    .accessibilityLabel("Search")
+
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(colors.onSurface)
+                            .frame(width: 30, height: 30)
+
+                        TextField("", text: $searchQuery, prompt: Text("Search").foregroundStyle(colors.onSurfaceVariant))
+                            .focused(searchFieldFocused)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .font(.tdayRounded(size: 18, weight: .bold))
+                            .foregroundStyle(colors.onSurface)
+                            .tint(colors.primary)
+                            .disabled(!searchExpanded)
+
+                        Button(action: onSearchClose) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                        }
+                        .buttonStyle(
+                            TdayPressButtonStyle(
+                                shadowColor: Color.black,
+                                pressedShadowOpacity: 0,
+                                normalShadowOpacity: 0
+                            )
+                        )
+                        .accessibilityLabel("Cancel search")
+                    }
+                    .padding(.horizontal, 14)
+                    .opacity(searchExpanded ? 1 : 0)
+                    .allowsHitTesting(searchExpanded)
+                }
+                .frame(width: searchWidth, height: buttonSize)
+                .background(colors.surface, in: Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(colors.onSurface.opacity(0.26), lineWidth: 1)
+                )
+                .offset(x: searchOffsetX)
+                .zIndex(2)
+                .animation(.spring(response: 0.28, dampingFraction: 0.86), value: searchExpanded)
+            }
+        }
+        .frame(height: TodoTimelineMetrics.topBarRowHeight)
+    }
+}
+
+private struct RootFeedHeaderIconButton: View {
+    let icon: String
+    let action: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(colors.onSurface)
+                .frame(
+                    width: TodoTimelineMetrics.topBarButtonFrame,
+                    height: TodoTimelineMetrics.topBarButtonFrame
+                )
+                .background(colors.surface)
+                .clipShape(Circle())
+                .overlay {
+                    Circle()
+                        .stroke(colors.onSurface.opacity(0.34), lineWidth: 1)
+                }
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.08,
+                normalShadowOpacity: 0.16
+            )
+        )
+    }
+}
+
+private struct FloaterSearchResultsCard: View {
+    let todos: [TodoItem]
+    let listsByID: [String: ListSummary]
+    let onOpenTodo: (TodoItem) -> Void
+
+    @Environment(\.tdayColors) private var colors
+    private let maxResultsHeight: CGFloat = 320
+    private let rowHeight: CGFloat = 66
+
+    private var resultsHeight: CGFloat {
+        min(CGFloat(max(todos.count, 1)) * rowHeight, maxResultsHeight)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if todos.isEmpty {
+                Text("No matching tasks")
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(colors.onSurfaceVariant)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+            } else {
+                ScrollView(showsIndicators: true) {
+                    VStack(spacing: 0) {
+                        ForEach(todos) { todo in
+                            let list = todo.listId.flatMap { listsByID[$0] }
+                            HStack(spacing: 10) {
+                                Image(systemName: todoListSymbolName(for: list?.iconKey))
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(todoListAccentColor(for: list?.color).opacity(0.92))
+                                    .frame(width: 18)
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(todo.title)
+                                        .font(.tdayRounded(size: 15, weight: .bold))
+                                        .foregroundStyle(colors.onSurface)
+                                        .lineLimit(1)
+
+                                    Text(list?.name ?? todo.priority)
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(colors.onSurfaceVariant)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer(minLength: 0)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                onOpenTodo(todo)
+                            }
+                        }
+                    }
+                }
+                .frame(height: resultsHeight)
+            }
+        }
+        .background(colors.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(colors.onSurface.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 6)
+    }
+}
+
+private struct FloaterListCard: View {
+    let list: ListSummary
+    let count: Int
+    let onTap: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    private var symbolName: String {
+        todoListSymbolName(for: list.iconKey)
+    }
+
+    private var containerColor: Color {
+        todoBlendColor(colors.surfaceVariant, todoListAccentColor(for: list.color), amount: 0.66)
+    }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+
+        Button(action: onTap) {
+            ZStack {
+                shape.fill(containerColor)
+                shape.fill(
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.08), .clear],
+                        center: .topLeading,
+                        startRadius: 8,
+                        endRadius: 120
+                    )
+                )
+                shape.fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.12),
+                            Color(red: 231.0 / 255.0, green: 243.0 / 255.0, blue: 255.0 / 255.0).opacity(0.1),
+                            Color(red: 255.0 / 255.0, green: 242.0 / 255.0, blue: 250.0 / 255.0).opacity(0.08),
+                            .clear,
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+                Image(systemName: symbolName)
+                    .font(.system(size: 60, weight: .regular))
+                    .foregroundStyle(todoBlendColor(containerColor, .white, amount: 0.34).opacity(0.42))
+                    .offset(x: 18, y: 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .allowsHitTesting(false)
+
+                HStack {
+                    HStack(spacing: 10) {
+                        Image(systemName: symbolName)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+
+                        Text(list.name)
+                            .font(.tdayRounded(size: 22, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Text("\(count)")
+                        .font(.tdayRounded(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .frame(maxWidth: .infinity, minHeight: 70, maxHeight: 70)
+            .clipShape(shape)
+            .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 7)
+    }
+}
+
 struct TodoListScreen: View {
     let highlightedTodoId: String?
     let onListDeleted: () -> Void
@@ -257,10 +566,14 @@ struct TodoListScreen: View {
     let createTaskRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
+    let onOpenFloaterList: (String, String) -> Void
+    let onOpenSettings: () -> Void
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var rootFloaterSearchFieldFocused: Bool
     @State private var showingCreateTask = false
+    @State private var showingCreateList = false
     @State private var editingTodo: TodoItem?
     @State private var showingSummary = false
     @State private var showingListSettings = false
@@ -275,6 +588,9 @@ struct TodoListScreen: View {
     @State private var completionPhases: [String: TodoCompletionPhase] = [:]
     @State private var flashTodoId: String?
     @State private var highlightedScrollRequestID = 0
+    @State private var rootFloaterSearchExpanded = false
+    @State private var rootFloaterSearchQuery = ""
+    @State private var openingRootFloaterSearchResultID: String?
 
     init(
         container: AppContainer,
@@ -289,6 +605,8 @@ struct TodoListScreen: View {
         createTaskRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
+        onOpenFloaterList: @escaping (String, String) -> Void = { _, _ in },
+        onOpenSettings: @escaping () -> Void = {},
         onListDeleted: @escaping () -> Void = {}
     ) {
         self.highlightedTodoId = highlightedTodoId
@@ -300,6 +618,8 @@ struct TodoListScreen: View {
         self.createTaskRequestID = createTaskRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
+        self.onOpenFloaterList = onOpenFloaterList
+        self.onOpenSettings = onOpenSettings
         _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
         _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
     }
@@ -312,6 +632,52 @@ struct TodoListScreen: View {
         )
     }
 
+    private var floaterListRows: [(list: ListSummary, count: Int)] {
+        guard viewModel.mode == .floater, viewModel.listId == nil else {
+            return []
+        }
+        let counts = Dictionary(grouping: viewModel.items.compactMap(\.listId), by: { $0 }).mapValues(\.count)
+        return viewModel.lists.compactMap { list in
+            guard let count = counts[list.id], count > 0 else {
+                return nil
+            }
+            return (list, count)
+        }
+    }
+
+    private var isRootFloaterScreen: Bool {
+        viewModel.mode == .floater && viewModel.listId == nil
+    }
+
+    private var floaterListByID: [String: ListSummary] {
+        Dictionary(viewModel.lists.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+    }
+
+    private var normalizedRootFloaterSearchQuery: String {
+        normalizedTodoSearchQuery(rootFloaterSearchQuery)
+    }
+
+    private var rootFloaterSearchResults: [TodoItem] {
+        guard isRootFloaterScreen, !normalizedRootFloaterSearchQuery.isEmpty else {
+            return []
+        }
+
+        return viewModel.items.filter { todo in
+            todoSearchText(todo.title).contains(normalizedRootFloaterSearchQuery) ||
+                (todo.description.map { todoSearchText($0).contains(normalizedRootFloaterSearchQuery) } ?? false) ||
+                (todo.listId.flatMap { floaterListByID[$0]?.name }.map {
+                    todoSearchText($0).contains(normalizedRootFloaterSearchQuery)
+                } ?? false)
+        }
+        .sorted(by: floaterTodoSortPrecedes)
+        .prefix(20)
+        .map { $0 }
+    }
+
+    private var showRootFloaterSearchResults: Bool {
+        isRootFloaterScreen && rootFloaterSearchExpanded && !normalizedRootFloaterSearchQuery.isEmpty
+    }
+
     private var isTodayMode: Bool {
         viewModel.mode == .today
     }
@@ -320,7 +686,7 @@ struct TodoListScreen: View {
         viewModel.mode == .overdue ||
             viewModel.mode == .scheduled ||
             viewModel.mode == .priority ||
-            viewModel.mode == .anytime ||
+            viewModel.mode == .floater ||
             viewModel.mode == .all ||
             viewModel.mode == .list
     }
@@ -362,7 +728,7 @@ struct TodoListScreen: View {
 
     private var canSummarizeCurrentMode: Bool {
         viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled
-            && viewModel.mode != .anytime
+            && viewModel.mode != .floater
     }
 
     private var heroTopBarAction: TimelineTopBarAction? {
@@ -479,12 +845,30 @@ struct TodoListScreen: View {
         .onChange(of: timelineScrollOffset, initial: true) { _, offset in
             onRootDockCollapsedChange(max(offset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold)
         }
+        .onChange(of: rootFloaterSearchExpanded, initial: true) { _, expanded in
+            guard isRootFloaterScreen else {
+                onRootControlsVisibleChange(true)
+                return
+            }
+            onRootControlsVisibleChange(!expanded)
+            if expanded {
+                rootFloaterSearchFieldFocused = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                    if rootFloaterSearchExpanded {
+                        rootFloaterSearchFieldFocused = true
+                    }
+                }
+            } else {
+                rootFloaterSearchFieldFocused = false
+            }
+        }
         .onChange(of: createTaskRequestID) { _, requestID in
             guard requestID > 0 else { return }
+            closeRootFloaterSearch()
             showingCreateTask = true
         }
         .onAppear {
-            onRootControlsVisibleChange(true)
+            onRootControlsVisibleChange(!(isRootFloaterScreen && rootFloaterSearchExpanded))
             onRootDockCollapsedChange(shouldCollapseRootDock)
         }
         .onDisappear {
@@ -492,6 +876,13 @@ struct TodoListScreen: View {
         }
         .sheet(isPresented: $showingCreateTask) {
             createTaskSheetContent
+        }
+        .sheet(isPresented: $showingCreateList) {
+            CreateListSheet { name, color, iconKey in
+                Task {
+                    await viewModel.createList(name: name, color: color, iconKey: iconKey)
+                }
+            }
         }
         .sheet(item: $editingTodo) { todo in
             editTaskSheetContent(for: todo)
@@ -583,7 +974,29 @@ struct TodoListScreen: View {
     }
 
     private var rootFeedTitleRow: some View {
-        RootFeedTitleRow(title: viewModel.title)
+        Group {
+            if isRootFloaterScreen {
+                RootFeedSearchTitleRow(
+                    title: viewModel.title,
+                    searchExpanded: $rootFloaterSearchExpanded,
+                    searchQuery: $rootFloaterSearchQuery,
+                    searchFieldFocused: $rootFloaterSearchFieldFocused,
+                    onSearchClose: {
+                        closeRootFloaterSearch()
+                    },
+                    onCreateList: {
+                        closeRootFloaterSearch()
+                        showingCreateList = true
+                    },
+                    onOpenSettings: {
+                        closeRootFloaterSearch()
+                        onOpenSettings()
+                    }
+                )
+            } else {
+                RootFeedTitleRow(title: viewModel.title)
+            }
+        }
             .background {
                 TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
                     .frame(width: 0, height: 0)
@@ -637,9 +1050,10 @@ struct TodoListScreen: View {
             lists: viewModel.lists,
             titleText: "New task",
             submitText: "Create",
-            initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? "High" : "Low", due: viewModel.mode == .anytime ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
-            defaultScheduled: viewModel.mode != .anytime,
-            onParseTaskTitleNlp: { title, dueRef in
+            initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? "High" : "Low", due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
+            defaultScheduled: viewModel.mode != .floater,
+            showScheduleControls: viewModel.mode != .floater,
+            onParseTaskTitleNlp: viewModel.mode == .floater ? nil : { title, dueRef in
                 await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
             },
             onDismiss: { showingCreateTask = false },
@@ -655,7 +1069,9 @@ struct TodoListScreen: View {
             titleText: "Edit task",
             submitText: "Save",
             initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
-            onParseTaskTitleNlp: { title, dueRef in
+            defaultScheduled: viewModel.mode != .floater,
+            showScheduleControls: viewModel.mode != .floater,
+            onParseTaskTitleNlp: viewModel.mode == .floater ? nil : { title, dueRef in
                 await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
             },
             onDismiss: { editingTodo = nil },
@@ -858,6 +1274,48 @@ struct TodoListScreen: View {
         pendingRescheduleDrop = nil
         Task {
             await viewModel.moveTask(drop.todo, toDay: drop.targetDate, scope: scope)
+        }
+    }
+
+    private func closeRootFloaterSearch() {
+        rootFloaterSearchFieldFocused = false
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            rootFloaterSearchExpanded = false
+        }
+        rootFloaterSearchQuery = ""
+    }
+
+    private func openRootFloaterSearchResult(_ todo: TodoItem, using proxy: ScrollViewProxy) {
+        guard openingRootFloaterSearchResultID == nil else {
+            return
+        }
+        openingRootFloaterSearchResultID = todo.id
+        closeRootFloaterSearch()
+
+        highlightedScrollRequestID += 1
+        let requestID = highlightedScrollRequestID
+        DispatchQueue.main.asyncAfter(deadline: .now() + TodoTimelineMetrics.searchResultScrollDelay) {
+            guard requestID == highlightedScrollRequestID else {
+                return
+            }
+            openingRootFloaterSearchResultID = nil
+            withAnimation(.easeInOut(duration: TodoTimelineMetrics.searchResultScrollDuration)) {
+                proxy.scrollTo(timelineTodoScrollID(todo.id), anchor: .center)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + TodoTimelineMetrics.searchResultFlashDelay) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                flashTodoId = todo.id
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                if flashTodoId == todo.id || flashTodoId == todo.canonicalId {
+                    flashTodoId = nil
+                }
+            }
         }
     }
 
@@ -1136,6 +1594,26 @@ struct TodoListScreen: View {
                 List {
                     timelineHeroTitleRow
 
+                    if showRootFloaterSearchResults {
+                        FloaterSearchResultsCard(
+                            todos: rootFloaterSearchResults,
+                            listsByID: floaterListByID,
+                            onOpenTodo: { todo in
+                                openRootFloaterSearchResult(todo, using: scrollProxy)
+                            }
+                        )
+                        .listRowInsets(
+                            EdgeInsets(
+                                top: 0,
+                                leading: TodoTimelineMetrics.horizontalPadding,
+                                bottom: 10,
+                                trailing: TodoTimelineMetrics.horizontalPadding
+                            )
+                        )
+                        .listRowBackground(colors.background)
+                        .listRowSeparator(.hidden)
+                    }
+
                     if let errorMessage = viewModel.errorMessage {
                         Section {
                             ErrorRetryView(message: errorMessage) {
@@ -1154,6 +1632,32 @@ struct TodoListScreen: View {
                             sections: groupedSections,
                             isFirstSection: index == 0
                         )
+                    }
+
+                    if !floaterListRows.isEmpty {
+                        Section {
+                            ForEach(floaterListRows, id: \.list.id) { row in
+                                FloaterListCard(
+                                    list: row.list,
+                                    count: row.count,
+                                    onTap: {
+                                        onOpenFloaterList(row.list.id, row.list.name)
+                                    }
+                                )
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 10, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowBackground(colors.background)
+                                .listRowSeparator(.hidden)
+                            }
+                        } header: {
+                            Text("My Lists")
+                                .font(.tdayRounded(size: 24, weight: .heavy))
+                                .foregroundStyle(colors.onSurface)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.top, 4)
+                                .padding(.bottom, 10)
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowSeparator(.hidden)
+                        }
                     }
 
                     Color.clear
@@ -1208,7 +1712,7 @@ struct TodoListScreen: View {
                 }
             }
             HStack(spacing: 6) {
-                Text(todo.due?.formatted(date: .abbreviated, time: .shortened) ?? "Anytime")
+                Text(todo.due?.formatted(date: .abbreviated, time: .shortened) ?? "Floater")
                     .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(colors.onSurfaceVariant)
             }
@@ -1579,7 +2083,7 @@ struct TodoListScreen: View {
 
     private func minimalTimelineSubtitle(for todo: TodoItem, in section: TodoTimelineSection) -> String {
         guard let due = todo.due else {
-            return "Anytime"
+            return "Floater"
         }
         let timeText = due.formatted(date: .omitted, time: .shortened)
         let dueBodyText = if section.id == "earlier" &&
@@ -1609,8 +2113,8 @@ struct TodoListScreen: View {
                 return "Overdue, \(dueBodyText)"
             }
             return "Due \(dueBodyText)"
-        case .anytime:
-            return "Anytime"
+        case .floater:
+            return "Floater"
         case .list:
             if !todo.completed && due < Date() {
                 return "Overdue, \(dueBodyText)"
@@ -2027,7 +2531,7 @@ private struct TodoDragPreview: View {
                     .font(.tdayRounded(size: 16, weight: .bold))
                     .foregroundStyle(colors.onSurface)
                     .lineLimit(1)
-                Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Anytime")
+                Text(todo.due?.formatted(date: .omitted, time: .shortened) ?? "Floater")
                     .font(.tdayRounded(size: 12, weight: .semibold))
                     .foregroundStyle(colors.onSurfaceVariant)
                     .lineLimit(1)
@@ -3110,8 +3614,8 @@ private func buildSections(
             placesEarlierBeforeToday: true,
             includeEmptyEarlierTarget: includeEmptyEarlierTarget
         )
-    case .anytime:
-        return buildAnytimeTimelineSections(items: items)
+    case .floater:
+        return buildFloaterTimelineSections(items: items)
     case .list:
         return buildFutureTimelineSections(
             items: items,
@@ -3122,61 +3626,78 @@ private func buildSections(
     }
 }
 
-private func buildAnytimeTimelineSections(items: [TodoItem]) -> [TodoTimelineSection] {
-    let anytimeItems = items.filter { $0.due == nil }
-    let priorityItems = anytimeItems
-        .filter { $0.pinned || $0.priority.caseInsensitiveCompare("High") == .orderedSame || $0.priority.caseInsensitiveCompare("Medium") == .orderedSame }
-        .sorted(by: anytimeTodoSortPrecedes)
-    let openItems = anytimeItems
-        .filter { item in !priorityItems.contains(where: { $0.id == item.id }) }
-        .sorted(by: anytimeTodoSortPrecedes)
+private func buildFloaterTimelineSections(items: [TodoItem]) -> [TodoTimelineSection] {
+    let floaterItems = items
+        .sorted(by: floaterTodoSortPrecedes)
 
-    var sections: [TodoTimelineSection] = []
-    if !priorityItems.isEmpty {
-        sections.append(
-            TodoTimelineSection(
-                id: "anytime-priority",
-                title: "Priority",
-                items: priorityItems,
-                isCollapsible: false,
-                targetDate: nil
-            )
+    let sectionSpecs: [(id: String, title: String, items: [TodoItem])] = [
+        (
+            "floater-high",
+            "High",
+            floaterItems.filter { $0.priority.caseInsensitiveCompare("High") == .orderedSame }
+        ),
+        (
+            "floater-medium",
+            "Medium",
+            floaterItems.filter { $0.priority.caseInsensitiveCompare("Medium") == .orderedSame }
+        ),
+        (
+            "floater-low",
+            "Low",
+            floaterItems.filter {
+                $0.priority.caseInsensitiveCompare("High") != .orderedSame &&
+                    $0.priority.caseInsensitiveCompare("Medium") != .orderedSame
+            }
+        ),
+    ]
+
+    let sections = sectionSpecs.compactMap { spec -> TodoTimelineSection? in
+        guard !spec.items.isEmpty else {
+            return nil
+        }
+        return TodoTimelineSection(
+            id: spec.id,
+            title: spec.title,
+            items: spec.items,
+            isCollapsible: false,
+            targetDate: nil
         )
     }
-    if !openItems.isEmpty || sections.isEmpty {
-        sections.append(
+
+    if sections.isEmpty {
+        return [
             TodoTimelineSection(
-                id: "anytime-open",
-                title: "Open",
-                items: openItems,
+                id: "floater-low",
+                title: "Low",
+                items: [],
                 isCollapsible: false,
                 targetDate: nil
-            )
-        )
+            ),
+        ]
     }
     return sections
 }
 
-private func anytimeTodoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
+private func floaterTodoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
     if lhs.pinned != rhs.pinned {
         return lhs.pinned && !rhs.pinned
     }
-    let lhsPriority = anytimePriorityRank(lhs.priority)
-    let rhsPriority = anytimePriorityRank(rhs.priority)
+    let lhsPriority = floaterPriorityRank(lhs.priority)
+    let rhsPriority = floaterPriorityRank(rhs.priority)
     if lhsPriority != rhsPriority {
-        return lhsPriority > rhsPriority
+        return lhsPriority < rhsPriority
     }
     return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
 }
 
-private func anytimePriorityRank(_ priority: String) -> Int {
+private func floaterPriorityRank(_ priority: String) -> Int {
     switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
     case "high", "urgent", "important":
-        return 3
+        return 0
     case "medium":
-        return 2
-    default:
         return 1
+    default:
+        return 2
     }
 }
 
@@ -3411,8 +3932,8 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
         return "No tasks yet"
     case .priority:
         return "No priority tasks"
-    case .anytime:
-        return "No anytime tasks"
+    case .floater:
+        return "No floater tasks"
     case .list:
         return "No tasks in this list"
     }
@@ -3430,7 +3951,7 @@ private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: Strin
         return "tray.fill"
     case .priority:
         return "flag.fill"
-    case .anytime:
+    case .floater:
         return "tray.full.fill"
     case .list:
         return todoListSymbolName(for: listIconKey)
@@ -3449,7 +3970,7 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
         return todoHexColor(0x5E6878)
     case .priority:
         return todoHexColor(0xE65E52)
-    case .anytime:
+    case .floater:
         return todoHexColor(0x4D8F83)
     case .list:
         return todoListAccentColor(for: listColorKey)
@@ -3491,6 +4012,30 @@ func todoListAccentColor(for key: String?) -> Color {
     default:
         return todoHexColor(0xC987A5)
     }
+}
+
+private func todoBlendColor(_ lhs: Color, _ rhs: Color, amount: CGFloat) -> Color {
+    let lhsColor = UIColor(lhs)
+    let rhsColor = UIColor(rhs)
+    var lhsRed: CGFloat = 0
+    var lhsGreen: CGFloat = 0
+    var lhsBlue: CGFloat = 0
+    var lhsAlpha: CGFloat = 0
+    var rhsRed: CGFloat = 0
+    var rhsGreen: CGFloat = 0
+    var rhsBlue: CGFloat = 0
+    var rhsAlpha: CGFloat = 0
+    lhsColor.getRed(&lhsRed, green: &lhsGreen, blue: &lhsBlue, alpha: &lhsAlpha)
+    rhsColor.getRed(&rhsRed, green: &rhsGreen, blue: &rhsBlue, alpha: &rhsAlpha)
+    let mix = min(max(amount, 0), 1)
+    return Color(
+        uiColor: UIColor(
+            red: lhsRed + ((rhsRed - lhsRed) * mix),
+            green: lhsGreen + ((rhsGreen - lhsGreen) * mix),
+            blue: lhsBlue + ((rhsBlue - lhsBlue) * mix),
+            alpha: lhsAlpha + ((rhsAlpha - lhsAlpha) * mix)
+        )
+    )
 }
 
 private func normalizedTodoListColorKey(_ key: String?) -> String {

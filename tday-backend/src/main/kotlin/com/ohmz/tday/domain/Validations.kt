@@ -29,6 +29,13 @@ val validatePatchTodo = Validation<TodoPatchRequest> {
     }
 }
 
+val validateCreateFloater = Validation<FloaterCreateRequest> {
+    FloaterCreateRequest::title {
+        minLength(1) hint "Title is required"
+        maxLength(500) hint "Title too long"
+    }
+}
+
 val validateCreateList = Validation<ListCreateRequest> {
     ListCreateRequest::name {
         minLength(1) hint "Name is required"
@@ -38,6 +45,19 @@ val validateCreateList = Validation<ListCreateRequest> {
 
 val validatePatchList = Validation<ListPatchRequest> {
     ListPatchRequest::id {
+        minLength(1) hint "List id is required"
+    }
+}
+
+val validateCreateFloaterList = Validation<FloaterListCreateRequest> {
+    FloaterListCreateRequest::name {
+        minLength(1) hint "Name is required"
+        maxLength(255) hint "Name too long"
+    }
+}
+
+val validatePatchFloaterList = Validation<FloaterListPatchRequest> {
+    FloaterListPatchRequest::id {
         minLength(1) hint "List id is required"
     }
 }

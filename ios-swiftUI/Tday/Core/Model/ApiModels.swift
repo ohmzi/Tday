@@ -87,6 +87,10 @@ struct TodosResponse: Codable {
     let todos: [TodoDTO]
 }
 
+struct FloatersResponse: Codable {
+    let floaters: [FloaterDTO]
+}
+
 struct TodoSummaryRequest: Codable {
     let mode: String
     let listId: String?
@@ -122,7 +126,7 @@ struct CreateTodoRequest: Codable {
     let title: String
     let description: String?
     let priority: String
-    let due: String?
+    let due: String
     let rrule: String?
     let listID: String?
 }
@@ -148,6 +152,59 @@ struct TodoDTO: Codable, Equatable {
 struct CreateTodoResponse: Codable {
     let message: String?
     let todo: TodoDTO?
+}
+
+struct CreateFloaterRequest: Codable {
+    let title: String
+    let description: String?
+    let priority: String
+    let listID: String?
+}
+
+struct FloaterDTO: Codable, Equatable {
+    let id: String
+    let title: String
+    let description: String?
+    let pinned: Bool
+    let priority: String
+    let completed: Bool
+    let order: Int?
+    let listID: String?
+    let userID: String?
+    let updatedAt: String?
+    let createdAt: String?
+}
+
+struct CreateFloaterResponse: Codable {
+    let message: String?
+    let floater: FloaterDTO?
+}
+
+struct UpdateFloaterRequest: Codable {
+    let id: String
+    let title: String?
+    let description: String?
+    let pinned: Bool?
+    let priority: String?
+    let completed: Bool?
+    let listID: String?
+}
+
+struct DeleteFloaterRequest: Codable {
+    let id: String
+}
+
+struct FloaterCompleteRequest: Codable {
+    let id: String
+}
+
+struct FloaterUncompleteRequest: Codable {
+    let id: String
+}
+
+struct FloaterPrioritizeRequest: Codable {
+    let id: String
+    let priority: String
 }
 
 struct UpdateTodoRequest: Codable {
@@ -208,7 +265,17 @@ struct ListsResponse: Codable {
     let lists: [ListDTO]
 }
 
+struct FloaterListsResponse: Codable {
+    let lists: [FloaterListDTO]
+}
+
 struct CreateListRequest: Codable {
+    let name: String
+    let color: String?
+    let iconKey: String?
+}
+
+struct CreateFloaterListRequest: Codable {
     let name: String
     let color: String?
     let iconKey: String?
@@ -224,9 +291,25 @@ struct ListDTO: Codable, Equatable {
     let createdAt: String?
 }
 
+struct FloaterListDTO: Codable, Equatable {
+    let id: String
+    let name: String
+    let color: String?
+    let todoCount: Int
+    let iconKey: String?
+    let userID: String?
+    let updatedAt: String?
+    let createdAt: String?
+}
+
 struct CreateListResponse: Codable {
     let message: String?
     let list: ListDTO?
+}
+
+struct CreateFloaterListResponse: Codable {
+    let message: String?
+    let list: FloaterListDTO?
 }
 
 struct UpdateListRequest: Codable {
@@ -236,7 +319,24 @@ struct UpdateListRequest: Codable {
     let iconKey: String?
 }
 
+struct UpdateFloaterListRequest: Codable {
+    let id: String
+    let name: String?
+    let color: String?
+    let iconKey: String?
+}
+
 struct DeleteListRequest: Codable {
+    let id: String?
+    let ids: [String]
+
+    init(id: String? = nil, ids: [String] = []) {
+        self.id = id
+        self.ids = ids
+    }
+}
+
+struct DeleteFloaterListRequest: Codable {
     let id: String?
     let ids: [String]
 
@@ -267,7 +367,49 @@ struct ListDetailResponse: Codable {
     }
 }
 
+struct FloaterListDetailResponse: Codable {
+    let list: FloaterListDTO
+    let floaters: [FloaterListTodoDTO]
+
+    init(list: FloaterListDTO, floaters: [FloaterListTodoDTO] = []) {
+        self.list = list
+        self.floaters = floaters
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case list
+        case floaters
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        list = try container.decode(FloaterListDTO.self, forKey: .list)
+        floaters = try container.decodeIfPresent([FloaterListTodoDTO].self, forKey: .floaters) ?? []
+    }
+}
+
 struct DeleteListResponse: Codable {
+    let message: String?
+    let deletedIds: [String]
+
+    init(message: String? = nil, deletedIds: [String] = []) {
+        self.message = message
+        self.deletedIds = deletedIds
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case message
+        case deletedIds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        message = try container.decodeIfPresent(String.self, forKey: .message)
+        deletedIds = try container.decodeIfPresent([String].self, forKey: .deletedIds) ?? []
+    }
+}
+
+struct DeleteFloaterListResponse: Codable {
     let message: String?
     let deletedIds: [String]
 
@@ -297,8 +439,20 @@ struct ListTodoDTO: Codable, Equatable {
     let order: Int
 }
 
+struct FloaterListTodoDTO: Codable, Equatable {
+    let id: String
+    let title: String
+    let priority: String
+    let completed: Bool
+    let order: Int
+}
+
 struct CompletedTodosResponse: Codable {
     let completedTodos: [CompletedTodoDTO]
+}
+
+struct CompletedFloatersResponse: Codable {
+    let completedFloaters: [CompletedFloaterDTO]
 }
 
 struct CompletedTodoDTO: Codable, Equatable {
@@ -330,6 +484,32 @@ struct UpdateCompletedTodoRequest: Codable {
 }
 
 struct DeleteCompletedTodoRequest: Codable {
+    let id: String
+}
+
+struct CompletedFloaterDTO: Codable, Equatable {
+    let id: String
+    let originalFloaterID: String?
+    let title: String
+    let description: String?
+    let priority: String
+    let completedAt: String?
+    let daysToComplete: Double?
+    let userID: String?
+    let listID: String?
+    let listName: String?
+    let listColor: String?
+}
+
+struct UpdateCompletedFloaterRequest: Codable {
+    let id: String
+    let title: String?
+    let description: String?
+    let priority: String?
+    let listID: String?
+}
+
+struct DeleteCompletedFloaterRequest: Codable {
     let id: String
 }
 
@@ -368,8 +548,11 @@ struct AuthRedirectResponse: Codable {
 }
 
 typealias TodoDto = TodoDTO
+typealias FloaterDto = FloaterDTO
 typealias ListDto = ListDTO
+typealias FloaterListDto = FloaterListDTO
 typealias CompletedTodoDto = CompletedTodoDTO
+typealias CompletedFloaterDto = CompletedFloaterDTO
 typealias PreferencesDto = PreferencesDTO
 typealias AuthCallbackResponse = AuthRedirectResponse
 

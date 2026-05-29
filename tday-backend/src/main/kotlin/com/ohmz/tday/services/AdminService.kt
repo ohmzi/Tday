@@ -89,8 +89,10 @@ class AdminServiceImpl : AdminService {
 
         newSuspendedTransaction(Dispatchers.IO) {
             CompletedTodos.deleteWhere { CompletedTodos.userID eq targetId }
+            CompletedFloaters.deleteWhere { CompletedFloaters.userID eq targetId }
             Files.deleteWhere { Files.userID eq targetId }
             Todos.deleteWhere { Todos.userID eq targetId }
+            Floaters.deleteWhere { Floaters.userID eq targetId }
             Lists.deleteWhere { Lists.userID eq targetId }
             UserPreferences.deleteWhere { UserPreferences.userID eq targetId }
             Users.deleteWhere { Users.id eq targetId }

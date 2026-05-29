@@ -82,6 +82,7 @@
 		D34840EBE7C4C90D2525F0DA /* VersionCompatibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE3297DCE3ECD21F5B0A4635 /* VersionCompatibility.swift */; };
 		DCD00FC940427B88E235F7F4 /* OfflineCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85ADE7E6DE0AADEF0E503DE5 /* OfflineCacheManager.swift */; };
 		DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19AB4B0B909242B323D5ABF /* ListRepository.swift */; };
+		F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */; };
 		E1BD58F3802B8806874A2E29 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DABE0225668571D48D55B96 /* AuthViewModel.swift */; };
 		EAFB2C3D4E5F678901ABCDEE /* LaunchSplashStack.png in Resources */ = {isa = PBXBuildFile; fileRef = EAFB2C3D4E5F678901ABCDEF /* LaunchSplashStack.png */; };
 		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
@@ -167,6 +168,7 @@
 		CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		D0ACC8B538184310B385746A /* ServerConfigRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerConfigRepository.swift; sourceTree = "<group>"; };
 		D19AB4B0B909242B323D5ABF /* ListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListRepository.swift; sourceTree = "<group>"; };
+		F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterListRepository.swift; sourceTree = "<group>"; };
 		D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLPersistenceTests.swift; sourceTree = "<group>"; };
 		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
 		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -219,6 +221,7 @@
 			isa = PBXGroup;
 			children = (
 				D19AB4B0B909242B323D5ABF /* ListRepository.swift */,
+				F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */,
 			);
 			path = List;
 			sourceTree = "<group>";
@@ -714,6 +717,7 @@
 				C0768A60B1B807FCA7A6D37F /* HomeScreen.swift in Sources */,
 				9D9B4F301D7261C3F4F95B6D /* HomeViewModel.swift in Sources */,
 				DEA51B1F722372A094C125F9 /* ListRepository.swift in Sources */,
+				F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */,
 				957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */,
 				1618367E71392D77BC8C61B6 /* NavigationBackHistoryTitle.swift in Sources */,
 				C013C84CCBF84A849CE93963 /* NetworkConfiguration.swift in Sources */,

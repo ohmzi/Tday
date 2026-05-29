@@ -136,6 +136,7 @@ fun CreateTaskBottomSheet(
     defaultListId: String? = null,
     defaultPriority: String? = null,
     defaultScheduled: Boolean = true,
+    showScheduleControls: Boolean = true,
     initialDueEpochMs: Long? = null,
     onParseTaskTitleNlp: (suspend (
         title: String,
@@ -184,7 +185,7 @@ fun CreateTaskBottomSheet(
         mutableStateOf(resolvedDueEpochMs)
     }
     var scheduleEnabled by rememberSaveable(editingTask?.id, defaultScheduled) {
-        mutableStateOf(editingTask?.due != null || (editingTask == null && defaultScheduled))
+        mutableStateOf(showScheduleControls && (editingTask?.due != null || (editingTask == null && defaultScheduled)))
     }
     LaunchedEffect(title, onParseTaskTitleNlp) {
         val nlpParser = onParseTaskTitleNlp ?: return@LaunchedEffect
@@ -205,7 +206,7 @@ fun CreateTaskBottomSheet(
         if (cleanTitle != title) {
             title = cleanTitle
         }
-        if (!scheduleEnabled) {
+        if (showScheduleControls && !scheduleEnabled) {
             scheduleEnabled = true
         }
         if (parsedDueEpochMs != dueEpochMs) {
@@ -225,7 +226,7 @@ fun CreateTaskBottomSheet(
     var sheetVisible by remember { mutableStateOf(false) }
 
     val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
-    val repeatPreset = if (scheduleEnabled) {
+    val repeatPreset = if (scheduleEnabled && showScheduleControls) {
         RepeatPreset.valueOf(selectedRepeat)
     } else {
         RepeatPreset.NONE
@@ -265,14 +266,15 @@ fun CreateTaskBottomSheet(
     }
 
     fun submitTask() {
-        val due = if (scheduleEnabled) Instant.ofEpochMilli(dueEpochMs) else null
+        val due =
+            if (scheduleEnabled && showScheduleControls) Instant.ofEpochMilli(dueEpochMs) else null
 
         val payload = CreateTaskPayload(
             title = title.trim(),
             description = notes.trim().ifBlank { null },
             priority = selectedPriority,
             due = due,
-            rrule = repeatPreset.rrule?.takeIf { scheduleEnabled },
+            rrule = repeatPreset.rrule?.takeIf { scheduleEnabled && showScheduleControls },
             listId = selectedListId,
         )
         val editing = editingTask
@@ -368,31 +370,33 @@ fun CreateTaskBottomSheet(
                         onKeyboardDone = dismissKeyboard,
                     )
 
-                    SectionHeading("Schedule")
-                    GroupCard {
-                        ScheduleSwitchRow(
-                            enabled = scheduleEnabled,
-                            onEnabledChange = { enabled -> scheduleEnabled = enabled },
-                        )
-                        AnimatedVisibility(visible = scheduleEnabled) {
-                            Column {
-                                RowDivider()
-                                SplitDateTimeRow(
-                                    icon = Icons.Rounded.CalendarMonth,
-                                    title = "Due",
-                                    dateValue = dateOnlyFormatter.format(
-                                        Instant.ofEpochMilli(
-                                            dueEpochMs
-                                        )
-                                    ),
-                                    timeValue = timeOnlyFormatter.format(
-                                        Instant.ofEpochMilli(
-                                            dueEpochMs
-                                        )
-                                    ),
-                                    onDateClick = { dueDatePickerOpen = true },
-                                    onTimeClick = { dueTimePickerOpen = true },
+                        if (showScheduleControls) {
+                            SectionHeading("Schedule")
+                            GroupCard {
+                                ScheduleSwitchRow(
+                                    enabled = scheduleEnabled,
+                                    onEnabledChange = { enabled -> scheduleEnabled = enabled },
                                 )
+                                AnimatedVisibility(visible = scheduleEnabled) {
+                                    Column {
+                                        RowDivider()
+                                        SplitDateTimeRow(
+                                            icon = Icons.Rounded.CalendarMonth,
+                                            title = "Due",
+                                            dateValue = dateOnlyFormatter.format(
+                                                Instant.ofEpochMilli(
+                                                    dueEpochMs
+                                                )
+                                            ),
+                                            timeValue = timeOnlyFormatter.format(
+                                                Instant.ofEpochMilli(
+                                                    dueEpochMs
+                                                )
+                                            ),
+                                            onDateClick = { dueDatePickerOpen = true },
+                                            onTimeClick = { dueTimePickerOpen = true },
+                                        )
+                                    }
                             }
                         }
                     }
@@ -427,19 +431,21 @@ fun CreateTaskBottomSheet(
                             isSelected = { option -> selectedPriority == option },
                             onOptionSelected = { option -> selectedPriority = option },
                         )
-                        RowDivider()
-                        SheetDropdownRow(
-                            icon = Icons.Rounded.Repeat,
-                            title = "Repeat",
-                            value = repeatPreset.label,
-                            options = if (scheduleEnabled) RepeatPreset.entries.toList() else listOf(
-                                RepeatPreset.NONE
-                            ),
-                            optionLabel = { option -> option.label },
-                            optionSwatchColor = { option -> repeatSwatchColor(option) },
-                            isSelected = { option -> selectedRepeat == option.name },
-                            onOptionSelected = { option -> selectedRepeat = option.name },
-                        )
+                        if (showScheduleControls) {
+                            RowDivider()
+                            SheetDropdownRow(
+                                icon = Icons.Rounded.Repeat,
+                                title = "Repeat",
+                                value = repeatPreset.label,
+                                options = if (scheduleEnabled) RepeatPreset.entries.toList() else listOf(
+                                    RepeatPreset.NONE
+                                ),
+                                optionLabel = { option -> option.label },
+                                optionSwatchColor = { option -> repeatSwatchColor(option) },
+                                isSelected = { option -> selectedRepeat == option.name },
+                                onOptionSelected = { option -> selectedRepeat = option.name },
+                            )
+                        }
                     }
 
                         Spacer(modifier = Modifier.height(4.dp))
@@ -824,7 +830,7 @@ private fun ScheduleSwitchRow(
                 fontWeight = FontWeight.ExtraBold,
             )
             Text(
-                text = if (enabled) "Scheduled" else "Anytime",
+                text = if (enabled) "Scheduled" else "Floater",
                 style = MaterialTheme.typography.bodySmall,
                 color = colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold,

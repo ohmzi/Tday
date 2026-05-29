@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.todos
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -21,6 +22,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,6 +38,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -51,6 +54,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.AcUnit
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
@@ -114,6 +118,7 @@ import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ShoppingBasket
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material.icons.rounded.SportsBaseball
@@ -160,10 +165,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -177,6 +185,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -186,6 +195,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -214,6 +224,7 @@ import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
+import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -228,6 +239,7 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import androidx.compose.ui.graphics.lerp as lerpColor
 
 private val TimelineSameDateTaskSpacing = 2.dp
 private val TimelineDateGroupSpacing = 6.dp
@@ -265,6 +277,9 @@ fun TodoListScreen(
     onDelete: (todo: TodoItem) -> Unit,
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
+    onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
+    onOpenSettings: () -> Unit = {},
+    onCreateList: (name: String, color: String?, iconKey: String?) -> Unit = { _, _, _ -> },
     rootFeedTab: RootFeedTab? = null,
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
@@ -280,10 +295,12 @@ fun TodoListScreen(
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
     val usesTodayStyle =
-        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.ANYTIME || uiState.mode == TodoListMode.LIST
-    val isAnytimeScreen = uiState.mode == TodoListMode.ANYTIME || uiState.title.trim() == "Anytime"
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
+    val isFloaterScreen = uiState.mode == TodoListMode.FLOATER || uiState.title.trim() == "Floater"
+    val isRootFloaterScreen =
+        uiState.mode == TodoListMode.FLOATER && uiState.listId.isNullOrBlank()
     val usesRootFeedChrome =
-        usesRootFeedHeader || isAnytimeScreen
+        usesRootFeedHeader || isFloaterScreen
     val titleColor = modeAccentColor(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -297,7 +314,7 @@ fun TodoListScreen(
         listIconKey = selectedList?.iconKey,
     )
     val showSectionedTimeline =
-        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.ANYTIME || uiState.mode == TodoListMode.LIST
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
     val suppressInitialTodayTimeline =
         uiState.mode == TodoListMode.TODAY &&
                 !uiState.hasHydratedSnapshot &&
@@ -310,6 +327,22 @@ fun TodoListScreen(
             items = uiState.items,
         )
     }
+    val floaterListRows = remember(uiState.mode, uiState.listId, uiState.items, uiState.lists) {
+        if (uiState.mode == TodoListMode.FLOATER && uiState.listId.isNullOrBlank()) {
+            val floaterCountsByList = uiState.items
+                .asSequence()
+                .mapNotNull { it.listId }
+                .groupingBy { it }
+                .eachCount()
+            uiState.lists.mapNotNull { list ->
+                val count = floaterCountsByList[list.id] ?: return@mapNotNull null
+                list to count
+            }
+        } else {
+            emptyList()
+        }
+    }
+    val floaterListById = remember(uiState.lists) { uiState.lists.associateBy { it.id } }
     var timelineAnimationsReady by remember(uiState.mode, uiState.listId) {
         mutableStateOf(uiState.mode != TodoListMode.TODAY)
     }
@@ -330,6 +363,7 @@ fun TodoListScreen(
     val timelineAnimationsEnabled =
         uiState.mode != TodoListMode.TODAY || timelineAnimationsReady
     val listState = rememberLazyListState()
+    val screenScope = rememberCoroutineScope()
     val hasScrollableContent =
         listState.canScrollForward || listState.canScrollBackward
     val dockCollapseThresholdPx = with(LocalDensity.current) {
@@ -361,6 +395,46 @@ fun TodoListScreen(
                 uiState.mode == TodoListMode.PRIORITY ||
                 uiState.mode == TodoListMode.LIST
     var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
+    var rootFloaterSearchExpanded by rememberSaveable { mutableStateOf(false) }
+    var rootFloaterSearchQuery by rememberSaveable { mutableStateOf("") }
+    val normalizedRootFloaterSearchQuery = remember(rootFloaterSearchQuery) {
+        rootFloaterSearchQuery.trim().lowercase(Locale.getDefault())
+    }
+    val rootFloaterSearchResults = remember(
+        isRootFloaterScreen,
+        normalizedRootFloaterSearchQuery,
+        uiState.items,
+        floaterListById,
+    ) {
+        if (!isRootFloaterScreen || normalizedRootFloaterSearchQuery.isBlank()) {
+            emptyList()
+        } else {
+            uiState.items
+                .asSequence()
+                .filter { todo ->
+                    todo.title.lowercase(Locale.getDefault())
+                        .contains(normalizedRootFloaterSearchQuery) ||
+                            (todo.description?.lowercase(Locale.getDefault())
+                                ?.contains(normalizedRootFloaterSearchQuery) == true) ||
+                            (todo.listId?.let { floaterListById[it]?.name }
+                                ?.lowercase(Locale.getDefault())
+                                ?.contains(normalizedRootFloaterSearchQuery) == true)
+                }
+                .sortedWith(
+                    compareByDescending<TodoItem> { it.pinned }
+                        .thenBy { floaterPriorityRank(it.priority) }
+                        .thenBy { it.title.lowercase(Locale.getDefault()) },
+                )
+                .take(20)
+                .toList()
+        }
+    }
+    val showRootFloaterSearchResults =
+        isRootFloaterScreen && rootFloaterSearchExpanded && rootFloaterSearchQuery.isNotBlank()
+    val closeRootFloaterSearch = {
+        rootFloaterSearchExpanded = false
+        rootFloaterSearchQuery = ""
+    }
     var lastHandledCreateTaskRequestKey by rememberSaveable {
         mutableStateOf(createTaskRequestKey)
     }
@@ -385,11 +459,24 @@ fun TodoListScreen(
     LaunchedEffect(createTaskRequestKey) {
         if (createTaskRequestKey > lastHandledCreateTaskRequestKey) {
             lastHandledCreateTaskRequestKey = createTaskRequestKey
+            closeRootFloaterSearch()
             quickAddDueEpochMs = null
             showCreateTaskSheet = true
         }
     }
+    BackHandler(enabled = rootFloaterSearchExpanded) {
+        closeRootFloaterSearch()
+    }
+    LaunchedEffect(isRootFloaterScreen, rootFloaterSearchExpanded) {
+        if (!isRootFloaterScreen) {
+            closeRootFloaterSearch()
+            onRootControlsVisibleChange(true)
+        } else {
+            onRootControlsVisibleChange(!rootFloaterSearchExpanded)
+        }
+    }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
+    var showCreateListSheet by rememberSaveable { mutableStateOf(false) }
     var showDeleteListConfirmation by rememberSaveable { mutableStateOf(false) }
     var showSummarySheet by rememberSaveable(uiState.mode) { mutableStateOf(false) }
     var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -398,6 +485,9 @@ fun TodoListScreen(
     var listSettingsIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
     var listSettingsColorTouched by rememberSaveable { mutableStateOf(false) }
     var listSettingsIconTouched by rememberSaveable { mutableStateOf(false) }
+    var createListName by rememberSaveable { mutableStateOf("") }
+    var createListColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR_KEY) }
+    var createListIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val editTargetTodo = remember(editTargetTodoId, uiState.items) {
         editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
@@ -427,7 +517,7 @@ fun TodoListScreen(
     val canSummarizeCurrentMode =
         uiState.mode != TodoListMode.LIST &&
             uiState.mode != TodoListMode.OVERDUE &&
-                uiState.mode != TodoListMode.ANYTIME &&
+                uiState.mode != TodoListMode.FLOATER &&
             uiState.aiSummaryEnabled
     val showTopBarActionButton = canSummarizeCurrentMode || uiState.mode == TodoListMode.LIST
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
@@ -445,6 +535,20 @@ fun TodoListScreen(
         var itemIndex = 0
         timelineSections.forEach { section ->
             itemIndex += 1
+            val todoIndex = section.items.indexOfFirst { item ->
+                item.id == todoId || item.canonicalId == todoId
+            }
+            if (todoIndex >= 0) {
+                val todo = section.items[todoIndex]
+                return itemIndex + todoIndex to "timeline-todo-${section.key}-${todo.id}"
+            }
+            itemIndex += section.items.size
+        }
+        return null
+    }
+    fun rootFloaterTodoListTarget(todoId: String): Pair<Int, String>? {
+        var itemIndex = 1 // Root Floater header row.
+        timelineSections.forEach { section ->
             val todoIndex = section.items.indexOfFirst { item ->
                 item.id == todoId || item.canonicalId == todoId
             }
@@ -482,6 +586,30 @@ fun TodoListScreen(
             flashTodoId = highlightedTodoId
             delay(2300)
             if (flashTodoId == highlightedTodoId) {
+                flashTodoId = null
+            }
+        }
+    }
+    fun openRootFloaterSearchResult(todo: TodoItem) {
+        closeRootFloaterSearch()
+        val target = rootFloaterTodoListTarget(todo.id) ?: return
+        screenScope.launch {
+            delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
+            val viewportHeight =
+                listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
+            val estimatedRowHeight =
+                with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
+            val centeredScrollOffset =
+                -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
+            listState.animateSearchResultScrollToItem(
+                targetIndex = target.first,
+                targetKey = target.second,
+                centeredScrollOffset = centeredScrollOffset,
+                estimatedItemSizePx = estimatedRowHeight,
+            )
+            flashTodoId = todo.id
+            delay(2300)
+            if (flashTodoId == todo.id || flashTodoId == todo.canonicalId) {
                 flashTodoId = null
             }
         }
@@ -644,7 +772,9 @@ fun TodoListScreen(
                     timelineDragContainerOrigin = coordinates.positionInRoot()
                 },
         ) {
-            Box(
+            TdayPullToRefreshBox(
+                isRefreshing = uiState.isLoading,
+                onRefresh = onRefresh,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
@@ -674,7 +804,40 @@ fun TodoListScreen(
                             key = "root-feed-title",
                             contentType = "root-feed-title",
                         ) {
-                            RootFeedTitleRow(title = uiState.title)
+                            if (isRootFloaterScreen) {
+                                RootFeedSearchHeaderRow(
+                                    title = uiState.title,
+                                    searchExpanded = rootFloaterSearchExpanded,
+                                    searchQuery = rootFloaterSearchQuery,
+                                    onSearchQueryChange = { rootFloaterSearchQuery = it },
+                                    onSearchExpandedChange = { rootFloaterSearchExpanded = it },
+                                    onSearchClose = closeRootFloaterSearch,
+                                    onCreateList = {
+                                        closeRootFloaterSearch()
+                                        showCreateListSheet = true
+                                    },
+                                    onOpenSettings = {
+                                        closeRootFloaterSearch()
+                                        onOpenSettings()
+                                    },
+                                )
+                            } else {
+                                RootFeedTitleRow(title = uiState.title)
+                            }
+                        }
+                    }
+
+                    if (showRootFloaterSearchResults) {
+                        item(
+                            key = "root-floater-search-results",
+                            contentType = "root-floater-search-results",
+                        ) {
+                            RootFloaterSearchResultsCard(
+                                results = rootFloaterSearchResults,
+                                listsById = floaterListById,
+                                onOpenTodo = ::openRootFloaterSearchResult,
+                                modifier = Modifier.padding(bottom = 10.dp),
+                            )
                         }
                     }
 
@@ -933,6 +1096,36 @@ fun TodoListScreen(
                         }
                     }
 
+                    if (floaterListRows.isNotEmpty()) {
+                        item(
+                            key = "floater-my-lists-header",
+                            contentType = "floater-list-header",
+                        ) {
+                            FloaterMyListsHeader(
+                                modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
+                            )
+                        }
+                        items(
+                            items = floaterListRows,
+                            key = { (list, _) -> "floater-list-${list.id}" },
+                            contentType = { "floater-list-row" },
+                        ) { (list, count) ->
+                            FloaterListRow(
+                                modifier = Modifier.padding(bottom = 10.dp),
+                                name = list.name,
+                                colorKey = list.color,
+                                iconKey = list.iconKey,
+                                count = count,
+                                onClick = {
+                                    onOpenFloaterList(
+                                        list.id,
+                                        capitalizeFirstListLetter(list.name),
+                                    )
+                                },
+                            )
+                        }
+                    }
+
                     uiState.errorMessage?.let { message ->
                         item {
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
@@ -989,11 +1182,12 @@ fun TodoListScreen(
     if (showCreateTaskSheet) {
         CreateTaskBottomSheet(
             lists = uiState.lists,
-            defaultListId = if (uiState.mode == TodoListMode.LIST) uiState.listId else null,
+            defaultListId = if (uiState.mode == TodoListMode.LIST || uiState.mode == TodoListMode.FLOATER) uiState.listId else null,
             defaultPriority = if (uiState.mode == TodoListMode.PRIORITY) "Medium" else null,
-            defaultScheduled = uiState.mode != TodoListMode.ANYTIME,
+            defaultScheduled = uiState.mode != TodoListMode.FLOATER,
+            showScheduleControls = uiState.mode != TodoListMode.FLOATER,
             initialDueEpochMs = quickAddDueEpochMs,
-            onParseTaskTitleNlp = onParseTaskTitleNlp,
+            onParseTaskTitleNlp = if (uiState.mode == TodoListMode.FLOATER) null else onParseTaskTitleNlp,
             onDismiss = {
                 showCreateTaskSheet = false
                 quickAddDueEpochMs = null
@@ -1087,13 +1281,39 @@ fun TodoListScreen(
         CreateTaskBottomSheet(
             lists = uiState.lists,
             editingTask = todo,
-            onParseTaskTitleNlp = onParseTaskTitleNlp,
+            showScheduleControls = uiState.mode != TodoListMode.FLOATER,
+            onParseTaskTitleNlp = if (uiState.mode == TodoListMode.FLOATER) null else onParseTaskTitleNlp,
             onDismiss = { editTargetTodoId = null },
             onCreateTask = { _ -> },
             onUpdateTask = { target, payload ->
                 onUpdateTask(target, payload)
                 editTargetTodoId = null
             },
+        )
+    }
+
+    if (showCreateListSheet && isRootFloaterScreen) {
+        ListSettingsBottomSheet(
+            title = stringResource(R.string.home_new_list),
+            listName = createListName,
+            onListNameChange = { createListName = capitalizeFirstListLetter(it) },
+            listColor = createListColor,
+            onListColorChange = { createListColor = it },
+            listIconKey = createListIconKey,
+            onListIconChange = { createListIconKey = it },
+            showDelete = false,
+            onDismiss = { showCreateListSheet = false },
+            onSave = {
+                val normalizedName = capitalizeFirstListLetter(createListName).trim()
+                if (normalizedName.isNotBlank()) {
+                    onCreateList(normalizedName, createListColor, createListIconKey)
+                    createListName = ""
+                    createListColor = DEFAULT_LIST_COLOR_KEY
+                    createListIconKey = DEFAULT_LIST_ICON_KEY
+                    showCreateListSheet = false
+                }
+            },
+            onDelete = {},
         )
     }
 
@@ -1104,6 +1324,7 @@ fun TodoListScreen(
         !selectedListId.isNullOrBlank()
     ) {
         ListSettingsBottomSheet(
+            title = stringResource(R.string.todos_list_settings),
             listName = listSettingsName,
             onListNameChange = { listSettingsName = capitalizeFirstListLetter(it) },
             listColor = listSettingsColor,
@@ -1292,6 +1513,381 @@ private fun RootFeedTitleRow(
                 color = colorScheme.onBackground,
                 maxLines = 1,
             )
+        }
+    }
+}
+
+@Composable
+private fun RootFeedSearchHeaderRow(
+    title: String,
+    searchExpanded: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onSearchExpandedChange: (Boolean) -> Unit,
+    onSearchClose: () -> Unit,
+    onCreateList: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
+    val isDaytime = rememberTodoRootIsDaytime()
+    val titleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val titleIconTint = if (isDaytime) Color(0xFFF4C542) else Color(0xFFA8B8E8)
+
+    LaunchedEffect(searchExpanded) {
+        if (searchExpanded) {
+            delay(300)
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        } else {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+        }
+    }
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+    ) {
+        val buttonSize = 56.dp
+        val buttonGap = 8.dp
+        val expandedSearchWidth = maxWidth.coerceAtLeast(buttonSize)
+        val collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
+        val animatedSearchWidth by animateDpAsState(
+            targetValue = if (searchExpanded) expandedSearchWidth else buttonSize,
+            label = "rootFeedSearchHeaderWidth",
+        )
+        val animatedSearchOffset by animateDpAsState(
+            targetValue = if (searchExpanded) 0.dp else collapsedSearchOffset,
+            label = "rootFeedSearchHeaderOffset",
+        )
+        val actionsAlpha by animateFloatAsState(
+            targetValue = if (searchExpanded) 0f else 1f,
+            label = "rootFeedSearchHeaderActionsAlpha",
+        )
+        val searchContentAlpha by animateFloatAsState(
+            targetValue = if (searchExpanded) 1f else 0f,
+            label = "rootFeedSearchHeaderContentAlpha",
+        )
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 2.dp)
+                .graphicsLayer { alpha = actionsAlpha },
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = titleIcon,
+                contentDescription = null,
+                tint = titleIconTint,
+                modifier = Modifier.size(26.dp),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .graphicsLayer { alpha = actionsAlpha },
+            horizontalArrangement = Arrangement.spacedBy(buttonGap),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TodayHeaderButton(
+                onClick = onCreateList,
+                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                contentDescription = stringResource(R.string.action_create_list),
+            )
+            TodayHeaderButton(
+                onClick = onOpenSettings,
+                icon = Icons.Rounded.MoreHoriz,
+                contentDescription = stringResource(R.string.action_more),
+            )
+        }
+
+        Card(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .offset(x = animatedSearchOffset)
+                .width(animatedSearchWidth)
+                .height(buttonSize)
+                .zIndex(2f),
+            shape = CircleShape,
+            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.background),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = ripple(bounded = true),
+                    ) {
+                        if (!searchExpanded) onSearchExpandedChange(true)
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = stringResource(R.string.action_search),
+                    tint = colorScheme.onSurface,
+                    modifier = Modifier
+                        .size(30.dp)
+                        .graphicsLayer { alpha = if (searchExpanded) 0f else 1f },
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp)
+                        .graphicsLayer { alpha = searchContentAlpha },
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = colorScheme.onSurface,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        enabled = searchExpanded,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            color = colorScheme.onSurface,
+                            fontWeight = FontWeight.ExtraBold,
+                        ),
+                        cursorBrush = SolidColor(colorScheme.primary),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        decorationBox = { innerTextField ->
+                            Box(contentAlignment = Alignment.CenterStart) {
+                                if (searchQuery.isBlank()) {
+                                    Text(
+                                        text = stringResource(R.string.home_search_placeholder),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                    )
+                    IconButton(onClick = onSearchClose) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = stringResource(R.string.action_close),
+                            tint = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RootFloaterSearchResultsCard(
+    results: List<TodoItem>,
+    listsById: Map<String, ListSummary>,
+    onOpenTodo: (TodoItem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.2f)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+    ) {
+        if (results.isEmpty()) {
+            Text(
+                text = stringResource(R.string.home_search_no_results),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurfaceVariant,
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp),
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
+                items(
+                    items = results,
+                    key = { todo -> todo.id },
+                ) { todo ->
+                    val listMeta = todo.listId?.let { listsById[it] }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics(mergeDescendants = true) {}
+                            .heightIn(min = 48.dp)
+                            .clickable { onOpenTodo(todo) }
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = listIconForKey(listMeta?.iconKey),
+                            contentDescription = null,
+                            tint = listAccentColor(listMeta?.color).copy(alpha = 0.92f),
+                            modifier = Modifier.size(17.dp),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = todo.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                            Text(
+                                text = listMeta?.name ?: todo.priority,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FloaterMyListsHeader(
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = "My Lists",
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.onBackground,
+        fontWeight = FontWeight.ExtraBold,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun FloaterListRow(
+    modifier: Modifier = Modifier,
+    name: String,
+    colorKey: String?,
+    iconKey: String?,
+    count: Int,
+    onClick: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        label = "floaterListRowScale",
+    )
+    val animatedOffsetY by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 0.dp,
+        label = "floaterListRowOffsetY",
+    )
+    val animatedElevation by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 8.dp,
+        label = "floaterListRowElevation",
+    )
+    val accent = listAccentColor(colorKey)
+    val icon = listIconForKey(iconKey)
+    val containerColor =
+        lerpColor(colorScheme.surfaceVariant, accent, FLOATER_LIST_CONTAINER_COLOR_WEIGHT)
+    val displayName = capitalizeFirstListLetter(name)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(70.dp)
+            .semantics(mergeDescendants = true) {}
+            .offset(y = animatedOffsetY)
+            .graphicsLayer {
+                scaleX = animatedScale
+                scaleY = animatedScale
+            },
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = animatedElevation,
+            pressedElevation = animatedElevation,
+        ),
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = lerpColor(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(x = 14.dp, y = 8.dp)
+                    .size(82.dp),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Text(
+                        text = displayName,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+                Text(
+                    text = count.toString(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
         }
     }
 }
@@ -1600,12 +2196,14 @@ private fun CreateTaskButton(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ListSettingsBottomSheet(
+    title: String,
     listName: String,
     onListNameChange: (String) -> Unit,
     listColor: String,
     onListColorChange: (String) -> Unit,
     listIconKey: String,
     onListIconChange: (String) -> Unit,
+    showDelete: Boolean = true,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -1663,7 +2261,7 @@ private fun ListSettingsBottomSheet(
                     )
 
                     Text(
-                        text = stringResource(R.string.todos_list_settings),
+                        text = title,
                         style = MaterialTheme.typography.headlineSmall,
                         color = colorScheme.onBackground,
                         fontWeight = FontWeight.ExtraBold,
@@ -1900,7 +2498,9 @@ private fun ListSettingsBottomSheet(
                 }
 
                 Spacer(Modifier.height(2.dp))
-                ListSettingsDeleteButton(onClick = onDelete)
+                if (showDelete) {
+                    ListSettingsDeleteButton(onClick = onDelete)
+                }
             }
         }
     }
@@ -2220,7 +2820,7 @@ private fun TimelineTaskDragPreview(
                     maxLines = 1,
                 )
                 Text(
-                    text = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Anytime",
+                    text = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Floater",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant,
@@ -2294,7 +2894,7 @@ private fun TimelineTaskRow(
                             mode == TodoListMode.OVERDUE ||
                             mode == TodoListMode.SCHEDULED ||
                             mode == TodoListMode.PRIORITY ||
-                            mode == TodoListMode.ANYTIME ||
+                            mode == TodoListMode.FLOATER ||
                             mode == TodoListMode.LIST
                     )
         ) {
@@ -2454,7 +3054,7 @@ private fun buildTimelineSections(
             includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
 
-        TodoListMode.ANYTIME -> buildAnytimeSections(items)
+        TodoListMode.FLOATER -> buildFloaterSections(items)
 
         TodoListMode.LIST -> buildScheduledSections(
             items = items,
@@ -2562,34 +3162,51 @@ private fun buildTodaySections(
     )
 }
 
-private fun buildAnytimeSections(items: List<TodoItem>): List<TodoSection> {
-    val anytimeItems = items.filter { it.due == null }
-    val priorityItems = anytimeItems
-        .filter {
-            it.pinned || it.priority.equals(
-                "High",
-                ignoreCase = true
-            ) || it.priority.equals("Medium", ignoreCase = true)
-        }
-        .sortedWith(compareByDescending<TodoItem> { it.pinned }.thenBy { it.title.lowercase(Locale.getDefault()) })
-    val laterItems = anytimeItems
-        .filterNot { it in priorityItems }
-        .sortedBy { it.title.lowercase(Locale.getDefault()) }
+private fun buildFloaterSections(items: List<TodoItem>): List<TodoSection> {
+    val floaterItems = items
+        .sortedWith(
+            compareByDescending<TodoItem> { it.pinned }
+                .thenBy { it.title.lowercase(Locale.getDefault()) },
+        )
 
     return listOfNotNull(
-        priorityItems.takeIf { it.isNotEmpty() }?.let {
+        floaterItems.filter { it.priority.equals("High", ignoreCase = true) }
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                TodoSection(
+                    key = "floater-high",
+                    title = "High",
+                    items = it,
+                )
+            },
+        floaterItems.filter { it.priority.equals("Medium", ignoreCase = true) }
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                TodoSection(
+                    key = "floater-medium",
+                    title = "Medium",
+                    items = it,
+                )
+            },
+        floaterItems.filterNot {
+            it.priority.equals("High", ignoreCase = true) ||
+                    it.priority.equals("Medium", ignoreCase = true)
+        }.takeIf { it.isNotEmpty() }?.let {
             TodoSection(
-                key = "anytime-priority",
-                title = "Priority",
+                key = "floater-low",
+                title = "Low",
                 items = it,
             )
         },
-        TodoSection(
-            key = "anytime-open",
-            title = "Open",
-            items = laterItems,
-        ),
     )
+}
+
+private fun floaterPriorityRank(priority: String): Int {
+    return when {
+        priority.equals("High", ignoreCase = true) -> 0
+        priority.equals("Medium", ignoreCase = true) -> 1
+        else -> 2
+    }
 }
 
 private fun buildScheduledSections(
@@ -2772,7 +3389,7 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
         TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
         TodoListMode.OVERDUE -> stringResource(R.string.todos_empty_overdue)
         TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
-        TodoListMode.ANYTIME -> "No anytime tasks"
+        TodoListMode.FLOATER -> "No floater tasks"
         TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
         TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
         TodoListMode.LIST -> stringResource(R.string.todos_empty_list)
@@ -2787,7 +3404,7 @@ private fun emptyStateIconForMode(
         TodoListMode.TODAY -> Icons.Rounded.WbSunny
         TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
         TodoListMode.PRIORITY -> Icons.Rounded.Flag
-        TodoListMode.ANYTIME -> Icons.Rounded.Inventory
+        TodoListMode.FLOATER -> Icons.Rounded.Inventory
         TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
         TodoListMode.ALL -> Icons.Rounded.Inbox
         TodoListMode.LIST -> listIconForKey(listIconKey)
@@ -3060,8 +3677,8 @@ private fun SwipeTaskRow(
         animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
         label = "swipeTaskTitleStrikeProgress",
     )
-    val dueTimeText = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Anytime"
-    val dueDateTimeText = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format) ?: "Anytime"
+    val dueTimeText = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Floater"
+    val dueDateTimeText = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format) ?: "Floater"
     val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
     val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
     val dueSubtitleText = if (isOverdue) {
@@ -3099,7 +3716,7 @@ private fun SwipeTaskRow(
         TodoListMode.OVERDUE,
         TodoListMode.SCHEDULED,
         TodoListMode.PRIORITY,
-        TodoListMode.ANYTIME,
+        TodoListMode.FLOATER,
         TodoListMode.ALL,
             -> listMeta != null
 
@@ -3399,7 +4016,7 @@ private fun TodayTodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val dueText = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Anytime"
+    val dueText = todo.due?.let(TODO_DUE_TIME_FORMATTER::format) ?: "Floater"
     val isDetailOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
     val detailDueText = if (isDetailOverdue) {
         stringResource(R.string.todos_due_overdue_text, dueText)
@@ -3473,7 +4090,7 @@ private fun TodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format) ?: "Anytime"
+    val due = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format) ?: "Floater"
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
@@ -3597,7 +4214,7 @@ private fun modeAccentColor(
         TodoListMode.SCHEDULED -> Color(0xFFF29F38)
         TodoListMode.ALL -> Color(0xFF5E6878)
         TodoListMode.PRIORITY -> Color(0xFFE65E52)
-        TodoListMode.ANYTIME -> Color(0xFF4D8F83)
+        TodoListMode.FLOATER -> Color(0xFF4D8F83)
         TodoListMode.LIST -> listAccentColor(listColorKey)
     }
 }
@@ -3650,6 +4267,7 @@ private data class ListSettingsIconOption(
 
 private const val DEFAULT_LIST_COLOR_KEY = "PINK"
 private const val DEFAULT_LIST_ICON_KEY = "inbox"
+private const val FLOATER_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 
 private val LIST_SETTINGS_COLOR_KEYS = listOf(
     "PINK",
