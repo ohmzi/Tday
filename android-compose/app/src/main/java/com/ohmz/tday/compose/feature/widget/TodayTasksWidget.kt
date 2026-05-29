@@ -34,6 +34,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.ohmz.tday.compose.MainActivity
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import dagger.hilt.android.EntryPointAccessors
 import java.time.Instant
@@ -65,14 +66,22 @@ class TodayTasksWidget : GlanceAppWidget() {
 
         provideContent {
             GlanceTheme {
-                WidgetContent(tasks = todayTasks)
+                WidgetContent(
+                    tasks = todayTasks,
+                    title = context.getString(R.string.widget_today_tasks_title),
+                    emptyMessage = context.getString(R.string.widget_today_tasks_empty),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun WidgetContent(tasks: List<CachedTodoRecord>) {
+private fun WidgetContent(
+    tasks: List<CachedTodoRecord>,
+    title: String,
+    emptyMessage: String,
+) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -91,7 +100,7 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Today's Tasks",
+                text = title,
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
                     fontFamily = TdayWidgetFontFamily,
@@ -117,7 +126,7 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No tasks due today",
+                    text = emptyMessage,
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurfaceVariant,
                         fontFamily = TdayWidgetFontFamily,
