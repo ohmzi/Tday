@@ -6,6 +6,24 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const MONO = path.resolve(ROOT, "..");
 const BACKEND_SRC = path.join(MONO, "tday-backend", "src", "main", "kotlin", "com", "ohmz", "tday");
 
+const SECURITY_EVENT_CODES = [
+  "auth_limit_ip",
+  "auth_limit_email",
+  "auth_lockout",
+  "auth_captcha_failed",
+  "register_captcha_failed",
+  "auth_captcha_misconfigured",
+  "auth_credential_envelope_invalid",
+  "auth_alert_ip_concentration",
+  "auth_alert_lockout_burst",
+  "auth_signal_anomaly",
+  "auth_session_absolute_expired",
+  "auth_session_renewed",
+  "auth_session_token_version_mismatch",
+  "auth_session_user_missing",
+  "request_rate_limit_triggered",
+] as const;
+
 function walkFiles(dir: string, ext: string): string[] {
   const results: string[] = [];
   if (!existsSync(dir)) return results;
@@ -175,6 +193,30 @@ describe("security guardrails", () => {
     it(".env.example should document CAPTCHA variables", () => {
       expect(envExample).toContain("AUTH_CAPTCHA_TRIGGER_FAILURES");
       expect(envExample).toContain("AUTH_CAPTCHA_SECRET");
+    });
+  });
+
+  describe("security event monitoring documentation", () => {
+    it("SECURITY.md should document emitted security event codes", () => {
+      const securityDoc = readSource(path.join(MONO, "SECURITY.md"));
+
+      for (const code of SECURITY_EVENT_CODES) {
+        expect(securityDoc).toContain(code);
+      }
+    });
+
+    it("operations hardening docs should document emitted security event codes", () => {
+      const operationsDoc = readSource(
+        path.join(MONO, "docs", "security", "operations-hardening.md"),
+      );
+      const cloudflareDoc = readSource(
+        path.join(MONO, "docs", "security", "cloudflare-auth-hardening.md"),
+      );
+
+      for (const code of SECURITY_EVENT_CODES) {
+        expect(operationsDoc).toContain(code);
+        expect(cloudflareDoc).toContain(code);
+      }
     });
   });
 

@@ -129,10 +129,17 @@ Structured security event codes are emitted to the `eventLog` database table:
 | `auth_lockout` | Account locked out after repeated failures |
 | `auth_captcha_failed` | CAPTCHA verification failed |
 | `register_captcha_failed` | Registration CAPTCHA failed |
+| `auth_captcha_misconfigured` | CAPTCHA should have been enforced but the server secret was missing |
+| `auth_credential_envelope_invalid` | Encrypted credential envelope could not be decrypted |
 | `auth_alert_ip_concentration` | Suspicious IP concentration detected |
 | `auth_alert_lockout_burst` | Burst of lockouts in a short window |
 | `auth_signal_anomaly` | Behavioral anomaly detected |
-| `auth_captcha_misconfigured` | CAPTCHA should have been enforced but the server secret was missing |
+| `auth_session_absolute_expired` | Session exceeded the configured absolute lifetime and was cleared |
+| `auth_session_renewed` | Active session was renewed because it crossed the renewal threshold |
+| `auth_session_token_version_mismatch` | Session was cleared because the user's token version changed |
+| `auth_session_user_missing` | Session referenced a user row that no longer exists |
 | `request_rate_limit_triggered` | App-layer request throttle triggered |
 
-Alert when `auth_lockout` grows rapidly, `auth_limit_ip` spikes from a narrow IP range, or `request_rate_limit_triggered` starts clustering on one path.
+The request-rate event includes a `reason` detail such as `api_rate_limit`, `infra_rate_limit`, `summary_rate_limit`, `change_password_rate_limit`, or `websocket_rate_limit`.
+
+Alert when `auth_lockout` grows rapidly, `auth_limit_ip` spikes from a narrow IP range, session-clearing events cluster unexpectedly, or `request_rate_limit_triggered` starts clustering on one path.
