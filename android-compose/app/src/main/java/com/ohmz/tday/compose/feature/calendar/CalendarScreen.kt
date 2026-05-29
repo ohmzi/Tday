@@ -43,82 +43,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.AccountBalance
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Architecture
-import androidx.compose.material.icons.rounded.Backpack
-import androidx.compose.material.icons.rounded.BeachAccess
-import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BorderColor
-import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Cake
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.CardGiftcard
-import androidx.compose.material.icons.rounded.ChangeHistory
-import androidx.compose.material.icons.rounded.ChatBubbleOutline
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.ChildCare
-import androidx.compose.material.icons.rounded.Circle
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.Computer
-import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.DesktopWindows
-import androidx.compose.material.icons.rounded.DirectionsBoat
-import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.Eco
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.FamilyRestroom
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Flight
-import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Inventory
-import androidx.compose.material.icons.rounded.Key
-import androidx.compose.material.icons.rounded.Lightbulb
-import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.LocalMall
-import androidx.compose.material.icons.rounded.LocationCity
-import androidx.compose.material.icons.rounded.Medication
-import androidx.compose.material.icons.rounded.Mood
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material.icons.rounded.Pets
-import androidx.compose.material.icons.rounded.PriorityHigh
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.School
-import androidx.compose.material.icons.rounded.ShoppingBasket
-import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material.icons.rounded.SportsBaseball
-import androidx.compose.material.icons.rounded.SportsBasketball
-import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.SportsFootball
-import androidx.compose.material.icons.rounded.SportsSoccer
-import androidx.compose.material.icons.rounded.SportsTennis
-import androidx.compose.material.icons.rounded.Square
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Train
-import androidx.compose.material.icons.rounded.WaterDrop
-import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material.icons.rounded.Whatshot
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -195,6 +129,7 @@ import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
+import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -2085,7 +2020,7 @@ private fun CalendarTaskDragPreview(
             }
             if (listMeta != null) {
                 Icon(
-                    imageVector = listIconForKey(listMeta.iconKey),
+                    imageVector = tdayListIconForKey(listMeta.iconKey),
                     contentDescription = null,
                     tint = tdayListAccentColor(listMeta.color),
                     modifier = Modifier.size(18.dp),
@@ -2432,7 +2367,7 @@ private fun CalendarTodoRow(
                         ) {
                             if (showListIndicator) {
                                 Icon(
-                                    imageVector = listIconForKey(listMeta?.iconKey),
+                                    imageVector = tdayListIconForKey(listMeta?.iconKey),
                                     contentDescription = stringResource(R.string.label_task_list),
                                     tint = listIndicatorColor,
                                     modifier = Modifier.size(18.dp),
@@ -2591,7 +2526,7 @@ private fun CalendarCompletedTodoRow(
                     ) {
                         if (showListIndicator) {
                             Icon(
-                                imageVector = listIconForKey(listMeta?.iconKey),
+                                imageVector = tdayListIconForKey(listMeta?.iconKey),
                                 contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
                                 modifier = Modifier.size(18.dp),
@@ -2606,7 +2541,7 @@ private fun CalendarCompletedTodoRow(
                     }
                 } else if (showListIndicator) {
                     Icon(
-                        imageVector = listIconForKey(listMeta?.iconKey),
+                        imageVector = tdayListIconForKey(listMeta?.iconKey),
                         contentDescription = stringResource(R.string.label_task_list),
                         tint = listIndicatorColor,
                         modifier = Modifier
@@ -2777,80 +2712,6 @@ private fun priorityIconFor(priority: String): ImageVector? {
 private fun CompletedItem.resolveListSummary(lists: List<ListSummary>): ListSummary? {
     val name = listName?.trim()?.lowercase(Locale.getDefault()) ?: return null
     return lists.firstOrNull { it.name.trim().lowercase(Locale.getDefault()) == name }
-}
-
-private fun listIconForKey(iconKey: String?): ImageVector {
-    return when (iconKey?.trim()?.lowercase(Locale.getDefault())) {
-        "sun" -> Icons.Rounded.WbSunny
-        "calendar" -> Icons.Rounded.CalendarToday
-        "schedule" -> Icons.Rounded.Schedule
-        "flag" -> Icons.Rounded.Flag
-        "check" -> Icons.Rounded.Check
-        "smile" -> Icons.Rounded.Mood
-        "list" -> Icons.AutoMirrored.Rounded.List
-        "bookmark" -> Icons.Rounded.Bookmark
-        "key" -> Icons.Rounded.Key
-        "gift" -> Icons.Rounded.CardGiftcard
-        "cake" -> Icons.Rounded.Cake
-        "school" -> Icons.Rounded.School
-        "bag" -> Icons.Rounded.Backpack
-        "edit" -> Icons.Rounded.Edit
-        "document" -> Icons.Rounded.Description
-        "inbox" -> Icons.Rounded.Inbox
-        "book" -> Icons.AutoMirrored.Rounded.MenuBook
-        "work", "briefcase" -> Icons.Rounded.Work
-        "wallet" -> Icons.Rounded.AccountBalanceWallet
-        "money" -> Icons.Rounded.Payments
-        "health" -> Icons.Rounded.Medication
-        "fitness" -> Icons.Rounded.FitnessCenter
-        "run" -> Icons.AutoMirrored.Rounded.DirectionsRun
-        "food" -> Icons.Rounded.Restaurant
-        "drink", "cocktail" -> Icons.Rounded.LocalBar
-        "monitor" -> Icons.Rounded.DesktopWindows
-        "music" -> Icons.Rounded.MusicNote
-        "computer" -> Icons.Rounded.Computer
-        "game" -> Icons.Rounded.SportsEsports
-        "headphones" -> Icons.Rounded.Headphones
-        "eco" -> Icons.Rounded.Eco
-        "pets" -> Icons.Rounded.Pets
-        "child" -> Icons.Rounded.ChildCare
-        "family" -> Icons.Rounded.FamilyRestroom
-        "basket" -> Icons.Rounded.ShoppingBasket
-        "cart" -> Icons.Rounded.ShoppingCart
-        "mall" -> Icons.Rounded.LocalMall
-        "inventory" -> Icons.Rounded.Inventory
-        "soccer" -> Icons.Rounded.SportsSoccer
-        "baseball" -> Icons.Rounded.SportsBaseball
-        "basketball" -> Icons.Rounded.SportsBasketball
-        "football" -> Icons.Rounded.SportsFootball
-        "tennis" -> Icons.Rounded.SportsTennis
-        "train" -> Icons.Rounded.Train
-        "flight", "travel" -> Icons.Rounded.Flight
-        "boat" -> Icons.Rounded.DirectionsBoat
-        "car" -> Icons.Rounded.DirectionsCar
-        "umbrella" -> Icons.Rounded.BeachAccess
-        "drop" -> Icons.Rounded.WaterDrop
-        "snow" -> Icons.Rounded.AcUnit
-        "fire" -> Icons.Rounded.Whatshot
-        "tools" -> Icons.Rounded.Build
-        "scissors" -> Icons.Rounded.ContentCut
-        "architecture" -> Icons.Rounded.Architecture
-        "bank" -> Icons.Rounded.AccountBalance
-        "code" -> Icons.Rounded.Code
-        "idea" -> Icons.Rounded.Lightbulb
-        "chat" -> Icons.Rounded.ChatBubbleOutline
-        "alert" -> Icons.Rounded.PriorityHigh
-        "star" -> Icons.Rounded.Star
-        "heart" -> Icons.Rounded.Favorite
-        "circle" -> Icons.Rounded.Circle
-        "square" -> Icons.Rounded.Square
-        "triangle" -> Icons.Rounded.ChangeHistory
-        "home" -> Icons.Rounded.Home
-        "city" -> Icons.Rounded.LocationCity
-        "camera" -> Icons.Rounded.CameraAlt
-        "palette" -> Icons.Rounded.Palette
-        else -> Icons.Rounded.Inbox
-    }
 }
 
 private val WEEKDAY_HEADERS = listOf("S", "M", "T", "W", "T", "F", "S")

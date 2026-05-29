@@ -31,29 +31,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.BorderColor
-import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Flight
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.LocalHospital
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -105,6 +91,7 @@ import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
+import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -813,7 +800,7 @@ private fun CompletedSwipeRow(
                             ) {
                                 if (showListIndicator) {
                                     Icon(
-                                        imageVector = listIconForKey(listMeta?.iconKey),
+                                        imageVector = tdayListIconForKey(listMeta?.iconKey),
                                         contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
                                         modifier = Modifier.size(18.dp),
@@ -828,7 +815,7 @@ private fun CompletedSwipeRow(
                             }
                         } else if (showListIndicator) {
                             Icon(
-                                imageVector = listIconForKey(listMeta?.iconKey),
+                                imageVector = tdayListIconForKey(listMeta?.iconKey),
                                 contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
                                 modifier = Modifier
@@ -936,29 +923,6 @@ private fun CompletedItem.toEditableTodo(lists: List<ListSummary>): TodoItem {
         listId = resolvedListId,
         updatedAt = completedAt,
     )
-}
-
-private fun listIconForKey(iconKey: String?): ImageVector {
-    return when (iconKey?.trim()?.lowercase(Locale.getDefault())) {
-        "sun" -> Icons.Rounded.WbSunny
-        "calendar" -> Icons.Rounded.CalendarMonth
-        "schedule" -> Icons.Rounded.Schedule
-        "flag" -> Icons.Rounded.Flag
-        "check" -> Icons.Rounded.Check
-        "inbox" -> Icons.Rounded.Inbox
-        "book" -> Icons.AutoMirrored.Rounded.MenuBook
-        "briefcase" -> Icons.Rounded.Work
-        "health" -> Icons.Rounded.LocalHospital
-        "fitness" -> Icons.Rounded.FitnessCenter
-        "food" -> Icons.Rounded.Restaurant
-        "cocktail" -> Icons.Rounded.LocalBar
-        "music" -> Icons.Rounded.MusicNote
-        "travel" -> Icons.Rounded.Flight
-        "car" -> Icons.Rounded.DirectionsCar
-        "gift" -> Icons.Rounded.CardGiftcard
-        "home" -> Icons.Rounded.Home
-        else -> Icons.AutoMirrored.Rounded.List
-    }
 }
 
 private data class CompletedSection(
