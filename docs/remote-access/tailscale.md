@@ -2,6 +2,8 @@
 
 Access T'Day over a private WireGuard mesh VPN managed by Tailscale. Install on the server and each client device — they join a shared "tailnet" with stable private IPs. No port forwarding, no DNS configuration, and no certificates to manage.
 
+This guide is only needed for Server Mode. Local Mode on Android and iOS works without remote access.
+
 ## Overview
 
 | | |

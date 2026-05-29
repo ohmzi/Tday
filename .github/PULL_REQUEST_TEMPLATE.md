@@ -8,6 +8,10 @@
 
 - 
 
+## Product / Data Impact
+
+<!-- Note Local Mode, Server Mode, mobile parity, API, shared DTO, backend table, Room, SwiftData, or sync impacts. Write "None" if not applicable. -->
+
 ## Type of Change
 
 - [ ] Feature (new functionality)
@@ -15,6 +19,7 @@
 - [ ] Refactor (no behavior change)
 - [ ] Chore (deps, CI, docs, tooling)
 - [ ] Breaking change (existing behavior altered)
+- [ ] Documentation-only
 
 ## Pre-Merge Checklist
 
@@ -24,9 +29,14 @@
 - [ ] No AI tool attribution in commits or PR description — no `Co-authored-by`, `Made-with`, or any trailer/text referencing Cursor, Codex, Copilot, ChatGPT, Claude, etc.
 - [ ] Backward compatibility maintained (or migration provided)
 - [ ] Flyway migration reviewed (if schema changed)
+- [ ] Shared DTOs / Android Room / iOS SwiftData / sync mappers reviewed (if data shape changed)
+- [ ] Local Mode behavior reviewed (if mobile behavior changed)
+- [ ] Android/iOS parity checked (if mobile UI changed)
+- [ ] Relevant docs updated (`README`, product/data/API/architecture/testing/platform docs)
 - [ ] Error handling and logging added where needed
-- [ ] API changes follow [API Guidelines](docs/API_GUIDELINES.md)
+- [ ] API changes follow [API Guidelines](../docs/API_GUIDELINES.md)
 - [ ] Android changes tested on emulator or device (if applicable)
+- [ ] iOS changes tested on simulator or device (if applicable)
 
 ## Testing
 

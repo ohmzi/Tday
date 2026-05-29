@@ -14,9 +14,17 @@ assignees: ''
 
 <!-- Describe the feature or change you'd like. -->
 
+## Product Surface
+
+<!-- Which surfaces need this? Web, backend/API, shared DTOs, Android, iOS, Local Mode, Server Mode, scheduled tasks, floaters, calendar, completed history, settings, deployment, docs. -->
+
 ## Alternatives Considered
 
 <!-- Any alternative solutions or workarounds you've thought about. -->
+
+## Parity / Data Notes
+
+<!-- Note expected Android/iOS parity, data model changes, API changes, sync behavior, or documentation updates. -->
 
 ## Additional Context
 

@@ -1,11 +1,11 @@
-# ADR 005: Offline-First Android Client with Background Sync
+# ADR 005: Offline-First Mobile Clients with Background Sync
 
 **Status:** Accepted  
-**Date:** 2025
+**Date:** 2025, updated 2026-05-29
 
 ## Context
 
-The Android client needs to work reliably on unstable networks and provide instant UI feedback. Options:
+The mobile clients need to work reliably on unstable networks and provide instant UI feedback. Android shipped first, then iOS adopted the same product behavior with platform-native storage. Options:
 
 1. **Online-only**: All data from network requests. Simple but fragile.
 2. **Cache-then-network**: Show cached data, refresh from network. Good UX but no offline writes.
@@ -13,21 +13,25 @@ The Android client needs to work reliably on unstable networks and provide insta
 
 ## Decision
 
-- Implement **offline-first** architecture with a local JSON cache and a pending mutation queue.
-- Cache state is serialized to `EncryptedSharedPreferences` as `OfflineSyncState`.
+- Implement **offline-first** architecture with local platform databases and a pending mutation queue.
+- Android stores cache state in Room. A one-time migration reads the legacy encrypted JSON cache and moves it into Room.
+- iOS stores cache state in SwiftData.
+- Both platforms mirror the same logical `OfflineSyncState`: todos, floaters, lists, floater lists, completed records, pending mutations, sync timestamps, and app settings metadata.
 - Mutations made offline are queued as `PendingMutationRecord` entries and synced when connectivity returns.
 - `OfflineCacheManager` exposes a `cacheDataVersion` `StateFlow` that increments on cache changes — ViewModels observe it to reload.
-- `AppViewModel` runs a periodic background sync loop.
+- iOS posts `.offlineCacheDidChange` for the same purpose.
+- `AppViewModel` runs periodic/foreground sync in Server Mode.
+- Local Mode is a first-class mobile workspace and clears/ignores pending mutations because there is no remote target.
 
 ## Rationale
 
 - Mobile networks are unreliable. Users expect their task app to work everywhere.
 - Optimistic UI updates (write locally, sync later) provide instant feedback.
 - The mutation queue preserves user intent even through app restarts.
-- Encrypted storage protects task data at rest on the device.
+- Platform storage keeps task data local on the device and avoids rewriting entire JSON blobs as the dataset grows.
 
 ## Consequences
 
 - **Positive**: Instant UI, works offline, data survives app restarts and network outages.
 - **Negative**: Conflict resolution is limited — last-write-wins for most fields. Sync and mutation replay add coordination complexity across repositories and `SyncManager`.
-- **Future**: Consider Room database if cache complexity grows beyond JSON serialization capabilities. Keep Android on direct MVVM wiring with repositories/services rather than reintroducing a separate use-case layer by default.
+- **Future**: Define explicit import/export or migration behavior before moving Local Mode data into a server workspace. Keep mobile ViewModels focused on presentation and prefer repositories/services or focused use cases over broad app-layer abstractions.

@@ -2,6 +2,8 @@
 
 Expose T'Day to the internet with a single command. ngrok creates an outbound tunnel from your server to ngrok's edge, giving you a public HTTPS URL instantly — no DNS, no certificates, no port forwarding.
 
+This guide is only needed for Server Mode. Local Mode on Android and iOS works without remote access.
+
 ## Overview
 
 | | |

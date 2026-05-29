@@ -2,6 +2,8 @@
 
 Self-hosted reverse proxy that exposes local services through a public VPS. Run `frps` (server) on a VPS with a public IP and `frpc` (client) on the T'Day host — traffic flows through the VPS to your local T'Day instance. Ideal when you run multiple self-hosted services behind one relay.
 
+This guide is only needed for Server Mode. Local Mode on Android and iOS works without remote access.
+
 ## Overview
 
 | | |

@@ -1,12 +1,14 @@
 # Testing Strategy
 
-This document defines testing expectations, conventions, and tooling for the web, backend, and Android codebases.
+This document defines testing expectations, conventions, and tooling for the web, backend, Android, and iOS codebases.
 
 ## Philosophy
 
 - Test behavior, not implementation details.
 - Security-critical code must always have tests.
 - Tests are first-class code — apply the same quality standards as production code.
+- For mobile UI work, verify Android/iOS parity even when only one platform changed.
+- For data model work, verify shared DTOs, backend persistence, mobile local cache, and sync replay together.
 
 ## Web Testing
 
@@ -112,6 +114,7 @@ npm run test -- tests/guardrails/security   # security guardrails only
 | Android `core/`, `feature/`, `ui/theme/` packages exist | Package structure follows the documented architecture |
 | Android theme files exist (`Color.kt`, `Theme.kt`, `Type.kt`, `Dimens.kt`) | Design tokens are centralized |
 | Android `build.gradle.kts` derives version from `package.json` | Single source of version truth |
+| iOS docs and project structure are represented in repository docs | Native iOS remains a first-class surface |
 
 #### `api-guidelines.test.ts` — API Convention Enforcement
 
@@ -161,6 +164,7 @@ npm run test -- tests/guardrails/security   # security guardrails only
 | `install-hooks.sh` exists | Hook installation is documented and scriptable |
 | `CODING_STANDARDS.md` documents git commit hygiene | Rules are discoverable |
 | All required documentation files exist | Complete project documentation |
+| Product/data/housekeeping docs exist | Product direction, data structure, and maintenance rules stay discoverable |
 | Version synchronizes from `package.json` to Android | Single source of version truth |
 
 ### Naming Conventions
@@ -195,6 +199,8 @@ describe("fieldEncryption", () => {
 | Guardrails: API guidelines | Yes | Enforce API_GUIDELINES.md patterns |
 | Guardrails: Android standards | Yes | Enforce Android coding and theme conventions |
 | Guardrails: dependency hygiene | Yes | Enforce config, CI, and documentation completeness |
+| Mobile Local Mode and sync behavior | Recommended | Prevent offline/local regressions |
+| Android/iOS parity for visible mobile features | Manual + tests where practical | Avoid product drift |
 | CRUD routes (happy path) | Recommended | Catch regressions |
 | Error paths in routes | Recommended | Ensure proper status codes |
 
@@ -267,8 +273,10 @@ android-compose/app/src/
 | Area | Type | Priority |
 |------|------|----------|
 | Repository data mapping (DTO → domain) | Unit | High |
-| Offline cache serialization/deserialization | Unit | High |
+| Room cache mapping and legacy cache migration | Unit | High |
+| Pending mutation creation/replay behavior | Unit | High |
 | ViewModel state transitions | Unit | High |
+| Local Mode server-only affordances | Unit/manual | High |
 | Notification scheduling logic | Unit | Medium |
 | Screen composition (renders, interactions) | Instrumented | Medium |
 | End-to-end auth flow | Instrumented | Low (manual for now) |
@@ -284,6 +292,43 @@ fun `should clear local data when session is invalidated`() { ... }
 ```
 
 Use backtick-quoted descriptive names: `should <expected behavior> when <condition>`.
+
+## iOS Testing
+
+### Tooling
+
+| Tool | Purpose |
+|------|---------|
+| XCTest | Unit and integration tests |
+| Xcode test runner | Simulator/device execution |
+| SwiftData in-memory containers | Repository/cache tests where practical |
+
+### Running Tests
+
+```bash
+xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'
+```
+
+### Test Locations
+
+```text
+ios-swiftUI/Tests/
+└── TdayCoreTests/
+```
+
+### What Should Be Tested (iOS)
+
+| Area | Type | Priority |
+|------|------|----------|
+| SwiftData cache mapping | Unit | High |
+| Repository data mapping (API → domain/cache) | Unit | High |
+| Pending mutation creation/replay behavior | Unit | High |
+| ViewModel state transitions | Unit | Medium |
+| Local Mode server-only affordances | Unit/manual | High |
+| Reminder scheduling helpers | Unit | Medium |
+| Navigation/deep-link routing helpers | Unit | Medium |
+
+For visual polish, build the app and do a simulator/device spot check when automated UI tests are not practical.
 
 ## Coverage Expectations
 
@@ -306,6 +351,12 @@ Use backtick-quoted descriptive names: `should <expected behavior> when <conditi
 - ViewModel state logic: **recommended**.
 - UI composition tests: **optional** for now.
 
+### iOS
+
+- SwiftData cache and repository mapping: **mandatory** when the local data shape changes.
+- Local Mode and sync behavior: **recommended** for app-flow changes.
+- UI tests: **optional** for now; use simulator/device spot checks for polish.
+
 ### Coverage Reporting
 
 Vitest is configured with coverage support. Reports are written to `coverage/`. Review coverage locally before pushing changes to security-critical modules.
@@ -314,8 +365,13 @@ Vitest is configured with coverage support. Reports are written to `coverage/`. 
 
 - [ ] `cd tday-web && npm run test` passes with no failures.
 - [ ] `./gradlew :tday-backend:test` passes with no failures.
+- [ ] `cd android-compose && ./gradlew :app:compileDebugKotlin` passes for Android code changes.
+- [ ] `cd android-compose && ./gradlew :app:testDebugUnitTest` passes for Android data/ViewModel changes when tests exist.
+- [ ] `xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'` passes for iOS code changes when the simulator is available.
 - [ ] New security-related code has tests.
 - [ ] New business logic (recurrence, NLP, date handling) has tests.
+- [ ] New data model changes are covered across shared/backend/mobile cache as appropriate.
+- [ ] Mobile UI changes received an Android/iOS parity pass.
 - [ ] Tests are deterministic — no flaky time-dependent assertions.
 - [ ] No `console.log` left in test files.
 - [ ] Test names describe behavior, not implementation.
@@ -336,3 +392,15 @@ Vitest is configured with coverage support. Reports are written to `coverage/`. 
 2. Use JUnit 5 annotations (`@Test`, `@BeforeEach`, etc.).
 3. For route tests, use Ktor's `testApplication` with `application { module() }`.
 4. Run `./gradlew :tday-backend:test` to verify.
+
+### Android
+
+1. Add unit tests under `android-compose/app/src/test/` or instrumentation tests under `android-compose/app/src/androidTest/`.
+2. Prefer repository/cache/ViewModel tests before UI instrumentation.
+3. Run `cd android-compose && ./gradlew :app:testDebugUnitTest`.
+
+### iOS
+
+1. Add tests under `ios-swiftUI/Tests/TdayCoreTests/`.
+2. Prefer cache/repository/helper tests before UI tests.
+3. Run the `xcodebuild test` command above or the same test action in Xcode.
