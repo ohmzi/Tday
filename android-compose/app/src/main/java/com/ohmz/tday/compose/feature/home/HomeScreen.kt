@@ -592,7 +592,7 @@ fun HomeScreen(
                         ) {
                             if (searchResults.isEmpty()) {
                                 Text(
-                                    text = "No matching tasks",
+                                    text = stringResource(R.string.home_search_no_results),
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = colorScheme.onSurfaceVariant,

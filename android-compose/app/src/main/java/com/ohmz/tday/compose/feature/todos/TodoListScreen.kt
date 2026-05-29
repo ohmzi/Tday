@@ -1765,7 +1765,7 @@ private fun FloaterMyListsHeader(
     modifier: Modifier = Modifier,
 ) {
     Text(
-        text = "My Lists",
+        text = stringResource(R.string.home_my_lists),
         style = MaterialTheme.typography.headlineSmall,
         color = MaterialTheme.colorScheme.onBackground,
         fontWeight = FontWeight.ExtraBold,

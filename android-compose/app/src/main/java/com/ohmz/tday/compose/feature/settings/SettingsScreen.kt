@@ -198,12 +198,15 @@ fun SettingsScreen(
             SettingsSectionCard {
                 SettingsListRow(
                     title = stringResource(R.string.release_title),
-                    value = "v${BuildConfig.VERSION_NAME}",
+                    value = stringResource(R.string.label_version_name, BuildConfig.VERSION_NAME),
                     onClick = onOpenLatestRelease,
                 )
                 if (hasUpdate && latestVersionName != null) {
                     Text(
-                        text = "v$latestVersionName available",
+                        text = stringResource(
+                            R.string.settings_update_available_version,
+                            latestVersionName,
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = colorScheme.secondary,
                         fontWeight = FontWeight.ExtraBold,
@@ -216,7 +219,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Server",
+                            text = stringResource(R.string.settings_server_label),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
@@ -226,14 +229,18 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "v$backendVersion",
+                                text = stringResource(R.string.label_version_name, backendVersion),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colorScheme.onSurface.copy(alpha = 0.58f),
                             )
                             val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
                                 versionCheckResult == null
                             Text(
-                                text = if (isCompatible) "Compatible" else "Incompatible",
+                                text = if (isCompatible) {
+                                    stringResource(R.string.settings_server_compatible)
+                                } else {
+                                    stringResource(R.string.settings_server_incompatible)
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (isCompatible) {
@@ -581,7 +588,7 @@ private fun ReminderSelector(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Default reminder",
+                text = stringResource(R.string.settings_default_reminder),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,

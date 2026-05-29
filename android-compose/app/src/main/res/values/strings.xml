@@ -33,6 +33,7 @@
     <string name="label_task_list">Task list</string>
     <string name="label_priority_task">Priority task</string>
     <string name="label_loading">Loading…</string>
+    <string name="label_version_name">v%1$s</string>
 
     <!-- Home screen -->
     <string name="home_title">T\'Day</string>
@@ -110,6 +111,11 @@
     <string name="settings_ai_task_summary">AI task summary</string>
     <string name="settings_saving_admin">Saving admin setting…</string>
     <string name="settings_ai_unavailable_title">AI Summary Unavailable</string>
+    <string name="settings_default_reminder">Default reminder</string>
+    <string name="settings_update_available_version">v%1$s available</string>
+    <string name="settings_server_label">Server</string>
+    <string name="settings_server_compatible">Compatible</string>
+    <string name="settings_server_incompatible">Incompatible</string>
 
     <!-- Onboarding / wizard -->
     <string name="onboarding_title">Set Up T\'Day</string>
@@ -303,7 +309,22 @@
     <string name="update_notification_title">Update installed</string>
     <string name="update_notification_message">Tap to reopen T\'Day.</string>
 
+    <string name="app_update_required_title">Update Required</string>
+    <string name="app_update_required_message">An update to v%1$s is required to continue.</string>
+    <string name="app_update_download_not_ready">v%1$s is not yet available for download. Please ask an administrator to upload the update.</string>
+    <string name="server_update_required_title">Server Update Needed</string>
+    <string name="server_update_required_message">Your app requires a newer server version. The server is on v%1$s. Please contact your administrator to update the server.</string>
+    <string name="install_permission_return_to_app">Grant install permission, then return to the app.</string>
+    <string name="install_permission_return_here">Grant install permission, then return here.</string>
+    <string name="overlay_install_awaiting_permission">Awaiting Permission...</string>
+    <string name="overlay_install_downloading_progress">Downloading... %1$d%%</string>
+    <string name="overlay_install_downloading">Downloading...</string>
+    <string name="overlay_install_installing">Installing...</string>
+    <string name="overlay_install_download_and_install">Download &amp; Install</string>
+
     <string name="widget_today_tasks_description">Shows today\'s tasks at a glance</string>
+    <string name="widget_today_tasks_title">Today\'s Tasks</string>
+    <string name="widget_today_tasks_empty">No tasks due today</string>
     <string name="widget_loading">Loading tasks…</string>
 
     <!-- Settings: updates -->
