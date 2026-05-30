@@ -25,6 +25,21 @@ interface TodoDao {
 }
 
 @Dao
+interface FloaterDao {
+    @Query("SELECT * FROM cached_floaters")
+    fun getAll(): List<CachedFloaterEntity>
+
+    @Query("SELECT COUNT(*) FROM cached_floaters")
+    fun count(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(floaters: List<CachedFloaterEntity>)
+
+    @Query("DELETE FROM cached_floaters")
+    fun deleteAll()
+}
+
+@Dao
 interface ListDao {
     @Query("SELECT * FROM cached_lists")
     fun getAll(): List<CachedListEntity>
@@ -43,6 +58,21 @@ interface ListDao {
 }
 
 @Dao
+interface FloaterListDao {
+    @Query("SELECT * FROM cached_floater_lists")
+    fun getAll(): List<CachedFloaterListEntity>
+
+    @Query("SELECT COUNT(*) FROM cached_floater_lists")
+    fun count(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(lists: List<CachedFloaterListEntity>)
+
+    @Query("DELETE FROM cached_floater_lists")
+    fun deleteAll()
+}
+
+@Dao
 interface CompletedDao {
     @Query("SELECT * FROM cached_completed")
     fun getAll(): List<CachedCompletedEntity>
@@ -57,6 +87,21 @@ interface CompletedDao {
     fun insertAll(items: List<CachedCompletedEntity>)
 
     @Query("DELETE FROM cached_completed")
+    fun deleteAll()
+}
+
+@Dao
+interface CompletedFloaterDao {
+    @Query("SELECT * FROM cached_completed_floaters")
+    fun getAll(): List<CachedCompletedFloaterEntity>
+
+    @Query("SELECT COUNT(*) FROM cached_completed_floaters")
+    fun count(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertAll(items: List<CachedCompletedFloaterEntity>)
+
+    @Query("DELETE FROM cached_completed_floaters")
     fun deleteAll()
 }
 

@@ -1,12 +1,14 @@
 # Testing Strategy
 
-This document defines testing expectations, conventions, and tooling for the web, backend, and Android codebases.
+This document defines testing expectations, conventions, and tooling for the web, backend, Android, and iOS codebases.
 
 ## Philosophy
 
 - Test behavior, not implementation details.
 - Security-critical code must always have tests.
 - Tests are first-class code — apply the same quality standards as production code.
+- For mobile UI work, verify Android/iOS parity even when only one platform changed.
+- For data model work, verify shared DTOs, backend persistence, mobile local cache, and sync replay together.
 
 ## Web Testing
 
@@ -23,47 +25,45 @@ This document defines testing expectations, conventions, and tooling for the web
 ```bash
 cd tday-web
 npm run test                              # run all tests
-TZ=UTC npx vitest tests/security/         # security suite only
-TZ=UTC npx vitest --watch                 # watch mode for development
-TZ=UTC npx vitest --coverage              # generate coverage report
+npm run test -- tests/guardrails/         # guardrail suite only
+npx vitest --watch                        # watch mode for development
+npx vitest run --coverage                 # generate coverage report
+TZ=UTC npx vitest run tests/unit/move-todo-to-day.test.ts
 ```
 
-Tests run with `TZ=UTC` to ensure deterministic date handling.
+Use `TZ=UTC` for focused date-sensitive runs. The default `npm run test` command runs Vitest with the repository config in `vitest.config.ts`.
 
 ### Test Organization
 
 ```
 tday-web/tests/
-├── security/                        # Functional security tests
-│   ├── authCredentialEnvelope.test.ts
-│   ├── authRouteOrigin.test.ts
-│   ├── authThrottleResponse.test.ts
-│   ├── authPasswordProofChallengeRoute.test.ts
-│   ├── fieldEncryption.test.ts
-│   ├── middlewareAuthz.test.ts
-│   ├── mobileProbeContract.test.ts
-│   ├── password.test.ts
-│   └── passwordProofChallenge.test.ts
-├── summary/                         # AI summary logic
-│   ├── todoSummary.test.ts
-│   └── todoSummaryRoute.test.ts
-├── recurrence/                      # RFC 5545 recurrence logic
-│   ├── genTodoFromRRule.test.ts
-│   ├── multiDayTodo.test.ts
-│   └── rruleExpansion.test.ts
-├── nlp/                             # NLP title parsing
-│   ├── todoNlp.test.ts
-│   └── todoNlpRoute.test.ts
-└── guardrails/                      # Best practice enforcement
-    ├── security.test.ts
-    ├── coding-standards.test.ts
-    ├── architecture.test.ts
-    ├── api-guidelines.test.ts
-    ├── android-standards.test.ts
-    └── dependency-hygiene.test.ts
+├── guardrails/                      # Static standards, security, API, docs, and platform checks
+│   ├── android-standards.test.ts
+│   ├── api-guidelines.test.ts
+│   ├── architecture.test.ts
+│   ├── coding-standards.test.ts
+│   ├── dependency-hygiene.test.ts
+│   ├── i18n-parity.test.ts
+│   ├── security.test.ts
+│   └── sentry-privacy.test.ts
+├── setup/
+│   └── web-storage.ts               # Browser storage stubs for React tests
+└── unit/
+    ├── AuthProvider.test.tsx
+    ├── api-client.test.ts
+    ├── create-todo-mutations.test.tsx
+    ├── get-timezone.test.tsx
+    ├── get-todo-timeline.test.tsx
+    ├── get-todo.test.tsx
+    ├── i18n.test.ts
+    ├── move-todo-to-day.test.ts
+    ├── publicRouteAuthGuard.test.tsx
+    ├── release-info.test.ts
+    ├── todo-form-create-close.test.tsx
+    └── todo-toast-navigation.test.ts
 ```
 
-Tests are grouped by domain, not by technical layer. Each test file covers a specific capability.
+Web tests are intentionally split into behavior-focused unit tests and repository-wide guardrails. Add a focused unit test beside the closest existing unit coverage when changing client behavior, API client behavior, cache mutation helpers, auth provider logic, release metadata, routing guards, timezone/date handling, or i18n behavior. Add or update guardrails when a documented standard should be enforceable across the repository.
 
 ### Guardrail Tests
 
@@ -72,7 +72,7 @@ The `tests/guardrails/` suite enforces coding standards, architecture rules, and
 ```bash
 cd tday-web
 npm run test -- tests/guardrails/           # run all guardrail tests
-npm run test -- tests/guardrails/security   # security guardrails only
+npm run test -- tests/guardrails/security.test.ts
 ```
 
 #### `security.test.ts` — Security Best Practices
@@ -84,6 +84,7 @@ npm run test -- tests/guardrails/security   # security guardrails only
 | Security headers are configured | CSP, HSTS, X-Frame-Options, CORP, etc. |
 | No sensitive data patterns in `console.log`/`console.info` | Passwords, tokens, secrets must never be logged |
 | `.env.example` documents rate limit, lockout, and CAPTCHA vars | Auth hardening config is discoverable |
+| Security monitoring docs list emitted event codes | Operational alerting stays aligned with backend emitters |
 | Database schema has `tokenVersion`, `AuthThrottle`, `eventLog` | Session revocation, rate limiting, and audit trail support |
 
 #### `coding-standards.test.ts` — Code Quality Rules
@@ -95,8 +96,9 @@ npm run test -- tests/guardrails/security   # security guardrails only
 | No `@ts-ignore` without an explanation | Suppressions require documented reasoning |
 | No inline hex colors in TSX `style` attributes | Colors must come from Tailwind/CSS variable tokens |
 | No `console.log` in production source | Use `console.error` or `console.warn` with intent |
+| No deep relative imports in web source | Use the `@/` alias instead of climbing across source directories |
 | No Kotlin `!!` force-unwrap operator | Use safe calls, Elvis, or early returns |
-| No hardcoded `Color(0x...)` in Android screens | Colors must come from `MaterialTheme` or `Color.kt` |
+| No hardcoded `Color(0x...)` in Android screens/components | Colors must come from the theme layer; broad detection is advisory in this suite |
 | ViewModels use `StateFlow`, never `LiveData` | Project standard is `StateFlow` exclusively |
 | ViewModels use `@HiltViewModel` annotation | All ViewModels must use Hilt DI |
 | No Gson usage in Kotlin source | Serialization uses `kotlinx.serialization` only |
@@ -112,15 +114,18 @@ npm run test -- tests/guardrails/security   # security guardrails only
 | Android `core/`, `feature/`, `ui/theme/` packages exist | Package structure follows the documented architecture |
 | Android theme files exist (`Color.kt`, `Theme.kt`, `Type.kt`, `Dimens.kt`) | Design tokens are centralized |
 | Android `build.gradle.kts` derives version from `package.json` | Single source of version truth |
+| iOS docs and project structure are represented in repository docs | Native iOS remains a first-class surface |
 
 #### `api-guidelines.test.ts` — API Convention Enforcement
 
 | What it checks | Rule enforced |
 |---------------|---------------|
-| Backend route handlers use authentication | All non-public endpoints require auth |
-| Error response shape is `{ message }` | All errors return a predictable JSON shape |
-| Custom error classes follow sealed hierarchy | Error hierarchy is consistent (`AppError`) |
-| Tenant isolation enforced at query level | Data queries filter by `userID` |
+| Backend route files use `Route` extension functions | Route modules stay composable and consistent |
+| Backend data route handlers use authentication helpers | Non-public endpoints require authenticated context |
+| Auth route files exist for the complete auth flow | CSRF, register, credential callback, session, and logout remain mounted |
+| `Routing.kt` mounts every major route group | Route files are not orphaned after refactors |
+| Shared route constants cover client-facing route groups | Backend route changes stay discoverable to shared/mobile clients |
+| `StatusPages.kt` handles exceptions | HTTP error translation stays centralized |
 
 #### `android-standards.test.ts` — Android Codebase Standards
 
@@ -130,13 +135,12 @@ npm run test -- tests/guardrails/security   # security guardrails only
 | `Color.kt` defines both light and dark color sets | Complete theme coverage |
 | `Theme.kt` configures both color schemes | Light/dark theme support |
 | `Dimens.kt` exists and defines `TdayDimens` object | Centralized dimension tokens |
-| `Dimens.kt` includes spacing, radius, and icon tokens | Complete dimension scale |
-| ViewModels have `UiState` data class | Consistent state modeling |
+| Shared semantic color literals appear only in theme files | Feature code reuses named theme colors |
+| No hardcoded user-facing Compose or Toast text | Static copy comes from Android string resources |
 | ViewModels use `viewModelScope` for coroutines | Lifecycle-aware coroutine launches |
 | Mutable `StateFlow` is private with `_` prefix | Encapsulated mutable state |
-| Retrofit API service uses `suspend` functions | Coroutine-based network calls |
-| `NetworkModule` redacts cookie headers in logs | No session leakage in debug logs |
-| Uses `kotlinx.serialization`, not Gson | Consistent serialization library |
+| Retrofit API service exists | Network access remains centralized behind the API service |
+| `NetworkModule` uses `kotlinx.serialization`, not Gson | Consistent serialization library |
 | `EncryptedCookieStore` and `SecureConfigStore` exist | Encrypted local storage for sensitive data |
 
 #### `dependency-hygiene.test.ts` — Configuration and Infrastructure
@@ -145,23 +149,36 @@ npm run test -- tests/guardrails/security   # security guardrails only
 |---------------|---------------|
 | `package.json` has valid semver version and is private | Proper package metadata |
 | Required npm scripts exist (`dev`, `build`, `lint`, `test`) | Standard development workflow |
-| Test script runs in UTC timezone | Deterministic date handling in tests |
-| TypeScript strict mode is enabled | Maximum type safety |
-| `@/*` path alias is configured | Consistent import paths |
-| `.gitignore` excludes `node_modules`, `dist/`, `.env` | No build artifacts or secrets in git |
+| `.gitignore` excludes `node_modules`, `tday-web/dist`, `.env` | No build artifacts or secrets in git |
 | `.env.example` documents all critical variables | Setup reference for new developers |
 | `.env.example` contains no real secrets | Placeholder values only |
 | Docker Compose defines required services | Infrastructure as code |
 | Docker container drops capabilities and prevents privilege escalation | Container security hardening |
 | CI workflows exist for PR gate and release | Automated quality gates |
-| PR template explicitly mentions `Made-with` trailer | AI attribution awareness in review |
-| `CONTRIBUTING.md` warns about auto-injected trailers | Developer awareness of IDE trailer injection |
-| `commit-msg` hook script exists and strips `Made-with` trailers | Automated trailer removal |
-| `commit-msg` hook strips AI `Co-authored-by` trailers | No AI attribution in git history |
+| PR template includes a no-AI-attribution checklist item | AI attribution awareness in review |
+| `commit-msg` hook script exists and strips `Made-with` trailers | Automated trailer cleanup |
 | `install-hooks.sh` exists | Hook installation is documented and scriptable |
-| `CODING_STANDARDS.md` documents git commit hygiene | Rules are discoverable |
 | All required documentation files exist | Complete project documentation |
-| Version synchronizes from `package.json` to Android | Single source of version truth |
+| Version mirrors synchronize from `package.json` to iOS metadata and env examples | Single source of version truth |
+| `postversion` stages every checked-in version mirror | Release bumps include all generated metadata |
+
+#### `i18n-parity.test.ts` — Locale Key Parity
+
+| What it checks | Rule enforced |
+|---------------|---------------|
+| Every locale has the same flattened key set as English | Adding or removing web copy requires updating all locale files |
+
+#### `sentry-privacy.test.ts` — Telemetry Privacy and Coverage
+
+| What it checks | Rule enforced |
+|---------------|---------------|
+| Backend, web, Android, and iOS declare Sentry SDK dependencies | Telemetry wiring remains explicit |
+| Sentry initializes on every platform | Error reporting is available where configured |
+| `sendDefaultPii` is disabled and IP addresses are stripped | Telemetry must not collect personal network identifiers |
+| DSNs come from env/build configuration | No hardcoded Sentry DSNs in committed source |
+| Exception capture and HTTP tracing are wired where expected | Production errors include useful, privacy-safe context |
+| Source upload is conditional on `SENTRY_AUTH_TOKEN` | Local and self-hosted builds work without private tokens |
+| `docs/TELEMETRY.md` documents collection and no-op behavior | Privacy expectations stay discoverable |
 
 ### Naming Conventions
 
@@ -187,14 +204,19 @@ describe("fieldEncryption", () => {
 | Credential encryption/envelope | Yes | Security-critical |
 | Field encryption | Yes | Data protection |
 | Mobile probe contract | Yes | Client compatibility |
-| Recurrence (rrule expansion) | Yes | Complex date logic |
-| NLP (title parsing) | Yes | User-facing feature correctness |
+| Recurrence and date movement rules | Yes | Complex date logic |
+| NLP (title parsing) | Yes | User-facing feature correctness; currently covered in backend services |
+| Web API/cache mutation helpers | Yes | Client/server contract correctness |
 | Guardrails: security practices | Yes | Enforce SECURITY.md rules via static analysis |
 | Guardrails: coding standards | Yes | Enforce CODING_STANDARDS.md rules via static analysis |
 | Guardrails: architecture | Yes | Enforce ARCHITECTURE.md structure and conventions |
 | Guardrails: API guidelines | Yes | Enforce API_GUIDELINES.md patterns |
 | Guardrails: Android standards | Yes | Enforce Android coding and theme conventions |
 | Guardrails: dependency hygiene | Yes | Enforce config, CI, and documentation completeness |
+| Guardrails: i18n parity | Yes | Keep all web locales aligned |
+| Guardrails: telemetry privacy | Yes | Keep Sentry privacy defaults and docs aligned |
+| Mobile Local Mode and sync behavior | Recommended | Prevent offline/local regressions |
+| Android/iOS parity for visible mobile features | Manual + tests where practical | Avoid product drift |
 | CRUD routes (happy path) | Recommended | Catch regressions |
 | Error paths in routes | Recommended | Ensure proper status codes |
 
@@ -222,7 +244,12 @@ describe("fieldEncryption", () => {
 
 ### Test Organization
 
-Tests live in `tday-backend/src/test/kotlin/com/ohmz/tday/`. Security services (password hashing, encryption, JWT, credential envelope, password proof) have dedicated test classes.
+Tests live in `tday-backend/src/test/kotlin/com/ohmz/tday/` and are grouped by package:
+
+- `security/`: password hashing, JWT/JWE session handling, field encryption, credential envelope, and password proof.
+- `routes/`: todo, floater, list, mobile probe, security enforcement, Apple app association, and auth route flows.
+- `plugins/`: rate limiting.
+- `services/`: NLP parsing and service-level behavior.
 
 ### What Should Be Tested (Backend)
 
@@ -234,6 +261,8 @@ Tests live in `tday-backend/src/test/kotlin/com/ohmz/tday/`. Security services (
 | Password proof challenge flow | High |
 | Field encryption round-trip | High |
 | Auth throttle/lockout logic | High |
+| Todo, floater, list, and completed route behavior | High |
+| Mobile probe and app association contract routes | Medium |
 | Route-level auth enforcement | Medium |
 | Service-layer business logic | Medium |
 
@@ -262,13 +291,17 @@ android-compose/app/src/
 └── androidTest/    # Instrumented tests (emulator/device)
 ```
 
+Current JVM tests cover API response helpers, offline sync state serialization, encrypted credential records, Room/cache mappers, todo delete/cache behavior, task rescheduling, realtime client behavior, app/auth ViewModel state, and login credential coordination.
+
 ### What Should Be Tested (Android)
 
 | Area | Type | Priority |
 |------|------|----------|
 | Repository data mapping (DTO → domain) | Unit | High |
-| Offline cache serialization/deserialization | Unit | High |
+| Room cache mapping and legacy cache migration | Unit | High |
+| Pending mutation creation/replay behavior | Unit | High |
 | ViewModel state transitions | Unit | High |
+| Local Mode server-only affordances | Unit/manual | High |
 | Notification scheduling logic | Unit | Medium |
 | Screen composition (renders, interactions) | Instrumented | Medium |
 | End-to-end auth flow | Instrumented | Low (manual for now) |
@@ -285,13 +318,52 @@ fun `should clear local data when session is invalidated`() { ... }
 
 Use backtick-quoted descriptive names: `should <expected behavior> when <condition>`.
 
+## iOS Testing
+
+### Tooling
+
+| Tool | Purpose |
+|------|---------|
+| XCTest | Unit and integration tests |
+| Xcode test runner | Simulator/device execution |
+| SwiftData in-memory containers | Repository/cache tests where practical |
+
+### Running Tests
+
+```bash
+xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'
+```
+
+### Test Locations
+
+```text
+ios-swiftUI/Tests/
+└── TdayCoreTests/
+```
+
+Current XCTest coverage includes API model contracts, cache mapper date parsing, completed-sync merging, connectivity classification, realtime client behavior, server URL persistence, system credential login handling, and Today widget snapshot storage.
+
+### What Should Be Tested (iOS)
+
+| Area | Type | Priority |
+|------|------|----------|
+| SwiftData cache mapping | Unit | High |
+| Repository data mapping (API → domain/cache) | Unit | High |
+| Pending mutation creation/replay behavior | Unit | High |
+| ViewModel state transitions | Unit | Medium |
+| Local Mode server-only affordances | Unit/manual | High |
+| Reminder scheduling helpers | Unit | Medium |
+| Navigation/deep-link routing helpers | Unit | Medium |
+
+For visual polish, build the app and do a simulator/device spot check when automated UI tests are not practical.
+
 ## Coverage Expectations
 
 ### Web
 
-- Security tests: **mandatory** — every auth, encryption, and access control path must be tested.
-- Business logic (recurrence, NLP, summaries): **mandatory**.
-- API routes: **recommended** for at least the happy path.
+- Guardrail tests: **mandatory** for standards that can be checked statically.
+- Web API client, auth provider, cache mutation, timezone/date, routing guard, release, toast, and i18n behavior: **mandatory** when changed.
+- Backend security and route behavior should be covered in backend tests, not duplicated as fake web route tests.
 - React components: **optional** — focus on complex interaction logic, not visual rendering.
 
 ### Backend (Ktor)
@@ -306,6 +378,12 @@ Use backtick-quoted descriptive names: `should <expected behavior> when <conditi
 - ViewModel state logic: **recommended**.
 - UI composition tests: **optional** for now.
 
+### iOS
+
+- SwiftData cache and repository mapping: **mandatory** when the local data shape changes.
+- Local Mode and sync behavior: **recommended** for app-flow changes.
+- UI tests: **optional** for now; use simulator/device spot checks for polish.
+
 ### Coverage Reporting
 
 Vitest is configured with coverage support. Reports are written to `coverage/`. Review coverage locally before pushing changes to security-critical modules.
@@ -314,8 +392,13 @@ Vitest is configured with coverage support. Reports are written to `coverage/`. 
 
 - [ ] `cd tday-web && npm run test` passes with no failures.
 - [ ] `./gradlew :tday-backend:test` passes with no failures.
+- [ ] `cd android-compose && ./gradlew :app:compileDebugKotlin` passes for Android code changes.
+- [ ] `cd android-compose && ./gradlew :app:testDebugUnitTest` passes for Android data/ViewModel changes when tests exist.
+- [ ] `xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'` passes for iOS code changes when the simulator is available.
 - [ ] New security-related code has tests.
 - [ ] New business logic (recurrence, NLP, date handling) has tests.
+- [ ] New data model changes are covered across shared/backend/mobile cache as appropriate.
+- [ ] Mobile UI changes received an Android/iOS parity pass.
 - [ ] Tests are deterministic — no flaky time-dependent assertions.
 - [ ] No `console.log` left in test files.
 - [ ] Test names describe behavior, not implementation.
@@ -324,11 +407,11 @@ Vitest is configured with coverage support. Reports are written to `coverage/`. 
 
 ### Web
 
-1. Create the test file in the appropriate `tday-web/tests/<domain>/` directory.
-2. Name it `<feature>.test.ts`.
+1. Create the test file in `tday-web/tests/unit/` for behavior tests or `tday-web/tests/guardrails/` for repository standards.
+2. Name it `<feature>.test.ts` or `<feature>.test.tsx`.
 3. Follow existing patterns: `describe` → `it` → assert.
 4. Run `cd tday-web && npm run test` to verify.
-5. Check that coverage didn't drop for the affected module.
+5. Check that coverage didn't drop for the affected module when coverage matters.
 
 ### Backend
 
@@ -336,3 +419,15 @@ Vitest is configured with coverage support. Reports are written to `coverage/`. 
 2. Use JUnit 5 annotations (`@Test`, `@BeforeEach`, etc.).
 3. For route tests, use Ktor's `testApplication` with `application { module() }`.
 4. Run `./gradlew :tday-backend:test` to verify.
+
+### Android
+
+1. Add unit tests under `android-compose/app/src/test/` or instrumentation tests under `android-compose/app/src/androidTest/`.
+2. Prefer repository/cache/ViewModel tests before UI instrumentation.
+3. Run `cd android-compose && ./gradlew :app:testDebugUnitTest`.
+
+### iOS
+
+1. Add tests under `ios-swiftUI/Tests/TdayCoreTests/`.
+2. Prefer cache/repository/helper tests before UI tests.
+3. Run the `xcodebuild test` command above or the same test action in Xcode.

@@ -55,8 +55,18 @@ fun TdayPullToRefreshBox(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.TopStart,
+    enabled: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    if (!enabled) {
+        Box(
+            modifier = modifier,
+            contentAlignment = contentAlignment,
+            content = content,
+        )
+        return
+    }
+
     val state = rememberPullToRefreshState()
     var localRefreshInFlight by remember { mutableStateOf(false) }
     var hasSeenExternalRefresh by remember { mutableStateOf(false) }

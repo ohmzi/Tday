@@ -109,13 +109,18 @@ fun Route.credentialsCallbackRoutes() {
                 return@post
             }
 
-            val usingProof = password.isNullOrBlank() && !body.passwordProof.isNullOrBlank() && !body.passwordProofChallengeId.isNullOrBlank()
+            val submittedChallengeId = body.passwordProofChallengeId
+            val submittedProofHex = body.passwordProof
 
-            val authenticated = if (usingProof) {
+            val authenticated = if (
+                password.isNullOrBlank() &&
+                !submittedChallengeId.isNullOrBlank() &&
+                !submittedProofHex.isNullOrBlank()
+            ) {
                 passwordProof.verify(
                     email = email,
-                    challengeId = body.passwordProofChallengeId!!,
-                    proofHex = body.passwordProof!!,
+                    challengeId = submittedChallengeId,
+                    proofHex = submittedProofHex,
                     proofVersion = body.passwordProofVersion,
                     storedPasswordHash = storedHash,
                 )

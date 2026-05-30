@@ -39,6 +39,7 @@ final class TodoRepository {
         let normalizedDescription = payload.description.nilIfBlank
         let normalizedListID = payload.listId.nilIfBlank
         let normalizedPriorityValue = normalizedPriority(payload.priority)
+        let normalizedDue = payload.due ?? Date().addingTimeInterval(60 * 60)
         let mutationID = UUID().uuidString
         let mutation = PendingMutationRecord(
             mutationId: mutationID,
@@ -48,7 +49,7 @@ final class TodoRepository {
             title: normalizedTitle,
             description: normalizedDescription,
             priority: normalizedPriorityValue,
-            dueEpochMs: payload.due.epochMilliseconds,
+            dueEpochMs: normalizedDue.epochMilliseconds,
             rrule: payload.rrule,
             listId: normalizedListID,
             pinned: false,
@@ -68,7 +69,7 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    dueEpochMs: payload.due.epochMilliseconds,
+                    dueEpochMs: normalizedDue.epochMilliseconds,
                     rrule: payload.rrule,
                     instanceDateEpochMs: nil,
                     pinned: false,
@@ -81,7 +82,11 @@ final class TodoRepository {
             return nextState
         }
 
-        if normalizedListID?.hasPrefix(LOCAL_LIST_PREFIX) == true {
+        if syncManager.isLocalMode {
+            return
+        }
+
+        if normalizedListID?.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) == true {
             _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
             return
         }
@@ -92,7 +97,7 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    due: payload.due.ISO8601Format(),
+                    due: normalizedDue.ISO8601Format(),
                     rrule: payload.rrule,
                     listID: normalizedListID
                 )
@@ -122,6 +127,99 @@ final class TodoRepository {
         }
     }
 
+    func createFloater(payload: CreateTaskPayload) async throws {
+        let normalizedTitle = payload.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedTitle.isEmpty else {
+            return
+        }
+
+        let now = Date().epochMilliseconds
+        let localFloaterID = LOCAL_FLOATER_PREFIX + UUID().uuidString.lowercased()
+        let normalizedDescription = payload.description.nilIfBlank
+        let normalizedListID = payload.listId.nilIfBlank
+        let normalizedPriorityValue = normalizedPriority(payload.priority)
+        let mutationID = UUID().uuidString
+        let mutation = PendingMutationRecord(
+            mutationId: mutationID,
+            kind: .createFloater,
+            targetId: localFloaterID,
+            timestampEpochMs: now,
+            title: normalizedTitle,
+            description: normalizedDescription,
+            priority: normalizedPriorityValue,
+            dueEpochMs: nil,
+            rrule: nil,
+            listId: normalizedListID,
+            pinned: false,
+            completed: false,
+            instanceDateEpochMs: nil,
+            name: nil,
+            color: nil,
+            iconKey: nil
+        )
+
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.floaters.append(
+                CachedFloaterRecord(
+                    id: localFloaterID,
+                    canonicalId: localFloaterID,
+                    title: normalizedTitle,
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
+                    pinned: false,
+                    completed: false,
+                    listId: normalizedListID,
+                    updatedAtEpochMs: now
+                )
+            )
+            nextState.pendingMutations.append(mutation)
+            return nextState
+        }
+
+        if syncManager.isLocalMode {
+            return
+        }
+
+        if normalizedListID?.hasPrefix(LOCAL_LIST_PREFIX) == true {
+            _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+            return
+        }
+
+        do {
+            let response = try await api.createFloater(
+                payload: CreateFloaterRequest(
+                    title: normalizedTitle,
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
+                    listID: normalizedListID
+                )
+            )
+            guard let createdDTO = response.floater else {
+                return
+            }
+            let createdFloater = mapFloaterDTO(createdDTO)
+            _ = try await cacheManager.updateOfflineState { state in
+                var nextState = self.replaceLocalFloaterID(
+                    state,
+                    localFloaterID: localFloaterID,
+                    serverFloaterID: createdFloater.canonicalId
+                )
+                let createdRecord = floaterToCache(createdFloater)
+                nextState.floaters = nextState.floaters.map { floater in
+                    guard floater.canonicalId == createdFloater.canonicalId else {
+                        return floater
+                    }
+                    return createdRecord
+                }
+                nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
+                return nextState
+            }
+        } catch {
+            // Keep the pending CREATE_FLOATER mutation so background sync can retry it.
+        }
+    }
+
     func updateTodo(_ todo: TodoItem, payload: CreateTaskPayload) async throws {
         let normalizedTitle = payload.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedTitle.isEmpty else {
@@ -132,6 +230,7 @@ final class TodoRepository {
         let normalizedDescription = payload.description.nilIfBlank
         let normalizedListID = payload.listId.nilIfBlank
         let normalizedPriorityValue = normalizedPriority(payload.priority)
+        let normalizedDue = payload.due ?? todo.due ?? Date().addingTimeInterval(60 * 60)
         _ = try await cacheManager.updateOfflineState { state in
             var nextState = state
             nextState.todos = state.todos.map { current in
@@ -143,7 +242,7 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    dueEpochMs: payload.due.epochMilliseconds,
+                    dueEpochMs: normalizedDue.epochMilliseconds,
                     rrule: payload.rrule,
                     instanceDateEpochMs: current.instanceDateEpochMs,
                     pinned: current.pinned,
@@ -162,7 +261,7 @@ final class TodoRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    dueEpochMs: payload.due.epochMilliseconds,
+                    dueEpochMs: normalizedDue.epochMilliseconds,
                     rrule: payload.rrule,
                     listId: normalizedListID,
                     pinned: todo.pinned,
@@ -175,6 +274,158 @@ final class TodoRepository {
             )
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    func updateFloater(_ floater: TodoItem, payload: CreateTaskPayload) async throws {
+        let normalizedTitle = payload.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedTitle.isEmpty else {
+            return
+        }
+
+        let now = Date().epochMilliseconds
+        let normalizedDescription = payload.description.nilIfBlank
+        let normalizedListID = payload.listId.nilIfBlank
+        let normalizedPriorityValue = normalizedPriority(payload.priority)
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.floaters = state.floaters.map { current in
+                guard current.canonicalId == floater.canonicalId else { return current }
+                return CachedFloaterRecord(
+                    id: current.id,
+                    canonicalId: current.canonicalId,
+                    title: normalizedTitle,
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
+                    pinned: current.pinned,
+                    completed: current.completed,
+                    listId: normalizedListID,
+                    updatedAtEpochMs: now
+                )
+            }
+            nextState.pendingMutations.removeAll { $0.kind == .updateFloater && $0.targetId == floater.canonicalId }
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: UUID().uuidString,
+                    kind: .updateFloater,
+                    targetId: floater.canonicalId,
+                    timestampEpochMs: now,
+                    title: normalizedTitle,
+                    description: normalizedDescription,
+                    priority: normalizedPriorityValue,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: normalizedListID,
+                    pinned: floater.pinned,
+                    completed: floater.completed,
+                    instanceDateEpochMs: nil,
+                    name: nil,
+                    color: nil,
+                    iconKey: nil
+                )
+            )
+            return nextState
+        }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    func moveTodo(_ todo: TodoItem, due: Date) async throws {
+        let now = Date().epochMilliseconds
+        let dueEpochMs = due.epochMilliseconds
+        let isLocalOnly = todo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX)
+
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            let hasExistingUpdateMutation = state.pendingMutations.contains { mutation in
+                mutation.kind == .updateTodo &&
+                    mutation.targetId == todo.canonicalId &&
+                    mutation.instanceDateEpochMs == todo.instanceDateEpochMilliseconds
+            }
+            nextState.todos = state.todos.map { current in
+                let sameTodo = current.canonicalId == todo.canonicalId && current.instanceDateEpochMs == todo.instanceDateEpochMilliseconds
+                guard sameTodo else { return current }
+                return CachedTodoRecord(
+                    id: current.id,
+                    canonicalId: current.canonicalId,
+                    title: current.title,
+                    description: current.description,
+                    priority: current.priority,
+                    dueEpochMs: dueEpochMs,
+                    rrule: current.rrule,
+                    instanceDateEpochMs: current.instanceDateEpochMs,
+                    pinned: current.pinned,
+                    completed: current.completed,
+                    listId: current.listId,
+                    updatedAtEpochMs: now
+                )
+            }
+            nextState.pendingMutations = state.pendingMutations.map { mutation in
+                let samePendingUpdate = mutation.kind == .updateTodo &&
+                    mutation.targetId == todo.canonicalId &&
+                    mutation.instanceDateEpochMs == todo.instanceDateEpochMilliseconds
+                guard samePendingUpdate || (mutation.kind == .createTodo && mutation.targetId == todo.canonicalId) else {
+                    return mutation
+                }
+                return PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId,
+                    timestampEpochMs: now,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey
+                )
+            }
+            if !isLocalOnly && !hasExistingUpdateMutation {
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: UUID().uuidString,
+                        kind: .updateTodo,
+                        targetId: todo.canonicalId,
+                        timestampEpochMs: now,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: dueEpochMs,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: todo.instanceDateEpochMilliseconds,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil
+                    )
+                )
+            }
+            return nextState
+        }
+
+        if syncManager.isLocalMode {
+            return
+        }
+
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -211,6 +462,48 @@ final class TodoRepository {
             }
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    func deleteFloater(_ floater: TodoItem) async throws {
+        let now = Date().epochMilliseconds
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.floaters.removeAll { $0.canonicalId == floater.canonicalId }
+            nextState.pendingMutations.removeAll { $0.targetId == floater.canonicalId && ($0.kind == .createFloater || $0.kind == .updateFloater) }
+            if !floater.canonicalId.hasPrefix(LOCAL_FLOATER_PREFIX) {
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: UUID().uuidString,
+                        kind: .deleteFloater,
+                        targetId: floater.canonicalId,
+                        timestampEpochMs: now,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: nil,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: nil,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil
+                    )
+                )
+            }
+            return nextState
+        }
+        if syncManager.isLocalMode {
+            return
+        }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -240,10 +533,11 @@ final class TodoRepository {
                     title: todo.title,
                     description: todo.description,
                     priority: todo.priority,
-                    dueEpochMs: todo.due.epochMilliseconds,
+                    dueEpochMs: todo.due?.epochMilliseconds,
                     completedAtEpochMs: now,
                     rrule: todo.rrule,
                     instanceDateEpochMs: todo.instanceDateEpochMilliseconds,
+                    listId: todo.listId,
                     listName: state.lists.first(where: { $0.id == todo.listId })?.name,
                     listColor: state.lists.first(where: { $0.id == todo.listId })?.color
                 ),
@@ -271,6 +565,75 @@ final class TodoRepository {
             )
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    func completeFloater(_ floater: TodoItem) async throws {
+        let now = Date().epochMilliseconds
+        let mutationID = UUID().uuidString
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.floaters = state.floaters.map { current in
+                guard current.canonicalId == floater.canonicalId else {
+                    return current
+                }
+                return CachedFloaterRecord(
+                    id: current.id,
+                    canonicalId: current.canonicalId,
+                    title: current.title,
+                    description: current.description,
+                    priority: current.priority,
+                    pinned: current.pinned,
+                    completed: true,
+                    listId: current.listId,
+                    updatedAtEpochMs: now
+                )
+            }
+            nextState.completedFloaters.insert(
+                CachedCompletedFloaterRecord(
+                    id: LOCAL_COMPLETED_FLOATER_PREFIX + UUID().uuidString.lowercased(),
+                    originalFloaterId: floater.canonicalId,
+                    title: floater.title,
+                    description: floater.description,
+                    priority: floater.priority,
+                    completedAtEpochMs: now,
+                    listId: floater.listId,
+                    listName: state.floaterLists.first(where: { $0.id == floater.listId })?.name,
+                    listColor: state.floaterLists.first(where: { $0.id == floater.listId })?.color
+                ),
+                at: 0
+            )
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: mutationID,
+                    kind: .completeFloater,
+                    targetId: floater.canonicalId,
+                    timestampEpochMs: now,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: true,
+                    instanceDateEpochMs: nil,
+                    name: nil,
+                    color: nil,
+                    iconKey: nil
+                )
+            )
+            return nextState
+        }
+        if syncManager.isLocalMode {
+            return
+        }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -286,7 +649,11 @@ final class TodoRepository {
     }
 
     func summarizeTodos(mode: TodoListMode, listId: String? = nil) async throws -> TodoSummaryResponse {
-        try await api.summarizeTodos(
+        if syncManager.isLocalMode {
+            throw APIError(message: "AI summary is unavailable in local mode", statusCode: nil)
+        }
+
+        return try await api.summarizeTodos(
             payload: TodoSummaryRequest(
                 mode: mode.rawValue,
                 listId: listId,
@@ -296,6 +663,10 @@ final class TodoRepository {
     }
 
     func parseTodoTitleNlp(text: String, referenceDueEpochMs: Int64) async -> TodoTitleNlpResponse? {
+        if syncManager.isLocalMode {
+            return nil
+        }
+
         let timezoneOffsetMinutes = TimeZone.current.secondsFromGMT() / 60
         return try? await api.parseTodoTitleNlp(
             payload: TodoTitleNlpRequest(
@@ -371,6 +742,9 @@ final class TodoRepository {
             )
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -400,6 +774,7 @@ final class TodoRepository {
                     updatedAtEpochMs: todo.updatedAtEpochMs
                 )
             },
+            floaters: state.floaters,
             completedItems: state.completedItems.map { item in
                 guard item.originalTodoId == localTodoID else {
                     return item
@@ -414,11 +789,14 @@ final class TodoRepository {
                     completedAtEpochMs: item.completedAtEpochMs,
                     rrule: item.rrule,
                     instanceDateEpochMs: item.instanceDateEpochMs,
+                    listId: item.listId,
                     listName: item.listName,
                     listColor: item.listColor
                 )
             },
+            completedFloaters: state.completedFloaters,
             lists: state.lists,
+            floaterLists: state.floaterLists,
             pendingMutations: state.pendingMutations.map { mutation in
                 PendingMutationRecord(
                     mutationId: mutation.mutationId,
@@ -443,8 +821,73 @@ final class TodoRepository {
         )
     }
 
+    private func replaceLocalFloaterID(_ state: OfflineSyncState, localFloaterID: String, serverFloaterID: String) -> OfflineSyncState {
+        OfflineSyncState(
+            lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
+            todos: state.todos,
+            floaters: state.floaters.map { floater in
+                guard floater.canonicalId == localFloaterID || floater.id == localFloaterID else {
+                    return floater
+                }
+                return CachedFloaterRecord(
+                    id: serverFloaterID,
+                    canonicalId: serverFloaterID,
+                    title: floater.title,
+                    description: floater.description,
+                    priority: floater.priority,
+                    pinned: floater.pinned,
+                    completed: floater.completed,
+                    listId: floater.listId,
+                    updatedAtEpochMs: floater.updatedAtEpochMs
+                )
+            },
+            completedItems: state.completedItems,
+            completedFloaters: state.completedFloaters.map { item in
+                guard item.originalFloaterId == localFloaterID else {
+                    return item
+                }
+                return CachedCompletedFloaterRecord(
+                    id: item.id,
+                    originalFloaterId: serverFloaterID,
+                    title: item.title,
+                    description: item.description,
+                    priority: item.priority,
+                    completedAtEpochMs: item.completedAtEpochMs,
+                    listId: item.listId,
+                    listName: item.listName,
+                    listColor: item.listColor
+                )
+            },
+            lists: state.lists,
+            floaterLists: state.floaterLists,
+            pendingMutations: state.pendingMutations.map { mutation in
+                PendingMutationRecord(
+                    mutationId: mutation.mutationId,
+                    kind: mutation.kind,
+                    targetId: mutation.targetId == localFloaterID ? serverFloaterID : mutation.targetId,
+                    timestampEpochMs: mutation.timestampEpochMs,
+                    title: mutation.title,
+                    description: mutation.description,
+                    priority: mutation.priority,
+                    dueEpochMs: mutation.dueEpochMs,
+                    rrule: mutation.rrule,
+                    listId: mutation.listId,
+                    pinned: mutation.pinned,
+                    completed: mutation.completed,
+                    instanceDateEpochMs: mutation.instanceDateEpochMs,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey
+                )
+            },
+            aiSummaryEnabled: state.aiSummaryEnabled
+        )
+    }
+
     private func buildDashboardSummary(from state: OfflineSyncState) -> DashboardSummary {
-        let timelineTodos = state.todos.map(todoFromCache).filter { !$0.completed }
+        let timelineTodos = state.todos.map(todoFromCache).filter { !$0.completed && $0.due != nil }
+        let floaters = state.floaters.map(floaterFromCache).filter { !$0.completed }
         let now = Date()
         let todayTodos = timelineTodos.filter { isTodayTodo($0, now: now) }
         let scheduledTodos = timelineTodos.filter { isScheduledTodo($0, now: now) }
@@ -458,13 +901,15 @@ final class TodoRepository {
             scheduledCount: scheduledTodos.count,
             allCount: timelineTodos.count,
             priorityCount: timelineTodos.filter { isPriorityTodo($0.priority) }.count,
+            floaterCount: floaters.count,
             completedCount: state.completedItems.count,
             lists: lists
         )
     }
 
     private func buildTodos(from state: OfflineSyncState, mode: TodoListMode, listId: String?) -> [TodoItem] {
-        let items = state.todos.map(todoFromCache).filter { !$0.completed }
+        let items = state.todos.map(todoFromCache).filter { !$0.completed && $0.due != nil }
+        let floaters = state.floaters.map(floaterFromCache).filter { !$0.completed }
         let now = Date()
 
         let filtered: [TodoItem]
@@ -479,6 +924,10 @@ final class TodoRepository {
             filtered = items
         case .priority:
             filtered = items.filter { isPriorityTodo($0.priority) }
+        case .floater:
+            filtered = listId.nilIfBlank.map { id in
+                floaters.filter { $0.listId == id }
+            } ?? floaters
         case .list:
             filtered = items.filter { $0.listId == listId }
         }
@@ -503,15 +952,18 @@ final class TodoRepository {
         guard let startOfTomorrow = calendar.date(byAdding: .day, value: 1, to: startOfToday) else {
             return false
         }
-        return todo.due >= startOfToday && todo.due < startOfTomorrow
+        guard let due = todo.due else { return false }
+        return due >= startOfToday && due < startOfTomorrow
     }
 
     private func isScheduledTodo(_ todo: TodoItem, now: Date = Date()) -> Bool {
-        todo.due >= now
+        guard let due = todo.due else { return false }
+        return due >= now
     }
 
     private func isOverdueTodo(_ todo: TodoItem, now: Date = Date()) -> Bool {
-        todo.due < now
+        guard let due = todo.due else { return false }
+        return due < now
     }
 
     private func isPriorityTodo(_ priority: String?) -> Bool {

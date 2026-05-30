@@ -5,7 +5,7 @@
 
 ## Context
 
-The application needs a relational database for user data, tasks with complex recurrence rules, and referential integrity. The original architecture used Prisma ORM with TypeScript. When the backend migrated to Kotlin/Ktor, a Kotlin-native ORM was needed.
+The application needs a relational database for user data, scheduled tasks with complex recurrence rules, floaters for unscheduled work, list/floater-list grouping, completion history, and referential integrity. The original architecture used Prisma ORM with TypeScript. When the backend migrated to Kotlin/Ktor, a Kotlin-native ORM was needed.
 
 Options considered for the ORM layer:
 1. **JetBrains Exposed** — Kotlin-native DSL and DAO APIs, lightweight, coroutine-friendly.
@@ -27,6 +27,7 @@ For migrations:
 ## Rationale
 
 - PostgreSQL provides ACID transactions, referential integrity, array types (used for `exdates`), and custom enum types.
+- Separate scheduled-task and floater tables keep due-date semantics clear instead of overloading nullable task fields.
 - Exposed provides type-safe queries with Kotlin DSL — table definitions serve as both schema documentation and query API.
 - Exposed is lightweight and coroutine-compatible, fitting well with Ktor's architecture.
 - HikariCP is the standard JVM connection pool with excellent performance characteristics.

@@ -66,7 +66,7 @@ func todoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
         return lhs.pinned && !rhs.pinned
     }
     if lhs.due != rhs.due {
-        return lhs.due < rhs.due
+        return (lhs.due ?? .distantFuture) < (rhs.due ?? .distantFuture)
     }
     let lhsKey = todoMergeKey(item: lhs)
     let rhsKey = todoMergeKey(item: rhs)
@@ -81,7 +81,7 @@ func cachedTodoSortPrecedes(_ lhs: CachedTodoRecord, _ rhs: CachedTodoRecord) ->
         return lhs.pinned && !rhs.pinned
     }
     if lhs.dueEpochMs != rhs.dueEpochMs {
-        return lhs.dueEpochMs < rhs.dueEpochMs
+        return (lhs.dueEpochMs ?? Int64.max) < (rhs.dueEpochMs ?? Int64.max)
     }
     let lhsKey = todoMergeKey(record: lhs)
     let rhsKey = todoMergeKey(record: rhs)
@@ -91,9 +91,35 @@ func cachedTodoSortPrecedes(_ lhs: CachedTodoRecord, _ rhs: CachedTodoRecord) ->
     return lhs.id < rhs.id
 }
 
+func cachedFloaterSortPrecedes(_ lhs: CachedFloaterRecord, _ rhs: CachedFloaterRecord) -> Bool {
+    if lhs.pinned != rhs.pinned {
+        return lhs.pinned && !rhs.pinned
+    }
+    let lhsRank = floaterPriorityRank(lhs.priority)
+    let rhsRank = floaterPriorityRank(rhs.priority)
+    if lhsRank != rhsRank {
+        return lhsRank < rhsRank
+    }
+    if lhs.title.localizedCaseInsensitiveCompare(rhs.title) != .orderedSame {
+        return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+    }
+    return lhs.id < rhs.id
+}
+
+private func floaterPriorityRank(_ priority: String) -> Int {
+    switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "high", "urgent", "important":
+        return 0
+    case "medium":
+        return 1
+    default:
+        return 2
+    }
+}
+
 func todoTimelineSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
     if lhs.due != rhs.due {
-        return lhs.due < rhs.due
+        return (lhs.due ?? .distantFuture) < (rhs.due ?? .distantFuture)
     }
     let lhsKey = todoMergeKey(item: lhs)
     let rhsKey = todoMergeKey(item: rhs)
@@ -131,9 +157,26 @@ func mapTodoDTO(_ dto: TodoDTO) -> TodoItem {
         title: dto.title,
         description: dto.description,
         priority: dto.priority,
-        due: parseOptionalDate(dto.due) ?? .now,
+        due: parseOptionalDate(dto.due),
         rrule: dto.rrule,
         instanceDate: instanceDate,
+        pinned: dto.pinned,
+        completed: dto.completed,
+        listId: dto.listID,
+        updatedAt: parseOptionalDate(dto.updatedAt)
+    )
+}
+
+func mapFloaterDTO(_ dto: FloaterDTO) -> TodoItem {
+    TodoItem(
+        id: dto.id,
+        canonicalId: dto.id,
+        title: dto.title,
+        description: dto.description,
+        priority: dto.priority,
+        due: nil,
+        rrule: nil,
+        instanceDate: nil,
         pinned: dto.pinned,
         completed: dto.completed,
         listId: dto.listID,
@@ -148,7 +191,7 @@ func todoToCache(_ todo: TodoItem) -> CachedTodoRecord {
         title: todo.title,
         description: todo.description,
         priority: todo.priority,
-        dueEpochMs: Int64(todo.due.timeIntervalSince1970 * 1000.0),
+        dueEpochMs: todo.due.map { Int64($0.timeIntervalSince1970 * 1000.0) },
         rrule: todo.rrule,
         instanceDateEpochMs: todo.instanceDateEpochMillis,
         pinned: todo.pinned,
@@ -165,7 +208,7 @@ func todoFromCache(_ record: CachedTodoRecord) -> TodoItem {
         title: record.title,
         description: record.description,
         priority: record.priority,
-        due: Date(timeIntervalSince1970: TimeInterval(record.dueEpochMs) / 1000.0),
+        due: record.dueEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },
         rrule: record.rrule,
         instanceDate: record.instanceDateEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },
         pinned: record.pinned,
@@ -175,7 +218,50 @@ func todoFromCache(_ record: CachedTodoRecord) -> TodoItem {
     )
 }
 
+func floaterToCache(_ floater: TodoItem) -> CachedFloaterRecord {
+    CachedFloaterRecord(
+        id: floater.id,
+        canonicalId: floater.canonicalId,
+        title: floater.title,
+        description: floater.description,
+        priority: floater.priority,
+        pinned: floater.pinned,
+        completed: floater.completed,
+        listId: floater.listId,
+        updatedAtEpochMs: floater.updatedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0
+    )
+}
+
+func floaterFromCache(_ record: CachedFloaterRecord) -> TodoItem {
+    TodoItem(
+        id: record.id,
+        canonicalId: record.canonicalId,
+        title: record.title,
+        description: record.description,
+        priority: record.priority,
+        due: nil,
+        rrule: nil,
+        instanceDate: nil,
+        pinned: record.pinned,
+        completed: record.completed,
+        listId: record.listId,
+        updatedAt: record.updatedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.updatedAtEpochMs) / 1000.0) : nil
+    )
+}
+
 func mapListDTO(_ dto: ListDTO, iconFallback: String? = nil) -> ListSummary {
+    ListSummary(
+        id: dto.id,
+        name: dto.name,
+        color: dto.color,
+        iconKey: dto.iconKey ?? iconFallback,
+        todoCount: dto.todoCount,
+        updatedAt: parseOptionalDate(dto.updatedAt),
+        createdAt: parseOptionalDate(dto.createdAt)
+    )
+}
+
+func mapFloaterListDTO(_ dto: FloaterListDTO, iconFallback: String? = nil) -> ListSummary {
     ListSummary(
         id: dto.id,
         name: dto.name,
@@ -199,7 +285,33 @@ func listToCache(_ list: ListSummary) -> CachedListRecord {
     )
 }
 
+func floaterListToCache(_ list: ListSummary) -> CachedFloaterListRecord {
+    CachedFloaterListRecord(
+        id: list.id,
+        name: list.name,
+        color: list.color,
+        iconKey: list.iconKey,
+        todoCount: list.todoCount,
+        updatedAtEpochMs: list.updatedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
+        createdAtEpochMs: list.createdAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0
+    )
+}
+
 func orderListsLikeWeb(_ lists: [CachedListRecord]) -> [CachedListRecord] {
+    guard lists.contains(where: { $0.createdAtEpochMs > 0 }) else {
+        return lists
+    }
+    return lists.enumerated()
+        .sorted { lhs, rhs in
+            if lhs.element.createdAtEpochMs != rhs.element.createdAtEpochMs {
+                return lhs.element.createdAtEpochMs > rhs.element.createdAtEpochMs
+            }
+            return lhs.offset < rhs.offset
+        }
+        .map(\.element)
+}
+
+func orderFloaterListsLikeWeb(_ lists: [CachedFloaterListRecord]) -> [CachedFloaterListRecord] {
     guard lists.contains(where: { $0.createdAtEpochMs > 0 }) else {
         return lists
     }
@@ -225,6 +337,18 @@ func listFromCache(_ record: CachedListRecord, todoCountOverride: Int? = nil) ->
     )
 }
 
+func floaterListFromCache(_ record: CachedFloaterListRecord, todoCountOverride: Int? = nil) -> ListSummary {
+    ListSummary(
+        id: record.id,
+        name: record.name,
+        color: record.color,
+        iconKey: record.iconKey,
+        todoCount: todoCountOverride ?? record.todoCount,
+        updatedAt: record.updatedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.updatedAtEpochMs) / 1000.0) : nil,
+        createdAt: record.createdAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.createdAtEpochMs) / 1000.0) : nil
+    )
+}
+
 func mapCompletedDTO(_ dto: CompletedTodoDTO) -> CompletedItem {
     CompletedItem(
         id: dto.id,
@@ -232,10 +356,28 @@ func mapCompletedDTO(_ dto: CompletedTodoDTO) -> CompletedItem {
         title: dto.title,
         description: dto.description,
         priority: dto.priority,
-        due: parseOptionalDate(dto.due) ?? .now,
+        due: parseOptionalDate(dto.due),
         completedAt: parseOptionalDate(dto.completedAt),
         rrule: dto.rrule,
         instanceDate: parseOptionalDate(dto.instanceDate),
+        listId: dto.listID,
+        listName: dto.listName,
+        listColor: dto.listColor
+    )
+}
+
+func mapCompletedFloaterDTO(_ dto: CompletedFloaterDTO) -> CompletedItem {
+    CompletedItem(
+        id: dto.id,
+        originalTodoId: dto.originalFloaterID,
+        title: dto.title,
+        description: dto.description,
+        priority: dto.priority,
+        due: nil,
+        completedAt: parseOptionalDate(dto.completedAt),
+        rrule: nil,
+        instanceDate: nil,
+        listId: dto.listID,
         listName: dto.listName,
         listColor: dto.listColor
     )
@@ -248,10 +390,11 @@ func completedToCache(_ item: CompletedItem) -> CachedCompletedRecord {
         title: item.title,
         description: item.description,
         priority: item.priority,
-        dueEpochMs: Int64(item.due.timeIntervalSince1970 * 1000.0),
+        dueEpochMs: item.due.map { Int64($0.timeIntervalSince1970 * 1000.0) },
         completedAtEpochMs: item.completedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
         rrule: item.rrule,
         instanceDateEpochMs: item.instanceDate.map { Int64($0.timeIntervalSince1970 * 1000.0) },
+        listId: item.listId,
         listName: item.listName,
         listColor: item.listColor
     )
@@ -264,10 +407,42 @@ func completedFromCache(_ record: CachedCompletedRecord) -> CompletedItem {
         title: record.title,
         description: record.description,
         priority: record.priority,
-        due: Date(timeIntervalSince1970: TimeInterval(record.dueEpochMs) / 1000.0),
+        due: record.dueEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },
         completedAt: record.completedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.completedAtEpochMs) / 1000.0) : nil,
         rrule: record.rrule,
         instanceDate: record.instanceDateEpochMs.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000.0) },
+        listId: record.listId,
+        listName: record.listName,
+        listColor: record.listColor
+    )
+}
+
+func completedFloaterToCache(_ item: CompletedItem) -> CachedCompletedFloaterRecord {
+    CachedCompletedFloaterRecord(
+        id: item.id,
+        originalFloaterId: item.originalTodoId,
+        title: item.title,
+        description: item.description,
+        priority: item.priority,
+        completedAtEpochMs: item.completedAt.map { Int64($0.timeIntervalSince1970 * 1000.0) } ?? 0,
+        listId: item.listId,
+        listName: item.listName,
+        listColor: item.listColor
+    )
+}
+
+func completedFloaterFromCache(_ record: CachedCompletedFloaterRecord) -> CompletedItem {
+    CompletedItem(
+        id: record.id,
+        originalTodoId: record.originalFloaterId,
+        title: record.title,
+        description: record.description,
+        priority: record.priority,
+        due: nil,
+        completedAt: record.completedAtEpochMs > 0 ? Date(timeIntervalSince1970: TimeInterval(record.completedAtEpochMs) / 1000.0) : nil,
+        rrule: nil,
+        instanceDate: nil,
+        listId: record.listId,
         listName: record.listName,
         listColor: record.listColor
     )
