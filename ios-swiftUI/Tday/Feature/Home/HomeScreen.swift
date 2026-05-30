@@ -170,10 +170,6 @@ struct HomeScreen: View {
         max(homeScrollOffset, 0) > HomeMetrics.rootDockCollapseThreshold
     }
 
-    private var canSummarizeToday: Bool {
-        summaryAvailable && viewModel.aiSummaryEnabled && !viewModel.todayTodos.isEmpty
-    }
-
     var body: some View {
         GeometryReader { proxy in
             let fallbackSearchBarFrame = CGRect(
@@ -217,11 +213,6 @@ struct HomeScreen: View {
                                     onOpenSettings: {
                                         closeSearch()
                                         onNavigate(.settings)
-                                    },
-                                    showSummaryAction: canSummarizeToday,
-                                    onSummarize: {
-                                        closeSearch()
-                                        presentSummary()
                                     }
                                 )
                                 .onTopPartialScrollSnap(
@@ -557,15 +548,13 @@ private struct HomeTopBar: View {
     let onSearchClose: () -> Void
     let onCreateList: () -> Void
     let onOpenSettings: () -> Void
-    let showSummaryAction: Bool
-    let onSummarize: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
         let buttonSize = HomeMetrics.topBarButtonSize
         let buttonGap: CGFloat = 8
-        let actionCount: CGFloat = showSummaryAction ? 3 : 2
+        let actionCount: CGFloat = 2
         let expandedSearchWidth = max(buttonSize, totalWidth)
         let searchWidth = searchExpanded ? expandedSearchWidth : buttonSize
         let collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
@@ -591,13 +580,6 @@ private struct HomeTopBar: View {
             }
 
             HStack(spacing: buttonGap) {
-                if showSummaryAction {
-                    HomeIconCircleButton(icon: "sparkles") {
-                        onSummarize()
-                    }
-                    .accessibilityLabel("Summary")
-                }
-
                 HomeIconCircleButton(icon: "text.badge.plus") {
                     onCreateList()
                 }
