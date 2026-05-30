@@ -1,12 +1,12 @@
 import { TodoItemType } from "@/types";
 import { useEffect, useMemo, useRef, useState } from "react";
-import PriorityDropdownMenu from "../../FormFields/Dropdowns/PriorityDropdown/PriorityDropdown";
-import DateDropdownMenu from "../../FormFields/Dropdowns/DateDropdown/DateDropdownMenu";
+import PriorityDropdownMenu from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/PriorityDropdown/PriorityDropdown";
+import DateDropdownMenu from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/DateDropdown/DateDropdownMenu";
 import { RRule } from "rrule";
-import RepeatDropdownMenu from "../../FormFields/Dropdowns/RepeatDropdown/RepeatDropdownMenu";
+import RepeatDropdownMenu from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/RepeatDropdown/RepeatDropdownMenu";
 import { AlignLeft, Clock, Flag, Circle, Repeat } from "lucide-react";
-import ConfirmCancelEditDialog from "../../../ConfirmationModals/ConfirmCancelEdit";
-import ConfirmEditAllDialog from "../../../ConfirmationModals/ConfirmEditAll";
+import ConfirmCancelEditDialog from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEdit";
+import ConfirmEditAllDialog from "@/features/calendar/component/ConfirmationModals/ConfirmEditAll";
 import { useEditCalendarTodo } from "@/features/calendar/query/update-calendar-todo";
 import { useTranslation } from "react-i18next";
 import {

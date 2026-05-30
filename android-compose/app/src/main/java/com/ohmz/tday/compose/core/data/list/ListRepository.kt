@@ -15,6 +15,7 @@ import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.model.CreateListRequest
+import com.ohmz.tday.compose.core.model.DeleteListRequest
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
@@ -72,6 +73,8 @@ class ListRepository @Inject constructor(
                 ),
             )
         }
+
+        if (syncManager.isLocalMode()) return
 
         runCatching {
             requireApiBody(
@@ -163,6 +166,7 @@ class ListRepository @Inject constructor(
             iconKey?.takeIf { it.isNotBlank() }?.let {
                 secureConfigStore.saveListIcon(listId, it)
             }
+            if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             Log.d(LOG_TAG, "updateList local-list path finished listId=$listId")
             return
@@ -194,6 +198,13 @@ class ListRepository @Inject constructor(
                         iconKey = iconKey,
                     ),
             )
+        }
+
+        if (syncManager.isLocalMode()) {
+            iconKey?.takeIf { it.isNotBlank() }?.let {
+                secureConfigStore.saveListIcon(listId, it)
+            }
+            return
         }
 
         Log.d(LOG_TAG, "updateList patch /api/list listId=$listId")
@@ -240,6 +251,88 @@ class ListRepository @Inject constructor(
         }
     }
 
+    suspend fun deleteList(
+        listId: String,
+        onOptimisticDelete: () -> Unit = {},
+    ) {
+        val normalizedListId = listId.trim()
+        if (normalizedListId.isBlank()) return
+
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.DELETE_LIST,
+            targetId = normalizedListId,
+            timestampEpochMs = timestampMs,
+        )
+        val isLocalOnly = normalizedListId.startsWith(LOCAL_LIST_PREFIX)
+
+        cacheManager.updateOfflineState { state ->
+            val deletedTodoIds = state.todos
+                .filter { it.listId == normalizedListId }
+                .map { it.canonicalId }
+                .toSet()
+            val prunedMutations = state.pendingMutations.filterNot { mutation ->
+                mutation.targetId == normalizedListId ||
+                        mutation.listId == normalizedListId ||
+                        deletedTodoIds.contains(mutation.targetId)
+            }
+
+            state.copy(
+                lists = state.lists.filterNot { it.id == normalizedListId },
+                todos = state.todos.filterNot { it.listId == normalizedListId },
+                completedItems = state.completedItems.filterNot { completed ->
+                    completed.listId == normalizedListId ||
+                            completed.originalTodoId?.let(deletedTodoIds::contains) == true
+                },
+                pendingMutations = if (isLocalOnly) {
+                    prunedMutations
+                } else {
+                    prunedMutations + pendingMutation
+                },
+            )
+        }
+
+        onOptimisticDelete()
+
+        if (syncManager.isLocalMode()) return
+
+        if (isLocalOnly) {
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            return
+        }
+
+        val immediateError = runCatching {
+            requireApiBody(
+                api.deleteListByBody(DeleteListRequest(id = normalizedListId)),
+                "Could not delete list",
+            )
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(
+                immediateError,
+                pendingMutation
+            )
+        ) {
+            throw immediateError
+        }
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+            Log.d(LOG_TAG, "deleteList success listId=$normalizedListId")
+        } else {
+            Log.w(
+                LOG_TAG,
+                "deleteList deferred listId=$normalizedListId reason=${immediateError.message}"
+            )
+        }
+    }
+
     private fun buildListsForState(state: OfflineSyncState): List<ListSummary> {
         val todoCountsByList = state.todos
             .asSequence()
@@ -261,6 +354,9 @@ class ListRepository @Inject constructor(
                 if (it.id == localListId) it.copy(id = serverListId) else it
             },
             todos = state.todos.map {
+                if (it.listId == localListId) it.copy(listId = serverListId) else it
+            },
+            completedItems = state.completedItems.map {
                 if (it.listId == localListId) it.copy(listId = serverListId) else it
             },
             pendingMutations = state.pendingMutations.map {

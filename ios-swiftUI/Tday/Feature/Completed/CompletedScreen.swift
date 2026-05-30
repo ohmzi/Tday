@@ -9,14 +9,17 @@ private enum CompletedRestorePhase {
 }
 
 struct CompletedScreen: View {
+    private let pullRefreshEnabled: Bool
     @State private var viewModel: CompletedViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
     @State private var editingItem: CompletedItem?
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String> = []
+    @State private var openSwipeTaskID: String?
 
-    init(container: AppContainer) {
+    init(container: AppContainer, pullRefreshEnabled: Bool = true) {
+        self.pullRefreshEnabled = pullRefreshEnabled
         _viewModel = State(initialValue: CompletedViewModel(container: container))
     }
 
@@ -44,6 +47,9 @@ struct CompletedScreen: View {
 
     var body: some View {
         completedTimelineContent
+            .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
+                await viewModel.refresh()
+            }
             .background(colors.background)
             .overlay {
                 if viewModel.items.isEmpty, !viewModel.isLoading {
@@ -74,6 +80,10 @@ struct CompletedScreen: View {
                     onBack: { dismiss() },
                     action: nil
                 )
+            }
+            .onChange(of: viewModel.items.map(\.id)) { _, ids in
+                guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
+                self.openSwipeTaskID = nil
             }
             .sheet(item: $editingItem) { item in
                 CreateTaskSheet(
@@ -107,7 +117,12 @@ struct CompletedScreen: View {
                 }
 
                 ForEach(Array(groupedItems.enumerated()), id: \.element.id) { index, section in
-                    completedTimelineSection(section, isFirstSection: index == 0)
+                    completedTimelineSection(
+                        section,
+                        sectionIndex: index,
+                        sections: groupedItems,
+                        isFirstSection: index == 0
+                    )
                 }
 
                 Color.clear
@@ -120,6 +135,7 @@ struct CompletedScreen: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .contentMargins(.top, 0, for: .scrollContent)
+            .listRowSpacing(0)
             .listSectionSpacing(0)
             .environment(\.defaultMinListRowHeight, 1)
             .disableVerticalScrollBounce()
@@ -145,19 +161,26 @@ struct CompletedScreen: View {
     }
 
     @ViewBuilder
-    private func completedTimelineSection(_ section: TimelineSection<CompletedItem>, isFirstSection: Bool) -> some View {
+    private func completedTimelineSection(
+        _ section: TimelineSection<CompletedItem>,
+        sectionIndex: Int,
+        sections: [TimelineSection<CompletedItem>],
+        isFirstSection: Bool
+    ) -> some View {
         let isCollapsed = collapsedSectionIDs.contains(section.id)
 
         Section {
             if !isCollapsed {
-                ForEach(Array(section.items.enumerated()), id: \.element.id) { _, item in
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, item in
                     completedTimelineRow(item)
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .transition(completedRowTransition())
-                    TimelineRowDivider()
-                        .transition(completedRowTransition())
+                    if shouldShowDateDivider(after: itemIndex, inSectionAt: sectionIndex, sections: sections) {
+                        TimelineRowDivider()
+                            .transition(completedRowTransition())
+                    }
                 }
             }
         } header: {
@@ -172,7 +195,7 @@ struct CompletedScreen: View {
             )
             .listRowInsets(
                 EdgeInsets(
-                    top: isFirstSection ? 0 : 8,
+                    top: isFirstSection ? 0 : TodoTimelineMetrics.sectionTopSpacing,
                     leading: 0,
                     bottom: 0,
                     trailing: 0
@@ -192,6 +215,35 @@ struct CompletedScreen: View {
                 collapsedSectionIDs.insert(id)
             }
         }
+    }
+
+    private func shouldShowDateDivider(
+        after itemIndex: Int,
+        inSectionAt sectionIndex: Int,
+        sections: [TimelineSection<CompletedItem>]
+    ) -> Bool {
+        guard sections.indices.contains(sectionIndex),
+              sections[sectionIndex].items.indices.contains(itemIndex) else {
+            return false
+        }
+
+        let currentItem = sections[sectionIndex].items[itemIndex]
+        let currentDate = currentItem.completedAt ?? currentItem.due ?? .distantPast
+        let nextItemInSection = sections[sectionIndex].items.dropFirst(itemIndex + 1).first
+        if let nextItemInSection {
+            let nextDate = nextItemInSection.completedAt ?? nextItemInSection.due ?? .distantPast
+            return !Calendar.current.isDate(currentDate, inSameDayAs: nextDate)
+        }
+
+        let nextVisibleItem = sections.dropFirst(sectionIndex + 1)
+            .first { !collapsedSectionIDs.contains($0.id) && !$0.items.isEmpty }?
+            .items.first
+
+        guard let nextVisibleItem else {
+            return false
+        }
+        let nextDate = nextVisibleItem.completedAt ?? nextVisibleItem.due ?? .distantPast
+        return !Calendar.current.isDate(currentDate, inSameDayAs: nextDate)
     }
 
     private func completedRowTransition() -> AnyTransition {
@@ -216,7 +268,8 @@ struct CompletedScreen: View {
             },
             onEdit: {
                 editingItem = item
-            }
+            },
+            openSwipeTaskID: $openSwipeTaskID
         )
     }
 }
@@ -227,6 +280,7 @@ private struct CompletedTimelineRow: View {
     let onUncomplete: () async -> Void
     let onDelete: () async -> Void
     let onEdit: () -> Void
+    @Binding var openSwipeTaskID: String?
 
     @Environment(\.tdayColors) private var colors
     @State private var restorePhase = CompletedRestorePhase.completed
@@ -256,10 +310,10 @@ private struct CompletedTimelineRow: View {
     }
 
     var body: some View {
-        let completedDate = item.completedAt ?? item.due
+        let completedDate = item.completedAt ?? item.due ?? .distantPast
         let completedTimeText = completedDate.formatted(date: .omitted, time: .shortened)
         let showListIndicator = item.listName?.isEmpty == false
-        let showPriorityFlag = item.priority.lowercased() == "high"
+        let priorityIcon = priorityIndicatorSymbolName(item.priority)
 
         VStack(spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
@@ -285,12 +339,12 @@ private struct CompletedTimelineRow: View {
                 .accessibilityLabel("Undo complete")
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(item.title)
-                        .font(.tdayRounded(size: TodoTimelineMetrics.minimalRowTitleSize, weight: .bold))
-                        .foregroundStyle(titleColor)
-                        .strikethrough(showStrikethrough, color: colors.onSurface.opacity(0.65))
-                        .lineLimit(2)
-                        .animation(.easeInOut(duration: 0.16), value: showStrikethrough)
+                    TodoTimelineTaskTitle(
+                        text: item.title,
+                        isCompleted: showStrikethrough,
+                        titleColor: titleColor,
+                        strikeColor: colors.onSurface.opacity(0.65)
+                    )
 
                     HStack(spacing: 5) {
                         Image(systemName: "clock")
@@ -303,15 +357,15 @@ private struct CompletedTimelineRow: View {
 
                 Spacer(minLength: 0)
 
-                if showListIndicator || showPriorityFlag {
+                if showListIndicator || priorityIcon != nil {
                     HStack(spacing: 8) {
                         if showListIndicator {
                             Image(systemName: "tray.fill")
                                 .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
                                 .foregroundStyle(todoListAccentColor(for: item.listColor))
                         }
-                        if showPriorityFlag {
-                            Image(systemName: "flag.fill")
+                        if let priorityIcon {
+                            Image(systemName: priorityIcon)
                                 .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
                                 .foregroundStyle(priorityColor(item.priority))
                         }
@@ -324,30 +378,27 @@ private struct CompletedTimelineRow: View {
         }
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
-        .animation(.easeInOut(duration: 0.22), value: isFading)
+        .offset(y: isFading ? -10 : 0)
+        .animation(.easeInOut(duration: 0.26), value: isFading)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .allowsHitTesting(!isRestoring)
-        .swipeRevealHintOnTap(enabled: !isRestoring)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button {
+        .todoTrailingSwipeActions(
+            rowID: item.id,
+            openRowID: $openSwipeTaskID,
+            enabled: !isRestoring,
+            onEdit: onEdit,
+            onDelete: {
                 Task { await onDelete() }
-            } label: {
-                Label("Delete", systemImage: "trash")
             }
-            .tint(TaskSwipeActionTint.delete)
-
-            Button {
-                onEdit()
-            } label: {
-                Label("Edit", systemImage: "square.and.pencil")
-            }
-            .tint(TaskSwipeActionTint.edit)
-        }
+        )
     }
 
     private func startRestore() {
         guard restorePhase == .completed else {
             return
+        }
+        if openSwipeTaskID == item.id {
+            openSwipeTaskID = nil
         }
 
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -360,10 +411,10 @@ private struct CompletedTimelineRow: View {
                 restorePhase = .unstruck
             }
             try? await Task.sleep(nanoseconds: 180_000_000)
-            withAnimation(.easeInOut(duration: 0.22)) {
+            withAnimation(.easeInOut(duration: 0.26)) {
                 restorePhase = .fading
             }
-            try? await Task.sleep(nanoseconds: 220_000_000)
+            try? await Task.sleep(nanoseconds: 260_000_000)
             await onUncomplete()
         }
     }
@@ -372,13 +423,13 @@ private struct CompletedTimelineRow: View {
 private func buildCompletedTimelineSections(items: [CompletedItem]) -> [TimelineSection<CompletedItem>] {
     let calendar = Calendar.current
     let grouped = Dictionary(grouping: items) { item in
-        calendar.startOfDay(for: item.completedAt ?? item.due)
+        calendar.startOfDay(for: item.completedAt ?? item.due ?? .distantPast)
     }
 
     return grouped.keys.sorted(by: >).map { date in
         let sectionItems = (grouped[date] ?? []).sorted { lhs, rhs in
-            let lhsCompletedAt = lhs.completedAt ?? lhs.due
-            let rhsCompletedAt = rhs.completedAt ?? rhs.due
+            let lhsCompletedAt = lhs.completedAt ?? lhs.due ?? .distantPast
+            let rhsCompletedAt = rhs.completedAt ?? rhs.due ?? .distantPast
             if lhsCompletedAt != rhsCompletedAt {
                 return lhsCompletedAt > rhsCompletedAt
             }
@@ -395,8 +446,14 @@ private func buildCompletedTimelineSections(items: [CompletedItem]) -> [Timeline
 }
 
 private func completedTimelineSectionTitle(for date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.locale = Locale.current
-    formatter.dateFormat = "EEEE, MMM d"
-    return formatter.string(from: date)
+    CompletedTimelineFormatters.sectionTitle.string(from: date)
+}
+
+private enum CompletedTimelineFormatters {
+    static let sectionTitle: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.current
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter
+    }()
 }

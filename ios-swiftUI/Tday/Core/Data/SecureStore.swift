@@ -24,6 +24,27 @@ final class SecureStore {
         case persistedAuthSessionCookie = "persisted-auth-session-cookie"
         case cachedSessionUser = "cached-session-user"
         case savedServerURLSuggestion = "saved-server-url-suggestion"
+        case appDataMode = "app-data-mode-v1"
+    }
+
+    func appDataMode() -> AppDataMode {
+        if let rawValue = loadString(for: .appDataMode),
+           let mode = AppDataMode(rawValue: rawValue) {
+            return mode
+        }
+        return (loadRuntimeServerURL() == nil && loadPersistedServerURL() == nil) ? .unset : .server
+    }
+
+    func isLocalMode() -> Bool {
+        appDataMode() == .local
+    }
+
+    func setAppDataMode(_ mode: AppDataMode) {
+        saveString(mode.rawValue, for: .appDataMode)
+    }
+
+    func clearAppDataMode() {
+        deleteValue(for: .appDataMode)
     }
 
     func loadPersistedServerURL() -> URL? {
@@ -35,6 +56,7 @@ final class SecureStore {
 
     func savePersistedServerURL(_ url: URL) {
         saveString(url.absoluteString, for: .persistedServerURL)
+        setAppDataMode(.server)
     }
 
     func clearPersistedServerURL() {
@@ -125,6 +147,7 @@ final class SecureStore {
     func clearAllUserValues(preservingServerURL: Bool = false) {
         if !preservingServerURL {
             clearPersistedServerURL()
+            clearAppDataMode()
         }
         clearPersistedAuthSessionCookie()
         clearCachedSessionUser()
@@ -191,6 +214,7 @@ final class SecureStore {
         }
 
         clearPersistedServerURL()
+        clearAppDataMode()
         clearPersistedAuthSessionCookie()
         clearCachedSessionUser()
         clearLastEmail()

@@ -7,6 +7,8 @@ enum AppRoute: Hashable {
     case scheduledTodos
     case allTodos(highlightTodoId: String?)
     case priorityTodos
+    case floaterTodos
+    case floaterListTodos(listId: String, listName: String)
     case listTodos(listId: String, listName: String)
     case completed
     case calendar
@@ -30,6 +32,10 @@ enum AppRoute: Hashable {
             return "todos/all"
         case .priorityTodos:
             return "todos/priority"
+        case .floaterTodos:
+            return "floater"
+        case let .floaterListTodos(listId, listName):
+            return "floater/list/\(listId)/\(listName)"
         case let .listTodos(listId, listName):
             return "todos/list/\(listId)/\(listName)"
         case .completed:
@@ -84,6 +90,12 @@ enum AppRoute: Hashable {
                 return .allTodos(highlightTodoId: highlightTodoId)
             case "priority":
                 return .priorityTodos
+            case "floater":
+                let remaining = Array(components.dropFirst(2))
+                if remaining.first == "list", remaining.count >= 3 {
+                    return .floaterListTodos(listId: remaining[1], listName: remaining[2])
+                }
+                return .floaterTodos
             case "list":
                 let remaining = Array(components.dropFirst(2))
                 guard remaining.count >= 2 else {
@@ -94,6 +106,13 @@ enum AppRoute: Hashable {
                 return nil
             }
         default:
+            if first == "floater" {
+                let remaining = Array(components.dropFirst())
+                if remaining.first == "list", remaining.count >= 3 {
+                    return .floaterListTodos(listId: remaining[1], listName: remaining[2])
+                }
+                return .floaterTodos
+            }
             return nil
         }
     }

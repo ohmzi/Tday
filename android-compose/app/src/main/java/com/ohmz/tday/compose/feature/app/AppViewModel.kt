@@ -1,8 +1,12 @@
 package com.ohmz.tday.compose.feature.app
 
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.ApiCallException
+import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
@@ -27,6 +31,7 @@ import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.feature.release.GitHubRelease
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
@@ -49,6 +54,7 @@ data class AppUiState(
     val requiresServerSetup: Boolean = false,
     val requiresLogin: Boolean = false,
     val serverUrl: String? = null,
+    val dataMode: AppDataMode = AppDataMode.UNSET,
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val user: SessionUser? = null,
     val error: String? = null,
@@ -68,7 +74,32 @@ data class AppUiState(
     val backendVersion: String? = null,
     val requiredUpdateRelease: GitHubRelease? = null,
     val isCheckingUpdateRelease: Boolean = false,
-)
+) {
+    val isLocalMode: Boolean
+        get() = dataMode == AppDataMode.LOCAL
+
+    val isWorkspaceAvailable: Boolean
+        get() = authenticated || isLocalMode
+}
+
+internal const val OFFLINE_NOTICE_COOLDOWN_MS = 10 * 60 * 1000L
+
+internal class OfflineNoticeCooldown(
+    private val nowMillis: () -> Long = { System.currentTimeMillis() },
+) {
+    private var lastNoticeShownAtMs: Long? = null
+
+    fun shouldShowNotice(): Boolean {
+        val now = nowMillis()
+        val lastShownAt = lastNoticeShownAtMs
+        if (lastShownAt != null && now - lastShownAt < OFFLINE_NOTICE_COOLDOWN_MS) {
+            return false
+        }
+
+        lastNoticeShownAtMs = now
+        return true
+    }
+}
 
 @HiltViewModel
 class AppViewModel @Inject constructor(
@@ -85,6 +116,7 @@ class AppViewModel @Inject constructor(
     private val connectivityObserver: ConnectivityObserver,
     private val appVersionManager: AppVersionManager,
     private val systemCredentialService: SystemCredentialServicing,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppUiState())
@@ -93,6 +125,7 @@ class AppViewModel @Inject constructor(
     private var realtimeJob: Job? = null
     private var connectivityJob: Job? = null
     private var foregroundReconnectJob: Job? = null
+    private val offlineNoticeCooldown = OfflineNoticeCooldown()
 
     init {
         _uiState.update {
@@ -121,6 +154,12 @@ class AppViewModel @Inject constructor(
     fun bootstrap() {
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null, isManualSyncing = false) }
+            val dataMode = serverConfigRepository.getAppDataMode()
+            if (dataMode == AppDataMode.LOCAL) {
+                enterLocalWorkspace()
+                return@launch
+            }
+
             if (!serverConfigRepository.hasServerConfigured()) {
                 authRepository.clearAllLocalUserDataForUnauthenticatedState()
                 _uiState.update {
@@ -130,6 +169,7 @@ class AppViewModel @Inject constructor(
                         requiresServerSetup = true,
                         requiresLogin = false,
                         serverUrl = null,
+                        dataMode = AppDataMode.UNSET,
                         user = null,
                         error = null,
                         canResetServerTrust = false,
@@ -139,6 +179,12 @@ class AppViewModel @Inject constructor(
                         isAdminAiSummaryLoading = false,
                         isAdminAiSummarySaving = false,
                         adminAiSummaryError = null,
+                        isOffline = false,
+                        pendingMutationCount = 0,
+                        versionCheckResult = VersionCheckResult.Compatible,
+                        backendVersion = null,
+                        requiredUpdateRelease = null,
+                        isCheckingUpdateRelease = false,
                     )
                 }
                 ensureResyncLoop(authenticated = false)
@@ -155,6 +201,8 @@ class AppViewModel @Inject constructor(
             if (sessionResult != null) {
                 val sessionUser = sessionResult.user
                 val adminUser = isAdmin(sessionUser)
+                val shouldShowOfflineNotice = sessionResult.isOffline &&
+                        offlineNoticeCooldown.shouldShowNotice()
                 val pendingCount = runCatching {
                     cacheManager.loadOfflineState().pendingMutations.size
                 }.getOrDefault(_uiState.value.pendingMutationCount)
@@ -165,6 +213,7 @@ class AppViewModel @Inject constructor(
                         requiresServerSetup = false,
                         requiresLogin = false,
                         serverUrl = serverConfigRepository.getServerUrl(),
+                        dataMode = AppDataMode.SERVER,
                         user = sessionUser,
                         error = null,
                         canResetServerTrust = false,
@@ -180,7 +229,7 @@ class AppViewModel @Inject constructor(
                         adminAiSummaryError = null,
                         isOffline = sessionResult.isOffline,
                         pendingMutationCount = pendingCount,
-                        offlineNoticeId = if (sessionResult.isOffline) {
+                        offlineNoticeId = if (shouldShowOfflineNotice) {
                             it.offlineNoticeId + 1L
                         } else {
                             it.offlineNoticeId
@@ -206,6 +255,7 @@ class AppViewModel @Inject constructor(
                         requiresServerSetup = false,
                         requiresLogin = false,
                         serverUrl = serverConfigRepository.getServerUrl(),
+                        dataMode = AppDataMode.SERVER,
                         user = null,
                         error = null,
                         canResetServerTrust = false,
@@ -233,6 +283,7 @@ class AppViewModel @Inject constructor(
                     requiresServerSetup = false,
                     requiresLogin = true,
                     serverUrl = serverConfigRepository.getServerUrl(),
+                    dataMode = AppDataMode.SERVER,
                     user = null,
                     error = null,
                     canResetServerTrust = false,
@@ -245,6 +296,58 @@ class AppViewModel @Inject constructor(
                 )
             }
             ensureResyncLoop(authenticated = false)
+        }
+    }
+
+    fun useLocalMode() {
+        viewModelScope.launch {
+            runCatching { authRepository.clearAllLocalUserDataForUnauthenticatedState() }
+            runCatching { systemCredentialService.clearCredentialState() }
+            runCatching { reminderScheduler.cancelAll() }
+            serverConfigRepository.enableLocalMode()
+            enterLocalWorkspace()
+        }
+    }
+
+    private fun enterLocalWorkspace() {
+        ensureResyncLoop(authenticated = false)
+        runCatching {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    lastSuccessfulSyncEpochMs = 0L,
+                    lastSyncAttemptEpochMs = 0L,
+                    pendingMutations = emptyList(),
+                )
+            }
+        }
+        _uiState.update {
+            it.copy(
+                loading = false,
+                authenticated = false,
+                requiresServerSetup = false,
+                requiresLogin = false,
+                serverUrl = null,
+                dataMode = AppDataMode.LOCAL,
+                user = null,
+                error = null,
+                canResetServerTrust = false,
+                pendingApprovalMessage = null,
+                isManualSyncing = false,
+                adminAiSummaryEnabled = null,
+                isAdminAiSummaryLoading = false,
+                isAdminAiSummarySaving = false,
+                adminAiSummaryError = null,
+                aiSummaryValidationError = null,
+                isOffline = false,
+                pendingMutationCount = 0,
+                versionCheckResult = VersionCheckResult.Compatible,
+                backendVersion = null,
+                requiredUpdateRelease = null,
+                isCheckingUpdateRelease = false,
+            )
+        }
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { reminderScheduler.rescheduleAll() }
         }
     }
 
@@ -282,7 +385,7 @@ class AppViewModel @Inject constructor(
 
     fun refreshAdminAiSummarySetting() {
         val current = _uiState.value
-        if (!isAdmin(current.user)) {
+        if (current.isLocalMode || !isAdmin(current.user)) {
             _uiState.update {
                 it.copy(
                     adminAiSummaryEnabled = null,
@@ -317,7 +420,10 @@ class AppViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAdminAiSummaryLoading = false,
-                            adminAiSummaryError = friendlyAdminError(error, "Could not load admin settings"),
+                            adminAiSummaryError = friendlyAdminError(
+                                error,
+                                R.string.error_load_admin_settings_failed,
+                            ),
                         )
                     }
                 }
@@ -326,7 +432,7 @@ class AppViewModel @Inject constructor(
 
     fun setAdminAiSummaryEnabled(enabled: Boolean) {
         val current = _uiState.value
-        if (!isAdmin(current.user) || current.isAdminAiSummarySaving) return
+        if (current.isLocalMode || !isAdmin(current.user) || current.isAdminAiSummarySaving) return
 
         viewModelScope.launch {
             _uiState.update {
@@ -360,7 +466,10 @@ class AppViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isAdminAiSummarySaving = false,
-                            adminAiSummaryError = friendlyAdminError(error, "Could not update admin settings"),
+                            adminAiSummaryError = friendlyAdminError(
+                                error,
+                                R.string.error_update_admin_settings_failed,
+                            ),
                         )
                     }
                     refreshAdminAiSummarySetting()
@@ -388,6 +497,7 @@ class AppViewModel @Inject constructor(
                         requiresServerSetup = false,
                         requiresLogin = !isBlocking,
                         serverUrl = probeResult.serverUrl,
+                        dataMode = AppDataMode.SERVER,
                         error = null,
                         canResetServerTrust = false,
                         pendingApprovalMessage = null,
@@ -416,6 +526,7 @@ class AppViewModel @Inject constructor(
     }
 
     fun recheckVersion() {
+        if (_uiState.value.isLocalMode) return
         viewModelScope.launch {
             appVersionManager.refreshServerCompatibility()
             if (appVersionManager.state.value.versionCheckResult is VersionCheckResult.Compatible &&
@@ -428,7 +539,11 @@ class AppViewModel @Inject constructor(
 
     fun refreshVersionInfo() {
         viewModelScope.launch {
-            appVersionManager.refreshAll()
+            if (_uiState.value.isLocalMode) {
+                appVersionManager.refreshGitHubReleases()
+            } else {
+                appVersionManager.refreshAll()
+            }
         }
     }
 
@@ -449,7 +564,7 @@ class AppViewModel @Inject constructor(
                 }
                 onSuccess()
             }.onFailure { error ->
-                val message = error.userFacingMessage("Could not reset trusted server.")
+                val message = error.userFacingMessage(appContext, R.string.error_reset_trusted_server_failed)
                 _uiState.update {
                     it.copy(
                         error = message,
@@ -474,6 +589,7 @@ class AppViewModel @Inject constructor(
                     requiresServerSetup = true,
                     requiresLogin = false,
                     serverUrl = null,
+                    dataMode = AppDataMode.UNSET,
                     user = null,
                     error = null,
                     loading = false,
@@ -484,13 +600,20 @@ class AppViewModel @Inject constructor(
                     isAdminAiSummaryLoading = false,
                     isAdminAiSummarySaving = false,
                     adminAiSummaryError = null,
+                    aiSummaryValidationError = null,
+                    isOffline = false,
+                    pendingMutationCount = 0,
+                    versionCheckResult = VersionCheckResult.Compatible,
+                    backendVersion = null,
+                    requiredUpdateRelease = null,
+                    isCheckingUpdateRelease = false,
                 )
             }
         }
     }
 
     fun syncNow() {
-        if (!_uiState.value.authenticated) return
+        if (!_uiState.value.authenticated || _uiState.value.isLocalMode) return
         if (_uiState.value.isManualSyncing) return
 
         viewModelScope.launch {
@@ -510,11 +633,16 @@ class AppViewModel @Inject constructor(
                         error = syncError,
                         suppressAuthenticationExpired = true,
                     )
+            val shouldShowOfflineNotice = isOffline && offlineNoticeCooldown.shouldShowNotice()
             _uiState.update {
                 it.copy(
                     isManualSyncing = false,
                     isOffline = isOffline,
-                    offlineNoticeId = if (isOffline) it.offlineNoticeId + 1L else it.offlineNoticeId,
+                    offlineNoticeId = if (shouldShowOfflineNotice) {
+                        it.offlineNoticeId + 1L
+                    } else {
+                        it.offlineNoticeId
+                    },
                     pendingMutationCount = runCatching {
                         cacheManager.loadOfflineState().pendingMutations.size
                     }.getOrDefault(it.pendingMutationCount),
@@ -534,7 +662,7 @@ class AppViewModel @Inject constructor(
     }
 
     fun reconnectAfterForeground() {
-        if (!_uiState.value.authenticated) return
+        if (!_uiState.value.authenticated || _uiState.value.isLocalMode) return
         if (foregroundReconnectJob?.isActive == true) return
 
         foregroundReconnectJob = viewModelScope.launch {
@@ -637,15 +765,19 @@ class AppViewModel @Inject constructor(
             connectionProbeTimeoutMs = connectionProbeTimeoutMs,
         )
         val syncError = result.exceptionOrNull()
+        val isOffline = syncError != null &&
+                shouldTreatSyncFailureAsOffline(
+                    error = syncError,
+                    suppressAuthenticationExpired = suppressAuthenticationExpired,
+                )
+        val shouldDeferOfflineState = syncError != null &&
+                isLikelyConnectivityIssue(syncError) &&
+                !markOfflineOnConnectivityFailure
+        val shouldShowOfflineNotice = isOffline &&
+                showOfflineNotice &&
+                !shouldDeferOfflineState &&
+                offlineNoticeCooldown.shouldShowNotice()
         _uiState.update {
-            val isOffline = syncError != null &&
-                    shouldTreatSyncFailureAsOffline(
-                        error = syncError,
-                        suppressAuthenticationExpired = suppressAuthenticationExpired,
-                    )
-            val shouldDeferOfflineState = syncError != null &&
-                    isLikelyConnectivityIssue(syncError) &&
-                    !markOfflineOnConnectivityFailure
             it.copy(
                 isOffline = when {
                     syncError == null -> false
@@ -653,7 +785,7 @@ class AppViewModel @Inject constructor(
                     isOffline -> true
                     else -> false
                 },
-                offlineNoticeId = if (isOffline && showOfflineNotice && !shouldDeferOfflineState) {
+                offlineNoticeId = if (shouldShowOfflineNotice) {
                     it.offlineNoticeId + 1L
                 } else {
                     it.offlineNoticeId
@@ -689,6 +821,7 @@ class AppViewModel @Inject constructor(
                 requiresServerSetup = false,
                 requiresLogin = false,
                 serverUrl = serverConfigRepository.getServerUrl(),
+                dataMode = AppDataMode.SERVER,
                 user = restoredSession.user,
                 error = null,
                 pendingApprovalMessage = null,
@@ -721,7 +854,7 @@ class AppViewModel @Inject constructor(
         suppressAuthenticationExpired: Boolean = false,
     ) {
         if (shouldTreatSyncFailureAsOffline(error, suppressAuthenticationExpired)) return
-        snackbarManager.showError(error.userFacingMessage()) {
+        snackbarManager.showError(error.userFacingMessage(appContext)) {
             if (error !is ApiCallException || error.statusCode != 401) syncNow()
         }
     }
@@ -824,8 +957,8 @@ class AppViewModel @Inject constructor(
         return user?.role?.equals("ADMIN", ignoreCase = true) == true
     }
 
-    private fun friendlyAdminError(error: Throwable, fallback: String): String {
-        return error.userFacingMessage(fallback)
+    private fun friendlyAdminError(error: Throwable, @StringRes fallbackRes: Int): String {
+        return error.userFacingMessage(appContext, fallbackRes)
     }
 
     private suspend fun probeAndSaveWithAutomaticTrustRecovery(
@@ -851,11 +984,12 @@ class AppViewModel @Inject constructor(
 
     private fun toServerSetupMessage(error: Throwable): String {
         return when (error) {
-            is TimeoutCancellationException -> "Server probe timed out. Check URL and network, then try again."
-            is ServerProbeException.InvalidUrl -> "Invalid server URL."
-            is ServerProbeException.InsecureTransport -> "Use HTTPS for remote server URLs."
+            is TimeoutCancellationException -> appContext.getString(R.string.server_setup_error_probe_timeout)
+            is ServerProbeException.InvalidUrl -> appContext.getString(R.string.server_setup_error_invalid_url)
+            is ServerProbeException.InsecureTransport ->
+                appContext.getString(R.string.server_setup_error_insecure_transport)
             is ServerProbeException.NotTdayServer ->
-                "Server is reachable but does not appear to be a T'Day server."
+                appContext.getString(R.string.server_setup_error_not_tday_server)
             is AutomaticTrustRefreshFailedException ->
                 staleServerTrustMessage()
             is ServerProbeException.CertificateChanged ->
@@ -864,9 +998,9 @@ class AppViewModel @Inject constructor(
                 if (isServerTrustMismatch(error)) {
                     automaticTrustRefreshMessage()
                 } else {
-                    error.userFacingMessage("Could not connect to server.")
+                    error.userFacingMessage(appContext, R.string.error_connect_server_failed)
                 }
-            else -> error.userFacingMessage("Could not connect to server.")
+            else -> error.userFacingMessage(appContext, R.string.error_connect_server_failed)
         }
     }
 
@@ -879,11 +1013,11 @@ class AppViewModel @Inject constructor(
     }
 
     private fun automaticTrustRefreshMessage(): String {
-        return "Saved server trust changed. Trying again with a refreshed certificate."
+        return appContext.getString(R.string.server_setup_trust_refreshing)
     }
 
     private fun staleServerTrustMessage(): String {
-        return "The app could not recover from a saved server trust mismatch automatically. Clear app storage or reinstall the app, then try again."
+        return appContext.getString(R.string.server_setup_trust_refresh_failed)
     }
 
     private class AutomaticTrustRefreshFailedException(

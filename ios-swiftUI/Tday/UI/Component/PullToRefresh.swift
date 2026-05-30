@@ -3,22 +3,41 @@ import UIKit
 
 struct PullToRefreshContainer<Content: View>: View {
     let isRefreshing: Bool
+    let isEnabled: Bool
     let action: @Sendable () async -> Void
     private let content: Content
 
     init(
         isRefreshing: Bool,
+        isEnabled: Bool = true,
         action: @escaping @Sendable () async -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.isRefreshing = isRefreshing
+        self.isEnabled = isEnabled
         self.action = action
         self.content = content()
     }
 
     var body: some View {
-        RefreshContainerBody(isRefreshing: isRefreshing, action: action) {
+        if isEnabled {
+            RefreshContainerBody(isRefreshing: isRefreshing, action: action) {
+                content
+            }
+        } else {
             content
+        }
+    }
+}
+
+extension View {
+    func tdayPullToRefresh(
+        isRefreshing: Bool,
+        isEnabled: Bool = true,
+        action: @escaping @Sendable () async -> Void
+    ) -> some View {
+        PullToRefreshContainer(isRefreshing: isRefreshing, isEnabled: isEnabled, action: action) {
+            self
         }
     }
 }
@@ -237,13 +256,20 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
         }
     }
 
-    final class Coordinator {
+    final class Coordinator: NSObject {
         var onChange: (CGFloat) -> Void
         private weak var observedScrollView: UIScrollView?
         private var observation: NSKeyValueObservation?
+        private var overscrollDistance: CGFloat = 0
+        private var gesturePullDistance: CGFloat = 0
+        private var pullStartTranslationY: CGFloat?
 
         init(onChange: @escaping (CGFloat) -> Void) {
             self.onChange = onChange
+        }
+
+        deinit {
+            observedScrollView?.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
         }
 
         func attach(to view: UIView) {
@@ -257,17 +283,56 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
                 return
             }
 
+            observedScrollView?.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
             observedScrollView = scrollView
+            scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
             observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
                 self?.hideNativeRefreshControl(in: scrollView)
                 let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
-                let pullDistance = max(-normalizedOffset, 0)
-                if Thread.isMainThread {
-                    self?.onChange(pullDistance)
-                } else {
-                    DispatchQueue.main.async {
-                        self?.onChange(pullDistance)
+                self?.overscrollDistance = max(-normalizedOffset, 0)
+                self?.emitPullDistance()
+            }
+        }
+
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let scrollView = observedScrollView else {
+                return
+            }
+
+            let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
+            let translationY = gesture.translation(in: scrollView).y
+
+            switch gesture.state {
+            case .began:
+                pullStartTranslationY = nil
+                gesturePullDistance = 0
+            case .changed:
+                if normalizedOffset <= 1, translationY > 0 {
+                    if pullStartTranslationY == nil {
+                        pullStartTranslationY = translationY
                     }
+                    gesturePullDistance = max(translationY - (pullStartTranslationY ?? translationY), 0)
+                } else if normalizedOffset > 1 || translationY <= 0 {
+                    pullStartTranslationY = nil
+                    gesturePullDistance = 0
+                }
+            case .ended, .cancelled, .failed:
+                pullStartTranslationY = nil
+                gesturePullDistance = 0
+            default:
+                break
+            }
+
+            emitPullDistance()
+        }
+
+        private func emitPullDistance() {
+            let pullDistance = max(overscrollDistance, gesturePullDistance)
+            if Thread.isMainThread {
+                onChange(pullDistance)
+            } else {
+                DispatchQueue.main.async {
+                    self.onChange(pullDistance)
                 }
             }
         }
@@ -443,6 +508,7 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
         private var settledTargetOffset: CGFloat = 0
         private var snapTimer: Timer?
         private var isSnapping = false
+        private let releaseVelocityThreshold: CGFloat = 90
 
         init(collapseDistance: CGFloat) {
             self.collapseDistance = collapseDistance
@@ -473,6 +539,7 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
             case .began:
                 snapTimer?.invalidate()
                 isSnapping = false
+                scrollView.layer.removeAllAnimations()
                 releaseVelocityY = 0
                 lastDragDelta = 0
                 dragStartOffset = offset
@@ -493,7 +560,7 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
 
         private func scheduleSnapCheck() {
             snapTimer?.invalidate()
-            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] timer in
                 guard let self else {
                     timer.invalidate()
                     return
@@ -547,20 +614,24 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
         }
 
         private func targetOffset(for currentOffset: CGFloat, distance: CGFloat) -> CGFloat {
-            let velocityThreshold: CGFloat = 20
-            if releaseVelocityY < -velocityThreshold {
+            if releaseVelocityY < -releaseVelocityThreshold {
                 return distance
             }
-            if releaseVelocityY > velocityThreshold {
+            if releaseVelocityY > releaseVelocityThreshold {
                 return 0
             }
 
             let dragDelta = currentOffset - dragStartOffset
-            if dragDelta > 0.5 || lastDragDelta > 0.05 {
+            if dragDelta > 2 || lastDragDelta > 0.2 {
                 return distance
             }
-            if dragDelta < -0.5 || lastDragDelta < -0.05 {
+            if dragDelta < -2 || lastDragDelta < -0.2 {
                 return 0
+            }
+
+            let progress = currentOffset / distance
+            if abs(progress - 0.5) > 0.08 {
+                return progress >= 0.5 ? distance : 0
             }
 
             return settledTargetOffset
@@ -585,11 +656,14 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
 
             isSnapping = true
             scrollView.layer.removeAllAnimations()
-            let initialVelocity = min(abs(releaseVelocityY) / max(collapseDistance, 1), 3)
+            let remainingDistance = abs(scrollView.contentOffset.y - targetOffset.y)
+            let progress = min(max(remainingDistance / max(collapseDistance, 1), 0), 1)
+            let duration = 0.22 + (0.12 * progress)
+            let initialVelocity = min(abs(releaseVelocityY) / max(collapseDistance, 1), 2.4)
             UIView.animate(
-                withDuration: 0.34,
+                withDuration: duration,
                 delay: 0,
-                usingSpringWithDamping: 0.88,
+                usingSpringWithDamping: 0.92,
                 initialSpringVelocity: initialVelocity,
                 options: [.allowUserInteraction, .beginFromCurrentState]
             ) {

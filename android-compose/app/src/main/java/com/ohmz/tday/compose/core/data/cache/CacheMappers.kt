@@ -1,10 +1,16 @@
 package com.ohmz.tday.compose.core.data.cache
 
+import com.ohmz.tday.compose.core.data.CachedCompletedFloaterRecord
 import com.ohmz.tday.compose.core.data.CachedCompletedRecord
+import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
+import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.CachedListRecord
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
+import com.ohmz.tday.compose.core.model.CompletedFloaterDto
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CompletedTodoDto
+import com.ohmz.tday.compose.core.model.FloaterDto
+import com.ohmz.tday.compose.core.model.FloaterListDto
 import com.ohmz.tday.compose.core.model.ListDto
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoDto
@@ -15,8 +21,11 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
 internal const val LOCAL_TODO_PREFIX = "local-todo-"
+internal const val LOCAL_FLOATER_PREFIX = "local-floater-"
 internal const val LOCAL_LIST_PREFIX = "local-list-"
+internal const val LOCAL_FLOATER_LIST_PREFIX = "local-floater-list-"
 internal const val LOCAL_COMPLETED_PREFIX = "local-completed-"
+internal const val LOCAL_COMPLETED_FLOATER_PREFIX = "local-completed-floater-"
 
 internal fun todoToCache(todo: TodoItem): CachedTodoRecord {
     return CachedTodoRecord(
@@ -25,7 +34,7 @@ internal fun todoToCache(todo: TodoItem): CachedTodoRecord {
         title = todo.title,
         description = todo.description,
         priority = todo.priority,
-        dueEpochMs = todo.due.toEpochMilli(),
+        dueEpochMs = todo.due?.toEpochMilli(),
         rrule = todo.rrule,
         instanceDateEpochMs = todo.instanceDateEpochMillis,
         pinned = todo.pinned,
@@ -42,9 +51,44 @@ internal fun todoFromCache(cache: CachedTodoRecord): TodoItem {
         title = cache.title,
         description = cache.description,
         priority = cache.priority,
-        due = Instant.ofEpochMilli(cache.dueEpochMs),
+        due = cache.dueEpochMs?.let(Instant::ofEpochMilli),
         rrule = cache.rrule,
         instanceDate = cache.instanceDateEpochMs?.let(Instant::ofEpochMilli),
+        pinned = cache.pinned,
+        completed = cache.completed,
+        listId = cache.listId,
+        updatedAt = if (cache.updatedAtEpochMs > 0L) {
+            Instant.ofEpochMilli(cache.updatedAtEpochMs)
+        } else {
+            null
+        },
+    )
+}
+
+internal fun floaterToCache(floater: TodoItem): CachedFloaterRecord {
+    return CachedFloaterRecord(
+        id = floater.id,
+        canonicalId = floater.canonicalId,
+        title = floater.title,
+        description = floater.description,
+        priority = floater.priority,
+        pinned = floater.pinned,
+        completed = floater.completed,
+        listId = floater.listId,
+        updatedAtEpochMs = floater.updatedAt?.toEpochMilli() ?: 0L,
+    )
+}
+
+internal fun floaterFromCache(cache: CachedFloaterRecord): TodoItem {
+    return TodoItem(
+        id = cache.id,
+        canonicalId = cache.canonicalId,
+        title = cache.title,
+        description = cache.description,
+        priority = cache.priority,
+        due = null,
+        rrule = null,
+        instanceDate = null,
         pinned = cache.pinned,
         completed = cache.completed,
         listId = cache.listId,
@@ -78,6 +122,16 @@ internal fun orderListsLikeWeb(lists: List<CachedListRecord>): List<CachedListRe
         .map { it.value }
 }
 
+internal fun orderFloaterListsLikeWeb(lists: List<CachedFloaterListRecord>): List<CachedFloaterListRecord> {
+    if (lists.none { it.createdAtEpochMs > 0L }) return lists
+    return lists.withIndex()
+        .sortedWith(
+            compareByDescending<IndexedValue<CachedFloaterListRecord>> { it.value.createdAtEpochMs }
+                .thenBy { it.index },
+        )
+        .map { it.value }
+}
+
 internal fun listFromCache(
     cache: CachedListRecord,
     todoCountOverride: Int,
@@ -101,6 +155,33 @@ internal fun listFromCache(
     )
 }
 
+internal fun floaterListToCache(list: ListSummary): CachedFloaterListRecord {
+    return CachedFloaterListRecord(
+        id = list.id,
+        name = list.name,
+        color = list.color,
+        iconKey = list.iconKey,
+        todoCount = list.todoCount,
+        updatedAtEpochMs = list.updatedAt?.toEpochMilli() ?: 0L,
+        createdAtEpochMs = list.createdAt?.toEpochMilli() ?: 0L,
+    )
+}
+
+internal fun floaterListFromCache(
+    cache: CachedFloaterListRecord,
+    todoCountOverride: Int,
+): ListSummary {
+    return ListSummary(
+        id = cache.id,
+        name = cache.name,
+        color = cache.color,
+        iconKey = cache.iconKey,
+        todoCount = todoCountOverride,
+        updatedAt = if (cache.updatedAtEpochMs > 0L) Instant.ofEpochMilli(cache.updatedAtEpochMs) else null,
+        createdAt = if (cache.createdAtEpochMs > 0L) Instant.ofEpochMilli(cache.createdAtEpochMs) else null,
+    )
+}
+
 internal fun completedToCache(item: CompletedItem): CachedCompletedRecord {
     return CachedCompletedRecord(
         id = item.id,
@@ -108,10 +189,11 @@ internal fun completedToCache(item: CompletedItem): CachedCompletedRecord {
         title = item.title,
         description = item.description,
         priority = item.priority,
-        dueEpochMs = item.due.toEpochMilli(),
+        dueEpochMs = item.due?.toEpochMilli(),
         completedAtEpochMs = item.completedAt?.toEpochMilli() ?: 0L,
         rrule = item.rrule,
         instanceDateEpochMs = item.instanceDate?.toEpochMilli(),
+        listId = item.listId,
         listName = item.listName,
         listColor = item.listColor,
     )
@@ -124,7 +206,7 @@ internal fun completedFromCache(cache: CachedCompletedRecord): CompletedItem {
         title = cache.title,
         description = cache.description,
         priority = cache.priority,
-        due = Instant.ofEpochMilli(cache.dueEpochMs),
+        due = cache.dueEpochMs?.let(Instant::ofEpochMilli),
         completedAt = if (cache.completedAtEpochMs > 0L) {
             Instant.ofEpochMilli(cache.completedAtEpochMs)
         } else {
@@ -132,6 +214,42 @@ internal fun completedFromCache(cache: CachedCompletedRecord): CompletedItem {
         },
         rrule = cache.rrule,
         instanceDate = cache.instanceDateEpochMs?.let(Instant::ofEpochMilli),
+        listId = cache.listId,
+        listName = cache.listName,
+        listColor = cache.listColor,
+    )
+}
+
+internal fun completedFloaterToCache(item: CompletedItem): CachedCompletedFloaterRecord {
+    return CachedCompletedFloaterRecord(
+        id = item.id,
+        originalFloaterId = item.originalTodoId,
+        title = item.title,
+        description = item.description,
+        priority = item.priority,
+        completedAtEpochMs = item.completedAt?.toEpochMilli() ?: 0L,
+        listId = item.listId,
+        listName = item.listName,
+        listColor = item.listColor,
+    )
+}
+
+internal fun completedFloaterFromCache(cache: CachedCompletedFloaterRecord): CompletedItem {
+    return CompletedItem(
+        id = cache.id,
+        originalTodoId = cache.originalFloaterId,
+        title = cache.title,
+        description = cache.description,
+        priority = cache.priority,
+        due = null,
+        completedAt = if (cache.completedAtEpochMs > 0L) {
+            Instant.ofEpochMilli(cache.completedAtEpochMs)
+        } else {
+            null
+        },
+        rrule = null,
+        instanceDate = null,
+        listId = cache.listId,
         listName = cache.listName,
         listColor = cache.listColor,
     )
@@ -150,9 +268,26 @@ internal fun mapTodoDto(dto: TodoDto): TodoItem {
         title = dto.title,
         description = dto.description,
         priority = dto.priority,
-        due = parseInstant(dto.due),
+        due = parseOptionalInstant(dto.due),
         rrule = dto.rrule,
         instanceDate = explicitInstance ?: suffixInstance,
+        pinned = dto.pinned,
+        completed = dto.completed,
+        listId = dto.listID,
+        updatedAt = parseOptionalInstant(dto.updatedAt),
+    )
+}
+
+internal fun mapFloaterDto(dto: FloaterDto): TodoItem {
+    return TodoItem(
+        id = dto.id,
+        canonicalId = dto.id,
+        title = dto.title,
+        description = dto.description,
+        priority = dto.priority,
+        due = null,
+        rrule = null,
+        instanceDate = null,
         pinned = dto.pinned,
         completed = dto.completed,
         listId = dto.listID,
@@ -167,16 +302,46 @@ internal fun mapCompletedDto(dto: CompletedTodoDto): CompletedItem {
         title = dto.title,
         description = dto.description,
         priority = dto.priority,
-        due = parseInstant(dto.due),
+        due = parseOptionalInstant(dto.due),
         completedAt = parseOptionalInstant(dto.completedAt),
         rrule = dto.rrule,
         instanceDate = parseOptionalInstant(dto.instanceDate),
+        listId = dto.listID,
+        listName = dto.listName,
+        listColor = dto.listColor,
+    )
+}
+
+internal fun mapCompletedFloaterDto(dto: CompletedFloaterDto): CompletedItem {
+    return CompletedItem(
+        id = dto.id,
+        originalTodoId = dto.originalFloaterID,
+        title = dto.title,
+        description = dto.description,
+        priority = dto.priority,
+        due = null,
+        completedAt = parseOptionalInstant(dto.completedAt),
+        rrule = null,
+        instanceDate = null,
+        listId = dto.listID,
         listName = dto.listName,
         listColor = dto.listColor,
     )
 }
 
 internal fun mapListDto(dto: ListDto, iconFallback: String? = null): ListSummary {
+    return ListSummary(
+        id = dto.id,
+        name = dto.name,
+        color = dto.color,
+        iconKey = dto.iconKey ?: iconFallback,
+        todoCount = dto.todoCount,
+        updatedAt = parseOptionalInstant(dto.updatedAt),
+        createdAt = parseOptionalInstant(dto.createdAt),
+    )
+}
+
+internal fun mapFloaterListDto(dto: FloaterListDto, iconFallback: String? = null): ListSummary {
     return ListSummary(
         id = dto.id,
         name = dto.name,

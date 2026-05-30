@@ -1,5 +1,7 @@
 # Security Policy
 
+For product/data context, see [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md) and [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md). Security rules apply to Server Mode; Local Mode stays on-device unless a future explicit migration/import flow is designed.
+
 ## Reporting Vulnerabilities
 
 If you discover a security vulnerability, please report it privately. Do **not** open a public issue.
@@ -91,8 +93,11 @@ Every response includes (via `SecurityHeaders.kt`):
 
 ### Mobile Client Security
 
-- Server URL and credentials stored in Android `EncryptedSharedPreferences`.
-- Session cookies persist in an encrypted cookie store.
+- Android server URL and credentials are stored in `EncryptedSharedPreferences`.
+- iOS server config, credentials, cookies, and mode state are stored through Keychain-backed `SecureStore`.
+- Session cookies persist in encrypted platform stores.
+- Android task data is cached in Room; iOS task data is cached in SwiftData. Both caches are local app data and are cleared through logout/session invalidation flows where appropriate.
+- Local Mode does not send task/list/floater data to a server and should not silently migrate local-only data into Server Mode.
 - Optional public-key fingerprint pinning for self-hosted servers.
 - All local user data (credentials, cache, cookies) is wiped on logout or session invalidation.
 - Custom client headers (`X-Tday-Client`, `X-Tday-App-Version`, `X-Tday-Device-Id`) for audit trails.
@@ -103,7 +108,7 @@ Every response includes (via `SecurityHeaders.kt`):
 - Production secrets should come from a secrets manager or mounted files.
 - The Ktor backend (`AppConfig.kt`) supports `_FILE` suffix for all sensitive variables:
   `AUTH_SECRET`, `DATABASE_URL`, `AUTH_CAPTCHA_SECRET`, `DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEYS`, `DATA_ENCRYPTION_AAD`.
-- Never commit real secrets. `.env.example` and `.env.docker` contain placeholder values only.
+- Never commit real secrets. `.env.example` contains placeholder values only; `.env.docker` is a local ignored runtime file created from that template.
 - Rotate secrets on a fixed schedule (recommended: 60-90 days).
 
 ## Dependency Security
@@ -124,10 +129,17 @@ Structured security event codes are emitted to the `eventLog` database table:
 | `auth_lockout` | Account locked out after repeated failures |
 | `auth_captcha_failed` | CAPTCHA verification failed |
 | `register_captcha_failed` | Registration CAPTCHA failed |
+| `auth_captcha_misconfigured` | CAPTCHA should have been enforced but the server secret was missing |
+| `auth_credential_envelope_invalid` | Encrypted credential envelope could not be decrypted |
 | `auth_alert_ip_concentration` | Suspicious IP concentration detected |
 | `auth_alert_lockout_burst` | Burst of lockouts in a short window |
 | `auth_signal_anomaly` | Behavioral anomaly detected |
-| `auth_captcha_misconfigured` | CAPTCHA should have been enforced but the server secret was missing |
+| `auth_session_absolute_expired` | Session exceeded the configured absolute lifetime and was cleared |
+| `auth_session_renewed` | Active session was renewed because it crossed the renewal threshold |
+| `auth_session_token_version_mismatch` | Session was cleared because the user's token version changed |
+| `auth_session_user_missing` | Session referenced a user row that no longer exists |
 | `request_rate_limit_triggered` | App-layer request throttle triggered |
 
-Alert when `auth_lockout` grows rapidly, `auth_limit_ip` spikes from a narrow IP range, or `request_rate_limit_triggered` starts clustering on one path.
+The request-rate event includes a `reason` detail such as `api_rate_limit`, `infra_rate_limit`, `summary_rate_limit`, `change_password_rate_limit`, or `websocket_rate_limit`.
+
+Alert when `auth_lockout` grows rapidly, `auth_limit_ip` spikes from a narrow IP range, session-clearing events cluster unexpectedly, or `request_rate_limit_triggered` starts clustering on one path.

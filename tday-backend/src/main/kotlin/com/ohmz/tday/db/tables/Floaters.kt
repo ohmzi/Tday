@@ -1,0 +1,25 @@
+package com.ohmz.tday.db.tables
+
+import com.ohmz.tday.db.enums.*
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.javatime.datetime
+
+object Floaters : Table("floaters") {
+    val id = varchar("id", 30)
+    val title = text("title")
+    val description = text("description").nullable()
+    val createdAt = datetime("createdAt")
+    val updatedAt = datetime("updatedAt")
+    val userID = varchar("userID", 30).references(Users.id).index()
+    val pinned = bool("pinned").default(false)
+    val order = integer("order").autoIncrement()
+    val priority = pgEnum<Priority>("priority", "\"Priority\"")
+    val completed = bool("completed").default(false)
+    val listID = varchar("projectID", 30).references(FloaterLists.id).nullable().index()
+
+    override val primaryKey = PrimaryKey(id)
+
+    init {
+        index(false, userID, listID)
+    }
+}

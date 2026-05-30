@@ -64,6 +64,10 @@ final class ListRepository {
             return nextState
         }
 
+        if syncManager.isLocalMode {
+            return
+        }
+
         do {
             let response = try await api.createList(
                 payload: CreateListRequest(name: normalizedName, color: color, iconKey: iconKey)
@@ -75,7 +79,7 @@ final class ListRepository {
             let updatedAt = parseOptionalDate(createdList.updatedAt)?.epochMilliseconds ?? now
             _ = try await cacheManager.updateOfflineState { state in
                 var nextState = self.replaceLocalListID(state, localListID: localListID, serverListID: createdList.id)
-                let todoCount = nextState.todos.filter { !$0.completed && $0.listId == createdList.id }.count
+                let todoCount = nextState.todos.filter { !$0.completed && $0.dueEpochMs != nil && $0.listId == createdList.id }.count
                 nextState.lists = nextState.lists.map { list in
                     guard list.id == createdList.id else {
                         return list
@@ -149,6 +153,9 @@ final class ListRepository {
                 }
                 return nextState
             }
+            if syncManager.isLocalMode {
+                return
+            }
             _ = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
             return
         }
@@ -190,6 +197,73 @@ final class ListRepository {
             )
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    func deleteList(
+        listId: String,
+        onOptimisticDelete: () -> Void = {}
+    ) async throws {
+        let normalizedListID = listId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedListID.isEmpty else {
+            return
+        }
+
+        let now = Date().epochMilliseconds
+        let mutationID = UUID().uuidString
+        let isLocalOnly = normalizedListID.hasPrefix(LOCAL_LIST_PREFIX)
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            let deletedTodoIDs = Set(state.todos.filter { $0.listId == normalizedListID }.map(\.canonicalId))
+
+            nextState.lists.removeAll { $0.id == normalizedListID }
+            nextState.todos.removeAll { $0.listId == normalizedListID }
+            nextState.completedItems.removeAll { completed in
+                completed.listId == normalizedListID ||
+                    completed.originalTodoId.map { deletedTodoIDs.contains($0) } == true
+            }
+            nextState.pendingMutations.removeAll { mutation in
+                mutation.targetId == normalizedListID ||
+                    mutation.listId == normalizedListID ||
+                    mutation.targetId.map { deletedTodoIDs.contains($0) } == true
+            }
+            if !isLocalOnly {
+                nextState.pendingMutations.append(
+                    PendingMutationRecord(
+                        mutationId: mutationID,
+                        kind: .deleteList,
+                        targetId: normalizedListID,
+                        timestampEpochMs: now,
+                        title: nil,
+                        description: nil,
+                        priority: nil,
+                        dueEpochMs: nil,
+                        rrule: nil,
+                        listId: nil,
+                        pinned: nil,
+                        completed: nil,
+                        instanceDateEpochMs: nil,
+                        name: nil,
+                        color: nil,
+                        iconKey: nil
+                    )
+                )
+            }
+            return nextState
+        }
+
+        onOptimisticDelete()
+
+        if syncManager.isLocalMode {
+            return
+        }
+
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -197,10 +271,10 @@ final class ListRepository {
     }
 
     private func buildLists(from state: OfflineSyncState) -> [ListSummary] {
-        let todoCounts = Dictionary(grouping: state.todos.filter { !$0.completed }, by: { $0.listId })
+        let scheduledCounts = Dictionary(grouping: state.todos.filter { !$0.completed && $0.dueEpochMs != nil }, by: { $0.listId })
             .mapValues(\.count)
         return orderListsLikeWeb(state.lists)
-            .map { listFromCache($0, todoCountOverride: todoCounts[$0.id] ?? 0) }
+            .map { listFromCache($0, todoCountOverride: scheduledCounts[$0.id] ?? 0) }
     }
 
     private func replaceLocalListID(_ state: OfflineSyncState, localListID: String, serverListID: String) -> OfflineSyncState {
@@ -226,7 +300,27 @@ final class ListRepository {
                     updatedAtEpochMs: todo.updatedAtEpochMs
                 )
             },
-            completedItems: state.completedItems,
+            floaters: state.floaters,
+            completedItems: state.completedItems.map { completed in
+                guard completed.listId == localListID else {
+                    return completed
+                }
+                return CachedCompletedRecord(
+                    id: completed.id,
+                    originalTodoId: completed.originalTodoId,
+                    title: completed.title,
+                    description: completed.description,
+                    priority: completed.priority,
+                    dueEpochMs: completed.dueEpochMs,
+                    completedAtEpochMs: completed.completedAtEpochMs,
+                    rrule: completed.rrule,
+                    instanceDateEpochMs: completed.instanceDateEpochMs,
+                    listId: serverListID,
+                    listName: completed.listName,
+                    listColor: completed.listColor
+                )
+            },
+            completedFloaters: state.completedFloaters,
             lists: state.lists.map { list in
                 guard list.id == localListID else {
                     return list
@@ -241,6 +335,7 @@ final class ListRepository {
                     createdAtEpochMs: list.createdAtEpochMs
                 )
             },
+            floaterLists: state.floaterLists,
             pendingMutations: state.pendingMutations.map { mutation in
                 PendingMutationRecord(
                     mutationId: mutation.mutationId,

@@ -14,7 +14,7 @@ Users need repeating tasks (daily, weekly, monthly, custom patterns). Options:
 ## Decision
 
 - Store recurrence rules as **RFC 5545 RRULE strings** on the `Todo` model.
-- Support `dtstart`, `due`, `exdates` (exclusion dates), and `durationMinutes` alongside the RRULE.
+- Support `due`, `exdates` (exclusion dates), and `durationMinutes` alongside the RRULE. `dtstart` existed in earlier schema versions but has been removed from the current clean schema.
 - Expand recurrence instances into `TodoInstance` records for per-occurrence overrides and completion tracking.
 - Use **lib-recur** (Kotlin/JVM) on the backend for rule expansion, and **rrule** (JavaScript) on the web frontend.
 
@@ -28,5 +28,5 @@ Users need repeating tasks (daily, weekly, monthly, custom patterns). Options:
 ## Consequences
 
 - **Positive**: Flexible recurrence, future calendar export/import compatibility, per-instance overrides.
-- **Negative**: RRULE expansion logic is complex — requires thorough testing (covered in `tday-web/tests/recurrence/` and backend tests). Instance materialization adds database writes.
+- **Negative**: RRULE expansion logic is complex and requires focused backend route/service coverage plus web/mobile tests for recurrence editing, movement, completion, and instance deletion behavior. Instance materialization adds database writes.
 - **Trade-off**: The legacy `RepeatInterval` enum still exists in the database schema for backward compatibility but new features use RRULE.

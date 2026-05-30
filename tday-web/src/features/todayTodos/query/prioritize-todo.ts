@@ -1,6 +1,10 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  canonicalTodoId,
+  todoInstanceTimestampFromId,
+} from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 
 export const usePrioritizeTodo = () => {
@@ -17,16 +21,14 @@ export const usePrioritizeTodo = () => {
         level: "Low" | "Medium" | "High";
         isRecurring: boolean;
       }) => {
-        const todoId = id.split(":")[0];
-        const instanceDate = Number(id.split(":")[1]);
+        const instanceDate = todoInstanceTimestampFromId(id);
         await api.PATCH({
           url: "/api/todo/prioritize",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            id: todoId,
+            id: canonicalTodoId(id),
             priority: level,
-            instanceDate:
-              isRecurring && Number.isFinite(instanceDate) ? instanceDate : null,
+            instanceDate: isRecurring ? instanceDate : null,
           }),
         });
       },
