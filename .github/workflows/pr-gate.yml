@@ -30,6 +30,9 @@ jobs:
           cache: npm
           cache-dependency-path: tday-web/package-lock.json
 
+      - name: Check version mirrors
+        run: node scripts/version.mjs check
+
       - name: Install frontend dependencies
         run: npm ci
         working-directory: tday-web

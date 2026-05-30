@@ -12,6 +12,7 @@ import javax.crypto.spec.SecretKeySpec
 data class ProbeCompatibilityPayload(
     val appVersion: String,
     val updateRequired: Boolean,
+    val compatibilityMode: String = "exact",
 )
 
 object ProbeDecryptor {

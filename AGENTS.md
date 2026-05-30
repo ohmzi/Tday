@@ -112,6 +112,16 @@ T'Day is a task app, not a marketing site. Mobile screens should feel quiet, use
 - If a new semantic color or repeated dimension is needed, add it to the platform's theme/token layer instead of scattering literals.
 - Existing feature-scoped constants can remain when they are already part of that feature's local style, but do not expand hardcoded styling casually.
 
+## Global Version Management
+
+`version.json` at the repository root is the single source of truth for the T'Day release version, mobile/server compatibility policy, iOS build number, and iOS update URL.
+
+- Bump versions with `node scripts/version.mjs bump patch|minor|major`, or edit `version.json` directly only when intentionally changing manifest fields.
+- After any manifest edit, run `node scripts/version.mjs sync`, then `node scripts/version.mjs check`.
+- Never hand-edit Android `versionName`/`versionCode`, backend Gradle version values, iOS marketing/build versions, web package versions, package-lock versions, or example `TDAY_APP_VERSION` mirrors.
+- Backend, Android, and iOS compatibility behavior must be updated together. Exact compatibility means mobile Server Mode clients and the backend should agree on the same release version when `compatibility.updateRequired` is true.
+- iOS update actions use `ios.updateUrl` from `version.json`; set it to the App Store or TestFlight URL before distributing an iOS build that should offer direct updates.
+
 ## New Feature Observability Checklist
 
 T'Day is Sentry-first and privacy-first. New UI, API, sync, auth, reminder, widget, realtime, or storage behavior should include only diagnostic telemetry that helps debug failures or performance.

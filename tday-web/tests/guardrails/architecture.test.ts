@@ -238,9 +238,9 @@ describe("android architecture guardrails", () => {
   );
 
   (skipAndroid ? describe.skip : describe)(
-    "version syncs from package.json",
+    "version syncs from root manifest",
     () => {
-      it("build.gradle.kts should read version from package.json, not hardcode it", () => {
+      it("build.gradle.kts should read version from version.json, not hardcode it", () => {
         const gradlePath = path.join(
           MONO,
           "android-compose",
@@ -248,7 +248,7 @@ describe("android architecture guardrails", () => {
           "build.gradle.kts",
         );
         const content = readSource(gradlePath);
-        expect(content).toContain("package.json");
+        expect(content).toContain("version.json");
         expect(content).not.toMatch(/versionName\s*=\s*"[0-9]+\.[0-9]+\.[0-9]+"/);
       });
     },

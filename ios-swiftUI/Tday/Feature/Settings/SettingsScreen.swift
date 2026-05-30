@@ -596,10 +596,8 @@ struct LatestReleaseScreen: View {
 
                 if viewModel.hasUpdate, let latestRelease = viewModel.latestRelease {
                     releaseListRow {
-                        UpdateAvailableCard(release: latestRelease) {
-                            if let url = URL(string: latestRelease.htmlUrl) {
-                                openURL(url)
-                            }
+                        UpdateAvailableCard(release: latestRelease, updateURL: viewModel.iosUpdateURL) { url in
+                            openURL(url)
                         }
                     }
                 }
@@ -797,7 +795,8 @@ private struct InstalledVersionCard: View {
 
 private struct UpdateAvailableCard: View {
     let release: GitHubRelease
-    let onOpen: () -> Void
+    let updateURL: URL?
+    let onOpen: (URL) -> Void
 
     @Environment(\.tdayColors) private var colors
 
@@ -812,18 +811,26 @@ private struct UpdateAvailableCard: View {
                 emptyMessage: nil
             )
 
-            Button(action: onOpen) {
-                HStack {
-                    Image(systemName: "arrow.up.forward.square")
-                    Text("Open GitHub release")
+            if let updateURL {
+                Button {
+                    onOpen(updateURL)
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.up.forward.square")
+                        Text("Open Update")
+                    }
+                    .font(.tdayRounded(size: 15, weight: .heavy))
+                    .foregroundStyle(colors.onPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(colors.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
-                .font(.tdayRounded(size: 15, weight: .heavy))
-                .foregroundStyle(colors.onPrimary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(colors.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .buttonStyle(.plain)
+            } else {
+                Text("No App Store or TestFlight update link is configured for this build.")
+                    .font(.tdayRounded(size: 13, weight: .bold))
+                    .foregroundStyle(colors.onSurface.opacity(0.6))
             }
-            .buttonStyle(.plain)
         }
     }
 }

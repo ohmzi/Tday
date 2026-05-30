@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "observability:smoke": "node ../scripts/observability-smoke.mjs",
-    "postversion": "../scripts/sync-ios-version.sh && git add ../ios-swiftUI/Tday/Info.plist ../ios-swiftUI/project.yml ../ios-swiftUI/TdayApp.xcodeproj/project.pbxproj ../.env.example ../tday-backend/.env.example"
+    "postversion": "node ../scripts/version.mjs sync && git add ../version.json package.json package-lock.json ../ios-swiftUI/Tday/Info.plist ../ios-swiftUI/project.yml ../ios-swiftUI/TdayApp.xcodeproj/project.pbxproj ../.env.example ../tday-backend/.env.example"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

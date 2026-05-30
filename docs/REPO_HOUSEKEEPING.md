@@ -69,7 +69,7 @@ The table below records the latest markdown owner commit observed during this do
 
 - Web todo mutation helpers now centralize patch payload, checksum, and id validation rules, with imports kept on repo aliases instead of deep relative paths.
 - Android UI cleanup moved user-facing display copy into resources and reusable colors into the theme layer.
-- Deployment/version docs now match the actual `tday-web/package.json` source of truth, iOS metadata mirrors, and backend compatibility templates.
+- Deployment/version docs now match the actual root `version.json` source of truth, iOS metadata mirrors, and backend compatibility templates.
 - Security monitoring docs now list the event codes actually emitted by the backend auth/session/rate-limit pipeline.
 - API and architecture docs now distinguish fetch `cache: "no-store"` behavior from response cache headers and describe file metadata as reserved legacy structure rather than active upload storage.
 - Testing docs now match the current guardrail/unit test layout and the guardrails added during this audit.

@@ -145,24 +145,27 @@ These rules apply across **both** TypeScript and Kotlin. Language-specific detai
 
 ### Single Source of Version
 
-The app version is defined **once** in `tday-web/package.json`. Build-time consumers read it directly, and checked-in mirrors are generated from it. Never hand-edit a version mirror when the package version is the real change.
+The app version is defined **once** in root `version.json`. Build-time consumers read it directly, and checked-in mirrors are generated from it. Never hand-edit a version mirror when the manifest is the real change.
 
 | Consumer | How it reads the version |
 |----------|------------------------|
-| **Web (Vite)** | Bundled automatically by Vite from `package.json` |
-| **CI/CD (release.yml)** | `node -p "require('./tday-web/package.json').version"` → Docker tags, Git tags, GitHub release, and generated release metadata files |
-| **Android (Gradle)** | `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and `versionCode` |
+| **Web (Vite)** | `tday-web/package.json` mirrors `version.json`, then Vite bundles that value |
+| **CI/CD (release.yml)** | `node -p "require('./version.json').version"` → Docker tags, Git tags, GitHub release, and generated release metadata files |
+| **Backend (Gradle/runtime)** | `tday-backend/build.gradle.kts` parses `version.json`, embeds it as `tday-version.json`, and `AppConfig` uses it as env fallback |
+| **Android (Gradle)** | `app/build.gradle.kts` parses root `version.json` at build time → `versionName` and `versionCode` |
 | **Android runtime** | `BuildConfig.VERSION_NAME` (sent in `X-Tday-App-Version` header) |
-| **iOS runtime/project metadata** | `scripts/sync-ios-version.sh` mirrors the package version into `Info.plist`, Xcode project metadata, and `project.yml` |
-| **Backend compatibility templates** | `scripts/sync-ios-version.sh` mirrors the package version into `.env.example` and `tday-backend/.env.example`; live deployment env files remain operator-owned |
+| **iOS runtime/project metadata** | `scripts/version.mjs sync` mirrors manifest version/build/update URL into `Info.plist`, Xcode metadata, and `project.yml` |
+| **Backend compatibility templates** | `scripts/version.mjs sync` mirrors manifest version/update-required values into `.env.example` and `tday-backend/.env.example`; live deployment env files remain operator-owned |
 
 **Rules:**
 
-- To bump the version, edit **only** `tday-web/package.json`. All other systems derive from it directly or through the sync script.
-- Use `npm version patch|minor|major` in the `tday-web/` directory to bump.
+- To bump the version, run `node scripts/version.mjs bump patch|minor|major` from the repo root.
+- After editing `version.json`, run `node scripts/version.mjs sync` and `node scripts/version.mjs check`.
 - Never set `versionName` or `versionCode` directly in `build.gradle.kts`.
-- Do not hand-edit iOS marketing versions or example `TDAY_APP_VERSION` values for a release; run the sync script or use the package `postversion` hook.
+- Do not hand-edit web package versions, iOS marketing/build versions, or example `TDAY_APP_VERSION` values for a release.
+- Keep backend, Android, and iOS exact-compatibility behavior aligned when changing `compatibility`.
 - `versionCode` is computed as `major * 10000 + minor * 100 + patch` (e.g., `1.6.0` → `10600`).
+- `ios.updateUrl` should be the App Store/TestFlight URL before distributing an iOS build with direct update actions.
 
 ### No Hardcoded Colors or Dimensions
 

@@ -53,6 +53,7 @@ data class AppConfig(
     val passwordProofMaxActive: Int,
     val probeAppVersion: String?,
     val probeUpdateRequired: Boolean,
+    val probeCompatibilityMode: String,
     val probeEncryptionKey: String?,
     val appleTeamId: String?,
     val iosBundleId: String,
@@ -64,6 +65,7 @@ data class AppConfig(
 ) {
     companion object {
         fun load(): AppConfig {
+            val versionDefaults = AppVersionDefaultsLoader.load()
             val sessionMaxAgeSec = envInt("AUTH_SESSION_MAX_AGE_SEC", 2_592_000)
                 .coerceIn(3600, 2_592_000)
             val sessionAbsoluteMaxAgeSec = envInt("AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC", 7_776_000)
@@ -123,9 +125,12 @@ data class AppConfig(
                 signalAnomalyWindowSec = envInt("AUTH_SIGNAL_ANOMALY_WINDOW_SEC", 86400),
                 passwordProofChallengeTtlSec = envInt("AUTH_PASSWORD_PROOF_CHALLENGE_TTL_SEC", 120),
                 passwordProofMaxActive = envInt("AUTH_PASSWORD_PROOF_MAX_ACTIVE", 5000),
-                probeAppVersion = env("TDAY_APP_VERSION"),
-                probeUpdateRequired = env("TDAY_UPDATE_REQUIRED", "false")
-                    .equals("true", ignoreCase = true),
+                probeAppVersion = env("TDAY_APP_VERSION") ?: versionDefaults.version,
+                probeUpdateRequired = env("TDAY_UPDATE_REQUIRED")
+                    ?.equals("true", ignoreCase = true)
+                    ?: versionDefaults.updateRequired,
+                probeCompatibilityMode = env("TDAY_COMPATIBILITY_MODE")
+                    ?: versionDefaults.compatibilityMode,
                 probeEncryptionKey = secret("TDAY_PROBE_ENCRYPTION_KEY", "TDAY_PROBE_ENCRYPTION_KEY_FILE"),
                 appleTeamId = env("APPLE_TEAM_ID"),
                 iosBundleId = env("IOS_BUNDLE_ID", "com.ohmz.tday.ios"),
@@ -136,7 +141,7 @@ data class AppConfig(
                     .coerceIn(0.0, 1.0),
                 backendVersion = env("TDAY_BACKEND_VERSION")
                     ?: env("TDAY_APP_VERSION")
-                    ?: "0.0.0",
+                    ?: versionDefaults.version,
             )
         }
 

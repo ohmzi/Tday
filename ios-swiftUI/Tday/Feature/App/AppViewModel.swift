@@ -64,6 +64,10 @@ final class AppViewModel {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
     }
 
+    var iosUpdateURL: URL? {
+        Self.bundleUpdateURL()
+    }
+
     var isLocalMode: Bool {
         dataMode == .local
     }
@@ -145,8 +149,9 @@ final class AppViewModel {
         if let sessionResult, sessionResult.user.id != nil {
             let session = sessionResult.user
             let versionResult = await container.serverConfigRepository.recheckVersion()
-            versionCheckResult = versionResult
-            switch versionResult {
+            versionCheckResult = versionResult.versionCheck
+            backendVersion = versionResult.backendVersion ?? backendVersion
+            switch versionResult.versionCheck {
             case .appUpdateRequired(let version):
                 backendVersion = version
             case .serverUpdateRequired(let version):
@@ -277,8 +282,9 @@ final class AppViewModel {
             return
         }
         let result = await container.serverConfigRepository.recheckVersion()
-        versionCheckResult = result
-        switch result {
+        versionCheckResult = result.versionCheck
+        backendVersion = result.backendVersion ?? backendVersion
+        switch result.versionCheck {
         case .appUpdateRequired(let version):
             backendVersion = version
         case .serverUpdateRequired(let version):
@@ -515,6 +521,12 @@ final class AppViewModel {
             isOffline = false
             refreshPendingMutationCount()
         case let .failure(error):
+            if isVersionGateError(error) {
+                isOffline = false
+                refreshPendingMutationCount()
+                Task { await self.recheckVersion() }
+                return
+            }
             isOffline = isLikelyConnectivityIssue(error) ||
                 (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
             if isOffline && showOfflineNotice && shouldShowOfflineNotice() {
@@ -525,6 +537,15 @@ final class AppViewModel {
             }
             refreshPendingMutationCount()
         }
+    }
+
+    private func isVersionGateError(_ error: Error) -> Bool {
+        guard let apiError = error as? APIError else {
+            return false
+        }
+        return apiError.statusCode == 426 ||
+            apiError.reason == "app_update_required" ||
+            apiError.reason == "server_update_required"
     }
 
     private func shouldShowOfflineNotice(now: Date = Date()) -> Bool {
@@ -770,5 +791,16 @@ final class AppViewModel {
             if av != bv { return av < bv ? -1 : 1 }
         }
         return 0
+    }
+
+    nonisolated static func bundleUpdateURL() -> URL? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: "TdayUpdateURL") as? String else {
+            return nil
+        }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("$(") else {
+            return nil
+        }
+        return URL(string: trimmed)
     }
 }

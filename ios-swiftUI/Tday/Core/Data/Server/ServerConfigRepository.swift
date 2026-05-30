@@ -57,6 +57,11 @@ final class ServerConfigRepository {
         let backendVersion: String?
     }
 
+    struct VersionRecheckResult {
+        let versionCheck: VersionCheckResult
+        let backendVersion: String?
+    }
+
     func saveServerURL(rawURL: String) async throws -> MobileProbeResponse {
         let result = try await probe(rawURL: rawURL)
         let response = result.response
@@ -92,12 +97,19 @@ final class ServerConfigRepository {
         )
     }
 
-    func recheckVersion() async -> VersionCheckResult {
-        guard let url = getServerURL() else { return .compatible }
+    func recheckVersion() async -> VersionRecheckResult {
+        guard let url = getServerURL() else {
+            return VersionRecheckResult(versionCheck: .compatible, backendVersion: nil)
+        }
         let probeURL = url.appending(path: "api/mobile/probe")
-        guard let response = try? await api.probeServer(url: probeURL) else { return .compatible }
+        guard let response = try? await api.probeServer(url: probeURL) else {
+            return VersionRecheckResult(versionCheck: .compatible, backendVersion: nil)
+        }
         let compatibility = response.encryptedCompatibility.flatMap { ProbeDecryptor.decrypt($0) }
-        return checkVersionCompatibility(payload: compatibility)
+        return VersionRecheckResult(
+            versionCheck: checkVersionCompatibility(payload: compatibility),
+            backendVersion: compatibility?.appVersion
+        )
     }
 
     func resetTrustedServer(rawURL: String) async throws -> MobileProbeResponse {
