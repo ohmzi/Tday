@@ -299,7 +299,7 @@ com.ohmz.tday.compose/
 │   ├── calendar/      # CalendarScreen + CalendarViewModel
 │   ├── settings/      # SettingsScreen
 │   ├── release/       # In-app update and latest release
-│   ├── widget/        # TodayTasks widget
+│   ├── widget/        # Today Tasks Glance widget and refresh coordinator
 │   └── onboarding/    # OnboardingWizardOverlay
 └── ui/
     ├── component/     # Shared composables (PullRefresh, CreateTaskBottomSheet, RootFeedDock)
@@ -344,7 +344,7 @@ ios-swiftUI/Tday/
 └── AppRootView.swift # NavigationStack, root feed state, overlays, deep links
 ```
 
-The widget extension lives beside the app target at `ios-swiftUI/TdayWidget/`, while iOS tests live in `ios-swiftUI/Tests/`. Sentry Cocoa is the only notable third-party runtime dependency; core app behavior uses native frameworks.
+The WidgetKit extension lives beside the app target at `ios-swiftUI/TdayWidget/` and is wired as the `TdayWidget` app-extension target in both `project.yml` and the Xcode project. It shares snapshots with the app through the App Group suite `group.com.ohmz.tday`. iOS tests live in `ios-swiftUI/Tests/`. Sentry Cocoa is the only notable third-party runtime dependency; core app behavior uses native frameworks.
 
 ## Database Design
 
@@ -439,13 +439,21 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 - **Web**: No application-level persistence cache. The shared API client uses browser `fetch` with `cache: "no-store"` for private API requests. TanStack React Query provides in-memory client-side cache with 60-second stale time.
 - **Android**: Room-backed local cache for todos, floaters, lists, completed history, pending mutations, and sync metadata. Encrypted preferences still protect credentials, cookies, server config, trust data, theme/reminder preferences, and legacy cache migration input. Cache is the source of truth for screens; network sync updates it periodically, on foreground reconnect, realtime events, and user refresh in Server Mode.
-- **iOS**: SwiftData-backed local cache with mirrored `OfflineSyncState` records. Keychain-backed stores protect server config, cookies, credentials, mode state, theme, and reminders. Cache changes notify ViewModels and widget snapshot storage.
+- **iOS**: SwiftData-backed local cache with mirrored `OfflineSyncState` records. Keychain-backed stores protect server config, cookies, credentials, mode state, theme, and reminders. Cache changes notify ViewModels and widget snapshot storage, which writes the Today widget payload into the App Group defaults suite.
 
 ## Background Jobs
 
 - **Android reminders**: `AlarmManager` for exact-time reminders, `WorkManager` for periodic reminder rescheduling, `BootRescheduleReceiver` for device restart recovery.
 - **iOS reminders**: `UserNotifications` scheduling and notification deep-link routing.
-- **Widgets**: Android Glance widget and iOS WidgetKit-ready snapshot storage focus on Today tasks.
+- **Widgets**: Android Glance and iOS WidgetKit expose the same Today Tasks contract: pending scheduled tasks due today only, header deep link to `tday://todos/today`, row deep links to `tday://todos/all?highlightTodoId=<id>`, and add deep link to `tday://todos/create?target=today`.
+
+## Mobile Widgets
+
+The v1 mobile widget surface is intentionally narrow and action-oriented. Widgets do not complete tasks inline; they take users into the app through deep links so Local Mode, optimistic writes, validation, and create/edit sheets remain owned by the main clients.
+
+- **Android**: `TodayTasksWidget` uses Glance with responsive compact, wide, and tall layouts. `TodayTasksWidgetModel` builds setup, empty, and tasks states from cached scheduled todos, and `TodayTasksWidgetRefresher` lets cache writes refresh the widget after Local Mode and optimistic changes.
+- **iOS**: `TdayWidget` is a WidgetKit extension supporting `.systemSmall`, `.systemMedium`, and `.systemLarge`. The app writes schema-versioned snapshots to App Group defaults under `tday.widget.todayTasksSnapshot`; payloads include status, task count, generation time, and capped task rows.
+- **Visual system fit**: each platform owns widget chrome, margins, background removal, tinting/accent rendering, and launch transitions. T'Day identity comes from the Today accent, rounded typography, priority dots, compact task rows, and calm empty/setup states.
 
 ## Production Deployment
 

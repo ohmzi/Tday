@@ -246,6 +246,7 @@ fun TodoListScreen(
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
+    openCreateTaskOnStart: Boolean = false,
     pullRefreshEnabled: Boolean = true,
     summaryAvailable: Boolean = true,
     usesRootFeedHeader: Boolean = false,
@@ -442,6 +443,13 @@ fun TodoListScreen(
     LaunchedEffect(createTaskRequestKey) {
         if (createTaskRequestKey > lastHandledCreateTaskRequestKey) {
             lastHandledCreateTaskRequestKey = createTaskRequestKey
+            closeRootFloaterSearch()
+            quickAddDueEpochMs = null
+            showCreateTaskSheet = true
+        }
+    }
+    LaunchedEffect(openCreateTaskOnStart) {
+        if (openCreateTaskOnStart) {
             closeRootFloaterSearch()
             quickAddDueEpochMs = null
             showCreateTaskSheet = true

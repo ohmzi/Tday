@@ -9,7 +9,7 @@ Current feature surface:
 - Local Mode for offline-only planning without server setup.
 - Server Mode with JWE cookie auth, optimistic local writes, realtime refresh, and pending mutation replay.
 - Home and Floater/Anytime root feeds controlled by `RootFeedDock`.
-- Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, and WidgetKit-ready snapshots.
+- Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, and the Today Tasks WidgetKit extension.
 - SwiftData-backed local cache mirrored with Android's Room-backed `OfflineSyncState`.
 
 ## Structure
@@ -44,7 +44,9 @@ ios-swiftUI/
 │   │   └── Theme/
 │   └── Resources/
 ├── TdayWidget/
-│   └── TodayTasksWidget.swift
+│   ├── TodayTasksWidget.swift
+│   ├── Info.plist
+│   └── TdayWidget.entitlements
 └── Tests/
 ```
 
@@ -71,6 +73,24 @@ xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination
 - Keychain-backed `SecureStore` handles server URL, cookies, credentials, theme, reminders, and mode state.
 
 See [`../docs/DATA_MODEL.md`](../docs/DATA_MODEL.md) for the shared cache model.
+
+## Widgets
+
+`TdayWidget` is a WidgetKit app extension with small, medium, and large Today Tasks widgets. The app
+writes snapshots through the App Group suite `group.com.ohmz.tday` using key
+`tday.widget.todayTasksSnapshot`; the extension decodes schema version 2 snapshots and keeps a legacy
+fallback for older payloads.
+
+- Snapshot status is `setup`, `empty`, or `tasks`, with task count, generated time, and capped task rows.
+- Header opens `tday://todos/today`.
+- Task rows open `tday://todos/all?highlightTodoId=<id>`.
+- The add action opens `tday://todos/create?target=today` and starts the in-app create-task sheet.
+- The widget shows pending scheduled tasks due today only; floaters, completed tasks, and overdue tasks
+  are intentionally excluded from v1.
+
+Widget UI should keep using system WidgetKit margins/backgrounds, removable container backgrounds, and
+tinted/accented rendering support while carrying T'Day identity through the Today accent, rounded
+typography, priority dots, and calm empty/setup states.
 
 ## Mobile Parity
 

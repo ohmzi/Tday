@@ -52,6 +52,8 @@
 		701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */; };
 		F2C4D6E8A1B3456790ABCDE0 /* TdaySheetChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */; };
 		72304EA28CF49303A8CCB6B0 /* TodayTasksWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC80072C8B232C0C09CE3139 /* TodayTasksWidgetSnapshotStore.swift */; };
+		D4A100000000000000000011 /* TdayWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D4A100000000000000000010 /* TdayWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D4A100000000000000000012 /* TodayTasksWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A100000000000000000013 /* TodayTasksWidget.swift */; };
 		765ED719B3CCBB90176C55EB /* DomainModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6D006E491513605369E7D5 /* DomainModels.swift */; };
 		846AE66C58EF435FB506E3E6 /* OnboardingWizardOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */; };
 		84B6C4F440AD30E4EFA1FA3F /* ReminderOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FBC41C56EEEFC8869E762B3 /* ReminderOption.swift */; };
@@ -101,7 +103,28 @@
 			remoteGlobalIDString = CEB0667A66D01D2A147D96AA;
 			remoteInfo = Tday;
 		};
+		D4A10000000000000000001E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DEBED54F5F85A969685E5452 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D4A100000000000000000016;
+			remoteInfo = TdayWidget;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D4A10000000000000000001C /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				D4A100000000000000000011 /* TdayWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0380EFC9ADD5303B83B5BD91 /* ProbeDecryptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProbeDecryptor.swift; sourceTree = "<group>"; };
@@ -178,6 +201,10 @@
 		D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLPersistenceTests.swift; sourceTree = "<group>"; };
 		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
 		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4A100000000000000000010 /* TdayWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TdayWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4A100000000000000000013 /* TodayTasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidget.swift; sourceTree = "<group>"; };
+		D4A100000000000000000014 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D4A100000000000000000015 /* TdayWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TdayWidget.entitlements; sourceTree = "<group>"; };
 		D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheMappers.swift; sourceTree = "<group>"; };
 		D617DF23936179DDFF13A36D /* OnboardingWizardOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWizardOverlay.swift; sourceTree = "<group>"; };
 		D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
@@ -198,6 +225,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				1FE50ED779CB252C73B0A496 /* Sentry-Dynamic in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4A100000000000000000018 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -280,6 +314,7 @@
 			children = (
 				2A80E8562326D2BB4FF7E8C7 /* Tday.app */,
 				D26B48A87B57A0417CC3F578 /* TdayTests.xctest */,
+				D4A100000000000000000010 /* TdayWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -328,9 +363,20 @@
 			isa = PBXGroup;
 			children = (
 				83705160F9DB3C02FBD56E41 /* Tday */,
+				D4A100000000000000000020 /* TdayWidget */,
 				75319F4921808A73555E9EC0 /* Tests */,
 				3F0733C5DBF6EC9BC6DBCB4D /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		D4A100000000000000000020 /* TdayWidget */ = {
+			isa = PBXGroup;
+			children = (
+				D4A100000000000000000013 /* TodayTasksWidget.swift */,
+				D4A100000000000000000014 /* Info.plist */,
+				D4A100000000000000000015 /* TdayWidget.entitlements */,
+			);
+			path = TdayWidget;
 			sourceTree = "<group>";
 		};
 		6DFF136486536F6077D88A7F /* Navigation */ = {
@@ -620,10 +666,12 @@
 				EE513C8DAF31C33B310B4E38 /* Sources */,
 				32A3CADD0462E89BFAB9B2DA /* Resources */,
 				3FDD7DCF0206921E0210DA60 /* Frameworks */,
+				D4A10000000000000000001C /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D4A10000000000000000001D /* PBXTargetDependency */,
 			);
 			name = Tday;
 			packageProductDependencies = (
@@ -632,6 +680,24 @@
 			productName = Tday;
 			productReference = 2A80E8562326D2BB4FF7E8C7 /* Tday.app */;
 			productType = "com.apple.product-type.application";
+		};
+		D4A100000000000000000016 /* TdayWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D4A10000000000000000001B /* Build configuration list for PBXNativeTarget "TdayWidget" */;
+			buildPhases = (
+				D4A100000000000000000017 /* Sources */,
+				D4A100000000000000000018 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TdayWidget;
+			packageProductDependencies = (
+			);
+			productName = TdayWidget;
+			productReference = D4A100000000000000000010 /* TdayWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -660,6 +726,7 @@
 			projectRoot = "";
 			targets = (
 				CEB0667A66D01D2A147D96AA /* Tday */,
+				D4A100000000000000000016 /* TdayWidget */,
 				870B7E606F6196C1CA699A1F /* TdayTests */,
 			);
 		};
@@ -694,6 +761,14 @@
 				C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */,
 				5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */,
 				494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4A100000000000000000017 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D4A100000000000000000012 /* TodayTasksWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -780,6 +855,11 @@
 			isa = PBXTargetDependency;
 			target = CEB0667A66D01D2A147D96AA /* Tday */;
 			targetProxy = 5892908396EB5C4983360D8B /* PBXContainerItemProxy */;
+		};
+		D4A10000000000000000001D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D4A100000000000000000016 /* TdayWidget */;
+			targetProxy = D4A10000000000000000001E /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -901,6 +981,62 @@
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
+		};
+		D4A100000000000000000019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = JUFACN2FS3;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TodayTasksWidget;
+				PRODUCT_NAME = TdayWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D4A10000000000000000001A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				DEVELOPMENT_TEAM = JUFACN2FS3;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TdayWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.5;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TodayTasksWidget;
+				PRODUCT_NAME = TdayWidget;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
 		};
 		B38EA14A0A17C1F777BD5D3E /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -1029,6 +1165,15 @@
 			buildConfigurations = (
 				B1DD4CAD649FE743CF85D3FA /* Debug */,
 				AC5B9D6404DFE8D18A0D546C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D4A10000000000000000001B /* Build configuration list for PBXNativeTarget "TdayWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D4A100000000000000000019 /* Debug */,
+				D4A10000000000000000001A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

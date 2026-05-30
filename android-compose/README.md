@@ -14,7 +14,7 @@ Current feature surface:
   replay.
 - Home and Floater/Anytime root feeds controlled by `RootFeedDock`.
 - Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar,
-  search, settings, reminders, widgets, and in-app APK updates.
+  search, settings, reminders, the Glance Today Tasks widget, and in-app APK updates.
 - Room-backed local cache with a one-time migration from the older encrypted JSON cache.
 
 ## Module
@@ -42,7 +42,7 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 │   ├── completed/     # Completed todo/floater history
 │   ├── settings/      # Settings and admin toggles
 │   ├── release/       # Latest release and APK installer
-│   └── widget/        # Today tasks widget
+│   └── widget/        # Today Tasks Glance widget and refresh coordinator
 └── ui/
     ├── component/     # RootFeedDock, sheets, pull refresh, controls
     └── theme/         # Colors, typography, dimensions
@@ -97,6 +97,23 @@ are stored through encrypted local stores.
 - Logout or invalid session clears session/user data according to the auth flow.
 
 See [`../docs/DATA_MODEL.md`](../docs/DATA_MODEL.md) for the shared cache model.
+
+## Widgets
+
+The Today Tasks widget is implemented with Glance and the same cache-backed task model as the app.
+It shows pending scheduled tasks due today only; floaters, completed tasks, and overdue tasks stay
+out
+of the v1 widget surface.
+
+- Header opens `tday://todos/today`.
+- Task rows open `tday://todos/all?highlightTodoId=<id>`.
+- The add action opens `tday://todos/create?target=today` and starts the in-app create-task sheet.
+- `OfflineCacheManager` requests widget refreshes after local cache changes, so Local Mode and
+  optimistic writes update the widget without waiting for a server sync path.
+
+Keep future widget work responsive across compact, wide, and tall sizes, preserve 48dp touch
+targets,
+and prefer system widget bounds, dynamic color, and Material/Glance idioms over custom chrome.
 
 ## Mobile Parity
 

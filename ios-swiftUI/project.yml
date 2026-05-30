@@ -22,6 +22,7 @@ targets:
     dependencies:
       - package: sentry-cocoa
         product: Sentry-Dynamic
+      - target: TdayWidget
     settings:
       base:
         PRODUCT_NAME: Tday
@@ -38,6 +39,28 @@ targets:
         TARGETED_DEVICE_FAMILY: 1
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+  TdayWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: TdayWidget
+        excludes:
+          - Info.plist
+    settings:
+      base:
+        PRODUCT_NAME: TdayWidget
+        PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.TodayTasksWidget
+        DEVELOPMENT_TEAM: THT5Z8K3TF
+        INFOPLIST_FILE: TdayWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TdayWidget/TdayWidget.entitlements
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.0
+        CURRENT_PROJECT_VERSION: 6
+        MARKETING_VERSION: 0.1.5
+        TARGETED_DEVICE_FAMILY: 1
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
   TdayTests:
     type: bundle.unit-test
     platform: iOS

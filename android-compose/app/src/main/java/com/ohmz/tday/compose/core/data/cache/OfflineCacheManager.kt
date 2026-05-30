@@ -8,6 +8,7 @@ import com.ohmz.tday.compose.core.data.db.SyncMetadataEntity
 import com.ohmz.tday.compose.core.data.db.TdayDatabase
 import com.ohmz.tday.compose.core.data.db.toEntity
 import com.ohmz.tday.compose.core.data.db.toRecord
+import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +27,7 @@ class OfflineCacheManager @Inject constructor(
     private val json: Json,
     private val themePreferenceStore: ThemePreferenceStore,
     private val cookieManager: CookieManager,
+    private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
 ) {
     private val todoDao = database.todoDao()
     private val floaterDao = database.floaterDao()
@@ -122,6 +124,7 @@ class OfflineCacheManager @Inject constructor(
         lastPersistedState = normalizedState
         if (hasUiDataChanges(previous, normalizedState)) {
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+            todayTasksWidgetRefresher.requestRefresh()
         }
     }
 
@@ -154,6 +157,7 @@ class OfflineCacheManager @Inject constructor(
         lastPersistedState = cleared
         if (hasUiDataChanges(previous, cleared)) {
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+            todayTasksWidgetRefresher.requestRefresh()
         }
     }
 
@@ -168,6 +172,7 @@ class OfflineCacheManager @Inject constructor(
         lastPersistedState = cleared
         if (hasUiDataChanges(previous, cleared)) {
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+            todayTasksWidgetRefresher.requestRefresh()
         }
     }
 
