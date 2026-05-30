@@ -68,13 +68,13 @@ struct AppRootView: View {
                                     scrollToTopRequestID: rootFloaterScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
-                                    summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
                                     onOpenFloaterList: { listId, listName in
                                         handleRoute(.floaterListTodos(listId: listId, listName: listName))
                                     },
                                     onOpenSettings: {
                                         handleRoute(.settings)
-                                    }
+                                    },
+                                    summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
                                 )
                             }
 
@@ -165,16 +165,9 @@ struct AppRootView: View {
                     }
                     .overlay(alignment: .bottom) {
                         if let message = container.snackbarManager.message {
-                            Text(message)
-                                .font(.tdayRounded(.footnote, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                                .background(Color.black.opacity(0.78), in: Capsule())
-                                .padding(.bottom, 18)
-                                .onTapGesture {
-                                    container.snackbarManager.dismiss()
-                                }
+                            AppSnackbar(message: message) {
+                                container.snackbarManager.dismiss()
+                            }
                         }
                     }
                     .overlay {
@@ -383,6 +376,22 @@ struct AppRootView: View {
         }
         handleDeepLink(url)
         notificationDeepLinkRouter.clearPendingURL()
+    }
+}
+
+private struct AppSnackbar: View {
+    let message: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        Text(message)
+            .font(.tdayRounded(.footnote, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.black.opacity(0.78), in: Capsule())
+            .padding(.bottom, 18)
+            .onTapGesture(perform: onDismiss)
     }
 }
 
