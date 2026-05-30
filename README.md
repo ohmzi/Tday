@@ -24,7 +24,7 @@ T'Day is designed to be a quiet daily planner, not a generic productivity platfo
 | Shared Contracts | Kotlin Multiplatform DTOs, enums, validators, and route constants |
 | AI | Optional Ollama (local, default `qwen3.5:0.8b`) with backend logic fallback |
 | Android | Kotlin, Jetpack Compose, Hilt, Retrofit, Room, WorkManager, Glance widgets, Material 3 |
-| iOS | SwiftUI, SwiftData, URLSession, Observation, Keychain/cookie handling, WidgetKit-ready snapshots |
+| iOS | SwiftUI, SwiftData, URLSession, Observation, Keychain/cookie handling, WidgetKit widgets |
 | Infra | Docker Compose, GitHub Actions CI/CD, GHCR |
 
 ## Documentation Currency
@@ -96,7 +96,7 @@ Open `android-compose/` in Android Studio (SDK 35 required) and run on a device 
 
 ### iOS
 
-Open `ios-swiftUI/TdayApp.xcodeproj` in Xcode on macOS and run the `Tday` scheme. The app supports Local Mode, server workspaces, SwiftData cache, reminders, and the shared mobile feature surface. See [`ios-swiftUI/README.md`](ios-swiftUI/README.md) for structure and environment notes.
+Open `ios-swiftUI/TdayApp.xcodeproj` in Xcode on macOS and run the `Tday` scheme. The app supports Local Mode, server workspaces, SwiftData cache, reminders, the Today Tasks WidgetKit extension, and the shared mobile feature surface. See [`ios-swiftUI/README.md`](ios-swiftUI/README.md) for structure and environment notes.
 
 ## Project Structure
 
@@ -130,7 +130,7 @@ Tday/
 ├── android-compose/           # Native Android client (Compose, Room, Hilt, Glance widget)
 ├── ios-swiftUI/               # Native iOS client (SwiftUI, SwiftData, Observation, WidgetKit target)
 │   ├── Tday/                  # Main iOS app
-│   ├── TdayWidget/            # Widget target and snapshots
+│   ├── TdayWidget/            # WidgetKit extension and snapshots
 │   └── Tests/                 # iOS test target
 ├── scripts/                   # Git hooks, version sync, operational helpers
 ├── version.json               # Global app/server version and compatibility manifest

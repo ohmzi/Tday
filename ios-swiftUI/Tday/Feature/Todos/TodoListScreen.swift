@@ -565,6 +565,7 @@ struct TodoListScreen: View {
     let showsRootControls: Bool
     let usesRootFeedHeader: Bool
     let createTaskRequestID: Int
+    let openCreateTaskOnAppear: Bool
     let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
@@ -596,6 +597,7 @@ struct TodoListScreen: View {
     @State private var rootFloaterSearchQuery = ""
     @State private var openingRootFloaterSearchResultID: String?
     @State private var openSwipeTaskID: String?
+    @State private var hasOpenedCreateTaskOnAppear = false
 
     init(
         container: AppContainer,
@@ -609,6 +611,7 @@ struct TodoListScreen: View {
         pullRefreshEnabled: Bool = true,
         usesRootFeedHeader: Bool = false,
         createTaskRequestID: Int = 0,
+        openCreateTaskOnAppear: Bool = false,
         scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
@@ -625,6 +628,7 @@ struct TodoListScreen: View {
         self.pullRefreshEnabled = pullRefreshEnabled
         self.usesRootFeedHeader = usesRootFeedHeader
         self.createTaskRequestID = createTaskRequestID
+        self.openCreateTaskOnAppear = openCreateTaskOnAppear
         self.scrollToTopRequestID = scrollToTopRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
@@ -892,6 +896,11 @@ struct TodoListScreen: View {
         .onAppear {
             onRootControlsVisibleChange(!(isRootFloaterScreen && rootFloaterSearchExpanded))
             onRootDockCollapsedChange(shouldCollapseRootDock)
+            if openCreateTaskOnAppear && !hasOpenedCreateTaskOnAppear {
+                hasOpenedCreateTaskOnAppear = true
+                closeRootFloaterSearch()
+                showingCreateTask = true
+            }
         }
         .onDisappear {
             onRootControlsVisibleChange(true)

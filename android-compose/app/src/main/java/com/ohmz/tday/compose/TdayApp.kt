@@ -621,6 +621,28 @@ fun TdayApp(
                 }
 
                 composable(
+                    route = AppRoute.CreateTodayTodo.route,
+                    arguments = listOf(
+                        navArgument("target") {
+                            type = NavType.StringType
+                            defaultValue = "today"
+                        },
+                    ),
+                    deepLinks = listOf(navDeepLink {
+                        uriPattern = "tday://todos/create?target={target}"
+                    }),
+                ) {
+                    TodosRoute(
+                        mode = TodoListMode.TODAY,
+                        onBack = { navController.popBackStack() },
+                        onTaskDeleted = ::showTaskDeletedToast,
+                        openCreateTaskOnStart = true,
+                        pullRefreshEnabled = !appUiState.isLocalMode,
+                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                    )
+                }
+
+                composable(
                     route = AppRoute.OverdueTodos.route,
                     deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/overdue" }),
                 ) {
@@ -1018,6 +1040,7 @@ private fun TodosRoute(
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
+    openCreateTaskOnStart: Boolean = false,
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
     scrollToTopRequestKey: Int = 0,
@@ -1074,6 +1097,7 @@ private fun TodosRoute(
         onRootFeedTabSelected = onRootFeedTabSelected,
         showRootFeedDock = showRootFeedDock,
         showCreateTaskButton = showCreateTaskButton,
+        openCreateTaskOnStart = openCreateTaskOnStart,
         pullRefreshEnabled = pullRefreshEnabled,
         summaryAvailable = summaryAvailable,
         usesRootFeedHeader = usesRootFeedHeader,

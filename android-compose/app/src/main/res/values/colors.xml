@@ -9,4 +9,8 @@
     <color name="ic_launcher_task">#FFEF7382</color>
     <color name="ic_launcher_detail">#FFCFCFCF</color>
     <color name="splash_background">#FFFFFFFF</color>
+    <color name="tday_light_surface">#FFFFFFFF</color>
+    <color name="tday_light_primary">#FF2A6DC2</color>
+    <color name="tday_light_on_surface">#FF1C2333</color>
+    <color name="tday_light_on_surface_variant">#FF5D677E</color>
 </resources>

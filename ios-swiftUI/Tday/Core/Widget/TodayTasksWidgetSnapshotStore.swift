@@ -5,10 +5,39 @@ import WidgetKit
 #endif
 
 struct TodayTasksWidgetSnapshot: Codable, Equatable {
+    let schemaVersion: Int
     let generatedAtEpochMs: Int64
     let title: String
+    let status: TodayTasksWidgetSnapshotStatus
     let taskCount: Int
     let tasks: [TodayTasksWidgetTaskSnapshot]
+
+    init(
+        schemaVersion: Int = TodayTasksWidgetSnapshotStore.snapshotSchemaVersion,
+        generatedAtEpochMs: Int64,
+        title: String,
+        status: TodayTasksWidgetSnapshotStatus,
+        taskCount: Int,
+        tasks: [TodayTasksWidgetTaskSnapshot]
+    ) {
+        self.schemaVersion = schemaVersion
+        self.generatedAtEpochMs = generatedAtEpochMs
+        self.title = title
+        self.status = status
+        self.taskCount = taskCount
+        self.tasks = tasks
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedTasks = try container.decodeIfPresent([TodayTasksWidgetTaskSnapshot].self, forKey: .tasks) ?? []
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        generatedAtEpochMs = try container.decode(Int64.self, forKey: .generatedAtEpochMs)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? TodayTasksWidgetSnapshotStore.defaultTitle
+        status = (try? container.decodeIfPresent(TodayTasksWidgetSnapshotStatus.self, forKey: .status)) ?? (decodedTasks.isEmpty ? .empty : .tasks)
+        taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
+        tasks = decodedTasks
+    }
 }
 
 struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
@@ -18,16 +47,36 @@ struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
     let priority: String
 }
 
+enum TodayTasksWidgetSnapshotStatus: String, Codable, Equatable {
+    case setup
+    case empty
+    case tasks
+}
+
 enum TodayTasksWidgetSnapshotStore {
+    static let snapshotSchemaVersion = 2
     static let widgetKind = "TodayTasksWidget"
     static let appGroupSuiteName = "group.com.ohmz.tday"
     static let snapshotKey = "tday.widget.todayTasksSnapshot"
+    static let defaultTitle = "Today's Tasks"
+    static let taskLimit = 8
 
     static func makeSnapshot(
         from state: OfflineSyncState,
+        workspaceConfigured: Bool = true,
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> TodayTasksWidgetSnapshot {
+        guard workspaceConfigured else {
+            return TodayTasksWidgetSnapshot(
+                generatedAtEpochMs: Int64(now.timeIntervalSince1970 * 1_000),
+                title: defaultTitle,
+                status: .setup,
+                taskCount: 0,
+                tasks: []
+            )
+        }
+
         let dayStart = calendar.startOfDay(for: now)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
         let dayStartEpochMs = Int64(dayStart.timeIntervalSince1970 * 1_000)
@@ -51,9 +100,10 @@ enum TodayTasksWidgetSnapshotStore {
 
         return TodayTasksWidgetSnapshot(
             generatedAtEpochMs: Int64(now.timeIntervalSince1970 * 1_000),
-            title: "Today's Tasks",
+            title: defaultTitle,
+            status: todayTasks.isEmpty ? .empty : .tasks,
             taskCount: todayTasks.count,
-            tasks: todayTasks.prefix(8).map {
+            tasks: todayTasks.prefix(taskLimit).map {
                 TodayTasksWidgetTaskSnapshot(
                     id: $0.id,
                     title: $0.title,
