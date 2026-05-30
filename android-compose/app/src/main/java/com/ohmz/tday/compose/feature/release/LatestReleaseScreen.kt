@@ -415,6 +415,8 @@ private fun ReleaseContent(
         hasUpdate = uiState.hasUpdate,
         backendVersion = uiState.backendVersion,
         versionCheckResult = uiState.versionCheckResult,
+        isLocalMode = uiState.isLocalMode,
+        hasServerConfigured = uiState.hasServerConfigured,
     )
 
     if (uiState.hasUpdate && latestRelease != null) {
@@ -453,6 +455,8 @@ private fun ReleaseOverviewCard(
     hasUpdate: Boolean,
     backendVersion: String? = null,
     versionCheckResult: VersionCheckResult? = null,
+    isLocalMode: Boolean = false,
+    hasServerConfigured: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val isIncompatible = versionCheckResult is VersionCheckResult.AppUpdateRequired ||
@@ -507,6 +511,27 @@ private fun ReleaseOverviewCard(
         ReleasePublishedDate(
             publishedAt = latestRelease?.publishedAt ?: currentRelease?.publishedAt,
         )
+        val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
+                versionCheckResult == null
+        ReleaseVersionLine(
+            label = stringResource(R.string.label_server),
+            version = when {
+                backendVersion != null -> stringResource(
+                    R.string.label_version_name,
+                    backendVersion
+                )
+
+                isLocalMode -> stringResource(R.string.release_server_local_mode)
+                !hasServerConfigured -> stringResource(R.string.release_server_not_connected)
+                else -> stringResource(R.string.release_server_version_unavailable)
+            },
+            tint = when {
+                backendVersion == null && !isLocalMode && hasServerConfigured -> colorScheme.onSurfaceVariant
+                backendVersion == null -> colorScheme.onSurfaceVariant
+                isCompatible -> TdayStatusSuccess
+                else -> colorScheme.error
+            },
+        )
         ReleaseVersionLine(
             label = if (hasUpdate) {
                 stringResource(R.string.release_installed_label)
@@ -516,15 +541,6 @@ private fun ReleaseOverviewCard(
             version = stringResource(R.string.label_version_name, currentVersion),
             tint = colorScheme.primary,
         )
-        if (backendVersion != null) {
-            val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
-                versionCheckResult == null
-            ReleaseVersionLine(
-                label = stringResource(R.string.label_server),
-                version = stringResource(R.string.label_version_name, backendVersion),
-                tint = if (isCompatible) TdayStatusSuccess else colorScheme.error,
-            )
-        }
         latestRelease?.takeIf { hasUpdate }?.let {
             ReleaseVersionLine(
                 label = stringResource(R.string.release_latest_label),
