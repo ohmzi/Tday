@@ -16,16 +16,14 @@ val localProps: Properties = Properties().apply {
 }
 
 val projectVersion: String by lazy {
-    val packageJsonCandidates = listOf(
-        File(rootProject.projectDir, "tday-web/package.json"),
-        File(rootProject.projectDir.parentFile, "tday-web/package.json"),
-        File(rootProject.projectDir, "package.json"),
-        File(rootProject.projectDir.parentFile, "package.json"),
+    val manifestCandidates = listOf(
+        File(rootProject.projectDir, "version.json"),
+        File(rootProject.projectDir.parentFile, "version.json"),
     )
-    val packageJson = packageJsonCandidates.firstOrNull { it.exists() }
-        ?: error("Could not locate package.json from ${rootProject.projectDir}")
-    val match = Regex(""""version"\s*:\s*"([^"]+)"""").find(packageJson.readText())
-    match?.groupValues?.get(1) ?: error("Could not read version from package.json")
+    val manifest = manifestCandidates.firstOrNull { it.exists() }
+        ?: error("Could not locate version.json from ${rootProject.projectDir}")
+    val match = Regex(""""version"\s*:\s*"([^"]+)"""").find(manifest.readText())
+    match?.groupValues?.get(1) ?: error("Could not read version from version.json")
 }
 
 val projectVersionCode: Int by lazy {

@@ -19,7 +19,7 @@ fun Route.mobileProbeRoutes(config: AppConfig) {
             call.response.header(HttpHeaders.Pragma, "no-cache")
 
             val encrypted = if (probeEncryption != null && config.probeAppVersion != null) {
-                val payload = """{"appVersion":"${config.probeAppVersion}","updateRequired":${config.probeUpdateRequired}}"""
+                val payload = """{"appVersion":"${config.probeAppVersion}","updateRequired":${config.probeUpdateRequired},"compatibilityMode":"${config.probeCompatibilityMode}"}"""
                 runCatching { probeEncryption.encrypt(payload) }.getOrNull()
             } else {
                 null

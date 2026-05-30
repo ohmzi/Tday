@@ -15,6 +15,12 @@ fun Throwable.userFacingMessage(
     }
 
     if (this is ApiCallException) {
+        if (statusCode == 426 || reason == "app_update_required") {
+            return context.getString(R.string.error_app_outdated)
+        }
+        if (reason == "server_update_required") {
+            return context.getString(R.string.error_server_outdated)
+        }
         return when (statusCode) {
             401 -> context.getString(R.string.error_auth_expired)
             403 -> context.getString(R.string.error_permission_denied)

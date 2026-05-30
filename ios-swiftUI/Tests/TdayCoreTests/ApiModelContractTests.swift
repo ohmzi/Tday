@@ -133,4 +133,20 @@ final class ApiModelContractTests: XCTestCase {
         XCTAssertEqual(detail.todos, [])
         XCTAssertEqual(delete.deletedIds, [])
     }
+
+    func testProbeCompatibilityPayloadAcceptsExactMode() throws {
+        let data = """
+        {
+          "appVersion": "1.44.0",
+          "updateRequired": true,
+          "compatibilityMode": "exact"
+        }
+        """.data(using: .utf8)!
+
+        let payload = try JSONDecoder().decode(ProbeCompatibilityPayload.self, from: data)
+
+        XCTAssertEqual(payload.appVersion, "1.44.0")
+        XCTAssertTrue(payload.updateRequired)
+        XCTAssertEqual(payload.compatibilityMode, "exact")
+    }
 }
