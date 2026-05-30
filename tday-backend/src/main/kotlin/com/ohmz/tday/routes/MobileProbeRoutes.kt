@@ -32,6 +32,7 @@ fun Route.mobileProbeRoutes(config: AppConfig) {
                     probe = "ok",
                     version = "1",
                     serverTime = Instant.now().toString(),
+                    appVersion = config.probeAppVersion,
                     encryptedCompatibility = encrypted,
                 ),
             )

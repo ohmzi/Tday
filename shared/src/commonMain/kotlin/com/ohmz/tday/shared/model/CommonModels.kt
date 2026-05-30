@@ -13,6 +13,7 @@ data class MobileProbeResponse(
     val probe: String? = null,
     val version: String,
     val serverTime: String,
+    val appVersion: String? = null,
     val encryptedCompatibility: String? = null,
 )
 
