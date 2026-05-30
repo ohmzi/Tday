@@ -8,9 +8,11 @@ type fetchOptions = {
 };
 
 type ApiErrorPayload = {
-  code?: string;
+  code?: string | number;
+  field?: string;
   message?: string;
   reason?: string;
+  retryAfterSeconds?: number;
 };
 
 export class ApiError extends Error {
@@ -18,6 +20,8 @@ export class ApiError extends Error {
     message: string,
     public status: number,
     public code?: string,
+    public field?: string,
+    public retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = "ApiError";
@@ -40,15 +44,24 @@ const fetchApi = async (url: string, options: fetchOptions) => {
 
   if (!res.ok) {
     const payload = isJson ? ((await res.json()) as ApiErrorPayload) : null;
+    const errorCode =
+      payload?.reason ??
+      (typeof payload?.code === "string" ? payload.code : undefined);
     const message =
       payload?.message || `a ${res.statusText || "request"} error occurred`;
     addApiErrorBreadcrumb({
       method: options.method,
       url,
       status: res.status,
-      code: payload?.code ?? payload?.reason,
+      code: errorCode,
     });
-    throw new ApiError(message, res.status, payload?.code ?? payload?.reason);
+    throw new ApiError(
+      message,
+      res.status,
+      errorCode,
+      payload?.field,
+      payload?.retryAfterSeconds,
+    );
   }
 
   if (!isJson || res.status === 204) {
