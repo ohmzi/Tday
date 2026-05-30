@@ -62,7 +62,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -310,8 +309,6 @@ fun HomeScreen(
         val now = Instant.now()
         uiState.searchableTodos.count { todo -> todo.due?.isBefore(now) == true }
     }
-    val canSummarizeToday =
-        summaryAvailable && uiState.aiSummaryEnabled && uiState.todayTodos.isNotEmpty()
     val dueFormatter = remember {
         DateTimeFormatter.ofPattern("EEE h:mm a")
             .withZone(ZoneId.systemDefault())
@@ -472,12 +469,6 @@ fun HomeScreen(
                             onOpenSettings = {
                                 closeSearch()
                                 onOpenSettings()
-                            },
-                            showSummaryAction = canSummarizeToday,
-                            onSummarize = {
-                                closeSearch()
-                                showSummarySheet = true
-                                onSummarize()
                             },
                         )
                     }
@@ -1200,8 +1191,6 @@ private fun TopSearchBar(
     onSearchBarBoundsChanged: (Rect) -> Unit,
     onCreateList: () -> Unit,
     onOpenSettings: () -> Unit,
-    showSummaryAction: Boolean,
-    onSummarize: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -1225,7 +1214,7 @@ private fun TopSearchBar(
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val buttonSize = TdayDimens.FabSize
         val buttonGap = 8.dp
-        val actionCount = if (showSummaryAction) 3 else 2
+        val actionCount = 2
         val collapsedSearchWidth = buttonSize
         val expandedSearchWidth = maxWidth.coerceAtLeast(buttonSize)
         val collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
@@ -1275,14 +1264,6 @@ private fun TopSearchBar(
             horizontalArrangement = Arrangement.spacedBy(buttonGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (showSummaryAction) {
-                PressableIconButton(
-                    icon = Icons.Rounded.AutoAwesome,
-                    contentDescription = stringResource(R.string.todos_summarize),
-                    tint = colorScheme.onSurface,
-                    onClick = onSummarize,
-                )
-            }
             PressableIconButton(
                 icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
                 contentDescription = stringResource(R.string.action_create_list),
