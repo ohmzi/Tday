@@ -22,6 +22,7 @@ import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.model.movedDuePreservingTime
 import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -89,6 +90,10 @@ class TodoListViewModel @Inject constructor(
 
     fun load(mode: TodoListMode, listId: String? = null, listName: String? = null) {
         hasLoadedMode = true
+        TdayTelemetry.addBreadcrumb(
+            "todo_list.load",
+            data = modeTelemetryData(mode = mode, scopedList = !listId.isNullOrBlank()),
+        )
         _uiState.update { current ->
             val isSameTimeline = current.mode == mode && current.listId == listId
             current.copy(
@@ -184,6 +189,10 @@ class TodoListViewModel @Inject constructor(
     }
 
     fun refresh() {
+        TdayTelemetry.addBreadcrumb(
+            "todo_list.refresh",
+            data = modeTelemetryData(),
+        )
         refreshInternal(forceSync = true, showLoading = true)
     }
 
@@ -283,6 +292,10 @@ class TodoListViewModel @Inject constructor(
         if (payload.title.isBlank()) return
         val mode = _uiState.value.mode
         val currentListId = _uiState.value.listId
+        TdayTelemetry.addBreadcrumb(
+            "task.create",
+            data = taskTelemetryData(mode = mode, payload = payload),
+        )
 
         viewModelScope.launch {
             runCatching {
@@ -315,6 +328,10 @@ class TodoListViewModel @Inject constructor(
     }
 
     fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        TdayTelemetry.addBreadcrumb(
+            "task.update",
+            data = taskTelemetryData(mode = _uiState.value.mode, payload = payload),
+        )
         updateTaskInternal(
             visibleTodo = todo,
             repositoryTodo = todo,
@@ -329,6 +346,10 @@ class TodoListViewModel @Inject constructor(
         val mode = previousState.mode
         val currentListId = previousState.listId
         val updatedTodo = todo.copy(due = movedDue)
+        TdayTelemetry.addBreadcrumb(
+            "task.reschedule",
+            data = taskTelemetryData(mode = mode, scope = scope) + mapOf("source" to "todo_list"),
+        )
 
         _uiState.update { current ->
             current.copy(
@@ -449,6 +470,10 @@ class TodoListViewModel @Inject constructor(
 
     fun toggleComplete(todo: TodoItem) {
         val previousItems = _uiState.value.items
+        TdayTelemetry.addBreadcrumb(
+            "task.complete",
+            data = taskTelemetryData(mode = _uiState.value.mode),
+        )
         _uiState.update { current ->
             current.copy(
                 items = current.items.filterNot { it.id == todo.id },
@@ -480,6 +505,10 @@ class TodoListViewModel @Inject constructor(
         val previousItems = _uiState.value.items
         val mode = _uiState.value.mode
         val listId = _uiState.value.listId
+        TdayTelemetry.addBreadcrumb(
+            "task.delete",
+            data = taskTelemetryData(mode = mode),
+        )
         _uiState.update { current ->
             current.copy(
                 items = current.items.filterNot { it.id == todo.id },
@@ -539,7 +568,11 @@ class TodoListViewModel @Inject constructor(
         }
         Log.d(
             TAG,
-            "updateListSettings requested rawId=$listId resolvedId=$resolvedListId name=$trimmedName color=$color iconKey=$iconKey",
+            "updateListSettings requested hasColor=${color != null} hasIcon=${iconKey != null}",
+        )
+        TdayTelemetry.addBreadcrumb(
+            "list.update",
+            data = listTelemetryData(currentState.mode, color, iconKey),
         )
 
         val previousState = currentState
@@ -584,11 +617,11 @@ class TodoListViewModel @Inject constructor(
                         color = color,
                         iconKey = iconKey,
                     )
-                }
+            }
             }.onSuccess {
-                Log.d(TAG, "updateListSettings persisted listId=$resolvedListId")
+                Log.d(TAG, "updateListSettings persisted")
             }.onFailure { error ->
-                Log.e(TAG, "updateListSettings failed listId=$resolvedListId", error)
+                Log.e(TAG, "updateListSettings failed", error)
                 _uiState.value = previousState.copy(
                     errorMessage = error.userFacingMessage(appContext, R.string.error_update_list_failed),
                 )
@@ -601,6 +634,10 @@ class TodoListViewModel @Inject constructor(
         if (trimmedName.isBlank()) return
 
         val currentMode = _uiState.value.mode
+        TdayTelemetry.addBreadcrumb(
+            "list.create",
+            data = listTelemetryData(currentMode, color, iconKey),
+        )
         viewModelScope.launch {
             runCatching {
                 if (currentMode == TodoListMode.FLOATER) {
@@ -639,6 +676,10 @@ class TodoListViewModel @Inject constructor(
             !currentState.listId.isNullOrBlank() -> currentState.listId
             else -> return
         }
+        TdayTelemetry.addBreadcrumb(
+            "list.delete",
+            data = listTelemetryData(currentState.mode, color = null, iconKey = null),
+        )
 
         viewModelScope.launch {
             runCatching {
@@ -667,7 +708,7 @@ class TodoListViewModel @Inject constructor(
             }.onSuccess {
                 if (currentState.mode != TodoListMode.FLOATER) rescheduleReminders()
             }.onFailure { error ->
-                Log.e(TAG, "deleteList failed listId=$resolvedListId", error)
+                Log.e(TAG, "deleteList failed", error)
                 _uiState.update {
                     it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_delete_list_failed))
                 }
@@ -700,6 +741,44 @@ class TodoListViewModel @Inject constructor(
             listRepository.fetchListsSnapshot()
         }
     }
+
+    private fun modeTelemetryData(
+        mode: TodoListMode = _uiState.value.mode,
+        scopedList: Boolean = !_uiState.value.listId.isNullOrBlank(),
+    ): Map<String, Any?> = mapOf(
+        "mode" to mode.name.lowercase(),
+        "scoped_list" to scopedList,
+    )
+
+    private fun taskTelemetryData(
+        mode: TodoListMode,
+        payload: CreateTaskPayload? = null,
+        scope: TaskRescheduleScope? = null,
+    ): Map<String, Any?> {
+        val data = mutableMapOf<String, Any?>()
+        data.putAll(modeTelemetryData(mode = mode))
+        if (payload != null) {
+            data["has_due"] = payload.due != null
+            data["has_repeat"] = !payload.rrule.isNullOrBlank()
+            data["has_list"] = !payload.listId.isNullOrBlank()
+            data["has_description"] = !payload.description.isNullOrBlank()
+        }
+        if (scope != null) {
+            data["scope"] = scope.name.lowercase()
+        }
+        return data
+    }
+
+    private fun listTelemetryData(
+        mode: TodoListMode,
+        color: String?,
+        iconKey: String?,
+    ): Map<String, Any?> = mapOf(
+        "kind" to if (mode == TodoListMode.FLOATER) "floater" else "scheduled",
+        "scoped_list" to !_uiState.value.listId.isNullOrBlank(),
+        "has_color" to !color.isNullOrBlank(),
+        "has_icon" to !iconKey.isNullOrBlank(),
+    )
 
     private companion object {
         const val TAG = "TodoListViewModel"

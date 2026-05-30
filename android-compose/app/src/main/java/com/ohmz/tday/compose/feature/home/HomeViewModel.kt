@@ -258,7 +258,7 @@ class HomeViewModel @Inject constructor(
                 refreshAfterMutation()
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage("Could not update task."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
                 )
             }
         }
@@ -281,7 +281,7 @@ class HomeViewModel @Inject constructor(
                 refreshAfterMutation()
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage("Could not complete task."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_complete_task_failed),
                 )
             }
         }
@@ -305,7 +305,7 @@ class HomeViewModel @Inject constructor(
                 refreshAfterMutation()
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage("Could not delete task."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed),
                 )
             }
         }
@@ -355,18 +355,6 @@ class HomeViewModel @Inject constructor(
                         it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed))
                     }
                     refreshFromCache()
-                }
-        }
-    }
-
-    fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
-        viewModelScope.launch {
-            runCatching { todoRepository.updateTodo(todo, payload) }
-                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed))
-                    }
                 }
         }
     }

@@ -14,6 +14,7 @@ import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.CreateCredentialCancellationException
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.GetCredentialException
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
 import javax.inject.Inject
@@ -64,7 +65,16 @@ class SystemCredentialService @Inject constructor(
         context: Context,
         preferredEmail: String?,
     ): SystemCredential? {
-        val activity = context.findActivity() ?: return null
+        credentialBreadcrumb(
+            operation = "credential.request",
+            kind = "login",
+            result = "start",
+            extra = mapOf("preferred_email_present" to !preferredEmail.isNullOrBlank()),
+        )
+        val activity = context.findActivity() ?: run {
+            credentialBreadcrumb("credential.request", "login", "no_activity")
+            return null
+        }
         val credentialManager = CredentialManager.create(activity)
         val allowedUserIds = preferredEmail
             ?.trim()
@@ -86,7 +96,7 @@ class SystemCredentialService @Inject constructor(
                 context = activity,
                 request = request,
             ).credential
-            when (credential) {
+            val result = when (credential) {
                 is PasswordCredential -> SystemCredentialRecords.loginCredential(
                     id = credential.id,
                     password = credential.password,
@@ -94,7 +104,14 @@ class SystemCredentialService @Inject constructor(
 
                 else -> null
             }
-        } catch (_: GetCredentialException) {
+            credentialBreadcrumb(
+                operation = "credential.result",
+                kind = "login",
+                result = if (result == null) "empty" else "filled",
+            )
+            result
+        } catch (error: GetCredentialException) {
+            credentialBreadcrumb("credential.result", "login", "failed", mapOf("error" to error.type))
             null
         }
     }
@@ -105,10 +122,15 @@ class SystemCredentialService @Inject constructor(
     ): SystemCredentialSaveResult {
         val normalizedEmail = credential.email.trim().lowercase(Locale.US)
         if (normalizedEmail.isBlank() || credential.password.isBlank()) {
+            credentialBreadcrumb("credential.save", "login", "skipped")
             return SystemCredentialSaveResult.SKIPPED
         }
 
-        val activity = context.findActivity() ?: return SystemCredentialSaveResult.FAILED
+        credentialBreadcrumb("credential.save", "login", "start")
+        val activity = context.findActivity() ?: run {
+            credentialBreadcrumb("credential.save", "login", "no_activity")
+            return SystemCredentialSaveResult.FAILED
+        }
         val credentialManager = CredentialManager.create(activity)
         val request = CreatePasswordRequest(
             id = normalizedEmail,
@@ -120,10 +142,13 @@ class SystemCredentialService @Inject constructor(
                 context = activity,
                 request = request,
             )
+            credentialBreadcrumb("credential.save", "login", "saved")
             SystemCredentialSaveResult.SAVED
         } catch (_: CreateCredentialCancellationException) {
+            credentialBreadcrumb("credential.save", "login", "cancelled")
             SystemCredentialSaveResult.CANCELLED
         } catch (error: CreateCredentialException) {
+            credentialBreadcrumb("credential.save", "login", "failed", mapOf("error" to error.type))
             Log.w(
                 LOG_TAG,
                 "Android Password Manager could not save credential: ${error.type}",
@@ -134,7 +159,11 @@ class SystemCredentialService @Inject constructor(
     }
 
     override suspend fun requestSavedServerUrl(context: Context): String? {
-        val activity = context.findActivity() ?: return null
+        credentialBreadcrumb("credential.request", "server_url", "start")
+        val activity = context.findActivity() ?: run {
+            credentialBreadcrumb("credential.request", "server_url", "no_activity")
+            return null
+        }
         val credentialManager = CredentialManager.create(activity)
         val request = GetCredentialRequest(
             credentialOptions = listOf(
@@ -150,7 +179,7 @@ class SystemCredentialService @Inject constructor(
                 context = activity,
                 request = request,
             ).credential
-            when (credential) {
+            val result = when (credential) {
                 is PasswordCredential -> SystemCredentialRecords.serverUrl(
                     id = credential.id,
                     password = credential.password,
@@ -158,7 +187,14 @@ class SystemCredentialService @Inject constructor(
 
                 else -> null
             }
-        } catch (_: GetCredentialException) {
+            credentialBreadcrumb(
+                operation = "credential.result",
+                kind = "server_url",
+                result = if (result == null) "empty" else "filled",
+            )
+            result
+        } catch (error: GetCredentialException) {
+            credentialBreadcrumb("credential.result", "server_url", "failed", mapOf("error" to error.type))
             null
         }
     }
@@ -169,10 +205,15 @@ class SystemCredentialService @Inject constructor(
     ): SystemCredentialSaveResult {
         val normalizedServerUrl = serverUrl.trim()
         if (normalizedServerUrl.isBlank()) {
+            credentialBreadcrumb("credential.save", "server_url", "skipped")
             return SystemCredentialSaveResult.SKIPPED
         }
 
-        val activity = context.findActivity() ?: return SystemCredentialSaveResult.FAILED
+        credentialBreadcrumb("credential.save", "server_url", "start")
+        val activity = context.findActivity() ?: run {
+            credentialBreadcrumb("credential.save", "server_url", "no_activity")
+            return SystemCredentialSaveResult.FAILED
+        }
         val credentialManager = CredentialManager.create(activity)
         val request = CreatePasswordRequest(
             id = SystemCredentialRecords.SERVER_URL_CREDENTIAL_ID,
@@ -184,10 +225,13 @@ class SystemCredentialService @Inject constructor(
                 context = activity,
                 request = request,
             )
+            credentialBreadcrumb("credential.save", "server_url", "saved")
             SystemCredentialSaveResult.SAVED
         } catch (_: CreateCredentialCancellationException) {
+            credentialBreadcrumb("credential.save", "server_url", "cancelled")
             SystemCredentialSaveResult.CANCELLED
         } catch (error: CreateCredentialException) {
+            credentialBreadcrumb("credential.save", "server_url", "failed", mapOf("error" to error.type))
             Log.w(
                 LOG_TAG,
                 "Android Password Manager could not save server URL: ${error.type}",
@@ -199,11 +243,29 @@ class SystemCredentialService @Inject constructor(
 
     override suspend fun clearCredentialState() {
         try {
+            credentialBreadcrumb("credential.clear", "session", "start")
             val credentialManager = CredentialManager.create(appContext)
             credentialManager.clearCredentialState(ClearCredentialStateRequest())
+            credentialBreadcrumb("credential.clear", "session", "cleared")
         } catch (_: ClearCredentialException) {
+            credentialBreadcrumb("credential.clear", "session", "failed")
             // The local app session is already cleared; credential providers are best-effort here.
         }
+    }
+
+    private fun credentialBreadcrumb(
+        operation: String,
+        kind: String,
+        result: String,
+        extra: Map<String, Any?> = emptyMap(),
+    ) {
+        TdayTelemetry.addBreadcrumb(
+            operation,
+            data = mapOf(
+                "kind" to kind,
+                "result" to result,
+            ) + extra,
+        )
     }
 
     private companion object {

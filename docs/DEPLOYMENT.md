@@ -158,14 +158,14 @@ Every file that contains or controls a version number, grouped by platform.
 |------|------|-------|
 | `tday-web/package.json` (`"version"`) | App semver (e.g. `1.21.0`) | **Edit only this file** — all other app versions derive from it. |
 | `tday-web/vite.config.ts` (`__APP_VERSION__`) | Build-time define from `npm_package_version` | Injected into the SPA at build; fallback `"0.0.0"`. |
-| `tday-web/src/main.tsx` | Sentry release (`tday-web@<version>`) | Derived at build time. |
+| `tday-web/src/main.tsx` | Sentry release (`tday-web@<version>`) | Derived at build time. `VITE_SENTRY_TRACES_SAMPLE_RATE` controls trace sampling. |
 
 #### Android
 
 | File | What | Notes |
 |------|------|-------|
 | `android-compose/app/build.gradle.kts` | `versionName` / `versionCode` | Parsed from `tday-web/package.json` at build time. `versionCode` = `major*10000 + minor*100 + patch`. |
-| `android-compose/.../TdayApplication.kt` | Sentry release (`tday-android@<version>`) | Uses `BuildConfig.VERSION_NAME`. |
+| `android-compose/.../TdayApplication.kt` | Sentry release (`tday-android@<version>`) | Uses `BuildConfig.VERSION_NAME`. `SENTRY_TRACES_SAMPLE_RATE` or `local.properties:sentryTracesSampleRate` controls trace sampling. |
 | `android-compose/.../NetworkModule.kt` | `X-Tday-App-Version` HTTP header | Uses `BuildConfig.VERSION_NAME`. |
 
 #### iOS
@@ -175,14 +175,14 @@ Every file that contains or controls a version number, grouped by platform.
 | `ios-swiftUI/Tday/Info.plist` (`CFBundleShortVersionString`) | Marketing version (e.g. `1.21.0`) | Auto-synced by `scripts/sync-ios-version.sh` on `npm version`. |
 | `ios-swiftUI/project.yml` / `TdayApp.xcodeproj/project.pbxproj` (`MARKETING_VERSION`) | Xcode project metadata | Auto-synced by `scripts/sync-ios-version.sh` on `npm version`; keep both aligned when regenerating the project. |
 | `ios-swiftUI/Tday/Info.plist` (`CFBundleVersion`) | Build number | Incremented manually for App Store submissions. |
-| `ios-swiftUI/.../SentryConfiguration.swift` | Sentry release (`tday-ios@<version>`) | Uses `CFBundleShortVersionString`. |
+| `ios-swiftUI/.../SentryConfiguration.swift` | Sentry release (`tday-ios@<version>`) | Uses `CFBundleShortVersionString`. `SENTRY_DSN` and `SENTRY_TRACES_SAMPLE_RATE` flow through `Info.plist` build settings. |
 
 #### Backend
 
 | File | What | Notes |
 |------|------|-------|
 | `tday-backend/build.gradle.kts` (`version`) | Gradle artifact version | Used for JAR metadata; not displayed to users. |
-| `tday-backend/.../Application.kt` | Sentry release (`tday-backend@<version>`) | Reads `TDAY_BACKEND_VERSION` env var with a hardcoded fallback. |
+| `tday-backend/.../Application.kt` | Sentry release (`tday-backend@<version>`) | Reads `TDAY_BACKEND_VERSION`, then `TDAY_APP_VERSION`, then `0.0.0`. `SENTRY_TRACES_SAMPLE_RATE` controls trace sampling. |
 
 #### Server Compatibility (`TDAY_APP_VERSION`)
 

@@ -233,7 +233,7 @@ class FloaterListRepository @Inject constructor(
         } else {
             Log.w(
                 LOG_TAG,
-                "updateFloaterList deferred listId=$listId reason=${immediateError.message}"
+                "updateFloaterList deferred reason=${immediateError.javaClass.simpleName}"
             )
         }
     }
@@ -308,7 +308,7 @@ class FloaterListRepository @Inject constructor(
         } else {
             Log.w(
                 LOG_TAG,
-                "deleteFloaterList deferred listId=$normalizedListId reason=${immediateError.message}"
+                "deleteFloaterList deferred reason=${immediateError.javaClass.simpleName}"
             )
         }
     }

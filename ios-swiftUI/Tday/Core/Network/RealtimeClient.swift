@@ -67,6 +67,7 @@ actor RealtimeClient {
         let request = URLRequest(url: url)
         let webSocketTask = configuration.session.webSocketTask(with: request)
         task = webSocketTask
+        TdayTelemetry.addBreadcrumb("realtime.connect", data: ["phase": "start"])
         webSocketTask.resume()
         await listen(on: webSocketTask)
     }
@@ -89,6 +90,16 @@ actor RealtimeClient {
                 }
             }
         } catch {
+            let nsError = error as NSError
+            TdayTelemetry.addBreadcrumb(
+                "realtime.connect",
+                level: .warning,
+                data: [
+                    "phase": "failure",
+                    "domain": TdayTelemetry.safeLabel(nsError.domain),
+                    "code": nsError.code
+                ]
+            )
             task = nil
             scheduleReconnect()
         }
@@ -120,6 +131,7 @@ actor RealtimeClient {
     }
 
     private func scheduleReconnect() {
+        TdayTelemetry.addBreadcrumb("realtime.disconnect")
         reconnectTask?.cancel()
         reconnectTask = Task {
             try? await Task.sleep(for: .seconds(3))

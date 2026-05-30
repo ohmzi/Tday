@@ -30,6 +30,10 @@ final class TodoListViewModel {
         self.listId = listId
         self.listName = listName
         title = listName ?? mode.title
+        TdayTelemetry.addBreadcrumb(
+            "todo_list.load",
+            data: modeTelemetryData(mode: mode, scopedList: listId?.isEmpty == false)
+        )
         hydrateFromCache()
         observeCacheChanges()
     }
@@ -39,6 +43,7 @@ final class TodoListViewModel {
     }
 
     func refresh() async {
+        TdayTelemetry.addBreadcrumb("todo_list.refresh", data: modeTelemetryData())
         isLoading = true
         let result = await container.syncAndRefresh(
             force: true,
@@ -88,6 +93,7 @@ final class TodoListViewModel {
     }
 
     func addTask(_ payload: CreateTaskPayload) async {
+        TdayTelemetry.addBreadcrumb("task.create", data: taskTelemetryData(mode: mode, payload: payload))
         do {
             if mode == .floater {
                 try await container.todoRepository.createFloater(payload: payload)
@@ -101,6 +107,7 @@ final class TodoListViewModel {
     }
 
     func updateTask(_ todo: TodoItem, payload: CreateTaskPayload) async {
+        TdayTelemetry.addBreadcrumb("task.update", data: taskTelemetryData(mode: mode, payload: payload))
         do {
             if mode == .floater {
                 try await container.todoRepository.updateFloater(todo, payload: payload)
@@ -124,6 +131,9 @@ final class TodoListViewModel {
             return
         }
 
+        var telemetryData = taskTelemetryData(mode: mode, scope: scope)
+        telemetryData["source"] = "todo_list"
+        TdayTelemetry.addBreadcrumb("task.reschedule", data: telemetryData)
         do {
             try await container.todoRepository.moveTodo(
                 todo.repositoryTargetForReschedule(scope: scope),
@@ -136,6 +146,7 @@ final class TodoListViewModel {
     }
 
     func complete(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("task.complete", data: taskTelemetryData(mode: mode))
         do {
             if mode == .floater {
                 try await container.todoRepository.completeFloater(todo)
@@ -149,6 +160,7 @@ final class TodoListViewModel {
     }
 
     func delete(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("task.delete", data: taskTelemetryData(mode: mode))
         do {
             if mode == .floater {
                 try await container.todoRepository.deleteFloater(todo)
@@ -163,6 +175,7 @@ final class TodoListViewModel {
 
     func updateListSettings(name: String, color: String?, iconKey: String?) async {
         guard let listId else { return }
+        TdayTelemetry.addBreadcrumb("list.update", data: listTelemetryData(color: color, iconKey: iconKey))
         do {
             if mode == .floater {
                 try await container.floaterListRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey)
@@ -177,6 +190,7 @@ final class TodoListViewModel {
     }
 
     func createList(name: String, color: String?, iconKey: String?) async {
+        TdayTelemetry.addBreadcrumb("list.create", data: listTelemetryData(color: color, iconKey: iconKey))
         do {
             if mode == .floater {
                 try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey)
@@ -191,6 +205,7 @@ final class TodoListViewModel {
 
     func deleteList(onOptimisticDelete: @escaping () -> Void) async {
         guard let listId else { return }
+        TdayTelemetry.addBreadcrumb("list.delete", data: listTelemetryData(color: nil, iconKey: nil))
         do {
             let optimisticDelete = {
                 self.lists.removeAll { $0.id == listId }
@@ -238,5 +253,39 @@ final class TodoListViewModel {
                 }
             }
         }
+    }
+
+    private func modeTelemetryData(mode: TodoListMode? = nil, scopedList: Bool? = nil) -> [String: Any] {
+        [
+            "mode": (mode ?? self.mode).summaryMode,
+            "scoped_list": scopedList ?? !(listId ?? "").isEmpty
+        ]
+    }
+
+    private func taskTelemetryData(
+        mode: TodoListMode,
+        payload: CreateTaskPayload? = nil,
+        scope: TaskRescheduleScope? = nil
+    ) -> [String: Any] {
+        var data = modeTelemetryData(mode: mode)
+        if let payload {
+            data["has_due"] = payload.due != nil
+            data["has_repeat"] = !(payload.rrule ?? "").isEmpty
+            data["has_list"] = !(payload.listId ?? "").isEmpty
+            data["has_description"] = !(payload.description ?? "").isEmpty
+        }
+        if let scope {
+            data["scope"] = scope.rawValue
+        }
+        return data
+    }
+
+    private func listTelemetryData(color: String?, iconKey: String?) -> [String: Any] {
+        [
+            "kind": mode == .floater ? "floater" : "scheduled",
+            "scoped_list": !(listId ?? "").isEmpty,
+            "has_color": !(color ?? "").isEmpty,
+            "has_icon": !(iconKey ?? "").isEmpty
+        ]
     }
 }

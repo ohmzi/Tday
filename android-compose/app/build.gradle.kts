@@ -76,6 +76,11 @@ android {
             "SENTRY_DSN",
             "\"${localProps.getProperty("sentryDsn") ?: System.getenv("SENTRY_DSN") ?: ""}\"",
         )
+        buildConfigField(
+            "String",
+            "SENTRY_TRACES_SAMPLE_RATE",
+            "\"${localProps.getProperty("sentryTracesSampleRate") ?: System.getenv("SENTRY_TRACES_SAMPLE_RATE") ?: ""}\"",
+        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

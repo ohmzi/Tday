@@ -21,6 +21,7 @@ function readSource(filePath: string): string {
 const backendApp = path.join(BACKEND_SRC, "Application.kt");
 const backendStatusPages = path.join(BACKEND_SRC, "plugins", "StatusPages.kt");
 const backendSentryPlugin = path.join(BACKEND_SRC, "plugins", "SentryPlugin.kt");
+const backendObservability = path.join(BACKEND_SRC, "observability", "TdayObservability.kt");
 const backendRouting = path.join(BACKEND_SRC, "plugins", "Routing.kt");
 const backendGradle = path.join(MONO, "tday-backend", "build.gradle.kts");
 const backendLogback = path.join(
@@ -31,6 +32,7 @@ const backendLogback = path.join(
 const webMain = path.join(ROOT, "src", "main.tsx");
 const webRouter = path.join(ROOT, "src", "router.tsx");
 const webApiClient = path.join(ROOT, "src", "lib", "api-client.ts");
+const webObservability = path.join(ROOT, "src", "lib", "observability", "sentry.ts");
 const webErrorBoundary = path.join(ROOT, "src", "components", "ErrorBoundary.tsx");
 const webPackageJson = path.join(ROOT, "package.json");
 
@@ -43,13 +45,36 @@ const androidGradle = path.join(MONO, "android-compose", "app", "build.gradle.kt
 const androidNetworkModule = path.join(
   ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "core", "network", "NetworkModule.kt",
 );
+const androidTelemetry = path.join(
+  ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "core", "observability", "TdayTelemetry.kt",
+);
+const androidTodoListViewModel = path.join(
+  ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "feature", "todos", "TodoListViewModel.kt",
+);
+const androidCalendarViewModel = path.join(
+  ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "feature", "calendar", "CalendarViewModel.kt",
+);
+const androidCalendarScreen = path.join(
+  ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "feature", "calendar", "CalendarScreen.kt",
+);
+const androidCredentialService = path.join(
+  ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "core", "data", "auth", "SystemCredentialService.kt",
+);
 
 // ─── iOS Sentry paths ──────────────────────────────────────────────
 const iosSentryConfig = path.join(IOS_SRC, "Core", "SentryConfiguration.swift");
 const iosApp = path.join(IOS_SRC, "TdayApp.swift");
+const iosInfoPlist = path.join(IOS_SRC, "Info.plist");
+const iosProject = path.join(MONO, "ios-swiftUI", "project.yml");
+const iosTodoListViewModel = path.join(IOS_SRC, "Feature", "Todos", "TodoListViewModel.swift");
+const iosCalendarViewModel = path.join(IOS_SRC, "Feature", "Calendar", "CalendarViewModel.swift");
+const iosCalendarScreen = path.join(IOS_SRC, "Feature", "Calendar", "CalendarScreen.swift");
+const iosCredentialService = path.join(IOS_SRC, "Core", "Data", "Auth", "SystemCredentialService.swift");
 
 // ─── Documentation ─────────────────────────────────────────────────
 const telemetryDoc = path.join(MONO, "docs", "TELEMETRY.md");
+const codingStandardsDoc = path.join(MONO, "docs", "CODING_STANDARDS.md");
+const agentsDoc = path.join(MONO, "AGENTS.md");
 
 describe("sentry integration guardrails", () => {
   describe("SDK dependencies are declared", () => {
@@ -134,9 +159,10 @@ describe("sentry privacy guardrails", () => {
     });
 
     it("web strips ip_address in beforeSend", () => {
-      const content = readSource(webMain);
-      expect(content).toContain("beforeSend");
-      expect(content).toContain("ip_address");
+      expect(readSource(webMain)).toContain("beforeSend: scrubSentryEvent");
+      const helper = readSource(webObservability);
+      expect(helper).toContain("ip_address");
+      expect(helper).toContain("scrubSentryEvent");
     });
 
     it("android strips ipAddress in setBeforeSend", () => {
@@ -161,6 +187,27 @@ describe("sentry privacy guardrails", () => {
     it("replaysOnErrorSampleRate is 0", () => {
       const content = readSource(webMain);
       expect(content).toMatch(/replaysOnErrorSampleRate\s*:\s*0/);
+    });
+  });
+
+  describe("web automatic breadcrumbs are privacy filtered", () => {
+    it("disables console and DOM breadcrumbs and sanitizes remaining breadcrumbs", () => {
+      const main = readSource(webMain);
+      expect(main).toContain("beforeBreadcrumb: scrubSentryBreadcrumb");
+      expect(main).toContain("breadcrumbsIntegration");
+      expect(main).toContain("console: false");
+      expect(main).toContain("dom: false");
+
+      const helper = readSource(webObservability);
+      expect(helper).toContain("scrubSentryBreadcrumb");
+      expect(helper).toContain('breadcrumb.category === "console"');
+      expect(helper).toContain('breadcrumb.category?.startsWith("ui.")');
+      expect(helper).toContain("SENSITIVE_LABEL_PATTERN");
+    });
+
+    it("sanitizes browser transaction names before sending", () => {
+      expect(readSource(webMain)).toContain("beforeSendTransaction: scrubSentryTransaction");
+      expect(readSource(webObservability)).toContain("scrubSentryTransaction");
     });
   });
 
@@ -193,7 +240,9 @@ describe("sentry privacy guardrails", () => {
 
     it("iOS reads DSN from Info.plist bundle key", () => {
       const content = readSource(iosSentryConfig);
-      expect(content).toMatch(/Bundle\.main.*SENTRY_DSN/);
+      expect(content).toContain('bundleString("SENTRY_DSN")');
+      expect(readSource(iosInfoPlist)).toContain("<key>SENTRY_DSN</key>");
+      expect(readSource(iosProject)).toContain("SENTRY_DSN");
     });
   });
 
@@ -202,7 +251,8 @@ describe("sentry privacy guardrails", () => {
 
     const filesToCheck = [
       backendApp, webMain, androidApplication, iosSentryConfig,
-      backendRouting, webRouter, webApiClient,
+      backendRouting, webRouter, webApiClient, backendObservability,
+      webObservability, androidTelemetry,
     ];
 
     it.each(filesToCheck.filter(existsSync))(
@@ -218,7 +268,7 @@ describe("sentry privacy guardrails", () => {
 describe("sentry exception capture coverage", () => {
   it("backend StatusPages captures exceptions to Sentry", () => {
     const content = readSource(backendStatusPages);
-    expect(content).toContain("Sentry.captureException");
+    expect(content).toContain("TdayObservability.captureException");
   });
 
   it("backend SentryRequestPlugin exists for transaction tracing", () => {
@@ -240,8 +290,8 @@ describe("sentry exception capture coverage", () => {
   });
 
   it("web ErrorBoundary captures exceptions to Sentry", () => {
-    const content = readSource(webErrorBoundary);
-    expect(content).toContain("Sentry.captureException");
+    expect(readSource(webErrorBoundary)).toContain("captureUiException");
+    expect(readSource(webObservability)).toContain("Sentry.captureException");
   });
 
   it("web router is wrapped with Sentry instrumentation", () => {
@@ -251,7 +301,7 @@ describe("sentry exception capture coverage", () => {
 
   it("web API client adds Sentry breadcrumbs on errors", () => {
     const content = readSource(webApiClient);
-    expect(content).toContain("Sentry.addBreadcrumb");
+    expect(content).toContain("addApiErrorBreadcrumb");
   });
 
   it("android uses SentryOkHttpInterceptor for HTTP tracing", () => {
@@ -264,6 +314,101 @@ describe("sentry exception capture coverage", () => {
     const content = readSource(androidManifest);
     expect(content).toContain('io.sentry.auto-init');
     expect(content).toContain('android:value="false"');
+  });
+
+  it("platform observability helpers exist", () => {
+    expect(existsSync(backendObservability)).toBe(true);
+    expect(existsSync(webObservability)).toBe(true);
+    expect(existsSync(androidTelemetry)).toBe(true);
+    expect(readSource(iosSentryConfig)).toContain("enum TdayTelemetry");
+  });
+});
+
+describe("sentry sampling and route sanitization", () => {
+  it("trace sample rates are environment configurable", () => {
+    expect(readSource(backendApp)).toContain("sentryTracesSampleRate");
+    expect(readSource(webMain)).toContain("VITE_SENTRY_TRACES_SAMPLE_RATE");
+    expect(readSource(androidApplication)).toContain("SENTRY_TRACES_SAMPLE_RATE");
+    expect(readSource(iosSentryConfig)).toContain("SENTRY_TRACES_SAMPLE_RATE");
+  });
+
+  it("web restricts trace propagation to API routes", () => {
+    const content = readSource(webMain);
+    expect(content).toContain("tracePropagationTargets");
+    expect(content).toContain("/^\\/api");
+  });
+
+  it("breadcrumbs and transaction names use sanitized route helpers", () => {
+    expect(readSource(backendSentryPlugin)).toContain("routeTemplate");
+    expect(readSource(webObservability)).toContain("sanitizeTelemetryUrl");
+    expect(readSource(webObservability)).toContain("sanitizeTelemetryLabel");
+    expect(readSource(androidTelemetry)).toContain("sanitizePath");
+    expect(readSource(iosSentryConfig)).toContain("sanitizePath");
+  });
+});
+
+describe("no product analytics vendor SDKs", () => {
+  it("web dependencies do not include analytics SDKs", () => {
+    const pkg = readSource(webPackageJson);
+    expect(pkg).not.toMatch(/google-analytics|gtag|@analytics|mixpanel|amplitude|dynatrace/i);
+  });
+
+  it("native/backend manifests do not include GA or Dynatrace SDKs", () => {
+    const files = [
+      backendGradle,
+      androidGradle,
+      path.join(MONO, "ios-swiftUI", "Package.swift"),
+    ];
+    for (const file of files.filter(existsSync)) {
+      const content = readSource(file);
+      expect(content).not.toMatch(/google-analytics|firebase-analytics|dynatrace|mixpanel|amplitude/i);
+    }
+  });
+});
+
+describe("post-Sentry diagnostic coverage is structural", () => {
+  it("mobile task and list operations use structural breadcrumb names", () => {
+    for (const file of [androidTodoListViewModel, iosTodoListViewModel]) {
+      const content = readSource(file);
+      expect(content).toContain("task.create");
+      expect(content).toContain("task.reschedule");
+      expect(content).toContain("list.update");
+      expect(content).toContain("has_description");
+      expect(content).not.toMatch(/addBreadcrumb\([^)]*title/i);
+      expect(content).not.toMatch(/addBreadcrumb\([^)]*description/i);
+    }
+  });
+
+  it("mobile calendar paging and drag-reschedule use structural breadcrumbs", () => {
+    for (const file of [androidCalendarScreen, iosCalendarScreen]) {
+      const content = readSource(file);
+      expect(content).toContain("calendar.page");
+      expect(content).toContain("calendar.mode");
+      expect(content).toContain("calendar.drag_reschedule");
+      expect(content).toContain("direction");
+      expect(content).not.toMatch(/addBreadcrumb\([^)]*selectedDate/i);
+      expect(content).not.toMatch(/addBreadcrumb\([^)]*targetDate/i);
+    }
+
+    for (const file of [androidCalendarViewModel, iosCalendarViewModel]) {
+      const content = readSource(file);
+      expect(content).toContain("calendar.task.create");
+      expect(content).toContain("calendar.task.reschedule");
+      expect(content).toContain("scheduled_items");
+    }
+  });
+
+  it("mobile credential manager diagnostics avoid credential values", () => {
+    for (const file of [androidCredentialService, iosCredentialService]) {
+      const content = readSource(file);
+      expect(content).toContain("credential.request");
+      expect(content).toContain("credential.save");
+      expect(content).toContain("server_url");
+      expect(content).not.toMatch(/addBreadcrumb\([^)]*email/i);
+      expect(content).not.toMatch(/addBreadcrumb\([^)]*password/i);
+      expect(content).not.toMatch(/addBreadcrumb\([^)]*serverUrl/i);
+      expect(content).not.toMatch(/addBreadcrumb\([^)]*rawURL/i);
+    }
   });
 });
 
@@ -310,6 +455,38 @@ describe("sentry documentation", () => {
     expect(content).toContain("TdayApplication.kt");
     expect(content).toContain("main.tsx");
     expect(content).toContain("SentryConfiguration.swift");
+  });
+
+  it("docs require the new feature observability checklist", () => {
+    expect(readSource(telemetryDoc)).toContain("New Feature Observability Checklist");
+    expect(readSource(codingStandardsDoc)).toContain("New Feature Observability Checklist");
+    expect(readSource(agentsDoc)).toContain("New Feature Observability Checklist");
+  });
+
+  it("TELEMETRY.md documents industry reference baselines", () => {
+    const content = readSource(telemetryDoc);
+    expect(content).toContain("Industry Reference Baseline");
+    expect(content).toContain("docs.sentry.io");
+    expect(content).toContain("support.google.com/analytics");
+    expect(content).toContain("docs.dynatrace.com");
+    expect(content).toContain("opentelemetry.io");
+  });
+
+  it("TELEMETRY.md documents post-Sentry feature coverage", () => {
+    const content = readSource(telemetryDoc);
+    for (const expected of [
+      "Local Mode",
+      "Floater / Anytime tasks",
+      "Offline sync replay",
+      "Credential manager / password autofill",
+      "Mobile probe and version gate",
+      "Realtime reconnect",
+      "Calendar paging",
+      "Task/list drag-reschedule",
+      "security.event",
+    ]) {
+      expect(content).toContain(expected);
+    }
   });
 });
 

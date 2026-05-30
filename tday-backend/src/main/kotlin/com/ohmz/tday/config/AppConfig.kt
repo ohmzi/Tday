@@ -59,6 +59,8 @@ data class AppConfig(
     val androidPackageName: String,
     val androidSha256CertFingerprints: List<String>,
     val sentryDsn: String?,
+    val sentryTracesSampleRate: Double,
+    val backendVersion: String,
 ) {
     companion object {
         fun load(): AppConfig {
@@ -130,6 +132,11 @@ data class AppConfig(
                 androidPackageName = env("ANDROID_PACKAGE_NAME", "com.ohmz.tday.compose"),
                 androidSha256CertFingerprints = envCsv("ANDROID_SHA256_CERT_FINGERPRINTS"),
                 sentryDsn = env("SENTRY_DSN"),
+                sentryTracesSampleRate = envDouble("SENTRY_TRACES_SAMPLE_RATE", if (resolveEnvironmentName().equals("production", ignoreCase = true)) 0.2 else 1.0)
+                    .coerceIn(0.0, 1.0),
+                backendVersion = env("TDAY_BACKEND_VERSION")
+                    ?: env("TDAY_APP_VERSION")
+                    ?: "0.0.0",
             )
         }
 
@@ -149,6 +156,11 @@ data class AppConfig(
         fun envInt(key: String, default: Int): Int {
             val raw = System.getenv(key)?.trim() ?: return default
             return raw.toIntOrNull()?.takeIf { it > 0 } ?: default
+        }
+
+        fun envDouble(key: String, default: Double): Double {
+            val raw = System.getenv(key)?.trim() ?: return default
+            return raw.toDoubleOrNull() ?: default
         }
 
         private fun resolveEnvironmentName(): String =

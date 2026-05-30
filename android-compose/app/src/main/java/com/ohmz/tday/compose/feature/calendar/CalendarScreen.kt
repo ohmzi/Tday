@@ -124,6 +124,7 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
@@ -404,6 +405,13 @@ fun CalendarScreen(
         calendarDropTargetBounds.clear()
         if (calendarTaskAlreadyDueOnDate(todo, targetDate, zoneId)) return
         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+        TdayTelemetry.addBreadcrumb(
+            "calendar.drag_reschedule",
+            data = mapOf(
+                "mode" to selectedViewMode.name.lowercase(),
+                "recurring" to todo.isRecurring,
+            ),
+        )
         if (todo.isRecurring) {
             pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo = todo, targetDate = targetDate)
         } else {
@@ -479,6 +487,10 @@ fun CalendarScreen(
                 collapseProgress = collapseProgress,
                 onJumpToday = {
                     todayJumpRequestId += 1
+                    TdayTelemetry.addBreadcrumb(
+                        "calendar.today",
+                        data = mapOf("mode" to selectedViewMode.name.lowercase()),
+                    )
                     todayJumpRequest = CalendarTodayJumpRequest(
                         id = todayJumpRequestId,
                         targetDate = LocalDate.now(zoneId),
@@ -513,6 +525,10 @@ fun CalendarScreen(
                     CalendarViewModeTabs(
                         selectedMode = selectedViewMode,
                         onModeSelected = { mode ->
+                            TdayTelemetry.addBreadcrumb(
+                                "calendar.mode",
+                                data = mapOf("mode" to mode.name.lowercase()),
+                            )
                             selectedViewKey = mode.name
                             if (mode != CalendarViewMode.MONTH) {
                                 visibleMonthIso = YearMonth.from(selectedDate).toString()
@@ -912,6 +928,13 @@ private fun CalendarWeekCard(
     fun settlePage(page: Int) {
         val targetDate = dateForPage(page)
         if (canSelectDate(targetDate)) {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data = mapOf(
+                    "mode" to "week",
+                    "direction" to if (page >= currentPage) "next" else "previous",
+                ),
+            )
             onSelectDate(targetDate)
         }
     }
@@ -1280,6 +1303,13 @@ private fun CalendarDayCard(
     }
 
     fun settlePage(page: Int) {
+        TdayTelemetry.addBreadcrumb(
+            "calendar.page",
+            data = mapOf(
+                "mode" to "day",
+                "direction" to if (page >= currentPage) "next" else "previous",
+            ),
+        )
         onSelectDate(dateForPage(page))
     }
 
@@ -1626,6 +1656,13 @@ private fun CalendarMonthCard(
     }
 
     fun settlePage(page: Int) {
+        TdayTelemetry.addBreadcrumb(
+            "calendar.page",
+            data = mapOf(
+                "mode" to "month",
+                "direction" to if (page >= currentPage) "next" else "previous",
+            ),
+        )
         onVisibleMonthChanged(monthForPage(page))
     }
 

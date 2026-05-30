@@ -56,6 +56,7 @@ import com.ohmz.tday.compose.core.model.UpdateFloaterRequest
 import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidget
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
@@ -93,6 +94,7 @@ class SyncManager @Inject constructor(
         connectionProbeTimeoutMs: Long? = null,
     ): Result<Unit> {
         if (isLocalMode()) {
+            TdayTelemetry.addBreadcrumb("local_mode.sync_noop")
             cacheManager.updateOfflineState { state ->
                 if (state.pendingMutations.isEmpty() &&
                     state.lastSuccessfulSyncEpochMs == 0L &&
@@ -114,6 +116,7 @@ class SyncManager @Inject constructor(
         val result = runCatching {
             var contactedServer = false
             if (connectionProbeTimeoutMs != null) {
+                TdayTelemetry.addBreadcrumb("server.probe", data = mapOf("phase" to "sync"))
                 verifyServerConnection(connectionProbeTimeoutMs)
                 contactedServer = true
             }
@@ -157,6 +160,12 @@ class SyncManager @Inject constructor(
 
         val shouldReplayPendingMutations = replayPendingMutations &&
             state.pendingMutations.isNotEmpty()
+        if (shouldReplayPendingMutations) {
+            TdayTelemetry.addBreadcrumb(
+                "sync.replay",
+                data = mapOf("pendingMutationCount" to state.pendingMutations.size),
+            )
+        }
         val shouldSync = force ||
             shouldReplayPendingMutations ||
             state.lastSuccessfulSyncEpochMs == 0L ||

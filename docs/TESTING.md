@@ -177,8 +177,12 @@ npm run test -- tests/guardrails/security.test.ts
 | `sendDefaultPii` is disabled and IP addresses are stripped | Telemetry must not collect personal network identifiers |
 | DSNs come from env/build configuration | No hardcoded Sentry DSNs in committed source |
 | Exception capture and HTTP tracing are wired where expected | Production errors include useful, privacy-safe context |
+| Trace sample rates are configurable | Production sampling can be reduced without code changes |
+| Route sanitizers and helper modules exist | Breadcrumbs and transactions avoid raw IDs, URLs, and query strings |
+| Post-Sentry mobile feature breadcrumbs are structural | Local Mode, floaters, sync, credentials, updates, realtime, reminders, calendar, drag-reschedule, and security monitoring stay diagnosable without content |
+| Google Analytics, Dynatrace, Mixpanel, and Amplitude SDKs are absent | T'Day remains Sentry-first and not product-analytics-driven |
 | Source upload is conditional on `SENTRY_AUTH_TOKEN` | Local and self-hosted builds work without private tokens |
-| `docs/TELEMETRY.md` documents collection and no-op behavior | Privacy expectations stay discoverable |
+| `docs/TELEMETRY.md` documents collection, no-op behavior, industry references, and coverage matrix | Privacy expectations stay discoverable |
 
 ### Naming Conventions
 

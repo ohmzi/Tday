@@ -36,12 +36,14 @@ fun main() {
     Sentry.init { options ->
         options.dsn = config.sentryDsn.orEmpty()
         options.environment = if (config.isProduction) "production" else "development"
-        options.release = "tday-backend@${System.getenv("TDAY_BACKEND_VERSION") ?: "1.23.0"}"
+        options.release = "tday-backend@${config.backendVersion}"
         options.isSendDefaultPii = false
         options.serverName = "tday-backend"
-        options.tracesSampleRate = 1.0
+        options.tracesSampleRate = config.sentryTracesSampleRate
         options.setBeforeSend { event, _ ->
             event.user?.ipAddress = null
+            event.request?.url = event.request?.url?.let(com.ohmz.tday.observability.TdayObservability::sanitizePath)
+            event.request?.queryString = null
             event
         }
     }

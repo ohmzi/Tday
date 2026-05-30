@@ -1,6 +1,6 @@
 import React, { Component, ReactNode } from "react";
-import * as Sentry from "@sentry/react";
 import { RefreshCw, ShieldAlert, Home } from "lucide-react";
+import { captureUiException } from "@/lib/observability/sentry";
 
 interface Props {
   children: ReactNode;
@@ -33,8 +33,8 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    Sentry.captureException(error, {
-      contexts: { react: { componentStack: errorInfo.componentStack } },
+    captureUiException(error, "ui.error_boundary", {
+      componentStack: errorInfo.componentStack,
     });
     console.error("Error caught by ErrorBoundary:", error, errorInfo);
   }

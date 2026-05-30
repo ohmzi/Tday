@@ -123,6 +123,7 @@ final class SyncManager {
         connectionProbeTimeoutSeconds: TimeInterval? = nil
     ) async -> Result<Void, Error> {
         if isLocalMode {
+            TdayTelemetry.addBreadcrumb("local_mode.sync_noop")
             if let localState = try? await cacheManager.updateOfflineState({ state in
                 var nextState = state
                 nextState.lastSuccessfulSyncEpochMs = 0
@@ -138,6 +139,7 @@ final class SyncManager {
         do {
             var contactedServer = false
             if let connectionProbeTimeoutSeconds {
+                TdayTelemetry.addBreadcrumb("server.probe", data: ["phase": "sync"])
                 _ = try await api.probeConfiguredServer(timeoutInterval: connectionProbeTimeoutSeconds)
                 contactedServer = true
             }
@@ -164,6 +166,12 @@ final class SyncManager {
         }
 
         let shouldReplay = replayPendingMutations && !state.pendingMutations.isEmpty
+        if shouldReplay {
+            TdayTelemetry.addBreadcrumb(
+                "sync.replay",
+                data: ["pendingMutationCount": state.pendingMutations.count]
+            )
+        }
         let shouldSync = force ||
             shouldReplay ||
             state.lastSuccessfulSyncEpochMs == 0 ||
