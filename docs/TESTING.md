@@ -73,6 +73,7 @@ The `tests/guardrails/` suite enforces coding standards, architecture rules, and
 cd tday-web
 npm run test -- tests/guardrails/           # run all guardrail tests
 npm run test -- tests/guardrails/security.test.ts
+npm run observability:smoke                 # no-dependency Sentry/privacy smoke check
 ```
 
 #### `security.test.ts` — Security Best Practices
@@ -183,6 +184,14 @@ npm run test -- tests/guardrails/security.test.ts
 | Google Analytics, Dynatrace, Mixpanel, and Amplitude SDKs are absent | T'Day remains Sentry-first and not product-analytics-driven |
 | Source upload is conditional on `SENTRY_AUTH_TOKEN` | Local and self-hosted builds work without private tokens |
 | `docs/TELEMETRY.md` documents collection, no-op behavior, industry references, and coverage matrix | Privacy expectations stay discoverable |
+| `docs/SENTRY_RUNBOOK.md` documents setup, alerts, smoke drills, and failure triage | Developers can debug self-hosted failures without adding product analytics |
+
+For environments where npm is unavailable, run the smoke check directly from the
+repo root:
+
+```bash
+node scripts/observability-smoke.mjs
+```
 
 ### Naming Conventions
 
