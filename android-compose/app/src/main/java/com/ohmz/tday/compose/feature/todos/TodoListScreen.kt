@@ -22,7 +22,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -120,6 +119,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -1525,9 +1525,11 @@ private fun RootFeedSearchHeaderRow(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
+    val density = LocalDensity.current
     val isDaytime = rememberTodoRootIsDaytime()
     val titleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
     val titleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
+    var containerWidth by remember { mutableStateOf(0.dp) }
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
@@ -1540,15 +1542,18 @@ private fun RootFeedSearchHeaderRow(
         }
     }
 
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .height(56.dp)
+            .onSizeChanged { size ->
+                containerWidth = with(density) { size.width.toDp() }
+            },
     ) {
         val buttonSize = 56.dp
         val buttonGap = 8.dp
         val actionCount = if (showSummaryAction) 3 else 2
-        val expandedSearchWidth = maxWidth.coerceAtLeast(buttonSize)
+        val expandedSearchWidth = containerWidth.coerceAtLeast(buttonSize)
         val collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
         val animatedSearchWidth by animateDpAsState(
             targetValue = if (searchExpanded) expandedSearchWidth else buttonSize,
@@ -2510,7 +2515,7 @@ private fun TimelineSectionHeader(
         colorScheme.onSurfaceVariant
     }
     val headerTextColor = if (isHeaderPressed) {
-        lerp(baseHeaderColor, colorScheme.onSurface, 0.16f)
+        lerpColor(baseHeaderColor, colorScheme.onSurface, 0.16f)
     } else if (isDropTarget) {
         colorScheme.error
     } else {
@@ -2519,7 +2524,7 @@ private fun TimelineSectionHeader(
     val baseChevronColor =
         colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.72f else 1f)
     val chevronColor = if (isHeaderPressed) {
-        lerp(baseChevronColor, colorScheme.onSurface, 0.16f)
+        lerpColor(baseChevronColor, colorScheme.onSurface, 0.16f)
     } else {
         baseChevronColor
     }
@@ -3231,11 +3236,16 @@ private fun localizedSectionTitle(section: TodoSection): String {
         }
         section.key.startsWith("rest-") -> {
             val ymPart = section.key.removePrefix("rest-")
-            runCatching {
+            val monthName = runCatching {
                 val ym = YearMonth.parse(ymPart)
-                val monthName = ym.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                ym.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
+            }.getOrNull()
+
+            if (monthName != null) {
                 stringResource(R.string.todos_section_rest_of, monthName)
-            }.getOrElse { section.title }
+            } else {
+                section.title
+            }
         }
         else -> section.title
     }
