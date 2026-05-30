@@ -803,11 +803,6 @@ fun TodoListScreen(
                                     onSearchQueryChange = { rootFloaterSearchQuery = it },
                                     onSearchExpandedChange = { rootFloaterSearchExpanded = it },
                                     onSearchClose = closeRootFloaterSearch,
-                                    showSummaryAction = canSummarizeCurrentMode,
-                                    onSummarize = {
-                                        closeRootFloaterSearch()
-                                        showSummarySheet = true
-                                    },
                                     onCreateList = {
                                         closeRootFloaterSearch()
                                         showCreateListSheet = true
@@ -1524,8 +1519,6 @@ private fun RootFeedSearchHeaderRow(
     onSearchQueryChange: (String) -> Unit,
     onSearchExpandedChange: (Boolean) -> Unit,
     onSearchClose: () -> Unit,
-    showSummaryAction: Boolean,
-    onSummarize: () -> Unit,
     onCreateList: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -1560,7 +1553,7 @@ private fun RootFeedSearchHeaderRow(
     ) {
         val buttonSize = 56.dp
         val buttonGap = 8.dp
-        val actionCount = if (showSummaryAction) 3 else 2
+        val actionCount = 2
         val expandedSearchWidth = containerWidth.coerceAtLeast(buttonSize)
         val collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
         val animatedSearchWidth by animateDpAsState(
@@ -1611,13 +1604,6 @@ private fun RootFeedSearchHeaderRow(
             horizontalArrangement = Arrangement.spacedBy(buttonGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (showSummaryAction) {
-                TodayHeaderButton(
-                    onClick = onSummarize,
-                    icon = Icons.Rounded.AutoAwesome,
-                    contentDescription = stringResource(R.string.todos_summarize),
-                )
-            }
             TodayHeaderButton(
                 onClick = onCreateList,
                 icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
