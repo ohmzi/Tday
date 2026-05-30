@@ -6,6 +6,9 @@ added in commit `4b79a1b` on 2026-04-04 (`feat: add Sentry telemetry across all
 platforms (v1.14.0)`), followed by no-DSN safety, CI upload guardrails, privacy
 tests, and iOS dSYM/package fixes.
 
+Operational Sentry setup, alerting, release artifact checks, smoke drills, and
+failure triage live in [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md).
+
 Telemetry is not product analytics. T'Day does not add Google Analytics,
 Dynatrace, Mixpanel, Amplitude, advertising IDs, or user-behavior tracking by
 default. Industry analytics guidance is used only as a privacy and taxonomy

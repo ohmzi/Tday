@@ -184,6 +184,11 @@ Every file that contains or controls a version number, grouped by platform.
 | `tday-backend/build.gradle.kts` (`version`) | Gradle artifact version | Used for JAR metadata; not displayed to users. |
 | `tday-backend/.../Application.kt` | Sentry release (`tday-backend@<version>`) | Reads `TDAY_BACKEND_VERSION`, then `TDAY_APP_VERSION`, then `0.0.0`. `SENTRY_TRACES_SAMPLE_RATE` controls trace sampling. |
 
+For Sentry project setup, release artifact verification, alerting, smoke drills,
+and failure triage, see [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md). Do not store
+Sentry account passwords in deployment files; use DSNs for SDK configuration and
+least-privilege auth tokens only for release/source artifact upload.
+
 #### Server Compatibility (`TDAY_APP_VERSION`)
 
 The `TDAY_APP_VERSION` environment variable tells the backend which app version it is compatible with. When `TDAY_UPDATE_REQUIRED=true`, clients that connect with a different version are shown an "Update Required" or "Server Update Needed" screen.
