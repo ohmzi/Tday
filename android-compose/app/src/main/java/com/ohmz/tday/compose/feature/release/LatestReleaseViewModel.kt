@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.core.data.server.AppVersionManager
+import com.ohmz.tday.compose.core.data.server.ServerConfigRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,8 @@ data class LatestReleaseUiState(
     val currentVersion: String = BuildConfig.VERSION_NAME,
     val backendVersion: String? = null,
     val versionCheckResult: com.ohmz.tday.compose.core.data.server.VersionCheckResult? = null,
+    val isLocalMode: Boolean = false,
+    val hasServerConfigured: Boolean = false,
 ) {
     val hasUpdate: Boolean
         get() {
@@ -51,6 +54,7 @@ internal fun compareVersions(a: String, b: String): Int {
 @HiltViewModel
 class LatestReleaseViewModel @Inject constructor(
     private val appVersionManager: AppVersionManager,
+    private val serverConfigRepository: ServerConfigRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LatestReleaseUiState())
@@ -67,6 +71,8 @@ class LatestReleaseViewModel @Inject constructor(
                         error = vs.releaseError,
                         backendVersion = vs.backendVersion,
                         versionCheckResult = vs.versionCheckResult,
+                        isLocalMode = serverConfigRepository.isLocalMode(),
+                        hasServerConfigured = serverConfigRepository.hasServerConfigured(),
                     )
                 }
             }
@@ -76,7 +82,17 @@ class LatestReleaseViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            appVersionManager.refreshGitHubReleases()
+            _uiState.update {
+                it.copy(
+                    isLocalMode = serverConfigRepository.isLocalMode(),
+                    hasServerConfigured = serverConfigRepository.hasServerConfigured(),
+                )
+            }
+            if (serverConfigRepository.isLocalMode()) {
+                appVersionManager.refreshGitHubReleases()
+            } else {
+                appVersionManager.refreshAll()
+            }
         }
     }
 }
