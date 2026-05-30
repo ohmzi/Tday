@@ -53,8 +53,12 @@ class TodoServiceImpl(
     ): Either<AppError, TodoResponse> {
         val id = CuidGenerator.newCuid()
         val now = LocalDateTime.now()
+        val normalizedListID = listID?.trim()?.takeIf { it.isNotEmpty() }
 
-        newSuspendedTransaction(Dispatchers.IO) {
+        val validList = newSuspendedTransaction(Dispatchers.IO) {
+            if (normalizedListID != null && !scheduledListExists(userId, normalizedListID)) {
+                return@newSuspendedTransaction false
+            }
             Todos.insert {
                 it[Todos.id] = id
                 it[Todos.title] = title
@@ -62,19 +66,21 @@ class TodoServiceImpl(
                 it[Todos.priority] = Priority.valueOf(priority)
                 it[Todos.due] = due
                 it[Todos.rrule] = rrule
-                it[Todos.listID] = listID
+                it[Todos.listID] = normalizedListID
                 it[Todos.userID] = userId
                 it[Todos.createdAt] = now
                 it[Todos.updatedAt] = now
                 it[Todos.exdates] = emptyList()
             }
+            true
         }
+        if (!validList) return Either.Left(AppError.BadRequest("list not found", "listID"))
         cache.invalidateTodoCaches(userId)
         return TodoResponse(
             id = id, title = title, description = description,
             priority = priority, due = due.toString(),
             rrule = rrule, timeZone = "UTC",
-            completed = false, pinned = false, order = 0, listID = listID,
+            completed = false, pinned = false, order = 0, listID = normalizedListID,
             userID = userId, createdAt = now.toString(), updatedAt = now.toString(),
         ).right()
     }
@@ -120,7 +126,11 @@ class TodoServiceImpl(
     }
 
     override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit> {
-        newSuspendedTransaction(Dispatchers.IO) {
+        val validList = newSuspendedTransaction(Dispatchers.IO) {
+            val listId = (fields["listID"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+            if (fields.containsKey("listID") && listId != null && !scheduledListExists(userId, listId)) {
+                return@newSuspendedTransaction false
+            }
             Todos.update({ (Todos.id eq id) and (Todos.userID eq userId) }) { stmt ->
                 fields["title"]?.let { stmt[Todos.title] = it as String }
                 fields["description"]?.let {
@@ -131,10 +141,12 @@ class TodoServiceImpl(
                 fields["completed"]?.let { stmt[Todos.completed] = it as Boolean }
                 (fields["due"] as? LocalDateTime)?.let { stmt[Todos.due] = it }
                 if (fields.containsKey("rrule")) stmt[Todos.rrule] = fields["rrule"] as? String
-                if (fields.containsKey("listID")) stmt[Todos.listID] = fields["listID"] as? String
+                if (fields.containsKey("listID")) stmt[Todos.listID] = listId
                 stmt[Todos.updatedAt] = LocalDateTime.now()
             }
+            true
         }
+        if (!validList) return Either.Left(AppError.BadRequest("list not found", "listID"))
         cache.invalidateTodoCaches(userId)
         return Unit.right()
     }
@@ -366,4 +378,10 @@ class TodoServiceImpl(
         completed = this[Todos.completed],
         listID = this[Todos.listID],
     )
+
+    private fun scheduledListExists(userId: String, listId: String): Boolean {
+        return Lists.selectAll().where {
+            (Lists.id eq listId) and (Lists.userID eq userId)
+        }.limit(1).any()
+    }
 }

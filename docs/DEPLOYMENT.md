@@ -19,7 +19,7 @@ Mobile clients can also run in Local Mode without a deployed backend. Deployment
 docker-compose.yaml
 ├── tday_backend    (Ktor + Vite SPA, port 2525 → 8080)
 ├── tday_db         (PostgreSQL 15, internal port 5432)
-└── tday_ollama     (Ollama AI, internal port 11434)
+└── tday_ollama     (optional Ollama AI profile, internal port 11434)
 ```
 
 ### Build
@@ -36,9 +36,13 @@ The production image is a **single JVM process** serving both the REST API and t
 # Local build
 docker compose up -d --build
 
-# Pull AI model after first start
-docker exec -it tday_ollama ollama pull qwen2.5:0.5b
+# Optional local AI summaries
+# Set OLLAMA_URL=http://ollama:11434 in .env.docker, then run:
+docker compose --profile ai pull ollama ollama-model-setup
+docker compose --profile ai up -d --build
 ```
+
+When the `ai` profile is enabled, Compose starts `tday_ollama` plus a one-shot model setup container. The setup container pulls `qwen3.5:0.8b` and attempts to remove the old `qwen2.5:0.5b` model. Pull the Ollama images during updates too; the qwen3.5 model requires a recent Ollama runtime. If the AI profile is not enabled, Summary still works through the backend logic fallback.
 
 ### Docker Security
 
@@ -79,8 +83,8 @@ For detailed instructions on all supported remote access methods — including C
 | Service | Check | Interval |
 |---------|-------|----------|
 | PostgreSQL | `pg_isready` | 1s (10 retries) |
-| Ollama | `ollama list` | 20s (5 retries) |
-| T'Day backend | Depends on both above being healthy | — |
+| Ollama, optional `ai` profile | `ollama list` | 20s (5 retries) |
+| T'Day backend | Depends on PostgreSQL; uses Ollama opportunistically when configured | — |
 
 ## CI/CD Pipeline
 
@@ -256,8 +260,8 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 | `IOS_BUNDLE_ID`                     | iOS app bundle identifier for webcredentials association (default: `com.ohmz.tday.ios`)                                        |
 | `ANDROID_PACKAGE_NAME`              | Android app package name for Digital Asset Links credential sharing (default: `com.ohmz.tday.compose`)                         |
 | `ANDROID_SHA256_CERT_FINGERPRINTS`  | Comma-separated SHA-256 signing certificate fingerprints for Android Digital Asset Links credential sharing                    |
-| `OLLAMA_URL`                        | Ollama service URL (default: `http://ollama:11434`)                                                                            |
-| `OLLAMA_MODEL`                      | AI model for summaries (default: `qwen2.5:0.5b`)                                                                               |
+| `OLLAMA_URL`                        | Optional Ollama service URL. Leave blank for backend logic-only summaries; use `http://ollama:11434` with the Compose `ai` profile |
+| `OLLAMA_MODEL`                      | AI model for summaries when Ollama is enabled (default: `qwen3.5:0.8b`)                                                        |
 
 The native iOS app saves and retrieves Tday credentials under the canonical `tday.ohmz.cloud` Apple Passwords scope, regardless of the server URL a user connects to.
 The native Android app can save and retrieve app-scoped password credentials immediately. Sharing
@@ -368,7 +372,7 @@ Flyway does not support automatic down-migrations. For rollbacks:
 - Monitor `auth_lockout` and `auth_limit_ip` event codes for abuse.
 - Set alerts for container restarts.
 - Monitor PostgreSQL connection pool (HikariCP) and disk usage.
-- Check Ollama health endpoint for AI availability.
+- Check the Ollama health endpoint only when the `ai` profile is enabled. Without Ollama, Summary falls back to backend logic.
 
 ### Backups
 

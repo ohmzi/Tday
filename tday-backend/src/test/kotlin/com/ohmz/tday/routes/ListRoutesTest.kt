@@ -6,6 +6,7 @@ import com.ohmz.tday.models.response.ListResponse
 import com.ohmz.tday.models.response.ListTodoResponse
 import com.ohmz.tday.plugins.AuthUserKey
 import com.ohmz.tday.plugins.configureSerialization
+import com.ohmz.tday.plugins.configureStatusPages
 import com.ohmz.tday.security.JwtUserClaims
 import com.ohmz.tday.services.ListService
 import com.ohmz.tday.shared.model.CreateListRequest
@@ -61,6 +62,33 @@ class ListRoutesTest {
         assertEquals("list created", payload.getValue("message").jsonPrimitive.content)
         assertEquals("list_123", payload.getValue("list").jsonObject.getValue("id").jsonPrimitive.content)
         assertEquals("Inbox", payload.getValue("list").jsonObject.getValue("name").jsonPrimitive.content)
+    }
+
+    @Test
+    fun `create list rejects invalid color`() = testApplication {
+        val listService = RecordingListService()
+
+        application {
+            configureListRoutesTestApp(listService)
+        }
+
+        val response = client.post("/api/list") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    CreateListRequest(
+                        name = "Inbox",
+                        color = "NEON",
+                        iconKey = "inbox",
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("color is invalid", payload.getValue("message").jsonPrimitive.content)
+        assertEquals("color", payload.getValue("field").jsonPrimitive.content)
     }
 
     @Test
@@ -144,6 +172,7 @@ class ListRoutesTest {
             )
         }
         configureSerialization()
+        configureStatusPages()
         intercept(ApplicationCallPipeline.Plugins) {
             if (call.attributes.getOrNull(AuthUserKey) == null) {
                 call.attributes.put(

@@ -4,11 +4,14 @@ import arrow.core.raise.either
 import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.validateCreateFloater
+import com.ohmz.tday.domain.validateOptionalEnumValue
 import com.ohmz.tday.domain.validateOrFail
+import com.ohmz.tday.domain.validateRequiredEnumValue
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.request.*
 import com.ohmz.tday.models.response.CreateFloaterResponse
 import com.ohmz.tday.services.FloaterService
+import com.ohmz.tday.shared.model.Priority
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -32,11 +35,12 @@ fun Route.floaterRoutes() {
                 either {
                     val body = call.receive<FloaterCreateRequest>()
                     validateCreateFloater.validateOrFail(body).bind()
+                    val priority = validateRequiredEnumValue<Priority>(body.priority, "priority").bind()
                     val floater = floaterService.create(
                         userId = user.id,
                         title = body.title,
                         description = body.description,
-                        priority = body.priority,
+                        priority = priority,
                         listID = body.listID,
                     ).bind()
                     CreateFloaterResponse(message = "floater created", floater = floater)
@@ -51,7 +55,7 @@ fun Route.floaterRoutes() {
                     val fields = mutableMapOf<String, Any?>()
                     body.title?.let { fields["title"] = it }
                     body.description?.let { fields["description"] = it }
-                    body.priority?.let { fields["priority"] = it }
+                    validateOptionalEnumValue<Priority>(body.priority, "priority").bind()?.let { fields["priority"] = it }
                     body.pinned?.let { fields["pinned"] = it }
                     body.completed?.let { fields["completed"] = it }
                     body.listID?.let { fields["listID"] = it.takeIf { value -> value.isNotBlank() } }
@@ -95,9 +99,12 @@ fun Route.floaterRoutes() {
         route("/prioritize") {
             patch {
                 call.withAuth { user ->
-                    val body = call.receive<FloaterPrioritizeRequest>()
-                    floaterService.prioritize(user.id, body.id, body.priority)
-                        .map { mapOf("message" to "priority updated") }
+                    either {
+                        val body = call.receive<FloaterPrioritizeRequest>()
+                        val priority = validateRequiredEnumValue<Priority>(body.priority, "priority").bind()
+                        floaterService.prioritize(user.id, body.id, priority).bind()
+                        mapOf("message" to "priority updated")
+                    }
                 }
             }
         }

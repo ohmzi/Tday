@@ -59,14 +59,9 @@ final class TodoListViewModel {
 
     func summarizeCurrentMode() async {
         guard aiSummaryEnabled else {
-            summaryError = "AI summary is disabled by admin"
+            summaryError = "Summary is disabled by admin"
             return
         }
-        guard mode != .list && mode != .overdue && mode != .floater else {
-            summaryError = "Summary is available for Today, Scheduled, All, and Priority"
-            return
-        }
-
         isSummarizing = true
         summaryText = nil
         summarySource = nil
@@ -80,7 +75,7 @@ final class TodoListViewModel {
             summaryGeneratedAt = response.generatedAt
         } catch {
             if isLikelyConnectivityIssue(error) {
-                summaryConnectivityError = true
+                summaryError = "No summary available while offline."
             } else {
                 summaryError = userFacingMessage(for: error, fallback: "Could not summarize tasks.")
             }

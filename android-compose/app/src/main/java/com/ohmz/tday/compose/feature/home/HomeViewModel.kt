@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
+import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.list.ListRepository
+import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
@@ -41,12 +43,26 @@ data class HomeUiState(
     val searchableTodos: List<TodoItem> = emptyList(),
     val todayTodos: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
+    val aiSummaryEnabled: Boolean = true,
+    val summaryText: String? = null,
+    val summarySource: String? = null,
+    val summaryGeneratedAt: String? = null,
+    val summaryError: String? = null,
+    val isSummarizing: Boolean = false,
+)
+
+private data class HomeSnapshot(
+    val summary: DashboardSummary,
+    val searchableTodos: List<TodoItem>,
+    val todayTodos: List<TodoItem>,
+    val aiSummaryEnabled: Boolean,
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val listRepository: ListRepository,
+    private val settingsRepository: SettingsRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
@@ -62,6 +78,7 @@ class HomeViewModel @Inject constructor(
                 searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
                 todayTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
                 errorMessage = null,
+                aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
             )
         }.getOrElse { HomeUiState() },
     )
@@ -82,18 +99,24 @@ class HomeViewModel @Inject constructor(
 
     fun refreshFromCache() {
         runCatching {
-            Triple(
-                todoRepository.fetchDashboardSummarySnapshot(),
-                todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
-                todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
+            HomeSnapshot(
+                summary = todoRepository.fetchDashboardSummarySnapshot(),
+                searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
+                todayTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
+                aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
             )
-        }.onSuccess { (summary, todos, todayTodos) ->
+        }.onSuccess { snapshot ->
             _uiState.update { current ->
                 current.copy(
                     isLoading = activeLoadingRefreshes > 0,
-                    summary = if (current.summary == summary) current.summary else summary,
-                    searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
-                    todayTodos = if (current.todayTodos == todayTodos) current.todayTodos else todayTodos,
+                    summary = if (current.summary == snapshot.summary) current.summary else snapshot.summary,
+                    searchableTodos = if (current.searchableTodos == snapshot.searchableTodos) {
+                        current.searchableTodos
+                    } else {
+                        snapshot.searchableTodos
+                    },
+                    todayTodos = if (current.todayTodos == snapshot.todayTodos) current.todayTodos else snapshot.todayTodos,
+                    aiSummaryEnabled = snapshot.aiSummaryEnabled,
                     errorMessage = null,
                 )
             }
@@ -134,19 +157,25 @@ class HomeViewModel @Inject constructor(
                         )
                             .onFailure { /* fall back to local cache */ }
                     }
-                    Triple(
-                        todoRepository.fetchDashboardSummary(),
-                        todoRepository.fetchTodos(mode = TodoListMode.ALL),
-                        todoRepository.fetchTodos(mode = TodoListMode.TODAY),
+                    HomeSnapshot(
+                        summary = todoRepository.fetchDashboardSummary(),
+                        searchableTodos = todoRepository.fetchTodos(mode = TodoListMode.ALL),
+                        todayTodos = todoRepository.fetchTodos(mode = TodoListMode.TODAY),
+                        aiSummaryEnabled = settingsRepository.isAiSummaryEnabledSnapshot(),
                     )
-                }.onSuccess { (summary, todos, todayTodos) ->
+                }.onSuccess { snapshot ->
                     _uiState.update { current ->
                         val keepLoading = activeLoadingRefreshes > if (showLoading) 1 else 0
                         current.copy(
                             isLoading = keepLoading,
-                            summary = if (current.summary == summary) current.summary else summary,
-                            searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
-                            todayTodos = if (current.todayTodos == todayTodos) current.todayTodos else todayTodos,
+                            summary = if (current.summary == snapshot.summary) current.summary else snapshot.summary,
+                            searchableTodos = if (current.searchableTodos == snapshot.searchableTodos) {
+                                current.searchableTodos
+                            } else {
+                                snapshot.searchableTodos
+                            },
+                            todayTodos = if (current.todayTodos == snapshot.todayTodos) current.todayTodos else snapshot.todayTodos,
+                            aiSummaryEnabled = snapshot.aiSummaryEnabled,
                             errorMessage = null,
                         )
                     }
@@ -161,6 +190,56 @@ class HomeViewModel @Inject constructor(
                 }
             } finally {
                 if (showLoading) activeLoadingRefreshes = maxOf(activeLoadingRefreshes - 1, 0)
+            }
+        }
+    }
+
+    fun summarizeToday() {
+        val current = _uiState.value
+        if (current.isSummarizing) return
+        if (!current.aiSummaryEnabled) {
+            _uiState.update {
+                it.copy(summaryError = appContext.getString(R.string.todos_summary_admin_disabled))
+            }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                isSummarizing = true,
+                summaryText = null,
+                summarySource = null,
+                summaryGeneratedAt = null,
+                summaryError = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.summarizeTodos(mode = TodoListMode.TODAY)
+            }.onSuccess { response ->
+                _uiState.update {
+                    it.copy(
+                        isSummarizing = false,
+                        summaryText = response.summary,
+                        summarySource = response.source,
+                        summaryGeneratedAt = response.generatedAt,
+                        summaryError = null,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isSummarizing = false,
+                        summaryError = if (isLikelyConnectivityIssue(error)) {
+                            appContext.getString(R.string.todos_summary_offline_unavailable)
+                        } else {
+                            error.userFacingMessage(
+                                appContext,
+                                R.string.error_summarize_tasks_failed
+                            )
+                        },
+                    )
+                }
             }
         }
     }

@@ -109,9 +109,9 @@
     <string name="settings_appearance">Appearance</string>
     <string name="settings_reminders">Reminders</string>
     <string name="settings_feature_toggle">Feature toggle</string>
-    <string name="settings_ai_task_summary">AI task summary</string>
+    <string name="settings_ai_task_summary">Summary</string>
     <string name="settings_saving_admin">Saving admin setting…</string>
-    <string name="settings_ai_unavailable_title">AI Summary Unavailable</string>
+    <string name="settings_ai_unavailable_title">Summary unavailable</string>
     <string name="settings_default_reminder">Default reminder</string>
     <string name="settings_update_available_version">v%1$s available</string>
     <string name="settings_server_compatible">Compatible</string>
@@ -204,8 +204,9 @@
     <string name="todos_summary_title">Summary</string>
     <string name="todos_summary_close">Close summary</string>
     <string name="todos_summary_loading">Creating your task summary…</string>
-    <string name="todos_summary_admin_disabled">AI summary is disabled by admin</string>
+    <string name="todos_summary_admin_disabled">Summary is disabled by admin</string>
     <string name="todos_summary_modes_unavailable">Summary is available only for Today, Scheduled, All, and Priority</string>
+    <string name="todos_summary_offline_unavailable">No summary available while offline.</string>
     <string name="todos_list_settings">List settings</string>
     <string name="todos_save_list_settings">Save list settings</string>
     <string name="todos_delete_list_title">Delete list?</string>

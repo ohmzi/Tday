@@ -56,11 +56,15 @@ class CompletedTodoServiceImpl(
     }
 
     override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Int> {
-        val count = newSuspendedTransaction(Dispatchers.IO) {
-            val list = (fields["listID"] as? String)?.let { listId ->
+        val result = newSuspendedTransaction(Dispatchers.IO) {
+            val requestedListId = (fields["listID"] as? String)?.trim()?.takeIf { it.isNotEmpty() }
+            val list = requestedListId?.let { listId ->
                 Lists.selectAll().where {
                     (Lists.id eq listId) and (Lists.userID eq userId)
                 }.firstOrNull()
+            }
+            if (requestedListId != null && list == null) {
+                return@newSuspendedTransaction null
             }
             CompletedTodos.update({ (CompletedTodos.id eq id) and (CompletedTodos.userID eq userId) }) { stmt ->
                 fields["title"]?.let { stmt[CompletedTodos.title] = it as String }
@@ -70,13 +74,14 @@ class CompletedTodoServiceImpl(
                 fields["priority"]?.let { stmt[CompletedTodos.priority] = Priority.valueOf(it as String) }
                 (fields["due"] as? LocalDateTime)?.let { stmt[CompletedTodos.due] = it }
                 if (fields.containsKey("rrule")) stmt[CompletedTodos.rrule] = fields["rrule"] as? String
-                fields["listID"]?.let { listId ->
-                    stmt[CompletedTodos.listID] = listId as? String
+                if (fields.containsKey("listID")) {
+                    stmt[CompletedTodos.listID] = requestedListId
                     stmt[CompletedTodos.listName] = list?.get(Lists.name)
                     stmt[CompletedTodos.listColor] = list?.get(Lists.color)?.name
                 }
             }
         }
+        val count = result ?: return Either.Left(AppError.BadRequest("list not found", "listID"))
         if (count > 0) cache.invalidateCompletedCaches(userId)
         return count.right()
     }

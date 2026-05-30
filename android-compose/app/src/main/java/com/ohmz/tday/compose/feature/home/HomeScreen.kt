@@ -60,9 +60,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -80,12 +80,15 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -152,6 +155,7 @@ import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSheetContent
+import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
 import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
@@ -199,9 +203,11 @@ fun HomeScreen(
     onCreateTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
-    onCompleteTask: (todo: com.ohmz.tday.compose.core.model.TodoItem) -> Unit,
-    onDeleteTask: (todo: com.ohmz.tday.compose.core.model.TodoItem) -> Unit,
-    onUpdateTask: (todo: com.ohmz.tday.compose.core.model.TodoItem, payload: CreateTaskPayload) -> Unit,
+    onCompleteTask: (todo: TodoItem) -> Unit,
+    onDeleteTask: (todo: TodoItem) -> Unit,
+    onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
+    onSummarize: () -> Unit = {},
+    summaryAvailable: Boolean = true,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
     pullRefreshEnabled: Boolean = true,
@@ -231,6 +237,7 @@ fun HomeScreen(
     var searchResultsBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
+    var showSummarySheet by rememberSaveable { mutableStateOf(false) }
     var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     var lastHandledCreateTaskRequestKey by rememberSaveable {
         mutableIntStateOf(createTaskRequestKey)
@@ -303,9 +310,11 @@ fun HomeScreen(
         val now = Instant.now()
         uiState.searchableTodos.count { todo -> todo.due?.isBefore(now) == true }
     }
+    val canSummarizeToday =
+        summaryAvailable && uiState.aiSummaryEnabled && uiState.todayTodos.isNotEmpty()
     val dueFormatter = remember {
-        java.time.format.DateTimeFormatter.ofPattern("EEE h:mm a")
-            .withZone(java.time.ZoneId.systemDefault())
+        DateTimeFormatter.ofPattern("EEE h:mm a")
+            .withZone(ZoneId.systemDefault())
     }
     val searchResults = remember(normalizedSearchQuery, uiState.searchableTodos, listById) {
         if (normalizedSearchQuery.isBlank()) {
@@ -463,6 +472,12 @@ fun HomeScreen(
                             onOpenSettings = {
                                 closeSearch()
                                 onOpenSettings()
+                            },
+                            showSummaryAction = canSummarizeToday,
+                            onSummarize = {
+                                closeSearch()
+                                showSummarySheet = true
+                                onSummarize()
                             },
                         )
                     }
@@ -718,6 +733,19 @@ fun HomeScreen(
         )
     }
 
+    if (showSummarySheet) {
+        HomeSummaryBottomSheet(
+            isLoading = uiState.isSummarizing,
+            summaryText = uiState.summaryText,
+            errorMessage = if (summaryAvailable) {
+                uiState.summaryError
+            } else {
+                stringResource(R.string.todos_summary_offline_unavailable)
+            },
+            onDismiss = { showSummarySheet = false },
+        )
+    }
+
     editTargetTodo?.let { todo ->
         CreateTaskBottomSheet(
             lists = uiState.summary.lists,
@@ -752,6 +780,76 @@ fun HomeScreen(
                 }
             },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeSummaryBottomSheet(
+    isLoading: Boolean,
+    summaryText: String?,
+    errorMessage: String?,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val colorScheme = MaterialTheme.colorScheme
+
+    TdayModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            TdaySheetHeader(
+                title = stringResource(R.string.todos_summary_title),
+                leftIcon = Icons.Rounded.Close,
+                leftContentDescription = stringResource(R.string.todos_summary_close),
+                onLeftClick = onDismiss,
+                showConfirmAction = false,
+            )
+
+            if (isLoading) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Text(
+                        text = stringResource(R.string.todos_summary_loading),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (!summaryText.isNullOrBlank()) {
+                TdaySheetCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+                        text = summaryText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = colorScheme.onSurface,
+                    )
+                }
+            }
+
+            if (!errorMessage.isNullOrBlank()) {
+                Text(
+                    text = errorMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colorScheme.error,
+                )
+            }
+        }
     }
 }
 
@@ -1102,6 +1200,8 @@ private fun TopSearchBar(
     onSearchBarBoundsChanged: (Rect) -> Unit,
     onCreateList: () -> Unit,
     onOpenSettings: () -> Unit,
+    showSummaryAction: Boolean,
+    onSummarize: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -1125,9 +1225,10 @@ private fun TopSearchBar(
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val buttonSize = TdayDimens.FabSize
         val buttonGap = 8.dp
+        val actionCount = if (showSummaryAction) 3 else 2
         val collapsedSearchWidth = buttonSize
         val expandedSearchWidth = maxWidth.coerceAtLeast(buttonSize)
-        val collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
+        val collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
         val animatedSearchWidth by animateDpAsState(
             targetValue = if (searchExpanded) expandedSearchWidth else collapsedSearchWidth,
             label = "topSearchBarSearchWidth",
@@ -1174,6 +1275,14 @@ private fun TopSearchBar(
             horizontalArrangement = Arrangement.spacedBy(buttonGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (showSummaryAction) {
+                PressableIconButton(
+                    icon = Icons.Rounded.AutoAwesome,
+                    contentDescription = stringResource(R.string.todos_summarize),
+                    tint = colorScheme.onSurface,
+                    onClick = onSummarize,
+                )
+            }
             PressableIconButton(
                 icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
                 contentDescription = stringResource(R.string.action_create_list),

@@ -3,8 +3,10 @@ package com.ohmz.tday.routes
 import arrow.core.Either
 import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
+import com.ohmz.tday.domain.validateOptionalEnumValue
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.services.CompletedTodoService
+import com.ohmz.tday.shared.model.Priority
 import com.ohmz.tday.shared.model.DeleteCompletedTodoRequest
 import com.ohmz.tday.shared.model.UpdateCompletedTodoRequest
 import io.ktor.server.request.*
@@ -42,7 +44,10 @@ fun Route.completedTodoRoutes() {
                 val fields = mutableMapOf<String, Any?>()
                 body.title?.let { fields["title"] = it }
                 body.description?.let { fields["description"] = it }
-                body.priority?.let { fields["priority"] = it }
+                when (val priority = validateOptionalEnumValue<Priority>(body.priority, "priority")) {
+                    is Either.Left -> return@withAuth Either.Left(priority.value)
+                    is Either.Right -> priority.value?.let { fields["priority"] = it }
+                }
                 val due = body.due
                 if (due != null) {
                     if (due.isBlank()) {
