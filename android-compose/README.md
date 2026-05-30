@@ -75,6 +75,17 @@ Server URLs are normalized and persisted only after successful authenticated set
 credentials use Android Credential Manager where available, while real login credentials and cookies
 are stored through encrypted local stores.
 
+## Version Compatibility
+
+- `android-compose/app/build.gradle.kts` reads root `../version.json` for `versionName` and computes
+  `versionCode`.
+- Server Mode sends `X-Tday-Client: android-compose` and `X-Tday-App-Version`.
+- When `compatibility.updateRequired` is true, Android and the backend use exact version matching.
+  The app shows installed/server/latest version state in Settings and blocks Server Mode with
+  update/server-update guidance when versions differ.
+- Do not edit Android version fields directly. Update `version.json`, then run
+  `node scripts/version.mjs sync` and `node scripts/version.mjs check` from the repo root.
+
 ## Persistence and Sync
 
 - Room stores todos, floaters, lists, floater lists, completed records, pending mutations, and sync

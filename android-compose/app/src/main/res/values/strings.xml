@@ -272,6 +272,7 @@
     <string name="offline_banner_pending_many">%1$d changes waiting to sync</string>
     <string name="error_auth_expired">Session expired. Please sign in again.</string>
     <string name="error_app_outdated">This version of the app is out of date. Please update to continue.</string>
+    <string name="error_server_outdated">The server needs to be updated before this app can continue.</string>
     <string name="error_server">Server error. Please try again later.</string>
     <string name="error_permission_denied">You don\'t have permission to do that.</string>
     <string name="error_not_found">The requested item was not found.</string>
@@ -338,6 +339,11 @@
     <string name="release_installed_label">Installed</string>
     <string name="release_latest_label">Latest</string>
     <string name="release_update_available">Update Available</string>
+    <string name="release_version_mismatch">Version Mismatch</string>
+    <string name="release_app_update_required_summary">The server requires v%1$s. Update the app to continue.</string>
+    <string name="release_server_update_required_summary">This app requires the server to be on v%1$s, but the server is on v%2$s.</string>
+    <string name="release_update_ready_version">Version %1$s is ready to install.</string>
+    <string name="release_update_ready_generic">A newer version is ready to install.</string>
     <string name="release_up_to_date">Latest</string>
     <string name="release_up_to_date_message">You\'re running the latest version</string>
     <string name="release_published">Published %1$s</string>

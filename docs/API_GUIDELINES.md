@@ -298,6 +298,14 @@ Floater lists group floaters.
 |--------|------|---------|------|
 | GET | `/api/mobile/probe` | Server discovery, compatibility/version metadata, optional encrypted probe payload | Public |
 
+When exact compatibility is enabled, Android and iOS send `X-Tday-Client` and
+`X-Tday-App-Version` on API requests. The backend leaves `/api/mobile/probe`,
+web requests, and requests without mobile client headers unaffected, but rejects
+mismatched mobile API requests with:
+
+- `426 Upgrade Required` + `reason: "app_update_required"` when the app is older than the server-compatible version.
+- `409 Conflict` + `reason: "server_update_required"` when the app is newer than the server-compatible version.
+
 ### App Association Files
 
 | Method | Path | Purpose | Auth |

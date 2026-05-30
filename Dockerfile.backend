@@ -12,6 +12,7 @@ COPY gradle/wrapper ./gradle/wrapper
 RUN chmod +x gradlew
 COPY docker/settings.gradle.kts settings.gradle.kts
 COPY docker/build.gradle.kts build.gradle.kts
+COPY version.json version.json
 COPY tday-backend/gradle.properties tday-backend/gradle.properties
 COPY tday-backend/build.gradle.kts tday-backend/build.gradle.kts
 COPY tday-backend/settings.gradle.kts tday-backend/settings.gradle.kts

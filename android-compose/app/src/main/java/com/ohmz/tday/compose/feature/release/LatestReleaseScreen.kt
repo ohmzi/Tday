@@ -463,18 +463,26 @@ private fun ReleaseOverviewCard(
         else -> colorScheme.onSurface
     }
     val title = when {
-        isIncompatible -> "Version Mismatch"
+        isIncompatible -> stringResource(R.string.release_version_mismatch)
         hasUpdate -> stringResource(R.string.release_update_available)
         else -> stringResource(R.string.release_up_to_date)
     }
     val summary = when (versionCheckResult) {
         is VersionCheckResult.AppUpdateRequired ->
-            "The server requires v${versionCheckResult.requiredVersion}. Update the app to continue."
+            stringResource(
+                R.string.release_app_update_required_summary,
+                versionCheckResult.requiredVersion,
+            )
         is VersionCheckResult.ServerUpdateRequired ->
-            "This app requires the server to be on v$currentVersion, but the server is on v${versionCheckResult.serverVersion}."
+            stringResource(
+                R.string.release_server_update_required_summary,
+                currentVersion,
+                versionCheckResult.serverVersion,
+            )
         else -> if (hasUpdate) {
-            latestRelease?.tagName?.let { "Version $it is ready to install." }
-                ?: "A newer version is ready to install."
+            latestRelease?.tagName?.let {
+                stringResource(R.string.release_update_ready_version, it)
+            } ?: stringResource(R.string.release_update_ready_generic)
         } else {
             stringResource(R.string.release_up_to_date_message)
         }
@@ -529,7 +537,7 @@ private fun ReleaseOverviewCard(
 
 @Composable
 private fun ReleaseSurfaceCard(
-    borderColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+    borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -555,7 +563,7 @@ private fun InstalledVersionCard(
     hasUpdate: Boolean,
     currentRelease: GitHubRelease?,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
+    MaterialTheme.colorScheme
     val currentChangelog = parseChangelog(currentRelease?.body)
 
     ReleaseSurfaceCard {
@@ -614,7 +622,7 @@ private fun UpdateAvailableCard(
 @Composable
 private fun ReleaseSectionTitle(
     title: String,
-    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    color: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Text(
         text = title,
@@ -966,8 +974,8 @@ private fun ReleaseBrowserButton(
 @Composable
 private fun VersionBadge(
     text: String,
-    backgroundColor: androidx.compose.ui.graphics.Color,
-    textColor: androidx.compose.ui.graphics.Color,
+    backgroundColor: Color,
+    textColor: Color,
 ) {
     Text(
         text = text,
@@ -985,7 +993,7 @@ private fun VersionBadge(
 private fun ReleaseVersionLine(
     label: String,
     version: String,
-    tint: androidx.compose.ui.graphics.Color,
+    tint: Color,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 

@@ -133,6 +133,7 @@ Tday/
 │   ├── TdayWidget/            # Widget target and snapshots
 │   └── Tests/                 # iOS test target
 ├── scripts/                   # Git hooks, version sync, operational helpers
+├── version.json               # Global app/server version and compatibility manifest
 ├── docker/                    # Container runtime helper config
 ├── docs/                      # Product, architecture, data, coding, testing, deployment
 ├── Dockerfile.backend         # Multi-stage Docker build (Vite + Ktor)

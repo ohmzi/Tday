@@ -17,7 +17,10 @@ func checkVersionCompatibility(payload: ProbeCompatibilityPayload?) -> VersionCh
     let localVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
     let cmp = AppViewModel.compareVersions(localVersion, payload.appVersion)
 
-    guard payload.updateRequired else { return .compatible }
+    guard payload.updateRequired,
+          (payload.compatibilityMode ?? "exact").caseInsensitiveCompare("exact") == .orderedSame else {
+        return .compatible
+    }
 
     if cmp < 0 {
         return .appUpdateRequired(requiredVersion: payload.appVersion)

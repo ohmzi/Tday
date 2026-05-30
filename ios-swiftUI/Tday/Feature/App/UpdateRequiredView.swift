@@ -5,6 +5,10 @@ struct UpdateRequiredView: View {
     let onRetry: () -> Void
     @Environment(\.tdayColors) private var colors
 
+    private var updateURL: URL? {
+        AppViewModel.bundleUpdateURL()
+    }
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.6).ignoresSafeArea()
@@ -25,12 +29,17 @@ struct UpdateRequiredView: View {
                         .foregroundStyle(colors.onSurfaceVariant)
                         .multilineTextAlignment(.center)
 
-                    Button("Download Update") {
-                        if let url = URL(string: "https://github.com/ohmzi/Tday/releases/tag/v\(requiredVersion)") {
-                            UIApplication.shared.open(url)
+                    if let updateURL {
+                        Button("Open Update") {
+                            UIApplication.shared.open(updateURL)
                         }
+                        .buttonStyle(.borderedProminent)
+                    } else {
+                        Text("No update link is configured for this build. Ask your administrator for the App Store or TestFlight update.")
+                            .font(.tdayRounded(.footnote, weight: .bold))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                            .multilineTextAlignment(.center)
                     }
-                    .buttonStyle(.borderedProminent)
 
                     Button("Retry") {
                         onRetry()

@@ -866,10 +866,27 @@ class AppViewModel @Inject constructor(
         error: Throwable,
         suppressAuthenticationExpired: Boolean = false,
     ) {
+        if (isVersionGateError(error)) {
+            viewModelScope.launch { appVersionManager.refreshServerCompatibility() }
+            return
+        }
         if (shouldTreatSyncFailureAsOffline(error, suppressAuthenticationExpired)) return
         snackbarManager.showError(error.userFacingMessage(appContext)) {
             if (error !is ApiCallException || error.statusCode != 401) syncNow()
         }
+    }
+
+    private fun isVersionGateError(error: Throwable): Boolean {
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is ApiCallException) {
+                return current.statusCode == 426 ||
+                        current.reason == "app_update_required" ||
+                        current.reason == "server_update_required"
+            }
+            current = current.cause?.takeIf { it !== current }
+        }
+        return false
     }
 
     private fun startRealtimeListener() {

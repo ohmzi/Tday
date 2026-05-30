@@ -4,6 +4,7 @@ import CryptoKit
 struct ProbeCompatibilityPayload: Codable, Equatable {
     let appVersion: String
     let updateRequired: Bool
+    let compatibilityMode: String?
 }
 
 enum ProbeDecryptor {

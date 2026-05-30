@@ -153,9 +153,10 @@ describe("dependency and configuration hygiene", () => {
       expect(content).toContain("needs: lint-and-test");
     });
 
-    it("release workflow should read version from tday-web/package.json", () => {
+    it("release workflow should read version from version.json", () => {
       const content = readSource(path.join(workflowDir, "release.yml"));
-      expect(content).toContain("tday-web/package.json");
+      expect(content).toContain("version.json");
+      expect(content).toContain("scripts/version.mjs check");
     });
 
     it("release workflow should build from Dockerfile.backend", () => {
@@ -209,18 +210,41 @@ describe("dependency and configuration hygiene", () => {
   });
 
   describe("version synchronization", () => {
-    function packageVersion(): string {
-      const pkg = readJSON(path.join(ROOT, "package.json")) as {
+    function manifestVersion(): string {
+      const manifest = readJSON(path.join(MONO, "version.json")) as {
         version: string;
       };
-      return pkg.version;
+      return manifest.version;
     }
 
-    it("tday-web package.json version should be a valid semver", () => {
-      expect(packageVersion()).toMatch(/^\d+\.\d+\.\d+$/);
+    it("root version manifest should be a valid exact compatibility manifest", () => {
+      const manifest = readJSON(path.join(MONO, "version.json")) as {
+        version?: string;
+        compatibility?: { mode?: string; updateRequired?: boolean };
+        ios?: { buildNumber?: number; updateUrl?: string };
+      };
+
+      expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(manifest.compatibility?.mode).toBe("exact");
+      expect(typeof manifest.compatibility?.updateRequired).toBe("boolean");
+      expect(Number.isInteger(manifest.ios?.buildNumber)).toBe(true);
+      expect(typeof manifest.ios?.updateUrl).toBe("string");
     });
 
-    it("Android build.gradle.kts should derive version from package.json", () => {
+    it("web package metadata should mirror version.json", () => {
+      const version = manifestVersion();
+      const pkg = readJSON(path.join(ROOT, "package.json")) as { version?: string };
+      const lock = readJSON(path.join(ROOT, "package-lock.json")) as {
+        version?: string;
+        packages?: Record<string, { version?: string }>;
+      };
+
+      expect(pkg.version).toBe(version);
+      expect(lock.version).toBe(version);
+      expect(lock.packages?.[""]?.version).toBe(version);
+    });
+
+    it("Android build.gradle.kts should derive version from version.json", () => {
       const gradlePath = path.join(
         MONO,
         "android-compose",
@@ -229,13 +253,22 @@ describe("dependency and configuration hygiene", () => {
       );
       if (existsSync(gradlePath)) {
         const content = readSource(gradlePath);
-        expect(content).toContain("package.json");
+        expect(content).toContain("version.json");
         expect(content).toContain("projectVersion");
       }
     });
 
-    it("iOS checked-in version mirrors should match package.json", () => {
-      const version = packageVersion();
+    it("backend build.gradle.kts should derive artifact version from version.json", () => {
+      const content = readSource(path.join(MONO, "tday-backend", "build.gradle.kts"));
+      expect(content).toContain("version.json");
+      expect(content).not.toMatch(/version\s*=\s*"[0-9]+\.[0-9]+\.[0-9]+"/);
+    });
+
+    it("iOS checked-in version mirrors should match version.json", () => {
+      const version = manifestVersion();
+      const manifest = readJSON(path.join(MONO, "version.json")) as {
+        ios?: { buildNumber?: number; updateUrl?: string };
+      };
       const infoPlist = readSource(
         path.join(MONO, "ios-swiftUI", "Tday", "Info.plist"),
       );
@@ -246,21 +279,34 @@ describe("dependency and configuration hygiene", () => {
 
       expect(infoPlist).toContain(`<key>CFBundleShortVersionString</key>`);
       expect(infoPlist).toContain(`<string>${version}</string>`);
+      expect(infoPlist).toContain(`<key>TdayUpdateURL</key>`);
+      expect(infoPlist).toContain(`<string>${manifest.ios?.updateUrl ?? ""}</string>`);
       expect(projectYml).toContain(`MARKETING_VERSION: ${version}`);
+      expect(projectYml).toContain(`CURRENT_PROJECT_VERSION: ${manifest.ios?.buildNumber}`);
       expect(pbxproj.match(/MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);/g)).toEqual([
         `MARKETING_VERSION = ${version};`,
         `MARKETING_VERSION = ${version};`,
       ]);
+      expect(pbxproj.match(/CURRENT_PROJECT_VERSION = \d+;/g)).toEqual([
+        `CURRENT_PROJECT_VERSION = ${manifest.ios?.buildNumber};`,
+        `CURRENT_PROJECT_VERSION = ${manifest.ios?.buildNumber};`,
+      ]);
     });
 
-    it("backend compatibility examples should match package.json", () => {
-      const version = packageVersion();
+    it("backend compatibility examples should match version.json", () => {
+      const version = manifestVersion();
+      const manifest = readJSON(path.join(MONO, "version.json")) as {
+        compatibility?: { updateRequired?: boolean };
+      };
       for (const envPath of [
         path.join(MONO, ".env.example"),
         path.join(MONO, "tday-backend", ".env.example"),
       ]) {
         const content = readSource(envPath);
         expect(content).toMatch(new RegExp(`^TDAY_APP_VERSION=${version}$`, "m"));
+        expect(content).toMatch(
+          new RegExp(`^TDAY_UPDATE_REQUIRED=${manifest.compatibility?.updateRequired}$`, "m"),
+        );
       }
     });
 
@@ -270,7 +316,9 @@ describe("dependency and configuration hygiene", () => {
       };
       const postversion = pkg.scripts?.postversion ?? "";
 
-      expect(postversion).toContain("scripts/sync-ios-version.sh");
+      expect(postversion).toContain("scripts/version.mjs");
+      expect(postversion).toContain("version.json");
+      expect(postversion).toContain("package-lock.json");
       expect(postversion).toContain("ios-swiftUI/Tday/Info.plist");
       expect(postversion).toContain("ios-swiftUI/project.yml");
       expect(postversion).toContain("ios-swiftUI/TdayApp.xcodeproj/project.pbxproj");

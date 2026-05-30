@@ -14,6 +14,12 @@ func userFacingMessage(for error: Error, fallback: String = "Something went wron
     }
 
     if let apiError = error as? APIError, let code = apiError.statusCode {
+        if code == 426 || apiError.reason == "app_update_required" {
+            return "This version of the app is out of date. Please update to continue."
+        }
+        if apiError.reason == "server_update_required" {
+            return "The server needs to be updated before this app can continue."
+        }
         switch code {
         case 401:
             return "Session expired. Please sign in again."

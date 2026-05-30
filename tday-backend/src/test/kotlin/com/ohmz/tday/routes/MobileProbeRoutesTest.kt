@@ -44,4 +44,29 @@ class MobileProbeRoutesTest {
         assertTrue(payload.serverTime.isNotBlank())
         assertNull(payload.encryptedCompatibility)
     }
+
+    @Test
+    fun `probe returns encrypted compatibility payload when version enforcement is configured`() = testApplication {
+        application {
+            configureSerialization()
+
+            routing {
+                route("/api") {
+                    mobileProbeRoutes(
+                        testAppConfig(
+                            probeAppVersion = "1.44.0",
+                            probeUpdateRequired = true,
+                            probeEncryptionKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                        ),
+                    )
+                }
+            }
+        }
+
+        val response = client.get("/api/mobile/probe")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val payload = json.decodeFromString<MobileProbeResponse>(response.bodyAsText())
+        assertTrue(payload.encryptedCompatibility?.isNotBlank() == true)
+    }
 }
