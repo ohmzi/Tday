@@ -66,37 +66,59 @@ final class SystemCredentialService: SystemCredentialServicing {
     }
 
     func requestSavedCredential() async -> SystemCredential? {
+        credentialBreadcrumb(operation: "credential.request", kind: "login", result: "start")
         let session = PasswordAuthorizationSession()
         activeAuthorizationSession = session
         let credential = await session.requestPasswordCredential()
             .flatMap { makeLoginCredential(user: $0.user, password: $0.password) }
         activeAuthorizationSession = nil
+        credentialBreadcrumb(
+            operation: "credential.result",
+            kind: "login",
+            result: credential == nil ? "empty" : "filled"
+        )
         return credential
     }
 
     func requestSavedServerURL() async -> String? {
-        secureStore.loadServerURLSuggestion()?.absoluteString
+        credentialBreadcrumb(operation: "credential.request", kind: "server_url", result: "start")
+        let url = secureStore.loadServerURLSuggestion()?.absoluteString
+        credentialBreadcrumb(
+            operation: "credential.result",
+            kind: "server_url",
+            result: url == nil ? "empty" : "filled"
+        )
+        return url
     }
 
     func offerSaveOrUpdateCredential(_ credential: SystemCredential) async -> SystemCredentialSaveResult {
         guard !credential.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !credential.password.isEmpty else {
+            credentialBreadcrumb(operation: "credential.save", kind: "login", result: "skipped")
             return .skipped
         }
 
+        credentialBreadcrumb(operation: "credential.save", kind: "login", result: "start")
         if #available(iOS 26.2, *) {
-            return await saveWithCredentialDataManager(credential)
+            let result = await saveWithCredentialDataManager(credential)
+            credentialBreadcrumb(operation: "credential.save", kind: "login", result: telemetryResult(result))
+            return result
         } else {
-            return await saveWithSharedWebCredential(credential)
+            let result = await saveWithSharedWebCredential(credential)
+            credentialBreadcrumb(operation: "credential.save", kind: "login", result: telemetryResult(result))
+            return result
         }
     }
 
     func offerSaveOrUpdateServerURL(_ rawURL: String) async -> SystemCredentialSaveResult {
         guard let normalizedURL = secureStore.normalizeServerURL(rawURL) else {
+            credentialBreadcrumb(operation: "credential.save", kind: "server_url", result: "skipped")
             return .skipped
         }
 
+        credentialBreadcrumb(operation: "credential.save", kind: "server_url", result: "start")
         secureStore.saveServerURLSuggestion(normalizedURL)
+        credentialBreadcrumb(operation: "credential.save", kind: "server_url", result: "saved")
         return .saved
     }
 
@@ -150,6 +172,33 @@ final class SystemCredentialService: SystemCredentialServicing {
 
                 continuation.resume(returning: .failed("Apple Passwords could not save this Tday login. Check that \(host) is associated with the Tday iOS app."))
             }
+        }
+    }
+
+    private func credentialBreadcrumb(
+        operation: String,
+        kind: String,
+        result: String
+    ) {
+        TdayTelemetry.addBreadcrumb(
+            operation,
+            data: [
+                "kind": kind,
+                "result": result
+            ]
+        )
+    }
+
+    private func telemetryResult(_ result: SystemCredentialSaveResult) -> String {
+        switch result {
+        case .saved:
+            return "saved"
+        case .skipped:
+            return "skipped"
+        case .cancelled:
+            return "cancelled"
+        case .failed:
+            return "failed"
         }
     }
 }

@@ -1,10 +1,11 @@
 package com.ohmz.tday.plugins
 
+import com.ohmz.tday.observability.TdayObservability
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.request.httpMethod
-import io.ktor.server.request.uri
+import io.ktor.server.request.path
 import org.slf4j.event.Level
 
 fun Application.configureCallLogging() {
@@ -13,9 +14,9 @@ fun Application.configureCallLogging() {
         format { call ->
             val status = call.response.status()?.value ?: "?"
             val method = call.request.httpMethod.value
-            val uri = call.request.uri
+            val route = TdayObservability.sanitizePath(call.request.path())
             val contentType = call.response.headers["Content-Type"] ?: "-"
-            "$method $uri -> $status ($contentType)"
+            "$method $route -> $status ($contentType)"
         }
     }
 }

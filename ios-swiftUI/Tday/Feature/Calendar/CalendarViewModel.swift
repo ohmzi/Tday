@@ -16,6 +16,7 @@ final class CalendarViewModel {
 
     init(container: AppContainer) {
         self.container = container
+        TdayTelemetry.addBreadcrumb("calendar.load", data: calendarTelemetryData())
         hydrateFromCache()
         observeCacheChanges()
     }
@@ -25,6 +26,7 @@ final class CalendarViewModel {
     }
 
     func refresh() async {
+        TdayTelemetry.addBreadcrumb("calendar.refresh", data: calendarTelemetryData())
         isLoading = true
         let result = await container.syncAndRefresh(
             force: true,
@@ -39,6 +41,7 @@ final class CalendarViewModel {
     }
 
     func createTask(_ payload: CreateTaskPayload) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.create", data: calendarTelemetryData(payload: payload))
         do {
             try await container.createTodo(payload)
             hydrateFromCache()
@@ -48,6 +51,7 @@ final class CalendarViewModel {
     }
 
     func complete(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.complete", data: calendarTelemetryData())
         do {
             try await container.completeTodo(todo)
             hydrateFromCache()
@@ -57,6 +61,7 @@ final class CalendarViewModel {
     }
 
     func uncomplete(_ item: CompletedItem) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.restore", data: calendarTelemetryData())
         do {
             try await container.completedRepository.uncomplete(item)
             hydrateFromCache()
@@ -66,6 +71,7 @@ final class CalendarViewModel {
     }
 
     func updateTask(_ todo: TodoItem, payload: CreateTaskPayload) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.update", data: calendarTelemetryData(payload: payload))
         do {
             try await container.todoRepository.updateTodo(todo, payload: payload)
             hydrateFromCache()
@@ -82,6 +88,9 @@ final class CalendarViewModel {
             return
         }
 
+        var telemetryData = calendarTelemetryData()
+        telemetryData["scope"] = scope.rawValue
+        TdayTelemetry.addBreadcrumb("calendar.task.reschedule", data: telemetryData)
         do {
             try await container.todoRepository.moveTodo(
                 todo.repositoryTargetForReschedule(scope: scope),
@@ -94,6 +103,7 @@ final class CalendarViewModel {
     }
 
     func delete(_ todo: TodoItem) async {
+        TdayTelemetry.addBreadcrumb("calendar.task.delete", data: calendarTelemetryData())
         do {
             try await container.todoRepository.deleteTodo(todo)
             hydrateFromCache()
@@ -121,5 +131,20 @@ final class CalendarViewModel {
                 }
             }
         }
+    }
+
+    private func calendarTelemetryData(payload: CreateTaskPayload? = nil) -> [String: Any] {
+        var data: [String: Any] = [
+            "surface": "calendar",
+            "scheduled_items": items.count,
+            "completed_items": completedItems.count
+        ]
+        if let payload {
+            data["has_due"] = payload.due != nil
+            data["has_repeat"] = !(payload.rrule ?? "").isEmpty
+            data["has_list"] = !(payload.listId ?? "").isEmpty
+            data["has_description"] = !(payload.description ?? "").isEmpty
+        }
+        return data
     }
 }
