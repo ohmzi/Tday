@@ -728,6 +728,26 @@ private struct ReleaseOverviewCard: View {
         }
     }
 
+    private var serverVersionText: String {
+        if let backendVersion = viewModel.backendVersion {
+            return "v\(backendVersion)"
+        }
+        if viewModel.isLocalMode {
+            return "Local Mode"
+        }
+        if viewModel.serverURL == nil {
+            return "Not connected"
+        }
+        return "Unavailable"
+    }
+
+    private var serverVersionTint: Color {
+        guard viewModel.backendVersion != nil else {
+            return colors.onSurface.opacity(0.58)
+        }
+        return viewModel.versionCheckResult == .compatible ? Color.green : colors.error
+    }
+
     var body: some View {
         ReleaseSurfaceCard(borderColor: accent.opacity(isIncompatible || viewModel.hasUpdate ? 0.12 : 0.05)) {
             ReleaseSectionTitle(title, color: accent)
@@ -741,18 +761,16 @@ private struct ReleaseOverviewCard: View {
             )
 
             ReleaseVersionLine(
+                label: "Server",
+                version: serverVersionText,
+                tint: serverVersionTint
+            )
+
+            ReleaseVersionLine(
                 label: viewModel.hasUpdate ? "Installed" : "Installed Version",
                 version: "v\(viewModel.currentVersionName)",
                 tint: colors.primary
             )
-
-            if let backendVersion = viewModel.backendVersion {
-                ReleaseVersionLine(
-                    label: "Server",
-                    version: "v\(backendVersion)",
-                    tint: viewModel.versionCheckResult == .compatible ? Color.green : colors.error
-                )
-            }
 
             if viewModel.hasUpdate, let latestRelease = viewModel.latestRelease {
                 ReleaseVersionLine(
