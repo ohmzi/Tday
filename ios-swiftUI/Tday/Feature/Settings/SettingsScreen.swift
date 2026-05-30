@@ -732,9 +732,6 @@ private struct ReleaseOverviewCard: View {
         if let backendVersion = viewModel.backendVersion {
             return "v\(backendVersion)"
         }
-        if viewModel.isLocalMode {
-            return "Local Mode"
-        }
         if viewModel.serverURL == nil {
             return "Not connected"
         }
@@ -760,11 +757,13 @@ private struct ReleaseOverviewCard: View {
                 publishedAt: viewModel.latestRelease?.publishedAt ?? viewModel.currentRelease?.publishedAt
             )
 
-            ReleaseVersionLine(
-                label: "Server",
-                version: serverVersionText,
-                tint: serverVersionTint
-            )
+            if !viewModel.isLocalMode {
+                ReleaseVersionLine(
+                    label: "Server",
+                    version: serverVersionText,
+                    tint: serverVersionTint
+                )
+            }
 
             ReleaseVersionLine(
                 label: viewModel.hasUpdate ? "Installed" : "Installed Version",

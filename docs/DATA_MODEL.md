@@ -31,6 +31,14 @@ This document describes the durable and local data structures that define T'Day.
 | File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
 | Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
 
+## Mobile Probe Contract
+
+`MobileProbeResponse` is the public server-discovery DTO used before a mobile client signs in. It
+includes `service`, probe protocol `version`, `serverTime`, optional plain `appVersion`, and optional
+`encryptedCompatibility`. Android and iOS use `appVersion` to display the server release version on
+the App Version screen when the backend is configured for release metadata but encrypted
+compatibility is not available.
+
 ## Scheduling Rules
 
 Scheduled tasks and floaters are intentionally different:
