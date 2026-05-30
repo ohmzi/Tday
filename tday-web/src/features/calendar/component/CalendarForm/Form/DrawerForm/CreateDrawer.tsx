@@ -17,11 +17,11 @@ import {
     DrawerClose,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { DateDrawerMenu } from "../../FormFields/Drawers/DateDrawer/DateDrawerMenu";
-import RepeatDrawerMenu from "../../FormFields/Drawers/RepeatDrawer/RepeatDrawerMenu";
+import { DateDrawerMenu } from "@/features/calendar/component/CalendarForm/FormFields/Drawers/DateDrawer/DateDrawerMenu";
+import RepeatDrawerMenu from "@/features/calendar/component/CalendarForm/FormFields/Drawers/RepeatDrawer/RepeatDrawerMenu";
 import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
-import ConfirmCancelEditDrawer from "../../../ConfirmationModals/ConfirmCancelEditDrawer";
-import ListDrawer from "../../FormFields/Drawers/ListDrawer/ListDrawer";
+import ConfirmCancelEditDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEditDrawer";
+import ListDrawer from "@/features/calendar/component/CalendarForm/FormFields/Drawers/ListDrawer/ListDrawer";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import ListDot from "@/components/ListDot";
 import NLPTitleInput from "@/components/todo/component/TodoForm/NLPTitleInput";

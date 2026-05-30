@@ -10,7 +10,9 @@ import com.ohmz.tday.compose.core.data.auth.SystemCredentialSaveResult
 import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
 import com.ohmz.tday.compose.core.model.AuthResult
 import com.ohmz.tday.compose.core.ui.SnackbarManager
+import com.ohmz.tday.compose.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +34,7 @@ class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val systemCredentialService: SystemCredentialServicing,
     private val snackbarManager: SnackbarManager,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -118,7 +121,7 @@ class AuthViewModel @Inject constructor(
                             isLoading = false,
                             pendingApproval = true,
                             errorMessage = null,
-                            infoMessage = "Account pending admin approval.",
+                            infoMessage = appContext.getString(R.string.auth_pending_admin_approval),
                         )
                     }
                 }
@@ -214,7 +217,7 @@ class AuthViewModel @Inject constructor(
         )
         if (result == SystemCredentialSaveResult.FAILED) {
             snackbarManager.showError(
-                "Android Password Manager could not save this server URL. Check that a password manager is enabled.",
+                appContext.getString(R.string.auth_password_manager_save_server_url_failed),
             )
         }
     }
@@ -222,7 +225,7 @@ class AuthViewModel @Inject constructor(
     private fun handleCredentialSaveResult(result: SystemCredentialSaveResult) {
         if (result == SystemCredentialSaveResult.FAILED) {
             snackbarManager.showError(
-                "Android Password Manager could not save this login. Check that a password manager is enabled.",
+                appContext.getString(R.string.auth_password_manager_save_login_failed),
             )
         }
     }
@@ -234,7 +237,7 @@ class AuthViewModel @Inject constructor(
             lower.contains("invalid email or password") ||
                     lower.contains("incorrect email or password") ||
                     lower.contains("invalid credentials") ->
-                "Incorrect email or password"
+                appContext.getString(R.string.auth_error_incorrect_credentials)
 
             lower.contains("127.0.0.1") ||
                     lower.contains("localhost") ||
@@ -250,17 +253,15 @@ class AuthViewModel @Inject constructor(
                     lower.contains("gateway timeout") ||
                     lower.contains("origin unreachable") ||
                     lower.contains("web server is down") ->
-                SERVER_UNREACHABLE_MESSAGE
+                serverUnreachableMessage
 
             lower.contains("serial name") || lower.contains("serializationexception") ||
                     lower.contains("required for type") ->
-                "This version of the app is out of date. Please update to continue."
-            else -> "Something went wrong. Please try again."
+                appContext.getString(R.string.error_app_outdated)
+            else -> appContext.getString(R.string.error_generic)
         }
     }
 
-    private companion object {
-        const val SERVER_UNREACHABLE_MESSAGE =
-            "Cannot reach server. Check your server URL and try again."
-    }
+    private val serverUnreachableMessage: String
+        get() = appContext.getString(R.string.auth_error_server_unreachable)
 }

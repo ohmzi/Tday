@@ -2,10 +2,8 @@ package com.ohmz.tday.compose.feature.completed
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,29 +31,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.BorderColor
-import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Flight
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.LocalHospital
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,29 +51,27 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -102,15 +84,44 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
-import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
+import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
+import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
+import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
+import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private val CompletedTimelineSameDateTaskSpacing = 2.dp
+private val CompletedTimelineDateGroupSpacing = 6.dp
+private val CompletedTimelineSectionTopSpacing = 6.dp
+private val CompletedTimelineHeaderBodySpacing = 2.dp
+private val CompletedTimelineCollapsedSectionSpacing = 4.dp
+private val CompletedSwipeRowHeight = 56.dp
+private const val COMPLETED_RESTORE_STEP_MS = 180L
+private const val COMPLETED_RESTORE_FADE_MS = 260L
+
+private fun completedTaskBottomSpacing(
+    itemIndex: Int,
+    lastIndex: Int,
+    showDateDivider: Boolean,
+) = if (showDateDivider || itemIndex == lastIndex) {
+    CompletedTimelineDateGroupSpacing
+} else {
+    CompletedTimelineSameDateTaskSpacing
+}
 
 private enum class CompletedRestorePhase {
     Completed,
@@ -134,85 +145,24 @@ fun CompletedScreen(
     val timelineSections = remember(uiState.items) {
         buildCompletedTimelineSections(uiState.items)
     }
-    val density = LocalDensity.current
-    val maxCollapsePx = with(density) { COMPLETED_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    var headerCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val collapseProgressTarget = if (maxCollapsePx > 0f) {
-        (headerCollapsePx / maxCollapsePx).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    val nestedScrollConnection = remember(listState, maxCollapsePx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val deltaY = available.y
-                if (deltaY < 0f) {
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = next - previous
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, -consumed)
-                    }
-                    return Offset.Zero
-                }
-
-                if (deltaY > 0f) {
-                    val isListAtTop =
-                        listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                    if (!isListAtTop) return Offset.Zero
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = previous - next
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, consumed)
-                    }
-                }
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                val isListAtTop =
-                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && !isListAtTop) return Velocity.Zero
-                val snapped = snapTitleCollapsePx(
-                    currentPx = headerCollapsePx,
-                    maxPx = maxCollapsePx,
-                    velocityY = available.y,
-                )
-                if (snapped == headerCollapsePx) return Velocity.Zero
-                headerCollapsePx = snapped
-                return if (available.y == 0f) Velocity.Zero else available
-            }
-        }
-    }
-    val collapseProgress by animateFloatAsState(
-        targetValue = collapseProgressTarget,
+    val titleScrollBehavior = rememberLazyListCollapsingTitleScrollBehavior(
+        listState = listState,
+        maxCollapseDistance = COMPLETED_TITLE_COLLAPSE_DISTANCE_DP.dp,
         label = "completedTitleCollapseProgress",
     )
-    LaunchedEffect(
-        listState.isScrollInProgress,
-        headerCollapsePx,
-        maxCollapsePx,
-    ) {
-        if (listState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
-            return@LaunchedEffect
-        }
-        val isListAtTop =
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        headerCollapsePx = if (isListAtTop) {
-            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
-        } else {
-            maxCollapsePx
-        }
-    }
     var collapsedSectionKeys by rememberSaveable {
         mutableStateOf(emptySet<String>())
     }
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
+    var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     val editTarget = remember(editTargetId, uiState.items) {
         editTargetId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+    }
+    LaunchedEffect(uiState.items, openSwipeTaskId) {
+        val openId = openSwipeTaskId ?: return@LaunchedEffect
+        if (uiState.items.none { it.id == openId }) {
+            openSwipeTaskId = null
+        }
     }
 
     Scaffold(
@@ -220,7 +170,7 @@ fun CompletedScreen(
         topBar = {
             CompletedTopBar(
                 onBack = onBack,
-                collapseProgress = collapseProgress,
+                collapseProgress = titleScrollBehavior.collapseProgress,
             )
         },
     ) { padding ->
@@ -235,7 +185,7 @@ fun CompletedScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .nestedScroll(nestedScrollConnection),
+                        .nestedScroll(titleScrollBehavior.nestedScrollConnection),
                     state = listState,
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(0.dp),
@@ -253,7 +203,14 @@ fun CompletedScreen(
                                         ),
                                         fadeOutSpec = null,
                                     )
-                                    .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
+                                    .padding(
+                                        top = if (sectionIndex == 0) 0.dp else CompletedTimelineSectionTopSpacing,
+                                        bottom = if (isCollapsed) {
+                                            CompletedTimelineCollapsedSectionSpacing
+                                        } else {
+                                            CompletedTimelineHeaderBodySpacing
+                                        },
+                                    ),
                                 section = section,
                                 isCollapsed = isCollapsed,
                                 onHeaderClick = {
@@ -268,6 +225,12 @@ fun CompletedScreen(
                         }
                         if (!isCollapsed) {
                             section.items.forEachIndexed { itemIndex, completed ->
+                                val showCompletedDateDivider = shouldShowDateDivider(
+                                    afterItemIndex = itemIndex,
+                                    inSectionIndex = sectionIndex,
+                                    sections = timelineSections,
+                                    collapsedSectionKeys = collapsedSectionKeys,
+                                )
                                 item(key = "completed-row-${section.key}-${completed.id}") {
                                     CompletedSwipeRow(
                                         modifier = Modifier
@@ -285,12 +248,21 @@ fun CompletedScreen(
                                                     easing = FastOutSlowInEasing,
                                                 ),
                                             )
-                                            .padding(top = 4.dp),
+                                            .padding(
+                                                bottom = completedTaskBottomSpacing(
+                                                    itemIndex = itemIndex,
+                                                    lastIndex = section.items.lastIndex,
+                                                    showDateDivider = showCompletedDateDivider,
+                                                ),
+                                            ),
                                         item = completed,
                                         lists = uiState.lists,
+                                        showDateDivider = showCompletedDateDivider,
                                         onInfo = { editTargetId = completed.id },
                                         onDelete = { onDelete(completed) },
                                         onUncomplete = { onUncomplete(completed) },
+                                        openSwipeTaskId = openSwipeTaskId,
+                                        onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
                                     )
                                 }
                             }
@@ -542,26 +514,37 @@ private fun CompletedSwipeRow(
     modifier: Modifier = Modifier,
     item: CompletedItem,
     lists: List<ListSummary>,
+    showDateDivider: Boolean,
     onInfo: () -> Unit,
     onDelete: () -> Unit,
     onUncomplete: () -> Unit,
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
-    val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 176.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
-    val maxElasticDragPx = actionRevealPx * 1.14f
-    var targetOffsetX by remember(item.id) { mutableFloatStateOf(0f) }
-    var swipeHinting by remember(item.id) { mutableStateOf(false) }
+    val swipeRevealState = rememberTaskSwipeRevealState(item.id)
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = targetOffsetX,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+    var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
+    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
+    fun claimSwipeSlot() {
+        if (latestOpenSwipeTaskId.value != item.id) {
+            onOpenSwipeTaskIdChange(item.id)
+        }
+    }
+
+    fun closeSwipeSlot() {
+        swipeRevealState.close()
+        if (latestOpenSwipeTaskId.value == item.id) {
+            onOpenSwipeTaskIdChange(null)
+        }
+    }
+    val animatedOffsetX by animateTaskSwipeOffsetAsState(
+        state = swipeRevealState,
         label = "completedSwipeOffset",
     )
-    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val showCompletedCheckmark = restorePhase == CompletedRestorePhase.Completed
     val showStrikethrough =
         restorePhase == CompletedRestorePhase.Completed || restorePhase == CompletedRestorePhase.Unchecked
@@ -569,13 +552,27 @@ private fun CompletedSwipeRow(
     val isRestoring = restorePhase != CompletedRestorePhase.Completed
     val rowAlpha by animateFloatAsState(
         targetValue = if (isFading) 0f else 1f,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(
+            durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
         label = "completedRestoreRowAlpha",
     )
     val rowScale by animateFloatAsState(
         targetValue = if (isFading) 0.985f else 1f,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(
+            durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
         label = "completedRestoreRowScale",
+    )
+    val rowOffsetY by animateDpAsState(
+        targetValue = if (isFading) (-10).dp else 0.dp,
+        animationSpec = tween(
+            durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
+        label = "completedRestoreRowOffsetY",
     )
     val titleColor by animateColorAsState(
         targetValue = if (showStrikethrough) {
@@ -586,17 +583,28 @@ private fun CompletedSwipeRow(
         animationSpec = tween(durationMillis = 160),
         label = "completedRestoreTitleColor",
     )
+    val titleStrikeProgress by animateFloatAsState(
+        targetValue = if (showStrikethrough) 1f else 0f,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "completedRestoreTitleStrikeProgress",
+    )
     val completedAtText = COMPLETED_ROW_TIME_FORMATTER
         .withZone(ZoneId.systemDefault())
-        .format(item.completedAt ?: item.due)
+        .format(item.completedAt ?: item.due ?: Instant.EPOCH)
     val listMeta = item.resolveListSummary(lists)
-    val listIndicatorColor = listMeta?.color?.let(::listAccentColor)
-        ?: item.listColor?.let(::listAccentColor)
+    val listIndicatorColor = listMeta?.color?.let(::tdayListAccentColor)
+        ?: item.listColor?.let(::tdayListAccentColor)
         ?: colorScheme.onSurfaceVariant.copy(alpha = 0.86f)
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
-    val showPriorityFlag = isHighPriority(item.priority)
+    val priorityIcon = priorityIconFor(item.priority)
+    val showPriorityIcon = priorityIcon != null
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
+    LaunchedEffect(openSwipeTaskId, item.id) {
+        if (openSwipeTaskId != null && openSwipeTaskId != item.id && swipeRevealState.isOpenOrDragging) {
+            swipeRevealState.close()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -605,14 +613,15 @@ private fun CompletedSwipeRow(
                 alpha = rowAlpha
                 scaleX = rowScale
                 scaleY = rowScale
+                translationY = rowOffsetY.toPx()
             },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(58.dp),
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(CompletedSwipeRowHeight),
+        ) {
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -625,7 +634,7 @@ private fun CompletedSwipeRow(
                         contentDescription = stringResource(R.string.action_edit_task),
                         label = stringResource(R.string.action_edit),
                         tint = Color.White,
-                        background = Color(0xFF4C7DDE),
+                        background = TdaySwipeEditBackground,
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.62f,
                         onClick = {
@@ -633,8 +642,8 @@ private fun CompletedSwipeRow(
                                 view,
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
+                            closeSwipeSlot()
                             onInfo()
-                            targetOffsetX = 0f
                         },
                     )
                     TaskSwipeActionButton(
@@ -642,7 +651,7 @@ private fun CompletedSwipeRow(
                         contentDescription = stringResource(R.string.action_delete_task),
                         label = stringResource(R.string.action_delete),
                         tint = Color.White,
-                        background = Color(0xFFFF453A),
+                        background = TdaySwipeDeleteBackground,
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.04f,
                         onClick = {
@@ -650,8 +659,8 @@ private fun CompletedSwipeRow(
                                 view,
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
+                            closeSwipeSlot()
                             onDelete()
-                            targetOffsetX = 0f
                         },
                     )
                 }
@@ -663,31 +672,36 @@ private fun CompletedSwipeRow(
                         .draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
-                                targetOffsetX = (targetOffsetX + delta).coerceIn(
-                                    -maxElasticDragPx,
-                                    0f,
-                                )
+                                if (delta < 0f || swipeRevealState.isOpenOrDragging) {
+                                    claimSwipeSlot()
+                                }
+                                swipeRevealState.dragBy(delta)
+                                if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == item.id) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
                             },
                             onDragStopped = { velocity ->
-                                val flingOpen = velocity < -1450f
-                                val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
-                                targetOffsetX = if (flingOpen || dragOpen) -actionRevealPx else 0f
+                                swipeRevealState.settle(velocity)
+                                if (swipeRevealState.isOpenOrDragging) {
+                                    claimSwipeSlot()
+                                } else if (latestOpenSwipeTaskId.value == item.id) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
                             },
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
-                            if (targetOffsetX != 0f) {
-                                targetOffsetX = 0f
-                            } else if (!swipeHinting && !isRestoring) {
-                                swipeHinting = true
+                            if (swipeRevealState.isOpenOrDragging) {
+                                closeSwipeSlot()
+                            } else if (!swipeRevealState.isHinting && !isRestoring) {
+                                claimSwipeSlot()
                                 coroutineScope.launch {
-                                    targetOffsetX = -swipeHintOffsetPx
-                                    delay(150)
-                                    targetOffsetX = 0f
-                                    delay(360)
-                                    swipeHinting = false
+                                    swipeRevealState.playHint()
+                                    if (latestOpenSwipeTaskId.value == item.id && !swipeRevealState.isOpenOrDragging) {
+                                        onOpenSwipeTaskIdChange(null)
+                                    }
                                 }
                             }
                         },
@@ -709,7 +723,7 @@ private fun CompletedSwipeRow(
                             },
                             contentDescription = stringResource(R.string.label_undo_complete),
                             tint = if (showCompletedCheckmark) {
-                                Color(0xFF6FBF86)
+                                TdayTaskCompleteAccent
                             } else {
                                 colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                             },
@@ -719,14 +733,14 @@ private fun CompletedSwipeRow(
                                     view,
                                     HapticFeedbackConstantsCompat.CLOCK_TICK,
                                 )
-                                targetOffsetX = 0f
+                                closeSwipeSlot()
                                 coroutineScope.launch {
                                     restorePhase = CompletedRestorePhase.Unchecked
-                                    delay(180)
+                                    delay(COMPLETED_RESTORE_STEP_MS)
                                     restorePhase = CompletedRestorePhase.Unstruck
-                                    delay(180)
+                                    delay(COMPLETED_RESTORE_STEP_MS)
                                     restorePhase = CompletedRestorePhase.Fading
-                                    delay(220)
+                                    delay(COMPLETED_RESTORE_FADE_MS)
                                     onUncomplete()
                                 }
                             },
@@ -739,14 +753,28 @@ private fun CompletedSwipeRow(
                         ) {
                             Text(
                                 text = item.title,
+                                modifier = Modifier.drawWithContent {
+                                    drawContent()
+                                    if (titleStrikeProgress > 0f) {
+                                        val lineEnd = (
+                                                titleLayoutResult
+                                                    ?.takeIf { it.lineCount > 0 }
+                                                    ?.getLineRight(0) ?: size.width
+                                                ).coerceIn(0f, size.width)
+                                        val lineY = size.height * 0.56f
+                                        drawLine(
+                                            color = colorScheme.onSurface.copy(alpha = 0.65f),
+                                            start = Offset(0f, lineY),
+                                            end = Offset(lineEnd * titleStrikeProgress, lineY),
+                                            strokeWidth = TdayDimens.BorderWidthThick.toPx(),
+                                        )
+                                    }
+                                },
                                 color = titleColor,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                textDecoration = if (showStrikethrough) {
-                                    TextDecoration.LineThrough
-                                } else {
-                                    TextDecoration.None
-                                },
+                                maxLines = 2,
+                                onTextLayout = { titleLayoutResult = it },
                             )
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
@@ -767,7 +795,7 @@ private fun CompletedSwipeRow(
                             }
                         }
 
-                        if (showPriorityFlag) {
+                        if (showPriorityIcon) {
                             Row(
                                 modifier = Modifier.padding(end = 24.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -775,22 +803,22 @@ private fun CompletedSwipeRow(
                             ) {
                                 if (showListIndicator) {
                                     Icon(
-                                        imageVector = listIconForKey(listMeta?.iconKey),
+                                        imageVector = tdayListIconForKey(listMeta?.iconKey),
                                         contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
                                 Icon(
-                                    imageVector = Icons.Rounded.Flag,
+                                    imageVector = priorityIcon ?: Icons.Rounded.Flag,
                                     contentDescription = stringResource(R.string.label_priority_task),
-                                    tint = priorityColor(item.priority),
+                                    tint = tdayPriorityColor(item.priority),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
                         } else if (showListIndicator) {
                             Icon(
-                                imageVector = listIconForKey(listMeta?.iconKey),
+                                imageVector = tdayListIconForKey(listMeta?.iconKey),
                                 contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
                                 modifier = Modifier
@@ -801,12 +829,14 @@ private fun CompletedSwipeRow(
                     }
                 }
             }
+        if (showDateDivider) {
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
+        }
     }
 }
 
@@ -862,19 +892,11 @@ private fun EmptyCompletedState(
     }
 }
 
-@Composable
-private fun priorityColor(priority: String): Color {
-    return when (priority.lowercase()) {
-        "high", "urgent", "important" -> Color(0xFFE56A6A)
-        "medium" -> Color(0xFFE3B368)
-        else -> Color(0xFF6FBF86)
-    }
-}
-
-private fun isHighPriority(priority: String): Boolean {
-    return when (priority.trim().lowercase()) {
-        "medium", "high", "urgent", "important" -> true
-        else -> false
+private fun priorityIconFor(priority: String): ImageVector? {
+    return when (priority.trim().lowercase(Locale.getDefault())) {
+        "medium" -> Icons.Rounded.Flag
+        "high", "urgent", "important" -> Icons.Rounded.Flag
+        else -> null
     }
 }
 
@@ -906,69 +928,56 @@ private fun CompletedItem.toEditableTodo(lists: List<ListSummary>): TodoItem {
     )
 }
 
-private fun listAccentColor(colorKey: String?): Color {
-    return when (colorKey?.trim()?.uppercase(Locale.getDefault())) {
-        "RED" -> Color(0xFFE65E52)
-        "ORANGE" -> Color(0xFFF29F38)
-        "YELLOW" -> Color(0xFFF3D04A)
-        "LIME" -> Color(0xFF8ACF56)
-        "BLUE" -> Color(0xFF5C9FE7)
-        "PURPLE" -> Color(0xFF8D6CE2)
-        "PINK" -> Color(0xFFDF6DAA)
-        "TEAL" -> Color(0xFF4EB5B0)
-        "CORAL" -> Color(0xFFE3876D)
-        "GOLD" -> Color(0xFFCFAB57)
-        "DEEP_BLUE" -> Color(0xFF4B73D6)
-        "ROSE" -> Color(0xFFD9799A)
-        "LIGHT_RED" -> Color(0xFFE48888)
-        "BRICK" -> Color(0xFFB86A5C)
-        "SLATE" -> Color(0xFF7B8593)
-        else -> Color(0xFF6EA8E1)
-    }
-}
-
-private fun listIconForKey(iconKey: String?): ImageVector {
-    return when (iconKey?.trim()?.lowercase(Locale.getDefault())) {
-        "sun" -> Icons.Rounded.WbSunny
-        "calendar" -> Icons.Rounded.CalendarMonth
-        "schedule" -> Icons.Rounded.Schedule
-        "flag" -> Icons.Rounded.Flag
-        "check" -> Icons.Rounded.Check
-        "inbox" -> Icons.Rounded.Inbox
-        "book" -> Icons.AutoMirrored.Rounded.MenuBook
-        "briefcase" -> Icons.Rounded.Work
-        "health" -> Icons.Rounded.LocalHospital
-        "fitness" -> Icons.Rounded.FitnessCenter
-        "food" -> Icons.Rounded.Restaurant
-        "cocktail" -> Icons.Rounded.LocalBar
-        "music" -> Icons.Rounded.MusicNote
-        "travel" -> Icons.Rounded.Flight
-        "car" -> Icons.Rounded.DirectionsCar
-        "gift" -> Icons.Rounded.CardGiftcard
-        "home" -> Icons.Rounded.Home
-        else -> Icons.AutoMirrored.Rounded.List
-    }
-}
-
 private data class CompletedSection(
     val key: String,
     val title: String,
     val items: List<CompletedItem>,
 )
 
+private fun shouldShowDateDivider(
+    afterItemIndex: Int,
+    inSectionIndex: Int,
+    sections: List<CompletedSection>,
+    collapsedSectionKeys: Set<String>,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Boolean {
+    val section = sections.getOrNull(inSectionIndex) ?: return false
+    val currentItem = section.items.getOrNull(afterItemIndex) ?: return false
+    val nextItemInSection = section.items.getOrNull(afterItemIndex + 1)
+    if (nextItemInSection != null) {
+        return !currentItem.completedDate()
+            .isSameLocalDayAs(nextItemInSection.completedDate(), zoneId)
+    }
+
+    val nextVisibleItem = sections
+        .asSequence()
+        .drop(inSectionIndex + 1)
+        .filter { it.key !in collapsedSectionKeys }
+        .flatMap { it.items.asSequence() }
+        .firstOrNull()
+        ?: return false
+
+    return !currentItem.completedDate().isSameLocalDayAs(nextVisibleItem.completedDate(), zoneId)
+}
+
+private fun CompletedItem.completedDate() = completedAt ?: due ?: Instant.EPOCH
+
+private fun Instant.isSameLocalDayAs(other: Instant, zoneId: ZoneId): Boolean =
+    LocalDate.ofInstant(this, zoneId) == LocalDate.ofInstant(other, zoneId)
+
 private fun buildCompletedTimelineSections(
     items: List<CompletedItem>,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): List<CompletedSection> {
     val groupedByDate = items.groupBy { item ->
-        LocalDate.ofInstant(item.completedAt ?: item.due, zoneId)
+        LocalDate.ofInstant(item.completedAt ?: item.due ?: Instant.EPOCH, zoneId)
     }
 
     return groupedByDate.keys
         .sortedDescending()
         .map { date ->
             val sectionItems = groupedByDate[date].orEmpty().sortedWith(
-                compareByDescending<CompletedItem> { it.completedAt ?: it.due }
+                compareByDescending<CompletedItem> { it.completedAt ?: it.due ?: Instant.EPOCH }
                     .thenBy { it.title.lowercase(Locale.getDefault()) }
                     .thenBy { it.id },
             )
@@ -980,7 +989,7 @@ private fun buildCompletedTimelineSections(
         }
 }
 
-private val COMPLETED_TITLE_COLOR = Color(0xFF5E6878)
+private val COMPLETED_TITLE_COLOR = TdayCompletedTitleAccent
 private val COMPLETED_SECTION_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d")
 private val COMPLETED_ROW_TIME_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("h:mm a")
 private const val COMPLETED_TITLE_COLLAPSE_DISTANCE_DP = 180f

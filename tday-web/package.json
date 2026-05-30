@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "postversion": "../scripts/sync-ios-version.sh && git add ../ios-swiftUI/Tday/Info.plist"
+    "postversion": "../scripts/sync-ios-version.sh && git add ../ios-swiftUI/Tday/Info.plist ../ios-swiftUI/project.yml ../ios-swiftUI/TdayApp.xcodeproj/project.pbxproj ../.env.example ../tday-backend/.env.example"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

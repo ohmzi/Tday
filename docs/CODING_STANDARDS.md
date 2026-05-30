@@ -1,17 +1,29 @@
 # Coding Standards
 
-Detailed code quality rules for the TypeScript (web), Kotlin (backend), and Kotlin (Android) codebases.
+Detailed code quality rules for the TypeScript web app, Kotlin backend/shared code, Android Compose app, and iOS SwiftUI app.
 
 ## Table of Contents
 
 - [General Principles](#general-principles)
 - [TypeScript Standards](#typescript-standards)
 - [Kotlin Standards](#kotlin-standards)
+- [Swift Standards](#swift-standards)
 - [Shared Rules](#shared-rules)
 
 ---
 
 ## General Principles
+
+### Product and Documentation Hygiene
+
+The product direction is part of the coding standard. Before adding behavior, check:
+
+- [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) for Local Mode, Floater/Anytime, mobile parity, and final-product expectations.
+- [`DATA_MODEL.md`](DATA_MODEL.md) for scheduled task vs floater semantics, local cache records, and mutation queue rules.
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) for module boundaries and data flow.
+- [`REPO_HOUSEKEEPING.md`](REPO_HOUSEKEEPING.md) for generated-file and cleanup expectations.
+
+Update docs in the same change when code changes a rule a future contributor needs to know.
 
 ### Git Commit Hygiene — No AI Trailers
 
@@ -30,16 +42,26 @@ Some AI-assisted editors (Cursor, Copilot, etc.) **silently inject trailers** in
 1. **`commit-msg` git hook** — Automatically strips `Made-with:` and AI `Co-authored-by:` trailers from every commit. Installed via `scripts/install-hooks.sh`. Run it once after cloning.
 2. **Guardrail tests** — `tests/guardrails/dependency-hygiene.test.ts` verifies the hook script exists and contains the correct stripping logic.
 3. **PR template checklist** — Reviewers verify no AI attribution in the final diff.
-4. **AI agent rule** — `.cursor/rules/no-ai-trailers.mdc` instructs AI assistants to use `git commit-tree` (plumbing) instead of `git commit` to avoid trailer injection entirely.
+4. **Cursor agent rule** — `.cursor/rules/no-ai-trailers.mdc` documents a trailer-safe `git commit-tree` fallback for Cursor environments that inject commit trailers. It must not use destructive cleanup commands.
 
 > **Never use `--no-verify`** to skip the hook. If the hook causes problems, fix the hook — don't bypass it.
 
-### Clean Code
+### Readable, Focused Code
 
-- Functions do one thing. If a function needs a comment explaining what the "next section" does, extract it.
-- Prefer explicit over clever. Readable code wins over terse code.
-- No dead code. Delete unused imports, variables, functions, and commented-out blocks.
-- No magic numbers. Use named constants.
+- A function, component, ViewModel method, or service method should have a narrow job that can be named plainly.
+- If a block needs a comment to explain the next phase of work, consider extracting that phase into a well-named helper.
+- Prefer explicit control flow and domain names over clever compression. Future readers should not have to reverse-engineer intent.
+- Delete unused imports, variables, functions, and commented-out blocks when the owning change makes them obsolete.
+- Replace repeated literals and thresholds with named constants close to their domain.
+- Keep files navigable. When a screen or service grows multiple independent concerns, split along feature, state, transport, validation, or rendering boundaries.
+
+### Durable Implementation
+
+- Build the smallest complete change that leaves the surrounding code easier to reason about.
+- Prefer steady, named structures over clever one-off shortcuts. A future contributor should be able to find the owner of a rule by following the domain names.
+- Keep special cases close to the feature that owns them, but do not let the same exception spread across platforms, services, or screens.
+- When a fix exposes messy structure, clean the part you touched enough that the next change has a clearer path.
+- Leave no ambiguous leftovers: remove dead code, stale comments, orphaned resources, and outdated docs in the same change that makes them obsolete.
 
 ### DRY — Extract Reusable Logic into Utilities
 
@@ -63,6 +85,9 @@ If a piece of logic appears (or could appear) in more than one place, extract it
 | **Android (shared)** | `core/` subpackages | Repository helpers, network utilities, model mapping |
 | **Android (UI shared)** | `ui/component/` | Reusable Composables (e.g., `TdayPullRefresh`, `CreateTaskBottomSheet`) |
 | **Android (feature-scoped)** | Within the feature package | Helpers used only by that feature |
+| **iOS (shared)** | `Core/` subpackages | Repositories, network, cache, navigation, notification, model mapping |
+| **iOS (UI shared)** | `UI/Component/`, `Core/UI/`, `UI/Theme/` | Reusable SwiftUI controls, app UI helpers, colors, typography |
+| **iOS (feature-scoped)** | `Feature/<Feature>/` | Helpers used only by that feature |
 
 **Rules:**
 
@@ -98,13 +123,14 @@ fun Instant?.formatDisplay(timeZone: String): String {
 val display = todo.due.formatDisplay(userTimeZone)
 ```
 
-### SOLID
+### Change-Friendly Boundaries
 
-- **S — Single Responsibility**: A module, class, or function should have one reason to change.
-- **O — Open/Closed**: Extend behavior through composition or new types, not by modifying existing code. Use sealed classes/interfaces for domain variants.
-- **L — Liskov Substitution**: Subclasses must be substitutable for their base types. Applies to error hierarchies (`AppError`, `ApiException`).
-- **I — Interface Segregation**: Clients should not depend on methods they don't use. Keep Retrofit interface methods grouped but don't force a single God interface if it grows beyond ~30 methods.
-- **D — Dependency Inversion**: High-level modules depend on injected collaborators, not concrete transport details. Android ViewModels depend on repositories and app services provided by Hilt, not on Retrofit directly. Backend services are injected via Koin.
+- Keep each module responsible for a coherent slice of the product: route handlers translate HTTP, services own business rules, repositories own persistence/sync, and views render state.
+- Add behavior by composing new collaborators, sealed variants, or feature-scoped helpers before widening an already overloaded type.
+- Shared abstractions must preserve the expectations of every caller. A common interface is only useful when each implementation can be swapped without surprising its consumers.
+- Do not make callers depend on operations they do not use. Split large service/repository/protocol surfaces when unrelated features start sharing one bag of methods.
+- Higher-level code should depend on injected contracts and app services, not transport or storage details. Android ViewModels should not call Retrofit directly; backend routes should not build SQL; SwiftUI views should not mutate SwiftData entities directly.
+- Keep dependency direction easy to explain: UI -> ViewModel/state -> repository/service -> network/database/cache. Avoid cycles and hidden global access.
 
 ### Null Safety, Type Safety, and Explicit Types
 
@@ -119,7 +145,7 @@ These rules apply across **both** TypeScript and Kotlin. Language-specific detai
 
 ### Single Source of Version
 
-The app version is defined **once** in `tday-web/package.json`. Every other system reads from it — never duplicate or hardcode a version elsewhere.
+The app version is defined **once** in `tday-web/package.json`. Build-time consumers read it directly, and checked-in mirrors are generated from it. Never hand-edit a version mirror when the package version is the real change.
 
 | Consumer | How it reads the version |
 |----------|------------------------|
@@ -127,21 +153,25 @@ The app version is defined **once** in `tday-web/package.json`. Every other syst
 | **CI/CD (release.yml)** | `node -p "require('./tday-web/package.json').version"` → Docker tags, Git tags, GitHub release, and generated release metadata files |
 | **Android (Gradle)** | `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and `versionCode` |
 | **Android runtime** | `BuildConfig.VERSION_NAME` (sent in `X-Tday-App-Version` header) |
+| **iOS runtime/project metadata** | `scripts/sync-ios-version.sh` mirrors the package version into `Info.plist`, Xcode project metadata, and `project.yml` |
+| **Backend compatibility templates** | `scripts/sync-ios-version.sh` mirrors the package version into `.env.example` and `tday-backend/.env.example`; live deployment env files remain operator-owned |
 
 **Rules:**
 
-- To bump the version, edit **only** `tday-web/package.json`. All other systems derive from it.
+- To bump the version, edit **only** `tday-web/package.json`. All other systems derive from it directly or through the sync script.
 - Use `npm version patch|minor|major` in the `tday-web/` directory to bump.
 - Never set `versionName` or `versionCode` directly in `build.gradle.kts`.
+- Do not hand-edit iOS marketing versions or example `TDAY_APP_VERSION` values for a release; run the sync script or use the package `postversion` hook.
 - `versionCode` is computed as `major * 10000 + minor * 100 + patch` (e.g., `1.6.0` → `10600`).
 
 ### No Hardcoded Colors or Dimensions
 
-Colors and spacing/sizing values must come from the project's centralized design tokens — never as inline hex codes, raw pixel/dp literals, or arbitrary magic numbers.
+Colors and spacing/sizing values should be named and owned by the smallest sensible design layer. Shared product language belongs in shared tokens; feature-specific visual systems may keep narrow local constants when they describe one component or screen.
 
 - **Web**: Use Tailwind utility classes that map to CSS custom properties defined in `src/globals.css` (e.g., `bg-card`, `text-foreground`, `border-border`). Never write inline `style={{ color: "#2A6DC2" }}` or raw `hsl(...)` values. If a new semantic color is needed, add a CSS variable in `globals.css` under `:root` and `.dark`, map it in the `@theme inline` block, then use the Tailwind class.
-- **Android**: Use `MaterialTheme.colorScheme.*` for all colors in Composables. If a color is not in the Material scheme, add it as a named constant in `ui/theme/Color.kt` — never write `Color(0xFF...)` directly in a screen or component file.
-- **Android dimensions**: Use the centralized `TdayDimens` object (`ui/theme/Dimens.kt`) for all spacing, sizing, corner radius, and elevation values. Never write raw `.dp` literals like `padding(18.dp)` directly in screens — use `TdayDimens.SpacingMd` or similar.
+- **Android**: Use `MaterialTheme.colorScheme.*` for Material surfaces and text in Composables. If a reusable product color is not in the Material scheme, add it to the Android theme layer instead of a screen file: app-wide palette values live in `ui/theme/Color.kt`, while domain colors such as priority, list palette, root-feed, mode, completed, and recurring-task accents live in `ui/theme/TdaySemanticColors.kt`. Feature-only illustration colors may stay as private named constants next to that illustration.
+- **Android dimensions**: Use `TdayDimens` (`ui/theme/Dimens.kt`) for shared spacing, sizing, corner radius, and elevation values. A screen or component may use private named `Dp` constants for local layout geometry, animation offsets, or illustration metrics. Do not scatter anonymous `.dp` literals through new UI; either use `TdayDimens` or name the value in the owning file.
+- **iOS**: Use `tdayColors`, `TdayTheme`, shared metrics, and feature-scoped constants that already belong to the local component. New repeated colors/metrics should move into `UI/Theme/` or a narrow shared component metrics type.
 
 ```kotlin
 // Good: colors and dimensions from centralized sources
@@ -151,7 +181,10 @@ Card(
     modifier = Modifier.padding(TdayDimens.SpacingMd),
 )
 
-// Bad: hardcoded color and magic dimension
+// Also good: local metrics for one component's geometry
+private val EmptyStateIconSize = 86.dp
+
+// Bad: anonymous color and magic dimension in the render path
 Card(
     shape = RoundedCornerShape(18.dp),
     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
@@ -172,7 +205,8 @@ Card(
 All user-facing strings must live in a single centralized source — never inline in component code, screen layouts, or route handlers. This applies to labels, button text, error messages shown to users, placeholders, tooltips, and any other text the user sees.
 
 - **Web**: Use **i18next** translation keys backed by `tday-web/public/locales/<lng>/translation.json`, with `tday-web/messages/en.json` kept as the bundled English fallback. Components access strings via `useTranslation()`.
-- **Android**: Use Android string resources (`res/values/strings.xml`). Screens access strings via `stringResource(R.string.*)`.
+- **Android**: Use Android string resources (`res/values/strings.xml`, including string arrays for repeated copy such as splash taglines). Screens access strings via `stringResource(R.string.*)` or `stringArrayResource(R.array.*)`.
+- **iOS**: Follow the current local SwiftUI string patterns until a broader localization layer exists. Avoid scattering repeated labels; extract repeated app language into narrow constants or shared helpers when it appears in multiple places.
 - Internal log messages and developer-facing error strings (not shown to users) are exempt.
 - When adding a new screen or feature, add its strings to the centralized source **first**, then reference the keys.
 
@@ -443,6 +477,8 @@ sealed interface AuthResult {
 - Android API DTOs live in `core/model/ApiModels.kt`; UI-facing domain models in `core/model/DomainModels.kt`.
 - Never expose DTOs directly to the Android UI layer — map them in the repository.
 - Use `kotlinx.serialization` for all JSON serialization (no Gson, no Moshi, no Jackson).
+- Scheduled `Todo` and unscheduled `Floater` models must remain distinct. Do not make a due date nullable to represent Anytime work.
+- Android local cache shape lives in `core/data/OfflineSyncModels.kt` and Room entities under `core/data/db/`; keep both aligned with `docs/DATA_MODEL.md`.
 
 ### Colors and Dimensions (Android)
 
@@ -451,8 +487,15 @@ All colors and dimension values must come from centralized theme files — never
 **Colors:**
 
 - Use `MaterialTheme.colorScheme.*` in Composables for all standard colors (`primary`, `surface`, `onSurface`, `error`, etc.).
-- Custom colors not in the Material scheme are defined as named constants in `ui/theme/Color.kt` (e.g., `TdayDarkPrimary`, `TdayLightError`).
-- Never write `Color(0xFF...)` directly in a screen or component file. If a new color is needed, add it to `Color.kt` first.
+- Custom colors not in the Material scheme are defined as named constants in the Android theme layer: app palette values in `ui/theme/Color.kt`, reusable domain accents in `ui/theme/TdaySemanticColors.kt`.
+- Repeated product/domain colors belong in `ui/theme/TdaySemanticColors.kt`, not in feature screens. Use the shared helpers for priority colors, list palette colors, todo-mode accents, completed accents, and root-feed accents.
+- Never write `Color(0xFF...)` directly in a screen or component file. If a new color is needed, add it to the smallest appropriate theme file first.
+
+**List visuals:**
+
+- List icon key options and icon lookup live in `ui/theme/TdayListIcons.kt`.
+- Use `TdayListIconOptions`, `tdayListIconForKey`, `isTdayListIconKeySupported`, and `TDAY_DEFAULT_LIST_ICON_KEY` instead of re-declaring key-to-icon maps inside screens.
+- Add legacy aliases in `TdayListIcons.kt` when persisted keys need compatibility.
 
 ```kotlin
 // Good: theme color
@@ -544,6 +587,42 @@ Within a ViewModel file:
 
 ---
 
+## Swift Standards
+
+These rules apply to the iOS SwiftUI codebase.
+
+### Architecture and State
+
+- Use SwiftUI, Observation, SwiftData, URLSession, and Keychain-backed storage patterns already present in the app.
+- Keep dependency wiring explicit in `Core/Data/AppContainer.swift`.
+- Keep feature screens and ViewModels in `Feature/<Feature>/`.
+- Put reusable repositories, sync logic, models, navigation, network, notification, security, and UI helpers under `Core/`.
+- Use `@Observable` ViewModels on the main actor for UI-facing state.
+- Keep local cache writes centralized through repositories and `OfflineCacheManager`; views should not mutate SwiftData entities directly.
+
+### Local Mode and Sync
+
+- Respect `AppDataMode.local` as a first-class workspace.
+- Hide or disable pull-to-refresh, manual sync, realtime reconnect expectations, and admin server settings in Local Mode.
+- Mirror Android's `OfflineSyncState` when adding cached records or pending mutations.
+- Update widget snapshot storage when Today-task cache semantics change.
+
+### SwiftUI UI Rules
+
+- Preserve dark mode and rounded typography.
+- Prefer platform-native gestures and controls unless the product behavior requires custom handling.
+- Keep root-feed behavior aligned with Android: Home and Floater/Anytime are sibling root feeds controlled by `RootFeedDock`.
+- Use shared sheet chrome and swipe helpers before creating one-off variants.
+- Keep text fitting in compact layouts with `lineLimit`, `minimumScaleFactor`, or layout changes where needed.
+
+### Error Handling
+
+- Convert technical failures into `userFacingMessage` before showing them.
+- Do not expose raw backend, SQL, keychain, or URLSession internals in UI copy.
+- For async work, keep cancellation and task lifetime explicit when work outlives a view update.
+
+---
+
 ## Shared Rules
 
 ### Folder and Module Structure
@@ -551,8 +630,16 @@ Within a ViewModel file:
 - **Web**: group by technical layer at root (`src/lib/`, `src/components/`, `src/providers/`) and by feature domain in `src/features/`.
 - **Backend**: group by layer (`routes/`, `services/`, `db/`, `security/`, `domain/`, `config/`, `plugins/`).
 - **Android**: group by feature (`feature/home/`, `feature/todos/`), shared code in `core/` and `ui/`.
-- **Shared KMP**: DTOs, enums, and validators in `shared/` consumed by all three platforms.
+- **iOS**: group by feature (`Feature/Home/`, `Feature/Todos/`), shared app code in `Core/`, reusable UI in `UI/`.
+- **Shared KMP**: DTOs, enums, validators, and route constants in `shared/` consumed by backend/Android and mirrored by iOS models/tests.
 - A new feature should create its own subdirectory, not grow an existing file.
+
+### Cross-Platform Mobile Parity
+
+- Android and iOS should expose the same mobile feature surface.
+- Match behavior, information architecture, counts, empty states, disabled states, Local Mode affordances, and navigation rules.
+- Use native APIs and patterns on each platform; do not blindly copy implementation details.
+- When one platform gets a better interaction, bring the other up to the same product quality.
 
 ### Error Messages
 
@@ -567,6 +654,7 @@ Within a ViewModel file:
 - Review changelogs before major version bumps.
 - Keep Android dependencies version-locked in `build.gradle.kts`.
 - Backend dependencies use Ktor's BOM for server artifacts; pin explicit versions for other libraries.
+- iOS dependencies should be added through Xcode/Swift Package Manager and documented in `ios-swiftUI/README.md` when they affect setup, privacy, or build behavior.
 
 ### Git Hygiene
 

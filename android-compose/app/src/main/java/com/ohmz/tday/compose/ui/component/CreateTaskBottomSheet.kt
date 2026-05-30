@@ -1,9 +1,10 @@
 package com.ohmz.tday.compose.ui.component
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,7 +39,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.LowPriority
@@ -55,6 +53,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -72,7 +72,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -80,19 +79,21 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
+import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
+import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
@@ -101,28 +102,43 @@ import java.time.format.DateTimeFormatter
 import android.graphics.Color as AndroidColor
 
 private enum class RepeatPreset(
-    val label: String,
+    @StringRes val labelRes: Int,
     val rrule: String?,
 ) {
-    NONE("No repeat", null),
-    DAILY("Daily", "RRULE:FREQ=DAILY;INTERVAL=1"),
-    WEEKLY("Weekly", "RRULE:FREQ=WEEKLY;INTERVAL=1"),
-    WEEKDAYS("Weekdays", "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR"),
-    MONTHLY("Monthly", "RRULE:FREQ=MONTHLY;INTERVAL=1"),
-    YEARLY("Yearly", "RRULE:FREQ=YEARLY;INTERVAL=1"),
+    NONE(R.string.create_task_repeat_none, null),
+    DAILY(R.string.create_task_repeat_daily, "RRULE:FREQ=DAILY;INTERVAL=1"),
+    WEEKLY(R.string.create_task_repeat_weekly, "RRULE:FREQ=WEEKLY;INTERVAL=1"),
+    WEEKDAYS(R.string.create_task_repeat_weekdays, "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR"),
+    MONTHLY(R.string.create_task_repeat_monthly, "RRULE:FREQ=MONTHLY;INTERVAL=1"),
+    YEARLY(R.string.create_task_repeat_yearly, "RRULE:FREQ=YEARLY;INTERVAL=1"),
 }
 
 private fun normalizePriorityValue(value: String?): String {
     return when (value?.trim()?.lowercase()) {
-        "medium" -> "Medium"
-        "high" -> "High"
-        else -> "Low"
+        "medium" -> PRIORITY_MEDIUM
+        "high" -> PRIORITY_HIGH
+        else -> PRIORITY_LOW
     }
 }
 
+@StringRes
+private fun priorityLabelRes(priority: String): Int {
+    return when (priority) {
+        PRIORITY_MEDIUM -> R.string.create_task_priority_medium
+        PRIORITY_HIGH -> R.string.create_task_priority_high
+        else -> R.string.create_task_priority_low
+    }
+}
+
+private const val PRIORITY_LOW = "Low"
+private const val PRIORITY_MEDIUM = "Medium"
+private const val PRIORITY_HIGH = "High"
 private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
+private const val CREATE_TASK_SHEET_CREATE_HEIGHT_FRACTION = 0.74f
+private const val CREATE_TASK_SHEET_FLOATER_CREATE_HEIGHT_FRACTION = 0.54f
+private const val CREATE_TASK_SHEET_EDIT_HEIGHT_FRACTION = 0.76f
+private const val CREATE_TASK_SHEET_FLOATER_EDIT_HEIGHT_FRACTION = 0.54f
 private const val CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION = 0.86f
-private const val CREATE_TASK_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.85f
 private const val CREATE_TASK_SHEET_MOTION_MS = 320
 
@@ -133,6 +149,8 @@ fun CreateTaskBottomSheet(
     editingTask: TodoItem? = null,
     defaultListId: String? = null,
     defaultPriority: String? = null,
+    defaultScheduled: Boolean = true,
+    showScheduleControls: Boolean = true,
     initialDueEpochMs: Long? = null,
     onParseTaskTitleNlp: (suspend (
         title: String,
@@ -180,6 +198,9 @@ fun CreateTaskBottomSheet(
     var dueEpochMs by rememberSaveable(editingTask?.id, initialDueEpochMs) {
         mutableStateOf(resolvedDueEpochMs)
     }
+    var scheduleEnabled by rememberSaveable(editingTask?.id, defaultScheduled) {
+        mutableStateOf(showScheduleControls && (editingTask?.due != null || (editingTask == null && defaultScheduled)))
+    }
     LaunchedEffect(title, onParseTaskTitleNlp) {
         val nlpParser = onParseTaskTitleNlp ?: return@LaunchedEffect
         val inputTitle = title.trim()
@@ -199,6 +220,9 @@ fun CreateTaskBottomSheet(
         if (cleanTitle != title) {
             title = cleanTitle
         }
+        if (showScheduleControls && !scheduleEnabled) {
+            scheduleEnabled = true
+        }
         if (parsedDueEpochMs != dueEpochMs) {
             dueEpochMs = parsedDueEpochMs
         }
@@ -206,40 +230,70 @@ fun CreateTaskBottomSheet(
     var selectedRepeat by rememberSaveable(editingTask?.id) {
         mutableStateOf(repeatPresetFromRrule(editingTask?.rrule).name)
     }
+    LaunchedEffect(scheduleEnabled) {
+        if (!scheduleEnabled) {
+            selectedRepeat = RepeatPreset.NONE.name
+        }
+    }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
     var sheetVisible by remember { mutableStateOf(false) }
 
-    val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: "No list"
-    val repeatPreset = RepeatPreset.valueOf(selectedRepeat)
+    val noListLabel = stringResource(R.string.create_task_no_list)
+    val priorityOptions = remember { listOf(PRIORITY_LOW, PRIORITY_MEDIUM, PRIORITY_HIGH) }
+    val priorityLabels = mapOf(
+        PRIORITY_LOW to stringResource(R.string.create_task_priority_low),
+        PRIORITY_MEDIUM to stringResource(R.string.create_task_priority_medium),
+        PRIORITY_HIGH to stringResource(R.string.create_task_priority_high),
+    )
+    val repeatLabels = mapOf(
+        RepeatPreset.NONE to stringResource(RepeatPreset.NONE.labelRes),
+        RepeatPreset.DAILY to stringResource(RepeatPreset.DAILY.labelRes),
+        RepeatPreset.WEEKLY to stringResource(RepeatPreset.WEEKLY.labelRes),
+        RepeatPreset.WEEKDAYS to stringResource(RepeatPreset.WEEKDAYS.labelRes),
+        RepeatPreset.MONTHLY to stringResource(RepeatPreset.MONTHLY.labelRes),
+        RepeatPreset.YEARLY to stringResource(RepeatPreset.YEARLY.labelRes),
+    )
+    val selectedListName = lists.firstOrNull { it.id == selectedListId }?.name ?: noListLabel
+    val repeatPreset = if (scheduleEnabled && showScheduleControls) {
+        RepeatPreset.valueOf(selectedRepeat)
+    } else {
+        RepeatPreset.NONE
+    }
     val canSubmit = title.isNotBlank()
     val colorScheme = MaterialTheme.colorScheme
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val sheetContainerColor = if (isDarkTheme) {
-        lerp(colorScheme.background, colorScheme.surfaceVariant, 0.34f)
-    } else {
-        colorScheme.background
-    }
-    val sheetScrimColor = if (isDarkTheme) {
-        Color.Black.copy(alpha = 0.68f)
-    } else {
-        Color.Black.copy(alpha = 0.40f)
-    }
+    val sheetContainerColor = TdaySheetDefaults.containerColor()
+    val sheetScrimColor = TdaySheetDefaults.scrimColor()
+    val sheetTonalElevation = TdaySheetDefaults.tonalElevation()
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val density = LocalDensity.current
     val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
     val maxSheetHeight = screenHeight * CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION
-    val sheetHeight by animateDpAsState(
-        targetValue = (screenHeight * if (keyboardVisible) {
-            CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION
-        } else {
-            CREATE_TASK_SHEET_NORMAL_HEIGHT_FRACTION
-        }).coerceAtMost(maxSheetHeight),
+    val usesTallCreateModal = !isEditMode && showScheduleControls
+    val usesFloaterCreateModal = !isEditMode && !showScheduleControls
+    val usesScheduledEditModal = isEditMode && showScheduleControls
+    val usesFloaterEditModal = isEditMode && !showScheduleControls
+    val usesScrollSizedModal = usesTallCreateModal ||
+            usesFloaterCreateModal ||
+            usesScheduledEditModal ||
+            usesFloaterEditModal
+    val createSheetHeight = (screenHeight * CREATE_TASK_SHEET_CREATE_HEIGHT_FRACTION)
+        .coerceAtMost(maxSheetHeight)
+    val floaterCreateSheetHeight = (screenHeight * CREATE_TASK_SHEET_FLOATER_CREATE_HEIGHT_FRACTION)
+        .coerceAtMost(maxSheetHeight)
+    val editSheetHeight = (screenHeight * CREATE_TASK_SHEET_EDIT_HEIGHT_FRACTION)
+        .coerceAtMost(maxSheetHeight)
+    val floaterEditSheetHeight = (screenHeight * CREATE_TASK_SHEET_FLOATER_EDIT_HEIGHT_FRACTION)
+        .coerceAtMost(maxSheetHeight)
+    val sheetFormScrollState = rememberScrollState()
+    val keyboardSheetHeight by animateDpAsState(
+        targetValue = (screenHeight * CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION)
+            .coerceAtMost(maxSheetHeight),
         animationSpec = tween(
             durationMillis = CREATE_TASK_SHEET_MOTION_MS,
             easing = FastOutSlowInEasing,
         ),
-        label = "createTaskSheetHeight",
+        label = "createTaskKeyboardSheetHeight",
     )
 
     LaunchedEffect(Unit) {
@@ -247,14 +301,15 @@ fun CreateTaskBottomSheet(
     }
 
     fun submitTask() {
-        val due = Instant.ofEpochMilli(dueEpochMs)
+        val due =
+            if (scheduleEnabled && showScheduleControls) Instant.ofEpochMilli(dueEpochMs) else null
 
         val payload = CreateTaskPayload(
             title = title.trim(),
             description = notes.trim().ifBlank { null },
             priority = selectedPriority,
             due = due,
-            rrule = repeatPreset.rrule,
+            rrule = repeatPreset.rrule?.takeIf { scheduleEnabled && showScheduleControls },
             listId = selectedListId,
         )
         val editing = editingTask
@@ -309,103 +364,198 @@ fun CreateTaskBottomSheet(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(sheetHeight)
+                        .then(
+                            if (keyboardVisible) {
+                                Modifier.height(keyboardSheetHeight)
+                            } else if (usesTallCreateModal) {
+                                Modifier.height(createSheetHeight)
+                            } else if (usesScheduledEditModal) {
+                                Modifier.height(editSheetHeight)
+                            } else if (usesFloaterCreateModal) {
+                                Modifier
+                                    .animateContentSize(
+                                        animationSpec = tween(
+                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                    )
+                                    .heightIn(min = floaterCreateSheetHeight, max = maxSheetHeight)
+                            } else if (usesFloaterEditModal) {
+                                Modifier
+                                    .animateContentSize(
+                                        animationSpec = tween(
+                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                    )
+                                    .heightIn(min = floaterEditSheetHeight, max = maxSheetHeight)
+                            } else {
+                                Modifier
+                                    .animateContentSize(
+                                        animationSpec = tween(
+                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                    )
+                                    .heightIn(max = maxSheetHeight)
+                            },
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {},
-                    shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+                    shape = TdaySheetDefaults.TopShape,
                     color = sheetContainerColor,
-                    tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+                    tonalElevation = sheetTonalElevation,
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(start = 18.dp, top = 14.dp, end = 18.dp, bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                    ) {
-                    SheetHeader(
-                        title = if (isEditMode) "Edit task" else "New task",
-                        leftIcon = Icons.Rounded.Close,
-                        leftContentDescription = "Close",
-                        onLeftClick = {
-                            dismissKeyboard()
-                            onDismiss()
-                        },
-                        onConfirm = {
-                            dismissKeyboard()
-                            if (canSubmit) {
-                                submitTask()
+                    TdayCenteredSheetContent {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(start = 18.dp, top = 14.dp, end = 18.dp, bottom = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            TdaySheetHeader(
+                                title = stringResource(
+                                    if (isEditMode) {
+                                        R.string.create_task_title_edit
+                                    } else {
+                                        R.string.create_task_title_new
+                                    },
+                                ),
+                                leftIcon = Icons.Rounded.Close,
+                                leftContentDescription = stringResource(R.string.action_close),
+                                onLeftClick = {
+                                    dismissKeyboard()
+                                    onDismiss()
+                                },
+                                confirmContentDescription = stringResource(
+                                    if (isEditMode) {
+                                        R.string.action_save_task
+                                    } else {
+                                        R.string.action_create_task
+                                    },
+                                ),
+                                onConfirm = {
+                                    dismissKeyboard()
+                                    if (canSubmit) {
+                                        submitTask()
+                                    }
+                                },
+                                confirmEnabled = canSubmit,
+                            )
+
+                            val formModifier = if (keyboardVisible || usesScrollSizedModal) {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f, fill = false)
+                                    .verticalScroll(sheetFormScrollState)
+                            } else {
+                                Modifier.fillMaxWidth()
                             }
-                        },
-                        confirmEnabled = canSubmit,
-                    )
 
-                    TaskTextCard(
-                        title = title,
-                        notes = notes,
-                        onTitleChange = { title = it },
-                        onNotesChange = { notes = it },
-                        onKeyboardDone = dismissKeyboard,
-                    )
+                            Column(
+                                modifier = formModifier,
+                                verticalArrangement = Arrangement.spacedBy(14.dp),
+                            ) {
+                                TaskTextCard(
+                                    title = title,
+                                    notes = notes,
+                                    onTitleChange = { title = it },
+                                    onNotesChange = { notes = it },
+                                    onKeyboardDone = dismissKeyboard,
+                                )
 
-                    SectionHeading("Schedule")
-                    GroupCard {
-                        SplitDateTimeRow(
-                            icon = Icons.Rounded.CalendarMonth,
-                            title = "Due",
-                            dateValue = dateOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                            timeValue = timeOnlyFormatter.format(Instant.ofEpochMilli(dueEpochMs)),
-                            onDateClick = { dueDatePickerOpen = true },
-                            onTimeClick = { dueTimePickerOpen = true },
-                        )
-                    }
+                                if (showScheduleControls) {
+                                    SectionHeading(stringResource(R.string.create_task_section_schedule))
+                                    GroupCard {
+                                        ScheduleSwitchRow(
+                                            enabled = scheduleEnabled,
+                                            onEnabledChange = { enabled ->
+                                                scheduleEnabled = enabled
+                                            },
+                                        )
+                                        AnimatedVisibility(visible = scheduleEnabled) {
+                                            Column {
+                                                RowDivider()
+                                                SplitDateTimeRow(
+                                                    icon = Icons.Rounded.CalendarMonth,
+                                                    title = stringResource(R.string.create_task_due),
+                                                    dateValue = dateOnlyFormatter.format(
+                                                        Instant.ofEpochMilli(
+                                                            dueEpochMs
+                                                        )
+                                                    ),
+                                                    timeValue = timeOnlyFormatter.format(
+                                                        Instant.ofEpochMilli(
+                                                            dueEpochMs
+                                                        )
+                                                    ),
+                                                    onDateClick = { dueDatePickerOpen = true },
+                                                    onTimeClick = { dueTimePickerOpen = true },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
 
-                    SectionHeading("Details")
-                    GroupCard {
-                        SheetDropdownRow(
-                            icon = Icons.AutoMirrored.Rounded.List,
-                            title = "List",
-                            value = selectedListName,
-                            options = listOf<ListSummary?>(null) + lists,
-                            optionLabel = { option -> option?.name ?: "No list" },
-                            optionSwatchColor = { option ->
-                                option?.let {
-                                    listColorSwatchForSelector(
-                                        raw = it.color,
-                                        fallback = colorScheme.primary.copy(alpha = 0.75f),
+                                SectionHeading(stringResource(R.string.create_task_section_details))
+                                GroupCard {
+                                    SheetDropdownRow(
+                                        icon = Icons.AutoMirrored.Rounded.List,
+                                        title = stringResource(R.string.create_task_list),
+                                        value = selectedListName,
+                                        options = listOf<ListSummary?>(null) + lists,
+                                        optionLabel = { option -> option?.name ?: noListLabel },
+                                        optionSwatchColor = { option ->
+                                            option?.let {
+                                                listColorSwatchForSelector(
+                                                    raw = it.color,
+                                                    fallback = colorScheme.primary.copy(alpha = 0.75f),
+                                                )
+                                            } ?: colorScheme.outlineVariant.copy(alpha = 0.95f)
+                                        },
+                                        isSelected = { option -> option?.id == selectedListId },
+                                        onOptionSelected = { option ->
+                                            selectedListId = option?.id
+                                        },
                                     )
-                                } ?: colorScheme.outlineVariant.copy(alpha = 0.95f)
-                            },
-                            isSelected = { option -> option?.id == selectedListId },
-                            onOptionSelected = { option -> selectedListId = option?.id },
-                        )
-                        RowDivider()
-                        SheetDropdownRow(
-                            icon = Icons.Rounded.LowPriority,
-                            title = "Priority",
-                            value = selectedPriority,
-                            options = listOf("Low", "Medium", "High"),
-                            optionLabel = { option -> option },
-                            optionSwatchColor = { option -> prioritySwatchColor(option) },
-                            isSelected = { option -> selectedPriority == option },
-                            onOptionSelected = { option -> selectedPriority = option },
-                        )
-                        RowDivider()
-                        SheetDropdownRow(
-                            icon = Icons.Rounded.Repeat,
-                            title = "Repeat",
-                            value = repeatPreset.label,
-                            options = RepeatPreset.entries.toList(),
-                            optionLabel = { option -> option.label },
-                            optionSwatchColor = { option -> repeatSwatchColor(option) },
-                            isSelected = { option -> selectedRepeat == option.name },
-                            onOptionSelected = { option -> selectedRepeat = option.name },
-                        )
-                    }
+                                    RowDivider()
+                                    SheetDropdownRow(
+                                        icon = Icons.Rounded.LowPriority,
+                                        title = stringResource(R.string.create_task_priority),
+                                        value = priorityLabels.getValue(selectedPriority),
+                                        options = priorityOptions,
+                                        optionLabel = { option -> priorityLabels.getValue(option) },
+                                        optionSwatchColor = { option -> tdayPriorityColor(option) },
+                                        isSelected = { option -> selectedPriority == option },
+                                        onOptionSelected = { option -> selectedPriority = option },
+                                    )
+                                    if (showScheduleControls) {
+                                        RowDivider()
+                                        SheetDropdownRow(
+                                            icon = Icons.Rounded.Repeat,
+                                            title = stringResource(R.string.create_task_repeat),
+                                            value = repeatLabels.getValue(repeatPreset),
+                                            options = if (scheduleEnabled) {
+                                                RepeatPreset.entries.toList()
+                                            } else {
+                                                listOf(RepeatPreset.NONE)
+                                            },
+                                            optionLabel = { option -> repeatLabels.getValue(option) },
+                                            optionSwatchColor = { option -> repeatSwatchColor(option) },
+                                            isSelected = { option -> selectedRepeat == option.name },
+                                            onOptionSelected = { option ->
+                                                selectedRepeat = option.name
+                                            },
+                                        )
+                                    }
+                                }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -442,152 +592,15 @@ fun CreateTaskBottomSheet(
 }
 
 @Composable
-private fun SheetHeader(
-    title: String,
-    leftIcon: ImageVector,
-    leftContentDescription: String,
-    onLeftClick: () -> Unit,
-    onConfirm: () -> Unit,
-    confirmEnabled: Boolean,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CircleActionButton(
-            icon = leftIcon,
-            contentDescription = leftContentDescription,
-            onClick = onLeftClick,
-            enabled = true,
-            accentColor = Color(0xFFE35A5A),
-        )
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.ExtraBold,
-        )
-
-        CircleActionButton(
-            icon = Icons.Rounded.Check,
-            contentDescription = "Create task",
-            onClick = onConfirm,
-            enabled = confirmEnabled,
-            accentColor = Color(0xFF2FA35B),
-        )
-    }
-}
-
-@Composable
-private fun CircleActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    enabled: Boolean,
-    accentColor: Color,
-) {
-    val view = LocalView.current
-    val colorScheme = MaterialTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.93f else 1f,
-        label = "sheetHeaderButtonScale",
-    )
-    val elevation by animateDpAsState(
-        targetValue = when {
-            pressed && enabled -> 2.dp
-            enabled -> 8.dp
-            else -> 5.dp
-        },
-        label = "sheetHeaderButtonElevation",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed && enabled) 1.dp else 0.dp,
-        label = "sheetHeaderButtonOffsetY",
-    )
-    val containerColor = colorScheme.surfaceVariant
-    val iconTint = colorScheme.onBackground.copy(alpha = if (enabled) 1f else 0.55f)
-    val borderColor = if (enabled) {
-        accentColor.copy(alpha = 0.55f)
-    } else {
-        accentColor.copy(alpha = 0.3f)
-    }
-
-    Card(
-        modifier = Modifier
-            .size(54.dp)
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .border(
-                width = 1.5.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(999.dp),
-            ),
-        shape = RoundedCornerShape(999.dp),
-        enabled = enabled,
-        onClick = {
-            if (enabled) {
-                performGentleHaptic(view)
-            }
-            onClick()
-        },
-        interactionSource = interactionSource,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = elevation,
-            pressedElevation = elevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = iconTint,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-    }
-}
-
-private fun performGentleHaptic(view: android.view.View) {
-    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-}
-
-@Composable
 private fun SectionHeading(text: String) {
-    Text(
+    TdaySheetSectionTitle(
         text = text,
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.ExtraBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 4.dp),
     )
 }
 
 @Composable
 private fun GroupCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            content = content,
-        )
-    }
+    TdaySheetCard(content = content)
 }
 
 @Composable
@@ -603,14 +616,14 @@ private fun TaskTextCard(
     GroupCard {
         TaskField(
             value = title,
-            placeholder = "Title",
+            placeholder = stringResource(R.string.create_task_title_placeholder),
             onValueChange = onTitleChange,
             onKeyboardDone = onKeyboardDone,
         )
         RowDivider()
         TaskField(
             value = notes,
-            placeholder = "Notes",
+            placeholder = stringResource(R.string.create_task_notes_placeholder),
             onValueChange = onNotesChange,
             onKeyboardDone = onKeyboardDone,
         )
@@ -759,6 +772,61 @@ private fun SplitDateTimeRow(
 }
 
 @Composable
+private fun ScheduleSwitchRow(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onEnabledChange(!enabled) }
+            .heightIn(min = 72.dp)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.CalendarMonth,
+            contentDescription = null,
+            tint = colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(modifier = Modifier.size(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.create_task_section_schedule),
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Text(
+                text = stringResource(
+                    if (enabled) {
+                        R.string.create_task_schedule_enabled
+                    } else {
+                        R.string.create_task_schedule_disabled
+                    },
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Switch(
+            checked = enabled,
+            onCheckedChange = onEnabledChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = colorScheme.onPrimary,
+                checkedTrackColor = colorScheme.primary,
+                uncheckedThumbColor = colorScheme.onSurfaceVariant,
+                uncheckedTrackColor = colorScheme.surfaceVariant,
+            ),
+        )
+    }
+}
+
+@Composable
 private fun SheetRow(
     icon: ImageVector,
     title: String,
@@ -838,7 +906,7 @@ private fun <T> SheetDropdownRow(
         )
 
         if (selectorOpen) {
-            CenteredSelectorDialog(
+            TdayCenteredSelectorDialog(
                 title = title,
                 options = options,
                 optionLabel = optionLabel,
@@ -854,151 +922,17 @@ private fun <T> SheetDropdownRow(
     }
 }
 
-@Composable
-private fun <T> CenteredSelectorDialog(
-    title: String,
-    options: List<T>,
-    optionLabel: (T) -> String,
-    optionSwatchColor: (T) -> Color,
-    isSelected: (T) -> Boolean,
-    onDismiss: () -> Unit,
-    onOptionSelected: (T) -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val isDark = colorScheme.background.luminance() < 0.5f
-    val containerColor = if (isDark) {
-        lerp(colorScheme.surface, colorScheme.surfaceVariant, 0.18f)
-    } else {
-        colorScheme.surface
-    }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.74f)
-                .heightIn(max = 380.dp),
-            shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = containerColor),
-            elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(vertical = 10.dp),
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                )
-
-                options.forEachIndexed { index, option ->
-                    if (index > 0) {
-                        RowDivider()
-                    }
-                    CenteredSelectorRow(
-                        title = optionLabel(option),
-                        swatchColor = optionSwatchColor(option),
-                        selected = isSelected(option),
-                        onClick = { onOptionSelected(option) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CenteredSelectorRow(
-    title: String,
-    swatchColor: Color,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .background(
-                    color = swatchColor,
-                    shape = RoundedCornerShape(999.dp),
-                ),
-        )
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = colorScheme.onSurface,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-
-        if (selected) {
-            Icon(
-                imageVector = Icons.Rounded.Check,
-                contentDescription = null,
-                tint = colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
-        } else {
-            Spacer(modifier = Modifier.size(20.dp))
-        }
-    }
-}
-
 private fun listColorSwatchForSelector(raw: String?, fallback: Color): Color {
     if (raw.isNullOrBlank()) return fallback
-    return when (raw.trim().uppercase()) {
-        "RED" -> Color(0xFFE65E52)
-        "ORANGE" -> Color(0xFFF29F38)
-        "YELLOW" -> Color(0xFFF3D04A)
-        "LIME" -> Color(0xFF8ACF56)
-        "BLUE" -> Color(0xFF5C9FE7)
-        "PURPLE" -> Color(0xFF8D6CE2)
-        "PINK" -> Color(0xFFDF6DAA)
-        "TEAL" -> Color(0xFF4EB5B0)
-        "CORAL" -> Color(0xFFE3876D)
-        "GOLD" -> Color(0xFFCFAB57)
-        "DEEP_BLUE" -> Color(0xFF4B73D6)
-        "ROSE" -> Color(0xFFD9799A)
-        "LIGHT_RED" -> Color(0xFFE48888)
-        "BRICK" -> Color(0xFFB86A5C)
-        "SLATE" -> Color(0xFF7B8593)
-        else -> runCatching { Color(AndroidColor.parseColor(raw)) }
+    return tdayListAccentColorOrNull(raw)
+        ?: runCatching { Color(AndroidColor.parseColor(raw)) }
             .getOrDefault(fallback)
-    }
-}
-
-private fun prioritySwatchColor(priority: String): Color {
-    return when (priority.lowercase()) {
-        "high" -> Color(0xFFE56A6A)
-        "medium" -> Color(0xFFE3B368)
-        else -> Color(0xFF6FBF86)
-    }
 }
 
 private fun repeatSwatchColor(preset: RepeatPreset): Color {
     return when (preset) {
         RepeatPreset.NONE -> Color(0xFFB7BCC8)
-        RepeatPreset.DAILY -> Color(0xFF6FBF86)
+        RepeatPreset.DAILY -> TdayTaskCompleteAccent
         RepeatPreset.WEEKLY -> Color(0xFF6FA6E8)
         RepeatPreset.WEEKDAYS -> Color(0xFF8C7AE6)
         RepeatPreset.MONTHLY -> Color(0xFFE3B368)
@@ -1059,8 +993,8 @@ private fun ThemedDatePickerDialog(
         colorScheme.onSurface,
         if (isDark) 0.14f else 0.28f,
     )
-    val dialogContainer = colorScheme.background
-    val calendarSurface = if (isDark) colorScheme.surface else Color.White
+    val dialogContainer = TdaySheetDefaults.containerColor()
+    val calendarSurface = TdaySheetDefaults.surfaceColor()
     val primaryText = colorScheme.onSurface
     val mutedText = colorScheme.onSurfaceVariant
     val selectedContentColor = if (pickerAccent.luminance() > 0.45f) colorScheme.surface else Color.White
@@ -1087,7 +1021,7 @@ private fun ThemedDatePickerDialog(
 
     SpectrumPickerDialog(
         onDismiss = onDismiss,
-        title = "Select date",
+        title = stringResource(R.string.create_task_select_date),
         titleIcon = Icons.Rounded.CalendarMonth,
         accent = pickerAccent,
         primaryText = primaryText,
@@ -1131,8 +1065,8 @@ private fun ThemedTimePickerDialog(
         colorScheme.onSurface,
         if (isDark) 0.14f else 0.28f,
     )
-    val dialogContainer = colorScheme.background
-    val pickerSurface = colorScheme.surface
+    val dialogContainer = TdaySheetDefaults.containerColor()
+    val pickerSurface = TdaySheetDefaults.surfaceColor()
     val primaryText = colorScheme.onSurface
     val mutedText = colorScheme.onSurfaceVariant
     val selectedContentColor = if (pickerAccent.luminance() > 0.45f) colorScheme.surface else Color.White
@@ -1165,7 +1099,7 @@ private fun ThemedTimePickerDialog(
 
     SpectrumPickerDialog(
         onDismiss = onDismiss,
-        title = "Select time",
+        title = stringResource(R.string.create_task_select_time),
         titleIcon = Icons.Rounded.Schedule,
         accent = pickerAccent,
         primaryText = primaryText,
@@ -1209,75 +1143,88 @@ private fun SpectrumPickerDialog(
     onConfirm: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    val outerShape = RoundedCornerShape(34.dp)
-    val innerShape = RoundedCornerShape(28.dp)
-
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Card(
+        Box(
             modifier = Modifier
-                .fillMaxWidth(dialogWidthFraction),
-            shape = outerShape,
-            colors = CardDefaults.cardColors(containerColor = containerColor),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                .fillMaxSize()
+                .background(TdaySheetDefaults.scrimColor())
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss,
+                ),
+            contentAlignment = Alignment.Center,
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(dialogWidthFraction)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                    ),
+                shape = TdaySheetDefaults.DialogShape,
+                colors = CardDefaults.cardColors(containerColor = containerColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                Column(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Icon(
-                        imageVector = titleIcon,
-                        contentDescription = null,
-                        tint = mutedText,
-                        modifier = Modifier.size(22.dp),
-                    )
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = primaryText,
-                    )
-                }
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    shape = innerShape,
-                    colors = CardDefaults.cardColors(containerColor = panelColor),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                ) {
-                    content()
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 2.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(onClick = onDismiss) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = titleIcon,
+                            contentDescription = null,
+                            tint = mutedText,
+                            modifier = Modifier.size(22.dp),
+                        )
                         Text(
-                            text = "Cancel",
-                            color = mutedText,
-                            style = MaterialTheme.typography.titleMedium,
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
+                            color = primaryText,
                         )
                     }
-                    TextButton(onClick = onConfirm) {
-                        Text(
-                            text = "Done",
-                            color = primaryText,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                        )
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        shape = TdaySheetDefaults.CardShape,
+                        colors = CardDefaults.cardColors(containerColor = panelColor),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    ) {
+                        content()
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 2.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TextButton(onClick = onDismiss) {
+                            Text(
+                                text = stringResource(R.string.action_cancel),
+                                color = mutedText,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
+                        TextButton(onClick = onConfirm) {
+                            Text(
+                                text = stringResource(R.string.action_done),
+                                color = primaryText,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
                     }
                 }
             }

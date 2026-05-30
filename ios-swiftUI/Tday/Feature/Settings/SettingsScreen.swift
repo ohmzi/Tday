@@ -8,9 +8,10 @@ struct SettingsScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
     @State private var settingsScrollOffset: CGFloat = 0
+    @State private var showingReminderSelector = false
 
     private var isAdminUser: Bool {
-        (viewModel.user?.role ?? "").uppercased() == "ADMIN"
+        !viewModel.isLocalMode && (viewModel.user?.role ?? "").uppercased() == "ADMIN"
     }
 
     private var titleCollapseProgress: CGFloat {
@@ -44,6 +45,18 @@ struct SettingsScreen: View {
                 action: nil
             )
         }
+        .overlay {
+            if showingReminderSelector {
+                SettingsReminderSelectorOverlay(
+                    selectedReminder: viewModel.selectedReminder,
+                    onSelect: viewModel.setDefaultReminder,
+                    onDismiss: {
+                        showingReminderSelector = false
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            }
+        }
         .task {
             await viewModel.refreshAdminAiSummarySetting()
             await viewModel.refreshVersionInfo()
@@ -65,14 +78,17 @@ struct SettingsScreen: View {
         } message: {
             Text(viewModel.aiSummaryValidationError ?? "")
         }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingReminderSelector)
     }
 
     private var settingsContent: some View {
         List {
             settingsHeroTitleRow
 
-            settingsListRow {
-                SettingsProfileCard(user: viewModel.user)
+            if !viewModel.isLocalMode {
+                settingsListRow {
+                    SettingsProfileCard(user: viewModel.user)
+                }
             }
 
             settingsListRow {
@@ -86,7 +102,9 @@ struct SettingsScreen: View {
                     SettingsSectionTitle("Reminders")
                     SettingsReminderSelector(
                         selectedReminder: viewModel.selectedReminder,
-                        onSelect: viewModel.setDefaultReminder
+                        onOpen: {
+                            showingReminderSelector = true
+                        }
                     )
                 }
             }
@@ -116,24 +134,26 @@ struct SettingsScreen: View {
                             .foregroundStyle(colors.secondary)
                     }
 
-                    if let backendVersion = viewModel.backendVersion {
+                    if !viewModel.isLocalMode, let backendVersion = viewModel.backendVersion {
                         SettingsServerVersionRow(
                             backendVersion: backendVersion,
                             versionCheckResult: viewModel.versionCheckResult
                         )
                     }
 
-                    SettingsDivider()
+                    if !viewModel.isLocalMode {
+                        SettingsDivider()
 
-                    SettingsListRow(
-                        title: "Sign out",
-                        value: nil,
-                        titleColor: colors.error,
-                        showChevron: false,
-                        action: {
-                            Task { await viewModel.logout() }
-                        }
-                    )
+                        SettingsListRow(
+                            title: "Sign out",
+                            value: nil,
+                            titleColor: colors.error,
+                            showChevron: false,
+                            action: {
+                                Task { await viewModel.logout() }
+                            }
+                        )
+                    }
                 }
             }
 
@@ -271,24 +291,12 @@ private struct SettingsThemeSelector: View {
 
 private struct SettingsReminderSelector: View {
     let selectedReminder: ReminderOption
-    let onSelect: (ReminderOption) -> Void
+    let onOpen: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
-        Menu {
-            ForEach(ReminderOption.allCases) { option in
-                Button {
-                    onSelect(option)
-                } label: {
-                    if option == selectedReminder {
-                        Label(option.label, systemImage: "checkmark")
-                    } else {
-                        Text(option.label)
-                    }
-                }
-            }
-        } label: {
+        Button(action: onOpen) {
             SettingsRowLabel(
                 title: "Default reminder",
                 value: selectedReminder.label,
@@ -297,6 +305,59 @@ private struct SettingsReminderSelector: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct SettingsReminderSelectorOverlay: View {
+    let selectedReminder: ReminderOption
+    let onSelect: (ReminderOption) -> Void
+    let onDismiss: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        ZStack {
+            colors.bottomSheetScrim
+                .ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+
+            TdayCenteredSelectorCard(title: "Default reminder") {
+                ForEach(Array(ReminderOption.allCases.enumerated()), id: \.element.id) { index, option in
+                    if index > 0 {
+                        TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
+                    }
+
+                    TdayCenteredSelectorRow(
+                        title: option.label,
+                        swatchColor: reminderSwatchColor(option, colors: colors),
+                        selected: option == selectedReminder
+                    ) {
+                        onSelect(option)
+                        onDismiss()
+                    }
+                }
+            }
+            .padding(.horizontal, 54)
+        }
+    }
+
+    private func reminderSwatchColor(_ option: ReminderOption, colors: TdayColors) -> Color {
+        switch option {
+        case .none:
+            return colors.onSurfaceVariant.opacity(0.35)
+        case .atTime:
+            return Color.tdayTodayBlue
+        case .fiveMinutes:
+            return Color(red: 0.44, green: 0.53, blue: 0.78)
+        case .fifteenMinutes:
+            return Color(red: 0.78, green: 0.58, blue: 0.40)
+        case .oneHour:
+            return Color(red: 0.56, green: 0.70, blue: 0.48)
+        case .oneDay:
+            return Color(red: 0.61, green: 0.54, blue: 0.82)
+        case .twoDays:
+            return Color(red: 0.78, green: 0.48, blue: 0.58)
+        }
     }
 }
 
@@ -945,14 +1006,23 @@ private func parseChangelog(_ body: String?) -> [String] {
 }
 
 private func formatIsoDate(_ value: String) -> String {
-    let parser = ISO8601DateFormatter()
-    parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    let date = parser.date(from: value) ?? {
-        let fallback = ISO8601DateFormatter()
-        fallback.formatOptions = [.withInternetDateTime]
-        return fallback.date(from: value)
-    }()
+    let date = ReleaseDateFormatters.internetDateTimeWithFraction.date(from: value)
+        ?? ReleaseDateFormatters.internetDateTime.date(from: value)
 
     guard let date else { return value }
     return date.formatted(.dateTime.month(.wide).day().year())
+}
+
+private enum ReleaseDateFormatters {
+    static let internetDateTimeWithFraction: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    static let internetDateTime: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 }

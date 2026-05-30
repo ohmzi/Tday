@@ -69,6 +69,8 @@ class CompletedRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         if (originalTodoId.startsWith(LOCAL_TODO_PREFIX)) return
 
         runCatching {
@@ -119,8 +121,8 @@ class CompletedRepository @Inject constructor(
                             title = normalizedTitle,
                             description = payload.description,
                             priority = normalizedPriority,
-                            dueEpochMs = payload.due.toEpochMilli(),
-                            rrule = payload.rrule,
+                            dueEpochMs = payload.due?.toEpochMilli(),
+                            rrule = payload.rrule?.takeIf { payload.due != null },
                             listId = normalizedListId,
                             updatedAtEpochMs = timestampMs,
                         )
@@ -143,10 +145,11 @@ class CompletedRepository @Inject constructor(
                             title = normalizedTitle,
                             description = payload.description,
                             priority = normalizedPriority,
-                            dueEpochMs = payload.due.toEpochMilli(),
+                            dueEpochMs = payload.due?.toEpochMilli(),
                             completedAtEpochMs = completed.completedAtEpochMs.takeIf { it > 0L }
                                 ?: timestampMs,
-                            rrule = payload.rrule,
+                            rrule = payload.rrule?.takeIf { payload.due != null },
+                            listId = normalizedListId,
                             listName = listMeta?.name,
                             listColor = listMeta?.color,
                         )
@@ -157,6 +160,8 @@ class CompletedRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         requireApiBody(
             api.patchCompletedTodoByBody(
                 UpdateCompletedTodoRequest(
@@ -164,8 +169,8 @@ class CompletedRepository @Inject constructor(
                     title = normalizedTitle,
                     description = payload.description,
                     priority = normalizedPriority,
-                    due = payload.due.toString(),
-                    rrule = payload.rrule,
+                    due = payload.due?.toString(),
+                    rrule = payload.rrule?.takeIf { payload.due != null },
                     listID = normalizedListId,
                 ),
             ),
@@ -206,6 +211,8 @@ class CompletedRepository @Inject constructor(
             )
         }
 
+        if (syncManager.isLocalMode()) return
+
         if (resolvedCompletedId.startsWith(LOCAL_COMPLETED_PREFIX)) return
 
         requireApiBody(
@@ -221,6 +228,10 @@ class CompletedRepository @Inject constructor(
         canonicalTodoId: String?,
         instanceDateEpochMs: Long?,
     ): String {
+        if (syncManager.isLocalMode()) {
+            return currentCompletedId
+        }
+
         if (!currentCompletedId.startsWith(LOCAL_COMPLETED_PREFIX)) {
             return currentCompletedId
         }

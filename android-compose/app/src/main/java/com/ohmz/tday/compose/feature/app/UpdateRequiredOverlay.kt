@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -50,6 +51,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.feature.release.GitHubAsset
 import com.ohmz.tday.compose.feature.release.GitHubRelease
@@ -68,6 +70,7 @@ fun UpdateRequiredOverlay(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
+    val installPermissionToast = stringResource(R.string.install_permission_return_to_app)
     val consumeAllTouchesSource = remember { MutableInteractionSource() }
     val scope = rememberCoroutineScope()
 
@@ -174,13 +177,16 @@ fun UpdateRequiredOverlay(
                             modifier = Modifier.size(48.dp),
                         )
                         Text(
-                            text = "Update Required",
+                            text = stringResource(R.string.app_update_required_title),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
                         )
                         Text(
-                            text = "An update to v${versionCheckResult.requiredVersion} is required to continue.",
+                            text = stringResource(
+                                R.string.app_update_required_message,
+                                versionCheckResult.requiredVersion,
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = colorScheme.onSurface.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center,
@@ -204,7 +210,7 @@ fun UpdateRequiredOverlay(
                                                 OverlayInstallState.AwaitingPermission
                                             Toast.makeText(
                                                 context,
-                                                "Grant install permission, then return to the app.",
+                                                installPermissionToast,
                                                 Toast.LENGTH_LONG,
                                             ).show()
                                             installPermissionLauncher.launch(
@@ -232,9 +238,10 @@ fun UpdateRequiredOverlay(
 
                             else -> {
                                 Text(
-                                    text = "v${versionCheckResult.requiredVersion} is not yet " +
-                                        "available for download. Please ask an administrator " +
-                                        "to upload the update.",
+                                    text = stringResource(
+                                        R.string.app_update_download_not_ready,
+                                        versionCheckResult.requiredVersion,
+                                    ),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = colorScheme.onSurface.copy(alpha = 0.7f),
                                     textAlign = TextAlign.Center,
@@ -246,7 +253,7 @@ fun UpdateRequiredOverlay(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = onRetry,
                         ) {
-                            Text("Retry")
+                            Text(stringResource(R.string.action_retry))
                         }
                     }
 
@@ -258,15 +265,16 @@ fun UpdateRequiredOverlay(
                             modifier = Modifier.size(48.dp),
                         )
                         Text(
-                            text = "Server Update Needed",
+                            text = stringResource(R.string.server_update_required_title),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
                         )
                         Text(
-                            text = "Your app requires a newer server version. The server is on " +
-                                "v${versionCheckResult.serverVersion}. Please contact your " +
-                                "administrator to update the server.",
+                            text = stringResource(
+                                R.string.server_update_required_message,
+                                versionCheckResult.serverVersion,
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = colorScheme.onSurface.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center,
@@ -275,7 +283,7 @@ fun UpdateRequiredOverlay(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = onRetry,
                         ) {
-                            Text("Retry")
+                            Text(stringResource(R.string.action_retry))
                         }
                     }
 
@@ -317,7 +325,7 @@ private fun OverlayInstallStatus(installState: OverlayInstallState) {
 
         OverlayInstallState.AwaitingPermission -> {
             Text(
-                text = "Grant install permission, then return here.",
+                text = stringResource(R.string.install_permission_return_here),
                 style = MaterialTheme.typography.bodySmall,
                 color = colorScheme.onSurface.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,
@@ -328,15 +336,23 @@ private fun OverlayInstallStatus(installState: OverlayInstallState) {
     }
 }
 
+@Composable
 private fun overlayInstallButtonLabel(state: OverlayInstallState): String = when (state) {
-    OverlayInstallState.AwaitingPermission -> "Awaiting Permission..."
+    OverlayInstallState.AwaitingPermission ->
+        stringResource(R.string.overlay_install_awaiting_permission)
     is OverlayInstallState.Downloading -> {
         state.progress
-            ?.let { "Downloading... ${(it * 100).roundToInt().coerceIn(0, 100)}%" }
-            ?: "Downloading..."
+            ?.let {
+                stringResource(
+                    R.string.overlay_install_downloading_progress,
+                    (it * 100).roundToInt().coerceIn(0, 100),
+                )
+            }
+            ?: stringResource(R.string.overlay_install_downloading)
     }
-    OverlayInstallState.Installing -> "Installing..."
-    OverlayInstallState.Idle, is OverlayInstallState.Error -> "Download & Install"
+    OverlayInstallState.Installing -> stringResource(R.string.overlay_install_installing)
+    OverlayInstallState.Idle, is OverlayInstallState.Error ->
+        stringResource(R.string.overlay_install_download_and_install)
 }
 
 private fun startOverlayInstall(

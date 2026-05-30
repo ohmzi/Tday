@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Options, RRule } from "rrule";
-import RepeatEndOption from "../../Dropdowns/RepeatDropdown/repeatModalMenu/RepeatEndOption";
-import RepeatEveryOption from "../../Dropdowns/RepeatDropdown/repeatModalMenu/RepeatEveryOption";
-import RepeatOnOption from "../../Dropdowns/RepeatDropdown/repeatModalMenu/RepeatOnOption";
+import RepeatEndOption from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/RepeatDropdown/repeatModalMenu/RepeatEndOption";
+import RepeatEveryOption from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/RepeatDropdown/repeatModalMenu/RepeatEveryOption";
+import RepeatOnOption from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/RepeatDropdown/repeatModalMenu/RepeatOnOption";
 import { cn } from "@/lib/utils";
 
 type CustomRepeatDrawerProps = {

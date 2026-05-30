@@ -1,25 +1,34 @@
 package com.ohmz.tday.compose.core.data.todo
 
 import android.util.Log
+import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.MutationKind
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.core.data.PendingMutationRecord
+import com.ohmz.tday.compose.core.data.cache.LOCAL_COMPLETED_FLOATER_PREFIX
+import com.ohmz.tday.compose.core.data.cache.LOCAL_FLOATER_LIST_PREFIX
+import com.ohmz.tday.compose.core.data.cache.LOCAL_FLOATER_PREFIX
 import com.ohmz.tday.compose.core.data.cache.LOCAL_LIST_PREFIX
 import com.ohmz.tday.compose.core.data.cache.LOCAL_TODO_PREFIX
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
-import com.ohmz.tday.compose.core.data.cache.completedFromCache
+import com.ohmz.tday.compose.core.data.cache.floaterFromCache
+import com.ohmz.tday.compose.core.data.cache.floaterToCache
 import com.ohmz.tday.compose.core.data.cache.listFromCache
+import com.ohmz.tday.compose.core.data.cache.mapFloaterDto
 import com.ohmz.tday.compose.core.data.cache.mapTodoDto
 import com.ohmz.tday.compose.core.data.cache.orderListsLikeWeb
 import com.ohmz.tday.compose.core.data.cache.todoFromCache
 import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.model.CreateFloaterRequest
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.CreateTodoRequest
 import com.ohmz.tday.compose.core.model.DashboardSummary
+import com.ohmz.tday.compose.core.model.DeleteFloaterRequest
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
+import com.ohmz.tday.compose.core.model.FloaterCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoCompleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceDeleteRequest
 import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
@@ -29,6 +38,7 @@ import com.ohmz.tday.compose.core.model.TodoSummaryRequest
 import com.ohmz.tday.compose.core.model.TodoSummaryResponse
 import com.ohmz.tday.compose.core.model.TodoTitleNlpRequest
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.model.UpdateFloaterRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import java.time.Instant
@@ -93,7 +103,8 @@ class TodoRepository @Inject constructor(
             "High" -> "High"
             else -> "Low"
         }
-        val normalizedDue = payload.due
+        val normalizedDue = payload.due ?: ZonedDateTime.now(zoneId).plusHours(1).toInstant()
+        val normalizedRrule = payload.rrule?.takeIf { it.isNotBlank() }
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
 
@@ -109,7 +120,7 @@ class TodoRepository @Inject constructor(
                 description = normalizedDescription,
                 priority = normalizedPriority,
                 dueEpochMs = normalizedDue.toEpochMilli(),
-                rrule = payload.rrule,
+                rrule = normalizedRrule,
                 instanceDateEpochMs = null,
                 pinned = false,
                 completed = false,
@@ -127,13 +138,18 @@ class TodoRepository @Inject constructor(
                     description = normalizedDescription,
                     priority = normalizedPriority,
                     dueEpochMs = normalizedDue.toEpochMilli(),
-                    rrule = payload.rrule,
+                    rrule = normalizedRrule,
                     listId = normalizedListId,
                 ),
             )
         }
 
-        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(LOCAL_LIST_PREFIX)) {
+        if (syncManager.isLocalMode()) return
+
+        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(
+                LOCAL_FLOATER_LIST_PREFIX
+            )
+        ) {
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
         }
@@ -146,7 +162,7 @@ class TodoRepository @Inject constructor(
                         description = normalizedDescription,
                         priority = normalizedPriority,
                         due = normalizedDue.toString(),
-                        rrule = payload.rrule,
+                        rrule = normalizedRrule,
                         listID = normalizedListId,
                     ),
                 ),
@@ -175,6 +191,93 @@ class TodoRepository @Inject constructor(
         }.onFailure { /* pending mutation will be retried by background sync */ }
     }
 
+    suspend fun createFloater(payload: CreateTaskPayload) {
+        val trimmedTitle = payload.title.trim()
+        if (trimmedTitle.isBlank()) return
+
+        val normalizedPriority = when (payload.priority.trim()) {
+            "Medium" -> "Medium"
+            "High" -> "High"
+            else -> "Low"
+        }
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+        val localFloaterId = "$LOCAL_FLOATER_PREFIX${UUID.randomUUID()}"
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+
+        cacheManager.updateOfflineState { state ->
+            val newFloater = CachedFloaterRecord(
+                id = localFloaterId,
+                canonicalId = localFloaterId,
+                title = trimmedTitle,
+                description = normalizedDescription,
+                priority = normalizedPriority,
+                pinned = false,
+                completed = false,
+                listId = normalizedListId,
+                updatedAtEpochMs = timestampMs,
+            )
+            state.copy(
+                floaters = state.floaters + newFloater,
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = mutationId,
+                    kind = MutationKind.CREATE_FLOATER,
+                    targetId = localFloaterId,
+                    timestampEpochMs = timestampMs,
+                    title = trimmedTitle,
+                    description = normalizedDescription,
+                    priority = normalizedPriority,
+                    listId = normalizedListId,
+                ),
+            )
+        }
+
+        if (syncManager.isLocalMode()) return
+
+        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(
+                LOCAL_FLOATER_LIST_PREFIX
+            )
+        ) {
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            return
+        }
+
+        runCatching {
+            requireApiBody(
+                api.createFloater(
+                    CreateFloaterRequest(
+                        title = trimmedTitle,
+                        description = normalizedDescription,
+                        priority = normalizedPriority,
+                        listID = normalizedListId,
+                    ),
+                ),
+                "Could not create floater",
+            ).floater
+        }.onSuccess { createdDto ->
+            if (createdDto == null) return@onSuccess
+            val createdFloater = mapFloaterDto(createdDto)
+            cacheManager.updateOfflineState { state ->
+                val remapped = replaceLocalFloaterId(
+                    state = state,
+                    localFloaterId = localFloaterId,
+                    serverFloaterId = createdFloater.canonicalId,
+                )
+                remapped.copy(
+                    floaters = remapped.floaters.map {
+                        if (it.canonicalId == createdFloater.canonicalId) {
+                            floaterToCache(createdFloater)
+                        } else {
+                            it
+                        }
+                    },
+                    pendingMutations = remapped.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        }.onFailure { /* pending mutation will be retried by background sync */ }
+    }
+
     suspend fun updateTodo(todo: TodoItem, payload: CreateTaskPayload) {
         val canonicalId = todo.canonicalId
         if (canonicalId.isBlank()) return
@@ -187,7 +290,8 @@ class TodoRepository @Inject constructor(
             "High" -> "High"
             else -> "Low"
         }
-        val normalizedDue = payload.due
+        val normalizedDue =
+            payload.due ?: todo.due ?: ZonedDateTime.now(zoneId).plusHours(1).toInstant()
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedRrule = payload.rrule?.takeIf { it.isNotBlank() }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
@@ -245,6 +349,7 @@ class TodoRepository @Inject constructor(
                     },
                 )
             }
+            if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
         }
@@ -277,7 +382,12 @@ class TodoRepository @Inject constructor(
             )
         }
 
-        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(LOCAL_LIST_PREFIX)) {
+        if (syncManager.isLocalMode()) return
+
+        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(
+                LOCAL_FLOATER_LIST_PREFIX
+            )
+        ) {
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
         }
@@ -337,6 +447,252 @@ class TodoRepository @Inject constructor(
         }
     }
 
+    suspend fun updateFloater(floater: TodoItem, payload: CreateTaskPayload) {
+        val canonicalId = floater.canonicalId
+        if (canonicalId.isBlank()) return
+        val trimmedTitle = payload.title.trim()
+        if (trimmedTitle.isBlank()) return
+
+        val normalizedPriority = when (payload.priority.trim()) {
+            "Medium" -> "Medium"
+            "High" -> "High"
+            else -> "Low"
+        }
+        val normalizedDescription = payload.description?.trim()?.ifBlank { null }
+        val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.UPDATE_FLOATER,
+            targetId = canonicalId,
+            timestampEpochMs = timestampMs,
+            title = trimmedTitle,
+            description = normalizedDescription,
+            priority = normalizedPriority,
+            listId = normalizedListId,
+        )
+
+        if (canonicalId.startsWith(LOCAL_FLOATER_PREFIX)) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    floaters = state.floaters.map { cached ->
+                        if (cached.canonicalId == canonicalId) {
+                            cached.copy(
+                                title = trimmedTitle,
+                                description = normalizedDescription,
+                                priority = normalizedPriority,
+                                listId = normalizedListId,
+                                updatedAtEpochMs = timestampMs,
+                            )
+                        } else {
+                            cached
+                        }
+                    },
+                    pendingMutations = state.pendingMutations.map { mutation ->
+                        if (mutation.kind == MutationKind.CREATE_FLOATER && mutation.targetId == canonicalId) {
+                            mutation.copy(
+                                title = trimmedTitle,
+                                description = normalizedDescription,
+                                priority = normalizedPriority,
+                                listId = normalizedListId,
+                                timestampEpochMs = timestampMs,
+                            )
+                        } else {
+                            mutation
+                        }
+                    },
+                )
+            }
+            if (syncManager.isLocalMode()) return
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            return
+        }
+
+        cacheManager.updateOfflineState { state ->
+            state.copy(
+                floaters = state.floaters.map { cached ->
+                    if (cached.canonicalId == canonicalId) {
+                        cached.copy(
+                            title = trimmedTitle,
+                            description = normalizedDescription,
+                            priority = normalizedPriority,
+                            listId = normalizedListId,
+                            updatedAtEpochMs = timestampMs,
+                        )
+                    } else {
+                        cached
+                    }
+                },
+                pendingMutations = state.pendingMutations
+                    .filterNot { it.kind == MutationKind.UPDATE_FLOATER && it.targetId == canonicalId } + pendingMutation,
+            )
+        }
+
+        if (syncManager.isLocalMode()) return
+
+        if (!normalizedListId.isNullOrBlank() && normalizedListId.startsWith(LOCAL_LIST_PREFIX)) {
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            return
+        }
+
+        val descriptionForApi =
+            normalizedDescription ?: if (floater.description != null) "" else null
+        val listIdForApi = normalizedListId ?: if (!floater.listId.isNullOrBlank()) "" else null
+        val immediateError = runCatching {
+            requireApiBody(
+                api.patchFloaterByBody(
+                    UpdateFloaterRequest(
+                        id = canonicalId,
+                        title = trimmedTitle,
+                        description = descriptionForApi,
+                        priority = normalizedPriority,
+                        listID = listIdForApi,
+                    ),
+                ),
+                "Could not update floater",
+            )
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(
+                immediateError,
+                pendingMutation
+            )
+        ) {
+            throw immediateError
+        }
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId })
+            }
+        } else {
+            Log.w(
+                LOG_TAG,
+                "updateFloater deferred floater=$canonicalId reason=${immediateError.message}"
+            )
+        }
+    }
+
+    suspend fun moveTodo(todo: TodoItem, due: Instant) {
+        val canonicalId = todo.canonicalId
+        if (canonicalId.isBlank()) return
+
+        val instanceDateEpochMs = todo.instanceDateEpochMillis
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        val pendingMutation = PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.UPDATE_TODO,
+            targetId = canonicalId,
+            timestampEpochMs = timestampMs,
+            dueEpochMs = due.toEpochMilli(),
+            instanceDateEpochMs = instanceDateEpochMs,
+        )
+
+        val isLocalOnly = canonicalId.startsWith(LOCAL_TODO_PREFIX)
+        cacheManager.updateOfflineState { state ->
+            val hasExistingUpdateMutation = state.pendingMutations.any { mutation ->
+                mutation.kind == MutationKind.UPDATE_TODO &&
+                        mutation.targetId == canonicalId &&
+                        mutation.instanceDateEpochMs == instanceDateEpochMs
+            }
+            val updatedMutations = state.pendingMutations
+                .map { mutation ->
+                    when {
+                        mutation.kind == MutationKind.CREATE_TODO && mutation.targetId == canonicalId -> {
+                            mutation.copy(
+                                dueEpochMs = due.toEpochMilli(),
+                                timestampEpochMs = timestampMs,
+                            )
+                        }
+
+                        mutation.kind == MutationKind.UPDATE_TODO &&
+                                mutation.targetId == canonicalId &&
+                                mutation.instanceDateEpochMs == instanceDateEpochMs -> {
+                            mutation.copy(
+                                dueEpochMs = due.toEpochMilli(),
+                                timestampEpochMs = timestampMs,
+                            )
+                        }
+
+                        else -> mutation
+                    }
+                }
+            state.copy(
+                todos = state.todos.map { cached ->
+                    val isTarget = cached.canonicalId == canonicalId &&
+                            (instanceDateEpochMs == null || cached.instanceDateEpochMs == instanceDateEpochMs)
+                    if (isTarget) {
+                        cached.copy(
+                            dueEpochMs = due.toEpochMilli(),
+                            updatedAtEpochMs = timestampMs,
+                        )
+                    } else {
+                        cached
+                    }
+                },
+                pendingMutations = if (isLocalOnly || hasExistingUpdateMutation) {
+                    updatedMutations
+                } else {
+                    updatedMutations + pendingMutation
+                },
+            )
+        }
+
+        if (syncManager.isLocalMode()) return
+
+        if (isLocalOnly) {
+            syncManager.syncCachedData(force = true, replayPendingMutations = true)
+            return
+        }
+
+        val immediateError = runCatching {
+            if (instanceDateEpochMs != null) {
+                requireApiBody(
+                    api.patchTodoInstanceByBody(
+                        TodoInstanceUpdateRequest(
+                            todoId = canonicalId,
+                            instanceDate = Instant.ofEpochMilli(instanceDateEpochMs).toString(),
+                            due = due.toString(),
+                        ),
+                    ),
+                    "Could not reschedule recurring task instance",
+                )
+            } else {
+                requireApiBody(
+                    api.patchTodoByBody(
+                        UpdateTodoRequest(
+                            id = canonicalId,
+                            due = due.toString(),
+                            dateChanged = true,
+                            instanceDate = null,
+                        ),
+                    ),
+                    "Could not reschedule task",
+                )
+            }
+        }.exceptionOrNull()
+
+        if (immediateError != null && isLikelyUnrecoverableMutationError(
+                immediateError,
+                pendingMutation
+            )
+        ) {
+            throw immediateError
+        }
+
+        if (immediateError == null) {
+            cacheManager.updateOfflineState { state ->
+                state.copy(
+                    pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
+                )
+            }
+        } else {
+            Log.w(LOG_TAG, "moveTodo deferred todo=$canonicalId reason=${immediateError.message}")
+        }
+    }
+
     suspend fun deleteTodo(todo: TodoItem) {
         val timestampMs = System.currentTimeMillis()
         val canonicalId = todo.canonicalId
@@ -346,34 +702,17 @@ class TodoRepository @Inject constructor(
 
         cacheManager.updateOfflineState { state ->
             val isLocalOnly = canonicalId.startsWith(LOCAL_TODO_PREFIX)
-            val prunedTodos = state.todos.filterNot { it.canonicalId == canonicalId }
-            val prunedCompleted = state.completedItems.filterNot { it.originalTodoId == canonicalId }
-
-            if (isLocalOnly) {
-                state.copy(
-                    todos = prunedTodos,
-                    completedItems = prunedCompleted,
-                    pendingMutations = state.pendingMutations.filterNot { it.targetId == canonicalId },
-                )
-            } else {
-                state.copy(
-                    todos = prunedTodos,
-                    completedItems = prunedCompleted,
-                    pendingMutations = state.pendingMutations
-                        .filterNot {
-                            it.kind == MutationKind.DELETE_TODO &&
-                                it.targetId == canonicalId &&
-                                it.instanceDateEpochMs == instanceDateEpochMs
-                        } + PendingMutationRecord(
-                        mutationId = mutationId,
-                        kind = MutationKind.DELETE_TODO,
-                        targetId = canonicalId,
-                        timestampEpochMs = timestampMs,
-                        instanceDateEpochMs = instanceDateEpochMs,
-                    ),
-                )
-            }
+            state.withDeletedTodoCached(
+                canonicalId = canonicalId,
+                instanceDateEpochMs = instanceDateEpochMs,
+                isRecurringInstanceDelete = isRecurringInstanceDelete,
+                isLocalOnly = isLocalOnly,
+                mutationId = mutationId,
+                timestampEpochMs = timestampMs,
+            )
         }
+
+        if (syncManager.isLocalMode()) return
 
         if (canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
 
@@ -405,6 +744,55 @@ class TodoRepository @Inject constructor(
         }
     }
 
+    suspend fun deleteFloater(floater: TodoItem) {
+        val timestampMs = System.currentTimeMillis()
+        val canonicalId = floater.canonicalId
+        val mutationId = UUID.randomUUID().toString()
+
+        cacheManager.updateOfflineState { state ->
+            val isLocalOnly = canonicalId.startsWith(LOCAL_FLOATER_PREFIX)
+            val prunedFloaters = state.floaters.filterNot { it.canonicalId == canonicalId }
+            val prunedCompleted =
+                state.completedFloaters.filterNot { it.originalFloaterId == canonicalId }
+
+            if (isLocalOnly) {
+                state.copy(
+                    floaters = prunedFloaters,
+                    completedFloaters = prunedCompleted,
+                    pendingMutations = state.pendingMutations.filterNot { it.targetId == canonicalId },
+                )
+            } else {
+                state.copy(
+                    floaters = prunedFloaters,
+                    completedFloaters = prunedCompleted,
+                    pendingMutations = state.pendingMutations
+                        .filterNot { it.kind == MutationKind.DELETE_FLOATER && it.targetId == canonicalId } +
+                            PendingMutationRecord(
+                                mutationId = mutationId,
+                                kind = MutationKind.DELETE_FLOATER,
+                                targetId = canonicalId,
+                                timestampEpochMs = timestampMs,
+                            ),
+                )
+            }
+        }
+
+        if (syncManager.isLocalMode()) return
+
+        if (canonicalId.startsWith(LOCAL_FLOATER_PREFIX)) return
+
+        runCatching {
+            requireApiBody(
+                api.deleteFloaterByBody(DeleteFloaterRequest(id = canonicalId)),
+                "Could not delete floater",
+            )
+        }.onSuccess {
+            cacheManager.updateOfflineState { state ->
+                state.copy(pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId })
+            }
+        }
+    }
+
     suspend fun completeTodo(todo: TodoItem) {
         val timestampMs = System.currentTimeMillis()
         val mutationId = UUID.randomUUID().toString()
@@ -432,10 +820,11 @@ class TodoRepository @Inject constructor(
                 title = todo.title,
                 description = todo.description,
                 priority = todo.priority,
-                dueEpochMs = todo.due.toEpochMilli(),
+                dueEpochMs = todo.due?.toEpochMilli(),
                 completedAtEpochMs = timestampMs,
                 rrule = todo.rrule,
                 instanceDateEpochMs = todo.instanceDateEpochMillis,
+                listId = todo.listId,
                 listName = listMeta?.name,
                 listColor = listMeta?.color,
             )
@@ -458,6 +847,8 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
+
+        if (syncManager.isLocalMode()) return
 
         if (todo.canonicalId.startsWith(LOCAL_TODO_PREFIX)) return
 
@@ -489,10 +880,68 @@ class TodoRepository @Inject constructor(
         }
     }
 
+    suspend fun completeFloater(floater: TodoItem) {
+        val timestampMs = System.currentTimeMillis()
+        val mutationId = UUID.randomUUID().toString()
+        cacheManager.updateOfflineState { state ->
+            val updatedFloaters = state.floaters.map {
+                if (it.canonicalId == floater.canonicalId) {
+                    it.copy(completed = true, updatedAtEpochMs = timestampMs)
+                } else {
+                    it
+                }
+            }
+            val completedId = "$LOCAL_COMPLETED_FLOATER_PREFIX${UUID.randomUUID()}"
+            val listMeta =
+                floater.listId?.let { listId -> state.floaterLists.firstOrNull { it.id == listId } }
+            val completedItem = com.ohmz.tday.compose.core.data.CachedCompletedFloaterRecord(
+                id = completedId,
+                originalFloaterId = floater.canonicalId,
+                title = floater.title,
+                description = floater.description,
+                priority = floater.priority,
+                completedAtEpochMs = timestampMs,
+                listId = floater.listId,
+                listName = listMeta?.name,
+                listColor = listMeta?.color,
+            )
+
+            state.copy(
+                floaters = updatedFloaters,
+                completedFloaters = state.completedFloaters + completedItem,
+                pendingMutations = state.pendingMutations + PendingMutationRecord(
+                    mutationId = mutationId,
+                    kind = MutationKind.COMPLETE_FLOATER,
+                    targetId = floater.canonicalId,
+                    timestampEpochMs = timestampMs,
+                ),
+            )
+        }
+
+        if (syncManager.isLocalMode()) return
+
+        if (floater.canonicalId.startsWith(LOCAL_FLOATER_PREFIX)) return
+
+        runCatching {
+            requireApiBody(
+                api.completeFloaterByBody(FloaterCompleteRequest(id = floater.canonicalId)),
+                "Could not complete floater",
+            )
+        }.onSuccess {
+            cacheManager.updateOfflineState { state ->
+                state.copy(pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId })
+            }
+        }
+    }
+
     suspend fun summarizeTodos(
         mode: TodoListMode,
         listId: String? = null,
     ): TodoSummaryResponse {
+        if (syncManager.isLocalMode()) {
+            throw IllegalStateException("AI summary is unavailable in local mode")
+        }
+
         val modeValue = when (mode) {
             TodoListMode.TODAY -> "today"
             TodoListMode.OVERDUE -> throw IllegalStateException(
@@ -501,6 +950,9 @@ class TodoRepository @Inject constructor(
             TodoListMode.SCHEDULED -> "scheduled"
             TodoListMode.ALL -> "all"
             TodoListMode.PRIORITY -> "priority"
+            TodoListMode.FLOATER -> throw IllegalStateException(
+                "Summary is available only for Today, Scheduled, All, and Priority screens",
+            )
             TodoListMode.LIST -> throw IllegalStateException(
                 "Summary is available only for Today, Scheduled, All, and Priority screens",
             )
@@ -517,6 +969,7 @@ class TodoRepository @Inject constructor(
     ): TodoTitleNlpResponse? {
         val trimmedText = text.trim()
         if (trimmedText.isBlank()) return null
+        if (syncManager.isLocalMode()) return null
 
         val timezoneOffsetMinutes = ZoneId.systemDefault()
             .rules
@@ -545,10 +998,14 @@ class TodoRepository @Inject constructor(
             .map(::todoFromCache)
             .filterNot { it.completed }
             .toList()
+        val activeFloaters = state.floaters
+            .asSequence()
+            .map(::floaterFromCache)
+            .filterNot { it.completed }
+            .toList()
         val todayTodos = timelineTodos.filter(::isTodayTodo)
         val now = Instant.now()
         val scheduledTodos = timelineTodos.filter { isScheduledTodo(it, now) }
-        val completedTodos = state.completedItems.map(::completedFromCache)
         val todoCountsByList = timelineTodos
             .groupingBy { it.listId }
             .eachCount()
@@ -562,7 +1019,8 @@ class TodoRepository @Inject constructor(
             scheduledCount = scheduledTodos.size,
             allCount = timelineTodos.size,
             priorityCount = timelineTodos.count { isPriorityTodo(it.priority) },
-            completedCount = completedTodos.size,
+            floaterCount = activeFloaters.size,
+            completedCount = state.completedItems.size,
             lists = lists,
         )
     }
@@ -577,6 +1035,11 @@ class TodoRepository @Inject constructor(
             .map(::todoFromCache)
             .toList()
         val activeTodos = allTodos.filterNot { it.completed }
+        val activeFloaters = state.floaters
+            .asSequence()
+            .map(::floaterFromCache)
+            .filterNot { it.completed }
+            .toList()
         val now = Instant.now()
 
         return when (mode) {
@@ -585,6 +1048,10 @@ class TodoRepository @Inject constructor(
             TodoListMode.ALL -> activeTodos
             TodoListMode.SCHEDULED -> activeTodos.filter { isScheduledTodo(it, now) }
             TodoListMode.PRIORITY -> activeTodos.filter { isPriorityTodo(it.priority) }
+            TodoListMode.FLOATER -> {
+                if (listId.isNullOrBlank()) activeFloaters
+                else activeFloaters.filter { it.listId == listId }
+            }
             TodoListMode.LIST -> {
                 if (listId.isNullOrBlank()) emptyList()
                 else activeTodos.filter { it.listId == listId }
@@ -595,15 +1062,16 @@ class TodoRepository @Inject constructor(
     private fun isTodayTodo(todo: TodoItem): Boolean {
         val start = Instant.ofEpochMilli(startOfTodayMillis())
         val end = Instant.ofEpochMilli(endOfTodayMillis())
-        return todo.due >= start && todo.due <= end
+        val due = todo.due ?: return false
+        return due >= start && due <= end
     }
 
     private fun isScheduledTodo(todo: TodoItem, now: Instant = Instant.now()): Boolean {
-        return !todo.due.isBefore(now)
+        return todo.due?.isBefore(now) == false
     }
 
     private fun isOverdueTodo(todo: TodoItem, now: Instant = Instant.now()): Boolean {
-        return todo.due.isBefore(now)
+        return todo.due?.isBefore(now) == true
     }
 
     private fun isPriorityTodo(priority: String?): Boolean {
@@ -658,7 +1126,86 @@ class TodoRepository @Inject constructor(
         )
     }
 
+    private fun replaceLocalFloaterId(
+        state: OfflineSyncState,
+        localFloaterId: String,
+        serverFloaterId: String,
+    ): OfflineSyncState {
+        return state.copy(
+            floaters = state.floaters.map {
+                if (it.canonicalId == localFloaterId) {
+                    it.copy(
+                        id = if (it.id == localFloaterId) serverFloaterId else it.id,
+                        canonicalId = serverFloaterId,
+                    )
+                } else {
+                    it
+                }
+            },
+            pendingMutations = state.pendingMutations.map {
+                if (it.targetId == localFloaterId) {
+                    it.copy(targetId = serverFloaterId)
+                } else {
+                    it
+                }
+            },
+        )
+    }
+
     private companion object {
         const val LOG_TAG = "TodoRepository"
     }
+}
+
+internal fun OfflineSyncState.withDeletedTodoCached(
+    canonicalId: String,
+    instanceDateEpochMs: Long?,
+    isRecurringInstanceDelete: Boolean,
+    isLocalOnly: Boolean,
+    mutationId: String,
+    timestampEpochMs: Long,
+): OfflineSyncState {
+    fun matchesTodo(record: CachedTodoRecord): Boolean {
+        if (record.canonicalId != canonicalId) return false
+        return !isRecurringInstanceDelete || record.instanceDateEpochMs == instanceDateEpochMs
+    }
+
+    fun matchesCompleted(recordOriginalTodoId: String?, recordInstanceDateEpochMs: Long?): Boolean {
+        if (recordOriginalTodoId != canonicalId) return false
+        return !isRecurringInstanceDelete || recordInstanceDateEpochMs == instanceDateEpochMs
+    }
+
+    val prunedTodos = todos.filterNot(::matchesTodo)
+    val prunedCompleted = completedItems.filterNot {
+        matchesCompleted(it.originalTodoId, it.instanceDateEpochMs)
+    }
+
+    if (isLocalOnly) {
+        return copy(
+            todos = prunedTodos,
+            completedItems = prunedCompleted,
+            pendingMutations = if (isRecurringInstanceDelete) {
+                pendingMutations
+            } else {
+                pendingMutations.filterNot { it.targetId == canonicalId }
+            },
+        )
+    }
+
+    return copy(
+        todos = prunedTodos,
+        completedItems = prunedCompleted,
+        pendingMutations = pendingMutations
+            .filterNot {
+                it.kind == MutationKind.DELETE_TODO &&
+                    it.targetId == canonicalId &&
+                    it.instanceDateEpochMs == instanceDateEpochMs
+            } + PendingMutationRecord(
+            mutationId = mutationId,
+            kind = MutationKind.DELETE_TODO,
+            targetId = canonicalId,
+            timestampEpochMs = timestampEpochMs,
+            instanceDateEpochMs = instanceDateEpochMs,
+        ),
+    )
 }

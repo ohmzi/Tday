@@ -2,6 +2,8 @@
 
 Forward T'Day's port over an encrypted SSH connection. Requires no extra software beyond an SSH client — if you can SSH into the server (directly or via a jump box), you can access T'Day from your laptop's browser.
 
+This guide is only needed for Server Mode. Local Mode on Android and iOS works without remote access.
+
 ## Overview
 
 | | |

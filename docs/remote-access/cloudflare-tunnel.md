@@ -4,6 +4,8 @@ Expose T'Day to the internet through Cloudflare's edge network using `cloudflare
 
 This is T'Day's **current production method** (`tday.ohmz.cloud`).
 
+This guide is only needed for Server Mode. Local Mode on Android and iOS works without remote access.
+
 ## Overview
 
 | | |

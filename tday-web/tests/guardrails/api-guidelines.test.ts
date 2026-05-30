@@ -6,6 +6,19 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const MONO = path.resolve(ROOT, "..");
 const BACKEND_SRC = path.join(MONO, "tday-backend", "src", "main", "kotlin", "com", "ohmz", "tday");
 const ROUTES_DIR = path.join(BACKEND_SRC, "routes");
+const SHARED_ROUTES_FILE = path.join(
+  MONO,
+  "shared",
+  "src",
+  "commonMain",
+  "kotlin",
+  "com",
+  "ohmz",
+  "tday",
+  "shared",
+  "routes",
+  "ApiRoutes.kt",
+);
 
 function walkFiles(dir: string, ext: string): string[] {
   const results: string[] = [];
@@ -31,7 +44,6 @@ function relPath(filePath: string): string {
 
 const ALL_ROUTE_FILES = walkFiles(ROUTES_DIR, ".kt");
 const AUTH_ROUTE_DIR = path.join(ROUTES_DIR, "auth");
-const AUTH_ROUTES = existsSync(AUTH_ROUTE_DIR) ? walkFiles(AUTH_ROUTE_DIR, ".kt") : [];
 const NON_AUTH_ROUTES = ALL_ROUTE_FILES.filter((f) => !f.startsWith(AUTH_ROUTE_DIR));
 
 describe("Ktor API route conventions", () => {
@@ -98,6 +110,31 @@ describe("Ktor API route conventions", () => {
       expect(routingFile).toContain("credentialsCallbackRoutes()");
       expect(routingFile).toContain("sessionRoutes()");
       expect(routingFile).toContain("logoutRoutes()");
+    });
+  });
+
+  describe("shared API route constants cover backend route groups", () => {
+    it("ApiRoutes.kt should expose the route groups used by clients", () => {
+      const content = readSource(SHARED_ROUTES_FILE);
+      const expectedObjects = [
+        "Auth",
+        "Todo",
+        "List",
+        "Floater",
+        "FloaterList",
+        "Completed",
+        "CompletedFloater",
+        "Preferences",
+        "User",
+        "Timezone",
+        "AppSettings",
+        "Admin",
+        "Mobile",
+      ];
+
+      for (const objectName of expectedObjects) {
+        expect(content).toContain(`object ${objectName}`);
+      }
     });
   });
 

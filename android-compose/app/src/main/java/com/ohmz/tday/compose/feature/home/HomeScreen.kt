@@ -2,7 +2,6 @@ package com.ohmz.tday.compose.feature.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -35,13 +34,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -54,7 +51,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -64,87 +60,27 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.AccountBalance
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Architecture
-import androidx.compose.material.icons.rounded.Backpack
-import androidx.compose.material.icons.rounded.BeachAccess
-import androidx.compose.material.icons.rounded.Bookmark
-import androidx.compose.material.icons.rounded.BorderColor
-import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Cake
 import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.CardGiftcard
-import androidx.compose.material.icons.rounded.ChangeHistory
-import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ChildCare
-import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.Computer
-import androidx.compose.material.icons.rounded.ContentCut
-import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.DesktopWindows
-import androidx.compose.material.icons.rounded.DirectionsBoat
-import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.Eco
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.FamilyRestroom
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Flight
-import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.Inventory
-import androidx.compose.material.icons.rounded.Key
-import androidx.compose.material.icons.rounded.Lightbulb
-import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.LocalMall
-import androidx.compose.material.icons.rounded.LocationCity
-import androidx.compose.material.icons.rounded.Medication
-import androidx.compose.material.icons.rounded.Mood
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.NightsStay
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material.icons.rounded.Pets
-import androidx.compose.material.icons.rounded.PriorityHigh
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.ShoppingBasket
-import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material.icons.rounded.SportsBaseball
-import androidx.compose.material.icons.rounded.SportsBasketball
-import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.SportsFootball
-import androidx.compose.material.icons.rounded.SportsSoccer
-import androidx.compose.material.icons.rounded.SportsTennis
-import androidx.compose.material.icons.rounded.Square
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Train
-import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material.icons.rounded.Whatshot
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -153,19 +89,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -178,11 +116,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
@@ -194,11 +128,12 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
@@ -211,9 +146,31 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedTab
+import com.ohmz.tday.compose.ui.component.TdayCenteredSheetContent
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import com.ohmz.tday.compose.ui.component.TdaySheetCard
+import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
+import com.ohmz.tday.compose.ui.component.TdaySheetHeader
+import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayFontFamily
+import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
+import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
+import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
+import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
+import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconNightAccent
+import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
+import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -235,15 +192,23 @@ fun HomeScreen(
     onOpenPriority: () -> Unit,
     onOpenCompleted: () -> Unit,
     onOpenCalendar: () -> Unit,
+    onOpenFloater: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTaskFromSearch: (todoId: String) -> Unit,
     onOpenList: (listId: String, listName: String) -> Unit,
-    onCompleteTask: (TodoItem) -> Unit,
-    onDeleteTask: (TodoItem) -> Unit,
-    onUpdateTask: (TodoItem, CreateTaskPayload) -> Unit,
     onCreateTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onCreateList: (name: String, color: String?, iconKey: String?) -> Unit,
+    onCompleteTask: (todo: com.ohmz.tday.compose.core.model.TodoItem) -> Unit,
+    onDeleteTask: (todo: com.ohmz.tday.compose.core.model.TodoItem) -> Unit,
+    onUpdateTask: (todo: com.ohmz.tday.compose.core.model.TodoItem, payload: CreateTaskPayload) -> Unit,
+    showRootFeedDock: Boolean = true,
+    showCreateTaskButton: Boolean = true,
+    pullRefreshEnabled: Boolean = true,
+    createTaskRequestKey: Int = 0,
+    scrollToTopRequestKey: Int = 0,
+    onRootDockCollapsedChange: (Boolean) -> Unit = {},
+    onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
@@ -266,17 +231,19 @@ fun HomeScreen(
     var searchResultsBounds by remember { mutableStateOf<Rect?>(null) }
     var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
+    var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
+    var lastHandledCreateTaskRequestKey by rememberSaveable {
+        mutableIntStateOf(createTaskRequestKey)
+    }
+    var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
+    val editTargetTodo = remember(editTargetTodoId, uiState.todayTodos) {
+        editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
+    }
     var listName by rememberSaveable { mutableStateOf("") }
-    var listColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR) }
-    var listIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
+    var listColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
+    var listIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
-    var hasCapturedInitialListSnapshot by rememberSaveable { mutableStateOf(false) }
-    var hasShownListDataOnce by rememberSaveable { mutableStateOf(false) }
-    var lastListStructureSignature by rememberSaveable { mutableStateOf("") }
-    var visibleListStage by rememberSaveable { mutableIntStateOf(0) }
-    var animateListCascade by rememberSaveable { mutableStateOf(false) }
     var searchResultOpening by rememberSaveable { mutableStateOf(false) }
-    var editingTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     val searchResultScope = rememberCoroutineScope()
     val closeSearch = {
         keyboardController?.hide()
@@ -303,6 +270,19 @@ fun HomeScreen(
     BackHandler(enabled = searchExpanded) {
         closeSearch()
     }
+    LaunchedEffect(createTaskRequestKey) {
+        if (createTaskRequestKey > lastHandledCreateTaskRequestKey) {
+            lastHandledCreateTaskRequestKey = createTaskRequestKey
+            closeSearch()
+            showCreateTask = true
+        }
+    }
+    LaunchedEffect(searchExpanded) {
+        onRootControlsVisibleChange(!searchExpanded)
+    }
+    DisposableEffect(Unit) {
+        onDispose { onRootControlsVisibleChange(true) }
+    }
     LaunchedEffect(searchExpanded, imeVisible) {
         if (!searchExpanded) {
             searchImeWasVisible = false
@@ -317,34 +297,15 @@ fun HomeScreen(
             closeSearch()
         }
     }
-    val listStructureSignature = remember(uiState.summary.lists) {
-        uiState.summary.lists.joinToString(separator = "|") { list ->
-            buildString {
-                append(list.id)
-                append(':')
-                append(list.name)
-                append(':')
-                append(list.color.orEmpty())
-                append(':')
-                append(list.iconKey.orEmpty())
-            }
-        }
-    }
     val listById = remember(uiState.summary.lists) { uiState.summary.lists.associateBy { it.id } }
     val normalizedSearchQuery = remember(searchQuery) { searchQuery.trim().lowercase(Locale.getDefault()) }
     val overdueCount = remember(uiState.searchableTodos) {
         val now = Instant.now()
-        uiState.searchableTodos.count { todo -> todo.due.isBefore(now) }
+        uiState.searchableTodos.count { todo -> todo.due?.isBefore(now) == true }
     }
     val dueFormatter = remember {
         java.time.format.DateTimeFormatter.ofPattern("EEE h:mm a")
             .withZone(java.time.ZoneId.systemDefault())
-    }
-    val todayHeaderFormatter = remember {
-        DateTimeFormatter.ofPattern("EEE, MMM d")
-    }
-    val todayHeaderLabel = remember(todayHeaderFormatter) {
-        todayHeaderFormatter.format(LocalDate.now())
     }
     val searchResults = remember(normalizedSearchQuery, uiState.searchableTodos, listById) {
         if (normalizedSearchQuery.isBlank()) {
@@ -358,188 +319,124 @@ fun HomeScreen(
                         (todo.listId?.let { listById[it]?.name }?.lowercase(Locale.getDefault())
                             ?.contains(normalizedSearchQuery) == true)
                 }
-                .sortedBy { it.due }
+                .sortedBy { it.due ?: Instant.MAX }
                 .take(20)
                 .toList()
-        }
-    }
-    val todayTasks = remember(uiState.searchableTodos) {
-        val zoneId = ZoneId.systemDefault()
-        val today = LocalDate.now(zoneId)
-        uiState.searchableTodos
-            .asSequence()
-            .filter { todo ->
-                !todo.completed && todo.due.atZone(zoneId).toLocalDate() == today
-            }
-            .sortedBy { it.due }
-            .toList()
-    }
-    val editingTask = remember(editingTaskId, uiState.searchableTodos) {
-        editingTaskId?.let { targetId ->
-            uiState.searchableTodos.firstOrNull { it.id == targetId }
         }
     }
     val showSearchResultsOverlay = searchExpanded && searchQuery.isNotBlank()
     val density = LocalDensity.current
     val listState = rememberLazyListState()
-    // NestedScrollConnection — intercepts scroll while the title bar (item 0) is partially
-    // visible and consumes half of the input, creating elastic resistance during the gesture.
-    // The LazyColumn receives the other half, so both the title and content move at half speed
-    // in the title zone, requiring deliberate effort to scroll the title away.
-    val elasticTitleConnection = remember(listState) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y >= 0f) return Offset.Zero
-                if (listState.firstVisibleItemIndex != 0) return Offset.Zero
-                val barHeight = listState.layoutInfo.visibleItemsInfo
-                    .firstOrNull { it.index == 0 }?.size ?: return Offset.Zero
-                if (listState.firstVisibleItemScrollOffset >= barHeight) return Offset.Zero
-                return Offset(0f, available.y * 0.5f)
-            }
+    val hasScrollableContent =
+        listState.canScrollForward || listState.canScrollBackward
+    val dockCollapseThresholdPx = with(density) { RootFeedDockCollapseThreshold.roundToPx() }
+    val hasScrolledPastDockCollapseThreshold =
+        listState.firstVisibleItemIndex > 0 ||
+                listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
+    val dockCollapsed =
+        hasScrollableContent && hasScrolledPastDockCollapseThreshold
+    LaunchedEffect(dockCollapsed) {
+        onRootDockCollapsedChange(dockCollapsed)
+    }
+    LaunchedEffect(scrollToTopRequestKey) {
+        if (scrollToTopRequestKey <= 0) return@LaunchedEffect
+        closeSearch()
+        if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+            listState.animateScrollToItem(index = 0, scrollOffset = 0)
         }
     }
-    // Spring snap after the gesture settles: reads item height directly from layoutInfo
-    // so it works on the very first scroll without needing a separate measurement pass.
-    // < 60 % through → spring back (title stays); ≥ 60 % → spring forward (Today card at top).
-    LaunchedEffect(Unit) {
-        snapshotFlow { !listState.isScrollInProgress && !searchExpanded }
-            .collect { canSnap ->
-                if (!canSnap) return@collect
-                if (listState.firstVisibleItemIndex != 0) return@collect
-                val offset = listState.firstVisibleItemScrollOffset
-                val zoneEnd = listState.layoutInfo.visibleItemsInfo
-                    .firstOrNull { it.index == 0 }?.size ?: return@collect
-                if (offset !in 1 until zoneEnd) return@collect
-                val snapForward = offset >= zoneEnd * 0.60f
-                val delta = if (snapForward) (zoneEnd - offset).toFloat() else -offset.toFloat()
-                listState.animateScrollBy(
-                    value = delta,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = Spring.StiffnessMediumLow,
-                    ),
-                )
-            }
+    LaunchedEffect(uiState.todayTodos, openSwipeTaskId) {
+        val openId = openSwipeTaskId ?: return@LaunchedEffect
+        if (uiState.todayTodos.none { it.id == openId }) {
+            openSwipeTaskId = null
+        }
+    }
+    LaunchedEffect(listState.isScrollInProgress, searchExpanded) {
+        if (searchExpanded || listState.isScrollInProgress) return@LaunchedEffect
+        // Snap only when top header row is partially visible.
+        // If fully off-screen (index > 0), do not force any anchor behavior.
+        if (listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset > 0) {
+            listState.animateScrollBy(
+                value = -listState.firstVisibleItemScrollOffset.toFloat(),
+                animationSpec = tween(
+                    durationMillis = 260,
+                    easing = FastOutSlowInEasing,
+                ),
+            )
+        }
     }
 
-    LaunchedEffect(listStructureSignature) {
-        val lists = uiState.summary.lists
-        val targetFinalStage = if (lists.isEmpty()) 0 else lists.size + 1
-        if (!hasCapturedInitialListSnapshot) {
-            visibleListStage = targetFinalStage
-            animateListCascade = false
-            hasCapturedInitialListSnapshot = true
-            hasShownListDataOnce = lists.isNotEmpty()
-            lastListStructureSignature = listStructureSignature
-            return@LaunchedEffect
-        }
-
-        if (listStructureSignature == lastListStructureSignature) {
-            visibleListStage = targetFinalStage
-            animateListCascade = false
-            return@LaunchedEffect
-        }
-
-        lastListStructureSignature = listStructureSignature
-        if (lists.isEmpty()) {
-            visibleListStage = 0
-            animateListCascade = false
-            return@LaunchedEffect
-        }
-
-        if (!hasShownListDataOnce) {
-            visibleListStage = targetFinalStage
-            animateListCascade = false
-            hasShownListDataOnce = true
-            return@LaunchedEffect
-        }
-
-        animateListCascade = true
-        visibleListStage = 0
-        delay(70)
-        visibleListStage = 1
-        delay(75)
-        lists.forEachIndexed { index, _ ->
-            visibleListStage = index + 2
-            delay(60)
-        }
-        // Stop wrapping rows with entry animation once the cascade has completed.
-        // This prevents rows from re-animating when they are recomposed during scroll.
-        visibleListStage = targetFinalStage
-        animateListCascade = false
-    }
     LaunchedEffect(showSearchResultsOverlay) {
         if (!showSearchResultsOverlay) {
             searchResultsBounds = null
-        }
-    }
-    LaunchedEffect(editingTaskId, editingTask) {
-        if (editingTaskId != null && editingTask == null) {
-            editingTaskId = null
         }
     }
 
     Scaffold(
         containerColor = colorScheme.background,
         floatingActionButton = {
-            CreateTaskButton(
-                modifier = Modifier
-                    .offset(y = fabOffsetY)
-                    .graphicsLayer {
-                        scaleX = fabScale
-                        scaleY = fabScale
+            if (showCreateTaskButton) {
+                CreateTaskButton(
+                    modifier = Modifier
+                        .offset(y = fabOffsetY)
+                        .graphicsLayer {
+                            scaleX = fabScale
+                            scaleY = fabScale
+                        },
+                    interactionSource = fabInteractionSource,
+                    onClick = {
+                        showCreateTask = true
                     },
-                interactionSource = fabInteractionSource,
-                onClick = {
-                    showCreateTask = true
-                },
-            )
+                )
+            }
         },
     ) { padding ->
-        CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
-            TdayPullToRefreshBox(
-                isRefreshing = uiState.isLoading,
-                onRefresh = onRefresh,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            ) {
-                Box(
+        Box(modifier = Modifier.fillMaxSize()) {
+            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+                TdayPullToRefreshBox(
+                    isRefreshing = uiState.isLoading,
+                    onRefresh = onRefresh,
+                    enabled = pullRefreshEnabled,
                     modifier = Modifier
                         .fillMaxSize()
-                        .nestedScroll(elasticTitleConnection)
-                        .then(
-                            if (searchExpanded) {
-                                Modifier
-                                    .onGloballyPositioned { coordinates ->
-                                        val topLeft = coordinates.boundsInRoot().topLeft
-                                        if (rootInRoot != topLeft) {
-                                            rootInRoot = topLeft
-                                        }
-                                    }
-                                    .pointerInput(
-                                        searchBarBounds,
-                                        searchResultsBounds,
-                                        rootInRoot
-                                    ) {
-                                        awaitEachGesture {
-                                            val down = awaitFirstDown(pass = PointerEventPass.Final)
-                                            val tapInRoot = down.position + rootInRoot
-                                            val tappedSearchBar =
-                                                searchBarBounds?.contains(tapInRoot) == true
-                                            val tappedSearchResults =
-                                                searchResultsBounds?.contains(tapInRoot) == true
-                                            val up =
-                                                waitForUpOrCancellation(pass = PointerEventPass.Final)
-                                            if (up != null && !tappedSearchBar && !tappedSearchResults) {
-                                                closeSearch()
+                        .padding(padding),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(
+                                if (searchExpanded) {
+                                    Modifier
+                                        .onGloballyPositioned { coordinates ->
+                                            val topLeft = coordinates.boundsInRoot().topLeft
+                                            if (rootInRoot != topLeft) {
+                                                rootInRoot = topLeft
                                             }
                                         }
-                                    }
-                            } else {
-                                Modifier
-                            }
-                        ),
+                                        .pointerInput(
+                                            searchBarBounds,
+                                            searchResultsBounds,
+                                            rootInRoot
+                                        ) {
+                                            awaitEachGesture {
+                                                val down =
+                                                    awaitFirstDown(pass = PointerEventPass.Final)
+                                                val tapInRoot = down.position + rootInRoot
+                                                val tappedSearchBar =
+                                                    searchBarBounds?.contains(tapInRoot) == true
+                                                val tappedSearchResults =
+                                                    searchResultsBounds?.contains(tapInRoot) == true
+                                                val up =
+                                                    waitForUpOrCancellation(pass = PointerEventPass.Final)
+                                                if (up != null && !tappedSearchBar && !tappedSearchResults) {
+                                                    closeSearch()
+                                                }
+                                            }
+                                        }
+                                } else {
+                                    Modifier
+                                }
+                            ),
                 ) {
                     LazyColumn(
                         state = listState,
@@ -569,45 +466,55 @@ fun HomeScreen(
                             },
                         )
                     }
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            HomeCategoryPill(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color(0xFF6EA8E1),
-                                icon = Icons.Rounded.WbSunny,
-                                backgroundWatermark = Icons.Rounded.WbSunny,
-                                title = todayHeaderLabel,
+                        item {
+                            HomeTodayCard(
                                 count = uiState.summary.todayCount,
-                                emphasized = true,
                                 onClick = {
                                     closeSearch()
                                     onOpenToday()
                                 },
                             )
+                        }
 
-                            TodayTaskPreview(
-                                tasks = todayTasks,
+                        itemsIndexed(
+                            items = uiState.todayTodos,
+                            key = { _, todo -> "home-today-${todo.id}" },
+                            contentType = { _, _ -> "home_today_task" },
+                        ) { _, todo ->
+                            HomeTodayTaskRow(
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = tween(
+                                        durationMillis = 180,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                    placementSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    ),
+                                    fadeOutSpec = tween(
+                                        durationMillis = 140,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                ),
+                                todo = todo,
                                 lists = uiState.summary.lists,
-                                onCompleteTask = { todo ->
-                                    closeSearch()
-                                    onCompleteTask(todo)
-                                },
-                                onDeleteTask = { todo ->
-                                    closeSearch()
-                                    onDeleteTask(todo)
-                                },
-                                onEditTask = { todo ->
-                                    closeSearch()
-                                    editingTaskId = todo.id
-                                },
+                                onComplete = { onCompleteTask(todo) },
+                                onDelete = { onDeleteTask(todo) },
+                                onEdit = { editTargetTodoId = todo.id },
+                                openSwipeTaskId = openSwipeTaskId,
+                                onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
                             )
+                        }
 
-                            HomeCategoryPillRow(
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            CategoryGrid(
                                 overdueCount = overdueCount,
                                 scheduledCount = uiState.summary.scheduledCount,
                                 allCount = uiState.summary.allCount,
                                 priorityCount = uiState.summary.priorityCount,
                                 completedCount = uiState.summary.completedCount,
+                                calendarCount = uiState.summary.scheduledCount,
                                 onOpenOverdue = {
                                     closeSearch()
                                     onOpenOverdue()
@@ -638,48 +545,23 @@ fun HomeScreen(
 
                     if (uiState.summary.lists.isNotEmpty()) {
                         item {
-                            if (visibleListStage >= 1) {
-                                if (animateListCascade) {
-                                    TopDownCascadeReveal {
-                                        MyListsHeader()
-                                    }
-                                } else {
-                                    MyListsHeader()
-                                }
-                            }
+                            MyListsHeader()
                         }
                         itemsIndexed(
                             items = uiState.summary.lists,
                             key = { _, list -> list.id },
                             contentType = { _, _ -> "list_row" },
-                        ) { index, list ->
-                            if (visibleListStage >= index + 2) {
-                                if (animateListCascade) {
-                                    TopDownCascadeReveal {
-                                        ListRow(
-                                            name = list.name,
-                                            colorKey = list.color,
-                                            iconKey = list.iconKey,
-                                            count = list.todoCount,
-                                            onClick = {
-                                                closeSearch()
-                                                onOpenList(list.id, capitalizeFirstListLetter(list.name))
-                                            },
-                                        )
-                                    }
-                                } else {
-                                    ListRow(
-                                        name = list.name,
-                                        colorKey = list.color,
-                                        iconKey = list.iconKey,
-                                        count = list.todoCount,
-                                        onClick = {
-                                            closeSearch()
-                                            onOpenList(list.id, capitalizeFirstListLetter(list.name))
-                                        },
-                                    )
-                                }
-                            }
+                        ) { _, list ->
+                            ListRow(
+                                name = list.name,
+                                colorKey = list.color,
+                                iconKey = list.iconKey,
+                                count = list.todoCount,
+                                onClick = {
+                                    closeSearch()
+                                    onOpenList(list.id, capitalizeFirstListLetter(list.name))
+                                },
+                            )
                         }
                     }
 
@@ -695,8 +577,8 @@ fun HomeScreen(
                     item { Spacer(Modifier.height(80.dp)) }
                     }
 
-                    if (showSearchResultsOverlay && searchBarBounds != null) {
-                        val searchBarRect = searchBarBounds!!
+                    val searchBarRect = searchBarBounds
+                    if (showSearchResultsOverlay && searchBarRect != null) {
                         val overlayLeft = with(density) { (searchBarRect.left - rootInRoot.x).toDp() }
                         val overlayTop = with(density) { (searchBarRect.bottom - rootInRoot.y).toDp() } + 8.dp
                         val overlayWidth = with(density) { searchBarRect.width.toDp() }
@@ -715,7 +597,7 @@ fun HomeScreen(
                         ) {
                             if (searchResults.isEmpty()) {
                                 Text(
-                                    text = "No matching tasks",
+                                    text = stringResource(R.string.home_search_no_results),
                                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = colorScheme.onSurfaceVariant,
@@ -732,8 +614,8 @@ fun HomeScreen(
                                         key = { _, todo -> todo.id },
                                     ) { index, todo ->
                                         val listMeta = todo.listId?.let { listById[it] }
-                                        val listTint = listColorAccent(listMeta?.color)
-                                        val listIcon = listIconForKey(listMeta?.iconKey)
+                                        val listTint = tdayListAccentColor(listMeta?.color)
+                                        val listIcon = tdayListIconForKey(listMeta?.iconKey)
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -762,14 +644,19 @@ fun HomeScreen(
                                                     fontWeight = FontWeight.ExtraBold,
                                                 )
                                                 Text(
-                                                    text = dueFormatter.format(todo.due),
+                                                    text = todo.due?.let(dueFormatter::format)
+                                                        .orEmpty(),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.onSurfaceVariant,
                                                     maxLines = 1,
                                                 )
                                             }
                                         }
-                                        if (index < searchResults.lastIndex) {
+                                        if (shouldShowDateDivider(
+                                                afterItemIndex = index,
+                                                items = searchResults,
+                                            )
+                                        ) {
                                             Spacer(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -787,7 +674,33 @@ fun HomeScreen(
                             }
                         }
                     }
+
+                    }
                 }
+            }
+            if (showRootFeedDock && !searchExpanded) {
+                RootFeedDock(
+                    activeTab = RootFeedTab.HOME,
+                    collapsed = dockCollapsed,
+                    onTabSelected = { tab ->
+                        when (tab) {
+                            RootFeedTab.HOME -> {
+                                searchResultScope.launch {
+                                    closeSearch()
+                                    listState.animateScrollToItem(index = 0, scrollOffset = 0)
+                                }
+                            }
+
+                            RootFeedTab.FLOATER -> {
+                                closeSearch()
+                                onOpenFloater()
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .zIndex(8f),
+                )
             }
         }
     }
@@ -805,16 +718,16 @@ fun HomeScreen(
         )
     }
 
-    if (editingTask != null) {
+    editTargetTodo?.let { todo ->
         CreateTaskBottomSheet(
             lists = uiState.summary.lists,
-            editingTask = editingTask,
+            editingTask = todo,
             onParseTaskTitleNlp = onParseTaskTitleNlp,
-            onDismiss = { editingTaskId = null },
-            onCreateTask = {},
+            onDismiss = { editTargetTodoId = null },
+            onCreateTask = { _ -> },
             onUpdateTask = { target, payload ->
                 onUpdateTask(target, payload)
-                editingTaskId = null
+                editTargetTodoId = null
             },
         )
     }
@@ -833,13 +746,25 @@ fun HomeScreen(
                 if (normalizedName.isNotBlank()) {
                     onCreateList(normalizedName, listColor, listIconKey)
                     listName = ""
-                    listColor = DEFAULT_LIST_COLOR
-                    listIconKey = DEFAULT_LIST_ICON_KEY
+                    listColor = TDAY_DEFAULT_LIST_COLOR_KEY
+                    listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
                     showCreateList = false
                 }
             },
         )
     }
+}
+
+private fun shouldShowDateDivider(
+    afterItemIndex: Int,
+    items: List<TodoItem>,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Boolean {
+    val currentTodo = items.getOrNull(afterItemIndex) ?: return false
+    val nextTodo = items.getOrNull(afterItemIndex + 1) ?: return false
+    val currentDue = currentTodo.due ?: return false
+    val nextDue = nextTodo.due ?: return false
+    return LocalDate.ofInstant(currentDue, zoneId) != LocalDate.ofInstant(nextDue, zoneId)
 }
 
 @Composable
@@ -863,9 +788,9 @@ private fun CreateListBottomSheet(
     var nameFieldFocused by remember { mutableStateOf(false) }
     var sheetVisible by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
-    val selectedAccent = listColorAccent(listColor)
+    val selectedAccent = tdayListAccentColor(listColor)
     val canCreate = listName.isNotBlank()
-    val selectedIcon = listIconForKey(listIconKey)
+    val selectedIcon = tdayListIconForKey(listIconKey)
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val density = LocalDensity.current
     val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
@@ -883,17 +808,9 @@ private fun CreateListBottomSheet(
         ),
         label = "createListSheetHeight",
     )
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val sheetContainerColor = if (isDarkTheme) {
-        lerp(colorScheme.background, colorScheme.surfaceVariant, 0.34f)
-    } else {
-        colorScheme.background
-    }
-    val sheetScrimColor = if (isDarkTheme) {
-        Color.Black.copy(alpha = 0.68f)
-    } else {
-        Color.Black.copy(alpha = 0.40f)
-    }
+    val sheetContainerColor = TdaySheetDefaults.containerColor()
+    val sheetScrimColor = TdaySheetDefaults.scrimColor()
+    val sheetTonalElevation = TdaySheetDefaults.tonalElevation()
 
     LaunchedEffect(Unit) {
         sheetVisible = true
@@ -954,22 +871,27 @@ private fun CreateListBottomSheet(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {},
-                    shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
+                    shape = TdaySheetDefaults.TopShape,
                     color = sheetContainerColor,
-                    tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
+                    tonalElevation = sheetTonalElevation,
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 18.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                    ) {
-                        ListSheetHeader(
-                            onClose = {
+                    TdayCenteredSheetContent {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 18.dp, vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            TdaySheetHeader(
+                                title = stringResource(R.string.home_new_list),
+                                leftIcon = Icons.Rounded.Close,
+                                leftContentDescription = stringResource(R.string.action_close),
+                                onLeftClick = {
                                 dismissKeyboard()
                                 onDismiss()
                             },
+                                confirmContentDescription = stringResource(R.string.action_create_list),
                             onConfirm = {
                                 dismissKeyboard()
                                 if (canCreate) onCreate()
@@ -977,7 +899,7 @@ private fun CreateListBottomSheet(
                             confirmEnabled = canCreate,
                         )
 
-                        ListSheetCard {
+                            TdaySheetCard {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1018,7 +940,7 @@ private fun CreateListBottomSheet(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clip(RoundedCornerShape(16.dp))
-                                                .background(colorScheme.surfaceVariant)
+                                                .background(TdaySheetDefaults.controlSurfaceColor())
                                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                                             contentAlignment = Alignment.Center,
                                         ) {
@@ -1037,8 +959,8 @@ private fun CreateListBottomSheet(
                             }
                         }
 
-                        ListSheetSectionTitle(stringResource(R.string.home_section_color))
-                        ListSheetCard {
+                            TdaySheetSectionTitle(stringResource(R.string.home_section_color))
+                            TdaySheetCard {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1046,7 +968,7 @@ private fun CreateListBottomSheet(
                                     .padding(horizontal = 14.dp, vertical = 14.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
-                                LIST_COLOR_OPTIONS.forEach { option ->
+                                TdayListColorOptions.forEach { option ->
                                     val selected = listColor == option.key
                                     val interactionSource = remember { MutableInteractionSource() }
                                     Box(
@@ -1073,8 +995,8 @@ private fun CreateListBottomSheet(
                             }
                         }
 
-                        ListSheetSectionTitle(stringResource(R.string.home_section_icon))
-                        ListSheetCard {
+                            TdaySheetSectionTitle(stringResource(R.string.home_section_icon))
+                            TdaySheetCard {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1082,7 +1004,7 @@ private fun CreateListBottomSheet(
                                     .padding(horizontal = 14.dp, vertical = 14.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                LIST_ICON_OPTIONS.forEach { option ->
+                                TdayListIconOptions.forEach { option ->
                                     val selected = listIconKey == option.key
                                     val interactionSource = remember { MutableInteractionSource() }
                                     val iconOptionDescription =
@@ -1095,7 +1017,7 @@ private fun CreateListBottomSheet(
                                                 if (selected) {
                                                     selectedAccent.copy(alpha = 0.2f)
                                                 } else {
-                                                    colorScheme.surfaceVariant
+                                                    TdaySheetDefaults.controlSurfaceColor()
                                                 },
                                             )
                                             .border(
@@ -1123,137 +1045,11 @@ private fun CreateListBottomSheet(
                         }
 
                         Spacer(Modifier.height(4.dp))
+                        }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ListSheetHeader(
-    onClose: () -> Unit,
-    onConfirm: () -> Unit,
-    confirmEnabled: Boolean,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ListSheetActionButton(
-            icon = Icons.Rounded.Close,
-            contentDescription = stringResource(R.string.action_close),
-            enabled = true,
-            accentColor = Color(0xFFE35A5A),
-            onClick = onClose,
-        )
-
-        Text(
-            text = stringResource(R.string.home_new_list),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.ExtraBold,
-        )
-
-        ListSheetActionButton(
-            icon = Icons.Rounded.Check,
-            contentDescription = stringResource(R.string.action_create_list),
-            enabled = confirmEnabled,
-            accentColor = Color(0xFF2FA35B),
-            onClick = onConfirm,
-        )
-    }
-}
-
-@Composable
-private fun ListSheetActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    enabled: Boolean,
-    accentColor: Color,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val colorScheme = MaterialTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.93f else 1f,
-        label = "listSheetHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed && enabled) 2.dp else 0.dp,
-        label = "listSheetHeaderButtonOffsetY",
-    )
-    val containerColor = colorScheme.surfaceVariant
-    val iconTint = colorScheme.onBackground.copy(alpha = if (enabled) 1f else 0.55f)
-    val borderColor = if (enabled) {
-        accentColor.copy(alpha = 0.55f)
-    } else {
-        accentColor.copy(alpha = 0.3f)
-    }
-
-    Card(
-        modifier = Modifier
-            .size(TdayDimens.FabSize)
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .border(
-                width = 1.5.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(999.dp),
-            ),
-        onClick = {
-            if (enabled) performGentleHaptic(view)
-            onClick()
-        },
-        enabled = enabled,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(999.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (enabled) TdayDimens.FabElevation else 0.dp,
-            pressedElevation = if (enabled) TdayDimens.FabPressedElevation else 0.dp,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = iconTint,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ListSheetSectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.ExtraBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 4.dp),
-    )
-}
-
-@Composable
-private fun ListSheetCard(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(modifier = Modifier.fillMaxWidth(), content = content)
     }
 }
 
@@ -1313,7 +1109,7 @@ private fun TopSearchBar(
     val focusRequester = remember { FocusRequester() }
     val isDaytime = rememberIsDaytime()
     val homeTitleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
-    val homeTitleIconTint = if (isDaytime) Color(0xFFF4C542) else Color(0xFFA8B8E8)
+    val homeTitleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
 
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
@@ -1587,138 +1383,14 @@ private fun PressableIconButton(
     }
 }
 
-@Composable
-private fun HomeCategoryPillRow(
-    overdueCount: Int,
-    scheduledCount: Int,
-    allCount: Int,
-    priorityCount: Int,
-    completedCount: Int,
-    onOpenOverdue: () -> Unit,
-    onOpenScheduled: () -> Unit,
-    onOpenAll: () -> Unit,
-    onOpenPriority: () -> Unit,
-    onOpenCompleted: () -> Unit,
-    onOpenCalendar: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            HomeCategoryPill(
-                modifier = Modifier.weight(1f),
-                color = Color(0xFFDA7661),
-                icon = Icons.Rounded.ErrorOutline,
-                title = stringResource(R.string.home_category_overdue),
-                count = overdueCount,
-                onClick = onOpenOverdue,
-            )
-            HomeCategoryPill(
-                modifier = Modifier.weight(1f),
-                color = Color(0xFFDDB37D),
-                icon = Icons.Rounded.Schedule,
-                title = stringResource(R.string.home_category_scheduled),
-                count = scheduledCount,
-                onClick = onOpenScheduled,
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            HomeCategoryPill(
-                modifier = Modifier.weight(1f),
-                color = Color(0xFFD48A8C),
-                icon = Icons.Rounded.Flag,
-                title = stringResource(R.string.home_category_priority),
-                count = priorityCount,
-                onClick = onOpenPriority,
-            )
-            HomeCategoryPill(
-                modifier = Modifier.weight(1f),
-                color = Color(0xFF4E4E50),
-                icon = Icons.Rounded.Inbox,
-                title = stringResource(R.string.home_category_all),
-                count = allCount,
-                onClick = onOpenAll,
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            HomeCategoryPill(
-                modifier = Modifier.weight(1f),
-                color = completedTileColor(),
-                icon = Icons.Rounded.Check,
-                title = stringResource(R.string.home_category_completed),
-                count = completedCount,
-                onClick = onOpenCompleted,
-            )
-            HomeCategoryPill(
-                modifier = Modifier.weight(1f),
-                color = calendarTileColor(),
-                icon = Icons.Rounded.CalendarToday,
-                backgroundGrid = true,
-                title = stringResource(R.string.home_category_calendar),
-                count = scheduledCount,
-                onClick = onOpenCalendar,
-            )
-        }
-    }
-}
-
-private fun completedTileColor(): Color {
-    return Color(0xFFA8C8B2)
-}
-
-private fun calendarTileColor(): Color {
-    return Color(0xFFC3B4DF)
-}
+private val HOME_TODAY_DUE_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
+private val HOME_TODAY_DATE_FORMATTER: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("EEE, MMM d").withZone(ZoneId.systemDefault())
 
 @Composable
-private fun TopDownCascadeReveal(
-    content: @Composable () -> Unit,
-) {
-    var revealed by remember { mutableStateOf(false) }
-    val alpha by animateFloatAsState(
-        targetValue = if (revealed) 1f else 0f,
-        animationSpec = tween(durationMillis = 320),
-        label = "listCascadeAlpha",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (revealed) 0.dp else (-14).dp,
-        animationSpec = tween(durationMillis = 320),
-        label = "listCascadeOffsetY",
-    )
-
-    LaunchedEffect(Unit) {
-        revealed = true
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                this.alpha = alpha
-                translationY = offsetY.toPx()
-            },
-    ) {
-        content()
-    }
-}
-
-@Composable
-private fun HomeCategoryPill(
-    modifier: Modifier,
-    color: Color,
-    icon: ImageVector,
-    backgroundWatermark: ImageVector? = null,
-    backgroundGrid: Boolean = false,
-    title: String,
-    count: Int? = null,
-    emphasized: Boolean = false,
+private fun HomeTodayCard(
+    count: Int,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
@@ -1726,33 +1398,516 @@ private fun HomeCategoryPill(
     val isPressed by interactionSource.collectIsPressedAsState()
     val animatedScale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
-        label = "homeCategoryPillScale",
+        label = "todayCardScale"
     )
     val animatedOffsetY by animateDpAsState(
         targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "homeCategoryPillOffsetY",
+        label = "todayCardOffsetY"
     )
     val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 1.dp else 3.dp,
-        label = "homeCategoryPillElevation",
+        targetValue = if (isPressed) 2.dp else 9.dp,
+        label = "todayCardElevation"
     )
-    val pillHeight = if (emphasized) HOME_TODAY_PILL_HEIGHT else HOME_CATEGORY_PILL_HEIGHT
-    val titleTextStyle = if (emphasized) {
-        MaterialTheme.typography.titleLarge
-    } else {
-        MaterialTheme.typography.titleSmall
+    val dateLabel = remember { HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
+    val color = Color(0xFF6EA8E1)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {}
+            .offset(y = animatedOffsetY)
+            .graphicsLayer { scaleX = animatedScale; scaleY = animatedScale },
+        onClick = {
+            performGentleHaptic(view)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        colors = CardDefaults.cardColors(containerColor = color),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = animatedElevation,
+            pressedElevation = animatedElevation
+        ),
+        shape = RoundedCornerShape(26.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .drawWithCache {
+                    val glow = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.08f),
+                            Color.Transparent
+                        ),
+                        center = Offset(size.width * 0.22f, size.height * 0.2f),
+                        radius = size.width * 0.72f,
+                    )
+                    val pearl = Brush.radialGradient(
+                        colors = listOf(Color.White.copy(alpha = 0.10f), Color.Transparent),
+                        center = Offset(size.width * 0.9f, size.height * 0.75f),
+                        radius = size.width * 0.55f,
+                    )
+                    onDrawWithContent { drawRect(glow); drawRect(pearl); drawContent() }
+                },
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = dateLabel,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontFamily = TdayFontFamily,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    lineHeight = 28.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White,
+                    fontFamily = TdayFontFamily,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Black,
+                    lineHeight = 40.sp,
+                )
+            }
+        }
     }
-    val countTextStyle = if (emphasized) {
-        MaterialTheme.typography.headlineLarge
-    } else {
-        MaterialTheme.typography.titleLarge
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun HomeTodayTaskRow(
+    modifier: Modifier = Modifier,
+    todo: TodoItem,
+    lists: List<ListSummary>,
+    onComplete: () -> Unit,
+    onDelete: () -> Unit,
+    onEdit: () -> Unit,
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val coroutineScope = rememberCoroutineScope()
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id)
+    var localChecked by remember(todo.id) { mutableStateOf(false) }
+    var localStruck by remember(todo.id) { mutableStateOf(false) }
+    var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
+    var completionFading by remember(todo.id) { mutableStateOf(false) }
+    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
+    fun claimSwipeSlot() {
+        if (latestOpenSwipeTaskId.value != todo.id) {
+            onOpenSwipeTaskIdChange(todo.id)
+        }
     }
-    val iconSize = if (emphasized) 24.dp else 22.dp
-    val watermarkSize = if (emphasized) 108.dp else 70.dp
+
+    fun closeSwipeSlot() {
+        swipeRevealState.close()
+        if (latestOpenSwipeTaskId.value == todo.id) {
+            onOpenSwipeTaskIdChange(null)
+        }
+    }
+    val animatedOffsetX by animateTaskSwipeOffsetAsState(
+        state = swipeRevealState,
+        label = "homeTodaySwipeOffset",
+    )
+    val completionAlpha by animateFloatAsState(
+        targetValue = if (completionFading) 0f else 1f,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "homeTodayCompletionAlpha",
+    )
+    val completionOffsetY by animateDpAsState(
+        targetValue = if (completionFading) (-10).dp else 0.dp,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "homeTodayCompletionOffsetY",
+    )
+    val titleStrikeProgress by animateFloatAsState(
+        targetValue = if (localStruck) 1f else 0f,
+        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+        label = "homeTodayTitleStrikeProgress",
+    )
+    val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
+    val dueText = todo.due?.let(HOME_TODAY_DUE_FORMATTER::format)
+    val rowShape = RoundedCornerShape(16.dp)
+    val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
+    val listIndicatorColor = tdayListAccentColor(listMeta?.color)
+    val priorityIcon = priorityIconFor(todo.priority)
+    val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
+    val subtitleColor =
+        if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(
+            alpha = 0.8f
+        )
+    val subtitleText = dueText?.let { text ->
+        if (isOverdue) {
+            stringResource(R.string.todos_due_overdue_text, text)
+        } else {
+            stringResource(R.string.todos_due_text, text)
+        }
+    }
+    LaunchedEffect(openSwipeTaskId, todo.id) {
+        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
+            swipeRevealState.close()
+        }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = completionAlpha
+                translationY = completionOffsetY.toPx()
+            },
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(58.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TaskSwipeActionButton(
+                    icon = Icons.Rounded.Edit,
+                    contentDescription = stringResource(R.string.action_edit_task),
+                    label = stringResource(R.string.action_edit),
+                    tint = Color.White,
+                    background = TdaySwipeEditBackground,
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.62f,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK
+                        )
+                        closeSwipeSlot()
+                        onEdit()
+                    },
+                )
+                TaskSwipeActionButton(
+                    icon = Icons.Rounded.Delete,
+                    contentDescription = stringResource(R.string.action_delete_task),
+                    label = stringResource(R.string.action_delete),
+                    tint = Color.White,
+                    background = TdaySwipeDeleteBackground,
+                    revealProgress = actionRevealProgress,
+                    revealDelay = 0.04f,
+                    onClick = {
+                        ViewCompat.performHapticFeedback(
+                            view,
+                            HapticFeedbackConstantsCompat.CLOCK_TICK
+                        )
+                        closeSwipeSlot()
+                        onDelete()
+                    },
+                )
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = animatedOffsetX }
+                    .draggable(
+                        orientation = Orientation.Horizontal,
+                        state = rememberDraggableState { delta ->
+                            if (delta < 0f || swipeRevealState.isOpenOrDragging) {
+                                claimSwipeSlot()
+                            }
+                            swipeRevealState.dragBy(delta)
+                            if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
+                                onOpenSwipeTaskIdChange(null)
+                            }
+                        },
+                        onDragStopped = { velocity ->
+                            swipeRevealState.settle(velocity)
+                            if (swipeRevealState.isOpenOrDragging) {
+                                claimSwipeSlot()
+                            } else if (latestOpenSwipeTaskId.value == todo.id) {
+                                onOpenSwipeTaskIdChange(null)
+                            }
+                        },
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        if (swipeRevealState.isOpenOrDragging) {
+                            closeSwipeSlot()
+                        } else if (!swipeRevealState.isHinting && !pendingCompletion) {
+                            claimSwipeSlot()
+                            coroutineScope.launch {
+                                swipeRevealState.playHint()
+                                if (latestOpenSwipeTaskId.value == todo.id && !swipeRevealState.isOpenOrDragging) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
+                            }
+                        }
+                    },
+                shape = rowShape,
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .semantics(mergeDescendants = true) {},
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                            .wrapContentSize(Alignment.Center)
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = ripple(bounded = true, radius = 24.dp),
+                                enabled = !pendingCompletion,
+                            ) {
+                                if (!pendingCompletion) {
+                                    closeSwipeSlot()
+                                    localChecked = true
+                                    pendingCompletion = true
+                                    coroutineScope.launch {
+                                        delay(160)
+                                        localStruck = true
+                                        delay(360)
+                                        completionFading = true
+                                        delay(260)
+                                        onComplete()
+                                    }
+                                }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (localChecked) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                            contentDescription = if (localChecked) {
+                                stringResource(R.string.label_completed)
+                            } else {
+                                stringResource(R.string.label_mark_complete)
+                            },
+                            tint = if (localChecked) TdayTaskCompleteAccent else colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.78f
+                            ),
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = todo.title,
+                            modifier = Modifier.drawWithContent {
+                                drawContent()
+                                if (titleStrikeProgress > 0f) {
+                                    val lineEnd = (
+                                            titleLayoutResult
+                                                ?.takeIf { it.lineCount > 0 }
+                                                ?.getLineRight(0) ?: size.width
+                                            ).coerceIn(0f, size.width)
+                                    val lineY = size.height * 0.56f
+                                    drawLine(
+                                        color = colorScheme.onSurface.copy(alpha = 0.65f),
+                                        start = Offset(0f, lineY),
+                                        end = Offset(lineEnd * titleStrikeProgress, lineY),
+                                        strokeWidth = TdayDimens.BorderWidthThick.toPx(),
+                                    )
+                                }
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontFamily = TdayFontFamily,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            lineHeight = 22.sp,
+                            color = if (localStruck) {
+                                colorScheme.onSurface.copy(alpha = 0.78f)
+                            } else {
+                                colorScheme.onSurface
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            onTextLayout = { titleLayoutResult = it },
+                        )
+                        subtitleText?.let { text ->
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = TdayFontFamily,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 18.sp,
+                                color = subtitleColor,
+                            )
+                        }
+                    }
+
+                    if (listMeta != null || priorityIcon != null) {
+                        Row(
+                            modifier = Modifier.padding(end = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (listMeta != null) {
+                                Icon(
+                                    imageVector = tdayListIconForKey(listMeta.iconKey),
+                                    contentDescription = null,
+                                    tint = listIndicatorColor,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            if (priorityIcon != null) {
+                                Icon(
+                                    imageVector = priorityIcon,
+                                    contentDescription = stringResource(R.string.label_priority_task),
+                                    tint = tdayPriorityColor(todo.priority),
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryGrid(
+    overdueCount: Int,
+    scheduledCount: Int,
+    allCount: Int,
+    priorityCount: Int,
+    completedCount: Int,
+    calendarCount: Int,
+    onOpenOverdue: () -> Unit,
+    onOpenScheduled: () -> Unit,
+    onOpenAll: () -> Unit,
+    onOpenPriority: () -> Unit,
+    onOpenCompleted: () -> Unit,
+    onOpenCalendar: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val completedColor = completedTileColor(colorScheme)
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CategoryCard(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFD98F4B),
+                icon = Icons.Rounded.Schedule,
+                backgroundWatermark = Icons.Rounded.Schedule,
+                title = stringResource(R.string.home_category_scheduled),
+                count = scheduledCount,
+                onClick = onOpenScheduled,
+            )
+            CategoryCard(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFC97880),
+                icon = Icons.Rounded.Flag,
+                backgroundWatermark = Icons.Rounded.Flag,
+                title = stringResource(R.string.home_category_priority),
+                count = priorityCount,
+                onClick = onOpenPriority,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CategoryCard(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFE06F66),
+                icon = Icons.Rounded.ErrorOutline,
+                backgroundWatermark = Icons.Rounded.ErrorOutline,
+                title = stringResource(R.string.home_category_overdue),
+                count = overdueCount,
+                onClick = onOpenOverdue,
+            )
+            CategoryCard(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFF68717A),
+                icon = Icons.Rounded.Inbox,
+                backgroundWatermark = Icons.Rounded.Inbox,
+                title = stringResource(R.string.home_category_all),
+                count = allCount,
+                onClick = onOpenAll,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CategoryCard(
+                modifier = Modifier.weight(1f),
+                color = completedColor,
+                icon = Icons.Rounded.Check,
+                backgroundWatermark = Icons.Rounded.Check,
+                title = stringResource(R.string.home_category_completed),
+                count = completedCount,
+                onClick = onOpenCompleted,
+            )
+            CategoryCard(
+                modifier = Modifier.weight(1f),
+                color = calendarTileColor(colorScheme),
+                icon = Icons.Rounded.CalendarToday,
+                backgroundGrid = true,
+                title = "Calendar",
+                count = calendarCount,
+                onClick = onOpenCalendar,
+            )
+        }
+    }
+}
+
+private fun completedTileColor(colorScheme: ColorScheme): Color {
+    return Color(0xFF719F84)
+}
+
+private fun calendarTileColor(colorScheme: ColorScheme): Color {
+    return Color(0xFF9A89D2)
+}
+
+@Composable
+private fun CategoryCard(
+    modifier: Modifier,
+    color: Color,
+    icon: ImageVector,
+    backgroundWatermark: ImageVector? = null,
+    backgroundGrid: Boolean = false,
+    title: String,
+    count: Int? = null,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        label = "categoryCardScale",
+    )
+    val animatedOffsetY by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 0.dp,
+        label = "categoryCardOffsetY",
+    )
+    val animatedElevation by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 9.dp,
+        label = "categoryCardElevation",
+    )
 
     Card(
         modifier = modifier
-            .height(pillHeight)
             .semantics(mergeDescendants = true) {}
             .offset(y = animatedOffsetY)
             .graphicsLayer {
@@ -1773,60 +1928,42 @@ private fun HomeCategoryPill(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .then(
-                    if (emphasized) {
-                        Modifier.drawWithCache {
-                            val surfaceLift = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.18f),
-                                    Color.White.copy(alpha = 0.08f),
-                                    Color.Black.copy(alpha = 0.03f),
-                                ),
-                                start = Offset(
-                                    x = size.width * 0.04f,
-                                    y = size.height * 0.06f,
-                                ),
-                                end = Offset(
-                                    x = size.width * 0.98f,
-                                    y = size.height * 0.92f,
-                                ),
-                            )
-                            val softBloom = Brush.radialGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.16f),
-                                    Color.Transparent,
-                                ),
-                                center = Offset(
-                                    x = size.width * 0.18f,
-                                    y = size.height * 0.18f,
-                                ),
-                                radius = size.maxDimension * 0.82f,
-                            )
-                            onDrawWithContent {
-                                drawRect(surfaceLift)
-                                drawRect(softBloom)
-                                drawContent()
-                            }
-                        }
-                    } else {
-                        Modifier.drawWithCache {
-                            val surfaceLift = Brush.linearGradient(
-                                colorStops = arrayOf(
-                                    0f to Color.White.copy(alpha = 0.26f),
-                                    0.45f to Color.White.copy(alpha = 0.10f),
-                                    1f to Color.Black.copy(alpha = 0.04f),
-                                ),
-                                start = Offset(x = size.width * 0.04f, y = size.height * 0.06f),
-                                end = Offset(x = size.width * 0.98f, y = size.height * 0.92f),
-                            )
-                            onDrawWithContent {
-                                drawRect(surfaceLift)
-                                drawContent()
-                            }
-                        }
+                .fillMaxWidth()
+                .drawWithCache {
+                    val iconSideGlow = Brush.radialGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.22f),
+                            Color.White.copy(alpha = 0.08f),
+                            Color.Transparent,
+                        ),
+                        center = Offset(
+                            x = size.width * 0.22f,
+                            y = size.height * 0.2f,
+                        ),
+                        radius = size.maxDimension * 0.9f,
+                    )
+                    val pearlWash = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.12f),
+                            Color(0xFFE7F3FF).copy(alpha = 0.1f),
+                            Color(0xFFFFF2FA).copy(alpha = 0.08f),
+                            Color.Transparent,
+                        ),
+                        start = Offset(
+                            x = size.width * 0.05f,
+                            y = size.height * 0.04f,
+                        ),
+                        end = Offset(
+                            x = size.width * 0.9f,
+                            y = size.height * 0.75f,
+                        ),
+                    )
+                    onDrawWithContent {
+                        drawRect(iconSideGlow)
+                        drawRect(pearlWash)
+                        drawContent()
                     }
-                ),
+                }
         ) {
             if (backgroundGrid) {
                 val gridTint = lerp(color, Color.White, 0.32f)
@@ -1834,9 +1971,9 @@ private fun HomeCategoryPill(
                     Canvas(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .offset(x = 30.dp, y = 10.dp)
-                            .size(width = 132.dp, height = 88.dp)
-                            .graphicsLayer { alpha = if (emphasized) 0.16f else 0.09f },
+                            .offset(x = 28.dp, y = 14.dp)
+                            .size(width = 172.dp, height = 116.dp)
+                            .graphicsLayer { alpha = 0.42f },
                     ) {
                         val cols = 6
                         val rows = 4
@@ -1872,13 +2009,13 @@ private fun HomeCategoryPill(
                 }
             }
 
-            if (backgroundWatermark != null && emphasized) {
+            if (backgroundWatermark != null) {
                 Box(modifier = Modifier.matchParentSize()) {
                     Icon(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .offset(x = 12.dp, y = 8.dp)
-                            .size(watermarkSize),
+                            .offset(x = 22.dp, y = 12.dp)
+                            .size(124.dp),
                         imageVector = backgroundWatermark,
                         contentDescription = null,
                         tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
@@ -1886,473 +2023,47 @@ private fun HomeCategoryPill(
                 }
             }
 
-            if (emphasized) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            modifier = Modifier.size(42.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                icon,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(iconSize),
-                            )
-                        }
-                        Text(
-                            text = title,
-                            style = titleTextStyle,
-                            color = Color.White,
-                            fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-
-                    if (count != null) {
-                        Box(
-                            modifier = Modifier
-                                .padding(start = 12.dp)
-                                .widthIn(min = 30.dp),
-                            contentAlignment = Alignment.CenterEnd,
-                        ) {
-                            Text(
-                                text = count.toString(),
-                                style = countTextStyle,
-                                color = Color.White,
-                                fontWeight = FontWeight.Black,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
-            } else {
-                Box(modifier = Modifier.fillMaxSize()) {
                     Icon(
                         icon,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 14.dp, top = 12.dp)
-                            .size(iconSize),
+                        modifier = Modifier.size(26.dp),
                     )
                     if (count != null) {
                         Text(
                             text = count.toString(),
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.headlineMedium,
                             color = Color.White,
                             fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 12.dp, end = 14.dp),
                         )
                     }
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
-                    )
                 }
-            }
-        }
-    }
-}
 
-@Composable
-private fun TodayTaskPreview(
-    tasks: List<TodoItem>,
-    lists: List<ListSummary>,
-    onCompleteTask: (TodoItem) -> Unit,
-    onDeleteTask: (TodoItem) -> Unit,
-    onEditTask: (TodoItem) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (tasks.isEmpty()) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 58.dp),
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Text(
-                        text = stringResource(R.string.todos_empty_today),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        } else {
-            tasks.forEach { todo ->
-                TodayTaskRow(
-                    todo = todo,
-                    lists = lists,
-                    onComplete = { onCompleteTask(todo) },
-                    onDelete = { onDeleteTask(todo) },
-                    onInfo = { onEditTask(todo) },
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun TodayTaskRow(
-    todo: TodoItem,
-    lists: List<ListSummary>,
-    onComplete: () -> Unit,
-    onDelete: () -> Unit,
-    onInfo: () -> Unit,
-) {
-    val view = LocalView.current
-    val density = LocalDensity.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val colorScheme = MaterialTheme.colorScheme
-    val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { HOME_TASK_ACTION_REVEAL_WIDTH.toPx() }
-    val swipeHintOffsetPx = with(density) { HOME_TASK_SWIPE_HINT_OFFSET.toPx() }
-        .coerceAtMost(actionRevealPx * 0.24f)
-    val maxElasticDragPx = actionRevealPx * 1.14f
-    var targetOffsetX by remember(todo.id) { mutableStateOf(0f) }
-    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
-    var localCompleted by remember(todo.id) { mutableStateOf(false) }
-    var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
-    var completionFading by remember(todo.id) { mutableStateOf(false) }
-    val highlightAnim = remember(todo.id) { Animatable(0f) }
-    val visuallyCompleted = localCompleted
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = targetOffsetX,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "homeTodayTaskOffset",
-    )
-    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
-    val completionAlpha by animateFloatAsState(
-        targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(durationMillis = 220),
-        label = "homeTodayTaskCompletionAlpha",
-    )
-    val dueTimeText = HOME_TODO_DUE_TIME_FORMATTER.format(todo.due)
-    val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
-    val dueSubtitleText = if (isOverdue) {
-        stringResource(R.string.todos_due_overdue_text, dueTimeText)
-    } else {
-        stringResource(R.string.todos_due_text, dueTimeText)
-    }
-    val rowShape = RoundedCornerShape(16.dp)
-    val foregroundColor = colorScheme.background
-    val highlightStrength = highlightAnim.value.coerceIn(0f, 1f)
-    val contentGlowBrush = Brush.horizontalGradient(
-        colors = listOf(
-            colorScheme.primary.copy(
-                alpha = if (colorScheme.background.luminance() < 0.5f) {
-                    0.50f * highlightStrength
-                } else {
-                    0.40f * highlightStrength
-                },
-            ),
-            colorScheme.primary.copy(
-                alpha = if (colorScheme.background.luminance() < 0.5f) {
-                    0.30f * highlightStrength
-                } else {
-                    0.20f * highlightStrength
-                },
-            ),
-            Color.Transparent,
-        ),
-    )
-    val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
-    val showListIndicator = listMeta != null
-    val showPriorityFlag = isHighPriority(todo.priority)
-    val listIndicatorColor = listColorAccent(listMeta?.color)
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer { alpha = completionAlpha },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(HOME_TASK_ROW_HEIGHT),
-        ) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TaskSwipeActionButton(
-                    icon = Icons.Rounded.BorderColor,
-                    contentDescription = stringResource(R.string.action_edit_task),
-                    label = stringResource(R.string.action_edit),
-                    tint = Color.White,
-                    background = Color(0xFF4C7DDE),
-                    revealProgress = actionRevealProgress,
-                    revealDelay = 0.62f,
-                    onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK,
-                        )
-                        onInfo()
-                        targetOffsetX = 0f
-                    },
-                )
-                TaskSwipeActionButton(
-                    icon = Icons.Rounded.DeleteOutline,
-                    contentDescription = stringResource(R.string.action_delete_task),
-                    label = stringResource(R.string.action_delete),
-                    tint = Color.White,
-                    background = Color(0xFFFF453A),
-                    revealProgress = actionRevealProgress,
-                    revealDelay = 0.04f,
-                    onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK,
-                        )
-                        onDelete()
-                        targetOffsetX = 0f
-                    },
-                )
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { translationX = animatedOffsetX }
-                    .draggable(
-                        orientation = Orientation.Horizontal,
-                        state = rememberDraggableState { delta ->
-                            targetOffsetX = (targetOffsetX + delta).coerceIn(-maxElasticDragPx, 0f)
-                        },
-                        onDragStopped = { velocity ->
-                            val flingOpen = velocity < -1450f
-                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
-                            targetOffsetX = if (flingOpen || dragOpen) -actionRevealPx else 0f
-                        },
-                    )
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                    ) {
-                        if (targetOffsetX != 0f) {
-                            targetOffsetX = 0f
-                        } else if (!swipeHinting && !pendingCompletion) {
-                            swipeHinting = true
-                            coroutineScope.launch {
-                                targetOffsetX = -swipeHintOffsetPx
-                                delay(150)
-                                targetOffsetX = 0f
-                                delay(360)
-                                swipeHinting = false
-                            }
-                        }
-                    },
-                shape = rowShape,
-                colors = CardDefaults.cardColors(containerColor = foregroundColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            horizontal = 4.dp,
-                            vertical = HOME_SWIPE_ROW_CONTENT_VERTICAL_PADDING,
-                        )
-                        .semantics(mergeDescendants = true) {},
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(vertical = 2.dp)
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(foregroundColor, RoundedCornerShape(18.dp))
-                            .background(contentGlowBrush, RoundedCornerShape(18.dp)),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        CircularCheckToggleIcon(
-                            imageVector = if (!visuallyCompleted) {
-                                Icons.Rounded.RadioButtonUnchecked
-                            } else {
-                                Icons.Rounded.CheckCircle
-                            },
-                            contentDescription = if (visuallyCompleted) {
-                                stringResource(R.string.label_completed)
-                            } else {
-                                stringResource(R.string.label_mark_complete)
-                            },
-                            tint = if (!visuallyCompleted) {
-                                colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                            } else {
-                                TASK_CHECKMARK_GREEN
-                            },
-                            enabled = !visuallyCompleted && !pendingCompletion,
-                            onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
-                                targetOffsetX = 0f
-                                localCompleted = true
-                                pendingCompletion = true
-                                coroutineScope.launch {
-                                    delay(180)
-                                    onComplete()
-                                }
-                            },
-                        )
-
-                        Column(
-                            modifier = Modifier
-                                .padding(start = 10.dp, end = 8.dp)
-                                .weight(1f),
-                        ) {
-                            Text(
-                                text = todo.title,
-                                color = if (visuallyCompleted) {
-                                    colorScheme.onSurface.copy(alpha = 0.78f)
-                                } else {
-                                    colorScheme.onSurface
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
-                                textDecoration = if (visuallyCompleted) {
-                                    TextDecoration.LineThrough
-                                } else {
-                                    TextDecoration.None
-                                },
-                                maxLines = 2,
-                            )
-                            Text(
-                                text = dueSubtitleText,
-                                color = if (isOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(
-                                    alpha = 0.8f
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
-                    if (showListIndicator || showPriorityFlag) {
-                        Row(
-                            modifier = Modifier.padding(start = 8.dp, end = 24.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (showListIndicator) {
-                                Icon(
-                                    imageVector = listIconForKey(listMeta?.iconKey),
-                                    contentDescription = stringResource(R.string.label_task_list),
-                                    tint = listIndicatorColor,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                            if (showPriorityFlag) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Flag,
-                                    contentDescription = stringResource(R.string.label_priority_task),
-                                    tint = priorityColor(todo.priority),
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
-        )
-    }
-}
-
-@Composable
-private fun CircularCheckToggleIcon(
-    imageVector: ImageVector,
-    contentDescription: String,
-    tint: Color,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Box(
-        modifier = Modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-            .wrapContentSize(Alignment.Center)
-            .clip(CircleShape)
-            .clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = ripple(
-                    bounded = true,
-                    radius = 24.dp,
-                ),
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(24.dp),
-        )
-    }
-}
-
-@Composable
-private fun priorityColor(priority: String): Color {
-    return when (priority.lowercase()) {
-        "high", "urgent", "important" -> Color(0xFFE56A6A)
-        "medium" -> Color(0xFFE3B368)
-        else -> Color(0xFF6FBF86)
-    }
-}
-
-private fun isHighPriority(priority: String): Boolean {
-    return when (priority.trim().lowercase()) {
-        "medium", "high", "urgent", "important" -> true
-        else -> false
     }
 }
 
 @Composable
 private fun ListRow(
+    modifier: Modifier = Modifier,
     name: String,
     colorKey: String?,
     iconKey: String?,
@@ -2380,13 +2091,13 @@ private fun ListRow(
         animationSpec = tween(durationMillis = 220),
         label = "listRowCount",
     )
-    val accent = listColorAccent(colorKey)
-    val icon = listIconForKey(iconKey)
-    val containerColor = lerp(colorScheme.surfaceVariant, accent, 0.38f)
+    val accent = tdayListAccentColor(colorKey)
+    val icon = tdayListIconForKey(iconKey)
+    val containerColor = lerp(colorScheme.surfaceVariant, accent, HOME_LIST_CONTAINER_COLOR_WEIGHT)
     val displayName = capitalizeFirstListLetter(name)
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(70.dp)
             .semantics(mergeDescendants = true) {}
@@ -2496,134 +2207,22 @@ private fun ListRow(
     }
 }
 
-private data class ListColorOption(
-    val key: String,
-    val color: Color,
-)
-
-private data class ListIconOption(
-    val key: String,
-    val icon: ImageVector,
-)
-
-private const val DEFAULT_LIST_COLOR = "BLUE"
-private const val DEFAULT_LIST_ICON_KEY = "inbox"
+private const val HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_MOTION_MS = 320
 private const val SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS = 260L
-private val HOME_TASK_ACTION_REVEAL_WIDTH = 176.dp
-private val HOME_TASK_SWIPE_HINT_OFFSET = 42.dp
-private val HOME_TASK_ROW_HEIGHT = 58.dp
-private val HOME_SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
-private val HOME_CATEGORY_PILL_MIN_WIDTH = 176.dp
-private val HOME_CATEGORY_PILL_WIDE_MIN_WIDTH = 188.dp
-private val HOME_CATEGORY_PILL_HEIGHT = 82.dp
-private val HOME_TODAY_PILL_HEIGHT = 88.dp
-private val HOME_TODO_DUE_TIME_FORMATTER: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
-private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
+private val RootFeedDockCollapseThreshold = 44.dp
 
 private fun performGentleHaptic(view: android.view.View) {
     ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
 }
 
-private val LIST_COLOR_OPTIONS = listOf(
-    ListColorOption("RED", Color(0xFFE65E52)),
-    ListColorOption("ORANGE", Color(0xFFF29F38)),
-    ListColorOption("YELLOW", Color(0xFFF3D04A)),
-    ListColorOption("LIME", Color(0xFF8ACF56)),
-    ListColorOption("BLUE", Color(0xFF5C9FE7)),
-    ListColorOption("PURPLE", Color(0xFF8D6CE2)),
-    ListColorOption("PINK", Color(0xFFDF6DAA)),
-    ListColorOption("TEAL", Color(0xFF4EB5B0)),
-    ListColorOption("CORAL", Color(0xFFE3876D)),
-    ListColorOption("GOLD", Color(0xFFCFAB57)),
-    ListColorOption("DEEP_BLUE", Color(0xFF4B73D6)),
-    ListColorOption("ROSE", Color(0xFFD9799A)),
-    ListColorOption("LIGHT_RED", Color(0xFFE48888)),
-    ListColorOption("BRICK", Color(0xFFB86A5C)),
-    ListColorOption("SLATE", Color(0xFF7B8593)),
-)
-
-private val LIST_ICON_OPTIONS = listOf(
-    ListIconOption("inbox", Icons.Rounded.Inbox),
-    ListIconOption("sun", Icons.Rounded.WbSunny),
-    ListIconOption("calendar", Icons.Rounded.CalendarToday),
-    ListIconOption("schedule", Icons.Rounded.Schedule),
-    ListIconOption("flag", Icons.Rounded.Flag),
-    ListIconOption("check", Icons.Rounded.Check),
-    ListIconOption("smile", Icons.Rounded.Mood),
-    ListIconOption("list", Icons.AutoMirrored.Rounded.List),
-    ListIconOption("bookmark", Icons.Rounded.Bookmark),
-    ListIconOption("key", Icons.Rounded.Key),
-    ListIconOption("gift", Icons.Rounded.CardGiftcard),
-    ListIconOption("cake", Icons.Rounded.Cake),
-    ListIconOption("school", Icons.Rounded.School),
-    ListIconOption("bag", Icons.Rounded.Backpack),
-    ListIconOption("edit", Icons.Rounded.Edit),
-    ListIconOption("document", Icons.Rounded.Description),
-    ListIconOption("book", Icons.AutoMirrored.Rounded.MenuBook),
-    ListIconOption("work", Icons.Rounded.Work),
-    ListIconOption("wallet", Icons.Rounded.AccountBalanceWallet),
-    ListIconOption("money", Icons.Rounded.Payments),
-    ListIconOption("fitness", Icons.Rounded.FitnessCenter),
-    ListIconOption("run", Icons.AutoMirrored.Rounded.DirectionsRun),
-    ListIconOption("food", Icons.Rounded.Restaurant),
-    ListIconOption("drink", Icons.Rounded.LocalBar),
-    ListIconOption("health", Icons.Rounded.Medication),
-    ListIconOption("monitor", Icons.Rounded.DesktopWindows),
-    ListIconOption("music", Icons.Rounded.MusicNote),
-    ListIconOption("computer", Icons.Rounded.Computer),
-    ListIconOption("game", Icons.Rounded.SportsEsports),
-    ListIconOption("headphones", Icons.Rounded.Headphones),
-    ListIconOption("eco", Icons.Rounded.Eco),
-    ListIconOption("pets", Icons.Rounded.Pets),
-    ListIconOption("child", Icons.Rounded.ChildCare),
-    ListIconOption("family", Icons.Rounded.FamilyRestroom),
-    ListIconOption("basket", Icons.Rounded.ShoppingBasket),
-    ListIconOption("cart", Icons.Rounded.ShoppingCart),
-    ListIconOption("mall", Icons.Rounded.LocalMall),
-    ListIconOption("inventory", Icons.Rounded.Inventory),
-    ListIconOption("soccer", Icons.Rounded.SportsSoccer),
-    ListIconOption("baseball", Icons.Rounded.SportsBaseball),
-    ListIconOption("basketball", Icons.Rounded.SportsBasketball),
-    ListIconOption("football", Icons.Rounded.SportsFootball),
-    ListIconOption("tennis", Icons.Rounded.SportsTennis),
-    ListIconOption("train", Icons.Rounded.Train),
-    ListIconOption("flight", Icons.Rounded.Flight),
-    ListIconOption("boat", Icons.Rounded.DirectionsBoat),
-    ListIconOption("car", Icons.Rounded.DirectionsCar),
-    ListIconOption("umbrella", Icons.Rounded.BeachAccess),
-    ListIconOption("drop", Icons.Rounded.WaterDrop),
-    ListIconOption("snow", Icons.Rounded.AcUnit),
-    ListIconOption("fire", Icons.Rounded.Whatshot),
-    ListIconOption("tools", Icons.Rounded.Build),
-    ListIconOption("scissors", Icons.Rounded.ContentCut),
-    ListIconOption("architecture", Icons.Rounded.Architecture),
-    ListIconOption("code", Icons.Rounded.Code),
-    ListIconOption("idea", Icons.Rounded.Lightbulb),
-    ListIconOption("chat", Icons.Rounded.ChatBubbleOutline),
-    ListIconOption("alert", Icons.Rounded.PriorityHigh),
-    ListIconOption("star", Icons.Rounded.Star),
-    ListIconOption("heart", Icons.Rounded.Favorite),
-    ListIconOption("circle", Icons.Rounded.Circle),
-    ListIconOption("square", Icons.Rounded.Square),
-    ListIconOption("triangle", Icons.Rounded.ChangeHistory),
-    ListIconOption("home", Icons.Rounded.Home),
-    ListIconOption("city", Icons.Rounded.LocationCity),
-    ListIconOption("bank", Icons.Rounded.AccountBalance),
-    ListIconOption("camera", Icons.Rounded.CameraAlt),
-    ListIconOption("palette", Icons.Rounded.Palette),
-)
-
-private fun listColorAccent(colorKey: String?): Color {
-    return LIST_COLOR_OPTIONS.firstOrNull { it.key == colorKey }?.color
-        ?: Color(0xFFE9A03B)
-}
-
-private fun listIconForKey(iconKey: String?): ImageVector {
-    return LIST_ICON_OPTIONS.firstOrNull { it.key == iconKey }?.icon
-        ?: Icons.Rounded.Inbox
+private fun priorityIconFor(priority: String): ImageVector? {
+    return when (priority.trim().lowercase(Locale.getDefault())) {
+        "medium" -> Icons.Rounded.Flag
+        "high", "urgent", "important" -> Icons.Rounded.Flag
+        else -> null
+    }
 }

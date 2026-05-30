@@ -1,17 +1,17 @@
 # Architecture
 
-This document describes the high-level system design, domain boundaries, and key technical decisions for T'Day.
+This document describes the high-level system design, domain boundaries, and key technical decisions for T'Day. Product intent lives in [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md); durable data shape lives in [`DATA_MODEL.md`](DATA_MODEL.md).
 
 ## System Overview
 
-T'Day is a **monorepo application** with a Kotlin/Ktor backend, a React SPA frontend, shared Kotlin Multiplatform code, and native mobile clients:
+T'Day is a **monorepo application** with a Kotlin/Ktor backend, a React SPA frontend, shared Kotlin Multiplatform code, and native local-first mobile clients:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Clients                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │  Web (React)  │  │ Android App  │  │    iOS App      │  │
-│  │  Vite SPA     │  │ Compose/Hilt │  │    SwiftUI      │  │
+│  │  Vite SPA     │  │ Compose/Room │  │ SwiftUI/Data   │  │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────────┘  │
 │         │                 │                  │               │
 └─────────┼─────────────────┼──────────────────┼───────────────┘
@@ -41,9 +41,20 @@ T'Day is a **monorepo application** with a Kotlin/Ktor backend, a React SPA fron
                           └─────────────────┘  └─────────────┘
 ```
 
+### Architectural Direction
+
+- Web is the desktop/admin/broad-access client.
+- Backend owns auth, persistence, tenant isolation, server compatibility, AI summaries, and realtime events.
+- Android and iOS own the primary mobile experience and render from local cache first.
+- Local Mode is a mobile-only workspace with no server dependency.
+- Server Mode uses optimistic local writes plus pending mutation replay.
+- Scheduled tasks and floaters are separate concepts; do not make `Todo.due` nullable to represent Anytime work.
+- Boundaries should stay readable and directional: clients render state, presentation layers coordinate work, repositories/services own domain/data operations, and transport/storage details sit at the edges.
+- Shared abstractions are introduced only when they reduce real duplication or clarify a cross-platform contract.
+
 ### Shared Kotlin Multiplatform Module
 
-The `shared/` module is a Kotlin Multiplatform (KMP) library targeting JVM, Android, and iOS. It provides a single source of truth for:
+The `shared/` module is a Kotlin Multiplatform (KMP) library targeting JVM, Android, and iOS frameworks. It provides the source of truth for:
 
 - Serializable DTOs (request/response models)
 - Domain enums (`Priority`, `UserRole`, `ApprovalStatus`, `SortBy`, `GroupBy`, `ProjectColor`, etc.)
@@ -53,7 +64,7 @@ The `shared/` module is a Kotlin Multiplatform (KMP) library targeting JVM, Andr
 |----------|--------|-------------------|
 | Backend (`tday-backend`) | JVM | Gradle `project(":shared")` |
 | Android (`android-compose`) | Android | Gradle `project(":shared")` |
-| iOS (`ios-swiftUI`) | iOS framework (`TdayShared`) | Swift Package import |
+| iOS (`ios-swiftUI`) | Swift models | Mirrored manually in `Core/Model/ApiModels.swift` and checked with contract tests |
 
 ## Domain Model
 
@@ -62,12 +73,15 @@ The application is organized around these core domains:
 | Domain | Description | Models |
 |--------|------------|--------|
 | **Auth** | Registration, login, sessions, approval, admin | `User`, `Account`, `AuthThrottle`, `AuthSignal` |
-| **Todos** | Task CRUD, RFC 5545 recurrence, priorities, ordering | `Todo`, `TodoInstance`, `CompletedTodo` |
-| **Lists** | Project grouping with colors and icons | `List` |
-| **Files** | S3-backed file storage | `File` |
+| **Todos** | Scheduled task CRUD, RFC 5545 recurrence, priorities, ordering | `Todo`, `TodoInstance`, `CompletedTodo` |
+| **Floaters** | Unscheduled Anytime task CRUD, priorities, ordering | `Floater`, `CompletedFloater` |
+| **Lists** | Scheduled-task project grouping with colors and icons | `List` |
+| **Floater Lists** | Floater project grouping with colors and icons | `FloaterList` |
+| **Files** | Reserved/legacy file metadata retained for cleanup paths; no active upload/download API | `File` |
 | **Preferences** | Sort/group/direction settings per user | `UserPreferences` |
 | **Admin** | App configuration, user management | `AppConfig` |
 | **Operations** | Cron jobs, event logging | `CronLog`, `eventLog` |
+| **Mobile Sync** | Local cache metadata and pending replay state | Android Room entities, iOS SwiftData entities, `PendingMutationRecord` |
 
 ## Backend Architecture (Ktor)
 
@@ -116,7 +130,8 @@ tday-backend/src/main/kotlin/com/ohmz/tday/
 │   └── DatabaseConfig.kt   # HikariCP pool, Flyway migrate, Exposed connect
 ├── db/
 │   ├── enums/PgEnums.kt    # PostgreSQL enum ↔ shared Kotlin enum mapping
-│   └── tables/             # Exposed Table definitions (Users, Todos, etc.)
+│   ├── tables/             # Exposed Table definitions (Users, Todos, etc.)
+│   └── util/               # Database utility helpers
 ├── di/AppModule.kt         # Koin modules: config, security, services
 ├── domain/
 │   ├── AppError.kt         # Sealed error hierarchy → HTTP status codes
@@ -128,8 +143,12 @@ tday-backend/src/main/kotlin/com/ohmz/tday/
 │   └── response/           # Response-specific DTOs
 ├── plugins/
 │   ├── Routing.kt          # /health, /api/*, /ws, static SPA serving
+│   ├── CallLogging.kt      # Structured request logging
+│   ├── Cors.kt             # CORS policy
+│   ├── RateLimiting.kt     # App-layer request throttling
 │   ├── Security.kt         # JWE bearer + cookie auth, pipeline intercept
 │   ├── SecurityHeaders.kt  # CSP, HSTS, X-Frame-Options, etc.
+│   ├── SentryPlugin.kt     # Sentry JVM configuration
 │   ├── Serialization.kt    # kotlinx.serialization JSON config
 │   └── StatusPages.kt      # AppError → JSON ApiError mapping
 ├── routes/                 # HTTP route handlers by domain
@@ -145,10 +164,12 @@ tday-backend/src/main/kotlin/com/ohmz/tday/
 | **Koin** | Dependency injection (config, security, service modules) |
 | **WebSockets** | Real-time domain event streaming per authenticated user |
 | **ContentNegotiation** | JSON request/response via kotlinx.serialization |
-| **DefaultHeaders** | Security headers (CSP, HSTS in production, X-Frame-Options, etc.) |
+| **DefaultHeaders / SecurityHeaders** | Security headers (CSP, HSTS in production, X-Frame-Options, etc.) |
 | **StatusPages** | Maps `AppError` / generic errors to JSON `ApiError` responses |
 | **Authentication** | Bearer token provider + pipeline intercept for JWE/cookie auth |
 | **Routing** | API routes, health check, WebSocket, optional static SPA |
+| **CallLogging** | Structured request logging without sensitive payloads |
+| **RateLimiting** | App-layer request throttling before handlers |
 
 ### Error Handling (Backend)
 
@@ -176,7 +197,7 @@ The primary error path uses the `AppError` sealed interface with `Either<AppErro
 - **React Router 7** with locale-prefixed URLs (`/:locale/app/*`)
 - **TanStack React Query 5** for server state
 - **Tailwind CSS 4** with Radix UI primitives (shadcn-style)
-- Native `fetch` API client with cookie-based auth
+- Shared `fetch` API client wrapper with cookie-based auth
 
 ### Directory Structure
 
@@ -188,9 +209,9 @@ tday-web/src/
 ├── globals.css           # Tailwind @theme tokens, CSS variables
 ├── i18n.ts               # i18next configuration (11 locales, path-based detection)
 ├── components/           # Shared UI (ui/* primitives, Sidebar, auth, todo pieces)
-├── features/             # Feature modules (calendar, list, todayTodos, completed)
+├── features/             # Feature modules (calendar, completed, list, release, todayTodos, user)
 ├── hooks/                # Shared React hooks
-├── lib/                  # Utilities (api-client, navigation, security, dates)
+├── lib/                  # Utilities (api-client, navigation, cache, performance, security, dates, todo)
 ├── pages/                # Route-level screens and layouts
 ├── providers/            # React context providers (Auth, Theme, Query, Menu, etc.)
 └── types/                # TypeScript type definitions
@@ -211,7 +232,7 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 - `api.GET/POST/PATCH/DELETE` functions in `lib/api-client.ts` with `ApiError` typing
 - All HTTP calls (including auth and preferences) route through the shared API client
 - `credentials: "same-origin"` for cookie-based sessions
-- `Cache-Control: no-store` on all requests
+- Browser `fetch` cache mode set to `no-store` on all private API requests
 - Dev: Vite proxy forwards `/api` to `http://localhost:8080`
 - Production: Ktor serves the SPA as static files from `STATIC_FILES_DIR`
 
@@ -233,14 +254,14 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
                        │
 ┌──────────────────────┴────────────────────────────┐
 │  Data / App Services                              │
-│  TodoRepository, ListRepository, CompletedRepo,   │
-│  AuthRepository, SettingsRepository, SyncManager, │
-│  OfflineCacheManager, TaskReminderScheduler       │
+│  TodoRepository, ListRepository, FloaterListRepo, │
+│  CompletedRepo, AuthRepository, SettingsRepo,     │
+│  SyncManager, OfflineCacheManager, Reminder APIs  │
 └──────┬───────────────────────────────┬────────────┘
        │                               │
 ┌──────┴──────┐              ┌─────────┴─────────┐
-│ Retrofit    │              │ EncryptedPrefs     │
-│ (Network)   │              │ (Local Cache)      │
+│ Retrofit    │              │ Room + Encrypted    │
+│ (Network)   │              │ prefs for secrets   │
 └─────────────┘              └───────────────────┘
 ```
 
@@ -248,11 +269,13 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 
 - **MVVM without an Android use-case layer**: ViewModels coordinate repositories and app services directly instead of routing through Android-specific `UseCase` wrappers.
 - **Domain-specific repositories**: Data access is split by concern (`TodoRepository`, `ListRepository`, `CompletedRepository`, `AuthRepository`, `SettingsRepository`) instead of a single catch-all repository.
-- **Offline-first sync**: `OfflineCacheManager` stores the local source of truth, while `SyncManager` replays pending mutations and refreshes remote snapshots.
+- **Local-first sync**: `OfflineCacheManager` stores the local source of truth in Room, while `SyncManager` replays pending mutations and refreshes remote snapshots in Server Mode.
+- **Local Mode**: Mobile can run without server setup. Server-only operations are hidden or disabled and pending mutations are not retained for replay.
 - **Cache invalidation**: `OfflineCacheManager.cacheDataVersion` is observed by ViewModels so screens can hydrate from cache when local data changes.
 - **Auth compatibility**: The Android client implements the JWE credential flow (CSRF token fetch → credential callback → session cookie) using Retrofit + an encrypted cookie store.
 - **Navigation**: Programmatic Compose Navigation (`NavHost`) with `sealed class AppRoute` — no XML navigation graphs.
 - **Server discovery**: Runtime server URL configuration with optional certificate fingerprint pinning for self-hosted instances.
+- **Root feeds**: `RootFeedDock` switches between Home and Floater/Anytime, with a shared root create action.
 
 ### Package Structure (Android)
 
@@ -260,22 +283,26 @@ The web SPA communicates with the Ktor backend via a thin `fetch` wrapper:
 com.ohmz.tday.compose/
 ├── core/
 │   ├── data/          # Repositories, OfflineCacheManager, SyncManager, stores
+│   │   └── db/        # Room entities, DAOs, and database
 │   ├── model/         # ApiModels (DTOs), DomainModels (UI types)
 │   ├── navigation/    # AppRoute sealed class
 │   ├── network/       # Hilt NetworkModule, TdayApiService, EncryptedCookieStore
-│   └── notification/  # Alarms, WorkManager, receivers
+│   ├── notification/  # Alarms, WorkManager, receivers
+│   ├── security/      # Probe/decryption helpers
+│   └── ui/            # Shared non-feature app UI helpers
 ├── feature/
 │   ├── app/           # AppViewModel (bootstrap, sync, session)
 │   ├── auth/          # AuthViewModel
 │   ├── home/          # HomeScreen + HomeViewModel
-│   ├── todos/         # TodoListScreen + TodoListViewModel
+│   ├── todos/         # Todo/Floater list screens + ViewModel
 │   ├── completed/     # CompletedScreen + CompletedViewModel
 │   ├── calendar/      # CalendarScreen + CalendarViewModel
-│   ├── lists/         # ListsScreen + ListsViewModel
 │   ├── settings/      # SettingsScreen
+│   ├── release/       # In-app update and latest release
+│   ├── widget/        # TodayTasks widget
 │   └── onboarding/    # OnboardingWizardOverlay
 └── ui/
-    ├── component/     # Shared composables (PullRefresh, CreateTaskBottomSheet)
+    ├── component/     # Shared composables (PullRefresh, CreateTaskBottomSheet, RootFeedDock)
     └── theme/         # Material 3 theme, colors, typography, dimensions
 ```
 
@@ -283,29 +310,41 @@ com.ohmz.tday.compose/
 
 ### Stack
 
-- **SwiftUI** targeting iOS 17+, managed via Swift Package Manager
+- **SwiftUI** targeting iOS 17+
 - **SwiftData** for local persistence
-- Feature-based folder structure with `AppRootView` using TabView + NavigationStack
+- **Observation** for ViewModels
+- `AppRootView` using `NavigationStack`, root-feed state, onboarding overlay, update gating, deep links, and Local/Server Mode checks
 
 ### Structure
 
 ```
 ios-swiftUI/Tday/
 ├── Feature/
-│   ├── Home/         # Home screen
-│   ├── Todos/        # Todo management
+│   ├── App/          # AppRootView + AppViewModel
+│   ├── Home/         # Home root feed
+│   ├── Todos/        # Todo/Floater management
 │   ├── Calendar/     # Calendar views
 │   ├── Completed/    # Completion history
 │   ├── Settings/     # User settings
 │   ├── Auth/         # Login/register
 │   └── Onboarding/   # First-launch flow
 ├── Core/
+│   ├── Data/         # AppContainer, repositories, SwiftData cache, sync
+│   ├── Domain/       # Focused use cases
+│   ├── Model/        # API/domain/offline models
+│   ├── Navigation/   # AppRoute
 │   ├── Network/      # TdayAPIService, RealtimeClient (URLSession + cookies)
-│   └── Data/         # Repositories, SwiftData models
-└── AppRootView.swift # TabView + NavigationStack with AppRoute destinations
+│   ├── Notification/ # Deep links and reminders
+│   ├── Security/     # Probe/decryption helpers
+│   ├── UI/           # Shared app UI helpers
+│   └── Widget/       # TodayTasks snapshot store
+├── UI/
+│   ├── Component/    # Shared SwiftUI controls and sheets
+│   └── Theme/        # Colors and rounded typography
+└── AppRootView.swift # NavigationStack, root feed state, overlays, deep links
 ```
 
-No third-party Swift dependencies — all native frameworks.
+The widget extension lives beside the app target at `ios-swiftUI/TdayWidget/`, while iOS tests live in `ios-swiftUI/Tests/`. Sentry Cocoa is the only notable third-party runtime dependency; core app behavior uses native frameworks.
 
 ## Database Design
 
@@ -313,8 +352,10 @@ No third-party Swift dependencies — all native frameworks.
 
 ```
 User ──┬── Todo ──── TodoInstance
-       │      └──── List (Project)
+       │      └──── List (scheduled-task project)
+       ├── Floater ─── FloaterList
        ├── CompletedTodo
+       ├── CompletedFloater
        ├── File
        ├── UserPreferences
        ├── Account (OAuth)
@@ -335,7 +376,8 @@ User ──┬── Todo ──── TodoInstance
 ### Key Patterns
 
 - **Soft completion**: Completed todos are moved to `CompletedTodo` with metadata (completion time, on-time status, days to complete).
-- **RFC 5545 recurrence**: Todos support `rrule`, `dtstart`, `due`, `exdates`, and `durationMinutes`. Instances are materialized in `TodoInstance` for per-occurrence overrides.
+- **Floater completion**: Completed floaters are moved to `CompletedFloater` with completion time, days-to-complete metadata, and floater-list metadata.
+- **RFC 5545 recurrence**: Todos support `rrule`, `due`, `exdates`, and `durationMinutes`. Instances are materialized in `TodoInstance` for per-occurrence overrides.
 - **Tenant isolation**: All data queries filter by `userID`. There are no shared/public data models.
 - **Audit fields**: All major models include `createdAt` and `updatedAt`.
 
@@ -361,7 +403,7 @@ Tokens are encrypted JWTs (JWE) via Nimbus JOSE JWT + BouncyCastle. The Ktor pip
 
 `SessionControl` bumps `tokenVersion` on the `User` row. Existing tokens fail on the next request when the intercept detects the version mismatch.
 
-### Android Auth Flow
+### Mobile Auth and Workspace Flow
 
 ```
 App launch → Probe server (GET /api/mobile/probe)
@@ -371,6 +413,8 @@ App launch → Probe server (GET /api/mobile/probe)
            → Session cookie stored in EncryptedCookieStore
            → Subsequent requests include cookie automatically
 ```
+
+Local Mode skips server probe/auth and enters a local-only workspace immediately.
 
 ## Real-Time Communication
 
@@ -392,12 +436,15 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 ## Caching Strategy
 
-- **Web**: No application-level cache layer. API requests use `Cache-Control: no-store`. TanStack React Query provides client-side cache with 60-second stale time.
-- **Android**: Offline JSON cache in encrypted shared preferences. Cache is the source of truth for list/todo screens; network sync updates the cache periodically and on pull-to-refresh.
+- **Web**: No application-level persistence cache. The shared API client uses browser `fetch` with `cache: "no-store"` for private API requests. TanStack React Query provides in-memory client-side cache with 60-second stale time.
+- **Android**: Room-backed local cache for todos, floaters, lists, completed history, pending mutations, and sync metadata. Encrypted preferences still protect credentials, cookies, server config, trust data, theme/reminder preferences, and legacy cache migration input. Cache is the source of truth for screens; network sync updates it periodically, on foreground reconnect, realtime events, and user refresh in Server Mode.
+- **iOS**: SwiftData-backed local cache with mirrored `OfflineSyncState` records. Keychain-backed stores protect server config, cookies, credentials, mode state, theme, and reminders. Cache changes notify ViewModels and widget snapshot storage.
 
 ## Background Jobs
 
 - **Android reminders**: `AlarmManager` for exact-time reminders, `WorkManager` for periodic reminder rescheduling, `BootRescheduleReceiver` for device restart recovery.
+- **iOS reminders**: `UserNotifications` scheduling and notification deep-link routing.
+- **Widgets**: Android Glance widget and iOS WidgetKit-ready snapshot storage focus on Today tasks.
 
 ## Production Deployment
 
@@ -411,7 +458,7 @@ One JVM process serves both the REST API and the SPA. Docker Compose orchestrate
 
 ## Future Considerations
 
-- Keep ViewModel orchestration focused on presentation concerns; if shared Android workflows become complex, prefer extracting them into repositories or platform services before adding another app-layer abstraction.
-- Consider Room database if the Android cache grows beyond what the current encrypted snapshot approach handles comfortably.
+- Keep ViewModel orchestration focused on presentation concerns; if shared mobile workflows become complex, prefer extracting them into repositories, platform services, or focused use cases before adding broad abstractions.
+- Define an explicit import/export or migration experience before moving Local Mode data into a server workspace.
 - Consider Redis or in-memory caching if web API latency becomes a concern under load.
 - Evaluate SSE as an alternative to WebSocket for clients that don't need bidirectional streaming.

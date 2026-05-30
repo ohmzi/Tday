@@ -18,7 +18,7 @@ data class CachedTodoEntity(
     val title: String,
     val description: String?,
     val priority: String,
-    val dueEpochMs: Long,
+    val dueEpochMs: Long?,
     val rrule: String?,
     val instanceDateEpochMs: Long?,
     val pinned: Boolean,
@@ -27,8 +27,38 @@ data class CachedTodoEntity(
     val updatedAtEpochMs: Long,
 )
 
+@Entity(
+    tableName = "cached_floaters",
+    indices = [
+        Index("listId"),
+        Index("completed"),
+    ],
+)
+data class CachedFloaterEntity(
+    @PrimaryKey val id: String,
+    val canonicalId: String,
+    val title: String,
+    val description: String?,
+    val priority: String,
+    val pinned: Boolean,
+    val completed: Boolean,
+    val listId: String?,
+    val updatedAtEpochMs: Long,
+)
+
 @Entity(tableName = "cached_lists")
 data class CachedListEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val color: String?,
+    val iconKey: String?,
+    val todoCount: Int,
+    val updatedAtEpochMs: Long,
+    val createdAtEpochMs: Long,
+)
+
+@Entity(tableName = "cached_floater_lists")
+data class CachedFloaterListEntity(
     @PrimaryKey val id: String,
     val name: String,
     val color: String?,
@@ -48,10 +78,27 @@ data class CachedCompletedEntity(
     val title: String,
     val description: String?,
     val priority: String,
-    val dueEpochMs: Long,
+    val dueEpochMs: Long?,
     val completedAtEpochMs: Long,
     val rrule: String?,
     val instanceDateEpochMs: Long?,
+    val listId: String?,
+    val listName: String?,
+    val listColor: String?,
+)
+
+@Entity(
+    tableName = "cached_completed_floaters",
+    indices = [Index("completedAtEpochMs")],
+)
+data class CachedCompletedFloaterEntity(
+    @PrimaryKey val id: String,
+    val originalFloaterId: String?,
+    val title: String,
+    val description: String?,
+    val priority: String,
+    val completedAtEpochMs: Long,
+    val listId: String?,
     val listName: String?,
     val listColor: String?,
 )

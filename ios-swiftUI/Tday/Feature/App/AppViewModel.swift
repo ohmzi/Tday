@@ -35,6 +35,7 @@ final class AppViewModel {
     var requiresServerSetup = false
     var requiresLogin = false
     var serverURL: String?
+    var dataMode: AppDataMode = .unset
     var themeMode: AppThemeMode
     var user: SessionUser?
     var error: String?
@@ -63,6 +64,14 @@ final class AppViewModel {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
     }
 
+    var isLocalMode: Bool {
+        dataMode == .local
+    }
+
+    var isWorkspaceAvailable: Bool {
+        authenticated || isLocalMode
+    }
+
     var hasUpdate: Bool {
         guard let remote = latestVersionName else { return false }
         return Self.compareVersions(remote, currentVersionName) > 0
@@ -75,6 +84,9 @@ final class AppViewModel {
     @ObservationIgnored nonisolated(unsafe) private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private let networkMonitorQueue = DispatchQueue(label: "tday.network-monitor")
     @ObservationIgnored private var isForegroundReconnectInFlight = false
+    @ObservationIgnored private var lastOfflineNoticeShownAt: Date?
+
+    private static let offlineNoticeCooldownSeconds: TimeInterval = 10 * 60
 
     init(container: AppContainer) {
         self.container = container
@@ -99,12 +111,18 @@ final class AppViewModel {
         error = nil
         isManualSyncing = false
 
+        if container.serverConfigRepository.appDataMode() == .local {
+            await enterLocalWorkspace()
+            return
+        }
+
         if !container.serverConfigRepository.hasServerConfigured() {
             container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
             authenticated = false
             requiresServerSetup = true
             requiresLogin = false
             serverURL = nil
+            dataMode = .unset
             user = nil
             error = nil
             canResetServerTrust = false
@@ -122,6 +140,7 @@ final class AppViewModel {
         }
 
         serverURL = container.serverConfigRepository.getServerURL()?.absoluteString
+        dataMode = .server
         let sessionResult = await container.bootstrapSession()
         if let sessionResult, sessionResult.user.id != nil {
             let session = sessionResult.user
@@ -138,12 +157,13 @@ final class AppViewModel {
             authenticated = true
             requiresServerSetup = false
             requiresLogin = false
+            dataMode = .server
             user = session
             error = nil
             pendingApprovalMessage = nil
             canResetServerTrust = true
             isOffline = sessionResult.isOffline
-            if sessionResult.isOffline {
+            if sessionResult.isOffline && shouldShowOfflineNotice() {
                 offlineNoticeID += 1
             }
             finishBootstrap()
@@ -161,6 +181,7 @@ final class AppViewModel {
         authenticated = false
         requiresServerSetup = false
         requiresLogin = true
+        dataMode = .server
         user = nil
         error = nil
         pendingApprovalMessage = nil
@@ -179,10 +200,51 @@ final class AppViewModel {
         await bootstrap()
     }
 
+    func useLocalMode() async {
+        container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
+        container.serverConfigRepository.enableLocalMode()
+        await enterLocalWorkspace()
+    }
+
+    private func enterLocalWorkspace() async {
+        stopRealtime()
+        stopSyncLoop()
+        _ = try? await container.cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.lastSuccessfulSyncEpochMs = 0
+            nextState.lastSyncAttemptEpochMs = 0
+            nextState.pendingMutations = []
+            return nextState
+        }
+        authenticated = false
+        requiresServerSetup = false
+        requiresLogin = false
+        serverURL = nil
+        dataMode = .local
+        user = nil
+        error = nil
+        canResetServerTrust = false
+        pendingApprovalMessage = nil
+        isManualSyncing = false
+        adminAiSummaryEnabled = nil
+        isAdminAiSummaryLoading = false
+        isAdminAiSummarySaving = false
+        adminAiSummaryError = nil
+        aiSummaryValidationError = nil
+        isOffline = false
+        pendingMutationCount = 0
+        versionCheckResult = .compatible
+        backendVersion = nil
+        await container.reminderScheduler.requestAuthorization()
+        await rescheduleReminders()
+        finishBootstrap()
+    }
+
     func connectServer(rawURL: String) async -> Result<Void, MessageError> {
         do {
             let probeResult = try await container.serverConfigRepository.probeAndSave(rawURL)
             serverURL = probeResult.serverURL
+            dataMode = .server
             versionCheckResult = probeResult.versionCheck
             backendVersion = probeResult.backendVersion
             let isBlocking = probeResult.versionCheck != .compatible
@@ -200,6 +262,9 @@ final class AppViewModel {
     }
 
     func recheckVersion() async {
+        guard !isLocalMode else {
+            return
+        }
         let result = await container.serverConfigRepository.recheckVersion()
         versionCheckResult = result
         switch result {
@@ -217,6 +282,7 @@ final class AppViewModel {
             _ = try await container.serverConfigRepository.resetTrustedServer(rawURL: rawURL)
             let savedServerURL = container.serverConfigRepository.getServerURL()?.absoluteString ?? rawURL
             serverURL = savedServerURL
+            dataMode = .server
             requiresServerSetup = false
             requiresLogin = true
             error = nil
@@ -234,7 +300,7 @@ final class AppViewModel {
     }
 
     func refreshAdminAiSummarySetting() async {
-        guard isAdmin(user) else {
+        guard !isLocalMode, isAdmin(user) else {
             adminAiSummaryEnabled = nil
             isAdminAiSummaryLoading = false
             isAdminAiSummarySaving = false
@@ -255,7 +321,7 @@ final class AppViewModel {
     }
 
     func setAdminAiSummaryEnabled(_ enabled: Bool) async {
-        guard isAdmin(user), !isAdminAiSummarySaving else {
+        guard !isLocalMode, isAdmin(user), !isAdminAiSummarySaving else {
             return
         }
         isAdminAiSummarySaving = true
@@ -290,6 +356,9 @@ final class AppViewModel {
     }
 
     func manualSync() async {
+        guard !isLocalMode else {
+            return
+        }
         isManualSyncing = true
         let result = await container.syncAndRefresh(
             force: true,
@@ -303,7 +372,7 @@ final class AppViewModel {
     }
 
     func reconnectAfterForeground() async {
-        guard authenticated, !isForegroundReconnectInFlight else {
+        guard authenticated, !isLocalMode, !isForegroundReconnectInFlight else {
             return
         }
 
@@ -320,7 +389,7 @@ final class AppViewModel {
 
     func navigate(to route: AppRoute) {
         switch route {
-        case .home:
+        case .home, .floaterTodos:
             navigationPath = []
         default:
             navigationPath.append(route)
@@ -352,6 +421,10 @@ final class AppViewModel {
     }
 
     private func refreshPendingMutationCount() {
+        guard !isLocalMode else {
+            pendingMutationCount = 0
+            return
+        }
         pendingMutationCount = container.cacheManager.loadOfflineState().pendingMutations.count
     }
 
@@ -432,7 +505,7 @@ final class AppViewModel {
         case let .failure(error):
             isOffline = isLikelyConnectivityIssue(error) ||
                 (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
-            if isOffline && showOfflineNotice {
+            if isOffline && showOfflineNotice && shouldShowOfflineNotice() {
                 offlineNoticeID += 1
             }
             if !isOffline {
@@ -440,6 +513,16 @@ final class AppViewModel {
             }
             refreshPendingMutationCount()
         }
+    }
+
+    private func shouldShowOfflineNotice(now: Date = Date()) -> Bool {
+        if let lastOfflineNoticeShownAt,
+           now.timeIntervalSince(lastOfflineNoticeShownAt) < Self.offlineNoticeCooldownSeconds {
+            return false
+        }
+
+        lastOfflineNoticeShownAt = now
+        return true
     }
 
     private func observeOfflineSyncFailures() {
@@ -620,7 +703,9 @@ final class AppViewModel {
     }
 
     func refreshVersionInfo() async {
-        await recheckVersion()
+        if !isLocalMode {
+            await recheckVersion()
+        }
         await refreshGitHubReleases()
     }
 

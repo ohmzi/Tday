@@ -22,25 +22,42 @@ actor AsyncLock {
 final class OfflineCacheManager {
     let modelContainer: ModelContainer
     private let modelContext: ModelContext
+    private let secureStore: SecureStore
     private let syncLock = AsyncLock()
     private(set) var cacheDataVersion = 0
     private var lastState = OfflineSyncState()
 
-    init(modelContainer: ModelContainer) {
+    init(modelContainer: ModelContainer, secureStore: SecureStore) {
         self.modelContainer = modelContainer
+        self.secureStore = secureStore
         modelContext = ModelContext(modelContainer)
         lastState = loadOfflineState()
     }
 
     func loadOfflineState() -> OfflineSyncState {
         let todos = (try? modelContext.fetch(FetchDescriptor<CachedTodoEntity>())) ?? []
+        let floaters = (try? modelContext.fetch(FetchDescriptor<CachedFloaterEntity>())) ?? []
         let lists = (try? modelContext.fetch(FetchDescriptor<CachedListEntity>())) ?? []
+        let floaterLists = (try? modelContext.fetch(FetchDescriptor<CachedFloaterListEntity>())) ?? []
         let completed = (try? modelContext.fetch(FetchDescriptor<CachedCompletedEntity>())) ?? []
+        let completedFloaters = (try? modelContext.fetch(FetchDescriptor<CachedCompletedFloaterEntity>())) ?? []
         let mutations = (try? modelContext.fetch(FetchDescriptor<PendingMutationEntity>())) ?? []
         let metadata = (try? modelContext.fetch(FetchDescriptor<SyncMetadataEntity>()))?.first
 
         let listRecords = lists.map {
             CachedListRecord(
+                id: $0.id,
+                name: $0.name,
+                color: $0.color,
+                iconKey: $0.iconKey,
+                todoCount: $0.todoCount,
+                updatedAtEpochMs: $0.updatedAtEpochMs,
+                createdAtEpochMs: $0.createdAtEpochMs ?? 0
+            )
+        }
+
+        let floaterListRecords = floaterLists.map {
+            CachedFloaterListRecord(
                 id: $0.id,
                 name: $0.name,
                 color: $0.color,
@@ -70,6 +87,19 @@ final class OfflineCacheManager {
                     updatedAtEpochMs: $0.updatedAtEpochMs
                 )
             },
+            floaters: floaters.map {
+                CachedFloaterRecord(
+                    id: $0.id,
+                    canonicalId: $0.canonicalId,
+                    title: $0.title,
+                    description: $0.itemDescription,
+                    priority: $0.priority,
+                    pinned: $0.pinned,
+                    completed: $0.completed,
+                    listId: $0.listId,
+                    updatedAtEpochMs: $0.updatedAtEpochMs
+                )
+            },
             completedItems: completed.map {
                 CachedCompletedRecord(
                     id: $0.id,
@@ -81,11 +111,26 @@ final class OfflineCacheManager {
                     completedAtEpochMs: $0.completedAtEpochMs,
                     rrule: $0.rrule,
                     instanceDateEpochMs: $0.instanceDateEpochMs,
+                    listId: $0.listId,
+                    listName: $0.listName,
+                    listColor: $0.listColor
+                )
+            },
+            completedFloaters: completedFloaters.map {
+                CachedCompletedFloaterRecord(
+                    id: $0.id,
+                    originalFloaterId: $0.originalFloaterId,
+                    title: $0.title,
+                    description: $0.itemDescription,
+                    priority: $0.priority,
+                    completedAtEpochMs: $0.completedAtEpochMs,
+                    listId: $0.listId,
                     listName: $0.listName,
                     listColor: $0.listColor
                 )
             },
             lists: orderListsLikeWeb(listRecords),
+            floaterLists: orderFloaterListsLikeWeb(floaterListRecords),
             pendingMutations: mutations.map {
                 PendingMutationRecord(
                     mutationId: $0.mutationId,
@@ -111,31 +156,48 @@ final class OfflineCacheManager {
     }
 
     func saveOfflineState(_ state: OfflineSyncState) {
-        if state == lastState {
+        let normalizedState: OfflineSyncState
+        if secureStore.isLocalMode() {
+            var localState = state
+            localState.lastSuccessfulSyncEpochMs = 0
+            localState.lastSyncAttemptEpochMs = 0
+            localState.pendingMutations = []
+            normalizedState = localState
+        } else {
+            normalizedState = state
+        }
+
+        if normalizedState == lastState {
             return
         }
 
         replaceAll(CachedTodoEntity.self)
+        replaceAll(CachedFloaterEntity.self)
         replaceAll(CachedListEntity.self)
+        replaceAll(CachedFloaterListEntity.self)
         replaceAll(CachedCompletedEntity.self)
+        replaceAll(CachedCompletedFloaterEntity.self)
         replaceAll(PendingMutationEntity.self)
         replaceAll(SyncMetadataEntity.self)
 
-        state.todos.forEach { modelContext.insert(CachedTodoEntity(from: $0)) }
-        state.lists.forEach { modelContext.insert(CachedListEntity(from: $0)) }
-        state.completedItems.forEach { modelContext.insert(CachedCompletedEntity(from: $0)) }
-        state.pendingMutations.forEach { modelContext.insert(PendingMutationEntity(from: $0)) }
+        normalizedState.todos.forEach { modelContext.insert(CachedTodoEntity(from: $0)) }
+        normalizedState.floaters.forEach { modelContext.insert(CachedFloaterEntity(from: $0)) }
+        normalizedState.lists.forEach { modelContext.insert(CachedListEntity(from: $0)) }
+        normalizedState.floaterLists.forEach { modelContext.insert(CachedFloaterListEntity(from: $0)) }
+        normalizedState.completedItems.forEach { modelContext.insert(CachedCompletedEntity(from: $0)) }
+        normalizedState.completedFloaters.forEach { modelContext.insert(CachedCompletedFloaterEntity(from: $0)) }
+        normalizedState.pendingMutations.forEach { modelContext.insert(PendingMutationEntity(from: $0)) }
         modelContext.insert(
             SyncMetadataEntity(
-                lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
-                lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs,
-                aiSummaryEnabled: state.aiSummaryEnabled
+                lastSuccessfulSyncEpochMs: normalizedState.lastSuccessfulSyncEpochMs,
+                lastSyncAttemptEpochMs: normalizedState.lastSyncAttemptEpochMs,
+                aiSummaryEnabled: normalizedState.aiSummaryEnabled
             )
         )
 
         try? modelContext.save()
-        lastState = state
-        TodayTasksWidgetSnapshotStore.saveTodayTasks(from: state)
+        lastState = normalizedState
+        TodayTasksWidgetSnapshotStore.saveTodayTasks(from: normalizedState)
         cacheDataVersion += 1
         NotificationCenter.default.post(name: .offlineCacheDidChange, object: nil)
     }
@@ -149,7 +211,13 @@ final class OfflineCacheManager {
 
     func hasCachedData() -> Bool {
         let state = loadOfflineState()
-        return !state.todos.isEmpty || !state.completedItems.isEmpty || !state.lists.isEmpty || !state.pendingMutations.isEmpty
+        return !state.todos.isEmpty ||
+            !state.floaters.isEmpty ||
+            !state.completedItems.isEmpty ||
+            !state.completedFloaters.isEmpty ||
+            !state.lists.isEmpty ||
+            !state.floaterLists.isEmpty ||
+            !state.pendingMutations.isEmpty
     }
 
     func clearAllLocalData() {

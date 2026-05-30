@@ -3,8 +3,10 @@ package com.ohmz.tday.services
 import arrow.core.Either
 import arrow.core.right
 import arrow.core.raise.either
+import com.ohmz.tday.db.tables.CompletedTodos
 import com.ohmz.tday.db.enums.ListColor
 import com.ohmz.tday.db.tables.Lists
+import com.ohmz.tday.db.tables.TodoInstances
 import com.ohmz.tday.db.tables.Todos
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
@@ -58,7 +60,7 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
                     id = row[Todos.id],
                     title = row[Todos.title],
                     priority = row[Todos.priority].name,
-                    due = row[Todos.due].toString(),
+                    due = row[Todos.due]?.toString(),
                     completed = row[Todos.completed],
                     order = row[Todos.order],
                 )
@@ -120,9 +122,35 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
                 return@newSuspendedTransaction emptyList()
             }
 
-            Todos.update({ (Todos.userID eq userId) and (Todos.listID inList existingIds) }) {
-                it[Todos.listID] = null
+            val todoIds = Todos
+                .select(Todos.id)
+                .where { (Todos.userID eq userId) and (Todos.listID inList existingIds) }
+                .map { it[Todos.id] }
+            if (todoIds.isNotEmpty()) {
+                CompletedTodos.deleteWhere {
+                    SqlExpressionBuilder.run {
+                        (CompletedTodos.userID eq userId) and
+                            ((CompletedTodos.listID inList existingIds) or (CompletedTodos.originalTodoID inList todoIds))
+                    }
+                }
+                TodoInstances.deleteWhere {
+                    SqlExpressionBuilder.run {
+                        TodoInstances.todoId inList todoIds
+                    }
+                }
+                Todos.deleteWhere {
+                    SqlExpressionBuilder.run {
+                        (Todos.userID eq userId) and (Todos.id inList todoIds)
+                    }
+                }
+            } else {
+                CompletedTodos.deleteWhere {
+                    SqlExpressionBuilder.run {
+                        (CompletedTodos.userID eq userId) and (CompletedTodos.listID inList existingIds)
+                    }
+                }
             }
+
             Lists.deleteWhere {
                 SqlExpressionBuilder.run {
                     (Lists.userID eq userId) and (Lists.id inList existingIds)
@@ -133,6 +161,8 @@ class ListServiceImpl(private val cache: CacheService) : ListService {
 
         if (deletedIds.isNotEmpty()) {
             cache.invalidateListCaches(userId)
+            cache.invalidateTodoCaches(userId)
+            cache.invalidateCompletedCaches(userId)
         }
 
         return deletedIds.right()

@@ -8,7 +8,7 @@ final class CachedTodoEntity {
     var title: String
     var itemDescription: String?
     var priority: String
-    var dueEpochMs: Int64
+    var dueEpochMs: Int64?
     var rrule: String?
     var instanceDateEpochMs: Int64?
     var pinned: Bool
@@ -25,6 +25,31 @@ final class CachedTodoEntity {
         dueEpochMs = record.dueEpochMs
         rrule = record.rrule
         instanceDateEpochMs = record.instanceDateEpochMs
+        pinned = record.pinned
+        completed = record.completed
+        listId = record.listId
+        updatedAtEpochMs = record.updatedAtEpochMs
+    }
+}
+
+@Model
+final class CachedFloaterEntity {
+    @Attribute(.unique) var id: String
+    var canonicalId: String
+    var title: String
+    var itemDescription: String?
+    var priority: String
+    var pinned: Bool
+    var completed: Bool
+    var listId: String?
+    var updatedAtEpochMs: Int64
+
+    init(from record: CachedFloaterRecord) {
+        id = record.id
+        canonicalId = record.canonicalId
+        title = record.title
+        itemDescription = record.description
+        priority = record.priority
         pinned = record.pinned
         completed = record.completed
         listId = record.listId
@@ -54,16 +79,38 @@ final class CachedListEntity {
 }
 
 @Model
+final class CachedFloaterListEntity {
+    @Attribute(.unique) var id: String
+    var name: String
+    var color: String?
+    var iconKey: String?
+    var todoCount: Int
+    var updatedAtEpochMs: Int64
+    var createdAtEpochMs: Int64?
+
+    init(from record: CachedFloaterListRecord) {
+        id = record.id
+        name = record.name
+        color = record.color
+        iconKey = record.iconKey
+        todoCount = record.todoCount
+        updatedAtEpochMs = record.updatedAtEpochMs
+        createdAtEpochMs = record.createdAtEpochMs
+    }
+}
+
+@Model
 final class CachedCompletedEntity {
     @Attribute(.unique) var id: String
     var originalTodoId: String?
     var title: String
     var itemDescription: String?
     var priority: String
-    var dueEpochMs: Int64
+    var dueEpochMs: Int64?
     var completedAtEpochMs: Int64
     var rrule: String?
     var instanceDateEpochMs: Int64?
+    var listId: String?
     var listName: String?
     var listColor: String?
 
@@ -77,6 +124,32 @@ final class CachedCompletedEntity {
         completedAtEpochMs = record.completedAtEpochMs
         rrule = record.rrule
         instanceDateEpochMs = record.instanceDateEpochMs
+        listId = record.listId
+        listName = record.listName
+        listColor = record.listColor
+    }
+}
+
+@Model
+final class CachedCompletedFloaterEntity {
+    @Attribute(.unique) var id: String
+    var originalFloaterId: String?
+    var title: String
+    var itemDescription: String?
+    var priority: String
+    var completedAtEpochMs: Int64
+    var listId: String?
+    var listName: String?
+    var listColor: String?
+
+    init(from record: CachedCompletedFloaterRecord) {
+        id = record.id
+        originalFloaterId = record.originalFloaterId
+        title = record.title
+        itemDescription = record.description
+        priority = record.priority
+        completedAtEpochMs = record.completedAtEpochMs
+        listId = record.listId
         listName = record.listName
         listColor = record.listColor
     }

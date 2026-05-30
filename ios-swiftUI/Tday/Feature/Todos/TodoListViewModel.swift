@@ -57,7 +57,7 @@ final class TodoListViewModel {
             summaryError = "AI summary is disabled by admin"
             return
         }
-        guard mode != .list && mode != .overdue else {
+        guard mode != .list && mode != .overdue && mode != .floater else {
             summaryError = "Summary is available for Today, Scheduled, All, and Priority"
             return
         }
@@ -89,7 +89,11 @@ final class TodoListViewModel {
 
     func addTask(_ payload: CreateTaskPayload) async {
         do {
-            try await container.createTodo(payload)
+            if mode == .floater {
+                try await container.todoRepository.createFloater(payload: payload)
+            } else {
+                try await container.createTodo(payload)
+            }
             hydrateFromCache()
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not create task.")
@@ -98,47 +102,46 @@ final class TodoListViewModel {
 
     func updateTask(_ todo: TodoItem, payload: CreateTaskPayload) async {
         do {
-            try await container.todoRepository.updateTodo(todo, payload: payload)
+            if mode == .floater {
+                try await container.todoRepository.updateFloater(todo, payload: payload)
+            } else {
+                try await container.todoRepository.updateTodo(todo, payload: payload)
+            }
             hydrateFromCache()
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
         }
     }
 
-    func moveTask(_ todo: TodoItem, toDay targetDay: Date) async {
+    func moveTask(_ todo: TodoItem, toDay targetDay: Date, scope: TaskRescheduleScope) async {
         let calendar = Calendar.current
-        guard !calendar.isDate(todo.due, inSameDayAs: targetDay) else {
+        guard let due = todo.due,
+              !calendar.isDate(due, inSameDayAs: targetDay) else {
             return
         }
 
-        let dueTimeComponents = calendar.dateComponents([.hour, .minute, .second, .nanosecond], from: todo.due)
-        var targetComponents = calendar.dateComponents([.year, .month, .day], from: targetDay)
-        targetComponents.timeZone = calendar.timeZone
-        targetComponents.hour = dueTimeComponents.hour
-        targetComponents.minute = dueTimeComponents.minute
-        targetComponents.second = dueTimeComponents.second
-        targetComponents.nanosecond = dueTimeComponents.nanosecond
-
-        guard let movedDue = calendar.date(from: targetComponents) else {
+        guard let movedDue = movedDuePreservingTime(due: due, targetDay: targetDay, calendar: calendar) else {
             return
         }
 
-        await updateTask(
-            todo,
-            payload: CreateTaskPayload(
-                title: todo.title,
-                description: todo.description,
-                priority: todo.priority,
-                due: movedDue,
-                rrule: todo.rrule,
-                listId: todo.listId
+        do {
+            try await container.todoRepository.moveTodo(
+                todo.repositoryTargetForReschedule(scope: scope),
+                due: movedDue
             )
-        )
+            hydrateFromCache()
+        } catch {
+            errorMessage = userFacingMessage(for: error, fallback: "Could not update task.")
+        }
     }
 
     func complete(_ todo: TodoItem) async {
         do {
-            try await container.completeTodo(todo)
+            if mode == .floater {
+                try await container.todoRepository.completeFloater(todo)
+            } else {
+                try await container.completeTodo(todo)
+            }
             hydrateFromCache()
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not complete task.")
@@ -147,7 +150,11 @@ final class TodoListViewModel {
 
     func delete(_ todo: TodoItem) async {
         do {
-            try await container.todoRepository.deleteTodo(todo)
+            if mode == .floater {
+                try await container.todoRepository.deleteFloater(todo)
+            } else {
+                try await container.todoRepository.deleteTodo(todo)
+            }
             hydrateFromCache()
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not delete task.")
@@ -157,11 +164,54 @@ final class TodoListViewModel {
     func updateListSettings(name: String, color: String?, iconKey: String?) async {
         guard let listId else { return }
         do {
-            try await container.listRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey)
+            if mode == .floater {
+                try await container.floaterListRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey)
+            } else {
+                try await container.listRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey)
+            }
             hydrateFromCache()
             title = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? (listName ?? mode.title) : name
         } catch {
             errorMessage = userFacingMessage(for: error, fallback: "Could not update list.")
+        }
+    }
+
+    func createList(name: String, color: String?, iconKey: String?) async {
+        do {
+            if mode == .floater {
+                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey)
+            } else {
+                try await container.listRepository.createList(name: name, color: color, iconKey: iconKey)
+            }
+            hydrateFromCache()
+        } catch {
+            errorMessage = userFacingMessage(for: error, fallback: "Could not create list.")
+        }
+    }
+
+    func deleteList(onOptimisticDelete: @escaping () -> Void) async {
+        guard let listId else { return }
+        do {
+            let optimisticDelete = {
+                self.lists.removeAll { $0.id == listId }
+                self.items.removeAll { $0.listId == listId }
+                self.errorMessage = nil
+                onOptimisticDelete()
+            }
+            if mode == .floater {
+                try await container.floaterListRepository.deleteList(
+                    listId: listId,
+                    onOptimisticDelete: optimisticDelete
+                )
+            } else {
+                try await container.listRepository.deleteList(
+                    listId: listId,
+                    onOptimisticDelete: optimisticDelete
+                )
+            }
+        } catch {
+            errorMessage = userFacingMessage(for: error, fallback: "Could not delete list.")
+            hydrateFromCache()
         }
     }
 
@@ -170,7 +220,11 @@ final class TodoListViewModel {
     }
 
     private func hydrateFromCache() {
-        lists = container.listRepository.fetchListsSnapshot()
+        if mode == .floater {
+            lists = container.floaterListRepository.fetchListsSnapshot()
+        } else {
+            lists = container.listRepository.fetchListsSnapshot()
+        }
         items = container.todoRepository.fetchTodosSnapshot(mode: mode, listId: listId)
         aiSummaryEnabled = container.settingsRepository.isAiSummaryEnabledSnapshot()
         errorMessage = nil

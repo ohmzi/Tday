@@ -34,7 +34,10 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import { api } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/error-message";
 import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
+import type { SupportedLocale } from "@/i18n";
 
 const localeOptions = [
   { code: "en", label: "English" },
@@ -48,7 +51,7 @@ const localeOptions = [
   { code: "ms", label: "Malay" },
   { code: "it", label: "Italian" },
   { code: "pt", label: "Portuguese" },
-] as const;
+] as const satisfies readonly { code: SupportedLocale; label: string }[];
 
 export default function SettingsPage() {
   const locale = useLocale();
@@ -87,16 +90,17 @@ export default function SettingsPage() {
     }
     setProfileLoading(true);
     try {
-      const res = await fetch("/api/user/profile", {
-        method: "PATCH",
+      await api.PATCH({
+        url: "/api/user/profile",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmed }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to update profile");
       toast({ description: "Name updated successfully" });
     } catch (err) {
-      toast({ description: err instanceof Error ? err.message : "Failed to update", variant: "destructive" });
+      toast({
+        description: getErrorMessage(err, "Failed to update"),
+        variant: "destructive",
+      });
     } finally {
       setProfileLoading(false);
     }
@@ -114,19 +118,20 @@ export default function SettingsPage() {
     }
     setPasswordLoading(true);
     try {
-      const res = await fetch("/api/user/change-password", {
-        method: "POST",
+      await api.POST({
+        url: "/api/user/change-password",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to change password");
       toast({ description: "Password changed successfully" });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      toast({ description: err instanceof Error ? err.message : "Failed to change password", variant: "destructive" });
+      toast({
+        description: getErrorMessage(err, "Failed to change password"),
+        variant: "destructive",
+      });
     } finally {
       setPasswordLoading(false);
     }
@@ -239,7 +244,7 @@ export default function SettingsPage() {
                   <DropdownMenuItem key={option.code} asChild>
                     <Link
                       href={pathname}
-                      locale={option.code as any}
+                      locale={option.code}
                       className={cn("flex w-full items-center justify-between", isActive && "font-medium")}
                     >
                       <span>{option.label}</span>

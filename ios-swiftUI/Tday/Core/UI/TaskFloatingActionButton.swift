@@ -4,6 +4,8 @@ private let defaultTaskFabFillColor = Color(red: 110.0 / 255.0, green: 168.0 / 2
 
 struct TaskFloatingActionButton: View {
     var fillColor = defaultTaskFabFillColor
+    var pressedShadowOpacity = 0.14
+    var normalShadowOpacity = 0.24
     let action: () -> Void
 
     private var borderColor: Color {
@@ -23,7 +25,12 @@ struct TaskFloatingActionButton: View {
                 )
                 .clipShape(Circle())
         }
-        .buttonStyle(TdayPressButtonStyle())
+        .buttonStyle(
+            TdayPressButtonStyle(
+                pressedShadowOpacity: pressedShadowOpacity,
+                normalShadowOpacity: normalShadowOpacity
+            )
+        )
         .accessibilityLabel("Create Task")
     }
 }
@@ -56,12 +63,19 @@ private func taskFabBlend(_ color: Color, with other: Color, amount: CGFloat) ->
 
 struct TaskFloatingActionButtonDock: View {
     var fillColor = defaultTaskFabFillColor
+    var pressedShadowOpacity = 0.14
+    var normalShadowOpacity = 0.24
     let action: () -> Void
 
     var body: some View {
         HStack {
             Spacer()
-            TaskFloatingActionButton(fillColor: fillColor, action: action)
+            TaskFloatingActionButton(
+                fillColor: fillColor,
+                pressedShadowOpacity: pressedShadowOpacity,
+                normalShadowOpacity: normalShadowOpacity,
+                action: action
+            )
                 .padding(.trailing, 18)
                 .padding(.vertical, 8)
         }
@@ -84,6 +98,18 @@ struct TdayPressButtonStyle: ButtonStyle {
     }
 }
 
+struct TdayToolbarButtonStyle: ButtonStyle {
+    var shadowsEnabled = true
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .tdayToolbarButtonEffect(
+                isPressed: configuration.isPressed,
+                shadowsEnabled: shadowsEnabled
+            )
+    }
+}
+
 extension View {
     func tdayPressEffect(
         isPressed: Bool,
@@ -101,6 +127,18 @@ extension View {
         )
     }
 
+    func tdayToolbarButtonEffect(
+        isPressed: Bool,
+        shadowsEnabled: Bool = true
+    ) -> some View {
+        modifier(
+            TdayToolbarButtonEffectModifier(
+                isPressed: isPressed,
+                shadowsEnabled: shadowsEnabled
+            )
+        )
+    }
+
     func tdayRippleEffect(
         isPressed: Bool,
         rippleColor: Color? = nil
@@ -111,6 +149,61 @@ extension View {
                 rippleColor: rippleColor
             )
         )
+    }
+}
+
+private struct TdayToolbarButtonEffectModifier: ViewModifier {
+    let isPressed: Bool
+    let shadowsEnabled: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .tdayRippleEffect(isPressed: isPressed)
+            .scaleEffect(isPressed ? 0.95 : 1)
+            .offset(y: isPressed ? 1 : 0)
+            .shadow(
+                color: Color.black.opacity(ambientShadowOpacity),
+                radius: ambientShadowRadius,
+                x: 0,
+                y: ambientShadowOffsetY
+            )
+            .shadow(
+                color: Color.black.opacity(keyShadowOpacity),
+                radius: keyShadowRadius,
+                x: 0,
+                y: keyShadowOffsetY
+            )
+            .animation(.easeOut(duration: 0.14), value: isPressed)
+    }
+
+    private var ambientShadowOpacity: Double {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 0.025 : 0.045
+    }
+
+    private var keyShadowOpacity: Double {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 0.02 : 0.026
+    }
+
+    private var ambientShadowRadius: CGFloat {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 5 : 10
+    }
+
+    private var keyShadowRadius: CGFloat {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 2 : 3
+    }
+
+    private var ambientShadowOffsetY: CGFloat {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 2 : 4
+    }
+
+    private var keyShadowOffsetY: CGFloat {
+        guard shadowsEnabled else { return 0 }
+        return isPressed ? 1 : 2
     }
 }
 

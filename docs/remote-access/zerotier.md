@@ -2,6 +2,8 @@
 
 Access T'Day over a peer-to-peer virtual LAN. ZeroTier creates a software-defined network that works like a flat Ethernet segment — every device gets a private IP and can reach every other device directly, regardless of NAT or firewalls.
 
+This guide is only needed for Server Mode. Local Mode on Android and iOS works without remote access.
+
 ## Overview
 
 | | |
