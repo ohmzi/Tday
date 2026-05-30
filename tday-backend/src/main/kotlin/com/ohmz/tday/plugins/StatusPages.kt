@@ -5,12 +5,15 @@ import com.ohmz.tday.models.response.ApiError
 import com.ohmz.tday.observability.TdayObservability
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.plugins.BadRequestException
+import io.ktor.server.plugins.ContentTransformationException
 import io.ktor.server.request.path
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("com.ohmz.tday.plugins.StatusPages")
+private const val INVALID_REQUEST_BODY_MESSAGE = "Invalid request body"
 
 @Deprecated("Migrate to AppError sealed interface with Either<AppError, T>", ReplaceWith("AppError"))
 open class ApiException(val status: HttpStatusCode, override val message: String) : RuntimeException(message)
@@ -57,6 +60,12 @@ fun Application.configureStatusPages() {
         @Suppress("DEPRECATION")
         exception<ApiException> { call, cause ->
             call.respondApiError(cause.status, cause.message.ifBlank { cause.status.description })
+        }
+        exception<ContentTransformationException> { call, _ ->
+            call.respondApiError(HttpStatusCode.BadRequest, INVALID_REQUEST_BODY_MESSAGE)
+        }
+        exception<BadRequestException> { call, _ ->
+            call.respondApiError(HttpStatusCode.BadRequest, INVALID_REQUEST_BODY_MESSAGE)
         }
         exception<Throwable> { call, cause ->
             TdayObservability.captureException(

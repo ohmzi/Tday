@@ -3,6 +3,23 @@ import Foundation
 struct APIError: Error, LocalizedError, Equatable {
     let message: String
     let statusCode: Int?
+    let reason: String?
+    let field: String?
+    let retryAfterSeconds: Int?
+
+    init(
+        message: String,
+        statusCode: Int?,
+        reason: String? = nil,
+        field: String? = nil,
+        retryAfterSeconds: Int? = nil
+    ) {
+        self.message = message
+        self.statusCode = statusCode
+        self.reason = reason
+        self.field = field
+        self.retryAfterSeconds = retryAfterSeconds
+    }
 
     var errorDescription: String? {
         message
@@ -10,6 +27,37 @@ struct APIError: Error, LocalizedError, Equatable {
 
     static func makeDecoder() -> JSONDecoder {
         .tdayDecoder
+    }
+}
+
+private struct ServerErrorResponse: Decodable {
+    let message: String?
+    let code: String?
+    let reason: String?
+    let field: String?
+    let retryAfterSeconds: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case message
+        case code
+        case reason
+        case field
+        case retryAfterSeconds
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        message = try container.decodeIfPresent(String.self, forKey: .message)
+        if let stringCode = try? container.decodeIfPresent(String.self, forKey: .code) {
+            code = stringCode
+        } else if let intCode = try? container.decodeIfPresent(Int.self, forKey: .code) {
+            code = String(intCode)
+        } else {
+            code = nil
+        }
+        reason = try container.decodeIfPresent(String.self, forKey: .reason)
+        field = try container.decodeIfPresent(String.self, forKey: .field)
+        retryAfterSeconds = try container.decodeIfPresent(Int.self, forKey: .retryAfterSeconds)
     }
 }
 
@@ -542,7 +590,8 @@ final class TdayAPIService {
             configuration.syncPersistedAuthCookie()
             let bodyString = String(data: data, encoding: .utf8) ?? ""
             guard !validateStatus || (200 ..< 300).contains(httpResponse.statusCode) else {
-                let serverMessage = decodeServerErrorMessage(from: bodyString) ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
+                let serverError = decodeServerError(from: bodyString)
+                let serverMessage = serverError?.message ?? HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
                 TdayTelemetry.addBreadcrumb(
                     "api.request",
                     category: "api",
@@ -553,7 +602,13 @@ final class TdayAPIService {
                         "status": httpResponse.statusCode
                     ]
                 )
-                throw APIError(message: serverMessage, statusCode: httpResponse.statusCode)
+                throw APIError(
+                    message: serverMessage,
+                    statusCode: httpResponse.statusCode,
+                    reason: serverError?.reason ?? serverError?.code,
+                    field: serverError?.field,
+                    retryAfterSeconds: serverError?.retryAfterSeconds
+                )
             }
             return (bodyString, httpResponse)
         } catch let error as APIError {
@@ -578,11 +633,11 @@ final class TdayAPIService {
         return try decoder.decode(type, from: encoded)
     }
 
-    private func decodeServerErrorMessage(from body: String) -> String? {
+    private func decodeServerError(from body: String) -> ServerErrorResponse? {
         guard let data = body.data(using: .utf8) else {
             return nil
         }
-        return (try? decoder.decode(MessageResponse.self, from: data))?.message
+        return try? decoder.decode(ServerErrorResponse.self, from: data)
     }
 }
 
