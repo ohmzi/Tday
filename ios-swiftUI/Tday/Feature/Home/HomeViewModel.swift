@@ -11,6 +11,12 @@ final class HomeViewModel {
     var searchableTodos: [TodoItem] = []
     var todayTodos: [TodoItem] = []
     var errorMessage: String?
+    var aiSummaryEnabled = true
+    var summaryText: String?
+    var summarySource: String?
+    var summaryGeneratedAt: String?
+    var summaryError: String?
+    var isSummarizing = false
 
     var lists: [ListSummary] { summary.lists }
 
@@ -51,8 +57,35 @@ final class HomeViewModel {
         summary = container.todoRepository.fetchDashboardSummarySnapshot()
         searchableTodos = container.todoRepository.fetchTodosSnapshot(mode: .all)
         todayTodos = container.todoRepository.fetchTodosSnapshot(mode: .today)
+        aiSummaryEnabled = container.settingsRepository.isAiSummaryEnabledSnapshot()
         isLoading = activeLoadingRefreshes > 0
         errorMessage = nil
+    }
+
+    func summarizeToday() async {
+        guard !isSummarizing else { return }
+        guard aiSummaryEnabled else {
+            summaryError = "Summary is disabled by admin"
+            return
+        }
+        isSummarizing = true
+        summaryText = nil
+        summarySource = nil
+        summaryGeneratedAt = nil
+        summaryError = nil
+        do {
+            let response = try await container.todoRepository.summarizeTodos(mode: .today)
+            summaryText = response.summary
+            summarySource = response.source
+            summaryGeneratedAt = response.generatedAt
+        } catch {
+            if isLikelyConnectivityIssue(error) {
+                summaryError = "No summary available while offline."
+            } else {
+                summaryError = userFacingMessage(for: error, fallback: "Could not summarize tasks.")
+            }
+        }
+        isSummarizing = false
     }
 
     func createList(name: String, color: String?, iconKey: String?) async {

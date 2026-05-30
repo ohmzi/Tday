@@ -15,8 +15,11 @@ fun Route.timezoneRoutes() {
     route("/timezone") {
         get {
             call.withAuth { user ->
-                val clientTz = call.request.queryParameters["timezone"]
-                    ?: call.request.headers["x-timezone"]
+                val clientTz = resolveClientTimeZone(
+                    queryTimeZone = call.request.queryParameters["timezone"],
+                    xTimeZone = call.request.headers["x-timezone"],
+                    xUserTimeZone = call.request.headers["x-user-timezone"],
+                )
 
                 if (!clientTz.isNullOrBlank() && isValidTimeZone(clientTz)) {
                     val dbUser = transaction {
@@ -41,6 +44,12 @@ fun Route.timezoneRoutes() {
         }
     }
 }
+
+internal fun resolveClientTimeZone(
+    queryTimeZone: String?,
+    xTimeZone: String?,
+    xUserTimeZone: String?,
+): String? = queryTimeZone ?: xTimeZone ?: xUserTimeZone
 
 fun isValidTimeZone(tz: String): Boolean {
     return try {

@@ -89,6 +89,7 @@ struct HomeScreen: View {
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
     let pullRefreshEnabled: Bool
+    let summaryAvailable: Bool
     let onNavigate: (AppRoute) -> Void
 
     @State private var viewModel: HomeViewModel
@@ -102,6 +103,7 @@ struct HomeScreen: View {
     @State private var openingSearchResultID: String?
     @State private var showingCreateTask = false
     @State private var showingCreateList = false
+    @State private var showingSummary = false
     @State private var editingTodo: TodoItem?
     @State private var homeScrollOffset: CGFloat = 0
     @State private var openSwipeTaskID: String?
@@ -115,6 +117,7 @@ struct HomeScreen: View {
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
         pullRefreshEnabled: Bool = true,
+        summaryAvailable: Bool = true,
         onNavigate: @escaping (AppRoute) -> Void
     ) {
         self.onRootFeedTabSelected = onRootFeedTabSelected
@@ -124,6 +127,7 @@ struct HomeScreen: View {
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
         self.pullRefreshEnabled = pullRefreshEnabled
+        self.summaryAvailable = summaryAvailable
         self.onNavigate = onNavigate
         _viewModel = State(initialValue: HomeViewModel(container: container))
     }
@@ -164,6 +168,10 @@ struct HomeScreen: View {
 
     private var shouldCollapseRootDock: Bool {
         max(homeScrollOffset, 0) > HomeMetrics.rootDockCollapseThreshold
+    }
+
+    private var canSummarizeToday: Bool {
+        summaryAvailable && viewModel.aiSummaryEnabled && !viewModel.todayTodos.isEmpty
     }
 
     var body: some View {
@@ -209,6 +217,11 @@ struct HomeScreen: View {
                                     onOpenSettings: {
                                         closeSearch()
                                         onNavigate(.settings)
+                                    },
+                                    showSummaryAction: canSummarizeToday,
+                                    onSummarize: {
+                                        closeSearch()
+                                        presentSummary()
                                     }
                                 )
                                 .onTopPartialScrollSnap(
@@ -420,6 +433,11 @@ struct HomeScreen: View {
                 }
             }
         }
+        .sheet(isPresented: $showingSummary) {
+            summarySheetContent
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.hidden)
+        }
         .sheet(item: $editingTodo) { todo in
             CreateTaskSheet(
                 lists: viewModel.lists,
@@ -485,6 +503,50 @@ struct HomeScreen: View {
         }
         return first.uppercased() + String(trimmed.dropFirst())
     }
+
+    private var summarySheetContent: some View {
+        VStack(spacing: 0) {
+            TdaySheetHeader(
+                title: "Summary",
+                closeAccessibilityLabel: "Close",
+                confirmSystemName: nil,
+                onClose: { showingSummary = false }
+            )
+
+            ScrollView {
+                TdaySheetCard {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if !summaryAvailable {
+                            Text("No summary available while offline.")
+                                .foregroundStyle(colors.error)
+                        } else if viewModel.isSummarizing {
+                            ProgressView()
+                        } else if let summaryText = viewModel.summaryText {
+                            Text(summaryText)
+                                .font(.tdayRounded(.body, weight: .bold))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else if let summaryError = viewModel.summaryError {
+                            Text(summaryError)
+                                .foregroundStyle(colors.error)
+                        } else {
+                            Text("No summary available.")
+                        }
+                    }
+                    .padding(18)
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, 24)
+            }
+        }
+    }
+
+    private func presentSummary() {
+        showingSummary = true
+        Task {
+            await viewModel.summarizeToday()
+        }
+    }
 }
 
 private struct HomeTopBar: View {
@@ -495,15 +557,18 @@ private struct HomeTopBar: View {
     let onSearchClose: () -> Void
     let onCreateList: () -> Void
     let onOpenSettings: () -> Void
+    let showSummaryAction: Bool
+    let onSummarize: () -> Void
 
     @Environment(\.tdayColors) private var colors
 
     var body: some View {
         let buttonSize = HomeMetrics.topBarButtonSize
         let buttonGap: CGFloat = 8
+        let actionCount: CGFloat = showSummaryAction ? 3 : 2
         let expandedSearchWidth = max(buttonSize, totalWidth)
         let searchWidth = searchExpanded ? expandedSearchWidth : buttonSize
-        let collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
+        let collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
         let searchOffsetX = searchExpanded ? 0 : collapsedSearchOffset
 
         ZStack(alignment: .trailing) {
@@ -526,6 +591,13 @@ private struct HomeTopBar: View {
             }
 
             HStack(spacing: buttonGap) {
+                if showSummaryAction {
+                    HomeIconCircleButton(icon: "sparkles") {
+                        onSummarize()
+                    }
+                    .accessibilityLabel("Summary")
+                }
+
                 HomeIconCircleButton(icon: "text.badge.plus") {
                     onCreateList()
                 }

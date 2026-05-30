@@ -6,6 +6,7 @@ import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
 import com.ohmz.tday.models.response.AppConfigResponse
+import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.plugins.AuthUserKey
 import com.ohmz.tday.routes.mobileProbeRoutes
@@ -21,6 +22,7 @@ import com.ohmz.tday.security.RequestRateLimiter
 import com.ohmz.tday.security.SessionControl
 import com.ohmz.tday.security.testAppConfig
 import com.ohmz.tday.services.AppConfigService
+import com.ohmz.tday.services.FloaterService
 import com.ohmz.tday.services.NlpParseResult
 import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoService
@@ -168,6 +170,7 @@ class RateLimitingTest {
                     single<SessionControl> { NoOpSessionControl() }
                     single<UserService> { userService }
                     single<TodoService> { todoService }
+                    single<FloaterService> { NoOpFloaterService() }
                     single<TodoSummaryService> { todoSummaryService }
                     single<TodoNlpService> { NoOpTodoNlpService() }
                     single<AppConfigService> { EnabledAppConfigService() }
@@ -341,6 +344,36 @@ class RateLimitingTest {
         }
 
         override suspend fun isHealthy(): Boolean = true
+
+        override suspend fun warmUp() = Unit
+    }
+
+    private class NoOpFloaterService : FloaterService {
+        override suspend fun create(
+            userId: String,
+            title: String,
+            description: String?,
+            priority: String,
+            listID: String?,
+        ): Either<AppError, FloaterResponse> = unsupported()
+
+        override suspend fun getAll(userId: String): Either<AppError, List<FloaterResponse>> =
+            emptyList<FloaterResponse>().right()
+
+        override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit> = Unit.right()
+
+        override suspend fun delete(userId: String, id: String): Either<AppError, Int> = 1.right()
+
+        override suspend fun completeFloater(userId: String, floaterId: String): Either<AppError, Unit> = Unit.right()
+
+        override suspend fun uncompleteFloater(userId: String, floaterId: String): Either<AppError, Unit> = Unit.right()
+
+        override suspend fun prioritize(userId: String, floaterId: String, priority: String): Either<AppError, Unit> = Unit.right()
+
+        override suspend fun reorder(userId: String, floaterId: String, newOrder: Int): Either<AppError, Unit> = Unit.right()
+
+        private fun <T> unsupported(): Either<AppError, T> =
+            Either.Left(AppError.Internal("unsupported in rate limit test"))
     }
 
     private class RecordingUserService : UserService {

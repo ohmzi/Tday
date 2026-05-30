@@ -404,6 +404,8 @@ fun TdayApp(
                                                         payload
                                                     )
                                                 },
+                                                onSummarize = homeViewModel::summarizeToday,
+                                                summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                                                 showRootFeedDock = false,
                                                 showCreateTaskButton = false,
                                                 createTaskRequestKey = rootCreateTaskRequestKey,
@@ -423,6 +425,7 @@ fun TdayApp(
                                                 onBack = { rootFeedTab = RootFeedTab.HOME },
                                                 onTaskDeleted = ::showTaskDeletedToast,
                                                 pullRefreshEnabled = !appUiState.isLocalMode,
+                                                summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                                                 onOpenFloaterList = { id, name ->
                                                     navController.navigate(
                                                         AppRoute.FloaterListTodos.create(
@@ -492,6 +495,7 @@ fun TdayApp(
                                     onCompleteTask = {},
                                     onDeleteTask = {},
                                     onUpdateTask = { _, _ -> },
+                                    summaryAvailable = false,
                                 )
                             }
                         }
@@ -612,6 +616,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
+                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                     )
                 }
 
@@ -624,6 +629,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
+                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                     )
                 }
 
@@ -636,6 +642,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
+                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                     )
                 }
 
@@ -667,6 +674,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
+                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                     )
                 }
 
@@ -679,6 +687,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
+                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                     )
                 }
 
@@ -701,6 +710,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
+                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                         onListDeleted = {
                             navController.navigate(AppRoute.Home.route) {
                                 popUpTo(AppRoute.Home.route) { inclusive = false }
@@ -729,6 +739,7 @@ fun TdayApp(
                         onBack = { navController.popBackStack() },
                         onTaskDeleted = ::showTaskDeletedToast,
                         pullRefreshEnabled = !appUiState.isLocalMode,
+                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                         onListDeleted = {
                             rootFeedTab = RootFeedTab.FLOATER
                             navController.navigate(AppRoute.Home.route) {
@@ -1013,6 +1024,7 @@ private fun TodosRoute(
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
     pullRefreshEnabled: Boolean = true,
+    summaryAvailable: Boolean = true,
 ) {
     val viewModel: TodoListViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -1063,6 +1075,7 @@ private fun TodosRoute(
         showRootFeedDock = showRootFeedDock,
         showCreateTaskButton = showCreateTaskButton,
         pullRefreshEnabled = pullRefreshEnabled,
+        summaryAvailable = summaryAvailable,
         usesRootFeedHeader = usesRootFeedHeader,
         createTaskRequestKey = createTaskRequestKey,
         scrollToTopRequestKey = scrollToTopRequestKey,

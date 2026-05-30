@@ -650,7 +650,7 @@ final class TodoRepository {
 
     func summarizeTodos(mode: TodoListMode, listId: String? = nil) async throws -> TodoSummaryResponse {
         if syncManager.isLocalMode {
-            throw APIError(message: "AI summary is unavailable in local mode", statusCode: nil)
+            throw APIError(message: "Summary is unavailable in local mode", statusCode: nil)
         }
 
         return try await api.summarizeTodos(

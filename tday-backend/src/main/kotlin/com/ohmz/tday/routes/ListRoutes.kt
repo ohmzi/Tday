@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.raise.either
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.validateCreateList
+import com.ohmz.tday.domain.validateOptionalEnumValue
 import com.ohmz.tday.domain.validateOrFail
 import com.ohmz.tday.domain.validatePatchList
 import com.ohmz.tday.domain.withAuth
@@ -13,6 +14,7 @@ import com.ohmz.tday.models.response.DeleteListResponse
 import com.ohmz.tday.models.response.ListDetailResponse
 import com.ohmz.tday.services.ListService
 import com.ohmz.tday.shared.model.DeleteListRequest
+import com.ohmz.tday.shared.model.ListColor
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import com.ohmz.tday.di.inject
@@ -32,7 +34,8 @@ fun Route.listRoutes() {
                 either {
                     val body = call.receive<ListCreateRequest>()
                     validateCreateList.validateOrFail(body).bind()
-                    val list = listService.create(user.id, body.name, body.color, body.iconKey).bind()
+                    val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
+                    val list = listService.create(user.id, body.name, color, body.iconKey).bind()
                     CreateListResponse(message = "list created", list = list)
                 }
             }
@@ -43,7 +46,8 @@ fun Route.listRoutes() {
                 either {
                     val body = call.receive<ListPatchRequest>()
                     validatePatchList.validateOrFail(body).bind()
-                    listService.update(user.id, body.id, body.name, body.color, body.iconKey).bind()
+                    val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
+                    listService.update(user.id, body.id, body.name, color, body.iconKey).bind()
                     mapOf("message" to "list updated")
                 }
             }

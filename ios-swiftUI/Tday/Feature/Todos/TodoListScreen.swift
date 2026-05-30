@@ -265,6 +265,8 @@ private struct RootFeedSearchTitleRow: View {
     @Binding var searchQuery: String
     var searchFieldFocused: FocusState<Bool>.Binding
     let onSearchClose: () -> Void
+    let showSummaryAction: Bool
+    let onSummarize: () -> Void
     let onCreateList: () -> Void
     let onOpenSettings: () -> Void
 
@@ -277,7 +279,8 @@ private struct RootFeedSearchTitleRow: View {
         GeometryReader { proxy in
             let totalWidth = proxy.size.width
             let searchWidth = searchExpanded ? max(buttonSize, totalWidth) : buttonSize
-            let collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
+            let actionCount: CGFloat = showSummaryAction ? 3 : 2
+            let collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
             let searchOffsetX = searchExpanded ? 0 : collapsedSearchOffset
             let daytime = isTodoRootDaytime(Date())
             let iconColor = daytime
@@ -301,6 +304,10 @@ private struct RootFeedSearchTitleRow: View {
                 .allowsHitTesting(false)
 
                 HStack(spacing: buttonGap) {
+                    if showSummaryAction {
+                        RootFeedHeaderIconButton(icon: "sparkles", action: onSummarize)
+                            .accessibilityLabel("Summary")
+                    }
                     RootFeedHeaderIconButton(icon: "text.badge.plus", action: onCreateList)
                         .accessibilityLabel("Create list")
                     RootFeedHeaderIconButton(icon: "ellipsis", action: onOpenSettings)
@@ -562,6 +569,7 @@ struct TodoListScreen: View {
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
     let pullRefreshEnabled: Bool
+    let summaryAvailable: Bool
     let onOpenFloaterList: (String, String) -> Void
     let onOpenSettings: () -> Void
     @State private var viewModel: TodoListViewModel
@@ -606,6 +614,7 @@ struct TodoListScreen: View {
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
         onOpenFloaterList: @escaping (String, String) -> Void = { _, _ in },
         onOpenSettings: @escaping () -> Void = {},
+        summaryAvailable: Bool = true,
         onListDeleted: @escaping () -> Void = {}
     ) {
         self.highlightedTodoId = highlightedTodoId
@@ -621,6 +630,7 @@ struct TodoListScreen: View {
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
         self.onOpenFloaterList = onOpenFloaterList
         self.onOpenSettings = onOpenSettings
+        self.summaryAvailable = summaryAvailable
         _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
         _collapsedSectionIDs = State(initialValue: mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
     }
@@ -737,8 +747,7 @@ struct TodoListScreen: View {
     }
 
     private var canSummarizeCurrentMode: Bool {
-        viewModel.mode != .list && viewModel.mode != .overdue && viewModel.aiSummaryEnabled
-            && viewModel.mode != .floater
+        summaryAvailable && viewModel.aiSummaryEnabled && !viewModel.items.isEmpty
     }
 
     private var heroTopBarAction: TimelineTopBarAction? {
@@ -997,6 +1006,11 @@ struct TodoListScreen: View {
                     onSearchClose: {
                         closeRootFloaterSearch()
                     },
+                    showSummaryAction: canSummarizeCurrentMode,
+                    onSummarize: {
+                        closeRootFloaterSearch()
+                        presentSummary()
+                    },
                     onCreateList: {
                         closeRootFloaterSearch()
                         showingCreateList = true
@@ -1097,7 +1111,7 @@ struct TodoListScreen: View {
     private var summarySheetContent: some View {
         VStack(spacing: 0) {
             TdaySheetHeader(
-                title: "AI Summary",
+                title: "Summary",
                 closeAccessibilityLabel: "Close",
                 confirmSystemName: nil,
                 onClose: { showingSummary = false }
@@ -4201,5 +4215,3 @@ private func todoHexColor(_ hex: UInt) -> Color {
         opacity: 1
     )
 }
-
-

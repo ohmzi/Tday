@@ -14,7 +14,9 @@ describe("api client", () => {
         new Response(
           JSON.stringify({
             code: "pending_approval",
+            field: "email",
             message: "Account approval required",
+            retryAfterSeconds: 12,
           }),
           {
             status: 403,
@@ -38,7 +40,9 @@ describe("api client", () => {
     expect(thrownError).toBeInstanceOf(ApiError);
     expect(thrownError).toMatchObject({
       code: "pending_approval",
+      field: "email",
       message: "Account approval required",
+      retryAfterSeconds: 12,
       status: 403,
     });
   });

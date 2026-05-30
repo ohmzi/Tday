@@ -5,6 +5,7 @@ import arrow.core.raise.either
 import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.validateCreateFloaterList
+import com.ohmz.tday.domain.validateOptionalEnumValue
 import com.ohmz.tday.domain.validateOrFail
 import com.ohmz.tday.domain.validatePatchFloaterList
 import com.ohmz.tday.domain.withAuth
@@ -15,6 +16,7 @@ import com.ohmz.tday.models.response.CreateFloaterListResponse
 import com.ohmz.tday.models.response.DeleteFloaterListResponse
 import com.ohmz.tday.models.response.FloaterListDetailResponse
 import com.ohmz.tday.services.FloaterListService
+import com.ohmz.tday.shared.model.ListColor
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -38,7 +40,8 @@ fun Route.floaterListRoutes() {
                 either {
                     val body = call.receive<FloaterListCreateRequest>()
                     validateCreateFloaterList.validateOrFail(body).bind()
-                    val list = floaterListService.create(user.id, body.name, body.color, body.iconKey).bind()
+                    val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
+                    val list = floaterListService.create(user.id, body.name, color, body.iconKey).bind()
                     CreateFloaterListResponse(message = "floater list created", list = list)
                 }
             }
@@ -49,7 +52,8 @@ fun Route.floaterListRoutes() {
                 either {
                     val body = call.receive<FloaterListPatchRequest>()
                     validatePatchFloaterList.validateOrFail(body).bind()
-                    floaterListService.update(user.id, body.id, body.name, body.color, body.iconKey).bind()
+                    val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
+                    floaterListService.update(user.id, body.id, body.name, color, body.iconKey).bind()
                     mapOf("message" to "floater list updated")
                 }
             }

@@ -51,7 +51,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -66,7 +65,6 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.Inventory
-import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -249,6 +247,7 @@ fun TodoListScreen(
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
     pullRefreshEnabled: Boolean = true,
+    summaryAvailable: Boolean = true,
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
     scrollToTopRequestKey: Int = 0,
@@ -499,10 +498,9 @@ fun TodoListScreen(
         }
     }
     val canSummarizeCurrentMode =
-        uiState.mode != TodoListMode.LIST &&
-            uiState.mode != TodoListMode.OVERDUE &&
-                uiState.mode != TodoListMode.FLOATER &&
-            uiState.aiSummaryEnabled
+        summaryAvailable &&
+                uiState.aiSummaryEnabled &&
+                uiState.items.isNotEmpty()
     val showTopBarActionButton = canSummarizeCurrentMode || isListDetailScreen
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
@@ -797,6 +795,11 @@ fun TodoListScreen(
                                     onSearchQueryChange = { rootFloaterSearchQuery = it },
                                     onSearchExpandedChange = { rootFloaterSearchExpanded = it },
                                     onSearchClose = closeRootFloaterSearch,
+                                    showSummaryAction = canSummarizeCurrentMode,
+                                    onSummarize = {
+                                        closeRootFloaterSearch()
+                                        showSummarySheet = true
+                                    },
                                     onCreateList = {
                                         closeRootFloaterSearch()
                                         showCreateListSheet = true
@@ -1513,6 +1516,8 @@ private fun RootFeedSearchHeaderRow(
     onSearchQueryChange: (String) -> Unit,
     onSearchExpandedChange: (Boolean) -> Unit,
     onSearchClose: () -> Unit,
+    showSummaryAction: Boolean,
+    onSummarize: () -> Unit,
     onCreateList: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -1542,8 +1547,9 @@ private fun RootFeedSearchHeaderRow(
     ) {
         val buttonSize = 56.dp
         val buttonGap = 8.dp
+        val actionCount = if (showSummaryAction) 3 else 2
         val expandedSearchWidth = maxWidth.coerceAtLeast(buttonSize)
-        val collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
+        val collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
         val animatedSearchWidth by animateDpAsState(
             targetValue = if (searchExpanded) expandedSearchWidth else buttonSize,
             label = "rootFeedSearchHeaderWidth",
@@ -1592,6 +1598,13 @@ private fun RootFeedSearchHeaderRow(
             horizontalArrangement = Arrangement.spacedBy(buttonGap),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (showSummaryAction) {
+                TodayHeaderButton(
+                    onClick = onSummarize,
+                    icon = Icons.Rounded.AutoAwesome,
+                    contentDescription = stringResource(R.string.todos_summarize),
+                )
+            }
             TodayHeaderButton(
                 onClick = onCreateList,
                 icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
@@ -2170,7 +2183,7 @@ private fun ListSettingsBottomSheet(
     onDelete: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = tdayListAccentColor(listColor)
@@ -2497,7 +2510,7 @@ private fun TimelineSectionHeader(
         colorScheme.onSurfaceVariant
     }
     val headerTextColor = if (isHeaderPressed) {
-        androidx.compose.ui.graphics.lerp(baseHeaderColor, colorScheme.onSurface, 0.16f)
+        lerp(baseHeaderColor, colorScheme.onSurface, 0.16f)
     } else if (isDropTarget) {
         colorScheme.error
     } else {
@@ -2506,7 +2519,7 @@ private fun TimelineSectionHeader(
     val baseChevronColor =
         colorScheme.onSurfaceVariant.copy(alpha = if (useMinimalStyle) 0.72f else 1f)
     val chevronColor = if (isHeaderPressed) {
-        androidx.compose.ui.graphics.lerp(baseChevronColor, colorScheme.onSurface, 0.16f)
+        lerp(baseChevronColor, colorScheme.onSurface, 0.16f)
     } else {
         baseChevronColor
     }
