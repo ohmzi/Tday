@@ -114,7 +114,7 @@ npm run observability:smoke                 # no-dependency Sentry/privacy smoke
 | All 11 locale JSON files exist and share top-level keys | Internationalization completeness across all languages |
 | Android `core/`, `feature/`, `ui/theme/` packages exist | Package structure follows the documented architecture |
 | Android theme files exist (`Color.kt`, `Theme.kt`, `Type.kt`, `Dimens.kt`) | Design tokens are centralized |
-| Android `build.gradle.kts` derives version from `package.json` | Single source of version truth |
+| Android `build.gradle.kts` derives version from root `version.json` | Single source of version truth |
 | iOS docs and project structure are represented in repository docs | Native iOS remains a first-class surface |
 
 #### `api-guidelines.test.ts` — API Convention Enforcement
@@ -148,7 +148,8 @@ npm run observability:smoke                 # no-dependency Sentry/privacy smoke
 
 | What it checks | Rule enforced |
 |---------------|---------------|
-| `package.json` has valid semver version and is private | Proper package metadata |
+| Root `version.json` has valid semver, exact compatibility policy, and iOS metadata | Proper release metadata |
+| `package.json` mirrors `version.json` and is private | Proper package metadata |
 | Required npm scripts exist (`dev`, `build`, `lint`, `test`) | Standard development workflow |
 | `.gitignore` excludes `node_modules`, `tday-web/dist`, `.env` | No build artifacts or secrets in git |
 | `.env.example` documents all critical variables | Setup reference for new developers |
@@ -160,8 +161,8 @@ npm run observability:smoke                 # no-dependency Sentry/privacy smoke
 | `commit-msg` hook script exists and strips `Made-with` trailers | Automated trailer cleanup |
 | `install-hooks.sh` exists | Hook installation is documented and scriptable |
 | All required documentation files exist | Complete project documentation |
-| Version mirrors synchronize from `package.json` to iOS metadata and env examples | Single source of version truth |
-| `postversion` stages every checked-in version mirror | Release bumps include all generated metadata |
+| Version mirrors synchronize from `version.json` to web package metadata, iOS metadata, and env examples | Single source of version truth |
+| `postversion` and `scripts/version.mjs check` cover every checked-in version mirror | Release bumps include all generated metadata |
 
 #### `i18n-parity.test.ts` — Locale Key Parity
 

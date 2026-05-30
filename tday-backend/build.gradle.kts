@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.ohmz"
-version = "1.23.0"
+version = projectVersion()
 
 application {
     mainClass.set("com.ohmz.tday.ApplicationKt")
@@ -70,6 +70,12 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
+tasks.processResources {
+    from(projectVersionManifest()) {
+        rename { "tday-version.json" }
+    }
+}
+
 ktor {
     fatJar {
         archiveFileName.set("tday-backend-all.jar")
@@ -85,4 +91,18 @@ sentry {
     org = "tday-kb"
     projectName = "tday-backend"
     authToken = System.getenv("SENTRY_AUTH_TOKEN")
+}
+
+fun projectVersion(): String {
+    val manifest = projectVersionManifest()
+    val match = Regex(""""version"\s*:\s*"([^"]+)"""").find(manifest.readText())
+    return match?.groupValues?.get(1) ?: error("Could not read version from version.json")
+}
+
+fun projectVersionManifest(): File {
+    return listOf(
+        File(rootProject.projectDir, "version.json"),
+        File(rootProject.projectDir.parentFile, "version.json"),
+    ).firstOrNull { it.exists() }
+        ?: error("Could not locate version.json from ${rootProject.projectDir}")
 }

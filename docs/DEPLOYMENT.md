@@ -131,36 +131,44 @@ This ensures:
 
 ### Version Bumping
 
-The **single source of truth** for the app version is `tday-web/package.json`. All other systems derive from it:
+The **single source of truth** for the app/server version is root `version.json`. All other systems derive from it:
 
-- **CI/CD**: Reads `tday-web/package.json` → Docker image tags (`:v1.6.0`, `:latest`), Git tags, GitHub releases.
-- **Android**: `app/build.gradle.kts` parses `tday-web/package.json` at build time → `versionName` and computed `versionCode`.
-- **iOS**: A `postversion` npm hook runs `scripts/sync-ios-version.sh`, which mirrors the version into `ios-swiftUI/Tday/Info.plist`, Xcode project metadata, and `project.yml`, then stages those files automatically.
-- **Backend compatibility templates**: The same sync script mirrors the package version into `.env.example` and `tday-backend/.env.example`. Live deployment env files such as `.env.docker` stay operator-owned and must be updated deliberately when the server should require a new app version.
+- **CI/CD**: Reads `version.json` → Docker image tags (`:v1.6.0`, `:latest`), Git tags, GitHub releases.
+- **Web**: `scripts/version.mjs sync` mirrors the version into `tday-web/package.json` and `package-lock.json`; Vite bundles that package value.
+- **Backend**: `tday-backend/build.gradle.kts` parses `version.json`, embeds it as `tday-version.json`, and `AppConfig` uses it as the default `TDAY_APP_VERSION`/backend release fallback.
+- **Android**: `app/build.gradle.kts` parses root `version.json` at build time → `versionName` and computed `versionCode`.
+- **iOS**: `scripts/version.mjs sync` mirrors the version, build number, and update URL into `Info.plist`, Xcode project metadata, and `project.yml`.
+- **Backend compatibility templates**: The same sync script mirrors version/update-required values into `.env.example` and `tday-backend/.env.example`. Live deployment env files such as `.env.docker` stay operator-owned and must be updated deliberately when the server should require a new app version.
 - **Runtime**: Android sends `BuildConfig.VERSION_NAME` and iOS sends `CFBundleShortVersionString` in the `X-Tday-App-Version` HTTP header.
 
 To bump the version before merging to `master`:
 
 ```bash
-cd tday-web
-npm version patch   # 1.6.0 → 1.6.1
-npm version minor   # 1.6.0 → 1.7.0
-npm version major   # 1.6.0 → 2.0.0
+node scripts/version.mjs bump patch   # 1.6.0 -> 1.6.1
+node scripts/version.mjs bump minor   # 1.6.0 -> 1.7.0
+node scripts/version.mjs bump major   # 1.6.0 -> 2.0.0
+node scripts/version.mjs check
 ```
 
-The `postversion` hook syncs the iOS metadata and backend compatibility templates, then stages those files so the version-bump commit includes every checked-in mirror.
+The bump command updates `version.json`, increments `ios.buildNumber`, and syncs every checked-in mirror. If you manually edit `version.json`, run `node scripts/version.mjs sync` and then `node scripts/version.mjs check`.
 
-**Never** set release version numbers directly in `build.gradle.kts`, iOS project files, or example env templates. Edit only `tday-web/package.json` for a version bump and let the sync hook update the mirrors.
+**Never** set release version numbers directly in Gradle files, iOS project files, web package files, lockfiles, or example env templates.
 
 ### Version Reference
 
 Every file that contains or controls a version number, grouped by platform.
 
-#### Web App (source of truth)
+#### Root Manifest (source of truth)
 
 | File | What | Notes |
 |------|------|-------|
-| `tday-web/package.json` (`"version"`) | App semver (e.g. `1.21.0`) | **Edit only this file** — all other app versions derive from it. |
+| `version.json` | App semver, exact compatibility policy, iOS build number, iOS update URL | **Edit this file or use `scripts/version.mjs bump`**; all other app/server versions derive from it. |
+
+#### Web App
+
+| File | What | Notes |
+|------|------|-------|
+| `tday-web/package.json` / `package-lock.json` (`"version"`) | App semver mirror | Auto-synced from `version.json`. |
 | `tday-web/vite.config.ts` (`__APP_VERSION__`) | Build-time define from `npm_package_version` | Injected into the SPA at build; fallback `"0.0.0"`. |
 | `tday-web/src/main.tsx` | Sentry release (`tday-web@<version>`) | Derived at build time. `VITE_SENTRY_TRACES_SAMPLE_RATE` controls trace sampling. |
 
@@ -168,7 +176,7 @@ Every file that contains or controls a version number, grouped by platform.
 
 | File | What | Notes |
 |------|------|-------|
-| `android-compose/app/build.gradle.kts` | `versionName` / `versionCode` | Parsed from `tday-web/package.json` at build time. `versionCode` = `major*10000 + minor*100 + patch`. |
+| `android-compose/app/build.gradle.kts` | `versionName` / `versionCode` | Parsed from root `version.json` at build time. `versionCode` = `major*10000 + minor*100 + patch`. |
 | `android-compose/.../TdayApplication.kt` | Sentry release (`tday-android@<version>`) | Uses `BuildConfig.VERSION_NAME`. `SENTRY_TRACES_SAMPLE_RATE` or `local.properties:sentryTracesSampleRate` controls trace sampling. |
 | `android-compose/.../NetworkModule.kt` | `X-Tday-App-Version` HTTP header | Uses `BuildConfig.VERSION_NAME`. |
 
@@ -176,17 +184,18 @@ Every file that contains or controls a version number, grouped by platform.
 
 | File | What | Notes |
 |------|------|-------|
-| `ios-swiftUI/Tday/Info.plist` (`CFBundleShortVersionString`) | Marketing version (e.g. `1.21.0`) | Auto-synced by `scripts/sync-ios-version.sh` on `npm version`. |
-| `ios-swiftUI/project.yml` / `TdayApp.xcodeproj/project.pbxproj` (`MARKETING_VERSION`) | Xcode project metadata | Auto-synced by `scripts/sync-ios-version.sh` on `npm version`; keep both aligned when regenerating the project. |
-| `ios-swiftUI/Tday/Info.plist` (`CFBundleVersion`) | Build number | Incremented manually for App Store submissions. |
+| `ios-swiftUI/Tday/Info.plist` (`CFBundleShortVersionString`) | Marketing version (e.g. `1.21.0`) | Auto-synced from `version.json`. |
+| `ios-swiftUI/Tday/Info.plist` (`TdayUpdateURL`) | App Store/TestFlight update URL | Auto-synced from `version.json` `ios.updateUrl`; leave empty only for builds without direct iOS update action. |
+| `ios-swiftUI/project.yml` / `TdayApp.xcodeproj/project.pbxproj` (`MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`) | Xcode project metadata | Auto-synced from `version.json`; keep both aligned when regenerating the project. |
+| `ios-swiftUI/Tday/Info.plist` (`CFBundleVersion`) | Build number | Mirrors `ios.buildNumber`; the bump command increments it. |
 | `ios-swiftUI/.../SentryConfiguration.swift` | Sentry release (`tday-ios@<version>`) | Uses `CFBundleShortVersionString`. `SENTRY_DSN` and `SENTRY_TRACES_SAMPLE_RATE` flow through `Info.plist` build settings. |
 
 #### Backend
 
 | File | What | Notes |
 |------|------|-------|
-| `tday-backend/build.gradle.kts` (`version`) | Gradle artifact version | Used for JAR metadata; not displayed to users. |
-| `tday-backend/.../Application.kt` | Sentry release (`tday-backend@<version>`) | Reads `TDAY_BACKEND_VERSION`, then `TDAY_APP_VERSION`, then `0.0.0`. `SENTRY_TRACES_SAMPLE_RATE` controls trace sampling. |
+| `tday-backend/build.gradle.kts` (`version`) | Gradle artifact version | Parsed from root `version.json` and embedded as `tday-version.json`. |
+| `tday-backend/.../Application.kt` | Sentry release (`tday-backend@<version>`) | Reads `TDAY_BACKEND_VERSION`, then `TDAY_APP_VERSION`, then embedded manifest version. `SENTRY_TRACES_SAMPLE_RATE` controls trace sampling. |
 
 For Sentry project setup, release artifact verification, alerting, smoke drills,
 and failure triage, see [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md). Do not store
@@ -195,16 +204,16 @@ least-privilege auth tokens only for release/source artifact upload.
 
 #### Server Compatibility (`TDAY_APP_VERSION`)
 
-The `TDAY_APP_VERSION` environment variable tells the backend which app version it is compatible with. When `TDAY_UPDATE_REQUIRED=true`, clients that connect with a different version are shown an "Update Required" or "Server Update Needed" screen.
+The manifest and `TDAY_APP_VERSION` environment variable tell the backend which app version it is compatible with. When exact compatibility is enabled with `TDAY_UPDATE_REQUIRED=true`, mobile clients that connect with a different version are shown an "Update Required" or "Server Update Needed" screen.
 
-Local Mode does not require this probe. Server Mode Android and iOS clients use `/api/mobile/probe` plus the `X-Tday-App-Version` header to decide whether the installed app and server can safely sync.
+Local Mode does not require this probe. Server Mode Android and iOS clients use `/api/mobile/probe` plus the `X-Tday-App-Version` header to decide whether the installed app and server can safely sync. The backend also rejects mismatched mobile API requests: older apps receive `426 Upgrade Required`; apps newer than the server receive `409 Conflict`.
 
 | File | Purpose | Notes |
 |------|---------|-------|
 | `.env.docker` | **Live value** used by the running Docker container | This is the file that actually controls what the server reports. Update here and recreate the container to take effect. |
-| `.env.example` | Template for new deployments (project root) | Auto-synced to the package version; copy the value into live env files when that version should be required. |
-| `tday-backend/.env.example` | Template for local backend development | Auto-synced to the package version; copy the value into live env files when that version should be required. |
-| `tday-backend/.../AppConfig.kt` (`probeAppVersion`) | Reads `TDAY_APP_VERSION` at startup | No hardcoded version; purely env-driven. |
+| `.env.example` | Template for new deployments (project root) | Auto-synced to the manifest version; copy the value into live env files when that version should be required. |
+| `tday-backend/.env.example` | Template for local backend development | Auto-synced to the manifest version; copy the value into live env files when that version should be required. |
+| `tday-backend/.../AppConfig.kt` (`probeAppVersion`) | Reads `TDAY_APP_VERSION` at startup | Env-driven with embedded `version.json` fallback. |
 
 **Updating live `TDAY_APP_VERSION`:** After releasing a new app version, update the value in `.env.docker` to match the newly released version, then recreate the backend container:
 
@@ -228,8 +237,8 @@ Distributable Android release builds must use the same release keystore every ti
 
 - The iOS app uses `ios-swiftUI/TdayApp.xcodeproj`, automatic signing, and the `Tday` scheme.
 - `/.well-known/apple-app-site-association` is served by the backend for webcredentials/deep-link support.
-- `CFBundleShortVersionString`, iOS `MARKETING_VERSION`, and example `TDAY_APP_VERSION` values are synced from `tday-web/package.json` by `scripts/sync-ios-version.sh` during `npm version`.
-- `CFBundleVersion` remains the App Store build number and is incremented manually when needed.
+- `CFBundleShortVersionString`, `CFBundleVersion`, iOS `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`, `TdayUpdateURL`, and example `TDAY_APP_VERSION` values are synced from root `version.json` by `scripts/version.mjs sync`.
+- Set `ios.updateUrl` in `version.json` to the App Store or TestFlight URL before distributing an iOS build that should offer direct updates.
 
 ## Configuration
 

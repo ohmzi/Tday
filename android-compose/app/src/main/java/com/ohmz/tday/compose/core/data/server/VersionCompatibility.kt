@@ -28,7 +28,9 @@ fun checkVersionCompatibility(payload: ProbeCompatibilityPayload?): VersionCheck
     val serverAppVersion = payload.appVersion
     val cmp = compareVersions(localVersion, serverAppVersion)
 
-    if (!payload.updateRequired) return VersionCheckResult.Compatible
+    if (!payload.updateRequired || !payload.compatibilityMode.equals("exact", ignoreCase = true)) {
+        return VersionCheckResult.Compatible
+    }
 
     return when {
         cmp < 0 -> VersionCheckResult.AppUpdateRequired(requiredVersion = serverAppVersion)

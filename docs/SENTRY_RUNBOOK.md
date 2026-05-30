@@ -58,7 +58,7 @@ Before considering Sentry fully operational, verify release artifacts:
 - Android mapping/native metadata upload only when Sentry token/env is configured.
 - iOS dSYMs upload during the configured release/archive flow.
 - Backend release uses `TDAY_BACKEND_VERSION`, then `TDAY_APP_VERSION`, then
-  `0.0.0`; it should not stay stuck on an old hardcoded app version.
+  the embedded `version.json` value; it should not stay stuck on an old hardcoded app version.
 - The release shown in Sentry matches the version shipped to users.
 
 ## Suggested Alerts

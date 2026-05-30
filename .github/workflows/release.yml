@@ -26,6 +26,9 @@ jobs:
           cache: npm
           cache-dependency-path: tday-web/package-lock.json
 
+      - name: Check version mirrors
+        run: node scripts/version.mjs check
+
       - name: Install frontend dependencies
         run: npm ci
         working-directory: tday-web
@@ -59,10 +62,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read version from package.json
+      - name: Read version from version manifest
         id: version
         run: |
-          VERSION=$(node -p "require('./tday-web/package.json').version")
+          VERSION=$(node -p "require('./version.json').version")
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
           PREVIOUS=$(git describe --tags --abbrev=0 2>/dev/null || echo "")

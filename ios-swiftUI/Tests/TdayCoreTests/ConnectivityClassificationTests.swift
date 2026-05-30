@@ -84,4 +84,34 @@ final class ConnectivityClassificationTests: XCTestCase {
             "Server error. Please try again later."
         )
     }
+
+    func testVersionGateErrorsUseUpdateMessages() {
+        XCTAssertEqual(
+            userFacingMessage(
+                for: APIError(
+                    message: "Update required",
+                    statusCode: 426,
+                    reason: "app_update_required"
+                )
+            ),
+            "This version of the app is out of date. Please update to continue."
+        )
+        XCTAssertEqual(
+            userFacingMessage(
+                for: APIError(
+                    message: "Server update required",
+                    statusCode: 409,
+                    reason: "server_update_required"
+                )
+            ),
+            "The server needs to be updated before this app can continue."
+        )
+    }
+
+    func testVersionComparisonAndEmptyUpdateURLFallback() {
+        XCTAssertEqual(AppViewModel.compareVersions("1.44.0", "1.43.9"), 1)
+        XCTAssertEqual(AppViewModel.compareVersions("1.44.0", "1.44.0"), 0)
+        XCTAssertEqual(AppViewModel.compareVersions("1.43.9", "1.44.0"), -1)
+        XCTAssertNil(AppViewModel.bundleUpdateURL())
+    }
 }
