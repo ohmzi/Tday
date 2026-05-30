@@ -42,6 +42,29 @@ class MobileProbeRoutesTest {
         assertEquals("ok", payload.probe)
         assertEquals("1", payload.version)
         assertTrue(payload.serverTime.isNotBlank())
+        assertNull(payload.appVersion)
+        assertNull(payload.encryptedCompatibility)
+    }
+
+    @Test
+    fun `probe returns plain app version when configured without encryption`() = testApplication {
+        application {
+            configureSerialization()
+
+            routing {
+                route("/api") {
+                    mobileProbeRoutes(
+                        testAppConfig(probeAppVersion = "1.44.0"),
+                    )
+                }
+            }
+        }
+
+        val response = client.get("/api/mobile/probe")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val payload = json.decodeFromString<MobileProbeResponse>(response.bodyAsText())
+        assertEquals("1.44.0", payload.appVersion)
         assertNull(payload.encryptedCompatibility)
     }
 
@@ -67,6 +90,7 @@ class MobileProbeRoutesTest {
 
         assertEquals(HttpStatusCode.OK, response.status)
         val payload = json.decodeFromString<MobileProbeResponse>(response.bodyAsText())
+        assertEquals("1.44.0", payload.appVersion)
         assertTrue(payload.encryptedCompatibility?.isNotBlank() == true)
     }
 }

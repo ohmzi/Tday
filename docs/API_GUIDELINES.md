@@ -298,6 +298,12 @@ Floater lists group floaters.
 |--------|------|---------|------|
 | GET | `/api/mobile/probe` | Server discovery, compatibility/version metadata, optional encrypted probe payload | Public |
 
+`GET /api/mobile/probe` returns the public probe contract:
+
+- `service: "tday"`, `probe: "ok"`, `version: "1"`, and `serverTime`.
+- `appVersion` when the backend has a configured T'Day release version; mobile App Version screens use this to display the server version even when encrypted compatibility metadata is unavailable.
+- `encryptedCompatibility` when mobile compatibility enforcement is configured; Android and iOS decrypt it to enforce app/server version compatibility.
+
 When exact compatibility is enabled, Android and iOS send `X-Tday-Client` and
 `X-Tday-App-Version` on API requests. The backend leaves `/api/mobile/probe`,
 web requests, and requests without mobile client headers unaffected, but rejects
