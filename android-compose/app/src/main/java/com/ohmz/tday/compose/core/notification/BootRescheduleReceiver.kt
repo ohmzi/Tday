@@ -76,7 +76,16 @@ class BootRescheduleReceiver : BroadcastReceiver() {
             .setContentIntent(openAppPendingIntent)
             .build()
 
-        NotificationManagerCompat.from(context).notify(UPDATE_NOTIFICATION_ID, notification)
+        try {
+            NotificationManagerCompat.from(context).notify(UPDATE_NOTIFICATION_ID, notification)
+        } catch (e: SecurityException) {
+            TdayTelemetry.capture(
+                e,
+                "reminder.update_notification",
+                data = mapOf("source" to "boot_receiver")
+            )
+            Log.w(LOG_TAG, "Unable to post update notification; permission was denied", e)
+        }
     }
 
     private fun canPostNotifications(context: Context): Boolean {
