@@ -9,6 +9,7 @@ sealed class AppRoute(val route: String) {
     data object Home : AppRoute("home")
     data object FloaterTodos : AppRoute("floater")
     data object TodayTodos : AppRoute("todos/today")
+    data object CreateTodayTodo : AppRoute("todos/create?target={target}")
     data object OverdueTodos : AppRoute("todos/overdue")
     data object ScheduledTodos : AppRoute("todos/scheduled")
     data object AllTodos : AppRoute("todos/all?highlightTodoId={highlightTodoId}") {

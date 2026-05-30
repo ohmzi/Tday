@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.widget
 
+import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -9,4 +10,5 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface WidgetEntryPoint {
     fun offlineCacheManager(): OfflineCacheManager
+    fun secureConfigStore(): SecureConfigStore
 }

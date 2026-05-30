@@ -327,6 +327,9 @@
     <string name="widget_today_tasks_description">Shows today\'s tasks at a glance</string>
     <string name="widget_today_tasks_title">Today\'s Tasks</string>
     <string name="widget_today_tasks_empty">No tasks due today</string>
+    <string name="widget_today_tasks_add">Add today</string>
+    <string name="widget_today_tasks_setup_title">Open T\'Day</string>
+    <string name="widget_today_tasks_setup_message">Set up your workspace</string>
     <string name="widget_loading">Loading tasks…</string>
 
     <!-- Settings: updates -->

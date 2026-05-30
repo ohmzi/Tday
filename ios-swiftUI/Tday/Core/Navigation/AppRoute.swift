@@ -3,6 +3,7 @@ import Foundation
 enum AppRoute: Hashable {
     case home
     case todayTodos
+    case createTodayTodo
     case overdueTodos
     case scheduledTodos
     case allTodos(highlightTodoId: String?)
@@ -21,6 +22,8 @@ enum AppRoute: Hashable {
             return "home"
         case .todayTodos:
             return "todos/today"
+        case .createTodayTodo:
+            return "todos/create?target=today"
         case .overdueTodos:
             return "todos/overdue"
         case .scheduledTodos:
@@ -78,6 +81,12 @@ enum AppRoute: Hashable {
             switch second {
             case "today":
                 return .todayTodos
+            case "create":
+                let target = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?
+                    .first(where: { $0.name == "target" })?
+                    .value
+                return target == "today" ? .createTodayTodo : nil
             case "overdue":
                 return .overdueTodos
             case "scheduled":

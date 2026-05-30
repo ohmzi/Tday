@@ -101,6 +101,8 @@ struct AppRootView: View {
                             }
                         case .todayTodos:
                             TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+                        case .createTodayTodo:
+                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, openCreateTaskOnAppear: true, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .overdueTodos:
                             TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .scheduledTodos:
