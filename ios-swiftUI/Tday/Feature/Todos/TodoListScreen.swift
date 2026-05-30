@@ -265,8 +265,6 @@ private struct RootFeedSearchTitleRow: View {
     @Binding var searchQuery: String
     var searchFieldFocused: FocusState<Bool>.Binding
     let onSearchClose: () -> Void
-    let showSummaryAction: Bool
-    let onSummarize: () -> Void
     let onCreateList: () -> Void
     let onOpenSettings: () -> Void
 
@@ -279,7 +277,7 @@ private struct RootFeedSearchTitleRow: View {
         GeometryReader { proxy in
             let totalWidth = proxy.size.width
             let searchWidth = searchExpanded ? max(buttonSize, totalWidth) : buttonSize
-            let actionCount: CGFloat = showSummaryAction ? 3 : 2
+            let actionCount: CGFloat = 2
             let collapsedSearchOffset = -((buttonSize * actionCount) + (buttonGap * actionCount))
             let searchOffsetX = searchExpanded ? 0 : collapsedSearchOffset
             let daytime = isTodoRootDaytime(Date())
@@ -304,10 +302,6 @@ private struct RootFeedSearchTitleRow: View {
                 .allowsHitTesting(false)
 
                 HStack(spacing: buttonGap) {
-                    if showSummaryAction {
-                        RootFeedHeaderIconButton(icon: "sparkles", action: onSummarize)
-                            .accessibilityLabel("Summary")
-                    }
                     RootFeedHeaderIconButton(icon: "text.badge.plus", action: onCreateList)
                         .accessibilityLabel("Create list")
                     RootFeedHeaderIconButton(icon: "ellipsis", action: onOpenSettings)
@@ -1014,11 +1008,6 @@ struct TodoListScreen: View {
                     searchFieldFocused: $rootFloaterSearchFieldFocused,
                     onSearchClose: {
                         closeRootFloaterSearch()
-                    },
-                    showSummaryAction: canSummarizeCurrentMode,
-                    onSummarize: {
-                        closeRootFloaterSearch()
-                        presentSummary()
                     },
                     onCreateList: {
                         closeRootFloaterSearch()
