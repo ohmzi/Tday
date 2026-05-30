@@ -180,11 +180,20 @@ Docs:
 
 Run the smallest meaningful verification for the change, then broaden when risk is higher.
 
+Mandatory compile/build checks by touched area:
+
+- Android: if files under `android-compose/` or shared Android-consumed contracts change, run the Android compile before finishing.
+- iOS: if files under `ios-swiftUI/` or shared iOS contract assumptions change, run the iOS build before finishing.
+- Backend: if files under `tday-backend/`, backend Gradle config, migrations, or shared server contracts change, run the backend verification before finishing.
+- Web: if files under `tday-web/`, web package config, or shared web-facing contracts change, run the web build/lint verification before finishing.
+- If a change touches more than one area, run each touched area's required build. Do not finish by saying the next compile should work when a local compile/build check was practical.
+
 Common commands:
 
 ```bash
 # Web
 cd tday-web && npm run lint
+cd tday-web && npm run build
 cd tday-web && npm run test
 
 # Backend
@@ -195,6 +204,7 @@ cd android-compose && ./gradlew :app:compileDebugKotlin
 cd android-compose && ./gradlew :app:testDebugUnitTest
 
 # iOS
+xcodebuild build -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
 xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'
 ```
 
