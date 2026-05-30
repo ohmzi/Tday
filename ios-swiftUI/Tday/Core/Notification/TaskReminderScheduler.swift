@@ -19,6 +19,10 @@ final class TaskReminderScheduler {
         guard let notificationCenter else {
             return
         }
+        TdayTelemetry.addBreadcrumb(
+            "reminder.reschedule",
+            data: ["taskCount": tasks.count, "enabled": defaultReminder.offsetSeconds != nil]
+        )
         let identifiers = tasks.map { notificationIdentifier(for: $0) }
         notificationCenter.removePendingNotificationRequests(withIdentifiers: identifiers)
 

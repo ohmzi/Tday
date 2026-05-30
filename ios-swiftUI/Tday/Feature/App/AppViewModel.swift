@@ -201,6 +201,7 @@ final class AppViewModel {
     }
 
     func useLocalMode() async {
+        TdayTelemetry.addBreadcrumb("local_mode.enter")
         container.authRepository.clearAllLocalUserDataForUnauthenticatedState()
         container.serverConfigRepository.enableLocalMode()
         await enterLocalWorkspace()
@@ -242,7 +243,12 @@ final class AppViewModel {
 
     func connectServer(rawURL: String) async -> Result<Void, MessageError> {
         do {
+            TdayTelemetry.addBreadcrumb("server.probe", data: ["phase": "start"])
             let probeResult = try await container.serverConfigRepository.probeAndSave(rawURL)
+            TdayTelemetry.addBreadcrumb(
+                "server.probe",
+                data: ["phase": "success", "version": String(describing: probeResult.versionCheck)]
+            )
             serverURL = probeResult.serverURL
             dataMode = .server
             versionCheckResult = probeResult.versionCheck
@@ -254,6 +260,11 @@ final class AppViewModel {
             canResetServerTrust = true
             return .success(())
         } catch {
+            TdayTelemetry.addBreadcrumb(
+                "server.probe",
+                level: .warning,
+                data: ["phase": "failure", "error": String(describing: type(of: error))]
+            )
             let msg = serverConnectionMessage(for: error)
             self.error = msg
             canResetServerTrust = shouldOfferServerTrustReset(for: error)
@@ -359,6 +370,7 @@ final class AppViewModel {
         guard !isLocalMode else {
             return
         }
+        TdayTelemetry.addBreadcrumb("sync.manual", data: ["phase": "start"])
         isManualSyncing = true
         let result = await container.syncAndRefresh(
             force: true,
@@ -703,6 +715,7 @@ final class AppViewModel {
     }
 
     func refreshVersionInfo() async {
+        TdayTelemetry.addBreadcrumb("update.check", data: ["scope": "all"])
         if !isLocalMode {
             await recheckVersion()
         }
@@ -710,6 +723,7 @@ final class AppViewModel {
     }
 
     func checkForUpdate() async {
+        TdayTelemetry.addBreadcrumb("update.check", data: ["scope": "release"])
         await refreshGitHubReleases()
     }
 

@@ -19,6 +19,7 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.movedDuePreservingTime
 import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -81,11 +82,13 @@ class CalendarViewModel @Inject constructor(
 
     fun load() {
         hasLoadedScreen = true
+        TdayTelemetry.addBreadcrumb("calendar.load", data = calendarTelemetryData())
         hydrateFromCache()
     }
 
     fun refresh() {
         hasLoadedScreen = true
+        TdayTelemetry.addBreadcrumb("calendar.refresh", data = calendarTelemetryData())
         loadInternal(forceSync = true, showLoading = true)
     }
 
@@ -177,6 +180,10 @@ class CalendarViewModel @Inject constructor(
 
     fun createTask(payload: CreateTaskPayload) {
         if (payload.title.isBlank()) return
+        TdayTelemetry.addBreadcrumb(
+            "calendar.task.create",
+            data = calendarTelemetryData(payload),
+        )
         viewModelScope.launch {
             runCatching {
                 todoRepository.createTodo(payload)
@@ -193,6 +200,7 @@ class CalendarViewModel @Inject constructor(
 
     fun complete(todo: TodoItem) {
         val previousItems = _uiState.value.items
+        TdayTelemetry.addBreadcrumb("calendar.task.complete", data = calendarTelemetryData())
         _uiState.update { current ->
             current.copy(
                 items = current.items.filterNot { it.id == todo.id },
@@ -218,6 +226,7 @@ class CalendarViewModel @Inject constructor(
 
     fun uncomplete(item: CompletedItem) {
         val previousCompletedItems = _uiState.value.completedItems
+        TdayTelemetry.addBreadcrumb("calendar.task.restore", data = calendarTelemetryData())
         _uiState.update { current ->
             current.copy(
                 completedItems = current.completedItems.filterNot { it.id == item.id },
@@ -242,6 +251,10 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        TdayTelemetry.addBreadcrumb(
+            "calendar.task.update",
+            data = calendarTelemetryData(payload),
+        )
         updateTaskInternal(
             visibleTodo = todo,
             repositoryTodo = todo,
@@ -254,6 +267,10 @@ class CalendarViewModel @Inject constructor(
         val movedDue = movedDuePreservingTime(due, targetDate)
         val previousState = _uiState.value
         val updatedTodo = todo.copy(due = movedDue)
+        TdayTelemetry.addBreadcrumb(
+            "calendar.task.reschedule",
+            data = calendarTelemetryData() + mapOf("scope" to scope.name.lowercase()),
+        )
 
         _uiState.update { current ->
             current.copy(
@@ -343,6 +360,7 @@ class CalendarViewModel @Inject constructor(
 
     fun delete(todo: TodoItem, onDeleted: (() -> Unit)? = null) {
         val previousItems = _uiState.value.items
+        TdayTelemetry.addBreadcrumb("calendar.task.delete", data = calendarTelemetryData())
         _uiState.update { current ->
             current.copy(
                 items = current.items.filterNot { it.id == todo.id },
@@ -371,5 +389,20 @@ class CalendarViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Default) {
             runCatching { reminderScheduler.rescheduleAll() }
         }
+    }
+
+    private fun calendarTelemetryData(payload: CreateTaskPayload? = null): Map<String, Any?> {
+        val data = mutableMapOf<String, Any?>(
+            "surface" to "calendar",
+            "scheduled_items" to _uiState.value.items.size,
+            "completed_items" to _uiState.value.completedItems.size,
+        )
+        if (payload != null) {
+            data["has_due"] = payload.due != null
+            data["has_repeat"] = !payload.rrule.isNullOrBlank()
+            data["has_list"] = !payload.listId.isNullOrBlank()
+            data["has_description"] = !payload.description.isNullOrBlank()
+        }
+        return data
     }
 }

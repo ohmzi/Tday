@@ -2,11 +2,12 @@ package com.ohmz.tday.plugins
 
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.models.response.ApiError
+import com.ohmz.tday.observability.TdayObservability
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.request.path
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
-import io.sentry.Sentry
 import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("com.ohmz.tday.plugins.StatusPages")
@@ -58,7 +59,11 @@ fun Application.configureStatusPages() {
             call.respondApiError(cause.status, cause.message.ifBlank { cause.status.description })
         }
         exception<Throwable> { call, cause ->
-            Sentry.captureException(cause)
+            TdayObservability.captureException(
+                cause,
+                operation = "api.unhandled",
+                data = mapOf("route" to TdayObservability.sanitizePath(call.request.path())),
+            )
             logger.error("api_error", cause)
             call.respondApiError(HttpStatusCode.InternalServerError, "An unexpected error occurred")
         }

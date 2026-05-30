@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.core.notification
 
 import android.content.Context
 import android.util.Log
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -18,9 +19,11 @@ class ReminderRescheduleWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return try {
             scheduler.rescheduleAll()
+            TdayTelemetry.addBreadcrumb("reminder.reschedule", data = mapOf("source" to "worker"))
             Log.d(LOG_TAG, "Periodic reschedule completed")
             Result.success()
         } catch (e: Exception) {
+            TdayTelemetry.capture(e, "reminder.reschedule", data = mapOf("source" to "worker"))
             Log.e(LOG_TAG, "Periodic reschedule failed", e)
             Result.retry()
         }

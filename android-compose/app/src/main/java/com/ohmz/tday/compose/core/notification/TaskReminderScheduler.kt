@@ -9,6 +9,7 @@ import android.util.Log
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -44,12 +45,17 @@ class TaskReminderScheduler @Inject constructor(
         }
 
         preferenceStore.saveScheduledRequestCodes(scheduledCodes)
+        TdayTelemetry.addBreadcrumb(
+            "reminder.reschedule",
+            data = mapOf("scheduledCount" to scheduledCodes.size),
+        )
         Log.d(LOG_TAG, "Scheduled ${scheduledCodes.size} task reminders")
     }
 
     fun cancelAll() {
         cancelAllInternal()
         preferenceStore.clearNotifiedSet()
+        TdayTelemetry.addBreadcrumb("reminder.cancel_all")
         Log.d(LOG_TAG, "Cancelled all task reminders")
     }
 

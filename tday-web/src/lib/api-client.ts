@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/react";
+import { addApiErrorBreadcrumb } from "@/lib/observability/sentry";
 
 type fetchOptions = {
   method: string;
@@ -42,11 +42,11 @@ const fetchApi = async (url: string, options: fetchOptions) => {
     const payload = isJson ? ((await res.json()) as ApiErrorPayload) : null;
     const message =
       payload?.message || `a ${res.statusText || "request"} error occurred`;
-    Sentry.addBreadcrumb({
-      category: "api",
-      message: `${options.method} ${url} — ${res.status}`,
-      level: "error",
-      data: { status: res.status, code: payload?.code },
+    addApiErrorBreadcrumb({
+      method: options.method,
+      url,
+      status: res.status,
+      code: payload?.code ?? payload?.reason,
     });
     throw new ApiError(message, res.status, payload?.code ?? payload?.reason);
   }

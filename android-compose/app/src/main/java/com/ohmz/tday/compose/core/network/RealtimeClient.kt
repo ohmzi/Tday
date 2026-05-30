@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.core.network
 
 import android.util.Log
 import com.ohmz.tday.compose.core.data.SecureConfigStore
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -60,7 +61,8 @@ class RealtimeClient @Inject constructor(
         socket = okHttpClient.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 connected = true
-                Log.d(LOG_TAG, "WebSocket connected to $wsUrl")
+                TdayTelemetry.addBreadcrumb("realtime.connect", data = mapOf("status" to "open"))
+                Log.d(LOG_TAG, "WebSocket connected")
                 _events.tryEmit(RealtimeEvent.Connected)
             }
 
@@ -75,7 +77,12 @@ class RealtimeClient @Inject constructor(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.d(LOG_TAG, "WebSocket failure: ${t.message}")
+                TdayTelemetry.addBreadcrumb(
+                    "realtime.connect",
+                    level = io.sentry.SentryLevel.WARNING,
+                    data = mapOf("status" to "failure", "code" to response?.code),
+                )
+                Log.d(LOG_TAG, "WebSocket failure: ${t.javaClass.simpleName}")
                 handleDisconnect()
             }
         })
@@ -94,6 +101,7 @@ class RealtimeClient @Inject constructor(
         socket = null
         if (connected) {
             connected = false
+            TdayTelemetry.addBreadcrumb("realtime.disconnect")
             _events.tryEmit(RealtimeEvent.Disconnected)
         }
     }

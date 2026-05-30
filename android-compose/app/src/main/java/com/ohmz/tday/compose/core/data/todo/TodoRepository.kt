@@ -443,7 +443,7 @@ class TodoRepository @Inject constructor(
                 )
             }
         } else {
-            Log.w(LOG_TAG, "updateTodo deferred todo=$canonicalId reason=${immediateError.message}")
+            Log.w(LOG_TAG, "updateTodo deferred reason=${immediateError.javaClass.simpleName}")
         }
     }
 
@@ -567,10 +567,7 @@ class TodoRepository @Inject constructor(
                 state.copy(pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId })
             }
         } else {
-            Log.w(
-                LOG_TAG,
-                "updateFloater deferred floater=$canonicalId reason=${immediateError.message}"
-            )
+            Log.w(LOG_TAG, "updateFloater deferred reason=${immediateError.javaClass.simpleName}")
         }
     }
 
@@ -689,7 +686,7 @@ class TodoRepository @Inject constructor(
                 )
             }
         } else {
-            Log.w(LOG_TAG, "moveTodo deferred todo=$canonicalId reason=${immediateError.message}")
+            Log.w(LOG_TAG, "moveTodo deferred reason=${immediateError.javaClass.simpleName}")
         }
     }
 

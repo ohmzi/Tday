@@ -112,6 +112,17 @@ T'Day is a task app, not a marketing site. Mobile screens should feel quiet, use
 - If a new semantic color or repeated dimension is needed, add it to the platform's theme/token layer instead of scattering literals.
 - Existing feature-scoped constants can remain when they are already part of that feature's local style, but do not expand hardcoded styling casually.
 
+## New Feature Observability Checklist
+
+T'Day is Sentry-first and privacy-first. New UI, API, sync, auth, reminder, widget, realtime, or storage behavior should include only diagnostic telemetry that helps debug failures or performance.
+
+- Use platform helpers: backend `TdayObservability`, web `src/lib/observability/sentry.ts`, Android `TdayTelemetry`, and iOS `TdayTelemetry`.
+- Keep breadcrumb and transaction names stable and structural: route templates, screen/operation names, status codes, durations, counts, and enum-like states.
+- Pass route-like fields such as `route`, `path`, `url`, `from`, and `to` through the platform helper so they are stored as templates, not raw URLs.
+- Never record task/list/floater titles, descriptions, user text, raw IDs, raw URLs, query strings, emails, cookies, auth tokens, session IDs, request bodies, response bodies, or local cache records.
+- Local Mode diagnostics may describe the operation, but must not upload local-only content or imply server sync.
+- Update `docs/TELEMETRY.md`, guardrail tests, and platform docs when collected fields, SDK config, helper behavior, or privacy boundaries change.
+
 ## Architecture Expectations
 
 Across the repo, keep changes shaped around readable boundaries: a file or type should have a clear reason to exist, dependencies should flow from UI to state to services/repositories to storage/network, and helpers should start local before being promoted to shared.

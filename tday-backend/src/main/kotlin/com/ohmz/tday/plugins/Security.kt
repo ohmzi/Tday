@@ -11,6 +11,7 @@ import com.ohmz.tday.security.isSessionPastAbsoluteLifetime
 import com.ohmz.tday.security.issueSessionCookie
 import com.ohmz.tday.security.sessionCookieNames
 import com.ohmz.tday.security.shouldRenewSession
+import com.ohmz.tday.observability.TdayObservability
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -60,7 +61,7 @@ fun Application.configureSecurity() {
                         "auth_session_absolute_expired",
                         mapOf(
                             EVENT_DETAIL_USER_ID to claims.id,
-                            EVENT_DETAIL_PATH to call.request.path(),
+                            EVENT_DETAIL_PATH to securityEventPath(call),
                         ),
                     )
                     return@intercept
@@ -103,7 +104,7 @@ fun Application.configureSecurity() {
                                 "auth_session_renewed",
                                 mapOf(
                                     EVENT_DETAIL_USER_ID to hydratedClaims.id,
-                                    EVENT_DETAIL_PATH to call.request.path(),
+                                    EVENT_DETAIL_PATH to securityEventPath(call),
                                     "remainingSeconds" to remainingSeconds.coerceAtLeast(0),
                                 ),
                             )
@@ -115,7 +116,7 @@ fun Application.configureSecurity() {
                             "auth_session_token_version_mismatch",
                             mapOf(
                                 EVENT_DETAIL_USER_ID to claims.id,
-                                EVENT_DETAIL_PATH to call.request.path(),
+                                EVENT_DETAIL_PATH to securityEventPath(call),
                             ),
                         )
                     }
@@ -125,7 +126,7 @@ fun Application.configureSecurity() {
                         "auth_session_user_missing",
                         mapOf(
                             EVENT_DETAIL_USER_ID to claims.id,
-                            EVENT_DETAIL_PATH to call.request.path(),
+                            EVENT_DETAIL_PATH to securityEventPath(call),
                         ),
                     )
                 }
@@ -146,6 +147,9 @@ private fun resolveSessionToken(call: ApplicationCall): String? {
     }
     return null
 }
+
+private fun securityEventPath(call: ApplicationCall): String =
+    TdayObservability.sanitizePath(call.request.path())
 
 private fun shouldSkipSessionRenewal(call: ApplicationCall): Boolean {
     return when (call.request.path()) {
