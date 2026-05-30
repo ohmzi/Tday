@@ -92,7 +92,7 @@ class ServerConfigRepository @Inject constructor(
         ProbeResult(
             serverUrl = saved,
             versionCheck = versionCheck,
-            backendVersion = compatibility?.appVersion,
+            backendVersion = compatibility?.appVersion ?: probeBody.appVersion,
         )
     }
 
@@ -122,7 +122,7 @@ class ServerConfigRepository @Inject constructor(
         val compatibility = body.encryptedCompatibility?.let { ProbeDecryptor.decrypt(it) }
         return VersionRecheckResult(
             versionCheck = checkVersionCompatibility(compatibility),
-            serverAppVersion = compatibility?.appVersion,
+            serverAppVersion = compatibility?.appVersion ?: body.appVersion,
         )
     }
 

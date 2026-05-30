@@ -340,7 +340,6 @@
     <string name="release_error">Unable to fetch release information. Please check your connection and try again.</string>
     <string name="release_installed_version">Installed Version</string>
     <string name="release_installed_label">Installed</string>
-    <string name="release_server_local_mode">Local Mode</string>
     <string name="release_server_not_connected">Not connected</string>
     <string name="release_server_version_unavailable">Unavailable</string>
     <string name="release_latest_label">Latest</string>

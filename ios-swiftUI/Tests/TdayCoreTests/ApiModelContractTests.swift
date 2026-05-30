@@ -149,4 +149,22 @@ final class ApiModelContractTests: XCTestCase {
         XCTAssertTrue(payload.updateRequired)
         XCTAssertEqual(payload.compatibilityMode, "exact")
     }
+
+    func testMobileProbeResponseAcceptsPlainAppVersion() throws {
+        let data = """
+        {
+          "service": "tday",
+          "probe": "ok",
+          "version": "1",
+          "serverTime": "2026-05-30T00:00:00Z",
+          "appVersion": "1.44.0",
+          "encryptedCompatibility": null
+        }
+        """.data(using: .utf8)!
+
+        let payload = try JSONDecoder().decode(MobileProbeResponse.self, from: data)
+
+        XCTAssertEqual(payload.appVersion, "1.44.0")
+        XCTAssertNil(payload.encryptedCompatibility)
+    }
 }

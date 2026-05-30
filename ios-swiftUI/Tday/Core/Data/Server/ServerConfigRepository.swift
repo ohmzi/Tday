@@ -93,7 +93,7 @@ final class ServerConfigRepository {
         return ProbeResult(
             serverURL: result.serverURL.absoluteString,
             versionCheck: versionCheck,
-            backendVersion: compatibility?.appVersion
+            backendVersion: compatibility?.appVersion ?? response.appVersion
         )
     }
 
@@ -108,7 +108,7 @@ final class ServerConfigRepository {
         let compatibility = response.encryptedCompatibility.flatMap { ProbeDecryptor.decrypt($0) }
         return VersionRecheckResult(
             versionCheck: checkVersionCompatibility(payload: compatibility),
-            backendVersion: compatibility?.appVersion
+            backendVersion: compatibility?.appVersion ?? response.appVersion
         )
     }
 
