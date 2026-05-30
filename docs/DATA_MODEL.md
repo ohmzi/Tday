@@ -11,6 +11,7 @@ This document describes the durable and local data structures that define T'Day.
 | Backend migrations | `tday-backend/src/main/resources/db/migration/` | Flyway SQL history and clean-install schema |
 | Android cache | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/data/db/` and `core/data/OfflineSyncModels.kt` | Room entities plus cache records used by repositories |
 | iOS cache | `ios-swiftUI/Tday/Core/Data/Database/` and `Core/Model/OfflineSyncModels.swift` | SwiftData entities plus cache records used by repositories |
+| iOS widget snapshot | `ios-swiftUI/Tday/Core/Widget/TodayTasksWidgetSnapshotStore.swift` | Versioned App Group payload consumed by the WidgetKit extension |
 
 ## Core Entities
 
@@ -96,6 +97,25 @@ iOS stores the same logical records in SwiftData:
 - `SyncMetadataEntity`
 
 Android has a one-time migration path from the legacy encrypted JSON cache into Room. New cache work should target Room and SwiftData directly.
+
+## Widget Snapshot Payloads
+
+The Today Tasks widgets do not add backend or shared DTOs. Android builds its widget model directly
+from the Room-backed `OfflineSyncState`; iOS writes a versioned JSON snapshot into App Group defaults
+for the WidgetKit extension.
+
+The current iOS snapshot schema is version `2` and includes:
+
+- `schemaVersion`
+- `generatedAtEpochMs`
+- `title`
+- `status` (`setup`, `empty`, or `tasks`)
+- `taskCount`
+- `tasks`, with each row carrying `id`, `title`, `dueEpochMs`, and `priority`
+
+Both platforms filter the source cache to pending scheduled tasks due today, sort by due time then
+title, cap displayed rows to the widget task limit, and exclude floaters, completed tasks, and overdue
+tasks from the v1 widget surface.
 
 ## Local IDs
 
