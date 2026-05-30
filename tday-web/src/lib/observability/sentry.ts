@@ -3,6 +3,8 @@ import * as Sentry from "@sentry/react";
 type SentryInitOptions = NonNullable<Parameters<typeof Sentry.init>[0]>;
 type SentryBeforeBreadcrumb = NonNullable<SentryInitOptions["beforeBreadcrumb"]>;
 type SentryBreadcrumb = Parameters<SentryBeforeBreadcrumb>[0];
+type SentryBeforeSend = NonNullable<SentryInitOptions["beforeSend"]>;
+type SentryErrorEvent = Parameters<SentryBeforeSend>[0];
 type SentryBeforeSendTransaction = NonNullable<SentryInitOptions["beforeSendTransaction"]>;
 type SentryTransactionEvent = Parameters<SentryBeforeSendTransaction>[0];
 
@@ -156,7 +158,7 @@ export function captureUiException(
   });
 }
 
-export function scrubSentryEvent(event: Sentry.Event): Sentry.Event {
+export function scrubSentryEvent(event: SentryErrorEvent): SentryErrorEvent {
   if (event.user) {
     delete event.user.ip_address;
     delete event.user.email;

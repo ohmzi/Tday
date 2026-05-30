@@ -1,8 +1,12 @@
 package com.ohmz.tday.compose.core.data
 
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import retrofit2.Response
 
 class ApiResponseUtilsTest {
 
@@ -44,5 +48,21 @@ class ApiResponseUtilsTest {
 
         assertTrue(isSessionAuthenticationIssue(error))
         assertFalse(isLikelyConnectivityIssue(error))
+    }
+
+    @Test
+    fun `api error details preserve field and retry metadata`() {
+        val response = Response.error<Unit>(
+            429,
+            """{"message":"Too many requests","reason":"api_rate_limit","field":"priority","retryAfterSeconds":12}"""
+                .toResponseBody("application/json".toMediaType()),
+        )
+
+        val details = extractApiErrorDetails(response, fallback = "Request failed")
+
+        assertEquals("Too many requests", details.message)
+        assertEquals("api_rate_limit", details.reason)
+        assertEquals("priority", details.field)
+        assertEquals(12, details.retryAfterSeconds)
     }
 }
