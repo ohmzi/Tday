@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
+    "observability:smoke": "node ../scripts/observability-smoke.mjs",
     "postversion": "../scripts/sync-ios-version.sh && git add ../ios-swiftUI/Tday/Info.plist ../ios-swiftUI/project.yml ../ios-swiftUI/TdayApp.xcodeproj/project.pbxproj ../.env.example ../tday-backend/.env.example"
   },
   "dependencies": {

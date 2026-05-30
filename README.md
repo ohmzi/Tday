@@ -169,6 +169,7 @@ The fuller north star is in [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Docker, CI/CD, secrets, releases |
 | [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md) | Remote access methods (Cloudflare Tunnel, Tailscale, WireGuard, etc.) |
 | [`docs/TELEMETRY.md`](docs/TELEMETRY.md) | What crash reporting collects (and doesn't) — no PII, no analytics |
+| [`docs/SENTRY_RUNBOOK.md`](docs/SENTRY_RUNBOOK.md) | Sentry setup, alerting, release artifacts, smoke drills, and failure triage |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records |
 
 ## Verification
