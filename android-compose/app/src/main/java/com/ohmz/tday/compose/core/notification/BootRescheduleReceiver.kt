@@ -14,6 +14,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +28,8 @@ class BootRescheduleReceiver : BroadcastReceiver() {
             action != Intent.ACTION_MY_PACKAGE_REPLACED
         ) return
 
-        Log.d(LOG_TAG, "Received $action — rescheduling task reminders")
+        TdayTelemetry.addBreadcrumb("reminder.reschedule", data = mapOf("source" to "boot_receiver"))
+        Log.d(LOG_TAG, "Received boot/update action for reminder reschedule")
 
         val pending = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
@@ -41,7 +43,8 @@ class BootRescheduleReceiver : BroadcastReceiver() {
                     showUpdateReadyNotification(context)
                 }
             } catch (e: Exception) {
-                Log.e(LOG_TAG, "Failed to handle $action", e)
+                TdayTelemetry.capture(e, "reminder.reschedule", data = mapOf("source" to "boot_receiver"))
+                Log.e(LOG_TAG, "Failed to handle boot/update action", e)
             } finally {
                 pending.finish()
             }

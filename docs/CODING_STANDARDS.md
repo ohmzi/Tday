@@ -573,6 +573,30 @@ state.errorMessageRes?.let { Text(text = stringResource(it)) }
 Log.d(TAG, "Sync completed in ${elapsed}ms")
 ```
 
+### New Feature Observability Checklist
+
+T'Day is Sentry-first and privacy-first. New UI, API, sync, auth, reminder,
+widget, realtime, or storage work should include diagnostics only when they help
+debug failures or performance.
+
+- Use the platform helper: backend `TdayObservability`, web
+  `src/lib/observability/sentry.ts`, Android `TdayTelemetry`, and iOS
+  `TdayTelemetry`.
+- Breadcrumb names must be stable and structural, such as `sync.replay`,
+  `server.probe`, `realtime.connect`, `reminder.reschedule`, `update.check`, or
+  `local_mode.enter`.
+- Record route templates, counts, enum states, status codes, durations, and
+  release/build values.
+- Pass route-like extra fields such as `route`, `path`, `url`, `from`, and `to`
+  through the platform helper so they are stored as templates, not raw URLs.
+- Never record task/list/floater titles, descriptions, raw IDs, raw URLs, query
+  strings, emails, cookies, auth tokens, session IDs, request bodies, response
+  bodies, or local cache records.
+- Local Mode diagnostics may describe the operation but must not upload
+  local-only content or imply server sync.
+- Update `docs/TELEMETRY.md` and guardrail tests when collected fields, SDK
+  config, helper behavior, or privacy boundaries change.
+
 ### File Organization (Kotlin)
 
 Within a ViewModel file:

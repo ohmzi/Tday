@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.core.data.server
 
 import com.ohmz.tday.compose.BuildConfig
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.feature.release.GitHubRelease
 import com.ohmz.tday.compose.feature.release.GitHubReleaseRepository
 import kotlinx.coroutines.async
@@ -37,6 +38,7 @@ class AppVersionManager @Inject constructor(
      * for the required release APK when an app update is needed.
      */
     suspend fun refreshServerCompatibility() {
+        TdayTelemetry.addBreadcrumb("update.check", data = mapOf("scope" to "server"))
         val recheckResult = runCatching { serverConfigRepository.recheckVersion() }
             .getOrNull() ?: return
         applyServerCompatibility(recheckResult.versionCheck, recheckResult.serverAppVersion)
@@ -81,6 +83,7 @@ class AppVersionManager @Inject constructor(
     }
 
     suspend fun refreshGitHubReleases() {
+        TdayTelemetry.addBreadcrumb("update.check", data = mapOf("scope" to "release"))
         _state.update { it.copy(isLoadingReleases = true, releaseError = null) }
         val currentTag = "v${BuildConfig.VERSION_NAME}"
         coroutineScope {

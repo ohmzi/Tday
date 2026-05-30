@@ -130,7 +130,7 @@ class ListRepository @Inject constructor(
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (listId.isBlank()) return
         require(trimmedName.isNotBlank()) { "List name is required" }
-        Log.d(LOG_TAG, "updateList start listId=$listId name=$trimmedName color=$color iconKey=$iconKey")
+        Log.d(LOG_TAG, "updateList start hasColor=${color != null} hasIcon=${iconKey != null}")
 
         val timestampMs = System.currentTimeMillis()
         val mutationId = UUID.randomUUID().toString()
@@ -168,7 +168,7 @@ class ListRepository @Inject constructor(
             }
             if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
-            Log.d(LOG_TAG, "updateList local-list path finished listId=$listId")
+            Log.d(LOG_TAG, "updateList local-list path finished")
             return
         }
 
@@ -207,7 +207,7 @@ class ListRepository @Inject constructor(
             return
         }
 
-        Log.d(LOG_TAG, "updateList patch /api/list listId=$listId")
+        Log.d(LOG_TAG, "updateList patch /api/list")
         val pendingMutation = PendingMutationRecord(
             mutationId = mutationId,
             kind = MutationKind.UPDATE_LIST,
@@ -245,9 +245,9 @@ class ListRepository @Inject constructor(
                     pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
                 )
             }
-            Log.d(LOG_TAG, "updateList success listId=$listId")
+            Log.d(LOG_TAG, "updateList success")
         } else {
-            Log.w(LOG_TAG, "updateList deferred listId=$listId reason=${immediateError.message}")
+            Log.w(LOG_TAG, "updateList deferred reason=${immediateError.javaClass.simpleName}")
         }
     }
 
@@ -324,11 +324,11 @@ class ListRepository @Inject constructor(
                     pendingMutations = state.pendingMutations.filterNot { it.mutationId == mutationId },
                 )
             }
-            Log.d(LOG_TAG, "deleteList success listId=$normalizedListId")
+            Log.d(LOG_TAG, "deleteList success")
         } else {
             Log.w(
                 LOG_TAG,
-                "deleteList deferred listId=$normalizedListId reason=${immediateError.message}"
+                "deleteList deferred reason=${immediateError.javaClass.simpleName}"
             )
         }
     }

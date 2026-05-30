@@ -4,6 +4,7 @@ import {
   Link,
   useParams,
 } from "react-router-dom";
+import { useEffect } from "react";
 import {
   RefreshCw,
   Home,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_LOCALE } from "@/i18n";
+import { captureUiException } from "@/lib/observability/sentry";
 
 type ErrorVariant = "chunk" | "notFound" | "network" | "server" | "generic";
 
@@ -116,6 +118,11 @@ export default function RouteErrorPage() {
   const meta = getMeta(variant);
   const locale = params.locale || DEFAULT_LOCALE;
   const homePath = `/${locale}/app/tday`;
+
+  useEffect(() => {
+    if (variant === "chunk" || variant === "network") return;
+    captureUiException(error, "route.error", { variant });
+  }, [error, variant]);
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background px-6">

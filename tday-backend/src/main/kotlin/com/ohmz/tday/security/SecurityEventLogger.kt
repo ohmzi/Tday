@@ -2,6 +2,7 @@ package com.ohmz.tday.security
 
 import com.ohmz.tday.db.tables.EventLogs
 import com.ohmz.tday.db.util.CuidGenerator
+import com.ohmz.tday.observability.TdayObservability
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
@@ -30,6 +31,11 @@ class SecurityEventLoggerImpl : SecurityEventLogger {
         }
 
         logger.warn("[security] {}", payload)
+        TdayObservability.addBreadcrumb(
+            operation = "security.event",
+            category = "security",
+            data = mapOf("reasonCode" to reasonCode),
+        )
 
         try {
             val serialized = json.encodeToString(JsonElement.serializer(), payload).take(500)

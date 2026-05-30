@@ -74,4 +74,6 @@ fun testAppConfig(
     androidPackageName = androidPackageName,
     androidSha256CertFingerprints = androidSha256CertFingerprints,
     sentryDsn = null,
+    sentryTracesSampleRate = 1.0,
+    backendVersion = "0.0.0",
 )

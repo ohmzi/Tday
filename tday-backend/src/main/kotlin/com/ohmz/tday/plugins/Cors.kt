@@ -26,6 +26,8 @@ fun Application.configureCors() {
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Origin)
+        allowHeader("baggage")
+        allowHeader("sentry-trace")
         allowCredentials = true
         allowNonSimpleContentTypes = true
 

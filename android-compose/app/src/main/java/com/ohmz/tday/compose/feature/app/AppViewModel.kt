@@ -26,6 +26,7 @@ import com.ohmz.tday.compose.core.network.RealtimeEvent
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import com.ohmz.tday.compose.feature.release.GitHubRelease
@@ -301,6 +302,7 @@ class AppViewModel @Inject constructor(
 
     fun useLocalMode() {
         viewModelScope.launch {
+            TdayTelemetry.addBreadcrumb("local_mode.enter")
             runCatching { authRepository.clearAllLocalUserDataForUnauthenticatedState() }
             runCatching { systemCredentialService.clearCredentialState() }
             runCatching { reminderScheduler.cancelAll() }
@@ -487,8 +489,13 @@ class AppViewModel @Inject constructor(
         onFailure: (String) -> Unit = {},
     ) {
         viewModelScope.launch {
+            TdayTelemetry.addBreadcrumb("server.probe", data = mapOf("phase" to "start"))
             val result = probeAndSaveWithAutomaticTrustRecovery(rawUrl)
             result.onSuccess { probeResult ->
+                TdayTelemetry.addBreadcrumb(
+                    "server.probe",
+                    data = mapOf("phase" to "success", "version" to probeResult.versionCheck::class.simpleName),
+                )
                 val versionResult = probeResult.versionCheck
                 val isBlocking = versionResult is VersionCheckResult.AppUpdateRequired ||
                     versionResult is VersionCheckResult.ServerUpdateRequired
@@ -507,6 +514,11 @@ class AppViewModel @Inject constructor(
                 }
                 onSuccess(probeResult.serverUrl)
             }.onFailure { error ->
+                TdayTelemetry.addBreadcrumb(
+                    "server.probe",
+                    level = io.sentry.SentryLevel.WARNING,
+                    data = mapOf("phase" to "failure", "error" to error.javaClass.simpleName),
+                )
                 val message = toServerSetupMessage(error)
                 _uiState.update {
                     it.copy(
@@ -617,6 +629,7 @@ class AppViewModel @Inject constructor(
         if (_uiState.value.isManualSyncing) return
 
         viewModelScope.launch {
+            TdayTelemetry.addBreadcrumb("sync.manual", data = mapOf("phase" to "start"))
             _uiState.update { it.copy(isManualSyncing = true) }
             val result = recoverSessionAndRetrySyncIfNeeded(
                 after = syncManager.syncCachedData(

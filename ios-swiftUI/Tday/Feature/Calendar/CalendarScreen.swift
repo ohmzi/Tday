@@ -492,6 +492,10 @@ struct CalendarScreen: View {
 
     private func selectCalendarMode(_ mode: CalendarDisplayMode) {
         guard mode != displayMode else { return }
+        TdayTelemetry.addBreadcrumb(
+            "calendar.mode",
+            data: ["mode": mode.rawValue]
+        )
 
         var contentTransaction = Transaction()
         contentTransaction.disablesAnimations = true
@@ -593,6 +597,10 @@ struct CalendarScreen: View {
 
     private func jumpToToday() {
         todayJumpRequestID += 1
+        TdayTelemetry.addBreadcrumb(
+            "calendar.today",
+            data: ["mode": displayMode.rawValue]
+        )
         todayJumpRequest = CalendarTodayJumpRequest(id: todayJumpRequestID, targetDate: Date())
     }
 
@@ -611,6 +619,13 @@ struct CalendarScreen: View {
             return
         }
 
+        TdayTelemetry.addBreadcrumb(
+            "calendar.drag_reschedule",
+            data: [
+                "mode": displayMode.rawValue,
+                "recurring": todo.isRecurring
+            ]
+        )
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         if todo.isRecurring {
             pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo: todo, targetDate: targetDay)
@@ -898,8 +913,16 @@ private struct CalendarMonthGrid: View {
         }
 
         if selection < calendarNativePagerCenterIndex {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "month", "direction": "previous"]
+            )
             onPreviousMonth()
         } else {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "month", "direction": "next"]
+            )
             onNextMonth()
         }
         resetPageSelection()
@@ -1111,8 +1134,16 @@ private struct CalendarWeekCard: View {
         }
 
         if selection < calendarNativePagerCenterIndex {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "week", "direction": "previous"]
+            )
             onPreviousWeek()
         } else {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "week", "direction": "next"]
+            )
             onNextWeek()
         }
         resetPageSelection()
@@ -1578,8 +1609,16 @@ private struct CalendarDayCard: View {
         }
 
         if selection < calendarNativePagerCenterIndex {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "day", "direction": "previous"]
+            )
             onPreviousDay()
         } else {
+            TdayTelemetry.addBreadcrumb(
+                "calendar.page",
+                data: ["mode": "day", "direction": "next"]
+            )
             onNextDay()
         }
         resetPageSelection()
