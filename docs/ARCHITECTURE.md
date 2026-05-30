@@ -429,10 +429,11 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 ## AI Integration
 
-- **Ollama** provides local LLM inference for task summaries.
-- Model: `qwen2.5:0.5b` (small, fast).
-- Feature is toggled globally via `AppConfig.aiSummaryEnabled` (admin setting).
-- Timeout-protected with `OLLAMA_TIMEOUT_MS`.
+- **Summary** is served by the backend and remains available without local AI by using deterministic task logic.
+- **Ollama** is an optional local AI enhancement for task summaries.
+- Model: `qwen3.5:0.8b` by default when Ollama is enabled.
+- The feature is toggled globally via `AppConfig.aiSummaryEnabled` (admin setting).
+- AI calls are timeout-protected with `OLLAMA_TIMEOUT_MS`; failures fall back to backend logic.
 
 ## Caching Strategy
 
@@ -454,7 +455,7 @@ In production, `Dockerfile.backend` produces a single container:
 2. **Stage 2** (JDK 21): Builds Ktor fat JAR (`./gradlew :tday-backend:buildFatJar`)
 3. **Stage 3** (JRE 21 Alpine): Runs the JAR with static files at `STATIC_FILES_DIR=/app/static`
 
-One JVM process serves both the REST API and the SPA. Docker Compose orchestrates PostgreSQL, Ollama, and the backend container.
+One JVM process serves both the REST API and the SPA. Docker Compose orchestrates PostgreSQL and the backend container by default, with Ollama available through the optional `ai` profile.
 
 ## Future Considerations
 

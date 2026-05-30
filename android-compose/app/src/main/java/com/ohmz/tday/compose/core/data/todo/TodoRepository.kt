@@ -936,26 +936,26 @@ class TodoRepository @Inject constructor(
         listId: String? = null,
     ): TodoSummaryResponse {
         if (syncManager.isLocalMode()) {
-            throw IllegalStateException("AI summary is unavailable in local mode")
+            throw IllegalStateException("Summary is unavailable in local mode")
         }
 
         val modeValue = when (mode) {
             TodoListMode.TODAY -> "today"
-            TodoListMode.OVERDUE -> throw IllegalStateException(
-                "Summary is available only for Today, Scheduled, All, and Priority screens",
-            )
+            TodoListMode.OVERDUE -> "overdue"
             TodoListMode.SCHEDULED -> "scheduled"
             TodoListMode.ALL -> "all"
             TodoListMode.PRIORITY -> "priority"
-            TodoListMode.FLOATER -> throw IllegalStateException(
-                "Summary is available only for Today, Scheduled, All, and Priority screens",
-            )
-            TodoListMode.LIST -> throw IllegalStateException(
-                "Summary is available only for Today, Scheduled, All, and Priority screens",
-            )
+            TodoListMode.FLOATER -> "floater"
+            TodoListMode.LIST -> "list"
         }
         return requireApiBody(
-            api.summarizeTodos(TodoSummaryRequest(mode = modeValue, listId = listId)),
+            api.summarizeTodos(
+                TodoSummaryRequest(
+                    mode = modeValue,
+                    listId = listId,
+                    timeZone = ZoneId.systemDefault().id,
+                ),
+            ),
             "Could not summarize tasks",
         )
     }

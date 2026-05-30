@@ -29,6 +29,7 @@ All API routes live under `/api/`. The web SPA consumes them via same-origin req
 
 - Validate incoming request bodies using **Konform** validators from `domain/Validations.kt` with the `validateOrFail()` helper.
 - Return typed `AppError` variants via `Either.Left` for invalid input (maps to `400 Bad Request`).
+- Validate string-backed enum fields before service calls. Invalid enum values such as priority, list color, and preference sort/group/direction must return `400`, not a generic `500`.
 - Never trust client input without validation.
 
 ```kotlin
@@ -72,15 +73,17 @@ Return JSON with appropriate HTTP status:
 
 ### Error Responses
 
-Always return a JSON object with a `message` field:
+Always return a JSON object with a `message` field. Validation errors may include `field`; throttled responses include `reason` and `retryAfterSeconds`:
 
 ```json
 {
-  "message": "Todo not found"
+  "code": 400,
+  "message": "priority is invalid",
+  "field": "priority"
 }
 ```
 
-Error responses are produced by `respondAppError()` from the `withAuth` helper, or by `StatusPages` for unhandled exceptions. The legacy `ApiException` hierarchy is deprecated — new code should use `Either<AppError, T>` exclusively.
+Malformed JSON/request bodies return `400` with `message: "Invalid request body"`. Error responses are produced by `respondAppError()` from the `withAuth` helper, or by `StatusPages` for malformed requests and unhandled exceptions. The legacy `ApiException` hierarchy is deprecated — new code should use `Either<AppError, T>` exclusively.
 
 ## HTTP Status Codes
 
@@ -194,7 +197,7 @@ Shared route constants live in `shared/src/commonMain/kotlin/com/ohmz/tday/share
 | DELETE | `/api/todo/instance` | Delete a recurring instance |
 | GET | `/api/todo/overdue` | List overdue todos |
 | POST | `/api/todo/nlp` | Natural language date/title parsing |
-| POST | `/api/todo/summary` | AI-powered task summary |
+| POST | `/api/todo/summary` | Task summary with optional AI and logic fallback |
 
 ### Floaters
 
@@ -248,7 +251,7 @@ Floater lists group floaters.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/admin/settings` | Get app configuration + Ollama health |
+| GET | `/api/admin/settings` | Get app configuration and Summary availability |
 | PATCH | `/api/admin/settings` | Update app configuration |
 | GET | `/api/admin/users` | List all users |
 | PATCH | `/api/admin/users/{id}` | Update user (approve, change role) |
@@ -281,13 +284,13 @@ Floater lists group floaters.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/timezone` | Get/detect timezone (query or header) |
+| GET | `/api/timezone` | Get/detect timezone using `timezone`, `X-Timezone`, or `X-User-Timezone` |
 
 ### App Settings
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/app-settings` | Get public app settings (AI summary enabled) |
+| GET | `/api/app-settings` | Get public app settings (Summary enabled) |
 
 ### Mobile
 

@@ -10,7 +10,7 @@ T'Day is designed to be a quiet daily planner, not a generic productivity platfo
 - Local Mode on Android and iOS for offline-only use without server setup or login.
 - Server Mode for self-hosted sync, realtime updates, encrypted sessions, and private PostgreSQL storage.
 - Local-first mobile data backed by Room on Android and SwiftData on iOS.
-- Completion history, list metadata preservation, task search, widgets, in-app update/version compatibility, and AI-powered summaries via Ollama.
+- Completion history, list metadata preservation, task search, widgets, in-app update/version compatibility, and backend summaries with optional local AI via Ollama.
 - 11 web locales via i18next, with mobile strings handled through platform-local patterns.
 
 ## Tech Stack
@@ -22,7 +22,7 @@ T'Day is designed to be a quiet daily planner, not a generic productivity platfo
 | Database | PostgreSQL 15 |
 | Auth | Rolling JWE cookie sessions, PBKDF2 credentials, credential envelope encryption |
 | Shared Contracts | Kotlin Multiplatform DTOs, enums, validators, and route constants |
-| AI | Ollama (local, e.g. qwen2.5:0.5b) |
+| AI | Optional Ollama (local, default `qwen3.5:0.8b`) with backend logic fallback |
 | Android | Kotlin, Jetpack Compose, Hilt, Retrofit, Room, WorkManager, Glance widgets, Material 3 |
 | iOS | SwiftUI, SwiftData, URLSession, Observation, Keychain/cookie handling, WidgetKit-ready snapshots |
 | Infra | Docker Compose, GitHub Actions CI/CD, GHCR |
@@ -42,16 +42,30 @@ cp .env.example .env.docker
 # Edit .env.docker — at minimum set AUTH_SECRET and DATABASE_URL
 
 docker compose up -d --build
-docker exec -it tday_ollama ollama pull qwen2.5:0.5b
 ```
 
-Docker Compose starts three services:
+Docker Compose starts the backend and database by default. Summary still works without Ollama by using the backend logic fallback.
+
+To enable local AI summaries:
+
+```bash
+# In .env.docker, set:
+OLLAMA_URL=http://ollama:11434
+OLLAMA_MODEL=qwen3.5:0.8b
+
+docker compose --profile ai pull ollama ollama-model-setup
+docker compose --profile ai up -d --build
+```
+
+The AI profile starts Ollama and runs a one-shot model setup container that pulls `qwen3.5:0.8b` and attempts to remove the old `qwen2.5:0.5b` model if it exists. Pull the Ollama images during updates too; the qwen3.5 model requires a recent Ollama runtime.
+
+Docker Compose services:
 
 | Service | Container | Port |
 |---------|-----------|------|
 | Ktor backend + Vite SPA | `tday_backend` | `localhost:2525 → 8080` (localhost only by default) |
 | PostgreSQL | `tday_db` | 5432 (internal) |
-| Ollama | `tday_ollama` | 11434 (internal) |
+| Ollama, optional AI profile | `tday_ollama` | 11434 (internal) |
 
 Port 2525 is bound to `127.0.0.1` by default so the backend is not exposed over HTTP to the network. For remote access, see [`docs/REMOTE_ACCESS.md`](docs/REMOTE_ACCESS.md) — it covers Cloudflare Tunnel, Tailscale, WireGuard, ZeroTier, SSH tunnels, ngrok, and frp. Set `TDAY_HOST_BIND=0.0.0.0` in the root `.env` to open the port externally (see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)).
 

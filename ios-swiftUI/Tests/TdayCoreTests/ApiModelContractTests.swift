@@ -34,20 +34,21 @@ final class ApiModelContractTests: XCTestCase {
         let json = """
         {
           "summary": null,
-          "source": null,
+          "source": "logic",
           "mode": "TODAY",
           "taskCount": 0,
           "generatedAt": null,
           "fallbackReason": "disabled",
-          "reason": "AI summary is disabled"
+          "reason": "disabled"
         }
         """.data(using: .utf8)!
 
         let response = try JSONDecoder().decode(TodoSummaryResponse.self, from: json)
 
         XCTAssertNil(response.summary)
+        XCTAssertEqual(response.source, "logic")
         XCTAssertEqual(response.fallbackReason, "disabled")
-        XCTAssertEqual(response.reason, "AI summary is disabled")
+        XCTAssertEqual(response.reason, "disabled")
     }
 
     func testListDeleteContractSupportsBulkPayload() throws {
