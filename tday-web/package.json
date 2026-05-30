@@ -1,6 +1,6 @@
 {
   "name": "tday-web",
-  "version": "1.44.0",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "scripts": {
