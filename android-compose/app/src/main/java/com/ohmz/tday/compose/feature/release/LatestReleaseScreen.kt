@@ -49,7 +49,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,19 +59,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -83,8 +78,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
-import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
+import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -102,75 +98,11 @@ fun LatestReleaseScreen(
     val context = LocalContext.current
     val view = LocalView.current
     val scrollState = rememberScrollState()
-    val density = LocalDensity.current
-    val maxCollapsePx = with(density) { RELEASE_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    var headerCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val collapseProgressTarget = if (maxCollapsePx > 0f) {
-        (headerCollapsePx / maxCollapsePx).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    val nestedScrollConnection = remember(scrollState, maxCollapsePx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val deltaY = available.y
-                if (deltaY < 0f) {
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = next - previous
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, -consumed)
-                    }
-                    return Offset.Zero
-                }
-
-                if (deltaY > 0f) {
-                    if (scrollState.value > 0) return Offset.Zero
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = previous - next
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, consumed)
-                    }
-                }
-
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (available.y > 0f && scrollState.value > 0) return Velocity.Zero
-                val snapped = snapTitleCollapsePx(
-                    currentPx = headerCollapsePx,
-                    maxPx = maxCollapsePx,
-                    velocityY = available.y,
-                )
-                if (snapped == headerCollapsePx) return Velocity.Zero
-                headerCollapsePx = snapped
-                return if (available.y == 0f) Velocity.Zero else available
-            }
-        }
-    }
-    val collapseProgress by animateFloatAsState(
-        targetValue = collapseProgressTarget,
+    val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
+        scrollState = scrollState,
+        maxCollapseDistance = RELEASE_TITLE_COLLAPSE_DISTANCE_DP.dp,
         label = "releaseTitleCollapseProgress",
     )
-    LaunchedEffect(
-        scrollState.isScrollInProgress,
-        headerCollapsePx,
-        maxCollapsePx,
-        scrollState.value,
-    ) {
-        if (scrollState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
-            return@LaunchedEffect
-        }
-        headerCollapsePx = if (scrollState.value == 0) {
-            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
-        } else {
-            maxCollapsePx
-        }
-    }
     val installScope = rememberCoroutineScope()
     val installerEvent by InAppApkUpdater.installEvent.collectAsStateWithLifecycle()
     var installUiState by remember { mutableStateOf<ApkInstallUiState>(ApkInstallUiState.Idle) }
@@ -243,7 +175,7 @@ fun LatestReleaseScreen(
         topBar = {
             ReleaseTopBar(
                 onBack = onBack,
-                collapseProgress = collapseProgress,
+                collapseProgress = titleScrollBehavior.collapseProgress,
             )
         },
     ) { padding ->
@@ -252,7 +184,7 @@ fun LatestReleaseScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(colorScheme.background)
-                .nestedScroll(nestedScrollConnection)
+                .nestedScroll(titleScrollBehavior.nestedScrollConnection)
                 .verticalScroll(scrollState)
                 .padding(horizontal = 18.dp, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -568,22 +500,26 @@ private fun ReleaseOverviewCard(
             publishedAt = latestRelease?.publishedAt ?: currentRelease?.publishedAt,
         )
         ReleaseVersionLine(
-            label = if (hasUpdate) "Installed" else stringResource(R.string.release_installed_version),
-            version = "v$currentVersion",
+            label = if (hasUpdate) {
+                stringResource(R.string.release_installed_label)
+            } else {
+                stringResource(R.string.release_installed_version)
+            },
+            version = stringResource(R.string.label_version_name, currentVersion),
             tint = colorScheme.primary,
         )
         if (backendVersion != null) {
             val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
                 versionCheckResult == null
             ReleaseVersionLine(
-                label = "Server",
-                version = "v$backendVersion",
-                tint = if (isCompatible) Color(0xFF4CAF50) else colorScheme.error,
+                label = stringResource(R.string.label_server),
+                version = stringResource(R.string.label_version_name, backendVersion),
+                tint = if (isCompatible) TdayStatusSuccess else colorScheme.error,
             )
         }
         latestRelease?.takeIf { hasUpdate }?.let {
             ReleaseVersionLine(
-                label = "Latest",
+                label = stringResource(R.string.release_latest_label),
                 version = it.tagName,
                 tint = colorScheme.tertiary,
             )
@@ -700,7 +636,7 @@ private fun InstalledVersionRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         VersionBadge(
-            text = "v$currentVersion",
+            text = stringResource(R.string.label_version_name, currentVersion),
             backgroundColor = colorScheme.primary.copy(alpha = 0.08f),
             textColor = colorScheme.primary,
         )

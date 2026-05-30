@@ -2,10 +2,10 @@ package com.ohmz.tday.compose.core.data.server
 
 import android.util.Log
 import com.ohmz.tday.compose.BuildConfig
+import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.core.data.ServerProbeException
 import com.ohmz.tday.compose.core.data.extractApiErrorMessage
-import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.core.security.ProbeDecryptor
 import kotlinx.coroutines.withTimeout
@@ -22,9 +22,20 @@ class ServerConfigRepository @Inject constructor(
     private val api: TdayApiService,
     private val secureConfigStore: SecureConfigStore,
 ) {
+    fun getAppDataMode(): AppDataMode = secureConfigStore.getAppDataMode()
+
+    fun isLocalMode(): Boolean = secureConfigStore.isLocalMode()
+
     fun hasServerConfigured(): Boolean = secureConfigStore.hasServerUrl()
 
     fun getServerUrl(): String? = secureConfigStore.getServerUrl()
+
+    fun enableLocalMode() {
+        secureConfigStore.clearServerUrl()
+        secureConfigStore.clearCachedSessionUser()
+        secureConfigStore.clearLastEmail()
+        secureConfigStore.setAppDataMode(AppDataMode.LOCAL)
+    }
 
     data class ProbeResult(
         val serverUrl: String,

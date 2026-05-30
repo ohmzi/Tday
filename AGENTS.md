@@ -1,6 +1,6 @@
 # T'Day Agent Guide
 
-This file is the working agreement for AI agents contributing to T'Day. Read it with `README.md`, `docs/ARCHITECTURE.md`, `docs/CODING_STANDARDS.md`, and `docs/TESTING.md`.
+This file is the working agreement for AI agents contributing to T'Day. Read it with `README.md`, `docs/PRODUCT_DIRECTION.md`, `docs/DATA_MODEL.md`, `docs/ARCHITECTURE.md`, `docs/CODING_STANDARDS.md`, `docs/TESTING.md`, and `docs/REPO_HOUSEKEEPING.md`.
 
 ## Project Shape
 
@@ -8,11 +8,19 @@ T'Day is a private, self-hosted personal task planner with:
 
 - `tday-web/`: Vite, React, TypeScript, Tailwind, i18next.
 - `tday-backend/`: Ktor, Exposed, Flyway, PostgreSQL, JWE sessions.
-- `shared/`: Kotlin Multiplatform DTOs, enums, and validators consumed by backend, Android, and iOS.
-- `android-compose/`: Native Android app using Kotlin, Jetpack Compose, Hilt, Retrofit, offline cache and sync.
-- `ios-swiftUI/`: Native iOS app using SwiftUI, SwiftData, Observation, URLSession, Keychain/cookie handling.
+- `shared/`: Kotlin Multiplatform DTOs, enums, validators, and route constants consumed by backend/Android and mirrored by iOS contract models.
+- `android-compose/`: Native Android app using Kotlin, Jetpack Compose, Hilt, Retrofit, Room offline cache, reminders, widgets, and sync.
+- `ios-swiftUI/`: Native iOS app using SwiftUI, SwiftData, Observation, URLSession, Keychain/cookie handling, reminders, and widget snapshots.
 
 The native mobile apps should feel like one product expressed through two platform-native implementations.
+
+Current product direction:
+
+- Scheduled `Todo` items have due-date, recurrence, reminder, calendar, and scheduled-list semantics.
+- `Floater` items are unscheduled Anytime tasks with separate floater lists and completed history.
+- Local Mode is a first-class mobile workspace and must not silently upload local-only data to a server workspace.
+- Server Mode uses local optimistic writes plus pending mutation replay.
+- Documentation is part of the deliverable when behavior, structure, API, data shape, or verification changes.
 
 ## How To Work In This Repo
 
@@ -23,6 +31,7 @@ The native mobile apps should feel like one product expressed through two platfo
 - When the user asks for implementation, implement it, verify it, then report clearly.
 - When the user asks for a PR, push the active branch and open/update the PR they requested.
 - When resolving merge conflicts into an outdated base, prefer the active/latest branch behavior unless the user explicitly says otherwise.
+- When the user asks for documentation, inspect the real project state and recent commits before writing broad claims.
 
 ## Git And Attribution
 
@@ -44,6 +53,7 @@ Before finishing a mobile UI task, ask:
 - Do labels, task counts, date rules, empty states, and disabled states match?
 - Do navigation rules match, including lower bounds and edge cases?
 - Does the interaction feel platform-native on each OS?
+- Does Local Mode hide/disable server-only affordances consistently?
 - Is one platform now clearly nicer? If yes, bring the other platform up to the same product quality.
 
 Do not blindly copy implementation details across platforms. Copy behavior, interaction rules, information architecture, and visual intent while using native APIs and established local patterns.
@@ -63,6 +73,7 @@ Core rules:
 - Task counts come from pending scheduled items grouped by local start-of-day.
 - Day and week task counts cap display at `9+`.
 - The task section title stays in the form `Tasks due EEE, MMM d`.
+- Floaters do not appear on the calendar unless a future product decision gives them scheduled semantics.
 
 Interaction rules:
 
@@ -90,6 +101,7 @@ T'Day is a task app, not a marketing site. Mobile screens should feel quiet, use
 - Text must fit in compact mobile layouts without overlap or truncation that hides meaning.
 - Empty states should be calm and short.
 - Preserve dark mode.
+- Root feed behavior should stay aligned: Home and Floater/Anytime are sibling root feeds controlled by `RootFeedDock`, with the create action available from the root controls.
 
 ## Design Tokens And Strings
 
@@ -102,30 +114,46 @@ T'Day is a task app, not a marketing site. Mobile screens should feel quiet, use
 
 ## Architecture Expectations
 
+Across the repo, keep changes shaped around readable boundaries: a file or type should have a clear reason to exist, dependencies should flow from UI to state to services/repositories to storage/network, and helpers should start local before being promoted to shared.
+
 Backend:
 
 - Keep request/response contracts aligned with `shared/` models when possible.
 - Services return typed errors and avoid leaking internals.
 - Preserve tenant isolation in all data access.
+- Keep scheduled-task routes, floater routes, scheduled-list routes, and floater-list routes distinct.
+- Routes translate HTTP and validation; services own business decisions; Exposed table/query code stays out of UI-facing layers.
 
 Android:
 
 - Use MVVM with `@HiltViewModel`, `StateFlow`, repositories, and app services.
 - Keep mutable state private and expose read-only state.
-- Respect offline-first cache/sync behavior.
+- Respect Room-backed offline-first cache/sync behavior and Local Mode.
 - Use Compose idioms and Material 3.
+- ViewModels depend on injected repositories/services, not Retrofit, Room DAOs, or storage details directly.
 
 iOS:
 
 - Use SwiftUI, Observation, SwiftData, and URLSession patterns already present in the app.
 - Keep feature code inside `Feature/<Name>/` unless it is truly shared.
 - Prefer small local helpers before creating broad abstractions.
+- Keep `AppContainer` wiring explicit and update SwiftData/cache mappers with data model changes.
+- Views render state and invoke actions; repositories/cache managers own persistence and sync details.
 
 Web:
 
 - Use React Query for server state.
 - Use the shared API client, not raw backend `fetch` calls from components.
 - Use Tailwind semantic tokens and locale keys.
+- Keep feature modules cohesive and move repeated logic into `src/lib/`, `src/hooks/`, or feature-scoped helpers only when that reduces real duplication.
+
+Docs:
+
+- Update `README.md` for project shape and documentation-map changes.
+- Update `docs/DATA_MODEL.md` for table, DTO, local cache, and pending mutation changes.
+- Update `docs/API_GUIDELINES.md` for route changes.
+- Update `docs/ARCHITECTURE.md` for data flow, module, and platform architecture changes.
+- Update platform READMEs for Android/iOS setup, storage, sync, or feature-surface changes.
 
 ## Verification Commands
 

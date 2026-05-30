@@ -35,12 +35,12 @@ final class CompletedRepository {
                     title: item.title,
                     description: item.description,
                     priority: item.priority,
-                    dueEpochMs: item.due.epochMilliseconds,
-                    rrule: item.rrule,
+                    dueEpochMs: item.due?.epochMilliseconds,
+                    rrule: item.due == nil ? nil : item.rrule,
                     instanceDateEpochMs: item.instanceDate?.epochMilliseconds,
                     pinned: false,
                     completed: false,
-                    listId: state.lists.first(where: { $0.name == item.listName })?.id,
+                    listId: item.listId ?? state.lists.first(where: { $0.name == item.listName })?.id,
                     updatedAtEpochMs: now
                 )
             )
@@ -68,6 +68,9 @@ final class CompletedRepository {
             }
             return nextState
         }
+        if syncManager.isLocalMode {
+            return
+        }
         let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
         if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
             throw error
@@ -94,15 +97,20 @@ final class CompletedRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    dueEpochMs: payload.due.epochMilliseconds,
+                    dueEpochMs: payload.due?.epochMilliseconds,
                     completedAtEpochMs: current.completedAtEpochMs,
-                    rrule: payload.rrule,
+                    rrule: payload.due == nil ? nil : payload.rrule,
                     instanceDateEpochMs: current.instanceDateEpochMs,
+                    listId: normalizedListID,
                     listName: state.lists.first(where: { $0.id == payload.listId })?.name,
                     listColor: state.lists.first(where: { $0.id == payload.listId })?.color
                 )
             }
             return nextState
+        }
+
+        if syncManager.isLocalMode {
+            return
         }
 
         do {
@@ -112,8 +120,8 @@ final class CompletedRepository {
                     title: normalizedTitle,
                     description: normalizedDescription,
                     priority: normalizedPriorityValue,
-                    due: payload.due.ISO8601Format(),
-                    rrule: payload.rrule,
+                    due: payload.due?.ISO8601Format(),
+                    rrule: payload.due == nil ? nil : payload.rrule,
                     listID: normalizedListID
                 )
             )
@@ -129,6 +137,10 @@ final class CompletedRepository {
             var nextState = state
             nextState.completedItems.removeAll { $0.id == item.id }
             return nextState
+        }
+
+        if syncManager.isLocalMode {
+            return
         }
 
         guard !item.id.hasPrefix(LOCAL_COMPLETED_PREFIX) else {

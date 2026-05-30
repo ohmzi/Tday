@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
@@ -245,6 +246,9 @@ fun <T> TdaySegmentedSlider(
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = if (selected) FontWeight.Black else FontWeight.ExtraBold,
                             color = contentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false,
                             modifier = Modifier.graphicsLayer {
                                 scaleX = contentScale
                                 scaleY = contentScale

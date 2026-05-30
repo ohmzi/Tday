@@ -13,6 +13,8 @@ import com.ohmz.tday.services.TodoNlpService
 import com.ohmz.tday.services.TodoService
 import com.ohmz.tday.services.TodoSummaryService
 import com.ohmz.tday.shared.model.CreateTodoRequest
+import com.ohmz.tday.shared.model.UpdateTodoRequest
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -33,6 +35,7 @@ import org.koin.ktor.plugin.Koin
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class TodoRoutesTest {
     private val json = Json { ignoreUnknownKeys = true }
@@ -64,6 +67,57 @@ class TodoRoutesTest {
     }
 
     @Test
+    fun `create todo rejects blank due date`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"title":"Floater belongs elsewhere","description":null,"priority":"Low","due":""}""")
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("due is required", payload.getValue("message").jsonPrimitive.content)
+        assertNull(todoService.lastCreateDue)
+    }
+
+    @Test
+    fun `create todo rejects recurring task with blank due date`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.post("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                    {
+                      "title": "Repeating task",
+                      "description": null,
+                      "priority": "Low",
+                      "due": "",
+                      "rrule": "RRULE:FREQ=DAILY;INTERVAL=1"
+                    }
+                """.trimIndent(),
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "due is required",
+            payload.getValue("message").jsonPrimitive.content,
+        )
+        assertNull(todoService.lastCreateDue)
+    }
+
+    @Test
     fun `create todo returns bad request when timestamp is invalid`() = testApplication {
         val todoService = RecordingTodoService()
 
@@ -92,6 +146,64 @@ class TodoRoutesTest {
             payload.getValue("message").jsonPrimitive.content,
         )
         assertNull(todoService.lastCreateDue)
+    }
+
+    @Test
+    fun `patch todo rejects due clear when dateChanged true and due is missing`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    UpdateTodoRequest(
+                        id = "todo_123",
+                        dateChanged = true,
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("due is required", payload.getValue("message").jsonPrimitive.content)
+        assertNull(todoService.lastUpdateFields)
+    }
+
+    @Test
+    fun `patch todo rejects repeat rule when due is cleared`() = testApplication {
+        val todoService = RecordingTodoService()
+
+        application {
+            configureTodoRoutesTestApp(todoService)
+        }
+
+        val response = client.patch("/api/todo") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    UpdateTodoRequest(
+                        id = "todo_123",
+                        due = null,
+                        dateChanged = true,
+                        rrule = "RRULE:FREQ=DAILY;INTERVAL=1",
+                        rruleChanged = true,
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals(
+            "due is required",
+            payload.getValue("message").jsonPrimitive.content,
+        )
+        assertNull(todoService.lastUpdateFields)
     }
 
     private fun Application.configureTodoRoutesTestApp(
@@ -132,6 +244,7 @@ class TodoRoutesTest {
 
     private class RecordingTodoService : TodoService {
         var lastCreateDue: LocalDateTime? = null
+        var lastUpdateFields: Map<String, Any?>? = null
 
         override suspend fun create(
             userId: String,
@@ -168,7 +281,10 @@ class TodoRoutesTest {
             recurringFutureDays: Int,
         ) = emptyList<TodoResponse>().right()
 
-        override suspend fun update(userId: String, id: String, fields: Map<String, Any?>) = Unit.right()
+        override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<com.ohmz.tday.domain.AppError, Unit> {
+            lastUpdateFields = fields
+            return Unit.right()
+        }
 
         override suspend fun delete(userId: String, id: String) = 1.right()
 

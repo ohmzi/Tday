@@ -8,6 +8,12 @@ struct AppRootView: View {
     @State private var notificationDeepLinkRouter = NotificationDeepLinkRouter.shared
     @State private var hasLeftActiveScene = false
     @State private var isLaunchSplashHeld = false
+    @State private var rootFeedTab: RootFeedTab = .home
+    @State private var rootCreateTaskRequestID = 0
+    @State private var rootHomeScrollToTopRequestID = 0
+    @State private var rootFloaterScrollToTopRequestID = 0
+    @State private var rootDockCollapsed = false
+    @State private var rootControlsVisible = true
     @Environment(\.scenePhase) private var scenePhase
 
     init(container: AppContainer) {
@@ -24,53 +30,129 @@ struct AppRootView: View {
             if !appViewModel.hasCompletedInitialBootstrap || isLaunchSplashHeld {
                 AppLaunchSplashView(isHeld: $isLaunchSplashHeld)
             } else {
-                let showOnboardingOverlay = !appViewModel.authenticated && appViewModel.versionCheckResult == .compatible
+                let showOnboardingOverlay = !appViewModel.isWorkspaceAvailable && appViewModel.versionCheckResult == .compatible
 
                 NavigationStack(
-                    path: Binding(
-                        get: { appViewModel.navigationPath },
-                        set: { appViewModel.navigationPath = $0 }
-                    )
+                    path: rootNavigationPath
                 ) {
                     TdayBackground {
-                        HomeScreen(container: container) { route in
-                            handleRoute(route)
+                        ZStack(alignment: .bottom) {
+                            switch rootFeedTab {
+                            case .home:
+                                HomeScreen(
+                                    container: container,
+                                    onRootFeedTabSelected: handleRootFeedTabSelection,
+                                    showsRootControls: false,
+                                    createTaskRequestID: rootCreateTaskRequestID,
+                                    scrollToTopRequestID: rootHomeScrollToTopRequestID,
+                                    onRootDockCollapsedChange: { rootDockCollapsed = $0 },
+                                    onRootControlsVisibleChange: { rootControlsVisible = $0 },
+                                    pullRefreshEnabled: !appViewModel.isLocalMode
+                                ) { route in
+                                    handleRoute(route)
+                                }
+                            case .floater:
+                                TodoListScreen(
+                                    container: container,
+                                    mode: .floater,
+                                    listId: nil,
+                                    listName: nil,
+                                    highlightedTodoId: nil,
+                                    rootFeedTab: .floater,
+                                    onRootFeedTabSelected: handleRootFeedTabSelection,
+                                    showsRootControls: false,
+                                    pullRefreshEnabled: !appViewModel.isLocalMode,
+                                    usesRootFeedHeader: true,
+                                    createTaskRequestID: rootCreateTaskRequestID,
+                                    scrollToTopRequestID: rootFloaterScrollToTopRequestID,
+                                    onRootDockCollapsedChange: { rootDockCollapsed = $0 },
+                                    onRootControlsVisibleChange: { rootControlsVisible = $0 },
+                                    onOpenFloaterList: { listId, listName in
+                                        handleRoute(.floaterListTodos(listId: listId, listName: listName))
+                                    },
+                                    onOpenSettings: {
+                                        handleRoute(.settings)
+                                    }
+                                )
+                            }
+
+                            if appViewModel.isWorkspaceAvailable, rootControlsVisible {
+                                rootFloatingControls
+                            }
                         }
                     }
                     .blur(radius: showOnboardingOverlay ? 6 : 0)
                     .scaleEffect(showOnboardingOverlay ? 0.992 : 1)
                     .animation(.easeInOut(duration: 0.22), value: showOnboardingOverlay)
+                    .navigationBarBackButtonHidden(true)
+                    .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: AppRoute.self) { route in
                         switch route {
                         case .home:
-                            HomeScreen(container: container) { nextRoute in
+                            HomeScreen(
+                                container: container,
+                                onRootFeedTabSelected: handleRootFeedTabSelection,
+                                pullRefreshEnabled: !appViewModel.isLocalMode
+                            ) { nextRoute in
                                 handleRoute(nextRoute)
                             }
                         case .todayTodos:
-                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil)
+                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .overdueTodos:
-                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil)
+                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .scheduledTodos:
-                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil)
+                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case let .allTodos(highlightTodoId):
-                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId)
+                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .priorityTodos:
-                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil)
+                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
+                        case .floaterTodos:
+                            Color.clear
+                                .navigationBarBackButtonHidden(true)
+                                .toolbar(.hidden, for: .navigationBar)
+                                .onAppear {
+                                    selectRootFeedTab(.floater)
+                                }
+                        case let .floaterListTodos(listId, listName):
+                            TodoListScreen(
+                                container: container,
+                                mode: .floater,
+                                listId: listId,
+                                listName: listName,
+                                highlightedTodoId: nil,
+                                pullRefreshEnabled: !appViewModel.isLocalMode,
+                                onListDeleted: {
+                                    handleRoute(.floaterTodos)
+                                }
+                            )
                         case let .listTodos(listId, listName):
-                            TodoListScreen(container: container, mode: .list, listId: listId, listName: listName, highlightedTodoId: nil)
+                            TodoListScreen(
+                                container: container,
+                                mode: .list,
+                                listId: listId,
+                                listName: listName,
+                                highlightedTodoId: nil,
+                                pullRefreshEnabled: !appViewModel.isLocalMode,
+                                onListDeleted: {
+                                    appViewModel.navigate(to: .home)
+                                }
+                            )
                         case .completed:
-                            CompletedScreen(container: container)
+                            CompletedScreen(container: container, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .calendar:
-                            CalendarScreen(container: container)
+                            CalendarScreen(container: container, pullRefreshEnabled: !appViewModel.isLocalMode)
                         case .settings:
                             SettingsScreen(viewModel: appViewModel)
                         case .latestRelease:
                             LatestReleaseScreen(viewModel: appViewModel)
                         }
                     }
+                    .onChange(of: appViewModel.navigationPath) { _, path in
+                        normalizeRootNavigationPath(path)
+                    }
                     .overlay(alignment: .top) {
                         OfflineBanner(
-                            visible: appViewModel.authenticated && appViewModel.isOffline,
+                            visible: appViewModel.authenticated && !appViewModel.isLocalMode && appViewModel.isOffline,
                             pendingMutationCount: appViewModel.pendingMutationCount,
                             noticeID: appViewModel.offlineNoticeID
                         )
@@ -91,7 +173,7 @@ struct AppRootView: View {
                         }
                     }
                     .overlay {
-                        if !appViewModel.authenticated {
+                        if !appViewModel.isWorkspaceAvailable {
                             let isVersionBlocking = appViewModel.versionCheckResult != .compatible
 
                             if isVersionBlocking {
@@ -129,6 +211,11 @@ struct AppRootView: View {
                                         }
                                         return success
                                     },
+                                    onUseLocalMode: {
+                                        authViewModel.clearStatus()
+                                        appViewModel.clearPendingApprovalNotice()
+                                        await appViewModel.useLocalMode()
+                                    },
                                     onClearAuthStatus: {
                                         authViewModel.clearStatus()
                                         appViewModel.clearPendingApprovalNotice()
@@ -137,7 +224,7 @@ struct AppRootView: View {
                             }
                         }
 
-                        if appViewModel.authenticated && appViewModel.versionCheckResult != .compatible {
+                        if appViewModel.authenticated && !appViewModel.isLocalMode && appViewModel.versionCheckResult != .compatible {
                             UpdateRequiredView(
                                 versionCheckResult: appViewModel.versionCheckResult,
                                 onRetry: {
@@ -182,7 +269,100 @@ struct AppRootView: View {
     }
 
     private func handleRoute(_ route: AppRoute) {
-        appViewModel.navigate(to: route)
+        switch route {
+        case .home:
+            selectRootFeedTab(.home)
+        case .floaterTodos:
+            selectRootFeedTab(.floater)
+        default:
+            appViewModel.navigate(to: route)
+        }
+    }
+
+    private func handleRootFeedTabSelection(_ tab: RootFeedTab) {
+        if tab == rootFeedTab {
+            requestRootFeedScrollToTop(for: tab)
+            return
+        }
+        selectRootFeedTab(tab)
+    }
+
+    private func selectRootFeedTab(_ tab: RootFeedTab) {
+        rootFeedTab = tab
+        appViewModel.navigationPath = []
+    }
+
+    private func requestRootFeedScrollToTop(for tab: RootFeedTab) {
+        switch tab {
+        case .home:
+            rootHomeScrollToTopRequestID += 1
+        case .floater:
+            rootFloaterScrollToTopRequestID += 1
+        }
+    }
+
+    private var rootNavigationPath: Binding<[AppRoute]> {
+        Binding(
+            get: { sanitizedNavigationPath(appViewModel.navigationPath) },
+            set: { newPath in
+                setNavigationPath(newPath)
+            }
+        )
+    }
+
+    private func setNavigationPath(_ newPath: [AppRoute]) {
+        if let rootTab = rootFeedTabRoute(in: newPath) {
+            selectRootFeedTab(rootTab)
+            return
+        }
+
+        appViewModel.navigationPath = newPath
+    }
+
+    private func sanitizedNavigationPath(_ path: [AppRoute]) -> [AppRoute] {
+        path.filter { route in
+            !route.isRootFeedRoute
+        }
+    }
+
+    private func rootFeedTabRoute(in path: [AppRoute]) -> RootFeedTab? {
+        for route in path.reversed() {
+            if let tab = route.rootFeedTab {
+                return tab
+            }
+        }
+
+        return nil
+    }
+
+    private func normalizeRootNavigationPath(_ path: [AppRoute]) {
+        guard let rootTab = rootFeedTabRoute(in: path) else {
+            return
+        }
+
+        DispatchQueue.main.async {
+            selectRootFeedTab(rootTab)
+        }
+    }
+
+    private var rootFloatingControls: some View {
+        HStack(alignment: .bottom) {
+            RootFeedDock(
+                activeTab: rootFeedTab,
+                collapsed: rootDockCollapsed,
+                onSelect: handleRootFeedTabSelection
+            )
+            .padding(.leading, 18)
+            .padding(.vertical, 8)
+
+            Spacer(minLength: 12)
+
+            TaskFloatingActionButton {
+                rootCreateTaskRequestID += 1
+            }
+            .padding(.trailing, 18)
+            .padding(.vertical, 8)
+        }
     }
 
     private func handleDeepLink(_ url: URL) {
@@ -198,6 +378,23 @@ struct AppRootView: View {
         }
         handleDeepLink(url)
         notificationDeepLinkRouter.clearPendingURL()
+    }
+}
+
+private extension AppRoute {
+    var rootFeedTab: RootFeedTab? {
+        switch self {
+        case .home:
+            return .home
+        case .floaterTodos:
+            return .floater
+        default:
+            return nil
+        }
+    }
+
+    var isRootFeedRoute: Bool {
+        rootFeedTab != nil
     }
 }
 

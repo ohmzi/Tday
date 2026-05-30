@@ -16,11 +16,12 @@ data class CompletedTodoDto(
     val priority: String = "Low",
     val due: String,
     val completedAt: String? = null,
-    val completedOnTime: Boolean? = null,
+    val completedOnTime: Boolean,
     val daysToComplete: Double? = null,
     val rrule: String? = null,
     val userID: String? = null,
     val instanceDate: String? = null,
+    val listID: String? = null,
     val listName: String? = null,
     val listColor: String? = null,
 )

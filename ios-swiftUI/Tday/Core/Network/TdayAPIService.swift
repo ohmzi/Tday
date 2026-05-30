@@ -158,6 +158,10 @@ final class TdayAPIService {
         return try await request(path: "/api/todo", method: "GET", queryItems: queryItems, responseType: TodosResponse.self)
     }
 
+    func getFloaters() async throws -> FloatersResponse {
+        try await request(path: "/api/floater", method: "GET", responseType: FloatersResponse.self)
+    }
+
     func getAppSettings() async throws -> AppSettingsResponse {
         try await request(path: "/api/app-settings", method: "GET", responseType: AppSettingsResponse.self)
     }
@@ -180,6 +184,10 @@ final class TdayAPIService {
 
     func createTodo(payload: CreateTodoRequest) async throws -> CreateTodoResponse {
         try await request(path: "/api/todo", method: "POST", body: payload, responseType: CreateTodoResponse.self)
+    }
+
+    func createFloater(payload: CreateFloaterRequest) async throws -> CreateFloaterResponse {
+        try await request(path: "/api/floater", method: "POST", body: payload, responseType: CreateFloaterResponse.self)
     }
 
     func patchTodo(payload: UpdateTodoRequest) async throws -> MessageResponse {
@@ -212,6 +220,26 @@ final class TdayAPIService {
 
     func deleteTodoByBody(payload: DeleteTodoRequest) async throws -> MessageResponse {
         try await request(path: "/api/todo", method: "DELETE", body: payload, responseType: MessageResponse.self)
+    }
+
+    func patchFloaterByBody(payload: UpdateFloaterRequest) async throws -> MessageResponse {
+        try await request(path: "/api/floater", method: "PATCH", body: payload, responseType: MessageResponse.self)
+    }
+
+    func deleteFloaterByBody(payload: DeleteFloaterRequest) async throws -> MessageResponse {
+        try await request(path: "/api/floater", method: "DELETE", body: payload, responseType: MessageResponse.self)
+    }
+
+    func completeFloaterByBody(payload: FloaterCompleteRequest) async throws -> MessageResponse {
+        try await request(path: "/api/floater/complete", method: "PATCH", body: payload, responseType: MessageResponse.self)
+    }
+
+    func uncompleteFloaterByBody(payload: FloaterUncompleteRequest) async throws -> MessageResponse {
+        try await request(path: "/api/floater/uncomplete", method: "PATCH", body: payload, responseType: MessageResponse.self)
+    }
+
+    func prioritizeFloaterByBody(payload: FloaterPrioritizeRequest) async throws -> MessageResponse {
+        try await request(path: "/api/floater/prioritize", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
 
     func completeTodoByBody(payload: TodoCompleteRequest) async throws -> MessageResponse {
@@ -254,6 +282,10 @@ final class TdayAPIService {
         try await request(path: "/api/completedTodo", method: "GET", responseType: CompletedTodosResponse.self)
     }
 
+    func getCompletedFloaters() async throws -> CompletedFloatersResponse {
+        try await request(path: "/api/completedFloater", method: "GET", responseType: CompletedFloatersResponse.self)
+    }
+
     func patchCompletedTodoByBody(payload: UpdateCompletedTodoRequest) async throws -> MessageResponse {
         try await request(path: "/api/completedTodo", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
@@ -266,12 +298,24 @@ final class TdayAPIService {
         try await request(path: "/api/completedTodo", method: "DELETE", body: payload, responseType: MessageResponse.self)
     }
 
+    func patchCompletedFloaterByBody(payload: UpdateCompletedFloaterRequest) async throws -> MessageResponse {
+        try await request(path: "/api/completedFloater", method: "PATCH", body: payload, responseType: MessageResponse.self)
+    }
+
+    func deleteCompletedFloaterByBody(payload: DeleteCompletedFloaterRequest) async throws -> MessageResponse {
+        try await request(path: "/api/completedFloater", method: "DELETE", body: payload, responseType: MessageResponse.self)
+    }
+
     func deleteCompletedTodo(payload: DeleteCompletedTodoRequest) async throws -> MessageResponse {
         try await deleteCompletedTodoByBody(payload: payload)
     }
 
     func getLists() async throws -> ListsResponse {
         try await request(path: "/api/list", method: "GET", responseType: ListsResponse.self)
+    }
+
+    func getFloaterLists() async throws -> FloaterListsResponse {
+        try await request(path: "/api/floaterList", method: "GET", responseType: FloaterListsResponse.self)
     }
 
     func getListTodos(listID: String, start: Int64, end: Int64) async throws -> ListDetailResponse {
@@ -286,12 +330,28 @@ final class TdayAPIService {
         )
     }
 
+    func getFloaterListTodos(listID: String) async throws -> FloaterListDetailResponse {
+        try await request(
+            path: "/api/floaterList/\(listID)",
+            method: "GET",
+            responseType: FloaterListDetailResponse.self
+        )
+    }
+
     func createList(payload: CreateListRequest) async throws -> CreateListResponse {
         try await request(path: "/api/list", method: "POST", body: payload, responseType: CreateListResponse.self)
     }
 
+    func createFloaterList(payload: CreateFloaterListRequest) async throws -> CreateFloaterListResponse {
+        try await request(path: "/api/floaterList", method: "POST", body: payload, responseType: CreateFloaterListResponse.self)
+    }
+
     func patchListByBody(payload: UpdateListRequest) async throws -> MessageResponse {
         try await request(path: "/api/list", method: "PATCH", body: payload, responseType: MessageResponse.self)
+    }
+
+    func patchFloaterListByBody(payload: UpdateFloaterListRequest) async throws -> MessageResponse {
+        try await request(path: "/api/floaterList", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
 
     func patchList(payload: UpdateListRequest) async throws -> MessageResponse {
@@ -300,6 +360,10 @@ final class TdayAPIService {
 
     func deleteListByBody(payload: DeleteListRequest) async throws -> DeleteListResponse {
         try await request(path: "/api/list", method: "DELETE", body: payload, responseType: DeleteListResponse.self)
+    }
+
+    func deleteFloaterListByBody(payload: DeleteFloaterListRequest) async throws -> DeleteFloaterListResponse {
+        try await request(path: "/api/floaterList", method: "DELETE", body: payload, responseType: DeleteFloaterListResponse.self)
     }
 
     func deleteList(payload: DeleteListRequest) async throws -> DeleteListResponse {

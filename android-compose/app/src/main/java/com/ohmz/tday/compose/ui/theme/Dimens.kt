@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.dp
 object TdayDimens {
 
     // Spacing scale
+    val SpacingNone: Dp = 0.dp
     val SpacingXxs: Dp = 2.dp
     val SpacingXs: Dp = 4.dp
     val SpacingSm: Dp = 6.dp
@@ -36,8 +37,19 @@ object TdayDimens {
 
     // Component sizes
     val FabSize: Dp = 56.dp
+    val FabIconSize: Dp = 40.dp
     val FabElevation: Dp = 16.dp
     val FabPressedElevation: Dp = 8.dp
+    val RootFeedDockHeight: Dp = 58.dp
+    val RootFeedDockInnerPadding: Dp = 5.dp
+    val RootFeedDockOuterPaddingStart: Dp = ContentPaddingHorizontal
+    val RootFeedDockOuterPaddingBottom: Dp = ContentPaddingHorizontal
+    val RootFeedDockTabWidth: Dp = 102.dp
+    val RootFeedDockRadius: Dp = 22.dp
+    val RootFeedDockSelectorRadius: Dp = RadiusLg
+    val RootFeedDockSelectorInset: Dp = SpacingXxs
+    val RootFeedDockSelectorElevation: Dp = SpacingLg
+    val RootFeedDockIconSize: Dp = 22.dp
     val BottomSheetTonalElevationDark: Dp = 10.dp
     val CardElevationDefault: Dp = 0.dp
     val PullRefreshContainerWidth: Dp = 152.dp

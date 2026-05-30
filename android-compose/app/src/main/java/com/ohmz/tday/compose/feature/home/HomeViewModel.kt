@@ -1,7 +1,9 @@
 package com.ohmz.tday.compose.feature.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
@@ -16,6 +18,7 @@ import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,10 +34,12 @@ data class HomeUiState(
         scheduledCount = 0,
         allCount = 0,
         priorityCount = 0,
+        floaterCount = 0,
         completedCount = 0,
         lists = emptyList(),
     ),
     val searchableTodos: List<TodoItem> = emptyList(),
+    val todayTodos: List<TodoItem> = emptyList(),
     val errorMessage: String? = null,
 )
 
@@ -45,6 +50,7 @@ class HomeViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
     private var activeLoadingRefreshes = 0
 
@@ -54,6 +60,7 @@ class HomeViewModel @Inject constructor(
                 isLoading = false,
                 summary = todoRepository.fetchDashboardSummarySnapshot(),
                 searchableTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
+                todayTodos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
                 errorMessage = null,
             )
         }.getOrElse { HomeUiState() },
@@ -75,13 +82,18 @@ class HomeViewModel @Inject constructor(
 
     fun refreshFromCache() {
         runCatching {
-            todoRepository.fetchDashboardSummarySnapshot() to todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
-        }.onSuccess { (summary, todos) ->
+            Triple(
+                todoRepository.fetchDashboardSummarySnapshot(),
+                todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL),
+                todoRepository.fetchTodosSnapshot(mode = TodoListMode.TODAY),
+            )
+        }.onSuccess { (summary, todos, todayTodos) ->
             _uiState.update { current ->
                 current.copy(
                     isLoading = activeLoadingRefreshes > 0,
                     summary = if (current.summary == summary) current.summary else summary,
                     searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
+                    todayTodos = if (current.todayTodos == todayTodos) current.todayTodos else todayTodos,
                     errorMessage = null,
                 )
             }
@@ -89,7 +101,7 @@ class HomeViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     isLoading = activeLoadingRefreshes > 0,
-                    errorMessage = error.userFacingMessage("Failed to load dashboard."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_load_dashboard_failed),
                 )
             }
         }
@@ -122,14 +134,19 @@ class HomeViewModel @Inject constructor(
                         )
                             .onFailure { /* fall back to local cache */ }
                     }
-                    todoRepository.fetchDashboardSummary() to todoRepository.fetchTodos(mode = TodoListMode.ALL)
-                }.onSuccess { (summary, todos) ->
+                    Triple(
+                        todoRepository.fetchDashboardSummary(),
+                        todoRepository.fetchTodos(mode = TodoListMode.ALL),
+                        todoRepository.fetchTodos(mode = TodoListMode.TODAY),
+                    )
+                }.onSuccess { (summary, todos, todayTodos) ->
                     _uiState.update { current ->
                         val keepLoading = activeLoadingRefreshes > if (showLoading) 1 else 0
                         current.copy(
                             isLoading = keepLoading,
                             summary = if (current.summary == summary) current.summary else summary,
                             searchableTodos = if (current.searchableTodos == todos) current.searchableTodos else todos,
+                            todayTodos = if (current.todayTodos == todayTodos) current.todayTodos else todayTodos,
                             errorMessage = null,
                         )
                     }
@@ -138,7 +155,7 @@ class HomeViewModel @Inject constructor(
                         val keepLoading = activeLoadingRefreshes > if (showLoading) 1 else 0
                         current.copy(
                             isLoading = keepLoading,
-                            errorMessage = error.userFacingMessage("Failed to load dashboard."),
+                            errorMessage = error.userFacingMessage(appContext, R.string.error_load_dashboard_failed),
                         )
                     }
                 }
@@ -155,7 +172,9 @@ class HomeViewModel @Inject constructor(
             runCatching { listRepository.createList(normalizedName, color = color, iconKey = iconKey) }
                 .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not create list.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_list_failed))
+                    }
                 }
         }
     }
@@ -186,7 +205,9 @@ class HomeViewModel @Inject constructor(
                         .onFailure { refreshInternal(forceSync = false, showLoading = false) }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(errorMessage = error.userFacingMessage("Could not create task.")) }
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_task_failed))
+                    }
                 }
         }
     }
@@ -304,6 +325,50 @@ class HomeViewModel @Inject constructor(
             text = text,
             referenceDueEpochMs = referenceDueEpochMs,
         )
+    }
+
+    fun completeTodo(todo: TodoItem) {
+        _uiState.update { current ->
+            current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
+        }
+        viewModelScope.launch {
+            runCatching { todoRepository.completeTodo(todo) }
+                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_complete_task_failed))
+                    }
+                    refreshFromCache()
+                }
+        }
+    }
+
+    fun deleteTodo(todo: TodoItem) {
+        _uiState.update { current ->
+            current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
+        }
+        viewModelScope.launch {
+            runCatching { todoRepository.deleteTodo(todo) }
+                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed))
+                    }
+                    refreshFromCache()
+                }
+        }
+    }
+
+    fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        viewModelScope.launch {
+            runCatching { todoRepository.updateTodo(todo, payload) }
+                .onSuccess { refreshInternal(forceSync = false, showLoading = false) }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed))
+                    }
+                }
+        }
     }
 
     val lists: List<ListSummary>

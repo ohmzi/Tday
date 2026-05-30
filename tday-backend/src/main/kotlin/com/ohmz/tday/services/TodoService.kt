@@ -87,7 +87,7 @@ class TodoServiceImpl(
         val todos = newSuspendedTransaction(Dispatchers.IO) {
             val oneOff = Todos.selectAll().where {
                 (Todos.userID eq userId) and Todos.rrule.isNull() and
-                    (Todos.completed eq false) and (Todos.due greaterEq dateRangeStart) and
+                    (Todos.completed eq false) and Todos.due.isNotNull() and (Todos.due greaterEq dateRangeStart) and
                     (Todos.due lessEq dateRangeEnd)
             }.orderBy(Todos.createdAt, SortOrder.DESC).map { it.toTodoResponse() }
 
@@ -129,9 +129,9 @@ class TodoServiceImpl(
                 fields["priority"]?.let { stmt[Todos.priority] = Priority.valueOf(it as String) }
                 fields["pinned"]?.let { stmt[Todos.pinned] = it as Boolean }
                 fields["completed"]?.let { stmt[Todos.completed] = it as Boolean }
-                fields["due"]?.let { stmt[Todos.due] = it as LocalDateTime }
-                fields["rrule"]?.let { stmt[Todos.rrule] = it as? String }
-                fields["listID"]?.let { stmt[Todos.listID] = it as? String }
+                (fields["due"] as? LocalDateTime)?.let { stmt[Todos.due] = it }
+                if (fields.containsKey("rrule")) stmt[Todos.rrule] = fields["rrule"] as? String
+                if (fields.containsKey("listID")) stmt[Todos.listID] = fields["listID"] as? String
                 stmt[Todos.updatedAt] = LocalDateTime.now()
             }
         }
@@ -187,6 +187,7 @@ class TodoServiceImpl(
                     it[CompletedTodos.rrule] = todo[Todos.rrule]
                     it[CompletedTodos.userID] = userId
                     it[CompletedTodos.instanceDate] = instanceDate
+                    it[CompletedTodos.listID] = todo[Todos.listID]
                     it[CompletedTodos.listName] = list?.get(Lists.name)
                     it[CompletedTodos.listColor] = list?.get(Lists.color)?.name
                 }
@@ -277,7 +278,7 @@ class TodoServiceImpl(
         val todos = newSuspendedTransaction(Dispatchers.IO) {
             Todos.selectAll().where {
                 (Todos.userID eq userId) and (Todos.completed eq false) and
-                    Todos.rrule.isNull() and (Todos.due less now)
+                    Todos.rrule.isNull() and Todos.due.isNotNull() and (Todos.due less now)
             }.orderBy(Todos.due, SortOrder.ASC).map { it.toTodoResponse() }
         }
         return todos.right()

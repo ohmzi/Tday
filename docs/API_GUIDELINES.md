@@ -1,15 +1,15 @@
 # API Guidelines
 
-Conventions for the T'Day REST API served by the Ktor backend.
+Conventions for the T'Day REST API served by the Ktor backend. Keep this file aligned with `shared/`, backend routes, mobile Retrofit/URLSession clients, and [`DATA_MODEL.md`](DATA_MODEL.md).
 
 ## Base URL
 
-All API routes live under `/api/`. The web SPA consumes them via same-origin requests (Vite proxy in development, same container in production). The Android and iOS clients target them at the user-configured server URL.
+All API routes live under `/api/`. The web SPA consumes them via same-origin requests (Vite proxy in development, same container in production). Android and iOS clients target them at the user-configured server URL in Server Mode. Local Mode does not call the API.
 
 ## Authentication
 
 - All routes require a valid JWE session unless listed as public.
-- Public routes: `/api/auth/*` (CSRF, register, login-challenge, credentials-key, callback), `/api/mobile/probe`, `/health`.
+- Public routes: `/api/auth/*` (CSRF, register, login-challenge, credentials-key, callback), `/api/mobile/probe`, `/.well-known/apple-app-site-association`, `/apple-app-site-association`, `/.well-known/assetlinks.json`, `/health`.
 - Authentication is enforced by a **Ktor pipeline intercept** in `Security.kt`:
   1. Reads a JWE token from `Authorization: Bearer` header or session cookies.
   2. Decodes and validates claims (expiry, `tokenVersion`, role, approval status).
@@ -149,6 +149,8 @@ route("/api/todo") {
 
 Services return `Either<AppError, T>` (Arrow) for typed error handling. Routes fold the result into HTTP responses.
 
+Shared route constants live in `shared/src/commonMain/kotlin/com/ohmz/tday/shared/routes/ApiRoutes.kt`. Add or update those constants with backend route changes so backend, Android, and iOS have one contract reference point.
+
 ## Tenant Isolation
 
 - **Every** data query must filter by `userID` from the authenticated session.
@@ -194,7 +196,24 @@ Services return `Either<AppError, T>` (Arrow) for typed error handling. Routes f
 | POST | `/api/todo/nlp` | Natural language date/title parsing |
 | POST | `/api/todo/summary` | AI-powered task summary |
 
+### Floaters
+
+Floaters are unscheduled Anytime tasks. They are not scheduled todos with a nullable due date.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/floater` | List all active floaters |
+| POST | `/api/floater` | Create a floater |
+| PATCH | `/api/floater` | Update a floater |
+| DELETE | `/api/floater` | Delete a floater |
+| PATCH | `/api/floater/complete` | Complete a floater |
+| PATCH | `/api/floater/uncomplete` | Restore a completed floater to active |
+| PATCH | `/api/floater/prioritize` | Change floater priority |
+| PATCH | `/api/floater/reorder` | Reorder floaters |
+
 ### Lists
+
+Lists group scheduled tasks.
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -203,6 +222,18 @@ Services return `Either<AppError, T>` (Arrow) for typed error handling. Routes f
 | PATCH | `/api/list` | Update a list |
 | DELETE | `/api/list` | Delete a list |
 | GET | `/api/list/{id}` | Get list with its todos |
+
+### Floater Lists
+
+Floater lists group floaters.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/floaterList` | List all floater lists |
+| POST | `/api/floaterList` | Create a floater list |
+| PATCH | `/api/floaterList` | Update a floater list |
+| DELETE | `/api/floaterList` | Delete one or many floater lists |
+| GET | `/api/floaterList/{id}` | Get floater list with its floaters |
 
 ### User
 
@@ -235,8 +266,16 @@ Services return `Either<AppError, T>` (Arrow) for typed error handling. Routes f
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/api/completedTodo` | List completed todos |
-| DELETE | `/api/completedTodo` | Delete all completed todos |
-| PATCH | `/api/completedTodo` | Remove a single completed todo |
+| DELETE | `/api/completedTodo` | Delete all completed todos, or delete one when an `id` body is supplied |
+| PATCH | `/api/completedTodo` | Update a completed todo, or remove it when no update fields are supplied |
+
+### Completed Floaters
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/completedFloater` | List completed floaters |
+| DELETE | `/api/completedFloater` | Delete all or one completed floater |
+| PATCH | `/api/completedFloater` | Update or remove a completed floater |
 
 ### Timezone
 
@@ -254,21 +293,33 @@ Services return `Either<AppError, T>` (Arrow) for typed error handling. Routes f
 
 | Method | Path | Purpose | Auth |
 |--------|------|---------|------|
-| GET | `/api/mobile/probe` | Server discovery | Public |
+| GET | `/api/mobile/probe` | Server discovery, compatibility/version metadata, optional encrypted probe payload | Public |
 
-## Cache Headers
+### App Association Files
 
-- Private API responses include `Cache-Control: no-store` (set by the web API client).
+| Method | Path | Purpose | Auth |
+|--------|------|---------|------|
+| GET | `/.well-known/apple-app-site-association` | iOS webcredentials/deep-link association | Public |
+| GET | `/apple-app-site-association` | iOS association fallback path | Public |
+| GET | `/.well-known/assetlinks.json` | Android app links association | Public |
+
+## Cache Behavior
+
+- The web API client sends private API requests with `cache: "no-store"` so browser fetch caching does not serve stale authenticated data.
+- Routes that return compatibility or discovery metadata, such as `/api/mobile/probe`, should set explicit `Cache-Control: no-store` response headers.
 - Security headers (CSP, HSTS, etc.) are applied by the Ktor `SecurityHeaders` plugin.
 - Static SPA assets are served from the filesystem when `STATIC_FILES_DIR` is set.
 
 ## Adding a New Endpoint
 
-1. Add a route function in `routes/<domain>.kt` (or create a new file for a new domain).
-2. Use `call.withAuth { }` for authenticated routes.
-3. Validate input using Konform validators or shared model validation.
-4. Delegate to a service in `services/`.
-5. Filter data by `userID` for tenant isolation.
-6. Use appropriate HTTP status codes.
-7. Add tests in `tday-backend/src/test/kotlin/` if the endpoint involves security or complex logic.
-8. Update this document with the new route.
+1. Add or update shared request/response models in `shared/` when the endpoint is consumed outside the backend.
+2. Add a route function in `routes/<domain>.kt` (or create a new file for a new domain).
+3. Use `call.withAuth { }` for authenticated routes.
+4. Validate input using Konform validators or shared model validation.
+5. Delegate to a service in `services/`.
+6. Filter data by `userID` for tenant isolation.
+7. Use appropriate HTTP status codes.
+8. Update Android Retrofit and iOS URLSession clients when mobile consumes it.
+9. Update local cache/sync models if the route changes mobile persisted data.
+10. Add tests in `tday-backend/src/test/kotlin/` if the endpoint involves security or complex logic.
+11. Update this document with the new route.

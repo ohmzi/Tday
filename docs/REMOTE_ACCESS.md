@@ -2,6 +2,8 @@
 
 How to reach your self-hosted T'Day instance from outside the local network.
 
+Remote access is only required for Server Mode. Android and iOS can run in Local Mode without any tunnel, VPN, public URL, or backend deployment.
+
 ## Background
 
 By default, Docker Compose binds the backend to **`127.0.0.1:2525`** (localhost only). This means no external device — phone, laptop on another network, or browser outside the LAN — can reach T'Day directly. You need an ingress method that bridges external clients to `localhost:2525` on the Docker host.

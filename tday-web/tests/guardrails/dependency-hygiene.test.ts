@@ -191,6 +191,10 @@ describe("dependency and configuration hygiene", () => {
       "README.md",
       "CONTRIBUTING.md",
       "SECURITY.md",
+      "AGENTS.md",
+      "docs/PRODUCT_DIRECTION.md",
+      "docs/DATA_MODEL.md",
+      "docs/REPO_HOUSEKEEPING.md",
       "docs/ARCHITECTURE.md",
       "docs/CODING_STANDARDS.md",
       "docs/API_GUIDELINES.md",
@@ -205,11 +209,15 @@ describe("dependency and configuration hygiene", () => {
   });
 
   describe("version synchronization", () => {
-    it("tday-web package.json version should be a valid semver", () => {
+    function packageVersion(): string {
       const pkg = readJSON(path.join(ROOT, "package.json")) as {
         version: string;
       };
-      expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
+      return pkg.version;
+    }
+
+    it("tday-web package.json version should be a valid semver", () => {
+      expect(packageVersion()).toMatch(/^\d+\.\d+\.\d+$/);
     });
 
     it("Android build.gradle.kts should derive version from package.json", () => {
@@ -224,6 +232,50 @@ describe("dependency and configuration hygiene", () => {
         expect(content).toContain("package.json");
         expect(content).toContain("projectVersion");
       }
+    });
+
+    it("iOS checked-in version mirrors should match package.json", () => {
+      const version = packageVersion();
+      const infoPlist = readSource(
+        path.join(MONO, "ios-swiftUI", "Tday", "Info.plist"),
+      );
+      const projectYml = readSource(path.join(MONO, "ios-swiftUI", "project.yml"));
+      const pbxproj = readSource(
+        path.join(MONO, "ios-swiftUI", "TdayApp.xcodeproj", "project.pbxproj"),
+      );
+
+      expect(infoPlist).toContain(`<key>CFBundleShortVersionString</key>`);
+      expect(infoPlist).toContain(`<string>${version}</string>`);
+      expect(projectYml).toContain(`MARKETING_VERSION: ${version}`);
+      expect(pbxproj.match(/MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);/g)).toEqual([
+        `MARKETING_VERSION = ${version};`,
+        `MARKETING_VERSION = ${version};`,
+      ]);
+    });
+
+    it("backend compatibility examples should match package.json", () => {
+      const version = packageVersion();
+      for (const envPath of [
+        path.join(MONO, ".env.example"),
+        path.join(MONO, "tday-backend", ".env.example"),
+      ]) {
+        const content = readSource(envPath);
+        expect(content).toMatch(new RegExp(`^TDAY_APP_VERSION=${version}$`, "m"));
+      }
+    });
+
+    it("postversion hook should stage every checked-in version mirror", () => {
+      const pkg = readJSON(path.join(ROOT, "package.json")) as {
+        scripts?: Record<string, string>;
+      };
+      const postversion = pkg.scripts?.postversion ?? "";
+
+      expect(postversion).toContain("scripts/sync-ios-version.sh");
+      expect(postversion).toContain("ios-swiftUI/Tday/Info.plist");
+      expect(postversion).toContain("ios-swiftUI/project.yml");
+      expect(postversion).toContain("ios-swiftUI/TdayApp.xcodeproj/project.pbxproj");
+      expect(postversion).toContain(".env.example");
+      expect(postversion).toContain("tday-backend/.env.example");
     });
   });
 });

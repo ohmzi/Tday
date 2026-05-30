@@ -13,12 +13,15 @@
     <string name="action_edit">Edit</string>
     <string name="action_edit_task">Edit task</string>
     <string name="action_delete_task">Delete task</string>
+    <string name="action_delete_list">Delete list</string>
     <string name="action_delete">Delete</string>
     <string name="action_complete">Complete</string>
     <string name="action_more">More</string>
     <string name="action_more_options">More options</string>
     <string name="action_save">Save</string>
+    <string name="action_save_task">Save task</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_done">Done</string>
     <string name="action_create">Create</string>
     <string name="action_ok">OK</string>
     <string name="action_sign_out">Sign out</string>
@@ -30,6 +33,8 @@
     <string name="label_task_list">Task list</string>
     <string name="label_priority_task">Priority task</string>
     <string name="label_loading">Loading…</string>
+    <string name="label_version_name">v%1$s</string>
+    <string name="label_server">Server</string>
 
     <!-- Home screen -->
     <string name="home_title">T\'Day</string>
@@ -40,6 +45,8 @@
     <string name="home_category_priority">Priority</string>
     <string name="home_category_completed">Completed</string>
     <string name="home_category_calendar">Calendar</string>
+    <string name="root_feed_tab_home">Home</string>
+    <string name="root_feed_tab_floater">Floater</string>
     <string name="home_search_placeholder">Search</string>
     <string name="home_search_no_results">No matching tasks</string>
     <string name="home_my_lists">My Lists</string>
@@ -49,6 +56,50 @@
     <string name="home_section_color">Color</string>
     <string name="home_section_icon">Icon</string>
     <string name="home_list_icon_option">Select %1$s list icon</string>
+    <string name="home_locked_list_name">Sign in to load your lists</string>
+
+    <string-array name="splash_taglines">
+        <item>Your server remembers, so you don’t have to</item>
+        <item>Hosted by you, haunted by deadlines</item>
+        <item>Because ‘I’ll remember later’ is always a lie</item>
+        <item>Self-hosted sanity, one task at a time</item>
+        <item>Nagging you from your own hardware</item>
+        <item>Your data, your server, your no-excuse zone</item>
+        <item>Making procrastination slightly harder since v0.1</item>
+        <item>Running on your server, running your life</item>
+        <item>Because sticky notes don’t have push notifications</item>
+        <item>Turning ‘I forgot’ into ‘I got this’</item>
+        <item>Your personal nudge machine</item>
+        <item>Self-hosted, self-organized… well, getting there</item>
+        <item>Where forgotten tasks go to get found</item>
+        <item>Adulting, but make it self-hosted</item>
+        <item>Taming chaos from a server near you</item>
+        <item>Future you says thanks in advance</item>
+        <item>The cloud is just someone else’s server. This one’s yours.</item>
+        <item>Organizing your life, no landlord required</item>
+        <item>Zero trust… except your own server</item>
+        <item>Syncing your tasks, judging your priorities</item>
+        <item>Today called. It wants a plan.</item>
+        <item>Making later file a formal request</item>
+        <item>Turning chaos into checkboxes</item>
+        <item>Your tasks are lining up nicely</item>
+        <item>A private server with opinions about your priorities</item>
+        <item>For when your brain opens too many tabs</item>
+        <item>Scheduling the chaos before it schedules you</item>
+        <item>Your lists have entered their productive era</item>
+        <item>A tiny operations desk for future you</item>
+        <item>Because vibes are not a task strategy</item>
+        <item>Private tasks. Better mornings.</item>
+        <item>Making your backlog feel seen, then sorted</item>
+        <item>Where scattered thoughts get assigned seating</item>
+        <item>Your priorities just got a home address</item>
+        <item>Sync first, panic later</item>
+        <item>Calendar drama, now with containment</item>
+        <item>Deadlines hate this one self-hosted trick</item>
+        <item>Helping your day stop freelancing</item>
+        <item>Your reminders came prepared</item>
+        <item>Turning I should into scheduled</item>
+    </string-array>
 
     <!-- Settings screen -->
     <string name="settings_title">Settings</string>
@@ -61,12 +112,27 @@
     <string name="settings_ai_task_summary">AI task summary</string>
     <string name="settings_saving_admin">Saving admin setting…</string>
     <string name="settings_ai_unavailable_title">AI Summary Unavailable</string>
+    <string name="settings_default_reminder">Default reminder</string>
+    <string name="settings_update_available_version">v%1$s available</string>
+    <string name="settings_server_compatible">Compatible</string>
+    <string name="settings_server_incompatible">Incompatible</string>
 
     <!-- Onboarding / wizard -->
     <string name="onboarding_title">Set Up T\'Day</string>
-    <string name="onboarding_subtitle">Secure onboarding wizard</string>
+    <string name="onboarding_subtitle">Set up your workspace</string>
+    <string name="onboarding_step_mode">Mode</string>
     <string name="onboarding_step_server">Server</string>
     <string name="onboarding_step_login">Login</string>
+    <string name="onboarding_mode_title">Choose your setup</string>
+    <string name="onboarding_mode_subtitle">Pick where T\'Day keeps your tasks.</string>
+    <string name="onboarding_mode_server_title">Self-hosted server</string>
+    <string name="onboarding_mode_server_subtitle">Use accounts, sync, and your backend.</string>
+    <string name="onboarding_mode_server_short_title">Self-hosted</string>
+    <string name="onboarding_mode_server_short_subtitle">Accounts and sync</string>
+    <string name="onboarding_mode_local_short_title">This device</string>
+    <string name="onboarding_mode_local_short_subtitle">No login</string>
+    <string name="onboarding_mode_local_subtitle">No login. Data stays in app storage.</string>
+    <string name="onboarding_server_hero_subtitle">Connect your T\'Day endpoint.</string>
     <string name="onboarding_server_url_label">Server URL</string>
     <string name="onboarding_server_url_placeholder">https://app.example.com</string>
     <string name="onboarding_reset_trust">Reset trusted server</string>
@@ -74,11 +140,15 @@
     <string name="onboarding_connect">Connect</string>
     <string name="onboarding_connecting_title">Connecting to server…</string>
     <string name="onboarding_connecting_subtitle">Checking endpoint, TLS, and workspace settings</string>
+    <string name="onboarding_use_device_only">Use this device only</string>
     <string name="onboarding_email_label">Email</string>
     <string name="onboarding_password_label">Password</string>
     <string name="onboarding_sign_in">Sign in</string>
+    <string name="onboarding_login_hero_subtitle">Open your synced workspace.</string>
     <string name="onboarding_create_account">Create account</string>
+    <string name="onboarding_register_hero_subtitle">Create your server account.</string>
     <string name="onboarding_change_server">Change server</string>
+    <string name="onboarding_change_setup">Change setup</string>
     <string name="onboarding_first_name_label">First name</string>
     <string name="onboarding_confirm_password_label">Confirm password</string>
     <string name="onboarding_creating_account">Creating account…</string>
@@ -97,8 +167,23 @@
     <string name="onboarding_validation_password_special">Password must include at least one special character</string>
     <string name="onboarding_validation_password_mismatch">Passwords do not match</string>
 
+    <!-- Authentication / credential messages -->
+    <string name="auth_pending_admin_approval">Account pending admin approval.</string>
+    <string name="auth_password_manager_save_server_url_failed">Android Password Manager could not save this server URL. Check that a password manager is enabled.</string>
+    <string name="auth_password_manager_save_login_failed">Android Password Manager could not save this login. Check that a password manager is enabled.</string>
+    <string name="auth_error_incorrect_credentials">Incorrect email or password</string>
+    <string name="auth_error_server_unreachable">Cannot reach server. Check your server URL and try again.</string>
+
     <!-- Todo list screen -->
     <string name="todos_summarize">Summarize tasks</string>
+    <string name="todos_title_tasks">Tasks</string>
+    <string name="todos_title_today">Today</string>
+    <string name="todos_title_overdue">Overdue</string>
+    <string name="todos_title_scheduled">Scheduled</string>
+    <string name="todos_title_all_tasks">All Tasks</string>
+    <string name="todos_title_priority">Priority</string>
+    <string name="todos_title_floater">Floater</string>
+    <string name="todos_title_list">List</string>
     <string name="todos_empty_today">No tasks for today</string>
     <string name="todos_empty_overdue">No overdue tasks</string>
     <string name="todos_empty_priority">No priority tasks</string>
@@ -112,13 +197,47 @@
     <string name="todos_section_today">Today</string>
     <string name="todos_section_tomorrow">Tomorrow</string>
     <string name="todos_section_rest_of">Rest of %1$s</string>
+    <string name="todos_reschedule_recurring_title">Move repeating task?</string>
+    <string name="todos_reschedule_recurring_message">Choose whether to move only this task occurrence or the entire repeating series.</string>
+    <string name="todos_reschedule_this_occurrence">This occurrence</string>
+    <string name="todos_reschedule_entire_series">Entire series</string>
     <string name="todos_summary_title">Summary</string>
     <string name="todos_summary_close">Close summary</string>
     <string name="todos_summary_loading">Creating your task summary…</string>
+    <string name="todos_summary_admin_disabled">AI summary is disabled by admin</string>
+    <string name="todos_summary_modes_unavailable">Summary is available only for Today, Scheduled, All, and Priority</string>
     <string name="todos_list_settings">List settings</string>
     <string name="todos_save_list_settings">Save list settings</string>
+    <string name="todos_delete_list_title">Delete list?</string>
+    <string name="todos_delete_list_message">This will delete this list, every task in it, and completed history for those tasks.</string>
     <string name="todos_due_overdue_text">Overdue, %1$s</string>
     <string name="todos_due_text">Due %1$s</string>
+
+    <!-- Create/edit task sheet -->
+    <string name="create_task_title_new">New task</string>
+    <string name="create_task_title_edit">Edit task</string>
+    <string name="create_task_section_schedule">Schedule</string>
+    <string name="create_task_due">Due</string>
+    <string name="create_task_section_details">Details</string>
+    <string name="create_task_list">List</string>
+    <string name="create_task_no_list">No list</string>
+    <string name="create_task_priority">Priority</string>
+    <string name="create_task_priority_low">Low</string>
+    <string name="create_task_priority_medium">Medium</string>
+    <string name="create_task_priority_high">High</string>
+    <string name="create_task_repeat">Repeat</string>
+    <string name="create_task_repeat_none">No repeat</string>
+    <string name="create_task_repeat_daily">Daily</string>
+    <string name="create_task_repeat_weekly">Weekly</string>
+    <string name="create_task_repeat_weekdays">Weekdays</string>
+    <string name="create_task_repeat_monthly">Monthly</string>
+    <string name="create_task_repeat_yearly">Yearly</string>
+    <string name="create_task_title_placeholder">Title</string>
+    <string name="create_task_notes_placeholder">Notes</string>
+    <string name="create_task_schedule_enabled">Task has a due date</string>
+    <string name="create_task_schedule_disabled">Floater task</string>
+    <string name="create_task_select_date">Select date</string>
+    <string name="create_task_select_time">Select time</string>
 
     <!-- Completed screen -->
     <string name="completed_title">Completed</string>
@@ -151,10 +270,37 @@
     <string name="offline_banner_pending_one">1 change waiting to sync</string>
     <string name="offline_banner_pending_many">%1$d changes waiting to sync</string>
     <string name="error_auth_expired">Session expired. Please sign in again.</string>
+    <string name="error_app_outdated">This version of the app is out of date. Please update to continue.</string>
     <string name="error_server">Server error. Please try again later.</string>
+    <string name="error_permission_denied">You don\'t have permission to do that.</string>
+    <string name="error_not_found">The requested item was not found.</string>
+    <string name="error_connection">Connection error. Check your internet and try again.</string>
     <string name="error_connectivity_title">No Internet Connection</string>
     <string name="error_connectivity">Unable to connect. Please check your network connection and try again.</string>
     <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_load_failed">Failed to load.</string>
+    <string name="error_load_dashboard_failed">Failed to load dashboard.</string>
+    <string name="error_load_calendar_failed">Failed to load calendar.</string>
+    <string name="error_load_tasks_failed">Failed to load tasks.</string>
+    <string name="error_create_task_failed">Could not create task.</string>
+    <string name="error_update_task_failed">Could not update task.</string>
+    <string name="error_complete_task_failed">Could not complete task.</string>
+    <string name="error_delete_task_failed">Could not delete task.</string>
+    <string name="error_restore_task_failed">Could not restore task.</string>
+    <string name="error_create_list_failed">Could not create list.</string>
+    <string name="error_update_list_failed">Could not update list.</string>
+    <string name="error_delete_list_failed">Could not delete list.</string>
+    <string name="error_summarize_tasks_failed">Could not summarize tasks.</string>
+    <string name="error_load_admin_settings_failed">Could not load admin settings</string>
+    <string name="error_update_admin_settings_failed">Could not update admin settings</string>
+    <string name="error_reset_trusted_server_failed">Could not reset trusted server.</string>
+    <string name="error_connect_server_failed">Could not connect to server.</string>
+    <string name="server_setup_error_probe_timeout">Server probe timed out. Check URL and network, then try again.</string>
+    <string name="server_setup_error_invalid_url">Invalid server URL.</string>
+    <string name="server_setup_error_insecure_transport">Use HTTPS for remote server URLs.</string>
+    <string name="server_setup_error_not_tday_server">Server is reachable but does not appear to be a T\'Day server.</string>
+    <string name="server_setup_trust_refreshing">Saved server trust changed. Trying again with a refreshed certificate.</string>
+    <string name="server_setup_trust_refresh_failed">The app could not recover from a saved server trust mismatch automatically. Clear app storage or reinstall the app, then try again.</string>
 
     <string name="notification_channel_task_reminders_name">Task Reminders</string>
     <string name="notification_channel_task_reminders_description">Reminders for upcoming task due dates</string>
@@ -163,7 +309,22 @@
     <string name="update_notification_title">Update installed</string>
     <string name="update_notification_message">Tap to reopen T\'Day.</string>
 
+    <string name="app_update_required_title">Update Required</string>
+    <string name="app_update_required_message">An update to v%1$s is required to continue.</string>
+    <string name="app_update_download_not_ready">v%1$s is not yet available for download. Please ask an administrator to upload the update.</string>
+    <string name="server_update_required_title">Server Update Needed</string>
+    <string name="server_update_required_message">Your app requires a newer server version. The server is on v%1$s. Please contact your administrator to update the server.</string>
+    <string name="install_permission_return_to_app">Grant install permission, then return to the app.</string>
+    <string name="install_permission_return_here">Grant install permission, then return here.</string>
+    <string name="overlay_install_awaiting_permission">Awaiting Permission...</string>
+    <string name="overlay_install_downloading_progress">Downloading... %1$d%%</string>
+    <string name="overlay_install_downloading">Downloading...</string>
+    <string name="overlay_install_installing">Installing...</string>
+    <string name="overlay_install_download_and_install">Download &amp; Install</string>
+
     <string name="widget_today_tasks_description">Shows today\'s tasks at a glance</string>
+    <string name="widget_today_tasks_title">Today\'s Tasks</string>
+    <string name="widget_today_tasks_empty">No tasks due today</string>
     <string name="widget_loading">Loading tasks…</string>
 
     <!-- Settings: updates -->
@@ -173,6 +334,8 @@
     <string name="release_title">App Version</string>
     <string name="release_error">Unable to fetch release information. Please check your connection and try again.</string>
     <string name="release_installed_version">Installed Version</string>
+    <string name="release_installed_label">Installed</string>
+    <string name="release_latest_label">Latest</string>
     <string name="release_update_available">Update Available</string>
     <string name="release_up_to_date">Latest</string>
     <string name="release_up_to_date_message">You\'re running the latest version</string>

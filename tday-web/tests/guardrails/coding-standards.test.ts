@@ -71,13 +71,7 @@ describe("TypeScript coding standards", () => {
           }
         }
       }
-      if (violations.length > 0) {
-        console.warn(
-          `Advisory: ${violations.length} non-null assertion(s) found.\n` +
-          violations.join("\n"),
-        );
-      }
-      expect(true).toBe(true);
+      expect(violations).toEqual([]);
     });
   });
 
@@ -99,13 +93,7 @@ describe("TypeScript coding standards", () => {
           }
         }
       }
-      if (violations.length > 0) {
-        console.warn(
-          `Advisory: ${violations.length} 'as any' cast(s) without justification.\n` +
-          violations.join("\n"),
-        );
-      }
-      expect(true).toBe(true);
+      expect(violations).toEqual([]);
     });
   });
 
@@ -159,13 +147,28 @@ describe("TypeScript coding standards", () => {
           }
         }
       }
-      if (violations.length > 0) {
-        console.warn(
-          `Advisory: ${violations.length} console.log() call(s) in production source.\n` +
-          violations.join("\n"),
-        );
+      expect(violations).toEqual([]);
+    });
+  });
+
+  describe("no deep relative imports in source", () => {
+    it("should use the @/ alias instead of ../../ imports", () => {
+      const DEEP_RELATIVE_IMPORT =
+        /(?:from\s+|import\s*\(\s*)["']\.\.\/(?:\.\.\/)+/;
+      const violations: string[] = [];
+
+      for (const file of TS_FILES) {
+        const content = readSource(file);
+        const lines = content.split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (DEEP_RELATIVE_IMPORT.test(line)) {
+            violations.push(`${relPath(file)}:${i + 1} → ${line.trim()}`);
+          }
+        }
       }
-      expect(true).toBe(true);
+
+      expect(violations).toEqual([]);
     });
   });
 });
@@ -196,13 +199,7 @@ describe("Kotlin coding standards", () => {
           }
         }
       }
-      if (violations.length > 0) {
-        console.warn(
-          `Advisory: ${violations.length} Kotlin force-unwrap(s) found.\n` +
-          violations.join("\n"),
-        );
-      }
-      expect(true).toBe(true);
+      expect(violations).toEqual([]);
     });
   });
 

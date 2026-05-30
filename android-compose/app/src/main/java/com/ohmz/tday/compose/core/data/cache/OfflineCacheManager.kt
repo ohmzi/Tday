@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.net.CookieManager
 import javax.inject.Inject
@@ -29,8 +28,11 @@ class OfflineCacheManager @Inject constructor(
     private val cookieManager: CookieManager,
 ) {
     private val todoDao = database.todoDao()
+    private val floaterDao = database.floaterDao()
     private val listDao = database.listDao()
+    private val floaterListDao = database.floaterListDao()
     private val completedDao = database.completedDao()
+    private val completedFloaterDao = database.completedFloaterDao()
     private val mutationDao = database.mutationDao()
     private val syncMetadataDao = database.syncMetadataDao()
 
@@ -78,8 +80,11 @@ class OfflineCacheManager @Inject constructor(
     fun loadOfflineState(): OfflineSyncState {
         ensureMigrated()
         val todos = todoDao.getAll().map { it.toRecord() }
+        val floaters = floaterDao.getAll().map { it.toRecord() }
         val lists = listDao.getAll().map { it.toRecord() }
+        val floaterLists = floaterListDao.getAll().map { it.toRecord() }
         val completed = completedDao.getAll().map { it.toRecord() }
+        val completedFloaters = completedFloaterDao.getAll().map { it.toRecord() }
         val mutations = mutationDao.getAll().map { it.toRecord() }
         val metadata = syncMetadataDao.get()
 
@@ -87,8 +92,11 @@ class OfflineCacheManager @Inject constructor(
             lastSuccessfulSyncEpochMs = metadata?.lastSuccessfulSyncEpochMs ?: 0L,
             lastSyncAttemptEpochMs = metadata?.lastSyncAttemptEpochMs ?: 0L,
             todos = todos,
+            floaters = floaters,
             completedItems = completed,
+            completedFloaters = completedFloaters,
             lists = lists,
+            floaterLists = floaterLists,
             pendingMutations = mutations,
             aiSummaryEnabled = metadata?.aiSummaryEnabled ?: true,
         )
@@ -99,11 +107,20 @@ class OfflineCacheManager @Inject constructor(
     fun saveOfflineState(state: OfflineSyncState) {
         ensureMigrated()
         val previous = lastPersistedState ?: loadOfflineState()
-        if (previous == state) return
+        val normalizedState = if (secureConfigStore.isLocalMode()) {
+            state.copy(
+                lastSuccessfulSyncEpochMs = 0L,
+                lastSyncAttemptEpochMs = 0L,
+                pendingMutations = emptyList(),
+            )
+        } else {
+            state
+        }
+        if (previous == normalizedState) return
 
-        persistStateToDaos(state)
-        lastPersistedState = state
-        if (hasUiDataChanges(previous, state)) {
+        persistStateToDaos(normalizedState)
+        lastPersistedState = normalizedState
+        if (hasUiDataChanges(previous, normalizedState)) {
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
         }
     }
@@ -117,8 +134,11 @@ class OfflineCacheManager @Inject constructor(
     fun hasCachedData(): Boolean {
         ensureMigrated()
         if (todoDao.count() > 0) return true
+        if (floaterDao.count() > 0) return true
         if (listDao.count() > 0) return true
+        if (floaterListDao.count() > 0) return true
         if (completedDao.count() > 0) return true
+        if (completedFloaterDao.count() > 0) return true
         return mutationDao.count() > 0
     }
 
@@ -159,10 +179,16 @@ class OfflineCacheManager @Inject constructor(
         database.runInTransaction {
             todoDao.deleteAll()
             todoDao.insertAll(state.todos.map { it.toEntity() })
+            floaterDao.deleteAll()
+            floaterDao.insertAll(state.floaters.map { it.toEntity() })
             listDao.deleteAll()
             listDao.insertAll(state.lists.map { it.toEntity() })
+            floaterListDao.deleteAll()
+            floaterListDao.insertAll(state.floaterLists.map { it.toEntity() })
             completedDao.deleteAll()
             completedDao.insertAll(state.completedItems.map { it.toEntity() })
+            completedFloaterDao.deleteAll()
+            completedFloaterDao.insertAll(state.completedFloaters.map { it.toEntity() })
             mutationDao.deleteAll()
             mutationDao.insertAll(state.pendingMutations.map { it.toEntity() })
             syncMetadataDao.upsert(
@@ -180,8 +206,11 @@ class OfflineCacheManager @Inject constructor(
         next: OfflineSyncState,
     ): Boolean {
         return previous.todos != next.todos ||
+                previous.floaters != next.floaters ||
             previous.completedItems != next.completedItems ||
+                previous.completedFloaters != next.completedFloaters ||
             previous.lists != next.lists ||
+                previous.floaterLists != next.floaterLists ||
             previous.aiSummaryEnabled != next.aiSummaryEnabled
     }
 

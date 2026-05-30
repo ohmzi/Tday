@@ -1,6 +1,7 @@
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 
 export function usePinListTodo() {
@@ -13,7 +14,7 @@ export function usePinListTodo() {
         url: "/api/todo",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: todoItem.id.split(":")[0],
+          id: canonicalTodoId(todoItem.id),
           pinned: !todoItem.pinned,
         }),
       });

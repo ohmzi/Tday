@@ -1,7 +1,9 @@
 package com.ohmz.tday.compose.feature.calendar
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
@@ -10,18 +12,23 @@ import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.model.movedDuePreservingTime
+import com.ohmz.tday.compose.core.model.repositoryTargetForReschedule
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 data class CalendarUiState(
@@ -40,13 +47,15 @@ class CalendarViewModel @Inject constructor(
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
     private val reminderScheduler: TaskReminderScheduler,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         runCatching {
             CalendarUiState(
                 isLoading = false,
-                items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED),
+                items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
+                    .filter { it.due != null },
                 completedItems = completedRepository.fetchCompletedItemsSnapshot(),
                 lists = listRepository.fetchListsSnapshot(),
                 errorMessage = null,
@@ -92,7 +101,8 @@ class CalendarViewModel @Inject constructor(
 
     private fun hydrateFromCache() {
         runCatching {
-            val todos = todoRepository.fetchTodosSnapshot(mode = TodoListMode.SCHEDULED)
+            val todos =
+                todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL).filter { it.due != null }
             val completedItems = completedRepository.fetchCompletedItemsSnapshot()
             val lists = listRepository.fetchListsSnapshot()
             Triple(todos, completedItems, lists)
@@ -135,7 +145,8 @@ class CalendarViewModel @Inject constructor(
                     )
                         .onFailure { /* fall back to cache */ }
                 }
-                val todos = todoRepository.fetchTodos(mode = TodoListMode.SCHEDULED)
+                val todos =
+                    todoRepository.fetchTodos(mode = TodoListMode.ALL).filter { it.due != null }
                 val completedItems = completedRepository.fetchCompletedItems()
                 val lists = listRepository.fetchLists()
                 Triple(todos, completedItems, lists)
@@ -157,7 +168,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
-                        errorMessage = error.userFacingMessage("Failed to load calendar."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_load_calendar_failed),
                     )
                 }
             }
@@ -174,7 +185,7 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.update { current ->
-                    current.copy(errorMessage = error.userFacingMessage("Could not create task."))
+                    current.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_create_task_failed))
                 }
             }
         }
@@ -198,7 +209,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         items = previousItems,
-                        errorMessage = error.userFacingMessage("Could not complete task."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_complete_task_failed),
                     )
                 }
             }
@@ -223,7 +234,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         completedItems = previousCompletedItems,
-                        errorMessage = error.userFacingMessage("Could not restore task."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_restore_task_failed),
                     )
                 }
             }
@@ -231,6 +242,50 @@ class CalendarViewModel @Inject constructor(
     }
 
     fun updateTask(todo: TodoItem, payload: CreateTaskPayload) {
+        updateTaskInternal(
+            visibleTodo = todo,
+            repositoryTodo = todo,
+            payload = payload,
+        )
+    }
+
+    fun moveTask(todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) {
+        val due = todo.due ?: return
+        val movedDue = movedDuePreservingTime(due, targetDate)
+        val previousState = _uiState.value
+        val updatedTodo = todo.copy(due = movedDue)
+
+        _uiState.update { current ->
+            current.copy(
+                items = current.items.map { item ->
+                    if (item.id == todo.id) updatedTodo else item
+                },
+                errorMessage = null,
+            )
+        }
+
+        viewModelScope.launch {
+            runCatching {
+                todoRepository.moveTodo(
+                    todo = todo.repositoryTargetForReschedule(scope),
+                    due = movedDue,
+                )
+            }.onSuccess {
+                rescheduleReminders()
+                loadInternal(forceSync = false, showLoading = false)
+            }.onFailure { error ->
+                _uiState.value = previousState.copy(
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
+                )
+            }
+        }
+    }
+
+    private fun updateTaskInternal(
+        visibleTodo: TodoItem,
+        repositoryTodo: TodoItem,
+        payload: CreateTaskPayload,
+    ) {
         val normalizedTitle = payload.title.trim()
         if (normalizedTitle.isBlank()) return
 
@@ -244,7 +299,7 @@ class CalendarViewModel @Inject constructor(
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
 
         val previousState = _uiState.value
-        val optimisticTodo = todo.copy(
+        val optimisticTodo = visibleTodo.copy(
             title = normalizedTitle,
             description = normalizedDescription,
             priority = normalizedPriority,
@@ -256,7 +311,7 @@ class CalendarViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 items = current.items.map { item ->
-                    if (item.id == todo.id) optimisticTodo else item
+                    if (item.id == visibleTodo.id) optimisticTodo else item
                 },
                 errorMessage = null,
             )
@@ -265,7 +320,7 @@ class CalendarViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 todoRepository.updateTodo(
-                    todo = todo,
+                    todo = repositoryTodo,
                     payload = CreateTaskPayload(
                         title = normalizedTitle,
                         description = normalizedDescription,
@@ -280,7 +335,7 @@ class CalendarViewModel @Inject constructor(
                 loadInternal(forceSync = false, showLoading = false)
             }.onFailure { error ->
                 _uiState.value = previousState.copy(
-                    errorMessage = error.userFacingMessage("Could not update task."),
+                    errorMessage = error.userFacingMessage(appContext, R.string.error_update_task_failed),
                 )
             }
         }
@@ -305,7 +360,7 @@ class CalendarViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         items = previousItems,
-                        errorMessage = error.userFacingMessage("Could not delete task."),
+                        errorMessage = error.userFacingMessage(appContext, R.string.error_delete_task_failed),
                     )
                 }
             }

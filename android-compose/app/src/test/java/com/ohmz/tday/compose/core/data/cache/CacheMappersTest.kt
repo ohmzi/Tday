@@ -37,7 +37,7 @@ class CacheMappersTest {
         assertEquals(todo.title, cached.title)
         assertEquals(todo.description, cached.description)
         assertEquals(todo.priority, cached.priority)
-        assertEquals(todo.due.toEpochMilli(), cached.dueEpochMs)
+        assertEquals(todo.due?.toEpochMilli(), cached.dueEpochMs)
         assertEquals(todo.rrule, cached.rrule)
         assertEquals(todo.instanceDateEpochMillis, cached.instanceDateEpochMs)
         assertEquals(todo.pinned, cached.pinned)
@@ -56,7 +56,7 @@ class CacheMappersTest {
         assertEquals(cached.title, todo.title)
         assertEquals(cached.description, todo.description)
         assertEquals(cached.priority, todo.priority)
-        assertEquals(Instant.ofEpochMilli(cached.dueEpochMs), todo.due)
+        assertEquals(cached.dueEpochMs?.let(Instant::ofEpochMilli), todo.due)
         assertEquals(cached.rrule, todo.rrule)
         assertNotNull(todo.instanceDate)
         assertEquals(cached.instanceDateEpochMs, todo.instanceDateEpochMillis)
@@ -133,8 +133,9 @@ class CacheMappersTest {
         assertEquals(item.originalTodoId, cached.originalTodoId)
         assertEquals(item.title, cached.title)
         assertEquals(item.priority, cached.priority)
-        assertEquals(item.due.toEpochMilli(), cached.dueEpochMs)
+        assertEquals(item.due?.toEpochMilli(), cached.dueEpochMs)
         assertEquals(item.completedAt?.toEpochMilli() ?: 0L, cached.completedAtEpochMs)
+        assertEquals(item.listId, cached.listId)
     }
 
     @Test
@@ -154,7 +155,7 @@ class CacheMappersTest {
 
         assertEquals("abc123", item.canonicalId)
         assertNotNull(item.instanceDate)
-        assertEquals(1718444400000L, item.instanceDate!!.toEpochMilli())
+        assertEquals(1718444400000L, requireNotNull(item.instanceDate).toEpochMilli())
     }
 
     @Test
@@ -197,6 +198,7 @@ class CacheMappersTest {
         assertEquals(dto.originalTodoID, item.originalTodoId)
         assertEquals(dto.title, item.title)
         assertEquals(dto.priority, item.priority)
+        assertEquals(dto.listID, item.listId)
     }
 
     // --- mapListDto ---
@@ -373,6 +375,7 @@ class CacheMappersTest {
         completedAt = completedInstant,
         rrule = null,
         instanceDate = null,
+        listId = "list-1",
         listName = "Work",
         listColor = "#00FF00",
     )
@@ -387,6 +390,7 @@ class CacheMappersTest {
         completedAtEpochMs = completedInstant.toEpochMilli(),
         rrule = null,
         instanceDateEpochMs = null,
+        listId = "list-1",
         listName = "Work",
         listColor = "#00FF00",
     )
@@ -406,6 +410,8 @@ class CacheMappersTest {
         priority = "High",
         due = dueInstant.toString(),
         completedAt = completedInstant.toString(),
+        completedOnTime = true,
+        listID = "list-1",
     )
 
     private fun makeListDto() = ListDto(

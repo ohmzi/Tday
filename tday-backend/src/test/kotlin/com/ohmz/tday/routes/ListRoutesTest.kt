@@ -110,6 +110,29 @@ class ListRoutesTest {
         assertEquals("list_456", payload.getValue("deletedIds").jsonArray[1].jsonPrimitive.content)
     }
 
+    @Test
+    fun `delete list is idempotent when list is already gone`() = testApplication {
+        val listService = RecordingListService(deletedIdsToReturn = emptyList())
+
+        application {
+            configureListRoutesTestApp(listService)
+        }
+
+        val response = client.delete("/api/list") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                json.encodeToString(
+                    DeleteListRequest(id = "list_missing"),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("list already deleted", payload.getValue("message").jsonPrimitive.content)
+        assertEquals(0, payload.getValue("deletedIds").jsonArray.size)
+    }
+
     private fun Application.configureListRoutesTestApp(
         listService: ListService,
     ) {
@@ -143,7 +166,9 @@ class ListRoutesTest {
         }
     }
 
-    private class RecordingListService : ListService {
+    private class RecordingListService(
+        private val deletedIdsToReturn: List<String>? = null,
+    ) : ListService {
         override suspend fun getAll(userId: String): Either<com.ohmz.tday.domain.AppError, List<ListResponse>> =
             emptyList<ListResponse>().right()
 
@@ -205,6 +230,6 @@ class ListRoutesTest {
         override suspend fun deleteMany(
             userId: String,
             ids: List<String>,
-        ): Either<com.ohmz.tday.domain.AppError, List<String>> = ids.right()
+        ): Either<com.ohmz.tday.domain.AppError, List<String>> = (deletedIdsToReturn ?: ids).right()
     }
 }

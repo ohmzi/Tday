@@ -25,15 +25,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -42,29 +39,22 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -74,14 +64,17 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
-import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
+import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 
 @Composable
 fun SettingsScreen(
     user: SessionUser?,
+    isLocalMode: Boolean = false,
     selectedThemeMode: AppThemeMode,
     selectedReminder: ReminderOption,
     adminAiSummaryEnabled: Boolean?,
@@ -104,82 +97,18 @@ fun SettingsScreen(
     val colorScheme = MaterialTheme.colorScheme
     val isAdminUser = user?.role?.equals("ADMIN", ignoreCase = true) == true
     val scrollState = rememberScrollState()
-    val density = LocalDensity.current
-    val maxCollapsePx = with(density) { SETTINGS_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    var headerCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val collapseProgressTarget = if (maxCollapsePx > 0f) {
-        (headerCollapsePx / maxCollapsePx).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    val nestedScrollConnection = remember(scrollState, maxCollapsePx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val deltaY = available.y
-                if (deltaY < 0f) {
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = next - previous
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, -consumed)
-                    }
-                    return Offset.Zero
-                }
-
-                if (deltaY > 0f) {
-                    if (scrollState.value > 0) return Offset.Zero
-                    val previous = headerCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxCollapsePx)
-                    val consumed = previous - next
-                    if (consumed > 0f) {
-                        headerCollapsePx = next
-                        return Offset(0f, consumed)
-                    }
-                }
-
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (available.y > 0f && scrollState.value > 0) return Velocity.Zero
-                val snapped = snapTitleCollapsePx(
-                    currentPx = headerCollapsePx,
-                    maxPx = maxCollapsePx,
-                    velocityY = available.y,
-                )
-                if (snapped == headerCollapsePx) return Velocity.Zero
-                headerCollapsePx = snapped
-                return if (available.y == 0f) Velocity.Zero else available
-            }
-        }
-    }
-    val collapseProgress by animateFloatAsState(
-        targetValue = collapseProgressTarget,
+    val titleScrollBehavior = rememberScrollCollapsingTitleScrollBehavior(
+        scrollState = scrollState,
+        maxCollapseDistance = SETTINGS_TITLE_COLLAPSE_DISTANCE_DP.dp,
         label = "settingsTitleCollapseProgress",
     )
-    LaunchedEffect(
-        scrollState.isScrollInProgress,
-        headerCollapsePx,
-        maxCollapsePx,
-        scrollState.value,
-    ) {
-        if (scrollState.isScrollInProgress || headerCollapsePx <= 0f || headerCollapsePx >= maxCollapsePx) {
-            return@LaunchedEffect
-        }
-        headerCollapsePx = if (scrollState.value == 0) {
-            snapTitleCollapsePx(headerCollapsePx, maxCollapsePx)
-        } else {
-            maxCollapsePx
-        }
-    }
 
     Scaffold(
         containerColor = colorScheme.background,
         topBar = {
             SettingsTopBar(
                 onBack = onBack,
-                collapseProgress = collapseProgress,
+                collapseProgress = titleScrollBehavior.collapseProgress,
             )
         },
         ) { padding ->
@@ -188,14 +117,16 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(colorScheme.background)
-                .nestedScroll(nestedScrollConnection)
+                .nestedScroll(titleScrollBehavior.nestedScrollConnection)
                 .verticalScroll(scrollState)
                 .padding(horizontal = 18.dp, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SettingsProfileCard(
-                user = user,
-            )
+            if (!isLocalMode) {
+                SettingsProfileCard(
+                    user = user,
+                )
+            }
 
             SettingsSectionCard {
                 SettingsSectionTitle(title = stringResource(R.string.settings_appearance))
@@ -211,7 +142,7 @@ fun SettingsScreen(
                 )
             }
 
-            if (isAdminUser) {
+            if (!isLocalMode && isAdminUser) {
                 SettingsSectionCard {
                     SettingsSectionTitle(title = stringResource(R.string.settings_feature_toggle))
                     Row(
@@ -268,25 +199,28 @@ fun SettingsScreen(
             SettingsSectionCard {
                 SettingsListRow(
                     title = stringResource(R.string.release_title),
-                    value = "v${BuildConfig.VERSION_NAME}",
+                    value = stringResource(R.string.label_version_name, BuildConfig.VERSION_NAME),
                     onClick = onOpenLatestRelease,
                 )
                 if (hasUpdate && latestVersionName != null) {
                     Text(
-                        text = "v$latestVersionName available",
+                        text = stringResource(
+                            R.string.settings_update_available_version,
+                            latestVersionName,
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = colorScheme.secondary,
                         fontWeight = FontWeight.ExtraBold,
                     )
                 }
-                if (backendVersion != null) {
+                if (!isLocalMode && backendVersion != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Server",
+                            text = stringResource(R.string.label_server),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = colorScheme.onSurface,
@@ -296,18 +230,22 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "v$backendVersion",
+                                text = stringResource(R.string.label_version_name, backendVersion),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colorScheme.onSurface.copy(alpha = 0.58f),
                             )
                             val isCompatible = versionCheckResult is VersionCheckResult.Compatible ||
                                 versionCheckResult == null
                             Text(
-                                text = if (isCompatible) "Compatible" else "Incompatible",
+                                text = if (isCompatible) {
+                                    stringResource(R.string.settings_server_compatible)
+                                } else {
+                                    stringResource(R.string.settings_server_incompatible)
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = if (isCompatible) {
-                                    Color(0xFF4CAF50)
+                                    TdayStatusSuccess
                                 } else {
                                     colorScheme.error
                                 },
@@ -315,15 +253,17 @@ fun SettingsScreen(
                         }
                     }
                 }
-                SettingsDivider()
-                SettingsListRow(
-                    title = stringResource(R.string.action_sign_out),
-                    value = null,
-                    onClick = onLogout,
-                    titleColor = colorScheme.error,
-                    trailingTint = colorScheme.error.copy(alpha = 0.72f),
-                    showChevron = false,
-                )
+                if (!isLocalMode) {
+                    SettingsDivider()
+                    SettingsListRow(
+                        title = stringResource(R.string.action_sign_out),
+                        value = null,
+                        onClick = onLogout,
+                        titleColor = colorScheme.error,
+                        trailingTint = colorScheme.error.copy(alpha = 0.72f),
+                        showChevron = false,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -649,7 +589,7 @@ private fun ReminderSelector(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Default reminder",
+                text = stringResource(R.string.settings_default_reminder),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
@@ -673,41 +613,38 @@ private fun ReminderSelector(
             }
         }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            ReminderOption.entries.forEach { option ->
-                val isSelected = option == selectedReminder
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = option.label,
-                            fontWeight = FontWeight.ExtraBold,
-                        )
-                    },
-                    onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK,
-                        )
-                        onReminderSelected(option)
-                        expanded = false
-                    },
-                    trailingIcon = if (isSelected) {
-                        {
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = colorScheme.secondary,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                )
-            }
+        if (expanded) {
+            TdayCenteredSelectorDialog(
+                title = "Default reminder",
+                options = ReminderOption.entries,
+                optionLabel = { option -> option.label },
+                optionSwatchColor = { option -> reminderSwatchColor(option) },
+                isSelected = { option -> option == selectedReminder },
+                onDismiss = { expanded = false },
+                onOptionSelected = { option ->
+                    ViewCompat.performHapticFeedback(
+                        view,
+                        HapticFeedbackConstantsCompat.CLOCK_TICK,
+                    )
+                    onReminderSelected(option)
+                    expanded = false
+                },
+            )
         }
+    }
+}
+
+private fun reminderSwatchColor(option: ReminderOption): Color {
+    return when (option) {
+        ReminderOption.NONE -> Color(0xFFB7BCC8)
+        ReminderOption.AT_TIME -> Color(0xFF6EA8E1)
+        ReminderOption.MINUTES_5 -> Color(0xFF7088C8)
+        ReminderOption.MINUTES_10 -> Color(0xFF7D67B6)
+        ReminderOption.MINUTES_15 -> Color(0xFFC7AA63)
+        ReminderOption.MINUTES_30 -> Color(0xFFD39A82)
+        ReminderOption.HOURS_1 -> Color(0xFF8DBB73)
+        ReminderOption.HOURS_2 -> Color(0xFF67AAA7)
+        ReminderOption.DAYS_1 -> Color(0xFF9A86CF)
+        ReminderOption.DAYS_2 -> Color(0xFFC98299)
     }
 }

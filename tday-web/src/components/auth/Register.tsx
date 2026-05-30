@@ -12,6 +12,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import PendingApprovalDialog from "@/components/auth/PendingApprovalDialog";
+import { api } from "@/lib/api-client";
+import { getErrorMessage } from "@/lib/error-message";
+
+type RegisterResponse = {
+  requiresApproval?: boolean;
+};
 
 export default function Register() {
   const router = useRouter();
@@ -44,21 +50,16 @@ export default function Register() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/auth/register", {
+      const body = (await api.POST({
+        url: "/api/auth/register",
         headers: { "content-type": "application/json" },
-        method: "POST",
         body: JSON.stringify({
           fname: firstName,
           lname: lastName,
           email,
           password,
         }),
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) {
-        setErrorMessage(body?.message || "Unable to create account.");
-        return;
-      }
+      })) as RegisterResponse | null;
 
       if (body?.requiresApproval) {
         setPendingApprovalOpen(true);
@@ -68,7 +69,9 @@ export default function Register() {
       router.replace("/login");
     } catch (error) {
       console.error(error);
-      setErrorMessage("Unable to create account. Please try again.");
+      setErrorMessage(
+        getErrorMessage(error, "Unable to create account. Please try again."),
+      );
     } finally {
       setIsSubmitting(false);
     }

@@ -27,7 +27,10 @@ final class TaskReminderScheduler {
         }
 
         for task in tasks where !task.completed {
-            let triggerDate = task.due.addingTimeInterval(-offsetSeconds)
+            guard let due = task.due else {
+                continue
+            }
+            let triggerDate = due.addingTimeInterval(-offsetSeconds)
             guard triggerDate > Date(), !reminderPreferenceStore.hasNotified(taskID: task.id) else {
                 continue
             }

@@ -25,7 +25,6 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
@@ -35,6 +34,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.ohmz.tday.compose.MainActivity
+import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import dagger.hilt.android.EntryPointAccessors
 import java.time.Instant
@@ -60,20 +60,28 @@ class TodayTasksWidget : GlanceAppWidget() {
         val dayEnd = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
 
         val todayTasks = state.todos
-            .filter { !it.completed && it.dueEpochMs in dayStart until dayEnd }
-            .sortedBy { it.dueEpochMs }
+            .filter { task -> !task.completed && task.dueEpochMs?.let { it in dayStart until dayEnd } == true }
+            .sortedBy { it.dueEpochMs ?: Long.MAX_VALUE }
             .take(8)
 
         provideContent {
             GlanceTheme {
-                WidgetContent(tasks = todayTasks)
+                WidgetContent(
+                    tasks = todayTasks,
+                    title = context.getString(R.string.widget_today_tasks_title),
+                    emptyMessage = context.getString(R.string.widget_today_tasks_empty),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun WidgetContent(tasks: List<CachedTodoRecord>) {
+private fun WidgetContent(
+    tasks: List<CachedTodoRecord>,
+    title: String,
+    emptyMessage: String,
+) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -92,7 +100,7 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Today's Tasks",
+                text = title,
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
                     fontFamily = TdayWidgetFontFamily,
@@ -118,7 +126,7 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No tasks due today",
+                    text = emptyMessage,
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurfaceVariant,
                         fontFamily = TdayWidgetFontFamily,
@@ -142,10 +150,11 @@ private fun WidgetContent(tasks: List<CachedTodoRecord>) {
 private fun TaskRow(task: CachedTodoRecord) {
     val timeFormatter = DateTimeFormatter.ofPattern("h:mm a")
         .withZone(ZoneId.systemDefault())
-    val dueText = timeFormatter.format(Instant.ofEpochMilli(task.dueEpochMs))
+    val dueText = task.dueEpochMs
+        ?.let { timeFormatter.format(Instant.ofEpochMilli(it)) }
     val priorityColor = when (task.priority.lowercase()) {
-        "high" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFE53935))
-        "medium" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFFB8C00))
+        "high" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFFF3B30))
+        "medium" -> ColorProvider(androidx.compose.ui.graphics.Color(0xFFFF9500))
         else -> GlanceTheme.colors.onSurfaceVariant
     }
 
@@ -179,15 +188,17 @@ private fun TaskRow(task: CachedTodoRecord) {
                 maxLines = 1,
             )
         }
-        Spacer(modifier = GlanceModifier.width(6.dp))
-        Text(
-            text = dueText,
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurfaceVariant,
-                fontFamily = TdayWidgetFontFamily,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-            ),
-        )
+        dueText?.let { text ->
+            Spacer(modifier = GlanceModifier.width(6.dp))
+            Text(
+                text = text,
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurfaceVariant,
+                    fontFamily = TdayWidgetFontFamily,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+            )
+        }
     }
 }

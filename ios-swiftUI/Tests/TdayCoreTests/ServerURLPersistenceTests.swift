@@ -40,6 +40,19 @@ final class ServerURLPersistenceTests: XCTestCase {
         XCTAssertNil(defaults.string(forKey: SecureStore.Key.persistedServerURL.rawValue))
     }
 
+    func testAppDataModePersistsLocalAndInfersServerFromSavedURL() {
+        XCTAssertEqual(secureStore.appDataMode(), .unset)
+
+        secureStore.savePersistedServerURL(URL(string: "https://tday.ohmz.cloud")!)
+        XCTAssertEqual(secureStore.appDataMode(), .server)
+
+        secureStore.setAppDataMode(.local)
+        XCTAssertEqual(secureStore.appDataMode(), .local)
+
+        secureStore.clearAllUserValues()
+        XCTAssertEqual(secureStore.appDataMode(), .unset)
+    }
+
     func testUserCleanupCanPreservePersistedServerURL() {
         let url = URL(string: "https://tday.ohmz.cloud")!
         secureStore.savePersistedServerURL(url)

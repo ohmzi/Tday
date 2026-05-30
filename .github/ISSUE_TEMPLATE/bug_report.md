@@ -26,11 +26,17 @@ assignees: ''
 
 ## Environment
 
-- **Platform**: Web / Android
+- **Platform**: Web / Android / iOS / Backend
+- **Workspace mode**: Local Mode / Server Mode / Not sure
 - **Browser** (if web): 
 - **Device/Emulator** (if Android): 
+- **Simulator/Device** (if iOS):
 - **T'Day version**: 
 - **OS**: 
+
+## Data / Sync Context
+
+<!-- If relevant: scheduled todo vs floater, list vs floater list, offline/online state, pending sync, Local Mode, recent server URL/auth changes. -->
 
 ## Screenshots / Logs
 

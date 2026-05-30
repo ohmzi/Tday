@@ -1,25 +1,20 @@
 package com.ohmz.tday.compose.feature.todos
 
-import android.content.ClipData
-import android.view.View
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.draganddrop.dragAndDropSource
-import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
@@ -27,6 +22,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -42,6 +38,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -54,86 +51,28 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material.icons.automirrored.rounded.MenuBook
-import androidx.compose.material.icons.rounded.AcUnit
-import androidx.compose.material.icons.rounded.AccountBalance
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Architecture
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Backpack
-import androidx.compose.material.icons.rounded.BeachAccess
-import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BorderColor
-import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Cake
-import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.CardGiftcard
-import androidx.compose.material.icons.rounded.ChangeHistory
-import androidx.compose.material.icons.rounded.ChatBubbleOutline
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronLeft
-import androidx.compose.material.icons.rounded.ChildCare
-import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.Computer
-import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.DesktopWindows
-import androidx.compose.material.icons.rounded.DirectionsBoat
-import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.Eco
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.ExpandMore
-import androidx.compose.material.icons.rounded.FamilyRestroom
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Flight
-import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Inbox
 import androidx.compose.material.icons.rounded.Inventory
 import androidx.compose.material.icons.rounded.Key
-import androidx.compose.material.icons.rounded.Lightbulb
-import androidx.compose.material.icons.rounded.LocalBar
-import androidx.compose.material.icons.rounded.LocalMall
-import androidx.compose.material.icons.rounded.LocationCity
-import androidx.compose.material.icons.rounded.Medication
-import androidx.compose.material.icons.rounded.Mood
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material.icons.rounded.Pets
-import androidx.compose.material.icons.rounded.PriorityHigh
+import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.School
-import androidx.compose.material.icons.rounded.ShoppingBasket
-import androidx.compose.material.icons.rounded.ShoppingCart
-import androidx.compose.material.icons.rounded.SportsBaseball
-import androidx.compose.material.icons.rounded.SportsBasketball
-import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.SportsFootball
-import androidx.compose.material.icons.rounded.SportsSoccer
-import androidx.compose.material.icons.rounded.SportsTennis
-import androidx.compose.material.icons.rounded.Square
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.Train
-import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.WbSunny
-import androidx.compose.material.icons.rounded.Whatshot
-import androidx.compose.material.icons.rounded.Work
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -142,7 +81,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -150,25 +88,29 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draganddrop.DragAndDropEvent
-import androidx.compose.ui.draganddrop.DragAndDropTarget
-import androidx.compose.ui.draganddrop.DragAndDropTransferData
-import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -177,37 +119,77 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.model.supportsTaskReschedule
+import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
 import com.ohmz.tday.compose.core.ui.EmptyTaskBackgroundMessage
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
-import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberLazyListCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedTab
+import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
+import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
+import com.ohmz.tday.compose.ui.component.TdaySheetCard
+import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
+import com.ohmz.tday.compose.ui.component.TdaySheetHeader
+import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
+import com.ohmz.tday.compose.ui.theme.TdayListColorOptions
+import com.ohmz.tday.compose.ui.theme.TdayListIconOptions
+import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
+import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
+import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
+import com.ohmz.tday.compose.ui.theme.TdayTitleIconNightAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodoModeAllAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodoModeOverdueAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodoModePriorityAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodoModeScheduledAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodoModeTodayAccent
+import com.ohmz.tday.compose.ui.theme.isTdayListIconKeySupported
+import com.ohmz.tday.compose.ui.theme.normalizeTdayListColorKey
+import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
+import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -221,6 +203,26 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import androidx.compose.ui.graphics.lerp as lerpColor
+
+private val TimelineSameDateTaskSpacing = 2.dp
+private val TimelineDateGroupSpacing = 6.dp
+private val TimelineSectionTopSpacing = 6.dp
+private val TimelineHeaderBodySpacing = 2.dp
+private val TimelineCollapsedSectionSpacing = 4.dp
+private val RootFeedDockCollapseThreshold = 44.dp
+
+private fun timelineTaskBottomSpacing(
+    itemIndex: Int,
+    lastIndex: Int,
+    showDateDivider: Boolean,
+): Dp {
+    return if (showDateDivider || itemIndex == lastIndex) {
+        TimelineDateGroupSpacing
+    } else {
+        TimelineSameDateTaskSpacing
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -234,15 +236,39 @@ fun TodoListScreen(
     onAddTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onUpdateTask: (todo: TodoItem, payload: CreateTaskPayload) -> Unit,
+    onMoveTask: (todo: TodoItem, targetDate: LocalDate, scope: TaskRescheduleScope) -> Unit,
     onComplete: (todo: TodoItem) -> Unit,
     onDelete: (todo: TodoItem) -> Unit,
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
+    onDeleteList: (listId: String) -> Unit,
+    onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
+    onOpenSettings: () -> Unit = {},
+    onCreateList: (name: String, color: String?, iconKey: String?) -> Unit = { _, _, _ -> },
+    rootFeedTab: RootFeedTab? = null,
+    onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
+    showRootFeedDock: Boolean = true,
+    showCreateTaskButton: Boolean = true,
+    pullRefreshEnabled: Boolean = true,
+    usesRootFeedHeader: Boolean = false,
+    createTaskRequestKey: Int = 0,
+    scrollToTopRequestKey: Int = 0,
+    onRootDockCollapsedChange: (Boolean) -> Unit = {},
+    onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
     val usesTodayStyle =
-        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
+    val isRootFloaterScreen =
+        uiState.mode == TodoListMode.FLOATER && uiState.listId.isNullOrBlank()
+    val isListDetailScreen =
+        uiState.mode == TodoListMode.LIST ||
+                (uiState.mode == TodoListMode.FLOATER && !uiState.listId.isNullOrBlank())
+    val usesRootFeedChrome =
+        usesRootFeedHeader || isRootFloaterScreen
     val titleColor = modeAccentColor(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -256,17 +282,35 @@ fun TodoListScreen(
         listIconKey = selectedList?.iconKey,
     )
     val showSectionedTimeline =
-        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST
+        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
     val suppressInitialTodayTimeline =
         uiState.mode == TodoListMode.TODAY &&
                 !uiState.hasHydratedSnapshot &&
                 uiState.items.isEmpty()
+    var draggedScheduledTodoId by rememberSaveable(uiState.mode) { mutableStateOf<String?>(null) }
+    val canRescheduleTasks = uiState.mode.supportsTaskReschedule()
     val timelineSections = remember(uiState.mode, uiState.items) {
         buildTimelineSections(
             mode = uiState.mode,
             items = uiState.items,
         )
     }
+    val floaterListRows = remember(uiState.mode, uiState.listId, uiState.items, uiState.lists) {
+        if (uiState.mode == TodoListMode.FLOATER && uiState.listId.isNullOrBlank()) {
+            val floaterCountsByList = uiState.items
+                .asSequence()
+                .mapNotNull { it.listId }
+                .groupingBy { it }
+                .eachCount()
+            uiState.lists.mapNotNull { list ->
+                val count = floaterCountsByList[list.id] ?: return@mapNotNull null
+                list to count
+            }
+        } else {
+            emptyList()
+        }
+    }
+    val floaterListById = remember(uiState.lists) { uiState.lists.associateBy { it.id } }
     var timelineAnimationsReady by remember(uiState.mode, uiState.listId) {
         mutableStateOf(uiState.mode != TodoListMode.TODAY)
     }
@@ -287,91 +331,98 @@ fun TodoListScreen(
     val timelineAnimationsEnabled =
         uiState.mode != TodoListMode.TODAY || timelineAnimationsReady
     val listState = rememberLazyListState()
+    val screenScope = rememberCoroutineScope()
+    val hasScrollableContent =
+        listState.canScrollForward || listState.canScrollBackward
+    val dockCollapseThresholdPx = with(LocalDensity.current) {
+        RootFeedDockCollapseThreshold.roundToPx()
+    }
+    val hasScrolledPastDockCollapseThreshold =
+        listState.firstVisibleItemIndex > 0 ||
+                listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
+    val dockCollapsed =
+        hasScrollableContent && hasScrolledPastDockCollapseThreshold
+    LaunchedEffect(dockCollapsed) {
+        onRootDockCollapsedChange(dockCollapsed)
+    }
+    LaunchedEffect(Unit) {
+        onRootControlsVisibleChange(true)
+    }
+    DisposableEffect(Unit) {
+        onDispose { onRootControlsVisibleChange(true) }
+    }
     val density = LocalDensity.current
-    val maxTodayCollapsePx = with(density) { TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp.toPx() }
-    var todayHeaderCollapsePx by rememberSaveable { mutableFloatStateOf(0f) }
-    val todayCollapseProgressTarget = if (usesTodayStyle && maxTodayCollapsePx > 0f) {
-        (todayHeaderCollapsePx / maxTodayCollapsePx).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    val todayNestedScrollConnection = remember(usesTodayStyle, listState, maxTodayCollapsePx) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (!usesTodayStyle) return Offset.Zero
-                val deltaY = available.y
-                if (deltaY < 0f) {
-                    val previous = todayHeaderCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
-                    val consumed = next - previous
-                    if (consumed > 0f) {
-                        todayHeaderCollapsePx = next
-                        return Offset(0f, -consumed)
-                    }
-                    return Offset.Zero
-                }
-
-                if (deltaY > 0f) {
-                    val isListAtTop =
-                        listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                    if (!isListAtTop) return Offset.Zero
-                    val previous = todayHeaderCollapsePx
-                    val next = (previous - deltaY).coerceIn(0f, maxTodayCollapsePx)
-                    val consumed = previous - next
-                    if (consumed > 0f) {
-                        todayHeaderCollapsePx = next
-                        return Offset(0f, consumed)
-                    }
-                }
-
-                return Offset.Zero
-            }
-
-            override suspend fun onPreFling(available: Velocity): Velocity {
-                if (!usesTodayStyle) return Velocity.Zero
-                val isListAtTop =
-                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                if (available.y > 0f && !isListAtTop) return Velocity.Zero
-                val snapped = snapTitleCollapsePx(
-                    currentPx = todayHeaderCollapsePx,
-                    maxPx = maxTodayCollapsePx,
-                    velocityY = available.y,
-                )
-                if (snapped == todayHeaderCollapsePx) return Velocity.Zero
-                todayHeaderCollapsePx = snapped
-                return if (available.y == 0f) Velocity.Zero else available
-            }
-        }
-    }
-    val todayCollapseProgress by animateFloatAsState(
-        targetValue = todayCollapseProgressTarget,
+    val todayTitleScrollBehavior = rememberLazyListCollapsingTitleScrollBehavior(
+        listState = listState,
+        maxCollapseDistance = TODAY_TITLE_COLLAPSE_DISTANCE_DP.dp,
+        enabled = usesTodayStyle,
         label = "todayTitleCollapseProgress",
     )
-    LaunchedEffect(
-        usesTodayStyle,
-        listState.isScrollInProgress,
-        todayHeaderCollapsePx,
-        maxTodayCollapsePx,
+    val isCollapsibleTimelineMode =
+        uiState.mode == TodoListMode.ALL ||
+                uiState.mode == TodoListMode.PRIORITY ||
+                uiState.mode == TodoListMode.LIST
+    var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
+    var openSwipeTaskId by rememberSaveable(uiState.mode, uiState.listId) {
+        mutableStateOf<String?>(null)
+    }
+    var rootFloaterSearchExpanded by rememberSaveable { mutableStateOf(false) }
+    var rootFloaterSearchQuery by rememberSaveable { mutableStateOf("") }
+    val normalizedRootFloaterSearchQuery = remember(rootFloaterSearchQuery) {
+        rootFloaterSearchQuery.trim().lowercase(Locale.getDefault())
+    }
+    val rootFloaterSearchResults = remember(
+        isRootFloaterScreen,
+        normalizedRootFloaterSearchQuery,
+        uiState.items,
+        floaterListById,
     ) {
-        if (!usesTodayStyle ||
-            listState.isScrollInProgress ||
-            todayHeaderCollapsePx <= 0f ||
-            todayHeaderCollapsePx >= maxTodayCollapsePx
-        ) {
-            return@LaunchedEffect
-        }
-        val isListAtTop =
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        todayHeaderCollapsePx = if (isListAtTop) {
-            snapTitleCollapsePx(todayHeaderCollapsePx, maxTodayCollapsePx)
+        if (!isRootFloaterScreen || normalizedRootFloaterSearchQuery.isBlank()) {
+            emptyList()
         } else {
-            maxTodayCollapsePx
+            uiState.items
+                .asSequence()
+                .filter { todo ->
+                    todo.title.lowercase(Locale.getDefault())
+                        .contains(normalizedRootFloaterSearchQuery) ||
+                            (todo.description?.lowercase(Locale.getDefault())
+                                ?.contains(normalizedRootFloaterSearchQuery) == true) ||
+                            (todo.listId?.let { floaterListById[it]?.name }
+                                ?.lowercase(Locale.getDefault())
+                                ?.contains(normalizedRootFloaterSearchQuery) == true)
+                }
+                .sortedWith(
+                    compareByDescending<TodoItem> { it.pinned }
+                        .thenBy { floaterPriorityRank(it.priority) }
+                        .thenBy { it.title.lowercase(Locale.getDefault()) },
+                )
+                .take(20)
+                .toList()
         }
     }
-    val isCollapsibleTimelineMode =
-        uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY
-    var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
-    var collapsedSectionKeys by rememberSaveable(uiState.mode, highlightedTodoId) {
+    val showRootFloaterSearchResults =
+        isRootFloaterScreen && rootFloaterSearchExpanded && rootFloaterSearchQuery.isNotBlank()
+    val closeRootFloaterSearch = {
+        rootFloaterSearchExpanded = false
+        rootFloaterSearchQuery = ""
+    }
+    LaunchedEffect(scrollToTopRequestKey) {
+        if (scrollToTopRequestKey <= 0 || !isRootFloaterScreen) return@LaunchedEffect
+        closeRootFloaterSearch()
+        if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {
+            listState.animateScrollToItem(index = 0, scrollOffset = 0)
+        }
+    }
+    LaunchedEffect(uiState.items, openSwipeTaskId) {
+        val openId = openSwipeTaskId ?: return@LaunchedEffect
+        if (uiState.items.none { it.id == openId }) {
+            openSwipeTaskId = null
+        }
+    }
+    var lastHandledCreateTaskRequestKey by rememberSaveable {
+        mutableStateOf(createTaskRequestKey)
+    }
+    var collapsedSectionKeys by rememberSaveable(uiState.mode, uiState.listId, highlightedTodoId) {
         mutableStateOf(
             if (isCollapsibleTimelineMode && highlightedTodoId.isNullOrBlank()) {
                 setOf("earlier")
@@ -383,16 +434,44 @@ fun TodoListScreen(
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
-    var draggedScheduledTodoId by rememberSaveable(uiState.mode) { mutableStateOf<String?>(null) }
     var activeDropSectionKey by remember(uiState.mode) { mutableStateOf<String?>(null) }
+    var activeTimelineDrag by remember(uiState.mode) { mutableStateOf<TimelineInAppDrag?>(null) }
+    var timelineDragContainerOrigin by remember(uiState.mode) { mutableStateOf(Offset.Zero) }
+    val timelineDropTargetBounds =
+        remember(uiState.mode) { mutableStateMapOf<String, TimelineDropTargetBounds>() }
+    var pendingRescheduleDrop by remember(uiState.mode) { mutableStateOf<TaskRescheduleDrop?>(null) }
+    LaunchedEffect(createTaskRequestKey) {
+        if (createTaskRequestKey > lastHandledCreateTaskRequestKey) {
+            lastHandledCreateTaskRequestKey = createTaskRequestKey
+            closeRootFloaterSearch()
+            quickAddDueEpochMs = null
+            showCreateTaskSheet = true
+        }
+    }
+    BackHandler(enabled = rootFloaterSearchExpanded) {
+        closeRootFloaterSearch()
+    }
+    LaunchedEffect(isRootFloaterScreen, rootFloaterSearchExpanded) {
+        if (!isRootFloaterScreen) {
+            closeRootFloaterSearch()
+            onRootControlsVisibleChange(true)
+        } else {
+            onRootControlsVisibleChange(!rootFloaterSearchExpanded)
+        }
+    }
     var showListSettingsSheet by rememberSaveable { mutableStateOf(false) }
+    var showCreateListSheet by rememberSaveable { mutableStateOf(false) }
+    var showDeleteListConfirmation by rememberSaveable { mutableStateOf(false) }
     var showSummarySheet by rememberSaveable(uiState.mode) { mutableStateOf(false) }
     var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var listSettingsName by rememberSaveable { mutableStateOf("") }
-    var listSettingsColor by rememberSaveable { mutableStateOf(DEFAULT_LIST_COLOR_KEY) }
-    var listSettingsIconKey by rememberSaveable { mutableStateOf(DEFAULT_LIST_ICON_KEY) }
+    var listSettingsColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
+    var listSettingsIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var listSettingsColorTouched by rememberSaveable { mutableStateOf(false) }
     var listSettingsIconTouched by rememberSaveable { mutableStateOf(false) }
+    var createListName by rememberSaveable { mutableStateOf("") }
+    var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
+    var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val editTargetTodo = remember(editTargetTodoId, uiState.items) {
         editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
@@ -402,11 +481,29 @@ fun TodoListScreen(
             uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
         }
     }
+    val requestTaskReschedule: (TodoItem, LocalDate) -> Unit =
+        requestTaskReschedule@{ todo, targetDate ->
+        draggedScheduledTodoId = null
+        activeDropSectionKey = null
+        activeTimelineDrag = null
+        timelineDropTargetBounds.clear()
+            val currentDue = todo.due ?: return@requestTaskReschedule
+            val currentDate = LocalDate.ofInstant(currentDue, zoneId)
+        if (currentDate != targetDate) {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            if (todo.isRecurring) {
+                pendingRescheduleDrop = TaskRescheduleDrop(todo = todo, targetDate = targetDate)
+            } else {
+                onMoveTask(todo, targetDate, TaskRescheduleScope.OCCURRENCE)
+            }
+        }
+    }
     val canSummarizeCurrentMode =
         uiState.mode != TodoListMode.LIST &&
             uiState.mode != TodoListMode.OVERDUE &&
+                uiState.mode != TodoListMode.FLOATER &&
             uiState.aiSummaryEnabled
-    val showTopBarActionButton = canSummarizeCurrentMode || uiState.mode == TodoListMode.LIST
+    val showTopBarActionButton = canSummarizeCurrentMode || isListDetailScreen
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
         targetValue = if (fabPressed) 0.93f else 1f,
@@ -416,12 +513,26 @@ fun TodoListScreen(
         targetValue = if (fabPressed) 2.dp else 0.dp,
         label = "todoFabOffsetY",
     )
-    val timelineItemSpacing = if (usesTodayStyle) 4.dp else 8.dp
-    val timelineHeaderBodySpacing = if (usesTodayStyle) 4.dp else 8.dp
+    val timelineItemSpacing = TimelineDateGroupSpacing
+    val timelineHeaderBodySpacing = TimelineHeaderBodySpacing
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
         var itemIndex = 0
         timelineSections.forEach { section ->
             itemIndex += 1
+            val todoIndex = section.items.indexOfFirst { item ->
+                item.id == todoId || item.canonicalId == todoId
+            }
+            if (todoIndex >= 0) {
+                val todo = section.items[todoIndex]
+                return itemIndex + todoIndex to "timeline-todo-${section.key}-${todo.id}"
+            }
+            itemIndex += section.items.size
+        }
+        return null
+    }
+    fun rootFloaterTodoListTarget(todoId: String): Pair<Int, String>? {
+        var itemIndex = 1 // Root Floater header row.
+        timelineSections.forEach { section ->
             val todoIndex = section.items.indexOfFirst { item ->
                 item.id == todoId || item.canonicalId == todoId
             }
@@ -442,7 +553,7 @@ fun TodoListScreen(
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
-            todayHeaderCollapsePx = maxTodayCollapsePx
+            todayTitleScrollBehavior.collapseFully()
             delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
@@ -463,92 +574,192 @@ fun TodoListScreen(
             }
         }
     }
+    fun openRootFloaterSearchResult(todo: TodoItem) {
+        closeRootFloaterSearch()
+        val target = rootFloaterTodoListTarget(todo.id) ?: return
+        screenScope.launch {
+            delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
+            val viewportHeight =
+                listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
+            val estimatedRowHeight =
+                with(density) { SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP.dp.toPx().toInt() }
+            val centeredScrollOffset =
+                -((viewportHeight - estimatedRowHeight).coerceAtLeast(0) / 2)
+            listState.animateSearchResultScrollToItem(
+                targetIndex = target.first,
+                targetKey = target.second,
+                centeredScrollOffset = centeredScrollOffset,
+                estimatedItemSizePx = estimatedRowHeight,
+            )
+            flashTodoId = todo.id
+            delay(2300)
+            if (flashTodoId == todo.id || flashTodoId == todo.canonicalId) {
+                flashTodoId = null
+            }
+        }
+    }
     LaunchedEffect(uiState.mode) {
-        if (uiState.mode == TodoListMode.PRIORITY) {
+        if (uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.LIST) {
             collapsedSectionKeys = collapsedSectionKeys + "earlier"
+        }
+    }
+    LaunchedEffect(draggedScheduledTodoId) {
+        if (draggedScheduledTodoId == null) {
+            timelineDropTargetBounds.clear()
+        }
+    }
+
+    fun timelineSectionForKey(key: String): TodoSection? =
+        timelineSections.firstOrNull { section -> section.key == key }
+
+    fun originSectionKeyFor(todo: TodoItem): String? {
+        timelineSections.firstOrNull { section ->
+            section.items.any { item -> item.id == todo.id }
+        }?.let { section ->
+            return section.key
+        }
+        return timelineSections.firstOrNull { section ->
+            section.items.any { item -> item.canonicalId == todo.canonicalId }
+        }?.key
+    }
+
+    fun canDropTodoInTimelineSection(todo: TodoItem, section: TodoSection): Boolean {
+        val targetDate = section.targetDate ?: return false
+        if (originSectionKeyFor(todo) == section.key) return false
+        val due = todo.due ?: return false
+        return LocalDate.ofInstant(due, zoneId) != targetDate
+    }
+
+    fun timelineDropSectionKeyAt(position: Offset, todo: TodoItem): String? {
+        return timelineDropTargetBounds.values
+            .asSequence()
+            .filter { target -> target.bounds.contains(position) }
+            .mapNotNull { target ->
+                val section = timelineSectionForKey(target.sectionKey) ?: return@mapNotNull null
+                if (canDropTodoInTimelineSection(todo, section)) target else null
+            }
+            .minByOrNull { target -> target.bounds.height }
+            ?.sectionKey
+    }
+
+    fun updateActiveTimelineDropTarget(position: Offset) {
+        val todo = activeTimelineDrag?.todo ?: draggedScheduledTodo
+        val nextSectionKey = todo?.let { timelineDropSectionKeyAt(position, it) }
+        if (activeDropSectionKey != nextSectionKey) {
+            activeDropSectionKey = nextSectionKey
+        }
+    }
+
+    fun finishTimelineDrag(position: Offset?) {
+        val drag = activeTimelineDrag
+        val targetKey = position
+            ?.let { dropPosition -> drag?.let { timelineDropSectionKeyAt(dropPosition, it.todo) } }
+            ?: activeDropSectionKey
+        val targetDate = targetKey
+            ?.let(::timelineSectionForKey)
+            ?.takeIf { section -> drag?.let { canDropTodoInTimelineSection(it.todo, section) } == true }
+            ?.targetDate
+        activeTimelineDrag = null
+        draggedScheduledTodoId = null
+        activeDropSectionKey = null
+        timelineDropTargetBounds.clear()
+        if (drag != null && targetDate != null) {
+            requestTaskReschedule(drag.todo, targetDate)
         }
     }
 
     Scaffold(
         containerColor = colorScheme.background,
         topBar = {
-            if (usesTodayStyle) {
-                TodayTopBar(
-                    onBack = onBack,
-                    collapseProgress = todayCollapseProgress,
-                    title = uiState.title,
-                    titleColor = titleColor,
-                    showActionButton = showTopBarActionButton,
-                    actionIcon = if (canSummarizeCurrentMode) {
-                        Icons.Rounded.AutoAwesome
-                    } else {
-                        Icons.Rounded.MoreHoriz
-                    },
-                    actionContentDescription = if (canSummarizeCurrentMode) {
-                        stringResource(R.string.todos_summarize)
-                    } else {
-                        stringResource(R.string.action_more_options)
-                    },
-                    onAction = {
-                        if (canSummarizeCurrentMode) {
-                            showSummarySheet = true
-                        } else if (selectedList != null) {
-                            listSettingsTargetId = selectedList.id
-                            listSettingsName = selectedList.name
-                            listSettingsColor = selectedList.color
-                                ?.takeIf { isSupportedListColor(it) }
-                                ?: DEFAULT_LIST_COLOR_KEY
-                            listSettingsIconKey = selectedList.iconKey
-                                ?.takeIf { isSupportedListIconKey(it) }
-                                ?: DEFAULT_LIST_ICON_KEY
-                            listSettingsColorTouched = false
-                            listSettingsIconTouched = false
-                            showListSettingsSheet = true
-                        }
-                    },
-                )
-            } else {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = uiState.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = titleColor,
-                        )
-                    },
-                    navigationIcon = {
-                        TodayHeaderButton(
-                            onClick = onBack,
-                            icon = Icons.Rounded.ChevronLeft,
-                            contentDescription = stringResource(R.string.action_back),
-                            isBackButton = true,
-                        )
+            when {
+                usesRootFeedChrome -> Unit
+                usesTodayStyle -> {
+                    TodayTopBar(
+                        onBack = onBack,
+                        collapseProgress = todayTitleScrollBehavior.collapseProgress,
+                        title = uiState.title,
+                        titleColor = titleColor,
+                        showActionButton = showTopBarActionButton,
+                        actionIcon = if (canSummarizeCurrentMode) {
+                            Icons.Rounded.AutoAwesome
+                        } else {
+                            Icons.Rounded.MoreHoriz
+                        },
+                        actionContentDescription = if (canSummarizeCurrentMode) {
+                            stringResource(R.string.todos_summarize)
+                        } else {
+                            stringResource(R.string.action_more_options)
+                        },
+                        onAction = {
+                            if (canSummarizeCurrentMode) {
+                                showSummarySheet = true
+                            } else if (selectedList != null) {
+                                listSettingsTargetId = selectedList.id
+                                listSettingsName = selectedList.name
+                                listSettingsColor = normalizeTdayListColorKey(selectedList.color)
+                                listSettingsIconKey = selectedList.iconKey
+                                    ?.takeIf { isTdayListIconKeySupported(it) }
+                                    ?: TDAY_DEFAULT_LIST_ICON_KEY
+                                listSettingsColorTouched = false
+                                listSettingsIconTouched = false
+                                showListSettingsSheet = true
+                            }
+                        },
+                    )
+                }
+
+                else -> {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = uiState.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = titleColor,
+                            )
+                        },
+                        navigationIcon = {
+                            TodayHeaderButton(
+                                onClick = onBack,
+                                icon = Icons.Rounded.ChevronLeft,
+                                contentDescription = stringResource(R.string.action_back),
+                                isBackButton = true,
+                            )
+                        },
+                    )
+                }
+            }
+        },
+        floatingActionButton = {
+            if (showCreateTaskButton) {
+                CreateTaskButton(
+                    modifier = Modifier
+                        .offset(y = fabOffsetY)
+                        .graphicsLayer {
+                            scaleX = fabScale
+                            scaleY = fabScale
+                        },
+                    interactionSource = fabInteractionSource,
+                    backgroundColor = fabColor,
+                    onClick = {
+                        quickAddDueEpochMs = null
+                        showCreateTaskSheet = true
                     },
                 )
             }
         },
-        floatingActionButton = {
-            CreateTaskButton(
-                modifier = Modifier
-                    .offset(y = fabOffsetY)
-                    .graphicsLayer {
-                        scaleX = fabScale
-                        scaleY = fabScale
-                    },
-                interactionSource = fabInteractionSource,
-                backgroundColor = fabColor,
-                onClick = {
-                    quickAddDueEpochMs = null
-                    showCreateTaskSheet = true
-                },
-            )
-        },
     ) { padding ->
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .onGloballyPositioned { coordinates ->
+                    timelineDragContainerOrigin = coordinates.positionInRoot()
+                },
         ) {
-            Box(
+            TdayPullToRefreshBox(
+                isRefreshing = uiState.isLoading,
+                onRefresh = onRefresh,
+                enabled = pullRefreshEnabled,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
@@ -558,21 +769,63 @@ fun TodoListScreen(
                         .fillMaxSize()
                         .then(
                             if (usesTodayStyle) {
-                                Modifier.nestedScroll(todayNestedScrollConnection)
+                                Modifier.nestedScroll(todayTitleScrollBehavior.nestedScrollConnection)
                             } else {
                                 Modifier
                             },
                         ),
                     state = listState,
-                    contentPadding = if (usesTodayStyle) {
-                        PaddingValues(horizontal = 18.dp, vertical = 2.dp)
-                    } else {
-                        PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                    contentPadding = when {
+                        usesRootFeedChrome -> PaddingValues(18.dp)
+                        usesTodayStyle -> PaddingValues(horizontal = 18.dp, vertical = 2.dp)
+                        else -> PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                     },
                     verticalArrangement = Arrangement.spacedBy(
                         if (showSectionedTimeline) 0.dp else timelineItemSpacing,
                     ),
                 ) {
+                    if (usesRootFeedChrome) {
+                        item(
+                            key = "root-feed-title",
+                            contentType = "root-feed-title",
+                        ) {
+                            if (isRootFloaterScreen) {
+                                RootFeedSearchHeaderRow(
+                                    title = uiState.title,
+                                    searchExpanded = rootFloaterSearchExpanded,
+                                    searchQuery = rootFloaterSearchQuery,
+                                    onSearchQueryChange = { rootFloaterSearchQuery = it },
+                                    onSearchExpandedChange = { rootFloaterSearchExpanded = it },
+                                    onSearchClose = closeRootFloaterSearch,
+                                    onCreateList = {
+                                        closeRootFloaterSearch()
+                                        showCreateListSheet = true
+                                    },
+                                    onOpenSettings = {
+                                        closeRootFloaterSearch()
+                                        onOpenSettings()
+                                    },
+                                )
+                            } else {
+                                RootFeedTitleRow(title = uiState.title)
+                            }
+                        }
+                    }
+
+                    if (showRootFloaterSearchResults) {
+                        item(
+                            key = "root-floater-search-results",
+                            contentType = "root-floater-search-results",
+                        ) {
+                            RootFloaterSearchResultsCard(
+                                results = rootFloaterSearchResults,
+                                listsById = floaterListById,
+                                onOpenTodo = ::openRootFloaterSearchResult,
+                                modifier = Modifier.padding(bottom = 10.dp),
+                            )
+                        }
+                    }
+
                     if (!showSectionedTimeline && uiState.items.isEmpty() && uiState.isLoading) {
                         item {
                             Card(
@@ -596,105 +849,136 @@ fun TodoListScreen(
                                 TodoListMode.OVERDUE -> true
                                 TodoListMode.SCHEDULED -> true
                                 TodoListMode.PRIORITY -> section.key == "earlier"
+                                TodoListMode.LIST -> section.key == "earlier"
                                 else -> false
                             }
                             val sectionCanCollapse = sectionModeCanCollapse && sectionHasTasks
                             val isCollapsed =
                                 sectionCanCollapse && collapsedSectionKeys.contains(section.key)
-                            val sectionDraggedTodo = if (uiState.mode == TodoListMode.SCHEDULED) {
+                            val isActiveDropSection = activeDropSectionKey == section.key
+                            val sectionDraggedTodo = if (canRescheduleTasks) {
                                 draggedScheduledTodo
                             } else {
                                 null
                             }
-                            val onSectionDropTargetChanged: (Boolean) -> Unit = { active ->
-                                if (active) {
-                                    activeDropSectionKey = section.key
-                                } else if (activeDropSectionKey == section.key) {
-                                    activeDropSectionKey = null
-                                }
-                            }
-                            val onSectionDragEnd: (() -> Unit)? =
-                                if (uiState.mode == TodoListMode.SCHEDULED) {
-                                    {
-                                        draggedScheduledTodoId = null
-                                        activeDropSectionKey = null
-                                    }
-                                } else {
-                                    null
-                                }
-                            val onMoveTaskToSectionDate: ((TodoItem, LocalDate) -> Unit)? =
-                                if (uiState.mode == TodoListMode.SCHEDULED) {
-                                    { todo, targetDate ->
-                                        draggedScheduledTodoId = null
-                                        activeDropSectionKey = null
-                                        onUpdateTask(todo, createMovedTaskPayload(todo, targetDate))
-                                    }
-                                } else {
-                                    null
-                                }
+                            val isDropEligibleSection = sectionDraggedTodo?.let { todo ->
+                                canDropTodoInTimelineSection(todo, section)
+                            } == true
 
-                            item(
-                                key = "timeline-header-${section.key}",
-                                contentType = "timeline-header",
-                            ) {
-                                var headerModifier: Modifier = Modifier
-                                if (timelineAnimationsEnabled) {
-                                    headerModifier = headerModifier.animateItem(
-                                        fadeInSpec = null,
-                                        placementSpec = tween(
-                                            durationMillis = 320,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                        fadeOutSpec = null,
+                            if (!usesRootFeedChrome) {
+                                item(
+                                    key = "timeline-header-${section.key}",
+                                    contentType = "timeline-header",
+                                ) {
+                                    var headerModifier: Modifier = Modifier
+                                    if (timelineAnimationsEnabled) {
+                                        headerModifier = headerModifier.animateItem(
+                                            fadeInSpec = null,
+                                            placementSpec = tween(
+                                                durationMillis = 320,
+                                                easing = FastOutSlowInEasing,
+                                            ),
+                                            fadeOutSpec = null,
+                                        )
+                                    }
+                                    TimelineSectionHeader(
+                                        modifier = headerModifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 1.dp)
+                                            .timelineInAppDropTarget(
+                                                targetId = "header-${section.key}",
+                                                section = section,
+                                                enabled = isDropEligibleSection,
+                                                dropTargets = timelineDropTargetBounds,
+                                            )
+                                            .padding(top = if (sectionIndex == 0) 0.dp else TimelineSectionTopSpacing),
+                                        section = section,
+                                        useMinimalStyle = usesTodayStyle,
+                                        isCollapsed = isCollapsed,
+                                        isDropTarget = isActiveDropSection && isDropEligibleSection,
+                                        bottomSpacing = if (isCollapsed) {
+                                            TimelineCollapsedSectionSpacing
+                                        } else {
+                                            timelineHeaderBodySpacing
+                                        },
+                                        onHeaderClick = if (sectionCanCollapse) {
+                                            {
+                                                collapsedSectionKeys =
+                                                    if (isCollapsed) {
+                                                        collapsedSectionKeys - section.key
+                                                    } else {
+                                                        collapsedSectionKeys + section.key
+                                                    }
+                                            }
+                                        } else {
+                                            null
+                                        },
+                                        onTapForQuickAdd = section.quickAddDefaults
+                                            ?.takeUnless { sectionModeCanCollapse }
+                                            ?.let { dueEpochMs ->
+                                                {
+                                                    quickAddDueEpochMs = dueEpochMs
+                                                    showCreateTaskSheet = true
+                                                }
+                                            },
                                     )
                                 }
-                                TimelineSectionHeader(
-                                    modifier = headerModifier
-                                        .timelineSectionDropTarget(
-                                            section = section,
-                                            draggedTodo = sectionDraggedTodo,
-                                            onDropTargetChanged = onSectionDropTargetChanged,
-                                            onDragTodoEnd = onSectionDragEnd,
-                                            onMoveTaskToDate = onMoveTaskToSectionDate,
+                            }
+
+                            if (canRescheduleTasks && isActiveDropSection && isDropEligibleSection && section.targetDate != null) {
+                                item(
+                                    key = "timeline-drop-placeholder-${section.key}",
+                                    contentType = "timeline-drop-placeholder",
+                                ) {
+                                    var placeholderModifier: Modifier = Modifier
+                                    if (timelineAnimationsEnabled) {
+                                        placeholderModifier = placeholderModifier.animateItem(
+                                            fadeInSpec = tween(
+                                                durationMillis = 150,
+                                                easing = FastOutSlowInEasing,
+                                            ),
+                                            placementSpec = tween(
+                                                durationMillis = 260,
+                                                easing = FastOutSlowInEasing,
+                                            ),
+                                            fadeOutSpec = tween(
+                                                durationMillis = 120,
+                                                easing = FastOutSlowInEasing,
+                                            ),
                                         )
-                                        .padding(top = if (sectionIndex == 0) 0.dp else 8.dp),
-                                    section = section,
-                                    useMinimalStyle = usesTodayStyle,
-                                    isCollapsed = isCollapsed,
-                                    isDropTarget = activeDropSectionKey == section.key,
-                                    bottomSpacing = if (isCollapsed) {
-                                        timelineItemSpacing
-                                    } else {
-                                        timelineHeaderBodySpacing
-                                    },
-                                    onHeaderClick = if (sectionCanCollapse) {
-                                        {
-                                            collapsedSectionKeys =
-                                                if (isCollapsed) {
-                                                    collapsedSectionKeys - section.key
-                                                } else {
-                                                    collapsedSectionKeys + section.key
-                                                }
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                    onTapForQuickAdd = section.quickAddDefaults
-                                        ?.takeUnless { sectionModeCanCollapse }
-                                        ?.let { dueEpochMs ->
-                                            {
-                                                quickAddDueEpochMs = dueEpochMs
-                                                showCreateTaskSheet = true
-                                            }
-                                        },
-                                )
+                                    }
+                                    TimelineDropPlaceholder(
+                                        modifier = placeholderModifier
+                                            .timelineInAppDropTarget(
+                                                targetId = "placeholder-${section.key}",
+                                                section = section,
+                                                enabled = isDropEligibleSection,
+                                                dropTargets = timelineDropTargetBounds,
+                                            )
+                                            .padding(
+                                                bottom = TimelineDateGroupSpacing,
+                                            ),
+                                        active = true,
+                                        useMinimalStyle = usesTodayStyle,
+                                    )
+                                }
                             }
 
                             if (!isCollapsed && section.items.isNotEmpty()) {
                                 val showEarlierDateTimeSubtitle =
                                     section.key == "earlier" &&
-                                            (uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY)
+                                            (
+                                                    uiState.mode == TodoListMode.ALL ||
+                                                            uiState.mode == TodoListMode.PRIORITY ||
+                                                            uiState.mode == TodoListMode.LIST
+                                                    )
                                 section.items.forEachIndexed { itemIndex, todo ->
+                                    val showTimelineDateDivider = shouldShowDateDivider(
+                                        afterItemIndex = itemIndex,
+                                        inSectionIndex = sectionIndex,
+                                        sections = timelineSections,
+                                        collapsedSectionKeys = collapsedSectionKeys,
+                                    )
                                     item(
                                         key = "timeline-todo-${section.key}-${todo.id}",
                                         contentType = "timeline-todo",
@@ -718,19 +1002,18 @@ fun TodoListScreen(
                                         }
                                         TimelineTaskRow(
                                             modifier = rowModifier
-                                                .timelineSectionDropTarget(
+                                                .timelineInAppDropTarget(
+                                                    targetId = "row-${section.key}-${todo.id}",
                                                     section = section,
-                                                    draggedTodo = sectionDraggedTodo,
-                                                    onDropTargetChanged = onSectionDropTargetChanged,
-                                                    onDragTodoEnd = onSectionDragEnd,
-                                                    onMoveTaskToDate = onMoveTaskToSectionDate,
+                                                    enabled = isDropEligibleSection,
+                                                    dropTargets = timelineDropTargetBounds,
                                                 )
                                                 .padding(
-                                                    bottom = if (itemIndex == section.items.lastIndex) {
-                                                        timelineItemSpacing
-                                                    } else {
-                                                        8.dp
-                                                    },
+                                                    bottom = timelineTaskBottomSpacing(
+                                                        itemIndex = itemIndex,
+                                                        lastIndex = section.items.lastIndex,
+                                                        showDateDivider = showTimelineDateDivider,
+                                                    ),
                                                 ),
                                             todo = todo,
                                             mode = uiState.mode,
@@ -738,19 +1021,40 @@ fun TodoListScreen(
                                             useMinimalStyle = usesTodayStyle,
                                             flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
                                             showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
+                                            showDateDivider = showTimelineDateDivider,
                                             onComplete = { onComplete(todo) },
                                             onDelete = { onDelete(todo) },
                                             onInfo = {
                                                 editTargetTodoId = todo.id
                                             },
                                             draggedTodo = sectionDraggedTodo,
-                                            onDragTodoStart = if (uiState.mode == TodoListMode.SCHEDULED) {
-                                                {
+                                            openSwipeTaskId = openSwipeTaskId,
+                                            onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
+                                            onDragTodoStart = if (canRescheduleTasks) {
+                                                { position ->
                                                     activeDropSectionKey = null
+                                                    timelineDropTargetBounds.clear()
                                                     draggedScheduledTodoId = todo.id
+                                                    activeTimelineDrag =
+                                                        TimelineInAppDrag(todo, position)
                                                 }
                                             } else {
                                                 null
+                                            },
+                                            onDragTodoMove = { position ->
+                                                activeTimelineDrag =
+                                                    activeTimelineDrag?.copy(position = position)
+                                                        ?: TimelineInAppDrag(todo, position)
+                                                updateActiveTimelineDropTarget(position)
+                                            },
+                                            onDragTodoEnd = { position ->
+                                                finishTimelineDrag(position)
+                                            },
+                                            onDragTodoCancel = {
+                                                activeTimelineDrag = null
+                                                draggedScheduledTodoId = null
+                                                activeDropSectionKey = null
+                                                timelineDropTargetBounds.clear()
                                             },
                                         )
                                     }
@@ -779,6 +1083,36 @@ fun TodoListScreen(
                         }
                     }
 
+                    if (floaterListRows.isNotEmpty()) {
+                        item(
+                            key = "floater-my-lists-header",
+                            contentType = "floater-list-header",
+                        ) {
+                            FloaterMyListsHeader(
+                                modifier = Modifier.padding(top = 4.dp, bottom = 10.dp),
+                            )
+                        }
+                        items(
+                            items = floaterListRows,
+                            key = { (list, _) -> "floater-list-${list.id}" },
+                            contentType = { "floater-list-row" },
+                        ) { (list, count) ->
+                            FloaterListRow(
+                                modifier = Modifier.padding(bottom = 10.dp),
+                                name = list.name,
+                                colorKey = list.color,
+                                iconKey = list.iconKey,
+                                count = count,
+                                onClick = {
+                                    onOpenFloaterList(
+                                        list.id,
+                                        capitalizeFirstListLetter(list.name),
+                                    )
+                                },
+                            )
+                        }
+                    }
+
                     uiState.errorMessage?.let { message ->
                         item {
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
@@ -801,16 +1135,55 @@ fun TodoListScreen(
                     message = emptyStateMessageForMode(uiState.mode),
                 )
             }
+
+            if (showRootFeedDock && rootFeedTab != null && onRootFeedTabSelected != null) {
+                RootFeedDock(
+                    activeTab = rootFeedTab,
+                    collapsed = dockCollapsed,
+                    onTabSelected = { tab ->
+                        if (tab == rootFeedTab && isRootFloaterScreen) {
+                            screenScope.launch {
+                                closeRootFloaterSearch()
+                                listState.animateScrollToItem(index = 0, scrollOffset = 0)
+                            }
+                        } else {
+                            onRootFeedTabSelected(tab)
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .zIndex(8f),
+                )
+            }
+
+            activeTimelineDrag?.let { drag ->
+                TimelineTaskDragPreview(
+                    modifier = Modifier
+                        .offset {
+                            val localPosition = drag.position - timelineDragContainerOrigin
+                            IntOffset(
+                                x = (localPosition.x - with(density) { 130.dp.toPx() }).roundToInt(),
+                                y = (localPosition.y - with(density) { 34.dp.toPx() }).roundToInt(),
+                            )
+                        }
+                        .zIndex(20f),
+                    todo = drag.todo,
+                    lists = uiState.lists,
+                    mode = uiState.mode,
+                )
+            }
         }
     }
 
     if (showCreateTaskSheet) {
         CreateTaskBottomSheet(
             lists = uiState.lists,
-            defaultListId = if (uiState.mode == TodoListMode.LIST) uiState.listId else null,
+            defaultListId = if (uiState.mode == TodoListMode.LIST || uiState.mode == TodoListMode.FLOATER) uiState.listId else null,
             defaultPriority = if (uiState.mode == TodoListMode.PRIORITY) "Medium" else null,
+            defaultScheduled = uiState.mode != TodoListMode.FLOATER,
+            showScheduleControls = uiState.mode != TodoListMode.FLOATER,
             initialDueEpochMs = quickAddDueEpochMs,
-            onParseTaskTitleNlp = onParseTaskTitleNlp,
+            onParseTaskTitleNlp = if (uiState.mode == TodoListMode.FLOATER) null else onParseTaskTitleNlp,
             onDismiss = {
                 showCreateTaskSheet = false
                 quickAddDueEpochMs = null
@@ -864,11 +1237,48 @@ fun TodoListScreen(
         )
     }
 
+    pendingRescheduleDrop?.let { drop ->
+        AlertDialog(
+            onDismissRequest = { pendingRescheduleDrop = null },
+            title = {
+                Text(
+                    text = stringResource(R.string.todos_reschedule_recurring_title),
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            },
+            text = {
+                Text(text = stringResource(R.string.todos_reschedule_recurring_message))
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRescheduleDrop = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = {
+                        pendingRescheduleDrop = null
+                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.OCCURRENCE)
+                    }) {
+                        Text(stringResource(R.string.todos_reschedule_this_occurrence))
+                    }
+                    TextButton(onClick = {
+                        pendingRescheduleDrop = null
+                        onMoveTask(drop.todo, drop.targetDate, TaskRescheduleScope.SERIES)
+                    }) {
+                        Text(stringResource(R.string.todos_reschedule_entire_series))
+                    }
+                }
+            },
+        )
+    }
+
     editTargetTodo?.let { todo ->
         CreateTaskBottomSheet(
             lists = uiState.lists,
             editingTask = todo,
-            onParseTaskTitleNlp = onParseTaskTitleNlp,
+            showScheduleControls = uiState.mode != TodoListMode.FLOATER,
+            onParseTaskTitleNlp = if (uiState.mode == TodoListMode.FLOATER) null else onParseTaskTitleNlp,
             onDismiss = { editTargetTodoId = null },
             onCreateTask = { _ -> },
             onUpdateTask = { target, payload ->
@@ -878,13 +1288,39 @@ fun TodoListScreen(
         )
     }
 
+    if (showCreateListSheet && isRootFloaterScreen) {
+        ListSettingsBottomSheet(
+            title = stringResource(R.string.home_new_list),
+            listName = createListName,
+            onListNameChange = { createListName = capitalizeFirstListLetter(it) },
+            listColor = createListColor,
+            onListColorChange = { createListColor = it },
+            listIconKey = createListIconKey,
+            onListIconChange = { createListIconKey = it },
+            showDelete = false,
+            onDismiss = { showCreateListSheet = false },
+            onSave = {
+                val normalizedName = capitalizeFirstListLetter(createListName).trim()
+                if (normalizedName.isNotBlank()) {
+                    onCreateList(normalizedName, createListColor, createListIconKey)
+                    createListName = ""
+                    createListColor = TDAY_DEFAULT_LIST_COLOR_KEY
+                    createListIconKey = TDAY_DEFAULT_LIST_ICON_KEY
+                    showCreateListSheet = false
+                }
+            },
+            onDelete = {},
+        )
+    }
+
     val selectedListId = listSettingsTargetId ?: uiState.listId
     if (
         showListSettingsSheet &&
-        uiState.mode == TodoListMode.LIST &&
+        isListDetailScreen &&
         !selectedListId.isNullOrBlank()
     ) {
         ListSettingsBottomSheet(
+            title = stringResource(R.string.todos_list_settings),
             listName = listSettingsName,
             onListNameChange = { listSettingsName = capitalizeFirstListLetter(it) },
             listColor = listSettingsColor,
@@ -911,8 +1347,553 @@ fun TodoListScreen(
                 showListSettingsSheet = false
                 listSettingsTargetId = null
             },
+            onDelete = {
+                showListSettingsSheet = false
+                showDeleteListConfirmation = true
+            },
         )
     }
+
+    val deleteConfirmationListId = selectedListId
+    if (
+        showDeleteListConfirmation &&
+        isListDetailScreen &&
+        !deleteConfirmationListId.isNullOrBlank()
+    ) {
+        ListDeleteConfirmationDialog(
+            onDismissRequest = { showDeleteListConfirmation = false },
+            onConfirm = {
+                showDeleteListConfirmation = false
+                onDeleteList(deleteConfirmationListId)
+                listSettingsTargetId = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun ListDeleteConfirmationDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val dialogContainerColor = TdaySheetDefaults.surfaceColor()
+    val scrimColor = TdaySheetDefaults.scrimColor()
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(scrimColor)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismissRequest,
+                )
+                .padding(horizontal = 34.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .sizeIn(maxWidth = 420.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                    ),
+                shape = TdaySheetDefaults.OverlayShape,
+                border = BorderStroke(1.dp, TdaySheetDefaults.cardStrokeColor()),
+                colors = CardDefaults.cardColors(containerColor = dialogContainerColor),
+                elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(22.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text(
+                            text = stringResource(R.string.todos_delete_list_title),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = colorScheme.onSurface,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                        Text(
+                            text = stringResource(R.string.todos_delete_list_message),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.16f,
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TextButton(onClick = onDismissRequest) {
+                            Text(
+                                text = stringResource(R.string.action_cancel),
+                                color = colorScheme.primary,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
+                        Spacer(Modifier.size(10.dp))
+                        TextButton(
+                            onClick = {
+                                ViewCompat.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
+                                )
+                                onConfirm()
+                            },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.action_delete),
+                                color = colorScheme.error,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RootFeedTitleRow(
+    title: String,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isDaytime = rememberTodoRootIsDaytime()
+    val titleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val titleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .padding(start = 2.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = titleIcon,
+                contentDescription = null,
+                tint = titleIconTint,
+                modifier = Modifier.size(26.dp),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onBackground,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RootFeedSearchHeaderRow(
+    title: String,
+    searchExpanded: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onSearchExpandedChange: (Boolean) -> Unit,
+    onSearchClose: () -> Unit,
+    onCreateList: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
+    val isDaytime = rememberTodoRootIsDaytime()
+    val titleIcon = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val titleIconTint = if (isDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
+
+    LaunchedEffect(searchExpanded) {
+        if (searchExpanded) {
+            delay(300)
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        } else {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+        }
+    }
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+    ) {
+        val buttonSize = 56.dp
+        val buttonGap = 8.dp
+        val expandedSearchWidth = maxWidth.coerceAtLeast(buttonSize)
+        val collapsedSearchOffset = -((buttonSize * 2) + (buttonGap * 2))
+        val animatedSearchWidth by animateDpAsState(
+            targetValue = if (searchExpanded) expandedSearchWidth else buttonSize,
+            label = "rootFeedSearchHeaderWidth",
+        )
+        val animatedSearchOffset by animateDpAsState(
+            targetValue = if (searchExpanded) 0.dp else collapsedSearchOffset,
+            label = "rootFeedSearchHeaderOffset",
+        )
+        val actionsAlpha by animateFloatAsState(
+            targetValue = if (searchExpanded) 0f else 1f,
+            label = "rootFeedSearchHeaderActionsAlpha",
+        )
+        val searchContentAlpha by animateFloatAsState(
+            targetValue = if (searchExpanded) 1f else 0f,
+            label = "rootFeedSearchHeaderContentAlpha",
+        )
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 2.dp)
+                .graphicsLayer { alpha = actionsAlpha },
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = titleIcon,
+                contentDescription = null,
+                tint = titleIconTint,
+                modifier = Modifier.size(26.dp),
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .graphicsLayer { alpha = actionsAlpha },
+            horizontalArrangement = Arrangement.spacedBy(buttonGap),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TodayHeaderButton(
+                onClick = onCreateList,
+                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                contentDescription = stringResource(R.string.action_create_list),
+            )
+            TodayHeaderButton(
+                onClick = onOpenSettings,
+                icon = Icons.Rounded.MoreHoriz,
+                contentDescription = stringResource(R.string.action_more),
+            )
+        }
+
+        Card(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .offset(x = animatedSearchOffset)
+                .width(animatedSearchWidth)
+                .height(buttonSize)
+                .zIndex(2f),
+            shape = CircleShape,
+            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f)),
+            colors = CardDefaults.cardColors(containerColor = colorScheme.background),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = ripple(bounded = true),
+                    ) {
+                        if (!searchExpanded) onSearchExpandedChange(true)
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = stringResource(R.string.action_search),
+                    tint = colorScheme.onSurface,
+                    modifier = Modifier
+                        .size(30.dp)
+                        .graphicsLayer { alpha = if (searchExpanded) 0f else 1f },
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp)
+                        .graphicsLayer { alpha = searchContentAlpha },
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = colorScheme.onSurface,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        enabled = searchExpanded,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            color = colorScheme.onSurface,
+                            fontWeight = FontWeight.ExtraBold,
+                        ),
+                        cursorBrush = SolidColor(colorScheme.primary),
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        decorationBox = { innerTextField ->
+                            Box(contentAlignment = Alignment.CenterStart) {
+                                if (searchQuery.isBlank()) {
+                                    Text(
+                                        text = stringResource(R.string.home_search_placeholder),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                    )
+                    IconButton(onClick = onSearchClose) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = stringResource(R.string.action_close),
+                            tint = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RootFloaterSearchResultsCard(
+    results: List<TodoItem>,
+    listsById: Map<String, ListSummary>,
+    onOpenTodo: (TodoItem) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.2f)),
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+    ) {
+        if (results.isEmpty()) {
+            Text(
+                text = stringResource(R.string.home_search_no_results),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = colorScheme.onSurfaceVariant,
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp),
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
+                items(
+                    items = results,
+                    key = { todo -> todo.id },
+                ) { todo ->
+                    val listMeta = todo.listId?.let { listsById[it] }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics(mergeDescendants = true) {}
+                            .heightIn(min = 48.dp)
+                            .clickable { onOpenTodo(todo) }
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = tdayListIconForKey(listMeta?.iconKey),
+                            contentDescription = null,
+                            tint = tdayListAccentColor(listMeta?.color).copy(alpha = 0.92f),
+                            modifier = Modifier.size(17.dp),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = todo.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = FontWeight.ExtraBold,
+                            )
+                            Text(
+                                text = listMeta?.name ?: todo.priority,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FloaterMyListsHeader(
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = stringResource(R.string.home_my_lists),
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.onBackground,
+        fontWeight = FontWeight.ExtraBold,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun FloaterListRow(
+    modifier: Modifier = Modifier,
+    name: String,
+    colorKey: String?,
+    iconKey: String?,
+    count: Int,
+    onClick: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val animatedScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        label = "floaterListRowScale",
+    )
+    val animatedOffsetY by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 0.dp,
+        label = "floaterListRowOffsetY",
+    )
+    val animatedElevation by animateDpAsState(
+        targetValue = if (isPressed) 2.dp else 8.dp,
+        label = "floaterListRowElevation",
+    )
+    val accent = tdayListAccentColor(colorKey)
+    val icon = tdayListIconForKey(iconKey)
+    val containerColor =
+        lerpColor(colorScheme.surfaceVariant, accent, FLOATER_LIST_CONTAINER_COLOR_WEIGHT)
+    val displayName = capitalizeFirstListLetter(name)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(70.dp)
+            .semantics(mergeDescendants = true) {}
+            .offset(y = animatedOffsetY)
+            .graphicsLayer {
+                scaleX = animatedScale
+                scaleY = animatedScale
+            },
+        onClick = {
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            onClick()
+        },
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = animatedElevation,
+            pressedElevation = animatedElevation,
+        ),
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = lerpColor(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(x = 14.dp, y = 8.dp)
+                    .size(82.dp),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Text(
+                        text = displayName,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+                Text(
+                    text = count.toString(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun rememberTodoRootIsDaytime(): Boolean {
+    var hour by remember { mutableStateOf(LocalTime.now().hour) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val now = LocalTime.now()
+            val millisToNextMinute = ((60 - now.second) * 1000L) - (now.nano / 1_000_000L)
+            delay(millisToNextMinute.coerceAtLeast(500L))
+            hour = LocalTime.now().hour
+        }
+    }
+
+    return hour in 6 until 18
 }
 
 @Composable
@@ -1073,22 +2054,10 @@ private fun SummaryBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colorScheme = MaterialTheme.colorScheme
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val sheetContainerColor = if (isDarkTheme) colorScheme.surface else colorScheme.background
-    val sheetScrimColor = if (isDarkTheme) {
-        Color.Black.copy(alpha = 0.68f)
-    } else {
-        Color.Black.copy(alpha = 0.40f)
-    }
 
-    ModalBottomSheet(
+    TdayModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        dragHandle = null,
-        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-        containerColor = sheetContainerColor,
-        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
-        scrimColor = sheetScrimColor,
     ) {
         Column(
             modifier = Modifier
@@ -1097,25 +2066,13 @@ private fun SummaryBottomSheet(
                 .padding(horizontal = 18.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.todos_summary_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onBackground,
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.todos_summary_close),
-                        tint = colorScheme.onBackground,
-                    )
-                }
-            }
+            TdaySheetHeader(
+                title = stringResource(R.string.todos_summary_title),
+                leftIcon = Icons.Rounded.Close,
+                leftContentDescription = stringResource(R.string.todos_summary_close),
+                onLeftClick = onDismiss,
+                showConfirmAction = false,
+            )
 
             if (isLoading) {
                 Row(
@@ -1136,11 +2093,8 @@ private fun SummaryBottomSheet(
             }
 
             if (!summaryText.isNullOrBlank()) {
-                Card(
+                TdaySheetCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 ) {
                     Text(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
@@ -1203,38 +2157,29 @@ private fun CreateTaskButton(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ListSettingsBottomSheet(
+    title: String,
     listName: String,
     onListNameChange: (String) -> Unit,
     listColor: String,
     onListColorChange: (String) -> Unit,
     listIconKey: String,
     onListIconChange: (String) -> Unit,
+    showDelete: Boolean = true,
     onDismiss: () -> Unit,
     onSave: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val colorScheme = MaterialTheme.colorScheme
-    val selectedAccent = listAccentColor(listColor)
-    val selectedIcon = listIconForKey(listIconKey)
+    val selectedAccent = tdayListAccentColor(listColor)
+    val selectedIcon = tdayListIconForKey(listIconKey)
     val canSave = listName.isNotBlank()
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val sheetContainerColor = if (isDarkTheme) colorScheme.surface else colorScheme.background
-    val sheetScrimColor = if (isDarkTheme) {
-        Color.Black.copy(alpha = 0.68f)
-    } else {
-        Color.Black.copy(alpha = 0.40f)
-    }
 
-    ModalBottomSheet(
+    TdayModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        dragHandle = null,
-        shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-        containerColor = sheetContainerColor,
-        tonalElevation = if (isDarkTheme) 10.dp else 0.dp,
-        scrimColor = sheetScrimColor,
     ) {
         Box(
             modifier = Modifier
@@ -1248,54 +2193,26 @@ private fun ListSettingsBottomSheet(
                     .padding(horizontal = 18.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    ListSettingsActionButton(
-                        icon = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.action_close),
-                        enabled = true,
-                        accentColor = Color(0xFFE35A5A),
-                        onClick = {
-                            focusManager.clearFocus(force = true)
-                            onDismiss()
-                        },
-                    )
-
-                    Text(
-                        text = stringResource(R.string.todos_list_settings),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = colorScheme.onBackground,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-
-                    ListSettingsActionButton(
-                        icon = Icons.Rounded.Check,
-                        contentDescription = stringResource(R.string.todos_save_list_settings),
-                        enabled = canSave,
-                        accentColor = Color(0xFF2FA35B),
-                        onClick = {
-                            focusManager.clearFocus(force = true)
-                            if (canSave) onSave()
-                        },
-                    )
-                }
-
-                Text(
-                    text = stringResource(R.string.home_section_list),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp),
+                TdaySheetHeader(
+                    title = title,
+                    leftIcon = Icons.Rounded.Close,
+                    leftContentDescription = stringResource(R.string.action_close),
+                    onLeftClick = {
+                        focusManager.clearFocus(force = true)
+                        onDismiss()
+                    },
+                    confirmContentDescription = stringResource(R.string.todos_save_list_settings),
+                    onConfirm = {
+                        focusManager.clearFocus(force = true)
+                        if (canSave) onSave()
+                    },
+                    confirmEnabled = canSave,
                 )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                ) {
+
+                TdaySheetSectionTitle(
+                    text = stringResource(R.string.home_section_list),
+                )
+                TdaySheetCard {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1356,7 +2273,8 @@ private fun ListSettingsBottomSheet(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(
-                                            colorScheme.surfaceVariant, RoundedCornerShape(16.dp)
+                                            TdaySheetDefaults.controlSurfaceColor(),
+                                            RoundedCornerShape(16.dp)
                                         )
                                         .padding(horizontal = 14.dp, vertical = 12.dp),
                                     contentAlignment = Alignment.Center,
@@ -1382,19 +2300,10 @@ private fun ListSettingsBottomSheet(
                     }
                 }
 
-                Text(
+                TdaySheetSectionTitle(
                     text = stringResource(R.string.home_section_color),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp),
                 )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                ) {
+                TdaySheetCard {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1402,9 +2311,10 @@ private fun ListSettingsBottomSheet(
                             .padding(horizontal = 14.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        LIST_SETTINGS_COLOR_KEYS.forEach { colorKey ->
+                        TdayListColorOptions.forEach { option ->
+                            val colorKey = option.key
                             val selected = listColor == colorKey
-                            val swatchColor = listAccentColor(colorKey)
+                            val swatchColor = option.color
                             val interactionSource = remember { MutableInteractionSource() }
                             Box(
                                 modifier = Modifier
@@ -1436,19 +2346,10 @@ private fun ListSettingsBottomSheet(
                     }
                 }
 
-                Text(
+                TdaySheetSectionTitle(
                     text = stringResource(R.string.home_section_icon),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp),
                 )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                ) {
+                TdaySheetCard {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1456,7 +2357,7 @@ private fun ListSettingsBottomSheet(
                             .padding(horizontal = 14.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        LIST_SETTINGS_ICON_OPTIONS.forEach { option ->
+                        TdayListIconOptions.forEach { option ->
                             val selected = listIconKey == option.key
                             val interactionSource = remember { MutableInteractionSource() }
                             Box(
@@ -1467,7 +2368,7 @@ private fun ListSettingsBottomSheet(
                                         color = if (selected) {
                                             selectedAccent.copy(alpha = 0.2f)
                                         } else {
-                                            colorScheme.surfaceVariant
+                                            TdaySheetDefaults.controlSurfaceColor()
                                         },
                                         shape = CircleShape,
                                     )
@@ -1500,17 +2401,18 @@ private fun ListSettingsBottomSheet(
                         }
                     }
                 }
+
+                Spacer(Modifier.height(2.dp))
+                if (showDelete) {
+                    ListSettingsDeleteButton(onClick = onDelete)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ListSettingsActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    enabled: Boolean,
-    accentColor: Color,
+private fun ListSettingsDeleteButton(
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
@@ -1518,60 +2420,48 @@ private fun ListSettingsActionButton(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.93f else 1f,
-        label = "listSettingsHeaderButtonScale",
+        targetValue = if (pressed) 0.97f else 1f,
+        label = "listSettingsDeleteButtonScale",
     )
-    val elevation by animateDpAsState(
-        targetValue = when {
-            pressed && enabled -> 2.dp
-            enabled -> 8.dp
-            else -> 5.dp
-        },
-        label = "listSettingsHeaderButtonElevation",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed && enabled) 1.dp else 0.dp,
-        label = "listSettingsHeaderButtonOffsetY",
-    )
-    val iconTint = colorScheme.onBackground.copy(alpha = if (enabled) 1f else 0.55f)
 
     Card(
         modifier = Modifier
-            .size(54.dp)
-            .offset(y = offsetY)
+            .fillMaxWidth()
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-            }
-            .border(
-                width = 1.5.dp,
-                color = accentColor.copy(alpha = if (enabled) 0.55f else 0.3f),
-                shape = CircleShape,
-            ),
+            },
         onClick = {
-            if (enabled) {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-            }
+            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
             onClick()
         },
-        enabled = enabled,
         interactionSource = interactionSource,
-        shape = CircleShape,
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = elevation,
-            pressedElevation = elevation,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.5.dp, colorScheme.error.copy(alpha = 0.45f)),
+        colors = CardDefaults.cardColors(
+            containerColor = colorScheme.error.copy(
+                alpha = if (TdaySheetDefaults.isDarkTheme()) 0.14f else 0.04f,
+            ),
         ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = iconTint,
-                modifier = Modifier.size(22.dp),
+                imageVector = Icons.Rounded.DeleteOutline,
+                contentDescription = null,
+                tint = colorScheme.error,
+            )
+            Text(
+                text = stringResource(R.string.action_delete_list),
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.error,
+                fontWeight = FontWeight.ExtraBold,
             )
         }
     }
@@ -1608,6 +2498,8 @@ private fun TimelineSectionHeader(
     }
     val headerTextColor = if (isHeaderPressed) {
         androidx.compose.ui.graphics.lerp(baseHeaderColor, colorScheme.onSurface, 0.16f)
+    } else if (isDropTarget) {
+        colorScheme.error
     } else {
         baseHeaderColor
     }
@@ -1618,7 +2510,7 @@ private fun TimelineSectionHeader(
     } else {
         baseChevronColor
     }
-    val minimumHeaderHeight = if (useMinimalStyle) 34.dp else 48.dp
+    val minimumHeaderHeight = if (useMinimalStyle) 32.dp else 44.dp
     val headerClickModifier = when {
         onHeaderClick != null -> Modifier.clickable(
             interactionSource = headerInteractionSource,
@@ -1644,13 +2536,7 @@ private fun TimelineSectionHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .background(
-                    if (isDropTarget) {
-                        colorScheme.primary.copy(alpha = 0.1f)
-                    } else {
-                        Color.Transparent
-                    },
-                )
+                .background(Color.Transparent)
                 .padding(horizontal = 4.dp)
                 .heightIn(min = minimumHeaderHeight)
                 .then(headerClickModifier),
@@ -1688,6 +2574,119 @@ private fun TimelineSectionHeader(
 }
 
 @Composable
+private fun TimelineDropPlaceholder(
+    modifier: Modifier = Modifier,
+    active: Boolean,
+    useMinimalStyle: Boolean,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val placeholderHeight by animateDpAsState(
+        targetValue = if (active) {
+            if (useMinimalStyle) 66.dp else 72.dp
+        } else {
+            if (useMinimalStyle) 46.dp else 52.dp
+        },
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "timelineDropPlaceholderHeight",
+    )
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(placeholderHeight)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                if (active) {
+                    colorScheme.error.copy(alpha = 0.10f)
+                } else {
+                    colorScheme.surfaceVariant.copy(alpha = 0.16f)
+                },
+            )
+            .border(
+                BorderStroke(
+                    width = if (active) 1.5.dp else 1.dp,
+                    color = if (active) {
+                        colorScheme.error.copy(alpha = 0.64f)
+                    } else {
+                        colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
+                    },
+                ),
+                RoundedCornerShape(18.dp),
+            ),
+    )
+}
+
+@Composable
+private fun TimelineTaskDragPreview(
+    modifier: Modifier = Modifier,
+    todo: TodoItem,
+    lists: List<ListSummary>,
+    mode: TodoListMode,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
+    val showListIndicator = listMeta != null && mode != TodoListMode.LIST
+    val previewShape = RoundedCornerShape(18.dp)
+    Card(
+        modifier = modifier
+            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp),
+        shape = previewShape,
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface.copy(alpha = 0.88f)),
+        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                modifier = Modifier.size(22.dp),
+            )
+            Column(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = todo.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.onSurface,
+                    maxLines = 1,
+                )
+                todo.due?.let(TODO_DUE_TIME_FORMATTER::format)?.let { dueText ->
+                    Text(
+                        text = dueText,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+            }
+            if (showListIndicator) {
+                Icon(
+                    imageVector = tdayListIconForKey(listMeta?.iconKey),
+                    contentDescription = null,
+                    tint = tdayListAccentColor(listMeta?.color),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            priorityIconFor(todo.priority)?.let { priorityIcon ->
+                Icon(
+                    imageVector = priorityIcon,
+                    contentDescription = null,
+                    tint = tdayPriorityColor(todo.priority),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun TimelineTaskRow(
     modifier: Modifier = Modifier,
     todo: TodoItem,
@@ -1696,11 +2695,17 @@ private fun TimelineTaskRow(
     useMinimalStyle: Boolean,
     flashHighlight: Boolean,
     showEarlierDateTimeSubtitle: Boolean,
+    showDateDivider: Boolean,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
     draggedTodo: TodoItem? = null,
-    onDragTodoStart: (() -> Unit)? = null,
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    onDragTodoStart: ((Offset) -> Unit)? = null,
+    onDragTodoMove: (Offset) -> Unit = {},
+    onDragTodoEnd: (Offset?) -> Unit = {},
+    onDragTodoCancel: () -> Unit = {},
 ) {
     Box(
         modifier = modifier.fillMaxWidth(),
@@ -1715,6 +2720,15 @@ private fun TimelineTaskRow(
                 onInfo = onInfo,
                 showDuePrefix = true,
                 showDueDateInSubtitle = showEarlierDateTimeSubtitle,
+                showDateDivider = showDateDivider,
+                dragEnabled = onDragTodoStart != null,
+                dragging = draggedTodo?.id == todo.id,
+                onDragStart = { position -> onDragTodoStart?.invoke(position) },
+                onDragMove = onDragTodoMove,
+                onDragEnd = onDragTodoEnd,
+                onDragCancel = onDragTodoCancel,
+                openSwipeTaskId = openSwipeTaskId,
+                onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
             )
         } else if (
             useMinimalStyle &&
@@ -1723,6 +2737,7 @@ private fun TimelineTaskRow(
                             mode == TodoListMode.OVERDUE ||
                             mode == TodoListMode.SCHEDULED ||
                             mode == TodoListMode.PRIORITY ||
+                            mode == TodoListMode.FLOATER ||
                             mode == TodoListMode.LIST
                     )
         ) {
@@ -1736,9 +2751,15 @@ private fun TimelineTaskRow(
                 onInfo = onInfo,
                 showDuePrefix = true,
                 showDueDateInSubtitle = showEarlierDateTimeSubtitle,
+                showDateDivider = showDateDivider,
                 dragEnabled = onDragTodoStart != null,
                 dragging = draggedTodo?.id == todo.id,
-                onDragStart = { onDragTodoStart?.invoke() },
+                onDragStart = { position -> onDragTodoStart?.invoke(position) },
+                onDragMove = onDragTodoMove,
+                onDragEnd = onDragTodoEnd,
+                onDragCancel = onDragTodoCancel,
+                openSwipeTaskId = openSwipeTaskId,
+                onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
             )
         } else if (useMinimalStyle) {
             TodayTodoRow(
@@ -1756,45 +2777,47 @@ private fun TimelineTaskRow(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-private fun Modifier.timelineSectionDropTarget(
+private fun Modifier.timelineInAppDropTarget(
+    targetId: String,
     section: TodoSection,
-    draggedTodo: TodoItem?,
-    onDropTargetChanged: (Boolean) -> Unit,
-    onDragTodoEnd: (() -> Unit)?,
-    onMoveTaskToDate: ((TodoItem, LocalDate) -> Unit)?,
+    enabled: Boolean,
+    dropTargets: MutableMap<String, TimelineDropTargetBounds>,
 ): Modifier {
-    if (section.targetDate == null || draggedTodo == null || onMoveTaskToDate == null) {
+    if (!enabled || section.targetDate == null) {
         return this
     }
 
-    return dragAndDropTarget(
-        shouldStartDragAndDrop = { event ->
-            event.mimeTypes().any { mimeType -> mimeType.startsWith("text/") }
-        },
-        target = object : DragAndDropTarget {
-            override fun onEntered(event: DragAndDropEvent) {
-                onDropTargetChanged(true)
+    return composed {
+        DisposableEffect(targetId) {
+            onDispose {
+                dropTargets.remove(targetId)
             }
-
-            override fun onExited(event: DragAndDropEvent) {
-                onDropTargetChanged(false)
-            }
-
-            override fun onDrop(event: DragAndDropEvent): Boolean {
-                val targetDate = section.targetDate ?: return false
-                onDropTargetChanged(false)
-                onMoveTaskToDate(draggedTodo, targetDate)
-                return true
-            }
-
-            override fun onEnded(event: DragAndDropEvent) {
-                onDropTargetChanged(false)
-                onDragTodoEnd?.invoke()
-            }
-        },
-    )
+        }
+        onGloballyPositioned { coordinates ->
+            val position = coordinates.positionInRoot()
+            val size = coordinates.size
+            dropTargets[targetId] = TimelineDropTargetBounds(
+                sectionKey = section.key,
+                bounds = Rect(
+                    left = position.x,
+                    top = position.y,
+                    right = position.x + size.width,
+                    bottom = position.y + size.height,
+                ),
+            )
+        }
+    }
 }
+
+private data class TimelineDropTargetBounds(
+    val sectionKey: String,
+    val bounds: Rect,
+)
+
+private data class TimelineInAppDrag(
+    val todo: TodoItem,
+    val position: Offset,
+)
 
 private data class TodoSection(
     val key: String,
@@ -1804,6 +2827,43 @@ private data class TodoSection(
     val targetDate: LocalDate? = null,
 )
 
+private data class TaskRescheduleDrop(
+    val todo: TodoItem,
+    val targetDate: LocalDate,
+)
+
+private fun shouldShowDateDivider(
+    afterItemIndex: Int,
+    inSectionIndex: Int,
+    sections: List<TodoSection>,
+    collapsedSectionKeys: Set<String>,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): Boolean {
+    val section = sections.getOrNull(inSectionIndex) ?: return false
+    val currentTodo = section.items.getOrNull(afterItemIndex) ?: return false
+    val nextTodoInSection = section.items.getOrNull(afterItemIndex + 1)
+    if (nextTodoInSection != null) {
+        val currentDue = currentTodo.due ?: return false
+        val nextDue = nextTodoInSection.due ?: return false
+        return !currentDue.isSameLocalDayAs(nextDue, zoneId)
+    }
+
+    val nextVisibleTodo = sections
+        .asSequence()
+        .drop(inSectionIndex + 1)
+        .filter { it.key !in collapsedSectionKeys }
+        .flatMap { it.items.asSequence() }
+        .firstOrNull()
+        ?: return false
+
+    val currentDue = currentTodo.due ?: return false
+    val nextDue = nextVisibleTodo.due ?: return false
+    return !currentDue.isSameLocalDayAs(nextDue, zoneId)
+}
+
+private fun Instant.isSameLocalDayAs(other: Instant, zoneId: ZoneId): Boolean =
+    LocalDate.ofInstant(this, zoneId) == LocalDate.ofInstant(other, zoneId)
+
 private enum class TodaySectionSlot {
     MORNING, AFTERNOON, TONIGHT,
 }
@@ -1811,6 +2871,7 @@ private enum class TodaySectionSlot {
 private fun buildTimelineSections(
     mode: TodoListMode,
     items: List<TodoItem>,
+    includeEmptyEarlierTarget: Boolean = false,
 ): List<TodoSection> {
     val zoneId = ZoneId.systemDefault()
     return when (mode) {
@@ -1827,13 +2888,25 @@ private fun buildTimelineSections(
             zoneId = zoneId,
             futureOnly = false,
             placesEarlierBeforeToday = true,
+            includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
 
-        TodoListMode.PRIORITY, TodoListMode.LIST -> buildScheduledSections(
+        TodoListMode.PRIORITY -> buildScheduledSections(
             items = items,
             zoneId = zoneId,
             futureOnly = false,
-            placesEarlierBeforeToday = false,
+            placesEarlierBeforeToday = true,
+            includeEmptyEarlierTarget = includeEmptyEarlierTarget,
+        )
+
+        TodoListMode.FLOATER -> buildFloaterSections(items)
+
+        TodoListMode.LIST -> buildScheduledSections(
+            items = items,
+            zoneId = zoneId,
+            futureOnly = false,
+            placesEarlierBeforeToday = true,
+            includeEmptyEarlierTarget = includeEmptyEarlierTarget,
         )
     }
 }
@@ -1845,13 +2918,14 @@ private fun buildOverdueSections(
     val now = Instant.now()
     val today = LocalDate.now(zoneId)
     val overdueByDate = items.asSequence()
-        .filter { todo -> todo.due.isBefore(now) }
-        .groupBy { todo -> LocalDate.ofInstant(todo.due, zoneId) }
+        .mapNotNull { todo -> todo.due?.let { due -> due to todo } }
+        .filter { (due, _) -> due.isBefore(now) }
+        .groupBy({ (due, _) -> LocalDate.ofInstant(due, zoneId) }, { (_, todo) -> todo })
 
     val sections = mutableListOf<TodoSection>()
 
     overdueByDate[today]
-        ?.sortedBy { it.due }
+        ?.sortedBy { it.due ?: Instant.MAX }
         ?.takeIf { it.isNotEmpty() }
         ?.let { todaysItems ->
             sections += TodoSection(
@@ -1873,7 +2947,7 @@ private fun buildOverdueSections(
             sections += TodoSection(
                 key = "day-$date",
                 title = date.format(SCHEDULED_DAY_FORMATTER),
-                items = overdueByDate[date].orEmpty().sortedBy { it.due },
+                items = overdueByDate[date].orEmpty().sortedBy { it.due ?: Instant.MAX },
                 quickAddDefaults = null,
             )
         }
@@ -1885,12 +2959,12 @@ private fun buildTodaySections(
     items: List<TodoItem>,
     zoneId: ZoneId,
 ): List<TodoSection> {
-    val sorted = items.sortedBy { it.due }
+    val sorted = items.filter { it.due != null }.sortedBy { it.due ?: Instant.MAX }
     val noon = LocalTime.NOON
     val eveningStartBoundary = LocalTime.of(18, 0)
 
     fun sectionOf(todo: TodoItem): TodaySectionSlot {
-        val dueTime = todo.due.atZone(zoneId).toLocalTime()
+        val dueTime = todo.due?.atZone(zoneId)?.toLocalTime() ?: LocalTime.NOON
         return when {
             // Requested boundaries:
             // Morning: 12:01 AM -> 12:00 PM (inclusive of 12:00 PM)
@@ -1933,18 +3007,68 @@ private fun buildTodaySections(
     )
 }
 
+private fun buildFloaterSections(items: List<TodoItem>): List<TodoSection> {
+    val floaterItems = items
+        .sortedWith(
+            compareByDescending<TodoItem> { it.pinned }
+                .thenBy { it.title.lowercase(Locale.getDefault()) },
+        )
+
+    return listOfNotNull(
+        floaterItems.filter { it.priority.equals("High", ignoreCase = true) }
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                TodoSection(
+                    key = "floater-high",
+                    title = "High",
+                    items = it,
+                )
+            },
+        floaterItems.filter { it.priority.equals("Medium", ignoreCase = true) }
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                TodoSection(
+                    key = "floater-medium",
+                    title = "Medium",
+                    items = it,
+                )
+            },
+        floaterItems.filterNot {
+            it.priority.equals("High", ignoreCase = true) ||
+                    it.priority.equals("Medium", ignoreCase = true)
+        }.takeIf { it.isNotEmpty() }?.let {
+            TodoSection(
+                key = "floater-low",
+                title = "Low",
+                items = it,
+            )
+        },
+    )
+}
+
+private fun floaterPriorityRank(priority: String): Int {
+    return when {
+        priority.equals("High", ignoreCase = true) -> 0
+        priority.equals("Medium", ignoreCase = true) -> 1
+        else -> 2
+    }
+}
+
 private fun buildScheduledSections(
     items: List<TodoItem>,
     zoneId: ZoneId,
     futureOnly: Boolean,
     placesEarlierBeforeToday: Boolean = true,
+    includeEmptyEarlierTarget: Boolean = false,
 ): List<TodoSection> {
     val now = Instant.now()
-    val sorted = items.asSequence().filter { todo ->
-        if (futureOnly) !todo.due.isBefore(now) else true
-    }.sortedBy { it.due }.toList()
+    val sorted = items.asSequence().mapNotNull { todo ->
+        todo.due?.let { due -> due to todo }
+    }.filter { (due, _) ->
+        if (futureOnly) !due.isBefore(now) else true
+    }.sortedBy { (due, _) -> due }.map { (_, todo) -> todo }.toList()
     val groupedByDate = sorted.groupBy { todo ->
-        LocalDate.ofInstant(todo.due, zoneId)
+        LocalDate.ofInstant(todo.due ?: Instant.MAX, zoneId)
     }
     val today = LocalDate.now(zoneId)
     val horizonStart = today.plusDays(7)
@@ -1960,7 +3084,7 @@ private fun buildScheduledSections(
                 date = date,
                 zoneId = zoneId,
             ),
-            targetDate = date,
+            targetDate = timelineRescheduleTargetDate("day-$date", today),
         )
     }
 
@@ -1980,17 +3104,21 @@ private fun buildScheduledSections(
 
     val earlierSection = if (!futureOnly) {
         val earlierItems = groupedByDate.asSequence().filter { (date, _) -> date < today }
-            .flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
-        earlierItems.takeIf { it.isNotEmpty() }?.let {
+            .flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due ?: Instant.MAX }
+            .toList()
+        if (earlierItems.isNotEmpty() || includeEmptyEarlierTarget) {
             TodoSection(
                 key = "earlier",
                 title = "Earlier",
-                items = it,
+                items = earlierItems,
                 quickAddDefaults = quickAddDefaultsForDate(
-                    date = today,
+                    date = today.minusDays(1),
                     zoneId = zoneId,
                 ),
+                targetDate = timelineRescheduleTargetDate("earlier", today),
             )
+        } else {
+            null
         }
     } else {
         null
@@ -2015,7 +3143,7 @@ private fun buildScheduledSections(
 
     val restOfCurrentMonthItems = groupedByDate.asSequence().filter { (date, _) ->
         date >= horizonStart && YearMonth.from(date) == currentMonth
-    }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
+    }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due ?: Instant.MAX }.toList()
     val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
     sections += TodoSection(
         key = "rest-$currentMonth",
@@ -2025,6 +3153,7 @@ private fun buildScheduledSections(
             date = currentMonth.atEndOfMonth(),
             zoneId = zoneId,
         ),
+        targetDate = timelineRescheduleTargetDate("rest-$currentMonth", today),
     )
 
     val futureMonthsWithData =
@@ -2040,7 +3169,8 @@ private fun buildScheduledSections(
     while (targetMonth <= finalMonth) {
         val monthItems = groupedByDate.asSequence().filter { (date, _) ->
             date >= horizonStart && YearMonth.from(date) == targetMonth
-        }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due }.toList()
+        }.flatMap { (_, dayItems) -> dayItems.asSequence() }.sortedBy { it.due ?: Instant.MAX }
+            .toList()
         sections += TodoSection(
             key = "month-$targetMonth",
             title = monthTitle(targetMonth, currentMonth.year),
@@ -2049,6 +3179,7 @@ private fun buildScheduledSections(
                 date = targetMonth.atDay(1),
                 zoneId = zoneId,
             ),
+            targetDate = timelineRescheduleTargetDate("month-$targetMonth", today),
         )
         targetMonth = targetMonth.plusMonths(1)
     }
@@ -2103,6 +3234,7 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
         TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
         TodoListMode.OVERDUE -> stringResource(R.string.todos_empty_overdue)
         TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
+        TodoListMode.FLOATER -> "No floater tasks"
         TodoListMode.SCHEDULED -> stringResource(R.string.todos_empty_scheduled)
         TodoListMode.ALL -> stringResource(R.string.todos_empty_all)
         TodoListMode.LIST -> stringResource(R.string.todos_empty_list)
@@ -2117,9 +3249,10 @@ private fun emptyStateIconForMode(
         TodoListMode.TODAY -> Icons.Rounded.WbSunny
         TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
         TodoListMode.PRIORITY -> Icons.Rounded.Flag
+        TodoListMode.FLOATER -> Icons.Rounded.Inventory
         TodoListMode.SCHEDULED -> Icons.Rounded.Schedule
         TodoListMode.ALL -> Icons.Rounded.Inbox
-        TodoListMode.LIST -> listIconForKey(listIconKey)
+        TodoListMode.LIST -> tdayListIconForKey(listIconKey)
     }
 }
 
@@ -2144,24 +3277,6 @@ private fun quickAddDefaultsForTodaySection(
         TodaySectionSlot.TONIGHT -> LocalTime.of(22, 0)
     }
     return ZonedDateTime.of(today, time, zoneId).toInstant().toEpochMilli()
-}
-
-private fun createMovedTaskPayload(
-    todo: TodoItem,
-    targetDate: LocalDate,
-    zoneId: ZoneId = ZoneId.systemDefault(),
-): CreateTaskPayload {
-    val dueTime = todo.due.atZone(zoneId).toLocalTime()
-    val movedDue = ZonedDateTime.of(targetDate, dueTime, zoneId).toInstant()
-
-    return CreateTaskPayload(
-        title = todo.title,
-        description = todo.description,
-        priority = todo.priority,
-        due = movedDue,
-        rrule = todo.rrule,
-        listId = todo.listId,
-    )
 }
 
 private suspend fun LazyListState.animateSearchResultScrollToItem(
@@ -2249,9 +3364,12 @@ private const val SEARCH_RESULT_SCROLL_MIN_DURATION_MS = 720
 private const val SEARCH_RESULT_SCROLL_MAX_DURATION_MS = 2400
 private const val SEARCH_RESULT_CENTER_SCROLL_DURATION_MS = 520
 private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
+private const val TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
+private const val TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
+private const val TASK_COMPLETION_FADE_MS = 260L
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
-private val SWIPE_ROW_HEIGHT = 58.dp
-private val TASK_CHECKMARK_GREEN = Color(0xFF6FBF86)
+private val SWIPE_ROW_HEIGHT = 56.dp
+private val TASK_CHECKMARK_GREEN = TdayTaskCompleteAccent
 private val TODO_DUE_TIME_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault())
 private val TODO_DUE_DATE_TIME_FORMATTER: DateTimeFormatter =
@@ -2267,6 +3385,15 @@ private fun AllTaskSwipeRow(
     onInfo: () -> Unit,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
+    showDateDivider: Boolean,
+    dragEnabled: Boolean = false,
+    dragging: Boolean = false,
+    onDragStart: ((Offset) -> Unit)? = null,
+    onDragMove: (Offset) -> Unit = {},
+    onDragEnd: (Offset?) -> Unit = {},
+    onDragCancel: () -> Unit = {},
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -2280,7 +3407,16 @@ private fun AllTaskSwipeRow(
         showDueText = true,
         showDuePrefix = showDuePrefix,
         showDueDateInSubtitle = showDueDateInSubtitle,
+        showDateDivider = showDateDivider,
         useDelayedFadeCompletion = false,
+        dragEnabled = dragEnabled,
+        dragging = dragging,
+        onDragStart = onDragStart,
+        onDragMove = onDragMove,
+        onDragEnd = onDragEnd,
+        onDragCancel = onDragCancel,
+        openSwipeTaskId = openSwipeTaskId,
+        onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
     )
 }
 
@@ -2295,9 +3431,15 @@ private fun TodayTaskSwipeRow(
     onInfo: () -> Unit,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
+    showDateDivider: Boolean,
     dragEnabled: Boolean = false,
     dragging: Boolean = false,
-    onDragStart: (() -> Unit)? = null,
+    onDragStart: ((Offset) -> Unit)? = null,
+    onDragMove: (Offset) -> Unit = {},
+    onDragEnd: (Offset?) -> Unit = {},
+    onDragCancel: () -> Unit = {},
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -2311,10 +3453,16 @@ private fun TodayTaskSwipeRow(
         showDueText = true,
         showDuePrefix = showDuePrefix,
         showDueDateInSubtitle = showDueDateInSubtitle,
+        showDateDivider = showDateDivider,
         useDelayedFadeCompletion = mode != TodoListMode.TODAY,
         dragEnabled = dragEnabled,
         dragging = dragging,
         onDragStart = onDragStart,
+        onDragMove = onDragMove,
+        onDragEnd = onDragEnd,
+        onDragCancel = onDragCancel,
+        openSwipeTaskId = openSwipeTaskId,
+        onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
     )
 }
 
@@ -2332,47 +3480,87 @@ private fun SwipeTaskRow(
     showDueText: Boolean,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
+    showDateDivider: Boolean = false,
     useDelayedFadeCompletion: Boolean = false,
     useFadeOnCompletion: Boolean = false,
     dragEnabled: Boolean = false,
     dragging: Boolean = false,
-    onDragStart: (() -> Unit)? = null,
+    onDragStart: ((Offset) -> Unit)? = null,
+    onDragMove: (Offset) -> Unit = {},
+    onDragEnd: (Offset?) -> Unit = {},
+    onDragCancel: () -> Unit = {},
+    openSwipeTaskId: String?,
+    onOpenSwipeTaskIdChange: (String?) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
-    val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
-    val actionRevealPx = with(density) { 176.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
-    val maxElasticDragPx = actionRevealPx * 1.14f
-    var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
-    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
-    var localCompleted by remember(todo.id) { mutableStateOf(false) }
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id)
+    var localChecked by remember(todo.id) { mutableStateOf(false) }
+    var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
+    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
+    var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
+    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
+    fun claimSwipeSlot() {
+        if (latestOpenSwipeTaskId.value != todo.id) {
+            onOpenSwipeTaskIdChange(todo.id)
+        }
+    }
+
+    fun closeSwipeSlot() {
+        swipeRevealState.close()
+        if (latestOpenSwipeTaskId.value == todo.id) {
+            onOpenSwipeTaskIdChange(null)
+        }
+    }
     val highlightAnim = remember(todo.id) { Animatable(0f) }
-    val visuallyCompleted = localCompleted || (keepCompletedInline && todo.completed)
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = targetOffsetX,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+    val visuallyChecked = localChecked || (keepCompletedInline && todo.completed)
+    val visuallyStruck = localStruck || (keepCompletedInline && todo.completed)
+    val animatedOffsetX by animateTaskSwipeOffsetAsState(
+        state = swipeRevealState,
         label = "swipeTaskOffset",
     )
-    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(
+            durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
         label = "swipeTaskCompletionAlpha",
     )
-    val dueTimeText = TODO_DUE_TIME_FORMATTER.format(todo.due)
-    val dueDateTimeText = TODO_DUE_DATE_TIME_FORMATTER.format(todo.due)
-    val isOverdue = !todo.completed && todo.due.isBefore(Instant.now())
-    val dueBodyText = if (showDueDateInSubtitle) dueDateTimeText else dueTimeText
-    val dueSubtitleText = if (isOverdue) {
-        stringResource(R.string.todos_due_overdue_text, dueBodyText)
-    } else if (showDuePrefix) {
-        stringResource(R.string.todos_due_text, dueBodyText)
-    } else {
-        dueBodyText
+    val completionOffsetY by animateDpAsState(
+        targetValue = if (completionFading) (-10).dp else 0.dp,
+        animationSpec = tween(
+            durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
+            easing = FastOutSlowInEasing
+        ),
+        label = "swipeTaskCompletionOffsetY",
+    )
+    val titleStrikeProgress by animateFloatAsState(
+        targetValue = if (visuallyStruck) 1f else 0f,
+        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
+        label = "swipeTaskTitleStrikeProgress",
+    )
+    val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
+    val dueBodyText = todo.due?.let {
+        if (showDueDateInSubtitle) {
+            TODO_DUE_DATE_TIME_FORMATTER.format(it)
+        } else {
+            TODO_DUE_TIME_FORMATTER.format(it)
+        }
+    }
+    val dueSubtitleText = dueBodyText?.let { text ->
+        if (isOverdue) {
+            stringResource(R.string.todos_due_overdue_text, text)
+        } else if (showDuePrefix) {
+            stringResource(R.string.todos_due_text, text)
+        } else {
+            text
+        }
     }
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
@@ -2402,25 +3590,24 @@ private fun SwipeTaskRow(
         TodoListMode.OVERDUE,
         TodoListMode.SCHEDULED,
         TodoListMode.PRIORITY,
+        TodoListMode.FLOATER,
         TodoListMode.ALL,
             -> listMeta != null
 
         TodoListMode.LIST,
             -> false
     }
-    val showPriorityFlag = when (mode) {
-        TodoListMode.TODAY,
-        TodoListMode.OVERDUE,
-        TodoListMode.SCHEDULED,
-        TodoListMode.PRIORITY,
-        TodoListMode.LIST,
-        TodoListMode.ALL,
-            -> isHighPriority(todo.priority)
+    val priorityIcon = priorityIconFor(todo.priority)
+    val showPriorityIcon = priorityIcon != null
+    val listIndicatorColor = tdayListAccentColor(listMeta?.color)
+    LaunchedEffect(openSwipeTaskId, todo.id) {
+        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
+            swipeRevealState.close()
+        }
     }
-    val listIndicatorColor = listAccentColor(listMeta?.color)
     LaunchedEffect(flashHighlight) {
         if (!flashHighlight) return@LaunchedEffect
-        targetOffsetX = 0f
+        closeSwipeSlot()
         highlightAnim.stop()
         highlightAnim.snapTo(0f)
         repeat(2) { pulseIndex ->
@@ -2441,7 +3628,10 @@ private fun SwipeTaskRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer { alpha = if (dragging) completionAlpha * 0.55f else completionAlpha },
+            .graphicsLayer {
+                alpha = if (dragging) completionAlpha * 0.55f else completionAlpha
+                translationY = completionOffsetY.toPx()
+            },
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
             Box(
@@ -2461,7 +3651,7 @@ private fun SwipeTaskRow(
                         contentDescription = stringResource(R.string.action_edit_task),
                         label = stringResource(R.string.action_edit),
                         tint = Color.White,
-                        background = Color(0xFF4C7DDE),
+                        background = TdaySwipeEditBackground,
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.62f,
                         onClick = {
@@ -2469,8 +3659,8 @@ private fun SwipeTaskRow(
                                 view,
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
+                            closeSwipeSlot()
                             onInfo()
-                            targetOffsetX = 0f
                         },
                     )
                     TaskSwipeActionButton(
@@ -2478,7 +3668,7 @@ private fun SwipeTaskRow(
                         contentDescription = stringResource(R.string.action_delete_task),
                         label = stringResource(R.string.action_delete),
                         tint = Color.White,
-                        background = Color(0xFFFF453A),
+                        background = TdaySwipeDeleteBackground,
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.04f,
                         onClick = {
@@ -2486,8 +3676,8 @@ private fun SwipeTaskRow(
                                 view,
                                 HapticFeedbackConstantsCompat.CLOCK_TICK,
                             )
+                            closeSwipeSlot()
                             onDelete()
-                            targetOffsetX = 0f
                         },
                     )
                 }
@@ -2495,22 +3685,39 @@ private fun SwipeTaskRow(
                 Card(
                     modifier = Modifier
                         .fillMaxSize()
+                        .onGloballyPositioned { coordinates ->
+                            rowOriginInRoot = coordinates.positionInRoot()
+                        }
                         .graphicsLayer { translationX = animatedOffsetX }
                         .then(
                             if (dragEnabled) {
-                                Modifier.dragAndDropSource {
-                                    detectTapGestures(
-                                        onLongPress = {
-                                            onDragStart?.invoke()
-                                            startTransfer(
-                                                DragAndDropTransferData(
-                                                    clipData = ClipData.newPlainText(
-                                                        "todo-id",
-                                                        todo.id
-                                                    ),
-                                                    flags = View.DRAG_FLAG_GLOBAL,
-                                                ),
+                                Modifier.pointerInput(todo.id, dragEnabled) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = { localOffset ->
+                                            closeSwipeSlot()
+                                            val startPosition = rowOriginInRoot + localOffset
+                                            dragPointerPosition = startPosition
+                                            onDragStart?.invoke(startPosition)
+                                            onDragMove(startPosition)
+                                            ViewCompat.performHapticFeedback(
+                                                view,
+                                                HapticFeedbackConstantsCompat.CLOCK_TICK,
                                             )
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            val nextPosition = (dragPointerPosition
+                                                ?: rowOriginInRoot) + dragAmount
+                                            dragPointerPosition = nextPosition
+                                            onDragMove(nextPosition)
+                                        },
+                                        onDragEnd = {
+                                            onDragEnd(dragPointerPosition)
+                                            dragPointerPosition = null
+                                        },
+                                        onDragCancel = {
+                                            dragPointerPosition = null
+                                            onDragCancel()
                                         },
                                     )
                                 }
@@ -2521,18 +3728,20 @@ private fun SwipeTaskRow(
                         .draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
-                                targetOffsetX = (targetOffsetX + delta).coerceIn(
-                                    -maxElasticDragPx,
-                                    0f,
-                                )
+                                if (delta < 0f || swipeRevealState.isOpenOrDragging) {
+                                    claimSwipeSlot()
+                                }
+                                swipeRevealState.dragBy(delta)
+                                if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
+                                    onOpenSwipeTaskIdChange(null)
+                                }
                             },
                             onDragStopped = { velocity ->
-                                val flingOpen = velocity < -1450f
-                                val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
-                                targetOffsetX = if (flingOpen || dragOpen) {
-                                    -actionRevealPx
-                                } else {
-                                    0f
+                                swipeRevealState.settle(velocity)
+                                if (swipeRevealState.isOpenOrDragging) {
+                                    claimSwipeSlot()
+                                } else if (latestOpenSwipeTaskId.value == todo.id) {
+                                    onOpenSwipeTaskIdChange(null)
                                 }
                             },
                         )
@@ -2540,16 +3749,15 @@ private fun SwipeTaskRow(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
-                            if (targetOffsetX != 0f) {
-                                targetOffsetX = 0f
-                            } else if (!swipeHinting && !pendingCompletion && !dragging) {
-                                swipeHinting = true
+                            if (swipeRevealState.isOpenOrDragging) {
+                                closeSwipeSlot()
+                            } else if (!swipeRevealState.isHinting && !pendingCompletion && !dragging) {
+                                claimSwipeSlot()
                                 coroutineScope.launch {
-                                    targetOffsetX = -swipeHintOffsetPx
-                                    delay(150)
-                                    targetOffsetX = 0f
-                                    delay(360)
-                                    swipeHinting = false
+                                    swipeRevealState.playHint()
+                                    if (latestOpenSwipeTaskId.value == todo.id && !swipeRevealState.isOpenOrDragging) {
+                                        onOpenSwipeTaskIdChange(null)
+                                    }
                                 }
                             }
                         },
@@ -2578,42 +3786,37 @@ private fun SwipeTaskRow(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             CircularCheckToggleIcon(
-                                imageVector = if (!visuallyCompleted) {
+                                imageVector = if (!visuallyChecked) {
                                     Icons.Rounded.RadioButtonUnchecked
                                 } else {
                                     Icons.Rounded.CheckCircle
                                 },
-                                contentDescription = if (visuallyCompleted) {
+                                contentDescription = if (visuallyChecked) {
                                     stringResource(R.string.label_completed)
                                 } else {
                                     stringResource(R.string.label_mark_complete)
                                 },
-                                tint = if (!visuallyCompleted) {
+                                tint = if (!visuallyChecked) {
                                     colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
                                 } else {
                                     TASK_CHECKMARK_GREEN
                                 },
-                                enabled = !visuallyCompleted && !pendingCompletion,
+                                enabled = !visuallyChecked && !pendingCompletion,
                                 onClick = {
                                     ViewCompat.performHapticFeedback(
                                         view,
                                         HapticFeedbackConstantsCompat.CLOCK_TICK,
                                     )
-                                    targetOffsetX = 0f
-                                    localCompleted = true
+                                    closeSwipeSlot()
+                                    localChecked = true
                                     pendingCompletion = true
                                     coroutineScope.launch {
-                                        if (useDelayedFadeCompletion) {
-                                            delay(500)
-                                            if (useFadeOnCompletion) {
-                                                completionFading = true
-                                                delay(220)
-                                            }
-                                            onComplete()
-                                        } else {
-                                            delay(if (keepCompletedInline) 120 else 180)
-                                            onComplete()
-                                        }
+                                        delay(TASK_COMPLETION_CHECK_TO_STRIKE_MS)
+                                        localStruck = true
+                                        delay(TASK_COMPLETION_STRIKE_TO_FADE_MS)
+                                        completionFading = true
+                                        delay(TASK_COMPLETION_FADE_MS)
+                                        onComplete()
                                     }
                                 },
                             )
@@ -2625,21 +3828,35 @@ private fun SwipeTaskRow(
                             ) {
                                 Text(
                                     text = todo.title,
-                                    color = if (visuallyCompleted) {
+                                    modifier = Modifier.drawWithContent {
+                                        drawContent()
+                                        if (titleStrikeProgress > 0f) {
+                                            val lineEnd = (
+                                                    titleLayoutResult
+                                                        ?.takeIf { it.lineCount > 0 }
+                                                        ?.getLineRight(0) ?: size.width
+                                                    ).coerceIn(0f, size.width)
+                                            val lineY = size.height * 0.56f
+                                            drawLine(
+                                                color = colorScheme.onSurface.copy(alpha = 0.65f),
+                                                start = Offset(0f, lineY),
+                                                end = Offset(lineEnd * titleStrikeProgress, lineY),
+                                                strokeWidth = TdayDimens.BorderWidthThick.toPx(),
+                                            )
+                                        }
+                                    },
+                                    color = if (visuallyStruck) {
                                         colorScheme.onSurface.copy(alpha = 0.78f)
                                     } else {
                                         colorScheme.onSurface
                                     },
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
-                                    textDecoration = if (visuallyCompleted) {
-                                        TextDecoration.LineThrough
-                                    } else {
-                                        TextDecoration.None
-                                    },
+                                    textDecoration = TextDecoration.None,
                                     maxLines = 2,
+                                    onTextLayout = { titleLayoutResult = it },
                                 )
-                                if (showDueText) {
+                                if (showDueText && dueSubtitleText != null) {
                                     Text(
                                         text = dueSubtitleText,
                                         color = if (isOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
@@ -2648,7 +3865,7 @@ private fun SwipeTaskRow(
                                 }
                             }
                         }
-                        if (showListIndicator || showPriorityFlag) {
+                        if (showListIndicator || showPriorityIcon) {
                             Row(
                                 modifier = Modifier.padding(start = 8.dp, end = 24.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -2656,17 +3873,17 @@ private fun SwipeTaskRow(
                             ) {
                                 if (showListIndicator) {
                                     Icon(
-                                        imageVector = listIconForKey(listMeta?.iconKey),
+                                        imageVector = tdayListIconForKey(listMeta?.iconKey),
                                         contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
-                                if (showPriorityFlag) {
+                                if (priorityIcon != null) {
                                     Icon(
-                                        imageVector = Icons.Rounded.Flag,
+                                        imageVector = priorityIcon,
                                         contentDescription = stringResource(R.string.label_priority_task),
-                                        tint = priorityColor(todo.priority),
+                                        tint = tdayPriorityColor(todo.priority),
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }
@@ -2675,12 +3892,14 @@ private fun SwipeTaskRow(
                     }
                 }
             }
+        if (showDateDivider) {
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(1.dp)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
+        }
     }
 }
 
@@ -2691,12 +3910,14 @@ private fun TodayTodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val dueText = TODO_DUE_TIME_FORMATTER.format(todo.due)
-    val isDetailOverdue = !todo.completed && todo.due.isBefore(Instant.now())
-    val detailDueText = if (isDetailOverdue) {
-        stringResource(R.string.todos_due_overdue_text, dueText)
-    } else {
-        dueText
+    val isDetailOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
+    val detailDueText = todo.due?.let { due ->
+        val dueText = TODO_DUE_TIME_FORMATTER.format(due)
+        if (isDetailOverdue) {
+            stringResource(R.string.todos_due_overdue_text, dueText)
+        } else {
+            dueText
+        }
     }
 
     Column(
@@ -2733,11 +3954,15 @@ private fun TodayTodoRow(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                     )
-                    Text(
-                        text = detailDueText,
-                        color = if (isDetailOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    detailDueText?.let { text ->
+                        Text(
+                            text = text,
+                            color = if (isDetailOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.8f
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
 
@@ -2765,7 +3990,7 @@ private fun TodoRow(
     onDelete: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val due = TODO_DUE_DATE_TIME_FORMATTER.format(todo.due)
+    val due = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
@@ -2799,11 +4024,13 @@ private fun TodoRow(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.ExtraBold,
                     )
-                    Text(
-                        text = due,
-                        color = colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    due?.let { text ->
+                        Text(
+                            text = text,
+                            color = colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
 
@@ -2852,19 +4079,11 @@ private fun CircularCheckToggleIcon(
     }
 }
 
-@Composable
-private fun priorityColor(priority: String): Color {
-    return when (priority.lowercase()) {
-        "high", "urgent", "important" -> Color(0xFFE56A6A)
-        "medium" -> Color(0xFFE3B368)
-        else -> Color(0xFF6FBF86)
-    }
-}
-
-private fun isHighPriority(priority: String): Boolean {
-    return when (priority.trim().lowercase()) {
-        "medium", "high", "urgent", "important" -> true
-        else -> false
+private fun priorityIconFor(priority: String): ImageVector? {
+    return when (priority.trim().lowercase(Locale.getDefault())) {
+        "medium" -> Icons.Rounded.Flag
+        "high", "urgent", "important" -> Icons.Rounded.Flag
+        else -> null
     }
 }
 
@@ -2883,141 +4102,17 @@ private fun modeAccentColor(
     listColorKey: String?,
 ): Color {
     return when (mode) {
-        TodoListMode.TODAY -> Color(0xFF5C9FE7)
-        TodoListMode.OVERDUE -> Color(0xFFDA7661)
-        TodoListMode.SCHEDULED -> Color(0xFFF29F38)
-        TodoListMode.ALL -> Color(0xFF5E6878)
-        TodoListMode.PRIORITY -> Color(0xFFE65E52)
-        TodoListMode.LIST -> listAccentColor(listColorKey)
+        TodoListMode.TODAY -> TdayTodoModeTodayAccent
+        TodoListMode.OVERDUE -> TdayTodoModeOverdueAccent
+        TodoListMode.SCHEDULED -> TdayTodoModeScheduledAccent
+        TodoListMode.ALL -> TdayTodoModeAllAccent
+        TodoListMode.PRIORITY -> TdayTodoModePriorityAccent
+        TodoListMode.FLOATER -> listColorKey
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::tdayListAccentColor)
+            ?: TdayFloaterAccent
+        TodoListMode.LIST -> tdayListAccentColor(listColorKey)
     }
 }
 
-private fun listAccentColor(colorKey: String?): Color {
-    return when (colorKey) {
-        "RED" -> Color(0xFFE65E52)
-        "ORANGE" -> Color(0xFFF29F38)
-        "YELLOW" -> Color(0xFFF3D04A)
-        "LIME" -> Color(0xFF8ACF56)
-        "BLUE" -> Color(0xFF5C9FE7)
-        "PURPLE" -> Color(0xFF8D6CE2)
-        "PINK" -> Color(0xFFDF6DAA)
-        "TEAL" -> Color(0xFF4EB5B0)
-        "CORAL" -> Color(0xFFE3876D)
-        "GOLD" -> Color(0xFFCFAB57)
-        "DEEP_BLUE" -> Color(0xFF4B73D6)
-        "ROSE" -> Color(0xFFD9799A)
-        "LIGHT_RED" -> Color(0xFFE48888)
-        "BRICK" -> Color(0xFFB86A5C)
-        "SLATE" -> Color(0xFF7B8593)
-        else -> Color(0xFF5C9FE7)
-    }
-}
-
-private fun listIconForKey(iconKey: String?): ImageVector {
-    return LIST_SETTINGS_ICON_OPTIONS.firstOrNull { it.key == iconKey }?.icon ?: Icons.Rounded.Inbox
-}
-
-private fun isSupportedListColor(colorKey: String): Boolean {
-    return LIST_SETTINGS_COLOR_KEYS.contains(colorKey)
-}
-
-private fun isSupportedListIconKey(iconKey: String): Boolean {
-    return LIST_SETTINGS_ICON_OPTIONS.any { it.key == iconKey }
-}
-
-private data class ListSettingsIconOption(
-    val key: String,
-    val icon: ImageVector,
-)
-
-private const val DEFAULT_LIST_COLOR_KEY = "BLUE"
-private const val DEFAULT_LIST_ICON_KEY = "inbox"
-
-private val LIST_SETTINGS_COLOR_KEYS = listOf(
-    "RED",
-    "ORANGE",
-    "YELLOW",
-    "LIME",
-    "BLUE",
-    "PURPLE",
-    "PINK",
-    "TEAL",
-    "CORAL",
-    "GOLD",
-    "DEEP_BLUE",
-    "ROSE",
-    "LIGHT_RED",
-    "BRICK",
-    "SLATE",
-)
-
-private val LIST_SETTINGS_ICON_OPTIONS = listOf(
-    ListSettingsIconOption("inbox", Icons.Rounded.Inbox),
-    ListSettingsIconOption("sun", Icons.Rounded.WbSunny),
-    ListSettingsIconOption("calendar", Icons.Rounded.CalendarToday),
-    ListSettingsIconOption("schedule", Icons.Rounded.Schedule),
-    ListSettingsIconOption("flag", Icons.Rounded.Flag),
-    ListSettingsIconOption("check", Icons.Rounded.Check),
-    ListSettingsIconOption("smile", Icons.Rounded.Mood),
-    ListSettingsIconOption("list", Icons.AutoMirrored.Rounded.List),
-    ListSettingsIconOption("bookmark", Icons.Rounded.Bookmark),
-    ListSettingsIconOption("key", Icons.Rounded.Key),
-    ListSettingsIconOption("gift", Icons.Rounded.CardGiftcard),
-    ListSettingsIconOption("cake", Icons.Rounded.Cake),
-    ListSettingsIconOption("school", Icons.Rounded.School),
-    ListSettingsIconOption("bag", Icons.Rounded.Backpack),
-    ListSettingsIconOption("edit", Icons.Rounded.Edit),
-    ListSettingsIconOption("document", Icons.Rounded.Description),
-    ListSettingsIconOption("book", Icons.AutoMirrored.Rounded.MenuBook),
-    ListSettingsIconOption("work", Icons.Rounded.Work),
-    ListSettingsIconOption("wallet", Icons.Rounded.AccountBalanceWallet),
-    ListSettingsIconOption("money", Icons.Rounded.Payments),
-    ListSettingsIconOption("fitness", Icons.Rounded.FitnessCenter),
-    ListSettingsIconOption("run", Icons.AutoMirrored.Rounded.DirectionsRun),
-    ListSettingsIconOption("food", Icons.Rounded.Restaurant),
-    ListSettingsIconOption("drink", Icons.Rounded.LocalBar),
-    ListSettingsIconOption("health", Icons.Rounded.Medication),
-    ListSettingsIconOption("monitor", Icons.Rounded.DesktopWindows),
-    ListSettingsIconOption("music", Icons.Rounded.MusicNote),
-    ListSettingsIconOption("computer", Icons.Rounded.Computer),
-    ListSettingsIconOption("game", Icons.Rounded.SportsEsports),
-    ListSettingsIconOption("headphones", Icons.Rounded.Headphones),
-    ListSettingsIconOption("eco", Icons.Rounded.Eco),
-    ListSettingsIconOption("pets", Icons.Rounded.Pets),
-    ListSettingsIconOption("child", Icons.Rounded.ChildCare),
-    ListSettingsIconOption("family", Icons.Rounded.FamilyRestroom),
-    ListSettingsIconOption("basket", Icons.Rounded.ShoppingBasket),
-    ListSettingsIconOption("cart", Icons.Rounded.ShoppingCart),
-    ListSettingsIconOption("mall", Icons.Rounded.LocalMall),
-    ListSettingsIconOption("inventory", Icons.Rounded.Inventory),
-    ListSettingsIconOption("soccer", Icons.Rounded.SportsSoccer),
-    ListSettingsIconOption("baseball", Icons.Rounded.SportsBaseball),
-    ListSettingsIconOption("basketball", Icons.Rounded.SportsBasketball),
-    ListSettingsIconOption("football", Icons.Rounded.SportsFootball),
-    ListSettingsIconOption("tennis", Icons.Rounded.SportsTennis),
-    ListSettingsIconOption("train", Icons.Rounded.Train),
-    ListSettingsIconOption("flight", Icons.Rounded.Flight),
-    ListSettingsIconOption("boat", Icons.Rounded.DirectionsBoat),
-    ListSettingsIconOption("car", Icons.Rounded.DirectionsCar),
-    ListSettingsIconOption("umbrella", Icons.Rounded.BeachAccess),
-    ListSettingsIconOption("drop", Icons.Rounded.WaterDrop),
-    ListSettingsIconOption("snow", Icons.Rounded.AcUnit),
-    ListSettingsIconOption("fire", Icons.Rounded.Whatshot),
-    ListSettingsIconOption("tools", Icons.Rounded.Build),
-    ListSettingsIconOption("scissors", Icons.Rounded.ContentCut),
-    ListSettingsIconOption("architecture", Icons.Rounded.Architecture),
-    ListSettingsIconOption("code", Icons.Rounded.Code),
-    ListSettingsIconOption("idea", Icons.Rounded.Lightbulb),
-    ListSettingsIconOption("chat", Icons.Rounded.ChatBubbleOutline),
-    ListSettingsIconOption("alert", Icons.Rounded.PriorityHigh),
-    ListSettingsIconOption("star", Icons.Rounded.Star),
-    ListSettingsIconOption("heart", Icons.Rounded.Favorite),
-    ListSettingsIconOption("circle", Icons.Rounded.Circle),
-    ListSettingsIconOption("square", Icons.Rounded.Square),
-    ListSettingsIconOption("triangle", Icons.Rounded.ChangeHistory),
-    ListSettingsIconOption("home", Icons.Rounded.Home),
-    ListSettingsIconOption("city", Icons.Rounded.LocationCity),
-    ListSettingsIconOption("bank", Icons.Rounded.AccountBalance),
-    ListSettingsIconOption("camera", Icons.Rounded.CameraAlt),
-    ListSettingsIconOption("palette", Icons.Rounded.Palette),
-)
+private const val FLOATER_LIST_CONTAINER_COLOR_WEIGHT = 0.66f

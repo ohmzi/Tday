@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { TodoItemType } from "@/types";
+import { TodoApiItemType, TodoItemType } from "@/types";
 import { endOfToday, startOfToday } from "date-fns";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
 
@@ -21,7 +21,7 @@ export const useList = ({ id }: { id: string }) => {
         signal,
       });
 
-      const todoWithFormattedDates = todos.map((todo: TodoItemType) => {
+      const todoWithFormattedDates = (todos as TodoApiItemType[]).filter((todo) => todo.due != null).map((todo) => {
         // id needs to be todo id + instance date, so that ghost todos of the same parent can have unique ids
         const todoInstanceDate = todo.instanceDate
           ? parseApiDateTime(todo.instanceDate)
@@ -32,7 +32,7 @@ export const useList = ({ id }: { id: string }) => {
           ...todo,
           id: todoId,
           createdAt: parseApiDateTime(todo.createdAt),
-          due: parseApiDateTime(todo.due),
+          due: parseApiDateTime(todo.due!),
           instanceDate: todoInstanceDate,
           listID: todo.listID ?? null,
         };

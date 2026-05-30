@@ -2,6 +2,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { todoSchema } from "@/schema";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import z from "zod";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
@@ -28,7 +29,7 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
     url: "/api/todo/instance",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      id: ghostTodo.id.split(":")[0],
+      id: canonicalTodoId(ghostTodo.id),
       ...parsedObj.data,
       instanceDate: parsedObj.data.instanceDate,
     }),
