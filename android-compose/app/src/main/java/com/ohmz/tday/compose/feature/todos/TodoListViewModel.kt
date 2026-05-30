@@ -135,13 +135,6 @@ class TodoListViewModel @Inject constructor(
             }
             return
         }
-        if (current.mode == TodoListMode.LIST || current.mode == TodoListMode.OVERDUE || current.mode == TodoListMode.FLOATER) {
-            _uiState.update {
-                it.copy(summaryError = appContext.getString(R.string.todos_summary_modes_unavailable))
-            }
-            return
-        }
-
         _uiState.update {
             it.copy(
                 isSummarizing = true,
@@ -169,7 +162,10 @@ class TodoListViewModel @Inject constructor(
             }.onFailure { error ->
                 _uiState.update {
                     if (isLikelyConnectivityIssue(error)) {
-                        it.copy(isSummarizing = false, summaryConnectivityError = true)
+                        it.copy(
+                            isSummarizing = false,
+                            summaryError = appContext.getString(R.string.todos_summary_offline_unavailable),
+                        )
                     } else {
                         it.copy(
                             isSummarizing = false,

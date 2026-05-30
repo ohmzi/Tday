@@ -22,6 +22,7 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
 import io.sentry.Sentry
+import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
@@ -81,7 +82,16 @@ fun Application.module(config: AppConfig = AppConfig.load()) {
     logStartupSecurityWarnings(config)
     configureRateLimiting()
     configureRouting()
+    warmUpSummaryModel()
     logger.info("Tday backend started successfully")
+}
+
+private fun Application.warmUpSummaryModel() {
+    val todoSummaryService by inject<com.ohmz.tday.services.TodoSummaryService>()
+    launch {
+        runCatching { todoSummaryService.warmUp() }
+            .onFailure { logger.warn("Summary model warm-up skipped: ${it.message}") }
+    }
 }
 
 private fun logStartupSecurityWarnings(config: AppConfig) {

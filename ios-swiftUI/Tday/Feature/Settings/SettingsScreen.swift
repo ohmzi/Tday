@@ -62,7 +62,7 @@ struct SettingsScreen: View {
             await viewModel.refreshVersionInfo()
         }
         .alert(
-            "AI Summary Unavailable",
+            "Summary unavailable",
             isPresented: Binding(
                 get: { viewModel.aiSummaryValidationError != nil },
                 set: { visible in
@@ -369,7 +369,7 @@ private struct SettingsAiSummaryRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("AI task summary")
+                Text("Summary")
                     .font(.tdayRounded(size: 17, weight: .heavy))
                     .foregroundStyle(colors.onSurface)
 

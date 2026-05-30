@@ -17,7 +17,9 @@ services:
 
   ollama:
     image: ollama/ollama:latest
+    pull_policy: always
     container_name: tday_ollama
+    profiles: ["ai"]
     restart: always
     gpus: all
     environment:
@@ -29,6 +31,21 @@ services:
       retries: 5
     volumes:
       - ollama_data:/root/.ollama
+
+  ollama-model-setup:
+    image: ollama/ollama:latest
+    pull_policy: always
+    container_name: tday_ollama_model_setup
+    profiles: ["ai"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}
+    command: >
+      sh -c "ollama pull \"$${OLLAMA_MODEL}\" &&
+      (ollama rm qwen2.5:0.5b || true)"
 
   tday-backend:
     build:
@@ -44,14 +61,13 @@ services:
     environment:
       APPLE_TEAM_ID: ${APPLE_TEAM_ID:-THT5Z8K3TF}
       IOS_BUNDLE_ID: ${IOS_BUNDLE_ID:-com.ohmz.tday.ios}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     depends_on:
       database:
-        condition: service_healthy
-      ollama:
         condition: service_healthy
 
 volumes:

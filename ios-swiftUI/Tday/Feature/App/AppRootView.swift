@@ -47,7 +47,8 @@ struct AppRootView: View {
                                     scrollToTopRequestID: rootHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
-                                    pullRefreshEnabled: !appViewModel.isLocalMode
+                                    pullRefreshEnabled: !appViewModel.isLocalMode,
+                                    summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
                                 ) { route in
                                     handleRoute(route)
                                 }
@@ -67,6 +68,7 @@ struct AppRootView: View {
                                     scrollToTopRequestID: rootFloaterScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
+                                    summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
                                     onOpenFloaterList: { listId, listName in
                                         handleRoute(.floaterListTodos(listId: listId, listName: listName))
                                     },
@@ -92,20 +94,21 @@ struct AppRootView: View {
                             HomeScreen(
                                 container: container,
                                 onRootFeedTabSelected: handleRootFeedTabSelection,
-                                pullRefreshEnabled: !appViewModel.isLocalMode
+                                pullRefreshEnabled: !appViewModel.isLocalMode,
+                                summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
                             ) { nextRoute in
                                 handleRoute(nextRoute)
                             }
                         case .todayTodos:
-                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
+                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .overdueTodos:
-                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
+                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .scheduledTodos:
-                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
+                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case let .allTodos(highlightTodoId):
-                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId, pullRefreshEnabled: !appViewModel.isLocalMode)
+                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .priorityTodos:
-                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode)
+                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .floaterTodos:
                             Color.clear
                                 .navigationBarBackButtonHidden(true)
@@ -121,6 +124,7 @@ struct AppRootView: View {
                                 listName: listName,
                                 highlightedTodoId: nil,
                                 pullRefreshEnabled: !appViewModel.isLocalMode,
+                                summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
                                 onListDeleted: {
                                     handleRoute(.floaterTodos)
                                 }
@@ -133,6 +137,7 @@ struct AppRootView: View {
                                 listName: listName,
                                 highlightedTodoId: nil,
                                 pullRefreshEnabled: !appViewModel.isLocalMode,
+                                summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
                                 onListDeleted: {
                                     appViewModel.navigate(to: .home)
                                 }

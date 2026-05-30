@@ -26,7 +26,7 @@ This document describes the durable and local data structures that define T'Day.
 | Floater list | `FloaterLists` / `FloaterProject` | `FloaterListDto`, `FloaterListDetailResponse` | Project/group for floaters. Keep separate from scheduled-task lists. |
 | Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters. |
 | Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences. |
-| App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as AI summary availability. |
+| App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as Summary availability. |
 | File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
 | Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
 
@@ -37,6 +37,7 @@ Scheduled tasks and floaters are intentionally different:
 - `Todo` requires a due timestamp and can participate in Today, Scheduled, Calendar, recurring instances, reminders, and scheduled-task lists.
 - `Floater` has no due timestamp and belongs to the Anytime/Floater root feed.
 - A task should not be made "unscheduled" by nulling `Todo.due`; use a floater instead.
+- Scheduled-task `listID` values must belong to the authenticated user. Stale or cross-user list IDs are rejected before database writes.
 - Completing a todo creates completed-todo history; completing a floater creates completed-floater history.
 - List deletion must preserve completed history metadata (`listName`, `listColor`) where the backend/mobile model supports it.
 
