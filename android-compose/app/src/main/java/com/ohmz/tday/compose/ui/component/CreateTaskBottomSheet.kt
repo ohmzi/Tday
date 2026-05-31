@@ -71,6 +71,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -152,6 +154,8 @@ fun CreateTaskBottomSheet(
     defaultScheduled: Boolean = true,
     showScheduleControls: Boolean = true,
     initialDueEpochMs: Long? = null,
+    autoFocusTitle: Boolean = false,
+    presentImmediately: Boolean = false,
     onParseTaskTitleNlp: (suspend (
         title: String,
         referenceDueEpochMs: Long,
@@ -162,6 +166,7 @@ fun CreateTaskBottomSheet(
 ) {
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val titleFocusRequester = remember { FocusRequester() }
     val dismissKeyboard = {
         keyboardController?.hide()
         focusManager.clearFocus(force = true)
@@ -237,7 +242,7 @@ fun CreateTaskBottomSheet(
     }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
-    var sheetVisible by remember { mutableStateOf(false) }
+    var sheetVisible by remember { mutableStateOf(presentImmediately) }
 
     val noListLabel = stringResource(R.string.create_task_no_list)
     val priorityOptions = remember { listOf(PRIORITY_LOW, PRIORITY_MEDIUM, PRIORITY_HIGH) }
@@ -268,6 +273,7 @@ fun CreateTaskBottomSheet(
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val density = LocalDensity.current
     val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
+    val reserveKeyboardLayout = keyboardVisible || (autoFocusTitle && !isEditMode)
     val maxSheetHeight = screenHeight * CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION
     val usesTallCreateModal = !isEditMode && showScheduleControls
     val usesFloaterCreateModal = !isEditMode && !showScheduleControls
@@ -296,8 +302,18 @@ fun CreateTaskBottomSheet(
         label = "createTaskKeyboardSheetHeight",
     )
 
-    LaunchedEffect(Unit) {
-        sheetVisible = true
+    LaunchedEffect(presentImmediately) {
+        if (!presentImmediately) {
+            sheetVisible = true
+        }
+    }
+    LaunchedEffect(sheetVisible, autoFocusTitle, isEditMode, presentImmediately) {
+        if (sheetVisible && autoFocusTitle && !isEditMode) {
+            delay(if (presentImmediately) 260 else 180)
+            titleFocusRequester.requestFocus()
+            delay(80)
+            keyboardController?.show()
+        }
     }
 
     fun submitTask() {
@@ -365,7 +381,7 @@ fun CreateTaskBottomSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(
-                            if (keyboardVisible) {
+                            if (reserveKeyboardLayout) {
                                 Modifier.height(keyboardSheetHeight)
                             } else if (usesTallCreateModal) {
                                 Modifier.height(createSheetHeight)
@@ -465,6 +481,9 @@ fun CreateTaskBottomSheet(
                                     onTitleChange = { title = it },
                                     onNotesChange = { notes = it },
                                     onKeyboardDone = dismissKeyboard,
+                                    titleFocusRequester = titleFocusRequester.takeIf {
+                                        autoFocusTitle && !isEditMode
+                                    },
                                 )
 
                                 if (showScheduleControls) {
@@ -610,6 +629,7 @@ private fun TaskTextCard(
     onTitleChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onKeyboardDone: () -> Unit,
+    titleFocusRequester: FocusRequester? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -619,6 +639,7 @@ private fun TaskTextCard(
             placeholder = stringResource(R.string.create_task_title_placeholder),
             onValueChange = onTitleChange,
             onKeyboardDone = onKeyboardDone,
+            focusRequester = titleFocusRequester,
         )
         RowDivider()
         TaskField(
@@ -636,6 +657,7 @@ private fun TaskField(
     placeholder: String,
     onValueChange: (String) -> Unit,
     onKeyboardDone: () -> Unit,
+    focusRequester: FocusRequester? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -656,6 +678,9 @@ private fun TaskField(
         ),
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+            )
             .padding(horizontal = 18.dp, vertical = 16.dp),
         decorationBox = { innerTextField ->
             if (value.isEmpty()) {
