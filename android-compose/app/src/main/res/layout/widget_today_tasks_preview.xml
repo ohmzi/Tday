@@ -46,15 +46,16 @@
                 android:fontFamily="@font/nunito_app"
                 android:gravity="center"
                 android:includeFontPadding="false"
-                android:minWidth="24dp"
-                android:text="6"
+                android:minWidth="48dp"
+                android:text="6 due"
                 android:textColor="@color/tday_widget_today_accent"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
-                android:layout_width="44dp"
-                android:layout_height="42dp"
+                android:layout_width="48dp"
+                android:layout_height="44dp"
+                android:background="@drawable/widget_add_button_background"
                 android:fontFamily="@font/nunito_app"
                 android:gravity="center"
                 android:includeFontPadding="false"

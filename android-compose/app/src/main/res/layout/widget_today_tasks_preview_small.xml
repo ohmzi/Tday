@@ -23,13 +23,13 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="38dp"
+            android:layout_height="48dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
                 android:layout_width="0dp"
-                android:layout_height="38dp"
+                android:layout_height="48dp"
                 android:layout_weight="1"
                 android:fontFamily="@font/nunito_app"
                 android:gravity="center_vertical"
@@ -40,8 +40,9 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:layout_width="38dp"
-                android:layout_height="38dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/widget_add_button_background"
                 android:fontFamily="@font/nunito_app"
                 android:gravity="center"
                 android:includeFontPadding="false"

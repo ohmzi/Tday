@@ -154,7 +154,7 @@ private struct TodayTasksWidgetView: View {
             case .setup:
                 message(title: "Open T'Day", subtitle: "Set up your workspace")
             case .empty:
-                message(title: "No tasks due today", subtitle: "Add today")
+                message(title: "No tasks due today", subtitle: "Add one for today")
             case .tasks:
                 taskContent
             }
@@ -187,23 +187,28 @@ private struct TodayTasksWidgetView: View {
 
     private var widgetBackground: some View {
         (colorScheme == .dark ? Color.tdayDarkSurface : Color.tdayLightSurface)
-            .overlay(alignment: .topLeading) {
-                accentColor.opacity(renderingMode == .fullColor ? 0.10 : 0)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0))
+                    .frame(height: 3)
             }
     }
 
     private var header: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 8) {
-                if family != .systemSmall {
-                    Text(entry.title)
-                        .font(.system(.headline, design: .rounded, weight: .bold))
-                        .lineLimit(1)
-                }
+            if family == .systemSmall {
+                smallCountLabel
+            } else {
+                Text(entry.title)
+                    .font(.system(.headline, design: .rounded, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
-                Text("\(entry.taskCount)")
-                    .font(.system(family == .systemSmall ? .title : .subheadline, design: .rounded, weight: .heavy))
+                Text(countText)
+                    .font(.system(.caption, design: .rounded, weight: .heavy))
                     .foregroundStyle(accentColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                     .widgetAccentable()
             }
 
@@ -214,12 +219,38 @@ private struct TodayTasksWidgetView: View {
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
                     .foregroundStyle(accentColor)
                     .frame(width: 44, height: 44)
+                    .background(addButtonBackground)
                     .contentShape(Rectangle())
                     .widgetAccentable()
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Add task for today")
         }
         .frame(minHeight: 44)
+    }
+
+    private var smallCountLabel: some View {
+        VStack(alignment: .leading, spacing: -2) {
+            Text("\(entry.taskCount)")
+                .font(.system(.title, design: .rounded, weight: .heavy))
+                .foregroundStyle(accentColor)
+                .lineLimit(1)
+                .widgetAccentable()
+            Text("due")
+                .font(.system(.caption2, design: .rounded, weight: .heavy))
+                .foregroundStyle(secondaryTextColor)
+                .lineLimit(1)
+        }
+        .accessibilityLabel(countText)
+    }
+
+    private var countText: String {
+        "\(entry.taskCount) due"
+    }
+
+    private var addButtonBackground: some View {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0.10))
     }
 
     @ViewBuilder
@@ -233,15 +264,17 @@ private struct TodayTasksWidgetView: View {
     @ViewBuilder
     private func taskListContent(availableHeight: CGFloat) -> some View {
         let rowCapacity = visibleRowCapacity(for: availableHeight)
-        let hasOverflow = entry.tasks.count > rowCapacity
-        let visibleCount = hasOverflow && rowCapacity > 1 ? rowCapacity - 1 : rowCapacity
-        let overflowCount = max(0, entry.tasks.count - visibleCount)
+        let totalCount = max(entry.taskCount, entry.tasks.count)
+        let hasOverflow = totalCount > rowCapacity || entry.tasks.count < totalCount
+        let visibleCapacity = hasOverflow && rowCapacity > 1 ? rowCapacity - 1 : rowCapacity
+        let visibleCount = min(visibleCapacity, entry.tasks.count)
+        let overflowCount = max(0, totalCount - visibleCount)
 
         VStack(alignment: .leading, spacing: taskRowSpacing) {
             ForEach(entry.tasks.prefix(visibleCount)) { task in
                 taskRow(task)
             }
-            if hasOverflow && rowCapacity > 1 {
+            if overflowCount > 0 && rowCapacity > 1 {
                 overflowRow(count: overflowCount)
             }
         }
@@ -269,14 +302,19 @@ private struct TodayTasksWidgetView: View {
             Text(task.title)
                 .font(.system(.caption, design: .rounded, weight: .bold))
                 .lineLimit(1)
+                .minimumScaleFactor(0.85)
             Spacer(minLength: 4)
-            Text(Self.dueTimeText(from: task.dueEpochMs))
-                .font(.system(.caption2, design: .rounded, weight: .bold))
-                .foregroundStyle(secondaryTextColor)
-                .lineLimit(1)
+            if family != .systemSmall {
+                Text(Self.dueTimeText(from: task.dueEpochMs))
+                    .font(.system(.caption2, design: .rounded, weight: .bold))
+                    .foregroundStyle(secondaryTextColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
         }
         .foregroundStyle(.primary)
         .frame(height: taskRowHeight)
+        .accessibilityLabel("\(task.title), due \(Self.dueTimeText(from: task.dueEpochMs))")
     }
 
     private func overflowRow(count: Int) -> some View {
@@ -306,7 +344,7 @@ private struct TodayTasksWidgetView: View {
         case "medium":
             return .tdayPriorityMedium
         default:
-            return .secondary
+            return .tdayPriorityLow
         }
     }
 
@@ -368,6 +406,7 @@ private extension Color {
     static let tdayDarkSurface = Color(red: 0.09, green: 0.10, blue: 0.13)
     static let tdayPriorityHigh = Color(red: 0.89, green: 0.49, blue: 0.49)
     static let tdayPriorityMedium = Color(red: 0.87, green: 0.70, blue: 0.49)
+    static let tdayPriorityLow = Color(red: 0.00, green: 0.48, blue: 1.00)
 }
 
 private extension Date {
