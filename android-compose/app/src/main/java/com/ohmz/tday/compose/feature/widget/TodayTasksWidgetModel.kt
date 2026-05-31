@@ -16,7 +16,10 @@ data class TodayTasksWidgetModel(
     val status: TodayTasksWidgetStatus,
     val taskCount: Int,
     val tasks: List<CachedTodoRecord>,
-)
+) {
+    val overflowCount: Int
+        get() = (taskCount - tasks.size).coerceAtLeast(0)
+}
 
 fun buildTodayTasksWidgetModel(
     state: OfflineSyncState,
