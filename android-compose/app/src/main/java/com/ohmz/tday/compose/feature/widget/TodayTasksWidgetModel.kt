@@ -57,4 +57,4 @@ fun buildTodayTasksWidgetModel(
     )
 }
 
-const val TODAY_TASKS_WIDGET_TASK_LIMIT = 8
+const val TODAY_TASKS_WIDGET_TASK_LIMIT = 20

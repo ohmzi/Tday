@@ -59,7 +59,7 @@ enum TodayTasksWidgetSnapshotStore {
     static let appGroupSuiteName = "group.com.ohmz.tday"
     static let snapshotKey = "tday.widget.todayTasksSnapshot"
     static let defaultTitle = "Today's Tasks"
-    static let taskLimit = 8
+    static let taskLimit = 20
 
     static func makeSnapshot(
         from state: OfflineSyncState,
