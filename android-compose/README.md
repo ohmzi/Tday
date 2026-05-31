@@ -111,12 +111,11 @@ out of the v1 widget surface.
 - Tapping the widget body, header, empty/setup message, or task rows opens the main app.
 - All task layouts hand the full capped Today task set to Glance `LazyColumn`, so widgets can
   scroll in place whenever more rows exist than the visible viewport fits.
-- The add action opens `tday://todos/create?target=today` through a dedicated widget-create
-  activity in the main app task, starts the in-app create-task sheet with the title field focused,
-  and treats Back/dismiss as returning to the launcher instead of walking through the app's internal
-  task
-  history. Submitting from this widget flow hands task creation to a background submitter so the
-  launcher widget can refresh from the latest cache after the Activity closes.
+- The add action opens `tday://todos/create?target=today` through a dedicated translucent
+  widget-create activity that hosts the same in-app create-task sheet directly over the launcher
+  with the title field focused. Back/dismiss returns to the launcher instead of walking through the
+  app's internal task history. Submitting from this widget flow hands task creation to a background
+  submitter so the launcher widget can refresh from the latest cache after the Activity closes.
 - `OfflineCacheManager` requests widget refreshes after local cache changes, so Local Mode and
   optimistic writes update the widget without waiting for a server sync path.
 
