@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -12,6 +11,8 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
@@ -45,17 +46,21 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import dagger.hilt.android.EntryPointAccessors
+import java.text.DateFormat
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
 
 private val TdayWidgetFontFamily = FontFamily("Nunito")
+private val TdayWidgetAccentColor = ColorProvider(R.color.tday_widget_today_accent)
+private val TdayWidgetAccentWash = ColorProvider(R.color.tday_widget_accent_wash)
 
 class TodayTasksWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(
         setOf(
             DpSize(150.dp, 110.dp),
             DpSize(250.dp, 110.dp),
+            DpSize(250.dp, 160.dp),
             DpSize(250.dp, 220.dp),
         ),
     )
@@ -97,6 +102,7 @@ private data class TodayTasksWidgetStrings(
 
 private enum class TodayTasksWidgetLayout {
     COMPACT,
+    WIDE,
     MEDIUM,
     TALL,
 }
@@ -107,39 +113,69 @@ private fun WidgetContent(
     strings: TodayTasksWidgetStrings,
 ) {
     val layout = widgetLayoutFor(LocalSize.current)
-    val horizontalPadding = if (layout == TodayTasksWidgetLayout.COMPACT) 12.dp else 14.dp
-    val verticalPadding = if (layout == TodayTasksWidgetLayout.COMPACT) 10.dp else 12.dp
+    val horizontalPadding = if (layout == TodayTasksWidgetLayout.COMPACT) 13.dp else 14.dp
+    val topPadding = if (layout == TodayTasksWidgetLayout.COMPACT) 7.dp else 8.dp
+    val bottomPadding = if (layout == TodayTasksWidgetLayout.COMPACT) 10.dp else 12.dp
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground)
-            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+            .background(GlanceTheme.colors.widgetBackground),
     ) {
-        HeaderRow(
-            title = model.title,
-            count = model.taskCount,
-            addTaskLabel = strings.addTaskLabel,
-            showTitle = layout != TodayTasksWidgetLayout.COMPACT,
-        )
+        Box(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(TdayWidgetAccentWash),
+        ) {}
 
-        when (model.status) {
-            TodayTasksWidgetStatus.SETUP -> WidgetMessage(
-                title = strings.setupTitle,
-                message = strings.setupMessage,
-                compact = layout == TodayTasksWidgetLayout.COMPACT,
+        Column(
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .padding(
+                    start = horizontalPadding,
+                    top = topPadding,
+                    end = horizontalPadding,
+                    bottom = bottomPadding,
+                ),
+        ) {
+            HeaderRow(
+                title = model.title,
+                count = model.taskCount,
+                showTitle = layout != TodayTasksWidgetLayout.COMPACT,
             )
 
-            TodayTasksWidgetStatus.EMPTY -> WidgetMessage(
-                title = strings.emptyMessage,
-                message = strings.addTaskLabel,
-                compact = layout == TodayTasksWidgetLayout.COMPACT,
-            )
+            Spacer(modifier = GlanceModifier.height(if (layout == TodayTasksWidgetLayout.COMPACT) 4.dp else 5.dp))
 
-            TodayTasksWidgetStatus.TASKS -> when (layout) {
-                TodayTasksWidgetLayout.COMPACT -> CompactTaskSummary(model.tasks.first())
-                TodayTasksWidgetLayout.MEDIUM -> TaskList(tasks = model.tasks.take(4))
-                TodayTasksWidgetLayout.TALL -> TaskList(tasks = model.tasks)
+            when (model.status) {
+                TodayTasksWidgetStatus.SETUP -> WidgetMessage(
+                    title = strings.setupTitle,
+                    message = strings.setupMessage,
+                    compact = layout == TodayTasksWidgetLayout.COMPACT,
+                    actionDeepLink = TODAY_DEEP_LINK,
+                )
+
+                TodayTasksWidgetStatus.EMPTY -> WidgetMessage(
+                    title = strings.emptyMessage,
+                    message = strings.addTaskLabel,
+                    compact = layout == TodayTasksWidgetLayout.COMPACT,
+                    actionDeepLink = CREATE_TODAY_DEEP_LINK,
+                )
+
+                TodayTasksWidgetStatus.TASKS -> when (layout) {
+                    TodayTasksWidgetLayout.COMPACT -> CompactTaskSummary(model.tasks.first())
+                    TodayTasksWidgetLayout.WIDE -> TaskList(
+                        tasks = model.tasks.take(2),
+                        layout = layout
+                    )
+
+                    TodayTasksWidgetLayout.MEDIUM -> TaskList(
+                        tasks = model.tasks.take(4),
+                        layout = layout
+                    )
+
+                    TodayTasksWidgetLayout.TALL -> TaskList(tasks = model.tasks, layout = layout)
+                }
             }
         }
     }
@@ -149,7 +185,6 @@ private fun WidgetContent(
 private fun HeaderRow(
     title: String,
     count: Int,
-    addTaskLabel: String,
     showTitle: Boolean,
 ) {
     Row(
@@ -181,7 +216,7 @@ private fun HeaderRow(
             Text(
                 text = count.toString(),
                 style = TextStyle(
-                    color = GlanceTheme.colors.primary,
+                    color = TdayWidgetAccentColor,
                     fontFamily = TdayWidgetFontFamily,
                     fontSize = if (showTitle) 14.sp else 24.sp,
                     fontWeight = FontWeight.Bold,
@@ -200,7 +235,7 @@ private fun HeaderRow(
             Text(
                 text = "+",
                 style = TextStyle(
-                    color = GlanceTheme.colors.primary,
+                    color = TdayWidgetAccentColor,
                     fontFamily = TdayWidgetFontFamily,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
@@ -217,11 +252,12 @@ private fun WidgetMessage(
     title: String,
     message: String,
     compact: Boolean,
+    actionDeepLink: String,
 ) {
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .clickable(openDeepLinkAction(if (message == title) TODAY_DEEP_LINK else CREATE_TODAY_DEEP_LINK)),
+            .clickable(openDeepLinkAction(actionDeepLink)),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -263,8 +299,8 @@ private fun CompactTaskSummary(task: CachedTodoRecord) {
             .fillMaxSize()
             .clickable(openTaskAction(task.id)),
     ) {
-        TaskPriorityDot(priority = task.priority, size = 10.dp)
-        Spacer(modifier = GlanceModifier.height(6.dp))
+        TaskPriorityDot(priority = task.priority, size = 9.dp)
+        Spacer(modifier = GlanceModifier.height(5.dp))
         Text(
             text = task.title,
             style = TextStyle(
@@ -291,33 +327,39 @@ private fun CompactTaskSummary(task: CachedTodoRecord) {
 }
 
 @Composable
-private fun TaskList(tasks: List<CachedTodoRecord>) {
+private fun TaskList(
+    tasks: List<CachedTodoRecord>,
+    layout: TodayTasksWidgetLayout,
+) {
     LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
         items(tasks, itemId = { it.id.hashCode().toLong() }) { task ->
-            TaskRow(task = task)
+            TaskRow(task = task, layout = layout)
         }
     }
 }
 
 @SuppressLint("RestrictedApi")
 @Composable
-private fun TaskRow(task: CachedTodoRecord) {
+private fun TaskRow(
+    task: CachedTodoRecord,
+    layout: TodayTasksWidgetLayout,
+) {
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .height(42.dp)
+            .height(taskRowHeight(layout))
             .clickable(openTaskAction(task.id)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TaskPriorityDot(priority = task.priority, size = 8.dp)
-        Spacer(modifier = GlanceModifier.width(8.dp))
+        TaskPriorityDot(priority = task.priority, size = 7.dp)
+        Spacer(modifier = GlanceModifier.width(7.dp))
         Text(
             modifier = GlanceModifier.defaultWeight(),
             text = task.title,
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontFamily = TdayWidgetFontFamily,
-                fontSize = 14.sp,
+                fontSize = if (layout == TodayTasksWidgetLayout.TALL) 13.sp else 12.sp,
                 fontWeight = FontWeight.Bold,
             ),
             maxLines = 1,
@@ -329,7 +371,7 @@ private fun TaskRow(task: CachedTodoRecord) {
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurfaceVariant,
                     fontFamily = TdayWidgetFontFamily,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                 ),
                 maxLines = 1,
@@ -340,32 +382,45 @@ private fun TaskRow(task: CachedTodoRecord) {
 
 @Composable
 private fun TaskPriorityDot(priority: String, size: Dp) {
-    Box(
+    Image(
+        provider = ImageProvider(priorityDotResource(priority)),
+        contentDescription = null,
         modifier = GlanceModifier
-            .size(size)
-            .background(priorityColor(priority)),
-    ) {}
+            .size(size),
+    )
 }
 
-@Composable
-private fun priorityColor(priority: String): ColorProvider {
-    return when (priority.lowercase()) {
-        "high" -> ColorProvider(Color(0xFFE47C7C))
-        "medium" -> ColorProvider(Color(0xFFDDB37D))
-        else -> GlanceTheme.colors.onSurfaceVariant
+private fun priorityDotResource(priority: String): Int {
+    return when (priority.trim().lowercase(Locale.getDefault())) {
+        "high", "urgent", "important" -> R.drawable.widget_priority_dot_high
+        "medium" -> R.drawable.widget_priority_dot_medium
+        else -> R.drawable.widget_priority_dot_low
     }
 }
 
 private fun widgetLayoutFor(size: DpSize): TodayTasksWidgetLayout {
     return when {
-        size.height < 150.dp -> TodayTasksWidgetLayout.COMPACT
         size.height >= 210.dp -> TodayTasksWidgetLayout.TALL
+        size.height >= 150.dp -> TodayTasksWidgetLayout.MEDIUM
+        size.width >= 220.dp -> TodayTasksWidgetLayout.WIDE
+        size.height < 150.dp -> TodayTasksWidgetLayout.COMPACT
         else -> TodayTasksWidgetLayout.MEDIUM
     }
 }
 
+private fun taskRowHeight(layout: TodayTasksWidgetLayout): Dp {
+    return when (layout) {
+        TodayTasksWidgetLayout.WIDE -> 22.dp
+        TodayTasksWidgetLayout.MEDIUM -> 24.dp
+        TodayTasksWidgetLayout.TALL -> 25.dp
+        TodayTasksWidgetLayout.COMPACT -> 24.dp
+    }
+}
+
 private fun dueTimeText(epochMs: Long): String {
-    return TIME_FORMATTER.format(Instant.ofEpochMilli(epochMs))
+    return DateFormat
+        .getTimeInstance(DateFormat.SHORT)
+        .format(Date.from(Instant.ofEpochMilli(epochMs)))
 }
 
 private fun openTaskAction(taskId: String) = openDeepLinkAction(
@@ -377,9 +432,6 @@ private fun openDeepLinkAction(deepLink: String) = actionStartActivity<MainActiv
         ActionParameters.Key<String>("deepLink") to deepLink,
     ),
 )
-
-private val TIME_FORMATTER = DateTimeFormatter.ofPattern("h:mm a")
-    .withZone(ZoneId.systemDefault())
 
 private const val TODAY_DEEP_LINK = "tday://todos/today"
 private const val CREATE_TODAY_DEEP_LINK = "tday://todos/create?target=today"

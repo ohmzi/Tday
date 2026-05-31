@@ -45,16 +45,7 @@ private struct TodayTasksSnapshot: Codable {
 
 private struct TodayTasksProvider: TimelineProvider {
     func placeholder(in context: Context) -> TodayTasksEntry {
-        TodayTasksEntry(
-            date: Date(),
-            title: "Today's Tasks",
-            status: .tasks,
-            taskCount: 2,
-            tasks: [
-                TodayTaskSnapshot(id: "placeholder-1", title: "Plan the morning", dueEpochMs: Date().timeIntervalEpochMs, priority: "medium"),
-                TodayTaskSnapshot(id: "placeholder-2", title: "Review today", dueEpochMs: Date().addingTimeInterval(3_600).timeIntervalEpochMs, priority: "high")
-            ]
-        )
+        .previewTasks
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TodayTasksEntry) -> Void) {
@@ -111,6 +102,37 @@ private struct TodayTasksProvider: TimelineProvider {
     private static let snapshotKey = "tday.widget.todayTasksSnapshot"
 }
 
+private extension TodayTasksEntry {
+    static let previewTasks = TodayTasksEntry(
+        date: Date(),
+        title: "Today's Tasks",
+        status: .tasks,
+        taskCount: 4,
+        tasks: [
+            TodayTaskSnapshot(id: "preview-1", title: "Plan the morning", dueEpochMs: Date().timeIntervalEpochMs, priority: "medium"),
+            TodayTaskSnapshot(id: "preview-2", title: "Review today", dueEpochMs: Date().addingTimeInterval(3_600).timeIntervalEpochMs, priority: "high"),
+            TodayTaskSnapshot(id: "preview-3", title: "Send the quick update", dueEpochMs: Date().addingTimeInterval(7_200).timeIntervalEpochMs, priority: "low"),
+            TodayTaskSnapshot(id: "preview-4", title: "Reset the evening list", dueEpochMs: Date().addingTimeInterval(10_800).timeIntervalEpochMs, priority: "medium")
+        ]
+    )
+
+    static let previewEmpty = TodayTasksEntry(
+        date: Date(),
+        title: "Today's Tasks",
+        status: .empty,
+        taskCount: 0,
+        tasks: []
+    )
+
+    static let previewSetup = TodayTasksEntry(
+        date: Date(),
+        title: "Today's Tasks",
+        status: .setup,
+        taskCount: 0,
+        tasks: []
+    )
+}
+
 private struct TodayTasksWidgetView: View {
     let entry: TodayTasksEntry
 
@@ -139,7 +161,14 @@ private struct TodayTasksWidgetView: View {
     }
 
     private var spacing: CGFloat {
-        family == .systemSmall ? 8 : 10
+        switch family {
+        case .systemSmall:
+            return 7
+        case .systemLarge:
+            return 10
+        default:
+            return 9
+        }
     }
 
     private var visibleTaskLimit: Int {
@@ -231,9 +260,9 @@ private struct TodayTasksWidgetView: View {
 
     private func message(title: String, subtitle: String) -> some View {
         Link(destination: URL(string: "tday://todos/create?target=today")!) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .center, spacing: family == .systemSmall ? 3 : 4) {
                 Text(title)
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    .font(.system(family == .systemLarge ? .headline : .subheadline, design: .rounded, weight: .bold))
                     .lineLimit(2)
                 if family != .systemSmall {
                     Text(subtitle)
@@ -329,4 +358,36 @@ private extension Date {
         Int64(timeIntervalSince1970 * 1_000)
     }
 }
+
+#if DEBUG
+#Preview("Small Tasks", as: .systemSmall) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewTasks
+}
+
+#Preview("Medium Tasks", as: .systemMedium) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewTasks
+}
+
+#Preview("Large Tasks", as: .systemLarge) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewTasks
+}
+
+#Preview("Empty", as: .systemMedium) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewEmpty
+}
+
+#Preview("Setup", as: .systemMedium) {
+    TodayTasksWidget()
+} timeline: {
+    TodayTasksEntry.previewSetup
+}
+#endif
 #endif
