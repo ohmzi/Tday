@@ -42,7 +42,7 @@ class MobileProbeRoutesTest {
         assertEquals("ok", payload.probe)
         assertEquals("1", payload.version)
         assertTrue(payload.serverTime.isNotBlank())
-        assertNull(payload.appVersion)
+        assertEquals("0.0.0", payload.appVersion)
         assertNull(payload.encryptedCompatibility)
     }
 

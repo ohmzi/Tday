@@ -34,10 +34,9 @@ This document describes the durable and local data structures that define T'Day.
 ## Mobile Probe Contract
 
 `MobileProbeResponse` is the public server-discovery DTO used before a mobile client signs in. It
-includes `service`, probe protocol `version`, `serverTime`, optional plain `appVersion`, and optional
+includes `service`, probe protocol `version`, `serverTime`, plain `appVersion`, and optional
 `encryptedCompatibility`. Android and iOS use `appVersion` to display the server release version on
-the App Version screen when the backend is configured for release metadata but encrypted
-compatibility is not available.
+the App Version screen when encrypted compatibility is not available.
 
 ## Scheduling Rules
 
