@@ -107,12 +107,18 @@ private extension TodayTasksEntry {
         date: Date(),
         title: "Today's Tasks",
         status: .tasks,
-        taskCount: 4,
+        taskCount: 10,
         tasks: [
             TodayTaskSnapshot(id: "preview-1", title: "Plan the morning", dueEpochMs: Date().timeIntervalEpochMs, priority: "medium"),
             TodayTaskSnapshot(id: "preview-2", title: "Review today", dueEpochMs: Date().addingTimeInterval(3_600).timeIntervalEpochMs, priority: "high"),
             TodayTaskSnapshot(id: "preview-3", title: "Send the quick update", dueEpochMs: Date().addingTimeInterval(7_200).timeIntervalEpochMs, priority: "low"),
-            TodayTaskSnapshot(id: "preview-4", title: "Reset the evening list", dueEpochMs: Date().addingTimeInterval(10_800).timeIntervalEpochMs, priority: "medium")
+            TodayTaskSnapshot(id: "preview-4", title: "Reset the evening list", dueEpochMs: Date().addingTimeInterval(10_800).timeIntervalEpochMs, priority: "medium"),
+            TodayTaskSnapshot(id: "preview-5", title: "Call the contractor", dueEpochMs: Date().addingTimeInterval(12_600).timeIntervalEpochMs, priority: "high"),
+            TodayTaskSnapshot(id: "preview-6", title: "Pick up groceries", dueEpochMs: Date().addingTimeInterval(14_400).timeIntervalEpochMs, priority: "medium"),
+            TodayTaskSnapshot(id: "preview-7", title: "Prep tomorrow", dueEpochMs: Date().addingTimeInterval(16_200).timeIntervalEpochMs, priority: "low"),
+            TodayTaskSnapshot(id: "preview-8", title: "Evening reset", dueEpochMs: Date().addingTimeInterval(18_000).timeIntervalEpochMs, priority: "medium"),
+            TodayTaskSnapshot(id: "preview-9", title: "Queue notes", dueEpochMs: Date().addingTimeInterval(19_800).timeIntervalEpochMs, priority: "low"),
+            TodayTaskSnapshot(id: "preview-10", title: "Close the loop", dueEpochMs: Date().addingTimeInterval(21_600).timeIntervalEpochMs, priority: "medium")
         ]
     )
 
@@ -171,17 +177,6 @@ private struct TodayTasksWidgetView: View {
         }
     }
 
-    private var visibleTaskLimit: Int {
-        switch family {
-        case .systemSmall:
-            return 1
-        case .systemLarge:
-            return 8
-        default:
-            return 4
-        }
-    }
-
     private var accentColor: Color {
         renderingMode == .fullColor ? .tdayTodayBlue : .primary
     }
@@ -229,22 +224,25 @@ private struct TodayTasksWidgetView: View {
 
     @ViewBuilder
     private var taskContent: some View {
-        if family == .systemSmall, let firstTask = entry.tasks.first {
-            VStack(alignment: .leading, spacing: 6) {
-                priorityDot(firstTask.priority, size: 10)
-                Text(firstTask.title)
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .lineLimit(2)
-                Text(Self.dueTimeText(from: firstTask.dueEpochMs))
-                    .font(.system(.caption, design: .rounded, weight: .bold))
-                    .foregroundStyle(secondaryTextColor)
+        GeometryReader { proxy in
+            taskListContent(availableHeight: proxy.size.height)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    @ViewBuilder
+    private func taskListContent(availableHeight: CGFloat) -> some View {
+        let rowCapacity = visibleRowCapacity(for: availableHeight)
+        let hasOverflow = entry.tasks.count > rowCapacity
+        let visibleCount = hasOverflow && rowCapacity > 1 ? rowCapacity - 1 : rowCapacity
+        let overflowCount = max(0, entry.tasks.count - visibleCount)
+
+        VStack(alignment: .leading, spacing: taskRowSpacing) {
+            ForEach(entry.tasks.prefix(visibleCount)) { task in
+                taskRow(task)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            VStack(alignment: .leading, spacing: family == .systemLarge ? 8 : 6) {
-                ForEach(entry.tasks.prefix(visibleTaskLimit)) { task in
-                    taskRow(task)
-                }
+            if hasOverflow && rowCapacity > 1 {
+                overflowRow(count: overflowCount)
             }
         }
     }
@@ -278,7 +276,16 @@ private struct TodayTasksWidgetView: View {
                 .lineLimit(1)
         }
         .foregroundStyle(.primary)
-        .frame(minHeight: family == .systemLarge ? 25 : 22)
+        .frame(height: taskRowHeight)
+    }
+
+    private func overflowRow(count: Int) -> some View {
+        Text("+\(count) more")
+            .font(.system(.caption2, design: .rounded, weight: .heavy))
+            .foregroundStyle(accentColor)
+            .lineLimit(1)
+            .widgetAccentable()
+            .frame(height: taskRowHeight, alignment: .leading)
     }
 
     private func priorityDot(_ priority: String, size: CGFloat) -> some View {
@@ -306,6 +313,36 @@ private struct TodayTasksWidgetView: View {
     private static func dueTimeText(from epochMs: Int64) -> String {
         let date = Date(timeIntervalSince1970: TimeInterval(epochMs) / 1_000)
         return date.formatted(date: .omitted, time: .shortened)
+    }
+
+    private var taskRowHeight: CGFloat {
+        switch family {
+        case .systemSmall:
+            return 24
+        case .systemLarge:
+            return 25
+        default:
+            return 22
+        }
+    }
+
+    private var taskRowSpacing: CGFloat {
+        switch family {
+        case .systemSmall:
+            return 4
+        case .systemLarge:
+            return 8
+        default:
+            return 6
+        }
+    }
+
+    private func visibleRowCapacity(for height: CGFloat) -> Int {
+        let rowStride = taskRowHeight + taskRowSpacing
+        guard rowStride > 0 else {
+            return 1
+        }
+        return max(1, Int((height + taskRowSpacing) / rowStride))
     }
 
 }

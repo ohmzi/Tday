@@ -63,7 +63,7 @@ class TodayTasksWidgetModelTest {
 
     @Test
     fun `model caps display tasks but preserves total count`() {
-        val todos = (0 until 10).map { index ->
+        val todos = (0 until 25).map { index ->
             todo(
                 id = "task-$index",
                 title = "Task $index",
@@ -79,10 +79,10 @@ class TodayTasksWidgetModelTest {
             zoneId = zoneId,
         )
 
-        assertEquals(10, model.taskCount)
-        assertEquals(8, model.tasks.size)
+        assertEquals(25, model.taskCount)
+        assertEquals(20, model.tasks.size)
         assertEquals("task-0", model.tasks.first().id)
-        assertEquals("task-7", model.tasks.last().id)
+        assertEquals("task-19", model.tasks.last().id)
     }
 
     @Test

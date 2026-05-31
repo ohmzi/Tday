@@ -326,6 +326,9 @@
 
     <string name="widget_today_tasks_description">Shows today\'s tasks at a glance</string>
     <string name="widget_today_tasks_title">Today\'s Tasks</string>
+    <string name="widget_today_tasks_title_small">Today\'s Tasks - Small</string>
+    <string name="widget_today_tasks_title_medium">Today\'s Tasks - Medium</string>
+    <string name="widget_today_tasks_title_large">Today\'s Tasks - Large</string>
     <string name="widget_today_tasks_empty">No tasks due today</string>
     <string name="widget_today_tasks_add">Add today</string>
     <string name="widget_today_tasks_setup_title">Open T\'Day</string>
