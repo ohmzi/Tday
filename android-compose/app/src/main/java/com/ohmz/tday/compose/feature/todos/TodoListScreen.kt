@@ -249,6 +249,7 @@ fun TodoListScreen(
     openCreateTaskOnStart: Boolean = false,
     exitToLauncherOnBack: Boolean = false,
     exitOnCreateTaskSheetDismiss: Boolean = false,
+    onCreateTaskFlowFinished: () -> Unit = {},
     pullRefreshEnabled: Boolean = true,
     summaryAvailable: Boolean = true,
     usesRootFeedHeader: Boolean = false,
@@ -1205,12 +1206,14 @@ fun TodoListScreen(
                 } else {
                     showCreateTaskSheet = false
                     quickAddDueEpochMs = null
+                    onCreateTaskFlowFinished()
                 }
             },
             onCreateTask = { payload ->
                 onAddTask(payload)
                 showCreateTaskSheet = false
                 quickAddDueEpochMs = null
+                onCreateTaskFlowFinished()
             },
         )
     }
