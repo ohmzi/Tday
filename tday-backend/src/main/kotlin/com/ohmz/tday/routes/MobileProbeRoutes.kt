@@ -18,8 +18,9 @@ fun Route.mobileProbeRoutes(config: AppConfig) {
             call.response.header(HttpHeaders.CacheControl, "no-store")
             call.response.header(HttpHeaders.Pragma, "no-cache")
 
-            val encrypted = if (probeEncryption != null && config.probeAppVersion != null) {
-                val payload = """{"appVersion":"${config.probeAppVersion}","updateRequired":${config.probeUpdateRequired},"compatibilityMode":"${config.probeCompatibilityMode}"}"""
+            val appVersion = config.probeAppVersion ?: config.backendVersion
+            val encrypted = if (probeEncryption != null) {
+                val payload = """{"appVersion":"$appVersion","updateRequired":${config.probeUpdateRequired},"compatibilityMode":"${config.probeCompatibilityMode}"}"""
                 runCatching { probeEncryption.encrypt(payload) }.getOrNull()
             } else {
                 null
@@ -32,7 +33,7 @@ fun Route.mobileProbeRoutes(config: AppConfig) {
                     probe = "ok",
                     version = "1",
                     serverTime = Instant.now().toString(),
-                    appVersion = config.probeAppVersion,
+                    appVersion = appVersion,
                     encryptedCompatibility = encrypted,
                 ),
             )
