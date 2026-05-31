@@ -1,7 +1,9 @@
 package com.ohmz.tday.compose.feature.widget
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
@@ -14,12 +16,10 @@ import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
-import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionParametersOf
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
@@ -41,6 +41,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.AppDataMode
@@ -427,10 +428,21 @@ private fun openTaskAction(taskId: String) = openDeepLinkAction(
     "tday://todos/all?highlightTodoId=${Uri.encode(taskId)}",
 )
 
-private fun openDeepLinkAction(deepLink: String) = actionStartActivity<MainActivity>(
-    actionParametersOf(
-        ActionParameters.Key<String>("deepLink") to deepLink,
-    ),
+private fun openDeepLinkAction(deepLink: String) = actionStartActivity(
+    if (deepLink == CREATE_TODAY_DEEP_LINK) {
+        Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
+            component = ComponentName(
+                BuildConfig.APPLICATION_ID,
+                WidgetCreateTaskActivity::class.java.name,
+            )
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+    } else {
+        Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
+            component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+    },
 )
 
 private const val TODAY_DEEP_LINK = "tday://todos/today"

@@ -247,6 +247,8 @@ fun TodoListScreen(
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
     openCreateTaskOnStart: Boolean = false,
+    exitToLauncherOnBack: Boolean = false,
+    exitOnCreateTaskSheetDismiss: Boolean = false,
     pullRefreshEnabled: Boolean = true,
     summaryAvailable: Boolean = true,
     usesRootFeedHeader: Boolean = false,
@@ -362,7 +364,9 @@ fun TodoListScreen(
         uiState.mode == TodoListMode.ALL ||
                 uiState.mode == TodoListMode.PRIORITY ||
                 uiState.mode == TodoListMode.LIST
-    var showCreateTaskSheet by rememberSaveable { mutableStateOf(false) }
+    var showCreateTaskSheet by rememberSaveable {
+        mutableStateOf(openCreateTaskOnStart)
+    }
     var openSwipeTaskId by rememberSaveable(uiState.mode, uiState.listId) {
         mutableStateOf<String?>(null)
     }
@@ -457,6 +461,9 @@ fun TodoListScreen(
     }
     BackHandler(enabled = rootFloaterSearchExpanded) {
         closeRootFloaterSearch()
+    }
+    BackHandler(enabled = exitToLauncherOnBack && !showCreateTaskSheet && !rootFloaterSearchExpanded) {
+        onBack()
     }
     LaunchedEffect(isRootFloaterScreen, rootFloaterSearchExpanded) {
         if (!isRootFloaterScreen) {
@@ -1189,10 +1196,16 @@ fun TodoListScreen(
             defaultScheduled = uiState.mode != TodoListMode.FLOATER,
             showScheduleControls = uiState.mode != TodoListMode.FLOATER,
             initialDueEpochMs = quickAddDueEpochMs,
+            autoFocusTitle = openCreateTaskOnStart,
+            presentImmediately = openCreateTaskOnStart,
             onParseTaskTitleNlp = if (uiState.mode == TodoListMode.FLOATER) null else onParseTaskTitleNlp,
             onDismiss = {
-                showCreateTaskSheet = false
-                quickAddDueEpochMs = null
+                if (exitOnCreateTaskSheetDismiss) {
+                    onBack()
+                } else {
+                    showCreateTaskSheet = false
+                    quickAddDueEpochMs = null
+                }
             },
             onCreateTask = { payload ->
                 onAddTask(payload)

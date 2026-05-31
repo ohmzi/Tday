@@ -451,7 +451,7 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 The v1 mobile widget surface is intentionally narrow and action-oriented. Widgets do not complete tasks inline; they take users into the app through deep links so Local Mode, optimistic writes, validation, and create/edit sheets remain owned by the main clients.
 
-- **Android**: `TodayTasksWidget` uses Glance with responsive compact, wide, and tall layouts. `TodayTasksWidgetModel` builds setup, empty, and tasks states from cached scheduled todos, and `TodayTasksWidgetRefresher` lets cache writes refresh the widget after Local Mode and optimistic changes.
+- **Android**: `TodayTasksWidget` uses Glance with responsive compact, wide, and tall layouts. `TodayTasksWidgetModel` builds setup, empty, and tasks states from cached scheduled todos, and `TodayTasksWidgetRefresher` lets cache writes refresh the widget after Local Mode and optimistic changes. The widget add deep link opens a dedicated widget-create activity so the Today create sheet appears without the main app Home/Today navigation stack; submitting hands task creation to a background submitter and returns to the launcher while the widget refreshes from cache.
 - **iOS**: `TdayWidget` is a WidgetKit extension supporting `.systemSmall`, `.systemMedium`, and `.systemLarge`. The app writes schema-versioned snapshots to App Group defaults under `tday.widget.todayTasksSnapshot`; payloads include status, task count, generation time, and capped task rows.
 - **Visual system fit**: each platform owns widget chrome, margins, background removal, tinting/accent rendering, and launch transitions. T'Day identity comes from the Today accent, rounded typography, priority dots, compact task rows, and calm empty/setup states.
 
