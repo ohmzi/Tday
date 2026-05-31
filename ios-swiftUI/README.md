@@ -84,8 +84,10 @@ fallback for older payloads.
 - Snapshot status is `setup`, `empty`, or `tasks`, with task count, generated time, and capped task rows.
 - Tapping the widget body, header, empty/setup message, or task rows opens the main app.
 - The add action opens `tday://todos/create?target=today` and starts the in-app create-task sheet.
-- System-family WidgetKit widgets remain snapshot/glanceable; the count reflects all due-today tasks,
-  while the visible rows stay capped to the family size.
+- System-family WidgetKit widgets remain snapshot/glanceable; WidgetKit does not expose an
+  internal `ScrollView` surface for home-screen widgets. The widget stores a larger capped task
+  set, fills the available family height with rows, and shows a compact overflow row when more
+  due-today tasks remain below the visible area.
 - The widget shows pending scheduled tasks due today only; floaters, completed tasks, and overdue tasks
   are intentionally excluded from v1.
 
