@@ -108,9 +108,12 @@ out of the v1 widget surface.
   metadata, while all three render the same responsive Glance widget.
 - Static picker previews use RemoteViews-compatible XML, and Android 15+ generated previews are
   published from `TodayTasksWidgetPreviewPublisher` when the app starts.
+- Medium and large layouts show the title, a compact `N due` count, and a 48dp add target; compact
+  layouts stay count-first and prioritize task titles over due-time detail.
 - Tapping the widget body, header, empty/setup message, or task rows opens the main app.
 - All task layouts hand the full capped Today task set to Glance `LazyColumn`, so widgets can
-  scroll in place whenever more rows exist than the visible viewport fits.
+  scroll in place whenever more rows exist than the visible viewport fits. If the cached model hits
+  the widget task cap, the final row shows the remaining `+N more` count.
 - The add action opens `tday://todos/create?target=today` through a dedicated translucent
   widget-create activity that hosts the same in-app create-task sheet directly over the launcher
   with the title field focused. Back/dismiss returns to the launcher instead of walking through the

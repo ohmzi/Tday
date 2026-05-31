@@ -81,6 +81,7 @@ class TodayTasksWidgetModelTest {
 
         assertEquals(25, model.taskCount)
         assertEquals(20, model.tasks.size)
+        assertEquals(5, model.overflowCount)
         assertEquals("task-0", model.tasks.first().id)
         assertEquals("task-19", model.tasks.last().id)
     }

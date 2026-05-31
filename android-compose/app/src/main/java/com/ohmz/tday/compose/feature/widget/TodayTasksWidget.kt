@@ -84,6 +84,8 @@ class TodayTasksWidget : GlanceAppWidget() {
             setupTitle = context.getString(R.string.widget_today_tasks_setup_title),
             setupMessage = context.getString(R.string.widget_today_tasks_setup_message),
             addTaskLabel = context.getString(R.string.widget_today_tasks_add),
+            countLabelFormat = context.getString(R.string.widget_today_tasks_count),
+            moreLabelFormat = context.getString(R.string.widget_today_tasks_more),
         )
 
         provideContent {
@@ -99,6 +101,14 @@ private data class TodayTasksWidgetStrings(
     val setupTitle: String,
     val setupMessage: String,
     val addTaskLabel: String,
+    val countLabelFormat: String,
+    val moreLabelFormat: String,
+)
+
+private data class TodayTasksWidgetListItem(
+    val key: Long,
+    val task: CachedTodoRecord? = null,
+    val overflowLabel: String? = null,
 )
 
 private enum class TodayTasksWidgetLayout {
@@ -144,6 +154,7 @@ private fun WidgetContent(
             HeaderRow(
                 title = model.title,
                 count = model.taskCount,
+                countLabel = strings.countLabel(model.taskCount),
                 showTitle = layout != TodayTasksWidgetLayout.COMPACT,
             )
 
@@ -168,6 +179,8 @@ private fun WidgetContent(
                     TodayTasksWidgetLayout.MEDIUM,
                     TodayTasksWidgetLayout.TALL -> TaskList(
                         tasks = model.tasks,
+                        overflowCount = model.overflowCount,
+                        overflowLabel = strings.moreLabel(model.overflowCount),
                         layout = layout,
                         modifier = GlanceModifier
                             .fillMaxWidth()
@@ -183,22 +196,26 @@ private fun WidgetContent(
 private fun HeaderRow(
     title: String,
     count: Int,
+    countLabel: String,
     showTitle: Boolean,
 ) {
+    val headerHeight = 48.dp
+
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .height(48.dp),
+            .height(headerHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
             modifier = GlanceModifier
                 .defaultWeight()
-                .height(48.dp),
+                .height(headerHeight),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (showTitle) {
                 Text(
+                    modifier = GlanceModifier.defaultWeight(),
                     text = title,
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurface,
@@ -208,39 +225,58 @@ private fun HeaderRow(
                     ),
                     maxLines = 1,
                 )
-                Spacer(modifier = GlanceModifier.width(8.dp))
+                Spacer(modifier = GlanceModifier.width(7.dp))
+                Text(
+                    text = countLabel,
+                    style = TextStyle(
+                        color = TdayWidgetAccentColor,
+                        fontFamily = TdayWidgetFontFamily,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    ),
+                    maxLines = 1,
+                )
+            } else {
+                Text(
+                    text = count.toString(),
+                    style = TextStyle(
+                        color = TdayWidgetAccentColor,
+                        fontFamily = TdayWidgetFontFamily,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Start,
+                    ),
+                    maxLines = 1,
+                )
             }
-            Text(
-                text = count.toString(),
-                style = TextStyle(
-                    color = TdayWidgetAccentColor,
-                    fontFamily = TdayWidgetFontFamily,
-                    fontSize = if (showTitle) 14.sp else 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                ),
-                maxLines = 1,
-            )
         }
 
-        Box(
-            modifier = GlanceModifier
-                .size(48.dp)
-                .clickable(openDeepLinkAction(CREATE_TODAY_DEEP_LINK)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "+",
-                style = TextStyle(
-                    color = TdayWidgetAccentColor,
-                    fontFamily = TdayWidgetFontFamily,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                ),
-                maxLines = 1,
-            )
-        }
+        Spacer(modifier = GlanceModifier.width(if (showTitle) 8.dp else 6.dp))
+        AddTaskButton()
+    }
+}
+
+@Composable
+private fun AddTaskButton() {
+    Box(
+        modifier = GlanceModifier
+            .size(48.dp)
+            .background(ImageProvider(R.drawable.widget_add_button_background))
+            .clickable(openDeepLinkAction(CREATE_TODAY_DEEP_LINK)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "+",
+            style = TextStyle(
+                color = TdayWidgetAccentColor,
+                fontFamily = TdayWidgetFontFamily,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            ),
+            maxLines = 1,
+        )
     }
 }
 
@@ -291,12 +327,34 @@ private fun WidgetMessage(
 @Composable
 private fun TaskList(
     tasks: List<CachedTodoRecord>,
+    overflowCount: Int,
+    overflowLabel: String,
     layout: TodayTasksWidgetLayout,
     modifier: GlanceModifier = GlanceModifier.fillMaxSize(),
 ) {
+    val rows = tasks.map { task ->
+        TodayTasksWidgetListItem(
+            key = task.id.hashCode().toLong(),
+            task = task,
+        )
+    } + if (overflowCount > 0) {
+        listOf(
+            TodayTasksWidgetListItem(
+                key = Long.MIN_VALUE,
+                overflowLabel = overflowLabel,
+            ),
+        )
+    } else {
+        emptyList()
+    }
+
     LazyColumn(modifier = modifier) {
-        items(tasks, itemId = { it.id.hashCode().toLong() }) { task ->
-            TaskRow(task = task, layout = layout)
+        items(rows, itemId = { it.key }) { row ->
+            row.task?.let { task ->
+                TaskRow(task = task, layout = layout)
+            } ?: row.overflowLabel?.let { label ->
+                OverflowRow(label = label, layout = layout)
+            }
         }
     }
 }
@@ -327,20 +385,56 @@ private fun TaskRow(
             ),
             maxLines = 1,
         )
-        task.dueEpochMs?.let { due ->
-            Spacer(modifier = GlanceModifier.width(6.dp))
-            Text(
-                text = dueTimeText(due),
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontFamily = TdayWidgetFontFamily,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-                maxLines = 1,
-            )
+        if (layout != TodayTasksWidgetLayout.COMPACT) {
+            task.dueEpochMs?.let { due ->
+                Spacer(modifier = GlanceModifier.width(6.dp))
+                Text(
+                    text = dueTimeText(due),
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurfaceVariant,
+                        fontFamily = TdayWidgetFontFamily,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    maxLines = 1,
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun OverflowRow(
+    label: String,
+    layout: TodayTasksWidgetLayout,
+) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(taskRowHeight(layout))
+            .clickable(openAppAction()),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(modifier = GlanceModifier.width(14.dp))
+        Text(
+            text = label,
+            style = TextStyle(
+                color = TdayWidgetAccentColor,
+                fontFamily = TdayWidgetFontFamily,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+            maxLines = 1,
+        )
+    }
+}
+
+private fun TodayTasksWidgetStrings.countLabel(count: Int): String {
+    return String.format(Locale.getDefault(), countLabelFormat, count)
+}
+
+private fun TodayTasksWidgetStrings.moreLabel(count: Int): String {
+    return String.format(Locale.getDefault(), moreLabelFormat, count)
 }
 
 @Composable
