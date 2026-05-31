@@ -632,11 +632,28 @@ fun TdayApp(
                         uriPattern = "tday://todos/create?target={target}"
                     }),
                 ) {
+                    val finishCreateTodayFlow = {
+                        rootFeedTab = RootFeedTab.HOME
+                        val returnedToHome = navController.popBackStack(
+                            route = AppRoute.Home.route,
+                            inclusive = false,
+                        )
+                        if (!returnedToHome) {
+                            navController.navigate(AppRoute.Home.route) {
+                                popUpTo(AppRoute.CreateTodayTodo.route) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                        navController.navigate(AppRoute.TodayTodos.route) {
+                            launchSingleTop = true
+                        }
+                    }
                     TodosRoute(
                         mode = TodoListMode.TODAY,
-                        onBack = { navController.popBackStack() },
+                        onBack = finishCreateTodayFlow,
                         onTaskDeleted = ::showTaskDeletedToast,
                         openCreateTaskOnStart = true,
+                        onCreateTaskFlowFinished = finishCreateTodayFlow,
                         pullRefreshEnabled = !appUiState.isLocalMode,
                         summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
                     )
@@ -1043,6 +1060,7 @@ private fun TodosRoute(
     openCreateTaskOnStart: Boolean = false,
     exitToLauncherOnBack: Boolean = false,
     exitOnCreateTaskSheetDismiss: Boolean = false,
+    onCreateTaskFlowFinished: () -> Unit = {},
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
     scrollToTopRequestKey: Int = 0,
@@ -1102,6 +1120,7 @@ private fun TodosRoute(
         openCreateTaskOnStart = openCreateTaskOnStart,
         exitToLauncherOnBack = exitToLauncherOnBack,
         exitOnCreateTaskSheetDismiss = exitOnCreateTaskSheetDismiss,
+        onCreateTaskFlowFinished = onCreateTaskFlowFinished,
         pullRefreshEnabled = pullRefreshEnabled,
         summaryAvailable = summaryAvailable,
         usesRootFeedHeader = usesRootFeedHeader,
