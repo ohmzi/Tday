@@ -10,6 +10,7 @@ struct AppRootView: View {
     @State private var isLaunchSplashHeld = false
     @State private var rootFeedTab: RootFeedTab = .home
     @State private var rootCreateTaskRequestID = 0
+    @State private var rootCreateTaskAutoFocusRequestID = 0
     @State private var rootHomeScrollToTopRequestID = 0
     @State private var rootFloaterScrollToTopRequestID = 0
     @State private var rootDockCollapsed = false
@@ -44,6 +45,7 @@ struct AppRootView: View {
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
                                     createTaskRequestID: rootCreateTaskRequestID,
+                                    autoFocusCreateTaskRequestID: rootCreateTaskAutoFocusRequestID,
                                     scrollToTopRequestID: rootHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
@@ -102,7 +104,12 @@ struct AppRootView: View {
                         case .todayTodos:
                             TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .createTodayTodo:
-                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, openCreateTaskOnAppear: true, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+                            Color.clear
+                                .navigationBarBackButtonHidden(true)
+                                .toolbar(.hidden, for: .navigationBar)
+                                .onAppear {
+                                    requestHomeCreateTask(autoFocusTitle: true)
+                                }
                         case .overdueTodos:
                             TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .scheduledTodos:
@@ -272,6 +279,8 @@ struct AppRootView: View {
         switch route {
         case .home:
             selectRootFeedTab(.home)
+        case .createTodayTodo:
+            requestHomeCreateTask(autoFocusTitle: true)
         case .floaterTodos:
             selectRootFeedTab(.floater)
         default:
@@ -298,6 +307,16 @@ struct AppRootView: View {
             rootHomeScrollToTopRequestID += 1
         case .floater:
             rootFloaterScrollToTopRequestID += 1
+        }
+    }
+
+    private func requestHomeCreateTask(autoFocusTitle: Bool) {
+        selectRootFeedTab(.home)
+        DispatchQueue.main.async {
+            rootCreateTaskRequestID += 1
+            if autoFocusTitle {
+                rootCreateTaskAutoFocusRequestID = rootCreateTaskRequestID
+            }
         }
     }
 

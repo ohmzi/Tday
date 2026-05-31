@@ -85,6 +85,7 @@ struct HomeScreen: View {
     let onRootFeedTabSelected: (RootFeedTab) -> Void
     let showsRootControls: Bool
     let createTaskRequestID: Int
+    let autoFocusCreateTaskRequestID: Int
     let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
     let onRootControlsVisibleChange: (Bool) -> Void
@@ -102,6 +103,8 @@ struct HomeScreen: View {
     @State private var searchResultsFrame: CGRect = .zero
     @State private var openingSearchResultID: String?
     @State private var showingCreateTask = false
+    @State private var createTaskAutoFocusTitle = false
+    @State private var lastHandledCreateTaskRequestID = 0
     @State private var showingCreateList = false
     @State private var showingSummary = false
     @State private var editingTodo: TodoItem?
@@ -113,6 +116,7 @@ struct HomeScreen: View {
         onRootFeedTabSelected: @escaping (RootFeedTab) -> Void = { _ in },
         showsRootControls: Bool = true,
         createTaskRequestID: Int = 0,
+        autoFocusCreateTaskRequestID: Int = 0,
         scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
@@ -123,6 +127,7 @@ struct HomeScreen: View {
         self.onRootFeedTabSelected = onRootFeedTabSelected
         self.showsRootControls = showsRootControls
         self.createTaskRequestID = createTaskRequestID
+        self.autoFocusCreateTaskRequestID = autoFocusCreateTaskRequestID
         self.scrollToTopRequestID = scrollToTopRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
         self.onRootControlsVisibleChange = onRootControlsVisibleChange
@@ -311,6 +316,7 @@ struct HomeScreen: View {
 
                                     TaskFloatingActionButton {
                                         closeSearch()
+                                        createTaskAutoFocusTitle = false
                                         showingCreateTask = true
                                     }
                                     .padding(.trailing, 18)
@@ -387,9 +393,7 @@ struct HomeScreen: View {
             onRootDockCollapsedChange(max(offset, 0) > HomeMetrics.rootDockCollapseThreshold)
         }
         .onChange(of: createTaskRequestID) { _, requestID in
-            guard requestID > 0 else { return }
-            closeSearch()
-            showingCreateTask = true
+            handleCreateTaskRequest(requestID)
         }
         .onChange(of: viewModel.todayTodos.map(\.id)) { _, ids in
             guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
@@ -408,6 +412,7 @@ struct HomeScreen: View {
                 titleText: "New task",
                 submitText: "Create",
                 initialPayload: nil,
+                autoFocusTitle: createTaskAutoFocusTitle,
                 onParseTaskTitleNlp: { title, dueRef in
                     await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },
@@ -454,6 +459,16 @@ struct HomeScreen: View {
         }
         searchQuery = ""
         searchResultsFrame = .zero
+    }
+
+    private func handleCreateTaskRequest(_ requestID: Int) {
+        guard requestID > 0, requestID > lastHandledCreateTaskRequestID else {
+            return
+        }
+        lastHandledCreateTaskRequestID = requestID
+        closeSearch()
+        createTaskAutoFocusTitle = requestID == autoFocusCreateTaskRequestID
+        showingCreateTask = true
     }
 
     @ViewBuilder
