@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="splash_background">#FF1C1B1F</color>
+    <color name="tday_widget_launch_background">#FF050507</color>
     <color name="tday_widget_surface">#FF171A20</color>
     <color name="tday_widget_accent_wash">#FF18283A</color>
     <color name="tday_widget_today_accent">#FF8DC3F3</color>

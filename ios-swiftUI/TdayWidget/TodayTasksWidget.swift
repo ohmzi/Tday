@@ -154,7 +154,7 @@ private struct TodayTasksWidgetView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .widgetURL(URL(string: "tday://todos/today"))
+        .widgetURL(URL(string: "tday://home"))
         .containerBackground(for: .widget) {
             widgetBackground
         }
@@ -199,21 +199,18 @@ private struct TodayTasksWidgetView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Link(destination: URL(string: "tday://todos/today")!) {
-                HStack(spacing: 8) {
-                    if family != .systemSmall {
-                        Text(entry.title)
-                            .font(.system(.headline, design: .rounded, weight: .bold))
-                            .lineLimit(1)
-                    }
-
-                    Text("\(entry.taskCount)")
-                        .font(.system(family == .systemSmall ? .title : .subheadline, design: .rounded, weight: .heavy))
-                        .foregroundStyle(accentColor)
-                        .widgetAccentable()
+            HStack(spacing: 8) {
+                if family != .systemSmall {
+                    Text(entry.title)
+                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .lineLimit(1)
                 }
+
+                Text("\(entry.taskCount)")
+                    .font(.system(family == .systemSmall ? .title : .subheadline, design: .rounded, weight: .heavy))
+                    .foregroundStyle(accentColor)
+                    .widgetAccentable()
             }
-            .buttonStyle(.plain)
 
             Spacer(minLength: 4)
 
@@ -233,48 +230,39 @@ private struct TodayTasksWidgetView: View {
     @ViewBuilder
     private var taskContent: some View {
         if family == .systemSmall, let firstTask = entry.tasks.first {
-            Link(destination: Self.taskDeepLinkURL(for: firstTask.id)) {
-                VStack(alignment: .leading, spacing: 6) {
-                    priorityDot(firstTask.priority, size: 10)
-                    Text(firstTask.title)
-                        .font(.system(.subheadline, design: .rounded, weight: .bold))
-                        .lineLimit(2)
-                    Text(Self.dueTimeText(from: firstTask.dueEpochMs))
-                        .font(.system(.caption, design: .rounded, weight: .bold))
-                        .foregroundStyle(secondaryTextColor)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 6) {
+                priorityDot(firstTask.priority, size: 10)
+                Text(firstTask.title)
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    .lineLimit(2)
+                Text(Self.dueTimeText(from: firstTask.dueEpochMs))
+                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .foregroundStyle(secondaryTextColor)
             }
-            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             VStack(alignment: .leading, spacing: family == .systemLarge ? 8 : 6) {
                 ForEach(entry.tasks.prefix(visibleTaskLimit)) { task in
-                    Link(destination: Self.taskDeepLinkURL(for: task.id)) {
-                        taskRow(task)
-                    }
-                    .buttonStyle(.plain)
+                    taskRow(task)
                 }
             }
         }
     }
 
     private func message(title: String, subtitle: String) -> some View {
-        Link(destination: URL(string: "tday://todos/create?target=today")!) {
-            VStack(alignment: .center, spacing: family == .systemSmall ? 3 : 4) {
-                Text(title)
-                    .font(.system(family == .systemLarge ? .headline : .subheadline, design: .rounded, weight: .bold))
+        VStack(alignment: .center, spacing: family == .systemSmall ? 3 : 4) {
+            Text(title)
+                .font(.system(family == .systemLarge ? .headline : .subheadline, design: .rounded, weight: .bold))
+                .lineLimit(2)
+            if family != .systemSmall {
+                Text(subtitle)
+                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .foregroundStyle(secondaryTextColor)
                     .lineLimit(2)
-                if family != .systemSmall {
-                    Text(subtitle)
-                        .font(.system(.caption, design: .rounded, weight: .bold))
-                        .foregroundStyle(secondaryTextColor)
-                        .lineLimit(2)
-                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .multilineTextAlignment(.center)
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .multilineTextAlignment(.center)
     }
 
     private func taskRow(_ task: TodayTaskSnapshot) -> some View {
@@ -320,14 +308,6 @@ private struct TodayTasksWidgetView: View {
         return date.formatted(date: .omitted, time: .shortened)
     }
 
-    private static func taskDeepLinkURL(for taskID: String) -> URL {
-        var components = URLComponents()
-        components.scheme = "tday"
-        components.host = "todos"
-        components.path = "/all"
-        components.queryItems = [URLQueryItem(name: "highlightTodoId", value: taskID)]
-        return components.url ?? URL(string: "tday://todos/all")!
-    }
 }
 
 @main

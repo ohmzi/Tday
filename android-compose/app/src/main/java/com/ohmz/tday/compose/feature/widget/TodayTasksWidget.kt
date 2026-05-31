@@ -121,7 +121,8 @@ private fun WidgetContent(
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground),
+            .background(GlanceTheme.colors.widgetBackground)
+            .clickable(openAppAction()),
     ) {
         Box(
             modifier = GlanceModifier
@@ -153,29 +154,25 @@ private fun WidgetContent(
                     title = strings.setupTitle,
                     message = strings.setupMessage,
                     compact = layout == TodayTasksWidgetLayout.COMPACT,
-                    actionDeepLink = TODAY_DEEP_LINK,
                 )
 
                 TodayTasksWidgetStatus.EMPTY -> WidgetMessage(
                     title = strings.emptyMessage,
                     message = strings.addTaskLabel,
                     compact = layout == TodayTasksWidgetLayout.COMPACT,
-                    actionDeepLink = CREATE_TODAY_DEEP_LINK,
                 )
 
                 TodayTasksWidgetStatus.TASKS -> when (layout) {
                     TodayTasksWidgetLayout.COMPACT -> CompactTaskSummary(model.tasks.first())
-                    TodayTasksWidgetLayout.WIDE -> TaskList(
-                        tasks = model.tasks.take(2),
-                        layout = layout
+                    TodayTasksWidgetLayout.WIDE,
+                    TodayTasksWidgetLayout.MEDIUM,
+                    TodayTasksWidgetLayout.TALL -> TaskList(
+                        tasks = model.tasks,
+                        layout = layout,
+                        modifier = GlanceModifier
+                            .fillMaxWidth()
+                            .defaultWeight(),
                     )
-
-                    TodayTasksWidgetLayout.MEDIUM -> TaskList(
-                        tasks = model.tasks.take(4),
-                        layout = layout
-                    )
-
-                    TodayTasksWidgetLayout.TALL -> TaskList(tasks = model.tasks, layout = layout)
                 }
             }
         }
@@ -197,8 +194,7 @@ private fun HeaderRow(
         Row(
             modifier = GlanceModifier
                 .defaultWeight()
-                .height(48.dp)
-                .clickable(openDeepLinkAction(TODAY_DEEP_LINK)),
+                .height(48.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (showTitle) {
@@ -253,12 +249,11 @@ private fun WidgetMessage(
     title: String,
     message: String,
     compact: Boolean,
-    actionDeepLink: String,
 ) {
     Box(
         modifier = GlanceModifier
             .fillMaxSize()
-            .clickable(openDeepLinkAction(actionDeepLink)),
+            .clickable(openAppAction()),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -298,7 +293,7 @@ private fun CompactTaskSummary(task: CachedTodoRecord) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .clickable(openTaskAction(task.id)),
+            .clickable(openAppAction()),
     ) {
         TaskPriorityDot(priority = task.priority, size = 9.dp)
         Spacer(modifier = GlanceModifier.height(5.dp))
@@ -331,8 +326,9 @@ private fun CompactTaskSummary(task: CachedTodoRecord) {
 private fun TaskList(
     tasks: List<CachedTodoRecord>,
     layout: TodayTasksWidgetLayout,
+    modifier: GlanceModifier = GlanceModifier.fillMaxSize(),
 ) {
-    LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
+    LazyColumn(modifier = modifier) {
         items(tasks, itemId = { it.id.hashCode().toLong() }) { task ->
             TaskRow(task = task, layout = layout)
         }
@@ -349,7 +345,7 @@ private fun TaskRow(
         modifier = GlanceModifier
             .fillMaxWidth()
             .height(taskRowHeight(layout))
-            .clickable(openTaskAction(task.id)),
+            .clickable(openAppAction()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TaskPriorityDot(priority = task.priority, size = 7.dp)
@@ -424,10 +420,6 @@ private fun dueTimeText(epochMs: Long): String {
         .format(Date.from(Instant.ofEpochMilli(epochMs)))
 }
 
-private fun openTaskAction(taskId: String) = openDeepLinkAction(
-    "tday://todos/all?highlightTodoId=${Uri.encode(taskId)}",
-)
-
 private fun openDeepLinkAction(deepLink: String) = actionStartActivity(
     if (deepLink == CREATE_TODAY_DEEP_LINK) {
         Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
@@ -435,7 +427,7 @@ private fun openDeepLinkAction(deepLink: String) = actionStartActivity(
                 BuildConfig.APPLICATION_ID,
                 WidgetCreateTaskActivity::class.java.name,
             )
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
     } else {
         Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
@@ -445,5 +437,12 @@ private fun openDeepLinkAction(deepLink: String) = actionStartActivity(
     },
 )
 
-private const val TODAY_DEEP_LINK = "tday://todos/today"
+private fun openAppAction() = actionStartActivity(
+    Intent(Intent.ACTION_MAIN).apply {
+        component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        addCategory(Intent.CATEGORY_LAUNCHER)
+    },
+)
+
 private const val CREATE_TODAY_DEEP_LINK = "tday://todos/create?target=today"

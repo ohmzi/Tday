@@ -104,11 +104,13 @@ The Today Tasks widget is implemented with Glance and the same cache-backed task
 It shows pending scheduled tasks due today only; floaters, completed tasks, and overdue tasks stay
 out of the v1 widget surface.
 
-- Header opens `tday://todos/today`.
-- Task rows open `tday://todos/all?highlightTodoId=<id>`.
+- Tapping the widget body, header, empty/setup message, or task rows opens the main app.
+- Wide, medium, and tall layouts hand the full capped Today task set to Glance `LazyColumn`, so
+  widgets can scroll in place when more rows exist than the visible viewport fits.
 - The add action opens `tday://todos/create?target=today` through a dedicated widget-create
-  activity, starts the in-app create-task sheet with the title field focused, and treats
-  Back/dismiss as returning to the launcher instead of walking through the app's internal task
+  activity in the main app task, starts the in-app create-task sheet with the title field focused,
+  and treats Back/dismiss as returning to the launcher instead of walking through the app's internal
+  task
   history. Submitting from this widget flow hands task creation to a background submitter so the
   launcher widget can refresh from the latest cache after the Activity closes.
 - `OfflineCacheManager` requests widget refreshes after local cache changes, so Local Mode and
