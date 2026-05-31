@@ -445,14 +445,14 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 - **Android reminders**: `AlarmManager` for exact-time reminders, `WorkManager` for periodic reminder rescheduling, `BootRescheduleReceiver` for device restart recovery.
 - **iOS reminders**: `UserNotifications` scheduling and notification deep-link routing.
-- **Widgets**: Android Glance and iOS WidgetKit expose the same Today Tasks contract: pending scheduled tasks due today only, header deep link to `tday://todos/today`, row deep links to `tday://todos/all?highlightTodoId=<id>`, and add deep link to `tday://todos/create?target=today`.
+- **Widgets**: Android Glance and iOS WidgetKit expose the same Today Tasks contract: pending scheduled tasks due today only, widget body/header/message/rows open the main app, and the add control opens `tday://todos/create?target=today`.
 
 ## Mobile Widgets
 
 The v1 mobile widget surface is intentionally narrow and action-oriented. Widgets do not complete tasks inline; they take users into the app through deep links so Local Mode, optimistic writes, validation, and create/edit sheets remain owned by the main clients.
 
-- **Android**: `TodayTasksWidget` uses Glance with responsive compact, wide, and tall layouts. `TodayTasksWidgetModel` builds setup, empty, and tasks states from cached scheduled todos, and `TodayTasksWidgetRefresher` lets cache writes refresh the widget after Local Mode and optimistic changes. The widget add deep link opens a dedicated widget-create activity so the Today create sheet appears without the main app Home/Today navigation stack; submitting hands task creation to a background submitter and returns to the launcher while the widget refreshes from cache.
-- **iOS**: `TdayWidget` is a WidgetKit extension supporting `.systemSmall`, `.systemMedium`, and `.systemLarge`. The app writes schema-versioned snapshots to App Group defaults under `tday.widget.todayTasksSnapshot`; payloads include status, task count, generation time, and capped task rows.
+- **Android**: `TodayTasksWidget` uses Glance with responsive compact, wide, and tall layouts. `TodayTasksWidgetModel` builds setup, empty, and tasks states from cached scheduled todos, and `TodayTasksWidgetRefresher` lets cache writes refresh the widget after Local Mode and optimistic changes. Wide, medium, and tall task layouts use a Glance `LazyColumn`, so overflow rows scroll inside the widget. The widget add deep link opens a dedicated widget-create activity in the main app task so the Today create sheet appears without the main app Home/Today navigation stack; submitting hands task creation to a background submitter and returns to the launcher while the widget refreshes from cache.
+- **iOS**: `TdayWidget` is a WidgetKit extension supporting `.systemSmall`, `.systemMedium`, and `.systemLarge`. The app writes schema-versioned snapshots to App Group defaults under `tday.widget.todayTasksSnapshot`; payloads include status, task count, generation time, and capped task rows. System-family WidgetKit widgets stay snapshot/glanceable, so overflow is represented by the total count rather than an in-widget scroll surface.
 - **Visual system fit**: each platform owns widget chrome, margins, background removal, tinting/accent rendering, and launch transitions. T'Day identity comes from the Today accent, rounded typography, priority dots, compact task rows, and calm empty/setup states.
 
 ## Production Deployment

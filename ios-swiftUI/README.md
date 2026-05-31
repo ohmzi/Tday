@@ -82,9 +82,10 @@ writes snapshots through the App Group suite `group.com.ohmz.tday` using key
 fallback for older payloads.
 
 - Snapshot status is `setup`, `empty`, or `tasks`, with task count, generated time, and capped task rows.
-- Header opens `tday://todos/today`.
-- Task rows open `tday://todos/all?highlightTodoId=<id>`.
+- Tapping the widget body, header, empty/setup message, or task rows opens the main app.
 - The add action opens `tday://todos/create?target=today` and starts the in-app create-task sheet.
+- System-family WidgetKit widgets remain snapshot/glanceable; the count reflects all due-today tasks,
+  while the visible rows stay capped to the family size.
 - The widget shows pending scheduled tasks due today only; floaters, completed tasks, and overdue tasks
   are intentionally excluded from v1.
 

@@ -62,7 +62,8 @@ class WidgetCreateTaskActivity : ComponentActivity() {
     }
 
     private fun exitToLauncher() {
-        finishAndRemoveTask()
+        moveTaskToBack(true)
+        finish()
         applyTransition(
             enter = R.anim.widget_create_hold,
             exit = R.anim.widget_create_exit,

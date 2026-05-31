@@ -28,10 +28,8 @@
         <activity
             android:name=".feature.widget.WidgetCreateTaskActivity"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
-            android:excludeFromRecents="true"
             android:exported="false"
-            android:finishOnTaskLaunch="true"
-            android:taskAffinity="${applicationId}.widget"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Tday.WidgetCreate"
             android:windowSoftInputMode="adjustResize" />
         <activity
