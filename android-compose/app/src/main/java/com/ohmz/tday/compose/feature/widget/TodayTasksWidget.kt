@@ -163,7 +163,7 @@ private fun WidgetContent(
                 )
 
                 TodayTasksWidgetStatus.TASKS -> when (layout) {
-                    TodayTasksWidgetLayout.COMPACT -> CompactTaskSummary(model.tasks.first())
+                    TodayTasksWidgetLayout.COMPACT,
                     TodayTasksWidgetLayout.WIDE,
                     TodayTasksWidgetLayout.MEDIUM,
                     TodayTasksWidgetLayout.TALL -> TaskList(
@@ -284,40 +284,6 @@ private fun WidgetMessage(
                     maxLines = 2,
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun CompactTaskSummary(task: CachedTodoRecord) {
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .clickable(openAppAction()),
-    ) {
-        TaskPriorityDot(priority = task.priority, size = 9.dp)
-        Spacer(modifier = GlanceModifier.height(5.dp))
-        Text(
-            text = task.title,
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurface,
-                fontFamily = TdayWidgetFontFamily,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-            ),
-            maxLines = 2,
-        )
-        task.dueEpochMs?.let { due ->
-            Text(
-                text = dueTimeText(due),
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontFamily = TdayWidgetFontFamily,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-                maxLines = 1,
-            )
         }
     }
 }

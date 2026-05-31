@@ -104,9 +104,13 @@ The Today Tasks widget is implemented with Glance and the same cache-backed task
 It shows pending scheduled tasks due today only; floaters, completed tasks, and overdue tasks stay
 out of the v1 widget surface.
 
+- Android exposes small, medium, and large picker entries backed by separate AppWidget provider
+  metadata, while all three render the same responsive Glance widget.
+- Static picker previews use RemoteViews-compatible XML, and Android 15+ generated previews are
+  published from `TodayTasksWidgetPreviewPublisher` when the app starts.
 - Tapping the widget body, header, empty/setup message, or task rows opens the main app.
-- Wide, medium, and tall layouts hand the full capped Today task set to Glance `LazyColumn`, so
-  widgets can scroll in place when more rows exist than the visible viewport fits.
+- All task layouts hand the full capped Today task set to Glance `LazyColumn`, so widgets can
+  scroll in place whenever more rows exist than the visible viewport fits.
 - The add action opens `tday://todos/create?target=today` through a dedicated widget-create
   activity in the main app task, starts the in-app create-task sheet with the title field focused,
   and treats Back/dismiss as returning to the launcher instead of walking through the app's internal

@@ -41,7 +41,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let now = Date(timeIntervalSince1970: 1_764_072_600)
         let startOfDay = calendar.startOfDay(for: now)
-        let todos = (0..<10).map { index in
+        let todos = (0..<25).map { index in
             todo(
                 id: "task-\(index)",
                 title: "Task \(index)",
@@ -55,10 +55,10 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
             calendar: calendar
         )
 
-        XCTAssertEqual(snapshot.taskCount, 10)
-        XCTAssertEqual(snapshot.tasks.count, 8)
+        XCTAssertEqual(snapshot.taskCount, 25)
+        XCTAssertEqual(snapshot.tasks.count, 20)
         XCTAssertEqual(snapshot.tasks.first?.id, "task-0")
-        XCTAssertEqual(snapshot.tasks.last?.id, "task-7")
+        XCTAssertEqual(snapshot.tasks.last?.id, "task-19")
     }
 
     func testSnapshotUsesEmptyStateForConfiguredWorkspaceWithoutTodayTasks() {
