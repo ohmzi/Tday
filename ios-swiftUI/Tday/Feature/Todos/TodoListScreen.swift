@@ -791,18 +791,18 @@ struct TodoListScreen: View {
             dropTargetFrames = frames
         }
         .overlay {
-            if viewModel.items.isEmpty, !viewModel.isLoading {
-                ZStack {
-                    EmptyTaskWatermark(
-                        systemName: emptyWatermarkSystemName,
-                        accentColor: modeAccentColor
-                    )
+            ZStack {
+                EmptyTaskWatermark(
+                    systemName: emptyWatermarkSystemName,
+                    accentColor: modeAccentColor
+                )
+                if viewModel.items.isEmpty, !viewModel.isLoading {
                     EmptyTaskBackgroundMessage(
                         message: emptyTimelineMessage(for: viewModel.mode)
                     )
                 }
-                .allowsHitTesting(false)
             }
+            .allowsHitTesting(false)
         }
         .overlay(alignment: .topLeading) {
             GeometryReader { proxy in

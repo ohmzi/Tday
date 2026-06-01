@@ -287,6 +287,12 @@ struct CalendarScreen: View {
         .onPreferenceChange(CalendarDateDropTargetFramePreferenceKey.self) { frames in
             dateDropTargetFrames = frames
         }
+        .overlay {
+            EmptyTaskWatermark(
+                systemName: "calendar",
+                accentColor: calendarAccentColor
+            )
+        }
         .onChange(of: displayMode) { _, mode in
             if mode == .day {
                 cancelInAppDrag()
