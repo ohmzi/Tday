@@ -264,6 +264,9 @@ fun TodoListScreen(
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
+    val isTodayDaytime = rememberTodoRootIsDaytime()
+    val todayTimeIcon = if (isTodayDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
+    val todayTimeIconTint = if (isTodayDaytime) TdayTitleIconDayAccent else TdayTitleIconNightAccent
     val usesTodayStyle =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
     val isRootFloaterScreen =
@@ -284,6 +287,7 @@ fun TodoListScreen(
     val emptyWatermarkIcon = emptyStateIconForMode(
         mode = uiState.mode,
         listIconKey = selectedList?.iconKey,
+        isTodayDaytime = isTodayDaytime,
     )
     val showSectionedTimeline =
         uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
@@ -693,6 +697,8 @@ fun TodoListScreen(
                         collapseProgress = todayTitleScrollBehavior.collapseProgress,
                         title = uiState.title,
                         titleColor = titleColor,
+                        titleIcon = if (uiState.mode == TodoListMode.TODAY) todayTimeIcon else null,
+                        titleIconTint = todayTimeIconTint,
                         showActionButton = showTopBarActionButton,
                         actionIcon = if (canSummarizeCurrentMode) {
                             Icons.Rounded.AutoAwesome
@@ -1929,6 +1935,8 @@ private fun TodayTopBar(
     collapseProgress: Float,
     title: String,
     titleColor: Color,
+    titleIcon: ImageVector? = null,
+    titleIconTint: Color = titleColor,
     showActionButton: Boolean,
     actionIcon: ImageVector,
     actionContentDescription: String,
@@ -1971,11 +1979,11 @@ private fun TodayTopBar(
                 }
             }
             if (collapsedTitleAlpha > 0.001f) {
-                Text(
+                TodayTitleLabel(
                     text = title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
                     color = titleColor,
+                    icon = titleIcon,
+                    iconTint = titleIconTint,
                     modifier = Modifier
                         .align(Alignment.Center)
                         .graphicsLayer {
@@ -1993,11 +2001,11 @@ private fun TodayTopBar(
             contentAlignment = Alignment.BottomStart,
         ) {
             if (expandedTitleAlpha > 0.001f) {
-                Text(
+                TodayTitleLabel(
                     text = title,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
                     color = titleColor,
+                    icon = titleIcon,
+                    iconTint = titleIconTint,
                     modifier = Modifier.graphicsLayer {
                         alpha = expandedTitleAlpha
                         translationY = expandedTitleShiftY
@@ -2005,6 +2013,38 @@ private fun TodayTopBar(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TodayTitleLabel(
+    text: String,
+    color: Color,
+    icon: ImageVector?,
+    iconTint: Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(26.dp),
+            )
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -3276,9 +3316,10 @@ private fun emptyStateMessageForMode(mode: TodoListMode): String {
 private fun emptyStateIconForMode(
     mode: TodoListMode,
     listIconKey: String?,
+    isTodayDaytime: Boolean,
 ): ImageVector {
     return when (mode) {
-        TodoListMode.TODAY -> Icons.Rounded.WbSunny
+        TodoListMode.TODAY -> if (isTodayDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay
         TodoListMode.OVERDUE -> Icons.Rounded.ErrorOutline
         TodoListMode.PRIORITY -> Icons.Rounded.Flag
         TodoListMode.FLOATER -> Icons.Rounded.Inventory
