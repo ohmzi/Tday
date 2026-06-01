@@ -210,6 +210,15 @@
     <string name="todos_empty_scheduled">No scheduled tasks</string>
     <string name="todos_empty_all">No tasks yet</string>
     <string name="todos_empty_list">No tasks in this list</string>
+    <string name="car_surface_title_today">T\'Day</string>
+    <string name="car_surface_title_floater">Floater</string>
+    <string name="car_surface_loading">Loading tasks</string>
+    <string name="car_surface_load_error">Could not load tasks</string>
+    <string name="car_voice_prompt_today">Say the task to add to T\'Day</string>
+    <string name="car_voice_prompt_floater">Say the floater to add</string>
+    <string name="car_voice_empty_result">No task was heard</string>
+    <string name="car_complete_dialog_title">Complete this task?</string>
+    <string name="car_complete_dialog_confirm">Complete</string>
     <string name="todos_section_morning">Morning</string>
     <string name="todos_section_afternoon">Afternoon</string>
     <string name="todos_section_tonight">Tonight</string>

@@ -9,7 +9,7 @@ Current feature surface:
 - Local Mode for offline-only planning without server setup.
 - Server Mode with JWE cookie auth, optimistic local writes, realtime refresh, and pending mutation replay.
 - Home and Floater/Anytime root feeds controlled by `RootFeedDock`.
-- Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, and Today/Floater WidgetKit widgets.
+- Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, Today/Floater WidgetKit widgets, CarPlay templates, and Siri/App Shortcuts for car task creation.
 - SwiftData-backed local cache mirrored with Android's Room-backed `OfflineSyncState`.
 
 ## Structure
@@ -36,6 +36,7 @@ ios-swiftUI/
 │   │   ├── Home/
 │   │   ├── Todos/
 │   │   ├── Calendar/
+│   │   ├── CarPlay/
 │   │   ├── Completed/
 │   │   ├── Settings/
 │   │   └── Onboarding/
@@ -105,6 +106,17 @@ Widget UI should keep using system WidgetKit margins/backgrounds, removable cont
 tinted/accented rendering support while carrying T'Day identity through rounded typography, native
 add icons, persistent calm watermarks, and Today/Floater accent treatment reserved for the plus add
 button.
+
+## CarPlay
+
+The app includes a CarPlay template scene in `Feature/CarPlay/` for the same Today/Floater task
+surface. CarPlay uses `CPListTemplate` and bar buttons rather than custom freeform SwiftUI, so the
+Today/Floater switcher is represented by icon controls and system transitions. App Store
+distribution requires Apple to grant the CarPlay entitlement for the appropriate category; until
+then, the code remains buildable but entitlement-gated for real CarPlay deployment.
+
+Voice creation is exposed through App Intents/App Shortcuts. The CarPlay plus action offers a
+template-compliant iPhone handoff, while Siri can run the same create operation directly by voice.
 
 ## Mobile Parity
 
