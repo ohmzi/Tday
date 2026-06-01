@@ -194,14 +194,6 @@ private enum TaskWidgetStatus {
         }
     }
 
-    var showsMessageWatermark: Bool {
-        switch self {
-        case .setup, .empty:
-            return true
-        case .tasks:
-            return false
-        }
-    }
 }
 
 private enum TaskWidgetMode {
@@ -302,9 +294,7 @@ private struct TdayTasksWidgetContent: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            if status.showsMessageWatermark {
-                messageWatermark
-            }
+            messageWatermark
 
             VStack(alignment: .leading, spacing: metrics.contentSpacing) {
                 header

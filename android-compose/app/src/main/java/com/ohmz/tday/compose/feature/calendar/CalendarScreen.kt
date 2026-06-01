@@ -43,7 +43,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.CalendarMonth
@@ -125,6 +124,7 @@ import com.ohmz.tday.compose.core.model.TaskRescheduleScope
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.snapTitleCollapsePx
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
@@ -512,6 +512,11 @@ fun CalendarScreen(
                     calendarDragContainerOrigin = coordinates.positionInRoot()
                 },
         ) {
+            EmptyTaskWatermark(
+                imageVector = Icons.Rounded.CalendarMonth,
+                accentColor = CalendarAccentPurple,
+            )
+
             CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
                 LazyColumn(
                     modifier = Modifier

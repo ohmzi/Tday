@@ -115,8 +115,8 @@ of these widget surfaces.
   target, and dense scan-first rows; compact layouts stay count-first and prioritize task titles
   over due-time detail. The short wide bucket also suppresses due-time chips so resized widgets keep
   long task titles readable.
-- Empty and setup states use a subtle oversized Today/Floater watermark behind the centered message,
-  echoing the in-app empty-list background while preserving Glance-friendly widget chrome.
+- All widget states keep a subtle oversized Today/Floater watermark in the background; empty and
+  setup states add centered message text over that persistent motif.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
 - Task layouts render a fixed size-specific row set as the widget crosses compact, wide, medium, and
   tall responsive buckets. Compact widgets show the highest-value row plus overflow, medium widgets
@@ -130,9 +130,9 @@ of these widget surfaces.
   optimistic writes update the widget without waiting for a server sync path.
 
 Keep future widget work responsive across compact, wide, and tall sizes, preserve large add/content
-tap targets, keep empty/setup states calm and watermark-backed, reserve Today/Floater accent
-treatment for the plus add button, and prefer system widget bounds, dynamic color, and
-Material/Glance idioms over custom chrome.
+tap targets, keep the persistent watermark calm behind both rows and empty text, reserve
+Today/Floater accent treatment for the plus add button, and prefer system widget bounds, dynamic
+color, and Material/Glance idioms over custom chrome.
 
 ## Mobile Parity
 
