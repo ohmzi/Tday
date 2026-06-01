@@ -94,6 +94,14 @@ private func isTodoRootDaytime(_ date: Date) -> Bool {
     return (6..<18).contains(hour)
 }
 
+private func todoTimeOfDaySystemImage(for date: Date) -> String {
+    isTodoRootDaytime(date) ? "sun.max.fill" : "moon.stars.fill"
+}
+
+private func todoTimeOfDayIconColor(for date: Date) -> Color {
+    todoHexColor(isTodoRootDaytime(date) ? 0xF4C542 : 0xA8B8E8)
+}
+
 private func normalizedTodoSearchQuery(_ value: String) -> String {
     value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
 }
@@ -717,10 +725,11 @@ struct TodoListScreen: View {
         todoModeAccentColor(viewModel.mode, listColorKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.color)
     }
 
-    private var emptyWatermarkSystemName: String {
+    private func emptyWatermarkSystemName(for date: Date) -> String {
         emptyTimelineSystemImage(
             for: viewModel.mode,
-            listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
+            listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey,
+            date: date
         )
     }
 
@@ -787,18 +796,21 @@ struct TodoListScreen: View {
             dropTargetFrames = frames
         }
         .overlay {
-            ZStack {
-                EmptyTaskWatermark(
-                    systemName: emptyWatermarkSystemName,
-                    accentColor: modeAccentColor
-                )
-                if viewModel.items.isEmpty, !viewModel.isLoading {
-                    EmptyTaskBackgroundMessage(
-                        message: emptyTimelineMessage(for: viewModel.mode)
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                ZStack {
+                    EmptyTaskWatermark(
+                        systemName: emptyWatermarkSystemName(for: context.date),
+                        accentColor: modeAccentColor
                     )
+                    if viewModel.items.isEmpty, !viewModel.isLoading {
+                        EmptyTaskBackgroundMessage(
+                            message: emptyTimelineMessage(for: viewModel.mode)
+                        )
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
             }
-            .allowsHitTesting(false)
         }
         .overlay(alignment: .topLeading) {
             GeometryReader { proxy in
@@ -974,7 +986,8 @@ struct TodoListScreen: View {
                 accentColor: modeAccentColor,
                 collapseProgress: titleCollapseProgress,
                 onBack: { dismiss() },
-                action: heroTopBarAction
+                action: heroTopBarAction,
+                showsTimeOfDayIcon: viewModel.mode == .today
             )
         }
     }
@@ -987,7 +1000,8 @@ struct TodoListScreen: View {
         TimelineExpandedTitleRow(
             title: viewModel.title,
             accentColor: modeAccentColor,
-            collapseProgress: timelineHeroTitleCollapseProgress
+            collapseProgress: timelineHeroTitleCollapseProgress,
+            showsTimeOfDayIcon: viewModel.mode == .today
         )
         .background {
             TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
@@ -2188,6 +2202,7 @@ struct TimelineTopBar: View {
     let collapseProgress: CGFloat
     let onBack: () -> Void
     let action: TimelineTopBarAction?
+    let showsTimeOfDayIcon: Bool
     let titleRevealStart: CGFloat
     let titleRevealEnd: CGFloat
     let titleRevealDistance: CGFloat
@@ -2200,6 +2215,7 @@ struct TimelineTopBar: View {
         collapseProgress: CGFloat,
         onBack: @escaping () -> Void,
         action: TimelineTopBarAction?,
+        showsTimeOfDayIcon: Bool = false,
         titleRevealStart: CGFloat = TodoTimelineMetrics.collapsedTitleRevealStart,
         titleRevealEnd: CGFloat = TodoTimelineMetrics.collapsedTitleRevealEnd,
         titleRevealDistance: CGFloat = TodoTimelineMetrics.collapsedTitleRevealDistance
@@ -2209,6 +2225,7 @@ struct TimelineTopBar: View {
         self.collapseProgress = collapseProgress
         self.onBack = onBack
         self.action = action
+        self.showsTimeOfDayIcon = showsTimeOfDayIcon
         self.titleRevealStart = titleRevealStart
         self.titleRevealEnd = titleRevealEnd
         self.titleRevealDistance = titleRevealDistance
@@ -2231,10 +2248,11 @@ struct TimelineTopBar: View {
     }
 
     private var titleContent: some View {
-        Text(title)
-            .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
-            .foregroundStyle(accentColor)
-            .lineLimit(1)
+        TodoTimelineTitleLabel(
+            title: title,
+            accentColor: accentColor,
+            showsTimeOfDayIcon: showsTimeOfDayIcon
+        )
     }
 
     var body: some View {
@@ -2275,6 +2293,19 @@ struct TimelineExpandedTitleRow: View {
     let title: String
     let accentColor: Color
     let collapseProgress: CGFloat
+    let showsTimeOfDayIcon: Bool
+
+    init(
+        title: String,
+        accentColor: Color,
+        collapseProgress: CGFloat,
+        showsTimeOfDayIcon: Bool = false
+    ) {
+        self.title = title
+        self.accentColor = accentColor
+        self.collapseProgress = collapseProgress
+        self.showsTimeOfDayIcon = showsTimeOfDayIcon
+    }
 
     private var progress: CGFloat {
         min(max(collapseProgress, 0), 1)
@@ -2298,10 +2329,11 @@ struct TimelineExpandedTitleRow: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            Text(title)
-                .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
-                .foregroundStyle(accentColor)
-                .lineLimit(1)
+            TodoTimelineTitleLabel(
+                title: title,
+                accentColor: accentColor,
+                showsTimeOfDayIcon: showsTimeOfDayIcon
+            )
                 .frame(
                     maxWidth: .infinity,
                     minHeight: TodoTimelineMetrics.expandedTitleHeight,
@@ -2319,6 +2351,30 @@ struct TimelineExpandedTitleRow: View {
         )
         .clipped()
         .allowsHitTesting(false)
+    }
+}
+
+private struct TodoTimelineTitleLabel: View {
+    let title: String
+    let accentColor: Color
+    let showsTimeOfDayIcon: Bool
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            HStack(spacing: 8) {
+                if showsTimeOfDayIcon {
+                    Image(systemName: todoTimeOfDaySystemImage(for: context.date))
+                        .font(.system(size: 26, weight: .regular))
+                        .foregroundStyle(todoTimeOfDayIconColor(for: context.date))
+                }
+
+                Text(title)
+                    .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
+                    .foregroundStyle(accentColor)
+                    .lineLimit(1)
+            }
+            .lineLimit(1)
+        }
     }
 }
 
@@ -3901,10 +3957,10 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
     }
 }
 
-private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: String?) -> String {
+private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: String?, date: Date = Date()) -> String {
     switch mode {
     case .today:
-        return "sun.max.fill"
+        return todoTimeOfDaySystemImage(for: date)
     case .overdue:
         return "exclamationmark.circle"
     case .scheduled:
