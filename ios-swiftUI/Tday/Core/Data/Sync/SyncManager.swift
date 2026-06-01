@@ -132,6 +132,7 @@ final class SyncManager {
                 return nextState
             }) {
                 TodayTasksWidgetSnapshotStore.saveTodayTasks(from: localState)
+                FloaterTasksWidgetSnapshotStore.saveFloaterTasks(from: localState)
             }
             return .success(())
         }
