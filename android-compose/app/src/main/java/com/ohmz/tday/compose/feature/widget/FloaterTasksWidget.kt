@@ -18,21 +18,18 @@ import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.AppDataMode
 import dagger.hilt.android.EntryPointAccessors
-import java.text.DateFormat
-import java.time.Instant
-import java.util.Date
 import java.util.Locale
 
-private val TodayWidgetVisuals = TaskWidgetVisuals(
-    accentColor = ColorProvider(R.color.tday_widget_today_accent),
-    accentWash = ColorProvider(R.color.tday_widget_accent_wash),
-    countPillBackground = R.drawable.widget_today_count_pill_background,
-    addButtonBackground = R.drawable.widget_add_button_background,
-    addIcon = R.drawable.widget_add_icon_today,
-    featuredRowBackground = R.drawable.widget_today_feature_row_background,
+private val FloaterWidgetVisuals = TaskWidgetVisuals(
+    accentColor = ColorProvider(R.color.tday_widget_floater_accent),
+    accentWash = ColorProvider(R.color.tday_widget_floater_accent_wash),
+    countPillBackground = R.drawable.widget_floater_count_pill_background,
+    addButtonBackground = R.drawable.widget_floater_add_button_background,
+    addIcon = R.drawable.widget_add_icon_floater,
+    featuredRowBackground = R.drawable.widget_floater_feature_row_background,
 )
 
-class TodayTasksWidget : GlanceAppWidget() {
+class FloaterTasksWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(
         setOf(
             DpSize(150.dp, 110.dp),
@@ -50,18 +47,18 @@ class TodayTasksWidget : GlanceAppWidget() {
         val cacheManager = entryPoint.offlineCacheManager()
         val secureConfigStore = entryPoint.secureConfigStore()
         val state = cacheManager.loadOfflineState()
-        val model = buildTodayTasksWidgetModel(
+        val model = buildFloaterTasksWidgetModel(
             state = state,
-            title = context.getString(R.string.widget_today_tasks_title),
+            title = context.getString(R.string.widget_floater_tasks_title),
             workspaceConfigured = secureConfigStore.getAppDataMode() != AppDataMode.UNSET,
         )
-        val strings = TodayTasksWidgetStrings(
-            emptyMessage = context.getString(R.string.widget_today_tasks_empty),
+        val strings = FloaterTasksWidgetStrings(
+            emptyMessage = context.getString(R.string.widget_floater_tasks_empty),
             setupTitle = context.getString(R.string.widget_today_tasks_setup_title),
             setupMessage = context.getString(R.string.widget_today_tasks_setup_message),
-            addTaskLabel = context.getString(R.string.widget_today_tasks_add),
-            countUnit = context.getString(R.string.widget_today_tasks_count_unit),
-            countLabelFormat = context.getString(R.string.widget_today_tasks_count),
+            addTaskLabel = context.getString(R.string.widget_floater_tasks_add),
+            countUnit = context.getString(R.string.widget_floater_tasks_count_unit),
+            countLabelFormat = context.getString(R.string.widget_floater_tasks_count),
             moreLabelFormat = context.getString(R.string.widget_today_tasks_more),
         )
 
@@ -82,21 +79,20 @@ class TodayTasksWidget : GlanceAppWidget() {
                             key = task.id.hashCode().toLong(),
                             title = task.title,
                             priority = task.priority,
-                            trailingText = task.dueEpochMs?.let(::dueTimeText),
                         )
                     },
                     overflowCount = model.overflowCount,
                     overflowLabel = strings.moreLabelFormat,
-                    visuals = TodayWidgetVisuals,
-                    openAction = openAppAction(),
-                    addAction = openCreateTodayAction(),
+                    visuals = FloaterWidgetVisuals,
+                    openAction = openFloaterAction(),
+                    addAction = openCreateFloaterAction(),
                 )
             }
         }
     }
 }
 
-private data class TodayTasksWidgetStrings(
+private data class FloaterTasksWidgetStrings(
     val emptyMessage: String,
     val setupTitle: String,
     val setupMessage: String,
@@ -106,26 +102,20 @@ private data class TodayTasksWidgetStrings(
     val moreLabelFormat: String,
 )
 
-private fun TodayTasksWidgetStatus.toContentState(): TaskWidgetContentState {
+private fun FloaterTasksWidgetStatus.toContentState(): TaskWidgetContentState {
     return when (this) {
-        TodayTasksWidgetStatus.SETUP -> TaskWidgetContentState.SETUP
-        TodayTasksWidgetStatus.EMPTY -> TaskWidgetContentState.EMPTY
-        TodayTasksWidgetStatus.TASKS -> TaskWidgetContentState.TASKS
+        FloaterTasksWidgetStatus.SETUP -> TaskWidgetContentState.SETUP
+        FloaterTasksWidgetStatus.EMPTY -> TaskWidgetContentState.EMPTY
+        FloaterTasksWidgetStatus.TASKS -> TaskWidgetContentState.TASKS
     }
 }
 
-private fun TodayTasksWidgetStrings.countLabel(count: Int): String {
+private fun FloaterTasksWidgetStrings.countLabel(count: Int): String {
     return String.format(Locale.getDefault(), countLabelFormat, count)
 }
 
-private fun dueTimeText(epochMs: Long): String {
-    return DateFormat
-        .getTimeInstance(DateFormat.SHORT)
-        .format(Date.from(Instant.ofEpochMilli(epochMs)))
-}
-
-private fun openCreateTodayAction() = actionStartActivity(
-    Intent(Intent.ACTION_VIEW, Uri.parse(CREATE_TODAY_DEEP_LINK)).apply {
+private fun openCreateFloaterAction() = actionStartActivity(
+    Intent(Intent.ACTION_VIEW, Uri.parse(CREATE_FLOATER_DEEP_LINK)).apply {
         component = ComponentName(
             BuildConfig.APPLICATION_ID,
             WidgetCreateTaskActivity::class.java.name,
@@ -134,12 +124,12 @@ private fun openCreateTodayAction() = actionStartActivity(
     },
 )
 
-private fun openAppAction() = actionStartActivity(
-    Intent(Intent.ACTION_MAIN).apply {
+private fun openFloaterAction() = actionStartActivity(
+    Intent(Intent.ACTION_VIEW, Uri.parse(FLOATER_DEEP_LINK)).apply {
         component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        addCategory(Intent.CATEGORY_LAUNCHER)
     },
 )
 
-private const val CREATE_TODAY_DEEP_LINK = "tday://todos/create?target=today"
+private const val FLOATER_DEEP_LINK = "tday://floater"
+private const val CREATE_FLOATER_DEEP_LINK = "tday://todos/create?target=floater"

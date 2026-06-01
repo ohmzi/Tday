@@ -16,7 +16,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TodayTasksWidgetRefresher @Inject constructor(
+class FloaterTasksWidgetRefresher @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -35,9 +35,9 @@ class TodayTasksWidgetRefresher @Inject constructor(
 
     private suspend fun updateWidgetInstances() {
         withContext(Dispatchers.Default) {
-            val widget = TodayTasksWidget()
+            val widget = FloaterTasksWidget()
             runCatching { widget.updateAll(context) }
-            todayWidgetReceiverClasses.forEach { receiverClass ->
+            floaterWidgetReceiverClasses.forEach { receiverClass ->
                 runCatching {
                     val manager = AppWidgetManager.getInstance(context)
                     val componentName = ComponentName(context, receiverClass)
@@ -51,7 +51,7 @@ class TodayTasksWidgetRefresher @Inject constructor(
 
     private fun requestSystemRefresh() {
         val manager = AppWidgetManager.getInstance(context)
-        todayWidgetReceiverClasses.forEach { receiverClass ->
+        floaterWidgetReceiverClasses.forEach { receiverClass ->
             val componentName = ComponentName(context, receiverClass)
             val appWidgetIds = manager.getAppWidgetIds(componentName)
             if (appWidgetIds.isEmpty()) return@forEach
@@ -65,10 +65,10 @@ class TodayTasksWidgetRefresher @Inject constructor(
     }
 
     private companion object {
-        val todayWidgetReceiverClasses = listOf(
-            TodayTasksWidgetSmallReceiver::class.java,
-            TodayTasksWidgetReceiver::class.java,
-            TodayTasksWidgetLargeReceiver::class.java,
+        val floaterWidgetReceiverClasses = listOf(
+            FloaterTasksWidgetSmallReceiver::class.java,
+            FloaterTasksWidgetReceiver::class.java,
+            FloaterTasksWidgetLargeReceiver::class.java,
         )
     }
 }

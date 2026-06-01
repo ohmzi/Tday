@@ -332,9 +332,19 @@
     <string name="widget_today_tasks_empty">No tasks due today</string>
     <string name="widget_today_tasks_add">Add one for today</string>
     <string name="widget_today_tasks_count">%1$d due</string>
+    <string name="widget_today_tasks_count_unit">due</string>
     <string name="widget_today_tasks_more">+%1$d more</string>
     <string name="widget_today_tasks_setup_title">Open T\'Day</string>
     <string name="widget_today_tasks_setup_message">Set up your workspace</string>
+    <string name="widget_floater_tasks_description">Shows floater tasks at a glance</string>
+    <string name="widget_floater_tasks_title">Floater Tasks</string>
+    <string name="widget_floater_tasks_title_small">Floater Tasks - Small</string>
+    <string name="widget_floater_tasks_title_medium">Floater Tasks - Medium</string>
+    <string name="widget_floater_tasks_title_large">Floater Tasks - Large</string>
+    <string name="widget_floater_tasks_empty">No floater tasks</string>
+    <string name="widget_floater_tasks_add">Add a floater</string>
+    <string name="widget_floater_tasks_count">%1$d open</string>
+    <string name="widget_floater_tasks_count_unit">open</string>
     <string name="widget_loading">Loading tasks…</string>
 
     <!-- Settings: updates -->

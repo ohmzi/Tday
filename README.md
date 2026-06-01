@@ -96,7 +96,7 @@ Open `android-compose/` in Android Studio (SDK 35 required) and run on a device 
 
 ### iOS
 
-Open `ios-swiftUI/TdayApp.xcodeproj` in Xcode on macOS and run the `Tday` scheme. The app supports Local Mode, server workspaces, SwiftData cache, reminders, the Today Tasks WidgetKit extension, and the shared mobile feature surface. See [`ios-swiftUI/README.md`](ios-swiftUI/README.md) for structure and environment notes.
+Open `ios-swiftUI/TdayApp.xcodeproj` in Xcode on macOS and run the `Tday` scheme. The app supports Local Mode, server workspaces, SwiftData cache, reminders, Today and Floater WidgetKit widgets, and the shared mobile feature surface. See [`ios-swiftUI/README.md`](ios-swiftUI/README.md) for structure and environment notes.
 
 ## Project Structure
 

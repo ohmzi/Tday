@@ -254,6 +254,7 @@ fun TodoListScreen(
     summaryAvailable: Boolean = true,
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
+    onCreateTaskRequestHandled: (Int) -> Unit = {},
     scrollToTopRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
@@ -424,9 +425,7 @@ fun TodoListScreen(
             openSwipeTaskId = null
         }
     }
-    var lastHandledCreateTaskRequestKey by rememberSaveable {
-        mutableStateOf(createTaskRequestKey)
-    }
+    var lastHandledCreateTaskRequestKey by rememberSaveable { mutableStateOf(0) }
     var collapsedSectionKeys by rememberSaveable(uiState.mode, uiState.listId, highlightedTodoId) {
         mutableStateOf(
             if (isCollapsibleTimelineMode && highlightedTodoId.isNullOrBlank()) {
@@ -446,8 +445,9 @@ fun TodoListScreen(
         remember(uiState.mode) { mutableStateMapOf<String, TimelineDropTargetBounds>() }
     var pendingRescheduleDrop by remember(uiState.mode) { mutableStateOf<TaskRescheduleDrop?>(null) }
     LaunchedEffect(createTaskRequestKey) {
-        if (createTaskRequestKey > lastHandledCreateTaskRequestKey) {
+        if (createTaskRequestKey > 0 && createTaskRequestKey != lastHandledCreateTaskRequestKey) {
             lastHandledCreateTaskRequestKey = createTaskRequestKey
+            onCreateTaskRequestHandled(createTaskRequestKey)
             closeRootFloaterSearch()
             quickAddDueEpochMs = null
             showCreateTaskSheet = true

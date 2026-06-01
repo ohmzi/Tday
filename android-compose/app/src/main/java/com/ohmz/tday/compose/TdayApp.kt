@@ -163,13 +163,25 @@ fun TdayApp(
     var hasShownLaunchUpdateToast by rememberSaveable { mutableStateOf(false) }
     var isStartupSplashHeld by remember { mutableStateOf(false) }
     var rootFeedTab by rememberSaveable { mutableStateOf(RootFeedTab.HOME) }
+    var rootCreateTaskRequestSerial by rememberSaveable { mutableStateOf(0) }
     var rootCreateTaskRequestKey by rememberSaveable { mutableStateOf(0) }
+    var pendingRootFloaterCreateTask by rememberSaveable { mutableStateOf(false) }
     var rootHomeScrollToTopRequestKey by remember { mutableStateOf(0) }
     var rootFloaterScrollToTopRequestKey by remember { mutableStateOf(0) }
     var rootDockCollapsed by rememberSaveable { mutableStateOf(false) }
     var rootControlsVisible by rememberSaveable { mutableStateOf(true) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    fun requestRootCreateTask() {
+        rootCreateTaskRequestSerial += 1
+        rootCreateTaskRequestKey = rootCreateTaskRequestSerial
+    }
+
+    fun consumeRootCreateTaskRequest(requestKey: Int) {
+        if (rootCreateTaskRequestKey == requestKey) {
+            rootCreateTaskRequestKey = 0
+        }
+    }
 
     val activity = LocalContext.current as? MainActivity
     val deepLinkIntent by activity?.deepLinkIntent?.collectAsStateWithLifecycle()
@@ -178,6 +190,22 @@ fun TdayApp(
     LaunchedEffect(deepLinkIntent) {
         val intent = deepLinkIntent ?: return@LaunchedEffect
         navController.handleDeepLink(intent)
+    }
+    LaunchedEffect(
+        pendingRootFloaterCreateTask,
+        currentRoute,
+        rootFeedTab,
+        appUiState.isWorkspaceAvailable,
+    ) {
+        if (
+            pendingRootFloaterCreateTask &&
+            currentRoute == AppRoute.Home.route &&
+            rootFeedTab == RootFeedTab.FLOATER &&
+            appUiState.isWorkspaceAvailable
+        ) {
+            pendingRootFloaterCreateTask = false
+            requestRootCreateTask()
+        }
     }
 
     CollectAppSnackbars(
@@ -409,6 +437,7 @@ fun TdayApp(
                                                 showRootFeedDock = false,
                                                 showCreateTaskButton = false,
                                                 createTaskRequestKey = rootCreateTaskRequestKey,
+                                                onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
                                                 scrollToTopRequestKey = rootHomeScrollToTopRequestKey,
                                                 onRootDockCollapsedChange = {
                                                     rootDockCollapsed = it
@@ -441,6 +470,7 @@ fun TdayApp(
                                                 showCreateTaskButton = false,
                                                 usesRootFeedHeader = true,
                                                 createTaskRequestKey = rootCreateTaskRequestKey,
+                                                onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
                                                 scrollToTopRequestKey = rootFloaterScrollToTopRequestKey,
                                                 onRootDockCollapsedChange = {
                                                     rootDockCollapsed = it
@@ -462,7 +492,7 @@ fun TdayApp(
                                                 .zIndex(8f),
                                         )
                                         RootCreateTaskButton(
-                                            onClick = { rootCreateTaskRequestKey += 1 },
+                                            onClick = ::requestRootCreateTask,
                                             modifier = Modifier
                                                 .align(Alignment.BottomEnd)
                                                 .navigationBarsPadding()
@@ -596,11 +626,11 @@ fun TdayApp(
                 composable(
                     route = AppRoute.FloaterTodos.route,
                     deepLinks = listOf(navDeepLink { uriPattern = "tday://floater" }),
-                ) {
-                    LaunchedEffect(Unit) {
+                ) { entry ->
+                    LaunchedEffect(entry.destination.id) {
                         rootFeedTab = RootFeedTab.FLOATER
                         navController.navigate(AppRoute.Home.route) {
-                            popUpTo(AppRoute.Home.route) { inclusive = false }
+                            popUpTo(entry.destination.id) { inclusive = true }
                             launchSingleTop = true
                         }
                     }
@@ -631,32 +661,45 @@ fun TdayApp(
                     deepLinks = listOf(navDeepLink {
                         uriPattern = "tday://todos/create?target={target}"
                     }),
-                ) {
-                    val finishCreateTodayFlow = {
-                        rootFeedTab = RootFeedTab.HOME
-                        val returnedToHome = navController.popBackStack(
-                            route = AppRoute.Home.route,
-                            inclusive = false,
-                        )
-                        if (!returnedToHome) {
+                ) { entry ->
+                    val createTarget = entry.arguments?.getString("target") ?: "today"
+                    if (createTarget.equals("floater", ignoreCase = true)) {
+                        LaunchedEffect(entry.destination.id, createTarget) {
+                            rootFeedTab = RootFeedTab.FLOATER
+                            pendingRootFloaterCreateTask = true
                             navController.navigate(AppRoute.Home.route) {
-                                popUpTo(AppRoute.CreateTodayTodo.route) { inclusive = true }
+                                popUpTo(entry.destination.id) { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
-                        navController.navigate(AppRoute.TodayTodos.route) {
-                            launchSingleTop = true
+                        Box(modifier = Modifier.fillMaxSize())
+                    } else {
+                        val finishCreateTodayFlow = {
+                            rootFeedTab = RootFeedTab.HOME
+                            val returnedToHome = navController.popBackStack(
+                                route = AppRoute.Home.route,
+                                inclusive = false,
+                            )
+                            if (!returnedToHome) {
+                                navController.navigate(AppRoute.Home.route) {
+                                    popUpTo(AppRoute.CreateTodayTodo.route) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                            navController.navigate(AppRoute.TodayTodos.route) {
+                                launchSingleTop = true
+                            }
                         }
+                        TodosRoute(
+                            mode = TodoListMode.TODAY,
+                            onBack = finishCreateTodayFlow,
+                            onTaskDeleted = ::showTaskDeletedToast,
+                            openCreateTaskOnStart = true,
+                            onCreateTaskFlowFinished = finishCreateTodayFlow,
+                            pullRefreshEnabled = !appUiState.isLocalMode,
+                            summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
+                        )
                     }
-                    TodosRoute(
-                        mode = TodoListMode.TODAY,
-                        onBack = finishCreateTodayFlow,
-                        onTaskDeleted = ::showTaskDeletedToast,
-                        openCreateTaskOnStart = true,
-                        onCreateTaskFlowFinished = finishCreateTodayFlow,
-                        pullRefreshEnabled = !appUiState.isLocalMode,
-                        summaryAvailable = !appUiState.isLocalMode && !appUiState.isOffline,
-                    )
                 }
 
                 composable(
@@ -1063,6 +1106,7 @@ private fun TodosRoute(
     onCreateTaskFlowFinished: () -> Unit = {},
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
+    onCreateTaskRequestHandled: (Int) -> Unit = {},
     scrollToTopRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
@@ -1125,6 +1169,7 @@ private fun TodosRoute(
         summaryAvailable = summaryAvailable,
         usesRootFeedHeader = usesRootFeedHeader,
         createTaskRequestKey = createTaskRequestKey,
+        onCreateTaskRequestHandled = onCreateTaskRequestHandled,
         scrollToTopRequestKey = scrollToTopRequestKey,
         onRootDockCollapsedChange = onRootDockCollapsedChange,
         onRootControlsVisibleChange = onRootControlsVisibleChange,

@@ -4,6 +4,7 @@ enum AppRoute: Hashable {
     case home
     case todayTodos
     case createTodayTodo
+    case createFloaterTodo
     case overdueTodos
     case scheduledTodos
     case allTodos(highlightTodoId: String?)
@@ -24,6 +25,8 @@ enum AppRoute: Hashable {
             return "todos/today"
         case .createTodayTodo:
             return "todos/create?target=today"
+        case .createFloaterTodo:
+            return "todos/create?target=floater"
         case .overdueTodos:
             return "todos/overdue"
         case .scheduledTodos:
@@ -86,7 +89,14 @@ enum AppRoute: Hashable {
                     .queryItems?
                     .first(where: { $0.name == "target" })?
                     .value
-                return target == "today" ? .createTodayTodo : nil
+                switch target {
+                case "today":
+                    return .createTodayTodo
+                case "floater":
+                    return .createFloaterTodo
+                default:
+                    return nil
+                }
             case "overdue":
                 return .overdueTodos
             case "scheduled":

@@ -198,6 +198,7 @@ final class OfflineCacheManager {
         try? modelContext.save()
         lastState = normalizedState
         TodayTasksWidgetSnapshotStore.saveTodayTasks(from: normalizedState)
+        FloaterTasksWidgetSnapshotStore.saveFloaterTasks(from: normalizedState)
         cacheDataVersion += 1
         NotificationCenter.default.post(name: .offlineCacheDidChange, object: nil)
     }

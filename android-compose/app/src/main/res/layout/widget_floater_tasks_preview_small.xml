@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="3dp"
-        android:background="@drawable/widget_preview_accent_strip"
+        android:background="@drawable/widget_floater_preview_accent_strip"
         android:includeFontPadding="false"
         android:text="" />
 
@@ -40,7 +40,7 @@
                     android:fontFamily="@font/nunito_app"
                     android:includeFontPadding="false"
                     android:text="6"
-                    android:textColor="@color/tday_widget_today_accent"
+                    android:textColor="@color/tday_widget_floater_accent"
                     android:textSize="26sp"
                     android:textStyle="bold" />
 
@@ -49,7 +49,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/nunito_app"
                     android:includeFontPadding="false"
-                    android:text="@string/widget_today_tasks_count_unit"
+                    android:text="@string/widget_floater_tasks_count_unit"
                     android:textColor="@color/tday_widget_on_surface_variant"
                     android:textSize="11sp"
                     android:textStyle="bold" />
@@ -58,14 +58,14 @@
             <FrameLayout
                 android:layout_width="42dp"
                 android:layout_height="42dp"
-                android:background="@drawable/widget_add_button_background">
+                android:background="@drawable/widget_floater_add_button_background">
 
                 <ImageView
                     android:layout_width="17dp"
                     android:layout_height="17dp"
                     android:layout_gravity="center"
                     android:contentDescription="@null"
-                    android:src="@drawable/widget_add_icon_today" />
+                    android:src="@drawable/widget_add_icon_floater" />
             </FrameLayout>
         </LinearLayout>
 
@@ -87,7 +87,7 @@
                 android:layout_width="7dp"
                 android:layout_height="7dp"
                 android:contentDescription="@null"
-                android:src="@drawable/widget_priority_dot_medium" />
+                android:src="@drawable/widget_priority_dot_high" />
 
             <TextView
                 android:layout_width="0dp"
@@ -98,7 +98,7 @@
                 android:fontFamily="@font/nunito_app"
                 android:includeFontPadding="false"
                 android:maxLines="1"
-                android:text="Plan the morning"
+                android:text="Draft the idea"
                 android:textColor="@color/tday_widget_on_surface"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -118,7 +118,7 @@
                 android:fontFamily="@font/nunito_app"
                 android:includeFontPadding="false"
                 android:text="+5 more"
-                android:textColor="@color/tday_widget_today_accent"
+                android:textColor="@color/tday_widget_floater_accent"
                 android:textSize="11sp"
                 android:textStyle="bold" />
         </LinearLayout>

@@ -559,6 +559,7 @@ struct TodoListScreen: View {
     let showsRootControls: Bool
     let usesRootFeedHeader: Bool
     let createTaskRequestID: Int
+    let autoFocusCreateTaskRequestID: Int
     let openCreateTaskOnAppear: Bool
     let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
@@ -592,6 +593,7 @@ struct TodoListScreen: View {
     @State private var openingRootFloaterSearchResultID: String?
     @State private var openSwipeTaskID: String?
     @State private var hasOpenedCreateTaskOnAppear = false
+    @State private var createTaskAutoFocusTitle = false
 
     init(
         container: AppContainer,
@@ -605,6 +607,7 @@ struct TodoListScreen: View {
         pullRefreshEnabled: Bool = true,
         usesRootFeedHeader: Bool = false,
         createTaskRequestID: Int = 0,
+        autoFocusCreateTaskRequestID: Int = 0,
         openCreateTaskOnAppear: Bool = false,
         scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
@@ -622,6 +625,7 @@ struct TodoListScreen: View {
         self.pullRefreshEnabled = pullRefreshEnabled
         self.usesRootFeedHeader = usesRootFeedHeader
         self.createTaskRequestID = createTaskRequestID
+        self.autoFocusCreateTaskRequestID = autoFocusCreateTaskRequestID
         self.openCreateTaskOnAppear = openCreateTaskOnAppear
         self.scrollToTopRequestID = scrollToTopRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
@@ -885,6 +889,7 @@ struct TodoListScreen: View {
         .onChange(of: createTaskRequestID) { _, requestID in
             guard requestID > 0 else { return }
             closeRootFloaterSearch()
+            createTaskAutoFocusTitle = requestID == autoFocusCreateTaskRequestID
             showingCreateTask = true
         }
         .onAppear {
@@ -893,6 +898,7 @@ struct TodoListScreen: View {
             if openCreateTaskOnAppear && !hasOpenedCreateTaskOnAppear {
                 hasOpenedCreateTaskOnAppear = true
                 closeRootFloaterSearch()
+                createTaskAutoFocusTitle = true
                 showingCreateTask = true
             }
         }
@@ -1063,6 +1069,7 @@ struct TodoListScreen: View {
             Spacer(minLength: 12)
 
             TaskFloatingActionButton(fillColor: modeAccentColor) {
+                createTaskAutoFocusTitle = false
                 showingCreateTask = true
             }
             .padding(.trailing, 18)
@@ -1078,11 +1085,14 @@ struct TodoListScreen: View {
             initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? "High" : "Low", due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
             defaultScheduled: viewModel.mode != .floater,
             showScheduleControls: viewModel.mode != .floater,
-            autoFocusTitle: openCreateTaskOnAppear,
+            autoFocusTitle: openCreateTaskOnAppear || createTaskAutoFocusTitle,
             onParseTaskTitleNlp: viewModel.mode == .floater ? nil : { title, dueRef in
                 await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
             },
-            onDismiss: { showingCreateTask = false },
+            onDismiss: {
+                createTaskAutoFocusTitle = false
+                showingCreateTask = false
+            },
             onSubmit: { payload in
                 await viewModel.addTask(payload)
             }
