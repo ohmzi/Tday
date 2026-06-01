@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.unit.sp
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
@@ -168,6 +169,10 @@ fun RootFeedDock(
     } else {
         colorScheme.onSurface.copy(alpha = 0.1f)
     }
+    val labelTextStyle = MaterialTheme.typography.titleSmall.copy(
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+    )
     val activeIndex = RootFeedTabs.indexOf(activeTab).coerceAtLeast(0)
     val interactionSources = remember {
         List(RootFeedTabs.size) { MutableInteractionSource() }
@@ -391,7 +396,7 @@ fun RootFeedDock(
                     )
                     Text(
                         text = stringResource(tab.labelRes()),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = labelTextStyle,
                         fontWeight = if (selected) FontWeight.Black else FontWeight.ExtraBold,
                         color = animatedContentColor,
                         maxLines = 1,

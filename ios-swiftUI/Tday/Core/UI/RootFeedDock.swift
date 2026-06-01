@@ -116,7 +116,7 @@ struct RootFeedDock: View {
                                     .scaleEffect(isExpanded ? 0.92 : 1)
 
                                 Text(tab.title)
-                                    .font(.tdayRounded(size: 13, weight: selected ? .black : .bold))
+                                    .font(.tdayRounded(size: 14.5, weight: selected ? .black : .bold))
                                     .foregroundStyle(foregroundColor)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.82)
@@ -192,11 +192,11 @@ private struct RootFeedFloaterIcon: View {
 }
 
 private enum RootFeedDockMetrics {
-    static let height: CGFloat = 52
+    static let height: CGFloat = 60
     static let collapsedWidth: CGFloat = height
-    static let innerPadding: CGFloat = 5
-    static let tabWidth: CGFloat = 102
+    static let innerPadding: CGFloat = 6
+    static let tabWidth: CGFloat = 112
     static let expandedWidth: CGFloat = (tabWidth * 2) + (innerPadding * 2)
-    static let cornerRadius: CGFloat = 22
-    static let selectorCornerRadius: CGFloat = 18
+    static let cornerRadius: CGFloat = 25
+    static let selectorCornerRadius: CGFloat = 20
 }
