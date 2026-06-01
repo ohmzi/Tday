@@ -106,17 +106,19 @@ unscheduled floaters across all floater lists. Completed tasks and overdue sched
 of these widget surfaces.
 
 - Android exposes small, medium, and large picker entries backed by separate AppWidget provider
-  metadata for each widget kind, while each kind renders a shared responsive Glance widget.
+  metadata for each widget kind. These picker choices are starting sizes; every placed entry shares
+  the same 2x2-to-4x4 resize range and renders the matching responsive Glance layout as it is
+  stretched or compressed.
 - Static picker previews use RemoteViews-compatible XML, and Android 15+ generated previews are
   published from `TodayTasksWidgetPreviewPublisher` when the app starts.
 - Medium and large layouts show the title, a compact count pill, a native plus icon add target,
   and dense scan-first rows; compact layouts stay count-first and prioritize task titles over
   due-time detail.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
-- Task layouts render a fixed family-specific row set for small, medium, and large widgets. Small
-  widgets show the highest-value row plus overflow, medium widgets show a short readable set, and
-  large widgets subtly emphasize the first task before the remaining rows. Hidden tasks surface as
-  the final `+N more` row.
+- Task layouts render a fixed size-specific row set as the widget crosses compact, wide, medium, and
+  tall responsive buckets. Compact widgets show the highest-value row plus overflow, medium widgets
+  show a short readable set, and large widgets subtly emphasize the first task before the remaining
+  rows. Hidden tasks surface as the final `+N more` row.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater` through a dedicated translucent widget-create activity that
   hosts the matching in-app create-task sheet directly over the launcher with the title field
