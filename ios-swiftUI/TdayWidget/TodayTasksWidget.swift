@@ -23,6 +23,25 @@ private enum TodayTasksSnapshotStatus: String, Codable {
     case tasks
 }
 
+private func isTaskWidgetDaytime(_ date: Date) -> Bool {
+    let hour = Calendar.current.component(.hour, from: date)
+    return (6..<18).contains(hour)
+}
+
+private func nextTaskWidgetDayNightRefresh(after date: Date, calendar: Calendar = .current) -> Date {
+    let hour = calendar.component(.hour, from: date)
+    let targetHour = hour < 6 ? 6 : (hour < 18 ? 18 : 6)
+    let targetDate: Date
+    if hour >= 18 {
+        targetDate = calendar.date(byAdding: .day, value: 1, to: date) ?? date.addingTimeInterval(86_400)
+    } else {
+        targetDate = date
+    }
+
+    return calendar.date(bySettingHour: targetHour, minute: 0, second: 0, of: targetDate)
+        ?? date.addingTimeInterval(1_800)
+}
+
 private struct TodayTasksSnapshot: Codable {
     let schemaVersion: Int
     let generatedAtEpochMs: Int64
@@ -53,15 +72,17 @@ private struct TodayTasksProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodayTasksEntry>) -> Void) {
-        let entry = loadEntry()
-        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: Date()) ?? Date().addingTimeInterval(1800)
-        completion(Timeline(entries: [entry], policy: .after(nextRefresh)))
+        let now = Date()
+        let entry = loadEntry(date: now)
+        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: now) ?? now.addingTimeInterval(1800)
+        let nextDayNightRefresh = nextTaskWidgetDayNightRefresh(after: now)
+        completion(Timeline(entries: [entry], policy: .after(min(nextRefresh, nextDayNightRefresh))))
     }
 
-    private func loadEntry() -> TodayTasksEntry {
+    private func loadEntry(date: Date = Date()) -> TodayTasksEntry {
         guard let snapshot = Self.loadSnapshot() else {
             return TodayTasksEntry(
-                date: Date(),
+                date: date,
                 title: "Today's Tasks",
                 status: .setup,
                 taskCount: 0,
@@ -70,7 +91,7 @@ private struct TodayTasksProvider: TimelineProvider {
         }
 
         return TodayTasksEntry(
-            date: Date(timeIntervalSince1970: TimeInterval(snapshot.generatedAtEpochMs) / 1_000),
+            date: date,
             title: snapshot.title,
             status: snapshot.status,
             taskCount: snapshot.taskCount,
@@ -155,6 +176,7 @@ private struct TodayTasksWidgetView: View {
                     dueEpochMs: $0.dueEpochMs
                 )
             },
+            date: entry.date,
             mode: .today
         )
     }
@@ -167,7 +189,7 @@ private struct WidgetTaskRowModel: Identifiable {
     let dueEpochMs: Int64?
 }
 
-private enum TaskWidgetStatus {
+private enum TaskWidgetStatus: Equatable {
     case setup
     case empty
     case tasks
@@ -245,10 +267,10 @@ private enum TaskWidgetMode {
         }
     }
 
-    var emptyWatermarkSystemName: String {
+    func emptyWatermarkSystemName(isDaytime: Bool) -> String {
         switch self {
         case .today:
-            return "sun.max.fill"
+            return isDaytime ? "sun.max.fill" : "moon.stars.fill"
         case .floater:
             return "tray.full.fill"
         }
@@ -286,6 +308,7 @@ private struct TdayTasksWidgetContent: View {
     let status: TaskWidgetStatus
     let taskCount: Int
     let rows: [WidgetTaskRowModel]
+    let date: Date
     let mode: TaskWidgetMode
 
     @Environment(\.widgetFamily) private var family
@@ -296,15 +319,19 @@ private struct TdayTasksWidgetContent: View {
         ZStack(alignment: .topLeading) {
             messageWatermark
 
+            switch status {
+            case .setup:
+                message(title: "Open T'Day", subtitle: "Set up your workspace")
+            case .empty:
+                message(title: mode.emptyTitle, subtitle: mode.emptySubtitle)
+            case .tasks:
+                EmptyView()
+            }
+
             VStack(alignment: .leading, spacing: metrics.contentSpacing) {
                 header
 
-                switch status {
-                case .setup:
-                    message(title: "Open T'Day", subtitle: "Set up your workspace")
-                case .empty:
-                    message(title: mode.emptyTitle, subtitle: mode.emptySubtitle)
-                case .tasks:
+                if status == .tasks {
                     taskList
                 }
             }
@@ -333,7 +360,14 @@ private struct TdayTasksWidgetContent: View {
         guard renderingMode == .fullColor else {
             return .primary.opacity(0.08)
         }
-        return accentColor.opacity(colorScheme == .dark ? 0.16 : 0.11)
+        let color: Color
+        switch mode {
+        case .today where !isTaskWidgetDaytime(date):
+            color = .tdayTitleNight
+        default:
+            color = accentColor
+        }
+        return color.opacity(colorScheme == .dark ? 0.16 : 0.11)
     }
 
     private var countText: String {
@@ -346,7 +380,7 @@ private struct TdayTasksWidgetContent: View {
 
     private var messageWatermark: some View {
         GeometryReader { proxy in
-            Image(systemName: mode.emptyWatermarkSystemName)
+            Image(systemName: mode.emptyWatermarkSystemName(isDaytime: isTaskWidgetDaytime(date)))
                 .font(.system(size: metrics.watermarkSize, weight: .regular))
                 .foregroundStyle(watermarkColor)
                 .rotationEffect(.degrees(-7))
@@ -364,12 +398,14 @@ private struct TdayTasksWidgetContent: View {
             if family == .systemSmall {
                 smallCountLabel
             } else {
-                Text(title)
-                    .font(.system(size: family == .systemLarge ? 17 : 16, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(title)
+                        .font(.system(size: family == .systemLarge ? 17 : 16, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
 
-                countPill
+                    countPill
+                }
             }
 
             Spacer(minLength: 4)
@@ -437,9 +473,9 @@ private struct TdayTasksWidgetContent: View {
     private func message(title: String, subtitle: String) -> some View {
         VStack(alignment: .center, spacing: family == .systemSmall ? 6 : 8) {
             Text(title)
-                .font(.system(size: family == .systemLarge ? 17 : 15, weight: .bold, design: .rounded))
+                .font(.system(size: family == .systemSmall ? 14 : (family == .systemLarge ? 17 : 15), weight: .bold, design: .rounded))
                 .lineLimit(family == .systemSmall ? 1 : 2)
-                .minimumScaleFactor(0.85)
+                .minimumScaleFactor(family == .systemSmall ? 0.75 : 0.85)
 
             if family != .systemSmall {
                 Text(subtitle)
@@ -455,7 +491,7 @@ private struct TdayTasksWidgetContent: View {
 
     private func taskRow(_ row: WidgetTaskRowModel) -> some View {
         HStack(spacing: 7) {
-            priorityDot(size: 7)
+            priorityDot(row.priority, size: 7)
             Text(row.title)
                 .font(.system(size: metrics.rowFontSize, weight: .bold, design: .rounded))
                 .lineLimit(1)
@@ -490,10 +526,25 @@ private struct TdayTasksWidgetContent: View {
             .frame(height: metrics.rowHeight, alignment: .leading)
     }
 
-    private func priorityDot(size: CGFloat) -> some View {
+    private func priorityDot(_ priority: String, size: CGFloat) -> some View {
         Circle()
-            .fill(secondaryTextColor.opacity(0.75))
+            .fill(widgetPriorityColor(priority))
             .frame(width: size, height: size)
+    }
+
+    private func widgetPriorityColor(_ priority: String) -> Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.78)
+        }
+
+        switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "high", "urgent", "important":
+            return colorScheme == .dark ? .tdayPriorityHighDark : .tdayPriorityHigh
+        case "medium":
+            return colorScheme == .dark ? .tdayPriorityMediumDark : .tdayPriorityMedium
+        default:
+            return colorScheme == .dark ? .tdayPriorityLowDark : .tdayPriorityLow
+        }
     }
 
     private func accessibilityLabel(for row: WidgetTaskRowModel) -> String {
@@ -730,6 +781,7 @@ private struct FloaterTasksWidgetView: View {
                     dueEpochMs: nil
                 )
             },
+            date: entry.date,
             mode: .floater
         )
     }
@@ -759,9 +811,16 @@ struct TdayWidgetBundle: WidgetBundle {
 
 private extension Color {
     static let tdayTodayBlue = Color(red: 110.0 / 255.0, green: 168.0 / 255.0, blue: 225.0 / 255.0)
+    static let tdayTitleNight = Color(red: 168.0 / 255.0, green: 184.0 / 255.0, blue: 232.0 / 255.0)
     static let tdayFloaterGreen = Color(red: 77.0 / 255.0, green: 143.0 / 255.0, blue: 131.0 / 255.0)
     static let tdayLightSurface = Color.white
     static let tdayDarkSurface = Color(red: 0.09, green: 0.10, blue: 0.13)
+    static let tdayPriorityHigh = Color(red: 1.0, green: 59.0 / 255.0, blue: 48.0 / 255.0)
+    static let tdayPriorityMedium = Color(red: 1.0, green: 149.0 / 255.0, blue: 0.0)
+    static let tdayPriorityLow = Color(red: 0.0, green: 122.0 / 255.0, blue: 1.0)
+    static let tdayPriorityHighDark = Color(red: 1.0, green: 107.0 / 255.0, blue: 97.0 / 255.0)
+    static let tdayPriorityMediumDark = Color(red: 1.0, green: 180.0 / 255.0, blue: 84.0 / 255.0)
+    static let tdayPriorityLowDark = Color(red: 121.0 / 255.0, green: 184.0 / 255.0, blue: 1.0)
 }
 
 private extension Date {
