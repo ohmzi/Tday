@@ -23,6 +23,8 @@ import java.util.Locale
 private val TodayWidgetVisuals = TaskWidgetVisuals(
     addButtonBackground = R.drawable.widget_add_button_background,
     addIcon = R.drawable.widget_add_icon_today,
+    emptyWatermark = R.drawable.widget_empty_watermark_today,
+    setupWatermark = R.drawable.widget_empty_watermark_today,
 )
 
 class TodayTasksWidget : GlanceAppWidget() {
