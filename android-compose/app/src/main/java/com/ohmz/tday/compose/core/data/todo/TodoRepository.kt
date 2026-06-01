@@ -42,6 +42,7 @@ import com.ohmz.tday.compose.core.model.UpdateFloaterRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -57,6 +58,7 @@ class TodoRepository @Inject constructor(
     private val api: TdayApiService,
     private val cacheManager: OfflineCacheManager,
     private val syncManager: SyncManager,
+    private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
     private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
 ) {
     private val zoneId: ZoneId
@@ -146,6 +148,9 @@ class TodoRepository @Inject constructor(
                     listId = normalizedListId,
                 ),
             )
+        }
+        withContext(NonCancellable) {
+            runCatching { todayTasksWidgetRefresher.refreshNow() }
         }
 
         if (syncManager.isLocalMode()) return
