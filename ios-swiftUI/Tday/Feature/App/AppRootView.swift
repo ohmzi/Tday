@@ -603,7 +603,27 @@ private let splashTaglines = [
     "Deadlines hate this one self-hosted trick",
     "Helping your day stop freelancing",
     "Your reminders came prepared",
-    "Turning I should into scheduled"
+    "Turning I should into scheduled",
+    "Your TODO list, but it shows up",
+    "Outsmarting 'I'll do it tomorrow'",
+    "A to-do list with a memory",
+    "Your executor, self-hosted",
+    "Procrastination's worst nightmare",
+    "Where 'someday' gets a date",
+    "Productivity, hosted on your terms",
+    "One server. Zero excuses.",
+    "Keeping your promises for you",
+    "The 'later' column, tamed",
+    "Your second brain, but reliable",
+    "Escalating 'maybe' to 'scheduled'",
+    "Chaos management, private edition",
+    "Your day's project manager",
+    "Because 'in my head' is not a system",
+    "Task herding made official",
+    "Turning mental load into checkmarks",
+    "Serving tasks like a good server should",
+    "Your personal accountability server",
+    "Prioritizing so you don't have to"
 ]
 
 private struct SplashTdayLogoMark: View {
