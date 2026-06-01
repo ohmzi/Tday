@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.widget
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.AnimRes
@@ -12,7 +13,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -27,6 +32,7 @@ import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -43,8 +49,10 @@ class WidgetCreateTaskActivity : ComponentActivity() {
             exit = R.anim.widget_create_hold,
         )
         enableEdgeToEdge()
+        val createTarget = WidgetCreateTarget.from(intent)
         setContent {
             WidgetCreateTaskSurface(
+                createTarget = createTarget,
                 widgetCreateTaskSubmitter = widgetCreateTaskSubmitter,
                 onExit = ::exitToLauncher,
                 onOpenMainApp = ::openMainApp,
@@ -85,6 +93,7 @@ class WidgetCreateTaskActivity : ComponentActivity() {
 
 @Composable
 private fun WidgetCreateTaskSurface(
+    createTarget: WidgetCreateTarget,
     widgetCreateTaskSubmitter: WidgetCreateTaskSubmitter,
     onExit: () -> Unit,
     onOpenMainApp: () -> Unit,
@@ -93,12 +102,16 @@ private fun WidgetCreateTaskSurface(
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
     val todoViewModel: TodoListViewModel = hiltViewModel()
     val todoUiState by todoViewModel.uiState.collectAsStateWithLifecycle()
+    val submitScope = rememberCoroutineScope()
+    var submitting by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        todoViewModel.load(mode = TodoListMode.TODAY)
+    val mode = createTarget.mode
+
+    LaunchedEffect(mode) {
+        todoViewModel.load(mode = mode)
     }
     OnWidgetRouteResume {
-        todoViewModel.load(mode = TodoListMode.TODAY)
+        todoViewModel.load(mode = mode)
         appViewModel.reconnectAfterForeground()
     }
     LaunchedEffect(appUiState.loading, appUiState.isWorkspaceAvailable) {
@@ -106,20 +119,63 @@ private fun WidgetCreateTaskSurface(
             onOpenMainApp()
         }
     }
+    BackHandler(enabled = !submitting) {
+        onExit()
+    }
 
     TdayTheme(themeMode = appUiState.themeMode) {
         Box(modifier = Modifier.fillMaxSize()) {
             CreateTaskBottomSheet(
                 lists = todoUiState.lists,
-                autoFocusTitle = true,
+                defaultScheduled = createTarget.showScheduleControls,
+                showScheduleControls = createTarget.showScheduleControls,
+                autoFocusTitle = createTarget.showScheduleControls,
                 presentImmediately = true,
-                onParseTaskTitleNlp = todoViewModel::parseTaskTitleNlp,
-                onDismiss = onExit,
+                onParseTaskTitleNlp = if (createTarget.showScheduleControls) {
+                    todoViewModel::parseTaskTitleNlp
+                } else {
+                    null
+                },
+                onDismiss = {
+                    if (!submitting) {
+                        onExit()
+                    }
+                },
                 onCreateTask = { payload ->
-                    widgetCreateTaskSubmitter.submitTodayTask(payload)
-                    onExit()
+                    if (!submitting) {
+                        submitting = true
+                        submitScope.launch {
+                            when (createTarget) {
+                                WidgetCreateTarget.TODAY -> {
+                                    widgetCreateTaskSubmitter.submitTodayTask(payload)
+                                }
+
+                                WidgetCreateTarget.FLOATER -> {
+                                    widgetCreateTaskSubmitter.submitFloaterTask(payload)
+                                }
+                            }
+                            onExit()
+                        }
+                    }
                 },
             )
+        }
+    }
+}
+
+private enum class WidgetCreateTarget(
+    val mode: TodoListMode,
+    val showScheduleControls: Boolean,
+) {
+    TODAY(TodoListMode.TODAY, true),
+    FLOATER(TodoListMode.FLOATER, false);
+
+    companion object {
+        fun from(intent: Intent): WidgetCreateTarget {
+            return when (intent.data?.getQueryParameter("target")?.lowercase()) {
+                "floater" -> FLOATER
+                else -> TODAY
+            }
         }
     }
 }

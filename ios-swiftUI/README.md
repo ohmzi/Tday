@@ -9,7 +9,7 @@ Current feature surface:
 - Local Mode for offline-only planning without server setup.
 - Server Mode with JWE cookie auth, optimistic local writes, realtime refresh, and pending mutation replay.
 - Home and Floater/Anytime root feeds controlled by `RootFeedDock`.
-- Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, and the Today Tasks WidgetKit extension.
+- Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, and Today/Floater WidgetKit widgets.
 - SwiftData-backed local cache mirrored with Android's Room-backed `OfflineSyncState`.
 
 ## Structure
@@ -29,7 +29,7 @@ ios-swiftUI/
 │   │   ├── Notification/# Deep links and reminders
 │   │   ├── Security/    # Probe/decryption helpers
 │   │   ├── UI/          # Shared app UI helpers
-│   │   └── Widget/      # Today tasks widget snapshot store
+│   │   └── Widget/      # Today/Floater widget snapshot stores
 │   ├── Feature/
 │   │   ├── App/
 │   │   ├── Auth/
@@ -76,27 +76,28 @@ See [`../docs/DATA_MODEL.md`](../docs/DATA_MODEL.md) for the shared cache model.
 
 ## Widgets
 
-`TdayWidget` is a WidgetKit app extension with small, medium, and large Today Tasks widgets. The app
-writes snapshots through the App Group suite `group.com.ohmz.tday` using key
-`tday.widget.todayTasksSnapshot`; the extension decodes schema version 2 snapshots and keeps a legacy
-fallback for older payloads.
+`TdayWidget` is a WidgetKit app extension with small, medium, and large Today Tasks and Floater
+Tasks widgets. The app writes snapshots through the App Group suite `group.com.ohmz.tday` using keys
+`tday.widget.todayTasksSnapshot` and `tday.widget.floaterTasksSnapshot`; the Today extension model
+decodes schema version 2 snapshots and keeps a legacy fallback for older payloads.
 
 - Snapshot status is `setup`, `empty`, or `tasks`, with task count, generated time, and capped task rows.
-- Medium and large layouts show the title, a compact `N due` count, and a clearer add target; compact
-  layouts stay count-first and prioritize task titles over due-time detail.
-- Tapping the widget body, header, empty/setup message, or task rows opens the main app.
-- The add action opens `tday://todos/create?target=today`, lands on the Home root, and immediately
-  starts the in-app create-task sheet with the title field focused. WidgetKit cannot present the
-  app sheet over the Home Screen widget host, so the interaction uses a focused in-app handoff.
+- Today includes pending scheduled tasks due today; Floater includes active unscheduled floaters
+  across all floater lists. Completed tasks and overdue scheduled tasks are excluded.
+- Medium and large layouts show the title, a compact `N due` or `N open` count, and a clearer add
+  target; compact layouts stay count-first and prioritize task titles over due-time detail.
+- Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
+- The add actions open `tday://todos/create?target=today` or
+  `tday://todos/create?target=floater`, select the matching root feed, and immediately start the
+  in-app create-task sheet with the title field focused. WidgetKit cannot present the app sheet over
+  the Home Screen widget host, so the interaction uses a focused in-app handoff.
 - System-family WidgetKit widgets remain snapshot/glanceable; WidgetKit does not expose an
   internal `ScrollView` surface for home-screen widgets. The widget stores a larger capped task
-  set, fills the available family height with rows, and shows a compact overflow row based on the
-  total due-today count when more tasks remain below the visible area or outside the stored cap.
-- The widget shows pending scheduled tasks due today only; floaters, completed tasks, and overdue tasks
-  are intentionally excluded from v1.
+  set, fills the available family height with rows, and shows a compact overflow row when more tasks
+  remain below the visible area or outside the stored cap.
 
 Widget UI should keep using system WidgetKit margins/backgrounds, removable container backgrounds, and
-tinted/accented rendering support while carrying T'Day identity through the Today accent, rounded
+tinted/accented rendering support while carrying T'Day identity through mode accents, rounded
 typography, priority dots, and calm empty/setup states.
 
 ## Mobile Parity
