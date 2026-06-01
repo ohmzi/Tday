@@ -84,21 +84,21 @@ decodes schema version 2 snapshots and keeps a legacy fallback for older payload
 - Snapshot status is `setup`, `empty`, or `tasks`, with task count, generated time, and capped task rows.
 - Today includes pending scheduled tasks due today; Floater includes active unscheduled floaters
   across all floater lists. Completed tasks and overdue scheduled tasks are excluded.
-- Medium and large layouts show the title, a compact `N due` or `N open` count, and a clearer add
-  target; compact layouts stay count-first and prioritize task titles over due-time detail.
+- Medium and large layouts show the title, a compact count pill, a native plus icon add target,
+  and dense scan-first rows; compact layouts stay count-first and prioritize task titles over
+  due-time detail.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater`, select the matching root feed, and immediately start the
   in-app create-task sheet with the title field focused. WidgetKit cannot present the app sheet over
   the Home Screen widget host, so the interaction uses a focused in-app handoff.
-- System-family WidgetKit widgets remain snapshot/glanceable; WidgetKit does not expose an
-  internal `ScrollView` surface for home-screen widgets. The widget stores a larger capped task
-  set, fills the available family height with rows, and shows a compact overflow row when more tasks
-  remain below the visible area or outside the stored cap.
+- System-family WidgetKit widgets remain snapshot/glanceable. The widget stores a larger capped task
+  set, renders a fixed family-specific row set, emphasizes the first row in large widgets, and shows
+  a compact overflow row when more tasks remain below the visible area or outside the stored cap.
 
 Widget UI should keep using system WidgetKit margins/backgrounds, removable container backgrounds, and
 tinted/accented rendering support while carrying T'Day identity through mode accents, rounded
-typography, priority dots, and calm empty/setup states.
+typography, priority dots, native add icons, count pills, and calm empty/setup states.
 
 ## Mobile Parity
 
