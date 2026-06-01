@@ -2,25 +2,10 @@ import SwiftUI
 import UIKit
 
 private enum CreateTaskSheetMetrics {
-    static let initialSheetHeight: CGFloat = 560
+    static let scheduledSheetHeight: CGFloat = 560
+    static let floaterSheetHeight: CGFloat = 420
     static let maximumHeightFraction: CGFloat = 0.86
     static let bottomContentPadding: CGFloat = 8
-}
-
-private struct CreateTaskSheetHeaderHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
-private struct CreateTaskSheetFormHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
 }
 
 struct CreateTaskSheet: View {
@@ -36,7 +21,6 @@ struct CreateTaskSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
-    @FocusState private var focusedField: CreateTaskSheetFocusedField?
 
     @State private var title = ""
     @State private var notes = ""
@@ -48,8 +32,6 @@ struct CreateTaskSheet: View {
     @State private var isSubmitting = false
     @State private var parserTask: Task<Void, Never>?
     @State private var activeSelector: CreateTaskSheetSelector?
-    @State private var headerHeight: CGFloat = 84
-    @State private var formHeight: CGFloat = CreateTaskSheetMetrics.initialSheetHeight - 84
 
     private let priorityOptions = ["Low", "Medium", "High"]
     private let repeatOptions: [(label: String, value: String?)] = [
@@ -80,12 +62,14 @@ struct CreateTaskSheet: View {
         max(1, UIScreen.main.bounds.height * CreateTaskSheetMetrics.maximumHeightFraction)
     }
 
-    private var measuredSheetHeight: CGFloat {
-        min(max(headerHeight + formHeight, 1), maximumSheetHeight)
-    }
-
-    private var formNeedsScrolling: Bool {
-        headerHeight + formHeight > maximumSheetHeight
+    private var sheetHeight: CGFloat {
+        min(
+            max(
+                showScheduleControls ? CreateTaskSheetMetrics.scheduledSheetHeight : CreateTaskSheetMetrics.floaterSheetHeight,
+                1
+            ),
+            maximumSheetHeight
+        )
     }
 
     init(
@@ -148,19 +132,12 @@ struct CreateTaskSheet: View {
                     }
                 }
             )
-            .background(
-                GeometryReader { proxy in
-                    Color.clear
-                        .preference(key: CreateTaskSheetHeaderHeightKey.self, value: ceil(proxy.size.height))
-                }
-            )
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
                     CreateTaskSheetTextCard(
                         title: $title,
-                        notes: $notes,
-                        focusedField: $focusedField
+                        notes: $notes
                     )
 
                     if showScheduleControls {
@@ -219,18 +196,13 @@ struct CreateTaskSheet: View {
                 }
                 .padding(.horizontal, 18)
                 .padding(.bottom, CreateTaskSheetMetrics.bottomContentPadding)
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear
-                            .preference(key: CreateTaskSheetFormHeightKey.self, value: ceil(proxy.size.height))
-                    }
-                )
             }
-            .scrollDisabled(!formNeedsScrolling)
+            .scrollDismissesKeyboard(.interactively)
+            .disableVerticalScrollBounce()
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .background(colors.bottomSheetBackground.ignoresSafeArea())
-        .presentationDetents([.height(measuredSheetHeight)])
+        .presentationDetents([.height(sheetHeight)])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground {
@@ -255,12 +227,6 @@ struct CreateTaskSheet: View {
                     activeSelector = nil
                 }
             }
-        }
-        .onPreferenceChange(CreateTaskSheetHeaderHeightKey.self) { height in
-            headerHeight = max(height, 1)
-        }
-        .onPreferenceChange(CreateTaskSheetFormHeightKey.self) { height in
-            formHeight = max(height, 1)
         }
     }
 
@@ -402,11 +368,6 @@ struct CreateTaskSheet: View {
     }
 }
 
-private enum CreateTaskSheetFocusedField {
-    case title
-    case notes
-}
-
 private enum CreateTaskSheetSelector: String, Identifiable {
     case list
     case priority
@@ -444,18 +405,13 @@ private enum CreateTaskSheetSelector: String, Identifiable {
 private struct CreateTaskSheetTextCard: View {
     @Binding var title: String
     @Binding var notes: String
-    var focusedField: FocusState<CreateTaskSheetFocusedField?>.Binding
-
-    @Environment(\.tdayColors) private var colors
 
     var body: some View {
         TdaySheetCard {
             CreateTaskSheetTextField(
                 placeholder: "Title",
                 text: $title,
-                lineLimit: 1 ... 1,
-                focusedField: focusedField,
-                field: .title
+                lineLimit: 1 ... 1
             )
 
             TdaySheetDivider()
@@ -463,9 +419,7 @@ private struct CreateTaskSheetTextCard: View {
             CreateTaskSheetTextField(
                 placeholder: "Notes",
                 text: $notes,
-                lineLimit: 1 ... 1,
-                focusedField: focusedField,
-                field: .notes
+                lineLimit: 1 ... 1
             )
         }
     }
@@ -475,8 +429,6 @@ private struct CreateTaskSheetTextField: View {
     let placeholder: String
     @Binding var text: String
     let lineLimit: ClosedRange<Int>
-    var focusedField: FocusState<CreateTaskSheetFocusedField?>.Binding
-    let field: CreateTaskSheetFocusedField
 
     @Environment(\.tdayColors) private var colors
 
@@ -500,7 +452,6 @@ private struct CreateTaskSheetTextField: View {
         )
         .lineLimit(lineLimit)
         .submitLabel(.done)
-        .focused(focusedField, equals: field)
         .onSubmit {
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder),
