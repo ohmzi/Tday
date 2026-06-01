@@ -22,15 +22,15 @@ class TodayTasksWidgetRefresher @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun requestRefresh() {
-        requestSystemRefresh()
         scope.launch {
             updateWidgetInstances()
+            requestSystemRefresh()
         }
     }
 
     suspend fun refreshNow() {
-        requestSystemRefresh()
         updateWidgetInstances()
+        requestSystemRefresh()
     }
 
     private suspend fun updateWidgetInstances() {
