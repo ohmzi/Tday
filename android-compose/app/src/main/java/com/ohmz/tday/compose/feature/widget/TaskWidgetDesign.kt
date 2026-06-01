@@ -93,13 +93,23 @@ internal fun TaskWidgetContent(
 ) {
     val layout = taskWidgetLayoutFor(LocalSize.current)
     val metrics = taskWidgetMetrics(layout)
+    val watermark = when (state) {
+        TaskWidgetContentState.SETUP -> visuals.setupWatermark
+        TaskWidgetContentState.EMPTY,
+        TaskWidgetContentState.TASKS -> visuals.emptyWatermark
+    }
 
-    Column(
+    Box(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(ImageProvider(R.drawable.widget_preview_background))
             .clickable(openAction),
     ) {
+        TaskWidgetMessageBackground(
+            watermark = watermark,
+            metrics = metrics,
+        )
+
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
@@ -125,18 +135,14 @@ internal fun TaskWidgetContent(
                 TaskWidgetContentState.SETUP -> TaskWidgetMessage(
                     title = setupTitle,
                     message = setupMessage,
-                    watermark = visuals.setupWatermark,
                     compact = layout == TaskWidgetLayout.COMPACT,
-                    metrics = metrics,
                     openAction = openAction,
                 )
 
                 TaskWidgetContentState.EMPTY -> TaskWidgetMessage(
                     title = emptyTitle,
                     message = emptyMessage,
-                    watermark = visuals.emptyWatermark,
                     compact = layout == TaskWidgetLayout.COMPACT,
-                    metrics = metrics,
                     openAction = openAction,
                 )
 
@@ -304,9 +310,7 @@ private fun TextAlign.toWidgetGravity(): Int {
 private fun TaskWidgetMessage(
     title: String,
     message: String,
-    watermark: Int,
     compact: Boolean,
-    metrics: TaskWidgetMetrics,
     openAction: Action,
 ) {
     Box(
@@ -315,10 +319,6 @@ private fun TaskWidgetMessage(
             .clickable(openAction),
         contentAlignment = Alignment.Center,
     ) {
-        TaskWidgetMessageBackground(
-            watermark = watermark,
-            metrics = metrics,
-        )
         Column(
             modifier = GlanceModifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,

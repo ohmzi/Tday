@@ -147,6 +147,7 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
@@ -398,6 +399,11 @@ fun HomeScreen(
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
+            EmptyTaskWatermark(
+                imageVector = Icons.Rounded.Inbox,
+                accentColor = TdayTitleIconDayAccent,
+            )
+
             CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
                 TdayPullToRefreshBox(
                     isRefreshing = uiState.isLoading,

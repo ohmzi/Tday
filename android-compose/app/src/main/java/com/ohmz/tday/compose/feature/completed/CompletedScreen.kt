@@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.BorderColor
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -290,11 +289,11 @@ fun CompletedScreen(
                 }
             }
 
+            EmptyTaskWatermark(
+                imageVector = Icons.Rounded.Check,
+                accentColor = COMPLETED_TITLE_COLOR,
+            )
             if (uiState.items.isEmpty() && !uiState.isLoading) {
-                EmptyTaskWatermark(
-                    imageVector = Icons.Rounded.Check,
-                    accentColor = COMPLETED_TITLE_COLOR,
-                )
                 EmptyTaskBackgroundMessage(
                     message = stringResource(R.string.completed_empty),
                 )

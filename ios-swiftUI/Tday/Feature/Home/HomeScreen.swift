@@ -188,6 +188,11 @@ struct HomeScreen: View {
                 : fallbackSearchBarFrame
 
             ZStack(alignment: .topLeading) {
+                EmptyTaskWatermark(
+                    systemName: "tray.fill",
+                    accentColor: Color.tdayTodayBlue
+                )
+
                 PullToRefreshContainer(
                     isRefreshing: viewModel.isLoading,
                     isEnabled: pullRefreshEnabled,

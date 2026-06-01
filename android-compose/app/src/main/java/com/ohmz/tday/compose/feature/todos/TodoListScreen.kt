@@ -1140,11 +1140,11 @@ fun TodoListScreen(
                 }
             }
 
+            EmptyTaskWatermark(
+                imageVector = emptyWatermarkIcon,
+                accentColor = titleColor,
+            )
             if (uiState.items.isEmpty() && !uiState.isLoading && !suppressInitialTodayTimeline) {
-                EmptyTaskWatermark(
-                    imageVector = emptyWatermarkIcon,
-                    accentColor = titleColor,
-                )
                 EmptyTaskBackgroundMessage(
                     message = emptyStateMessageForMode(uiState.mode),
                 )
