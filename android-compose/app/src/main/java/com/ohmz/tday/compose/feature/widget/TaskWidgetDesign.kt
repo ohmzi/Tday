@@ -19,8 +19,6 @@ import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
-import androidx.glance.appwidget.lazy.LazyColumn
-import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -95,8 +93,10 @@ internal fun TaskWidgetContent(
     openAction: Action,
     addAction: Action,
 ) {
-    val layout = taskWidgetLayoutFor(LocalSize.current)
+    val widgetSize = LocalSize.current
+    val layout = taskWidgetLayoutFor(widgetSize)
     val metrics = taskWidgetMetrics(layout)
+    val visibleRows = rows.take(taskWidgetVisibleRowCount(widgetSize, metrics))
     val watermark = when (state) {
         TaskWidgetContentState.SETUP -> visuals.setupWatermark
         TaskWidgetContentState.EMPTY,
@@ -146,7 +146,7 @@ internal fun TaskWidgetContent(
                 Spacer(modifier = GlanceModifier.height(metrics.contentSpacing))
 
                 TaskWidgetList(
-                    rows = rows,
+                    rows = visibleRows,
                     layout = layout,
                     metrics = metrics,
                     openAction = openAction,
@@ -419,21 +419,16 @@ private fun TaskWidgetList(
     openAction: Action,
     modifier: GlanceModifier = GlanceModifier,
 ) {
-    LazyColumn(modifier = modifier) {
-        itemsIndexed(
-            items = rows,
-            itemId = { _, row -> row.key },
-        ) { index, row ->
-            Column(modifier = GlanceModifier.fillMaxWidth()) {
-                TaskWidgetRow(
-                    row = row,
-                    layout = layout,
-                    metrics = metrics,
-                    openAction = openAction,
-                )
-                if (index < rows.lastIndex) {
-                    Spacer(modifier = GlanceModifier.height(metrics.rowSpacing))
-                }
+    Column(modifier = modifier) {
+        rows.forEachIndexed { index, row ->
+            TaskWidgetRow(
+                row = row,
+                layout = layout,
+                metrics = metrics,
+                openAction = openAction,
+            )
+            if (index < rows.lastIndex) {
+                Spacer(modifier = GlanceModifier.height(metrics.rowSpacing))
             }
         }
     }
@@ -589,6 +584,21 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             messageWatermarkSize = 208.dp,
         )
     }
+}
+
+private fun taskWidgetVisibleRowCount(
+    size: DpSize,
+    metrics: TaskWidgetMetrics,
+): Int {
+    val availableHeight = size.height.value -
+        metrics.topPadding.value -
+        metrics.bottomPadding.value -
+        metrics.headerHeight.value -
+        metrics.contentSpacing.value
+    val rowStep = metrics.rowHeight.value + metrics.rowSpacing.value
+    return ((availableHeight + metrics.rowSpacing.value) / rowStep)
+        .toInt()
+        .coerceAtLeast(1)
 }
 
 private data class TaskWidgetMetrics(

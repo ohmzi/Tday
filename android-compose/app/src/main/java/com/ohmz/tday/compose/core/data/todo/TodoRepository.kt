@@ -64,6 +64,18 @@ class TodoRepository @Inject constructor(
     private val zoneId: ZoneId
         get() = ZoneId.systemDefault()
 
+    private suspend fun refreshTodayWidgetNow() {
+        withContext(NonCancellable) {
+            runCatching { todayTasksWidgetRefresher.refreshNow() }
+        }
+    }
+
+    private suspend fun refreshFloaterWidgetNow() {
+        withContext(NonCancellable) {
+            runCatching { floaterTasksWidgetRefresher.refreshNow() }
+        }
+    }
+
     suspend fun fetchDashboardSummary(): DashboardSummary {
         return buildDashboardSummary(cacheManager.loadOfflineState())
     }
@@ -149,9 +161,7 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
-        withContext(NonCancellable) {
-            runCatching { todayTasksWidgetRefresher.refreshNow() }
-        }
+        refreshTodayWidgetNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -241,9 +251,7 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
-        withContext(NonCancellable) {
-            runCatching { floaterTasksWidgetRefresher.refreshNow() }
-        }
+        refreshFloaterWidgetNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -361,6 +369,7 @@ class TodoRepository @Inject constructor(
                     },
                 )
             }
+            refreshTodayWidgetNow()
             if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
@@ -393,6 +402,7 @@ class TodoRepository @Inject constructor(
                     } + pendingMutation,
             )
         }
+        refreshTodayWidgetNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -516,6 +526,7 @@ class TodoRepository @Inject constructor(
                     },
                 )
             }
+            refreshFloaterWidgetNow()
             if (syncManager.isLocalMode()) return
             syncManager.syncCachedData(force = true, replayPendingMutations = true)
             return
@@ -540,6 +551,7 @@ class TodoRepository @Inject constructor(
                     .filterNot { it.kind == MutationKind.UPDATE_FLOATER && it.targetId == canonicalId } + pendingMutation,
             )
         }
+        refreshFloaterWidgetNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -648,6 +660,7 @@ class TodoRepository @Inject constructor(
                 },
             )
         }
+        refreshTodayWidgetNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -720,6 +733,7 @@ class TodoRepository @Inject constructor(
                 timestampEpochMs = timestampMs,
             )
         }
+        refreshTodayWidgetNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -785,6 +799,7 @@ class TodoRepository @Inject constructor(
                 )
             }
         }
+        refreshFloaterWidgetNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -856,6 +871,7 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
+        refreshTodayWidgetNow()
 
         if (syncManager.isLocalMode()) return
 
@@ -926,6 +942,7 @@ class TodoRepository @Inject constructor(
                 ),
             )
         }
+        refreshFloaterWidgetNow()
 
         if (syncManager.isLocalMode()) return
 
