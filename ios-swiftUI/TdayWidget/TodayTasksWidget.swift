@@ -142,47 +142,191 @@ private extension TodayTasksEntry {
 private struct TodayTasksWidgetView: View {
     let entry: TodayTasksEntry
 
+    var body: some View {
+        TdayTasksWidgetContent(
+            title: entry.title,
+            status: TaskWidgetStatus(entry.status),
+            taskCount: entry.taskCount,
+            rows: entry.tasks.map {
+                WidgetTaskRowModel(
+                    id: $0.id,
+                    title: $0.title,
+                    priority: $0.priority,
+                    dueEpochMs: $0.dueEpochMs
+                )
+            },
+            mode: .today
+        )
+    }
+}
+
+private struct WidgetTaskRowModel: Identifiable {
+    let id: String
+    let title: String
+    let priority: String
+    let dueEpochMs: Int64?
+}
+
+private enum TaskWidgetStatus {
+    case setup
+    case empty
+    case tasks
+
+    init(_ status: TodayTasksSnapshotStatus) {
+        switch status {
+        case .setup:
+            self = .setup
+        case .empty:
+            self = .empty
+        case .tasks:
+            self = .tasks
+        }
+    }
+
+    init(_ status: FloaterTasksSnapshotStatus) {
+        switch status {
+        case .setup:
+            self = .setup
+        case .empty:
+            self = .empty
+        case .tasks:
+            self = .tasks
+        }
+    }
+}
+
+private enum TaskWidgetMode {
+    case today
+    case floater
+
+    var openURL: URL {
+        switch self {
+        case .today:
+            return URL(string: "tday://home")!
+        case .floater:
+            return URL(string: "tday://floater")!
+        }
+    }
+
+    var createURL: URL {
+        switch self {
+        case .today:
+            return URL(string: "tday://todos/create?target=today")!
+        case .floater:
+            return URL(string: "tday://todos/create?target=floater")!
+        }
+    }
+
+    var countUnit: String {
+        switch self {
+        case .today:
+            return "due"
+        case .floater:
+            return "open"
+        }
+    }
+
+    var emptyTitle: String {
+        switch self {
+        case .today:
+            return "No tasks due today"
+        case .floater:
+            return "No floater tasks"
+        }
+    }
+
+    var emptySubtitle: String {
+        switch self {
+        case .today:
+            return "Add one for today"
+        case .floater:
+            return "Add a floater"
+        }
+    }
+
+    var addAccessibilityLabel: String {
+        switch self {
+        case .today:
+            return "Add task for today"
+        case .floater:
+            return "Add floater task"
+        }
+    }
+
+    var showsDueTime: Bool {
+        self == .today
+    }
+
+    func accentColor(renderingMode: WidgetRenderingMode) -> Color {
+        guard renderingMode == .fullColor else {
+            return .primary
+        }
+        switch self {
+        case .today:
+            return .tdayTodayBlue
+        case .floater:
+            return .tdayFloaterGreen
+        }
+    }
+
+    func featuredRowColor(renderingMode: WidgetRenderingMode, colorScheme: ColorScheme) -> Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.08)
+        }
+        switch self {
+        case .today:
+            return colorScheme == .dark ? .tdayTodayFeatureWashDark : .tdayTodayFeatureWash
+        case .floater:
+            return colorScheme == .dark ? .tdayFloaterFeatureWashDark : .tdayFloaterFeatureWash
+        }
+    }
+}
+
+private struct TdayTasksWidgetContent: View {
+    let title: String
+    let status: TaskWidgetStatus
+    let taskCount: Int
+    let rows: [WidgetTaskRowModel]
+    let mode: TaskWidgetMode
+
     @Environment(\.widgetFamily) private var family
     @Environment(\.widgetRenderingMode) private var renderingMode
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: spacing) {
+        VStack(alignment: .leading, spacing: metrics.contentSpacing) {
             header
 
-            switch entry.status {
+            switch status {
             case .setup:
                 message(title: "Open T'Day", subtitle: "Set up your workspace")
             case .empty:
-                message(title: "No tasks due today", subtitle: "Add one for today")
+                message(title: mode.emptyTitle, subtitle: mode.emptySubtitle)
             case .tasks:
-                taskContent
+                taskList
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .widgetURL(URL(string: "tday://home"))
+        .widgetURL(mode.openURL)
         .containerBackground(for: .widget) {
             widgetBackground
         }
     }
 
-    private var spacing: CGFloat {
-        switch family {
-        case .systemSmall:
-            return 7
-        case .systemLarge:
-            return 10
-        default:
-            return 9
-        }
+    private var metrics: WidgetLayoutMetrics {
+        WidgetLayoutMetrics(family: family)
     }
 
     private var accentColor: Color {
-        renderingMode == .fullColor ? .tdayTodayBlue : .primary
+        mode.accentColor(renderingMode: renderingMode)
     }
 
     private var secondaryTextColor: Color {
         renderingMode == .fullColor ? .secondary : .primary.opacity(0.72)
+    }
+
+    private var countText: String {
+        "\(taskCount) \(mode.countUnit)"
     }
 
     private var widgetBackground: some View {
@@ -199,131 +343,155 @@ private struct TodayTasksWidgetView: View {
             if family == .systemSmall {
                 smallCountLabel
             } else {
-                Text(entry.title)
-                    .font(.system(.headline, design: .rounded, weight: .bold))
+                Text(title)
+                    .font(.system(size: family == .systemLarge ? 17 : 16, weight: .bold, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
 
-                Text(countText)
-                    .font(.system(.caption, design: .rounded, weight: .heavy))
-                    .foregroundStyle(accentColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .widgetAccentable()
+                countPill
             }
 
             Spacer(minLength: 4)
-
-            Link(destination: URL(string: "tday://todos/create?target=today")!) {
-                Text("+")
-                    .font(.system(size: 24, weight: .heavy, design: .rounded))
-                    .foregroundStyle(accentColor)
-                    .frame(width: 44, height: 44)
-                    .background(addButtonBackground)
-                    .contentShape(Rectangle())
-                    .widgetAccentable()
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Add task for today")
+            addButton
         }
-        .frame(minHeight: 44)
+        .frame(minHeight: metrics.headerHeight)
     }
 
     private var smallCountLabel: some View {
-        VStack(alignment: .leading, spacing: -2) {
-            Text("\(entry.taskCount)")
-                .font(.system(.title, design: .rounded, weight: .heavy))
+        VStack(alignment: .leading, spacing: -1) {
+            Text("\(taskCount)")
+                .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .foregroundStyle(accentColor)
                 .lineLimit(1)
                 .widgetAccentable()
-            Text("due")
-                .font(.system(.caption2, design: .rounded, weight: .heavy))
+            Text(mode.countUnit)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(secondaryTextColor)
                 .lineLimit(1)
         }
         .accessibilityLabel(countText)
     }
 
-    private var countText: String {
-        "\(entry.taskCount) due"
+    private var countPill: some View {
+        Text(countText)
+            .font(.system(size: 12, weight: .heavy, design: .rounded))
+            .foregroundStyle(accentColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, 10)
+            .frame(height: 26)
+            .background(Capsule().fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0.10)))
+            .widgetAccentable()
     }
 
-    private var addButtonBackground: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0.10))
-    }
-
-    @ViewBuilder
-    private var taskContent: some View {
-        GeometryReader { proxy in
-            taskListContent(availableHeight: proxy.size.height)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    private var addButton: some View {
+        Link(destination: mode.createURL) {
+            Image(systemName: "plus")
+                .font(.system(size: family == .systemSmall ? 16 : 17, weight: .heavy, design: .rounded))
+                .foregroundStyle(accentColor)
+                .frame(width: metrics.addButtonSize, height: metrics.addButtonSize)
+                .background(
+                    RoundedRectangle(cornerRadius: metrics.addButtonCornerRadius, style: .continuous)
+                        .fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0.10))
+                )
+                .contentShape(Rectangle())
+                .widgetAccentable()
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(mode.addAccessibilityLabel)
     }
 
-    @ViewBuilder
-    private func taskListContent(availableHeight: CGFloat) -> some View {
-        let rowCapacity = visibleRowCapacity(for: availableHeight)
-        let totalCount = max(entry.taskCount, entry.tasks.count)
-        let hasOverflow = totalCount > rowCapacity || entry.tasks.count < totalCount
+    private var taskList: some View {
+        let rowCapacity = metrics.visibleRowCapacity
+        let totalCount = max(taskCount, rows.count)
+        let hasOverflow = totalCount > rowCapacity || rows.count < totalCount
         let visibleCapacity = hasOverflow && rowCapacity > 1 ? rowCapacity - 1 : rowCapacity
-        let visibleCount = min(visibleCapacity, entry.tasks.count)
-        let overflowCount = max(0, totalCount - visibleCount)
+        let visibleRows = Array(rows.prefix(visibleCapacity))
+        let overflowCount = max(0, totalCount - visibleRows.count)
 
-        VStack(alignment: .leading, spacing: taskRowSpacing) {
-            ForEach(entry.tasks.prefix(visibleCount)) { task in
-                taskRow(task)
+        return VStack(alignment: .leading, spacing: metrics.rowSpacing) {
+            ForEach(Array(visibleRows.enumerated()), id: \.element.id) { index, row in
+                taskRow(row, featured: family == .systemLarge && index == 0)
             }
             if overflowCount > 0 && rowCapacity > 1 {
                 overflowRow(count: overflowCount)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func message(title: String, subtitle: String) -> some View {
-        VStack(alignment: .center, spacing: family == .systemSmall ? 3 : 4) {
+        VStack(alignment: .center, spacing: family == .systemSmall ? 6 : 8) {
+            Capsule()
+                .fill(accentColor.opacity(renderingMode == .fullColor ? 0.18 : 0.10))
+                .frame(width: family == .systemSmall ? 28 : 34, height: 3)
+                .widgetAccentable()
+
             Text(title)
-                .font(.system(family == .systemLarge ? .headline : .subheadline, design: .rounded, weight: .bold))
-                .lineLimit(2)
+                .font(.system(size: family == .systemLarge ? 17 : 15, weight: .bold, design: .rounded))
+                .lineLimit(family == .systemSmall ? 1 : 2)
+                .minimumScaleFactor(0.85)
+
             if family != .systemSmall {
                 Text(subtitle)
-                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(secondaryTextColor)
                     .lineLimit(2)
+                    .minimumScaleFactor(0.85)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .multilineTextAlignment(.center)
     }
 
-    private func taskRow(_ task: TodayTaskSnapshot) -> some View {
-        HStack(spacing: 7) {
-            priorityDot(task.priority, size: 7)
-            Text(task.title)
-                .font(.system(.caption, design: .rounded, weight: .bold))
+    private func taskRow(_ row: WidgetTaskRowModel, featured: Bool) -> some View {
+        HStack(spacing: featured ? 8 : 7) {
+            priorityDot(row.priority, size: featured ? 8 : 7)
+            Text(row.title)
+                .font(.system(size: featured ? 13 : metrics.rowFontSize, weight: .bold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
             Spacer(minLength: 4)
-            if family != .systemSmall {
-                Text(Self.dueTimeText(from: task.dueEpochMs))
-                    .font(.system(.caption2, design: .rounded, weight: .bold))
-                    .foregroundStyle(secondaryTextColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+            if mode.showsDueTime, family != .systemSmall, let dueEpochMs = row.dueEpochMs {
+                dueTimeChip(Self.dueTimeText(from: dueEpochMs))
             }
         }
         .foregroundStyle(.primary)
-        .frame(height: taskRowHeight)
-        .accessibilityLabel("\(task.title), due \(Self.dueTimeText(from: task.dueEpochMs))")
+        .padding(.horizontal, featured ? 9 : 2)
+        .frame(height: featured ? metrics.featuredRowHeight : metrics.rowHeight)
+        .background {
+            if featured {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(mode.featuredRowColor(renderingMode: renderingMode, colorScheme: colorScheme))
+            }
+        }
+        .accessibilityLabel(accessibilityLabel(for: row))
+    }
+
+    private func dueTimeChip(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .foregroundStyle(secondaryTextColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, 7)
+            .frame(height: 22)
+            .background(
+                Capsule().fill(
+                    (colorScheme == .dark ? Color.tdayDueChipBackgroundDark : Color.tdayDueChipBackground)
+                        .opacity(renderingMode == .fullColor ? 1 : 0.12)
+                )
+            )
     }
 
     private func overflowRow(count: Int) -> some View {
         Text("+\(count) more")
-            .font(.system(.caption2, design: .rounded, weight: .heavy))
+            .font(.system(size: 11, weight: .heavy, design: .rounded))
             .foregroundStyle(accentColor)
             .lineLimit(1)
             .widgetAccentable()
-            .frame(height: taskRowHeight, alignment: .leading)
+            .padding(.leading, 16)
+            .frame(height: metrics.rowHeight, alignment: .leading)
     }
 
     private func priorityDot(_ priority: String, size: CGFloat) -> some View {
@@ -339,7 +507,7 @@ private struct TodayTasksWidgetView: View {
         }
 
         switch priority.lowercased() {
-        case "high":
+        case "high", "urgent", "important":
             return .tdayPriorityHigh
         case "medium":
             return .tdayPriorityMedium
@@ -348,41 +516,64 @@ private struct TodayTasksWidgetView: View {
         }
     }
 
+    private func accessibilityLabel(for row: WidgetTaskRowModel) -> String {
+        guard mode.showsDueTime, let dueEpochMs = row.dueEpochMs else {
+            return row.title
+        }
+        return "\(row.title), due \(Self.dueTimeText(from: dueEpochMs))"
+    }
+
     private static func dueTimeText(from epochMs: Int64) -> String {
         let date = Date(timeIntervalSince1970: TimeInterval(epochMs) / 1_000)
         return date.formatted(date: .omitted, time: .shortened)
     }
+}
 
-    private var taskRowHeight: CGFloat {
+private struct WidgetLayoutMetrics {
+    let contentSpacing: CGFloat
+    let headerHeight: CGFloat
+    let addButtonSize: CGFloat
+    let addButtonCornerRadius: CGFloat
+    let rowHeight: CGFloat
+    let featuredRowHeight: CGFloat
+    let rowSpacing: CGFloat
+    let rowFontSize: CGFloat
+    let visibleRowCapacity: Int
+
+    init(family: WidgetFamily) {
         switch family {
         case .systemSmall:
-            return 24
+            contentSpacing = 6
+            headerHeight = 40
+            addButtonSize = 40
+            addButtonCornerRadius = 12
+            rowHeight = 22
+            featuredRowHeight = 22
+            rowSpacing = 3
+            rowFontSize = 12
+            visibleRowCapacity = 2
         case .systemLarge:
-            return 25
+            contentSpacing = 10
+            headerHeight = 46
+            addButtonSize = 46
+            addButtonCornerRadius = 14
+            rowHeight = 25
+            featuredRowHeight = 34
+            rowSpacing = 5
+            rowFontSize = 13
+            visibleRowCapacity = 5
         default:
-            return 22
+            contentSpacing = 8
+            headerHeight = 44
+            addButtonSize = 44
+            addButtonCornerRadius = 13
+            rowHeight = 24
+            featuredRowHeight = 24
+            rowSpacing = 4
+            rowFontSize = 12
+            visibleRowCapacity = 3
         }
     }
-
-    private var taskRowSpacing: CGFloat {
-        switch family {
-        case .systemSmall:
-            return 4
-        case .systemLarge:
-            return 8
-        default:
-            return 6
-        }
-    }
-
-    private func visibleRowCapacity(for height: CGFloat) -> Int {
-        let rowStride = taskRowHeight + taskRowSpacing
-        guard rowStride > 0 else {
-            return 1
-        }
-        return max(1, Int((height + taskRowSpacing) / rowStride))
-    }
-
 }
 
 struct TodayTasksWidget: Widget {
@@ -538,233 +729,21 @@ private extension FloaterTasksEntry {
 private struct FloaterTasksWidgetView: View {
     let entry: FloaterTasksEntry
 
-    @Environment(\.widgetFamily) private var family
-    @Environment(\.widgetRenderingMode) private var renderingMode
-    @Environment(\.colorScheme) private var colorScheme
-
     var body: some View {
-        VStack(alignment: .leading, spacing: spacing) {
-            header
-
-            switch entry.status {
-            case .setup:
-                message(title: "Open T'Day", subtitle: "Set up your workspace")
-            case .empty:
-                message(title: "No floater tasks", subtitle: "Add a floater")
-            case .tasks:
-                taskContent
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .widgetURL(URL(string: "tday://floater"))
-        .containerBackground(for: .widget) {
-            widgetBackground
-        }
-    }
-
-    private var spacing: CGFloat {
-        switch family {
-        case .systemSmall:
-            return 7
-        case .systemLarge:
-            return 10
-        default:
-            return 9
-        }
-    }
-
-    private var accentColor: Color {
-        renderingMode == .fullColor ? .tdayFloaterGreen : .primary
-    }
-
-    private var secondaryTextColor: Color {
-        renderingMode == .fullColor ? .secondary : .primary.opacity(0.72)
-    }
-
-    private var widgetBackground: some View {
-        (colorScheme == .dark ? Color.tdayDarkSurface : Color.tdayLightSurface)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0))
-                    .frame(height: 3)
-            }
-    }
-
-    private var header: some View {
-        HStack(spacing: 8) {
-            if family == .systemSmall {
-                smallCountLabel
-            } else {
-                Text(entry.title)
-                    .font(.system(.headline, design: .rounded, weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-
-                Text(countText)
-                    .font(.system(.caption, design: .rounded, weight: .heavy))
-                    .foregroundStyle(accentColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .widgetAccentable()
-            }
-
-            Spacer(minLength: 4)
-
-            Link(destination: URL(string: "tday://todos/create?target=floater")!) {
-                Text("+")
-                    .font(.system(size: 24, weight: .heavy, design: .rounded))
-                    .foregroundStyle(accentColor)
-                    .frame(width: 44, height: 44)
-                    .background(addButtonBackground)
-                    .contentShape(Rectangle())
-                    .widgetAccentable()
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Add floater task")
-        }
-        .frame(minHeight: 44)
-    }
-
-    private var smallCountLabel: some View {
-        VStack(alignment: .leading, spacing: -2) {
-            Text("\(entry.taskCount)")
-                .font(.system(.title, design: .rounded, weight: .heavy))
-                .foregroundStyle(accentColor)
-                .lineLimit(1)
-                .widgetAccentable()
-            Text("open")
-                .font(.system(.caption2, design: .rounded, weight: .heavy))
-                .foregroundStyle(secondaryTextColor)
-                .lineLimit(1)
-        }
-        .accessibilityLabel(countText)
-    }
-
-    private var countText: String {
-        "\(entry.taskCount) open"
-    }
-
-    private var addButtonBackground: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0.10))
-    }
-
-    @ViewBuilder
-    private var taskContent: some View {
-        GeometryReader { proxy in
-            taskListContent(availableHeight: proxy.size.height)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-    }
-
-    @ViewBuilder
-    private func taskListContent(availableHeight: CGFloat) -> some View {
-        let rowCapacity = visibleRowCapacity(for: availableHeight)
-        let totalCount = max(entry.taskCount, entry.tasks.count)
-        let hasOverflow = totalCount > rowCapacity || entry.tasks.count < totalCount
-        let visibleCapacity = hasOverflow && rowCapacity > 1 ? rowCapacity - 1 : rowCapacity
-        let visibleCount = min(visibleCapacity, entry.tasks.count)
-        let overflowCount = max(0, totalCount - visibleCount)
-
-        VStack(alignment: .leading, spacing: taskRowSpacing) {
-            ForEach(entry.tasks.prefix(visibleCount)) { task in
-                taskRow(task)
-            }
-            if overflowCount > 0 && rowCapacity > 1 {
-                overflowRow(count: overflowCount)
-            }
-        }
-    }
-
-    private func message(title: String, subtitle: String) -> some View {
-        VStack(alignment: .center, spacing: family == .systemSmall ? 3 : 4) {
-            Text(title)
-                .font(.system(family == .systemLarge ? .headline : .subheadline, design: .rounded, weight: .bold))
-                .lineLimit(2)
-            if family != .systemSmall {
-                Text(subtitle)
-                    .font(.system(.caption, design: .rounded, weight: .bold))
-                    .foregroundStyle(secondaryTextColor)
-                    .lineLimit(2)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .multilineTextAlignment(.center)
-    }
-
-    private func taskRow(_ task: FloaterTaskSnapshot) -> some View {
-        HStack(spacing: 7) {
-            priorityDot(task.priority, size: 7)
-            Text(task.title)
-                .font(.system(.caption, design: .rounded, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-            Spacer(minLength: 4)
-        }
-        .foregroundStyle(.primary)
-        .frame(height: taskRowHeight)
-        .accessibilityLabel(task.title)
-    }
-
-    private func overflowRow(count: Int) -> some View {
-        Text("+\(count) more")
-            .font(.system(.caption2, design: .rounded, weight: .heavy))
-            .foregroundStyle(accentColor)
-            .lineLimit(1)
-            .widgetAccentable()
-            .frame(height: taskRowHeight, alignment: .leading)
-    }
-
-    private func priorityDot(_ priority: String, size: CGFloat) -> some View {
-        Circle()
-            .fill(priorityColor(for: priority))
-            .frame(width: size, height: size)
-            .widgetAccentable()
-    }
-
-    private func priorityColor(for priority: String) -> Color {
-        guard renderingMode == .fullColor else {
-            return accentColor
-        }
-
-        switch priority.lowercased() {
-        case "high":
-            return .tdayPriorityHigh
-        case "medium":
-            return .tdayPriorityMedium
-        default:
-            return .tdayPriorityLow
-        }
-    }
-
-    private var taskRowHeight: CGFloat {
-        switch family {
-        case .systemSmall:
-            return 24
-        case .systemLarge:
-            return 25
-        default:
-            return 22
-        }
-    }
-
-    private var taskRowSpacing: CGFloat {
-        switch family {
-        case .systemSmall:
-            return 4
-        case .systemLarge:
-            return 8
-        default:
-            return 6
-        }
-    }
-
-    private func visibleRowCapacity(for height: CGFloat) -> Int {
-        let rowStride = taskRowHeight + taskRowSpacing
-        guard rowStride > 0 else {
-            return 1
-        }
-        return max(1, Int((height + taskRowSpacing) / rowStride))
+        TdayTasksWidgetContent(
+            title: entry.title,
+            status: TaskWidgetStatus(entry.status),
+            taskCount: entry.taskCount,
+            rows: entry.tasks.map {
+                WidgetTaskRowModel(
+                    id: $0.id,
+                    title: $0.title,
+                    priority: $0.priority,
+                    dueEpochMs: nil
+                )
+            },
+            mode: .floater
+        )
     }
 }
 
@@ -795,6 +774,12 @@ private extension Color {
     static let tdayFloaterGreen = Color(red: 77.0 / 255.0, green: 143.0 / 255.0, blue: 131.0 / 255.0)
     static let tdayLightSurface = Color.white
     static let tdayDarkSurface = Color(red: 0.09, green: 0.10, blue: 0.13)
+    static let tdayTodayFeatureWash = Color(red: 243.0 / 255.0, green: 249.0 / 255.0, blue: 1.0)
+    static let tdayFloaterFeatureWash = Color(red: 240.0 / 255.0, green: 248.0 / 255.0, blue: 245.0 / 255.0)
+    static let tdayDueChipBackground = Color(red: 241.0 / 255.0, green: 244.0 / 255.0, blue: 249.0 / 255.0)
+    static let tdayTodayFeatureWashDark = Color(red: 0.09, green: 0.14, blue: 0.20)
+    static let tdayFloaterFeatureWashDark = Color(red: 0.08, green: 0.17, blue: 0.15)
+    static let tdayDueChipBackgroundDark = Color(red: 0.13, green: 0.15, blue: 0.21)
     static let tdayPriorityHigh = Color(red: 0.89, green: 0.49, blue: 0.49)
     static let tdayPriorityMedium = Color(red: 0.87, green: 0.70, blue: 0.49)
     static let tdayPriorityLow = Color(red: 0.00, green: 0.48, blue: 1.00)
