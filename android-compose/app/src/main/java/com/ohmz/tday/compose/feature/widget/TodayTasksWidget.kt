@@ -17,15 +17,24 @@ import com.ohmz.tday.compose.core.data.AppDataMode
 import dagger.hilt.android.EntryPointAccessors
 import java.text.DateFormat
 import java.time.Instant
+import java.time.LocalTime
 import java.util.Date
 import java.util.Locale
 
-private val TodayWidgetVisuals = TaskWidgetVisuals(
-    addButtonBackground = R.drawable.widget_add_button_background,
-    addIcon = R.drawable.widget_add_icon_today,
-    emptyWatermark = R.drawable.widget_empty_watermark_today,
-    setupWatermark = R.drawable.widget_empty_watermark_today,
-)
+private fun todayWidgetVisuals(isDaytime: Boolean): TaskWidgetVisuals {
+    val watermark = if (isDaytime) {
+        R.drawable.widget_empty_watermark_today
+    } else {
+        R.drawable.widget_empty_watermark_today_night
+    }
+
+    return TaskWidgetVisuals(
+        addButtonBackground = R.drawable.widget_add_button_background,
+        addIcon = R.drawable.widget_add_icon_today,
+        emptyWatermark = watermark,
+        setupWatermark = watermark,
+    )
+}
 
 class TodayTasksWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Responsive(TaskWidgetResponsiveSizes)
@@ -43,14 +52,13 @@ class TodayTasksWidget : GlanceAppWidget() {
             title = context.getString(R.string.widget_today_tasks_title),
             workspaceConfigured = secureConfigStore.getAppDataMode() != AppDataMode.UNSET,
         )
+        val visuals = todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
         val strings = TodayTasksWidgetStrings(
             emptyMessage = context.getString(R.string.widget_today_tasks_empty),
             setupTitle = context.getString(R.string.widget_today_tasks_setup_title),
             setupMessage = context.getString(R.string.widget_today_tasks_setup_message),
             addTaskLabel = context.getString(R.string.widget_today_tasks_add),
             countLabelFormat = context.getString(R.string.widget_today_tasks_count),
-            moreLabelFormat = context.getString(R.string.widget_today_tasks_more),
-            moreInAppLabelFormat = context.getString(R.string.widget_tasks_more_in_tday),
         )
 
         provideContent {
@@ -72,10 +80,7 @@ class TodayTasksWidget : GlanceAppWidget() {
                             trailingText = task.dueEpochMs?.let(::dueTimeText),
                         )
                     },
-                    overflowCount = model.overflowCount,
-                    overflowLabel = strings.moreLabelFormat,
-                    terminalOverflowLabel = strings.moreInAppLabelFormat,
-                    visuals = TodayWidgetVisuals,
+                    visuals = visuals,
                     openAction = openAppAction(),
                     addAction = openCreateTodayAction(),
                 )
@@ -90,8 +95,6 @@ private data class TodayTasksWidgetStrings(
     val setupMessage: String,
     val addTaskLabel: String,
     val countLabelFormat: String,
-    val moreLabelFormat: String,
-    val moreInAppLabelFormat: String,
 )
 
 private fun TodayTasksWidgetStatus.toContentState(): TaskWidgetContentState {

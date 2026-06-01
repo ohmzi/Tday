@@ -46,8 +46,6 @@ class FloaterTasksWidget : GlanceAppWidget() {
             setupMessage = context.getString(R.string.widget_today_tasks_setup_message),
             addTaskLabel = context.getString(R.string.widget_floater_tasks_add),
             countLabelFormat = context.getString(R.string.widget_floater_tasks_count),
-            moreLabelFormat = context.getString(R.string.widget_today_tasks_more),
-            moreInAppLabelFormat = context.getString(R.string.widget_tasks_more_in_tday),
         )
 
         provideContent {
@@ -68,9 +66,6 @@ class FloaterTasksWidget : GlanceAppWidget() {
                             priority = task.priority,
                         )
                     },
-                    overflowCount = model.overflowCount,
-                    overflowLabel = strings.moreLabelFormat,
-                    terminalOverflowLabel = strings.moreInAppLabelFormat,
                     visuals = FloaterWidgetVisuals,
                     openAction = openFloaterAction(),
                     addAction = openCreateFloaterAction(),
@@ -86,8 +81,6 @@ private data class FloaterTasksWidgetStrings(
     val setupMessage: String,
     val addTaskLabel: String,
     val countLabelFormat: String,
-    val moreLabelFormat: String,
-    val moreInAppLabelFormat: String,
 )
 
 private fun FloaterTasksWidgetStatus.toContentState(): TaskWidgetContentState {
