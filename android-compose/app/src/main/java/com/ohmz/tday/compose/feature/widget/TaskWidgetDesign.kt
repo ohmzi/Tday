@@ -1,6 +1,5 @@
 package com.ohmz.tday.compose.feature.widget
 
-import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -31,7 +30,6 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.ohmz.tday.compose.R
 import java.util.Locale
 
@@ -50,13 +48,16 @@ internal enum class TaskWidgetLayout {
     TALL,
 }
 
+internal val TaskWidgetResponsiveSizes = setOf(
+    DpSize(150.dp, 110.dp),
+    DpSize(250.dp, 126.dp),
+    DpSize(250.dp, 140.dp),
+    DpSize(250.dp, 220.dp),
+)
+
 internal data class TaskWidgetVisuals(
-    val accentColor: ColorProvider,
-    val accentWash: ColorProvider,
-    val countPillBackground: Int,
     val addButtonBackground: Int,
     val addIcon: Int,
-    val featuredRowBackground: Int,
 )
 
 internal data class TaskWidgetRow(
@@ -72,7 +73,6 @@ internal fun TaskWidgetContent(
     state: TaskWidgetContentState,
     taskCount: Int,
     countLabel: String,
-    countUnit: String,
     setupTitle: String,
     setupMessage: String,
     emptyTitle: String,
@@ -93,13 +93,6 @@ internal fun TaskWidgetContent(
             .background(ImageProvider(R.drawable.widget_preview_background))
             .clickable(openAction),
     ) {
-        Box(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .height(3.dp)
-                .background(visuals.accentWash),
-        ) {}
-
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
@@ -112,9 +105,7 @@ internal fun TaskWidgetContent(
         ) {
             TaskWidgetHeader(
                 title = title,
-                count = taskCount,
                 countLabel = countLabel,
-                countUnit = countUnit,
                 layout = layout,
                 metrics = metrics,
                 visuals = visuals,
@@ -128,7 +119,6 @@ internal fun TaskWidgetContent(
                     title = setupTitle,
                     message = setupMessage,
                     compact = layout == TaskWidgetLayout.COMPACT,
-                    visuals = visuals,
                     openAction = openAction,
                 )
 
@@ -136,7 +126,6 @@ internal fun TaskWidgetContent(
                     title = emptyTitle,
                     message = emptyMessage,
                     compact = layout == TaskWidgetLayout.COMPACT,
-                    visuals = visuals,
                     openAction = openAction,
                 )
 
@@ -146,7 +135,6 @@ internal fun TaskWidgetContent(
                     overflowLabel = overflowLabel,
                     layout = layout,
                     metrics = metrics,
-                    visuals = visuals,
                     openAction = openAction,
                     modifier = GlanceModifier
                         .fillMaxWidth()
@@ -160,9 +148,7 @@ internal fun TaskWidgetContent(
 @Composable
 private fun TaskWidgetHeader(
     title: String,
-    count: Int,
     countLabel: String,
-    countUnit: String,
     layout: TaskWidgetLayout,
     metrics: TaskWidgetMetrics,
     visuals: TaskWidgetVisuals,
@@ -176,9 +162,7 @@ private fun TaskWidgetHeader(
     ) {
         if (layout == TaskWidgetLayout.COMPACT) {
             CompactCountLockup(
-                count = count,
-                countUnit = countUnit,
-                visuals = visuals,
+                countLabel = countLabel,
                 modifier = GlanceModifier.defaultWeight(),
             )
         } else {
@@ -196,7 +180,6 @@ private fun TaskWidgetHeader(
             Spacer(modifier = GlanceModifier.width(8.dp))
             CountPill(
                 label = countLabel,
-                visuals = visuals,
             )
         }
 
@@ -211,30 +194,19 @@ private fun TaskWidgetHeader(
 
 @Composable
 private fun CompactCountLockup(
-    count: Int,
-    countUnit: String,
-    visuals: TaskWidgetVisuals,
+    countLabel: String,
     modifier: GlanceModifier = GlanceModifier,
 ) {
-    Column(
+    Box(
         modifier = modifier,
+        contentAlignment = Alignment.CenterStart,
     ) {
         Text(
-            text = count.toString(),
-            style = TextStyle(
-                color = visuals.accentColor,
-                fontFamily = TdayWidgetFontFamily,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
-            ),
-            maxLines = 1,
-        )
-        Text(
-            text = countUnit,
+            text = countLabel,
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
                 fontFamily = TdayWidgetFontFamily,
-                fontSize = 11.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
             ),
             maxLines = 1,
@@ -245,16 +217,14 @@ private fun CompactCountLockup(
 @Composable
 private fun CountPill(
     label: String,
-    visuals: TaskWidgetVisuals,
 ) {
     Text(
         modifier = GlanceModifier
             .height(26.dp)
-            .background(ImageProvider(visuals.countPillBackground))
             .padding(start = 10.dp, end = 10.dp),
         text = label,
         style = TextStyle(
-            color = visuals.accentColor,
+            color = GlanceTheme.colors.onSurfaceVariant,
             fontFamily = TdayWidgetFontFamily,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
@@ -290,7 +260,6 @@ private fun TaskWidgetMessage(
     title: String,
     message: String,
     compact: Boolean,
-    visuals: TaskWidgetVisuals,
     openAction: Action,
 ) {
     Box(
@@ -303,13 +272,6 @@ private fun TaskWidgetMessage(
             modifier = GlanceModifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                modifier = GlanceModifier
-                    .width(if (compact) 28.dp else 34.dp)
-                    .height(3.dp)
-                    .background(visuals.accentWash),
-            ) {}
-            Spacer(modifier = GlanceModifier.height(if (compact) 6.dp else 8.dp))
             Text(
                 text = title,
                 style = TextStyle(
@@ -346,7 +308,6 @@ private fun TaskWidgetList(
     overflowLabel: String,
     layout: TaskWidgetLayout,
     metrics: TaskWidgetMetrics,
-    visuals: TaskWidgetVisuals,
     openAction: Action,
     modifier: GlanceModifier = GlanceModifier,
 ) {
@@ -363,8 +324,6 @@ private fun TaskWidgetList(
                 row = row,
                 layout = layout,
                 metrics = metrics,
-                visuals = visuals,
-                featured = layout == TaskWidgetLayout.TALL && index == 0,
                 openAction = openAction,
             )
             if (index < visibleRows.lastIndex || hiddenCount > 0) {
@@ -375,54 +334,43 @@ private fun TaskWidgetList(
             OverflowRow(
                 label = String.format(Locale.getDefault(), overflowLabel, hiddenCount),
                 metrics = metrics,
-                visuals = visuals,
                 openAction = openAction,
             )
         }
     }
 }
 
-@SuppressLint("RestrictedApi")
 @Composable
 private fun TaskWidgetRow(
     row: TaskWidgetRow,
     layout: TaskWidgetLayout,
     metrics: TaskWidgetMetrics,
-    visuals: TaskWidgetVisuals,
-    featured: Boolean,
     openAction: Action,
 ) {
-    var modifier = GlanceModifier
+    val modifier = GlanceModifier
         .fillMaxWidth()
-        .height(if (featured) metrics.featuredRowHeight else metrics.rowHeight)
+        .height(metrics.rowHeight)
         .clickable(openAction)
-
-    modifier = if (featured) {
-        modifier
-            .background(ImageProvider(visuals.featuredRowBackground))
-            .padding(start = 9.dp, end = 9.dp)
-    } else {
-        modifier.padding(start = 2.dp, end = 2.dp)
-    }
+        .padding(start = 2.dp, end = 2.dp)
 
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PriorityDot(priority = row.priority, size = if (featured) 8.dp else 7.dp)
-        Spacer(modifier = GlanceModifier.width(if (featured) 8.dp else 7.dp))
+        PriorityDot(size = 7.dp)
+        Spacer(modifier = GlanceModifier.width(7.dp))
         Text(
             modifier = GlanceModifier.defaultWeight(),
             text = row.title,
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontFamily = TdayWidgetFontFamily,
-                fontSize = if (featured) 13.sp else metrics.rowFontSize,
+                fontSize = metrics.rowFontSize,
                 fontWeight = FontWeight.Bold,
             ),
             maxLines = 1,
         )
-        if (layout != TaskWidgetLayout.COMPACT && row.trailingText != null) {
+        if (taskWidgetShowsTrailingText(layout) && row.trailingText != null) {
             Spacer(modifier = GlanceModifier.width(6.dp))
             TimeChip(text = row.trailingText)
         }
@@ -434,7 +382,6 @@ private fun TimeChip(text: String) {
     Text(
         modifier = GlanceModifier
             .height(22.dp)
-            .background(ImageProvider(R.drawable.widget_due_time_chip_background))
             .padding(start = 7.dp, end = 7.dp),
         text = text,
         style = TextStyle(
@@ -452,7 +399,6 @@ private fun TimeChip(text: String) {
 private fun OverflowRow(
     label: String,
     metrics: TaskWidgetMetrics,
-    visuals: TaskWidgetVisuals,
     openAction: Action,
 ) {
     Row(
@@ -466,7 +412,7 @@ private fun OverflowRow(
         Text(
             text = label,
             style = TextStyle(
-                color = visuals.accentColor,
+                color = GlanceTheme.colors.onSurfaceVariant,
                 fontFamily = TdayWidgetFontFamily,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -477,42 +423,37 @@ private fun OverflowRow(
 }
 
 @Composable
-private fun PriorityDot(priority: String, size: Dp) {
+private fun PriorityDot(size: Dp) {
     Image(
-        provider = ImageProvider(priorityDotResource(priority)),
+        provider = ImageProvider(R.drawable.widget_priority_dot_neutral),
         contentDescription = null,
         modifier = GlanceModifier.size(size),
     )
 }
 
-private fun priorityDotResource(priority: String): Int {
-    return when (priority.trim().lowercase(Locale.getDefault())) {
-        "high", "urgent", "important" -> R.drawable.widget_priority_dot_high
-        "medium" -> R.drawable.widget_priority_dot_medium
-        else -> R.drawable.widget_priority_dot_low
-    }
-}
-
 internal fun taskWidgetLayoutFor(size: DpSize): TaskWidgetLayout {
     return when {
-        size.height >= 210.dp -> TaskWidgetLayout.TALL
-        size.height >= 150.dp -> TaskWidgetLayout.MEDIUM
+        size.height >= 208.dp -> TaskWidgetLayout.TALL
+        size.height >= 140.dp -> TaskWidgetLayout.MEDIUM
         size.width >= 220.dp -> TaskWidgetLayout.WIDE
         else -> TaskWidgetLayout.COMPACT
     }
+}
+
+internal fun taskWidgetShowsTrailingText(layout: TaskWidgetLayout): Boolean {
+    return layout == TaskWidgetLayout.MEDIUM || layout == TaskWidgetLayout.TALL
 }
 
 private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
     return when (layout) {
         TaskWidgetLayout.COMPACT -> TaskWidgetMetrics(
             horizontalPadding = 13.dp,
-            topPadding = 6.dp,
-            bottomPadding = 7.dp,
-            headerHeight = 40.dp,
+            topPadding = 5.dp,
+            bottomPadding = 6.dp,
+            headerHeight = 44.dp,
             addButtonSize = 42.dp,
             contentSpacing = 4.dp,
             rowHeight = 22.dp,
-            featuredRowHeight = 22.dp,
             rowSpacing = 2.dp,
             rowFontSize = 12.sp,
             visibleRowCapacity = 2,
@@ -522,11 +463,10 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             horizontalPadding = 14.dp,
             topPadding = 6.dp,
             bottomPadding = 7.dp,
-            headerHeight = 42.dp,
+            headerHeight = 44.dp,
             addButtonSize = 44.dp,
             contentSpacing = 5.dp,
             rowHeight = 23.dp,
-            featuredRowHeight = 23.dp,
             rowSpacing = 2.dp,
             rowFontSize = 12.sp,
             visibleRowCapacity = 2,
@@ -534,27 +474,25 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
 
         TaskWidgetLayout.MEDIUM -> TaskWidgetMetrics(
             horizontalPadding = 14.dp,
-            topPadding = 8.dp,
-            bottomPadding = 8.dp,
+            topPadding = 6.dp,
+            bottomPadding = 7.dp,
             headerHeight = 44.dp,
-            addButtonSize = 46.dp,
-            contentSpacing = 6.dp,
-            rowHeight = 25.dp,
-            featuredRowHeight = 25.dp,
-            rowSpacing = 3.dp,
+            addButtonSize = 44.dp,
+            contentSpacing = 5.dp,
+            rowHeight = 22.dp,
+            rowSpacing = 2.dp,
             rowFontSize = 12.sp,
             visibleRowCapacity = 3,
         )
 
         TaskWidgetLayout.TALL -> TaskWidgetMetrics(
             horizontalPadding = 14.dp,
-            topPadding = 9.dp,
-            bottomPadding = 10.dp,
-            headerHeight = 46.dp,
+            topPadding = 8.dp,
+            bottomPadding = 9.dp,
+            headerHeight = 48.dp,
             addButtonSize = 48.dp,
-            contentSpacing = 8.dp,
-            rowHeight = 26.dp,
-            featuredRowHeight = 34.dp,
+            contentSpacing = 7.dp,
+            rowHeight = 25.dp,
             rowSpacing = 3.dp,
             rowFontSize = 13.sp,
             visibleRowCapacity = 5,
@@ -570,7 +508,6 @@ private data class TaskWidgetMetrics(
     val addButtonSize: Dp,
     val contentSpacing: Dp,
     val rowHeight: Dp,
-    val featuredRowHeight: Dp,
     val rowSpacing: Dp,
     val rowFontSize: TextUnit,
     val visibleRowCapacity: Int,
