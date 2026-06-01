@@ -4,15 +4,12 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceTheme
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
-import androidx.glance.unit.ColorProvider
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
@@ -24,23 +21,12 @@ import java.util.Date
 import java.util.Locale
 
 private val TodayWidgetVisuals = TaskWidgetVisuals(
-    accentColor = ColorProvider(R.color.tday_widget_today_accent),
-    accentWash = ColorProvider(R.color.tday_widget_accent_wash),
-    countPillBackground = R.drawable.widget_today_count_pill_background,
     addButtonBackground = R.drawable.widget_add_button_background,
     addIcon = R.drawable.widget_add_icon_today,
-    featuredRowBackground = R.drawable.widget_today_feature_row_background,
 )
 
 class TodayTasksWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Responsive(
-        setOf(
-            DpSize(150.dp, 110.dp),
-            DpSize(250.dp, 110.dp),
-            DpSize(250.dp, 160.dp),
-            DpSize(250.dp, 220.dp),
-        ),
-    )
+    override val sizeMode: SizeMode = SizeMode.Responsive(TaskWidgetResponsiveSizes)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryPoint = EntryPointAccessors.fromApplication(
@@ -60,7 +46,6 @@ class TodayTasksWidget : GlanceAppWidget() {
             setupTitle = context.getString(R.string.widget_today_tasks_setup_title),
             setupMessage = context.getString(R.string.widget_today_tasks_setup_message),
             addTaskLabel = context.getString(R.string.widget_today_tasks_add),
-            countUnit = context.getString(R.string.widget_today_tasks_count_unit),
             countLabelFormat = context.getString(R.string.widget_today_tasks_count),
             moreLabelFormat = context.getString(R.string.widget_today_tasks_more),
         )
@@ -72,7 +57,6 @@ class TodayTasksWidget : GlanceAppWidget() {
                     state = model.status.toContentState(),
                     taskCount = model.taskCount,
                     countLabel = strings.countLabel(model.taskCount),
-                    countUnit = strings.countUnit,
                     setupTitle = strings.setupTitle,
                     setupMessage = strings.setupMessage,
                     emptyTitle = strings.emptyMessage,
@@ -101,7 +85,6 @@ private data class TodayTasksWidgetStrings(
     val setupTitle: String,
     val setupMessage: String,
     val addTaskLabel: String,
-    val countUnit: String,
     val countLabelFormat: String,
     val moreLabelFormat: String,
 )

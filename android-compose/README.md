@@ -111,14 +111,15 @@ of these widget surfaces.
   stretched or compressed.
 - Static picker previews use RemoteViews-compatible XML, and Android 15+ generated previews are
   published from `TodayTasksWidgetPreviewPublisher` when the app starts.
-- Medium and large layouts show the title, a compact count pill, a native plus icon add target,
-  and dense scan-first rows; compact layouts stay count-first and prioritize task titles over
-  due-time detail.
+- Medium and large layouts show the title, neutral count text, a mode-accented native plus icon add
+  target, and dense scan-first rows; compact layouts stay count-first and prioritize task titles
+  over due-time detail. The short wide bucket also suppresses due-time chips so resized widgets keep
+  long task titles readable.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
 - Task layouts render a fixed size-specific row set as the widget crosses compact, wide, medium, and
   tall responsive buckets. Compact widgets show the highest-value row plus overflow, medium widgets
-  show a short readable set, and large widgets subtly emphasize the first task before the remaining
-  rows. Hidden tasks surface as the final `+N more` row.
+  show two rows plus overflow when more tasks remain, and large widgets show a fuller neutral list.
+  Hidden tasks surface as the final `+N more` row.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater` through a dedicated translucent widget-create activity that
   hosts the matching in-app create-task sheet directly over the launcher with the title field
@@ -127,8 +128,8 @@ of these widget surfaces.
   optimistic writes update the widget without waiting for a server sync path.
 
 Keep future widget work responsive across compact, wide, and tall sizes, preserve large add/content
-tap targets, and prefer system widget bounds, dynamic color, and Material/Glance idioms over custom
-chrome.
+tap targets, reserve Today/Floater accent treatment for the plus add button, and prefer system
+widget bounds, dynamic color, and Material/Glance idioms over custom chrome.
 
 ## Mobile Parity
 

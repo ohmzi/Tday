@@ -5,21 +5,14 @@
     android:background="@drawable/widget_preview_background"
     android:orientation="vertical">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="3dp"
-        android:background="@drawable/widget_floater_preview_accent_strip"
-        android:includeFontPadding="false"
-        android:text="" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:paddingStart="14dp"
-        android:paddingTop="8dp"
+        android:paddingTop="6dp"
         android:paddingEnd="14dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="7dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -43,7 +36,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="26dp"
-                android:background="@drawable/widget_floater_count_pill_background"
                 android:fontFamily="@font/nunito_app"
                 android:gravity="center"
                 android:includeFontPadding="false"
@@ -51,13 +43,13 @@
                 android:paddingStart="10dp"
                 android:paddingEnd="10dp"
                 android:text="6 open"
-                android:textColor="@color/tday_widget_floater_accent"
+                android:textColor="@color/tday_widget_on_surface_variant"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
             <FrameLayout
-                android:layout_width="46dp"
-                android:layout_height="46dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:layout_marginStart="10dp"
                 android:background="@drawable/widget_floater_add_button_background">
 
@@ -72,13 +64,13 @@
 
         <TextView
             android:layout_width="1dp"
-            android:layout_height="6dp"
+            android:layout_height="5dp"
             android:includeFontPadding="false"
             android:text="" />
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="25dp"
+            android:layout_height="22dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="2dp"
@@ -88,7 +80,7 @@
                 android:layout_width="7dp"
                 android:layout_height="7dp"
                 android:contentDescription="@null"
-                android:src="@drawable/widget_priority_dot_high" />
+                android:src="@drawable/widget_priority_dot_neutral" />
 
             <TextView
                 android:layout_width="0dp"
@@ -105,9 +97,50 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
+        <TextView
+            android:layout_width="1dp"
+            android:layout_height="2dp"
+            android:includeFontPadding="false"
+            android:text="" />
+
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="25dp"
+            android:layout_height="22dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
+
+            <ImageView
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:contentDescription="@null"
+                android:src="@drawable/widget_priority_dot_neutral" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_app"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="Queue reading"
+                android:textColor="@color/tday_widget_on_surface"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="1dp"
+            android:layout_height="2dp"
+            android:includeFontPadding="false"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="22dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="16dp"
@@ -118,8 +151,8 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/nunito_app"
                 android:includeFontPadding="false"
-                android:text="+5 more"
-                android:textColor="@color/tday_widget_floater_accent"
+                android:text="+4 more"
+                android:textColor="@color/tday_widget_on_surface_variant"
                 android:textSize="11sp"
                 android:textStyle="bold" />
         </LinearLayout>

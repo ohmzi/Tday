@@ -269,17 +269,6 @@ private enum TaskWidgetMode {
         }
     }
 
-    func featuredRowColor(renderingMode: WidgetRenderingMode, colorScheme: ColorScheme) -> Color {
-        guard renderingMode == .fullColor else {
-            return .primary.opacity(0.08)
-        }
-        switch self {
-        case .today:
-            return colorScheme == .dark ? .tdayTodayFeatureWashDark : .tdayTodayFeatureWash
-        case .floater:
-            return colorScheme == .dark ? .tdayFloaterFeatureWashDark : .tdayFloaterFeatureWash
-        }
-    }
 }
 
 private struct TdayTasksWidgetContent: View {
@@ -330,12 +319,7 @@ private struct TdayTasksWidgetContent: View {
     }
 
     private var widgetBackground: some View {
-        (colorScheme == .dark ? Color.tdayDarkSurface : Color.tdayLightSurface)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0))
-                    .frame(height: 3)
-            }
+        colorScheme == .dark ? Color.tdayDarkSurface : Color.tdayLightSurface
     }
 
     private var header: some View {
@@ -358,30 +342,22 @@ private struct TdayTasksWidgetContent: View {
     }
 
     private var smallCountLabel: some View {
-        VStack(alignment: .leading, spacing: -1) {
-            Text("\(taskCount)")
-                .font(.system(size: 28, weight: .heavy, design: .rounded))
-                .foregroundStyle(accentColor)
-                .lineLimit(1)
-                .widgetAccentable()
-            Text(mode.countUnit)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(secondaryTextColor)
-                .lineLimit(1)
-        }
-        .accessibilityLabel(countText)
+        Text(countText)
+            .font(.system(size: 18, weight: .heavy, design: .rounded))
+            .foregroundStyle(secondaryTextColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .accessibilityLabel(countText)
     }
 
     private var countPill: some View {
         Text(countText)
             .font(.system(size: 12, weight: .heavy, design: .rounded))
-            .foregroundStyle(accentColor)
+            .foregroundStyle(secondaryTextColor)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 2)
             .frame(height: 26)
-            .background(Capsule().fill(accentColor.opacity(renderingMode == .fullColor ? 0.14 : 0.10)))
-            .widgetAccentable()
     }
 
     private var addButton: some View {
@@ -410,8 +386,8 @@ private struct TdayTasksWidgetContent: View {
         let overflowCount = max(0, totalCount - visibleRows.count)
 
         return VStack(alignment: .leading, spacing: metrics.rowSpacing) {
-            ForEach(Array(visibleRows.enumerated()), id: \.element.id) { index, row in
-                taskRow(row, featured: family == .systemLarge && index == 0)
+            ForEach(visibleRows) { row in
+                taskRow(row)
             }
             if overflowCount > 0 && rowCapacity > 1 {
                 overflowRow(count: overflowCount)
@@ -422,11 +398,6 @@ private struct TdayTasksWidgetContent: View {
 
     private func message(title: String, subtitle: String) -> some View {
         VStack(alignment: .center, spacing: family == .systemSmall ? 6 : 8) {
-            Capsule()
-                .fill(accentColor.opacity(renderingMode == .fullColor ? 0.18 : 0.10))
-                .frame(width: family == .systemSmall ? 28 : 34, height: 3)
-                .widgetAccentable()
-
             Text(title)
                 .font(.system(size: family == .systemLarge ? 17 : 15, weight: .bold, design: .rounded))
                 .lineLimit(family == .systemSmall ? 1 : 2)
@@ -444,11 +415,11 @@ private struct TdayTasksWidgetContent: View {
         .multilineTextAlignment(.center)
     }
 
-    private func taskRow(_ row: WidgetTaskRowModel, featured: Bool) -> some View {
-        HStack(spacing: featured ? 8 : 7) {
-            priorityDot(row.priority, size: featured ? 8 : 7)
+    private func taskRow(_ row: WidgetTaskRowModel) -> some View {
+        HStack(spacing: 7) {
+            priorityDot(size: 7)
             Text(row.title)
-                .font(.system(size: featured ? 13 : metrics.rowFontSize, weight: .bold, design: .rounded))
+                .font(.system(size: metrics.rowFontSize, weight: .bold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
             Spacer(minLength: 4)
@@ -457,14 +428,8 @@ private struct TdayTasksWidgetContent: View {
             }
         }
         .foregroundStyle(.primary)
-        .padding(.horizontal, featured ? 9 : 2)
-        .frame(height: featured ? metrics.featuredRowHeight : metrics.rowHeight)
-        .background {
-            if featured {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(mode.featuredRowColor(renderingMode: renderingMode, colorScheme: colorScheme))
-            }
-        }
+        .padding(.horizontal, 2)
+        .frame(height: metrics.rowHeight)
         .accessibilityLabel(accessibilityLabel(for: row))
     }
 
@@ -474,46 +439,23 @@ private struct TdayTasksWidgetContent: View {
             .foregroundStyle(secondaryTextColor)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
-            .padding(.horizontal, 7)
+            .padding(.horizontal, 2)
             .frame(height: 22)
-            .background(
-                Capsule().fill(
-                    (colorScheme == .dark ? Color.tdayDueChipBackgroundDark : Color.tdayDueChipBackground)
-                        .opacity(renderingMode == .fullColor ? 1 : 0.12)
-                )
-            )
     }
 
     private func overflowRow(count: Int) -> some View {
         Text("+\(count) more")
             .font(.system(size: 11, weight: .heavy, design: .rounded))
-            .foregroundStyle(accentColor)
+            .foregroundStyle(secondaryTextColor)
             .lineLimit(1)
-            .widgetAccentable()
             .padding(.leading, 16)
             .frame(height: metrics.rowHeight, alignment: .leading)
     }
 
-    private func priorityDot(_ priority: String, size: CGFloat) -> some View {
+    private func priorityDot(size: CGFloat) -> some View {
         Circle()
-            .fill(priorityColor(for: priority))
+            .fill(secondaryTextColor.opacity(0.75))
             .frame(width: size, height: size)
-            .widgetAccentable()
-    }
-
-    private func priorityColor(for priority: String) -> Color {
-        guard renderingMode == .fullColor else {
-            return accentColor
-        }
-
-        switch priority.lowercased() {
-        case "high", "urgent", "important":
-            return .tdayPriorityHigh
-        case "medium":
-            return .tdayPriorityMedium
-        default:
-            return .tdayPriorityLow
-        }
     }
 
     private func accessibilityLabel(for row: WidgetTaskRowModel) -> String {
@@ -535,7 +477,6 @@ private struct WidgetLayoutMetrics {
     let addButtonSize: CGFloat
     let addButtonCornerRadius: CGFloat
     let rowHeight: CGFloat
-    let featuredRowHeight: CGFloat
     let rowSpacing: CGFloat
     let rowFontSize: CGFloat
     let visibleRowCapacity: Int
@@ -543,33 +484,30 @@ private struct WidgetLayoutMetrics {
     init(family: WidgetFamily) {
         switch family {
         case .systemSmall:
-            contentSpacing = 6
-            headerHeight = 40
-            addButtonSize = 40
+            contentSpacing = 5
+            headerHeight = 38
+            addButtonSize = 38
             addButtonCornerRadius = 12
-            rowHeight = 22
-            featuredRowHeight = 22
-            rowSpacing = 3
+            rowHeight = 21
+            rowSpacing = 2
             rowFontSize = 12
             visibleRowCapacity = 2
         case .systemLarge:
-            contentSpacing = 10
-            headerHeight = 46
+            contentSpacing = 8
+            headerHeight = 45
             addButtonSize = 46
             addButtonCornerRadius = 14
-            rowHeight = 25
-            featuredRowHeight = 34
-            rowSpacing = 5
-            rowFontSize = 13
-            visibleRowCapacity = 5
-        default:
-            contentSpacing = 8
-            headerHeight = 44
-            addButtonSize = 44
-            addButtonCornerRadius = 13
             rowHeight = 24
-            featuredRowHeight = 24
             rowSpacing = 4
+            rowFontSize = 13
+            visibleRowCapacity = 6
+        default:
+            contentSpacing = 7
+            headerHeight = 42
+            addButtonSize = 42
+            addButtonCornerRadius = 13
+            rowHeight = 22
+            rowSpacing = 3
             rowFontSize = 12
             visibleRowCapacity = 3
         }
@@ -774,15 +712,6 @@ private extension Color {
     static let tdayFloaterGreen = Color(red: 77.0 / 255.0, green: 143.0 / 255.0, blue: 131.0 / 255.0)
     static let tdayLightSurface = Color.white
     static let tdayDarkSurface = Color(red: 0.09, green: 0.10, blue: 0.13)
-    static let tdayTodayFeatureWash = Color(red: 243.0 / 255.0, green: 249.0 / 255.0, blue: 1.0)
-    static let tdayFloaterFeatureWash = Color(red: 240.0 / 255.0, green: 248.0 / 255.0, blue: 245.0 / 255.0)
-    static let tdayDueChipBackground = Color(red: 241.0 / 255.0, green: 244.0 / 255.0, blue: 249.0 / 255.0)
-    static let tdayTodayFeatureWashDark = Color(red: 0.09, green: 0.14, blue: 0.20)
-    static let tdayFloaterFeatureWashDark = Color(red: 0.08, green: 0.17, blue: 0.15)
-    static let tdayDueChipBackgroundDark = Color(red: 0.13, green: 0.15, blue: 0.21)
-    static let tdayPriorityHigh = Color(red: 0.89, green: 0.49, blue: 0.49)
-    static let tdayPriorityMedium = Color(red: 0.87, green: 0.70, blue: 0.49)
-    static let tdayPriorityLow = Color(red: 0.00, green: 0.48, blue: 1.00)
 }
 
 private extension Date {
