@@ -415,6 +415,7 @@ private struct TdayTasksWidgetContent: View {
     }
 
     private var taskList: some View {
+        // WidgetKit system-family widgets do not support true in-widget scrolling, so iOS keeps a best-fit row set plus overflow text.
         let rowCapacity = metrics.visibleRowCapacity
         let totalCount = max(taskCount, rows.count)
         let hasOverflow = totalCount > rowCapacity || rows.count < totalCount

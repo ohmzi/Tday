@@ -305,7 +305,7 @@ android-compose/app/src/
 └── androidTest/    # Instrumented tests (emulator/device)
 ```
 
-Current JVM tests cover API response helpers, offline sync state serialization, encrypted credential records, Room/cache mappers, todo delete/cache behavior, task rescheduling, realtime client behavior, app/auth ViewModel state, login credential coordination, and Today/Floater widget model filtering/count/state behavior.
+Current JVM tests cover API response helpers, offline sync state serialization, encrypted credential records, Room/cache mappers, todo delete/cache behavior, task rescheduling, realtime client behavior, app/auth ViewModel state, login credential coordination, and Today/Floater widget model filtering/count/state/scroll sequencing behavior.
 
 ### What Should Be Tested (Android)
 
@@ -317,7 +317,7 @@ Current JVM tests cover API response helpers, offline sync state serialization, 
 | ViewModel state transitions | Unit | High |
 | Local Mode server-only affordances | Unit/manual | High |
 | Notification scheduling logic | Unit | Medium |
-| Today/Floater widget filtering, counts, setup/empty states, and refresh triggers | Unit | Medium |
+| Today/Floater widget filtering, counts, setup/empty states, scroll sequencing, and refresh triggers | Unit | Medium |
 | Screen composition (renders, interactions) | Instrumented | Medium |
 | End-to-end auth flow | Instrumented | Low (manual for now) |
 
@@ -356,7 +356,7 @@ ios-swiftUI/Tests/
 └── TdayCoreTests/
 ```
 
-Current XCTest coverage includes API model contracts, cache mapper date parsing, completed-sync merging, connectivity classification, realtime client behavior, server URL persistence, system credential login handling, Today/Floater widget snapshot schema/status storage, and widget create deep-link routing.
+Current XCTest coverage includes API model contracts, cache mapper date parsing, completed-sync merging, connectivity classification, realtime client behavior, server URL persistence, system credential login handling, Today/Floater widget snapshot schema/status/cap storage, and widget create deep-link routing.
 
 ### What Should Be Tested (iOS)
 
@@ -369,7 +369,7 @@ Current XCTest coverage includes API model contracts, cache mapper date parsing,
 | Local Mode server-only affordances | Unit/manual | High |
 | Reminder scheduling helpers | Unit | Medium |
 | Navigation/deep-link routing helpers | Unit | Medium |
-| Today/Floater widget snapshot schema, task cap, setup/empty states, and App Group key consistency | Unit | Medium |
+| Today/Floater widget snapshot schema, 50-row task cap, setup/empty states, App Group key consistency, and static best-fit overflow fallback | Unit | Medium |
 
 For visual polish, build the app and do a simulator/device spot check when automated UI tests are not practical. Widget UI changes should get a launcher/widget-preview check on Android and a WidgetKit preview or simulator check on iOS when those surfaces are available locally.
 

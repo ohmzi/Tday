@@ -19,6 +19,8 @@ import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -69,6 +71,39 @@ internal data class TaskWidgetRow(
     val trailingText: String? = null,
 )
 
+internal sealed class TaskWidgetScrollItem {
+    data class Task(val row: TaskWidgetRow) : TaskWidgetScrollItem()
+    data class OverflowMarker(val hiddenCount: Int) : TaskWidgetScrollItem()
+    data class TerminalOverflow(val hiddenCount: Int) : TaskWidgetScrollItem()
+}
+
+internal fun taskWidgetScrollItems(
+    rows: List<TaskWidgetRow>,
+    overflowCount: Int,
+    visibleRowCapacity: Int,
+): List<TaskWidgetScrollItem> {
+    val totalCount = rows.size + overflowCount
+    val visibleTaskSlots =
+        if (totalCount > visibleRowCapacity && visibleRowCapacity > 1) {
+            visibleRowCapacity - 1
+        } else {
+            visibleRowCapacity
+        }
+    val visibleRows = rows.take(visibleTaskSlots)
+    val hiddenCount = (totalCount - visibleRows.size).coerceAtLeast(0)
+
+    return buildList {
+        visibleRows.forEach { row -> add(TaskWidgetScrollItem.Task(row)) }
+        if (hiddenCount > 0 && visibleRowCapacity > 1) {
+            add(TaskWidgetScrollItem.OverflowMarker(hiddenCount))
+        }
+        rows.drop(visibleTaskSlots).forEach { row -> add(TaskWidgetScrollItem.Task(row)) }
+        if (overflowCount > 0) {
+            add(TaskWidgetScrollItem.TerminalOverflow(overflowCount))
+        }
+    }
+}
+
 private enum class TaskWidgetTextColor(@ColorRes val resourceId: Int) {
     PRIMARY(R.color.tday_widget_on_surface),
     SECONDARY(R.color.tday_widget_on_surface_variant),
@@ -87,6 +122,7 @@ internal fun TaskWidgetContent(
     rows: List<TaskWidgetRow>,
     overflowCount: Int,
     overflowLabel: String,
+    terminalOverflowLabel: String,
     visuals: TaskWidgetVisuals,
     openAction: Action,
     addAction: Action,
@@ -150,6 +186,7 @@ internal fun TaskWidgetContent(
                     rows = rows,
                     overflowCount = overflowCount,
                     overflowLabel = overflowLabel,
+                    terminalOverflowLabel = terminalOverflowLabel,
                     layout = layout,
                     metrics = metrics,
                     openAction = openAction,
@@ -370,37 +407,61 @@ private fun TaskWidgetList(
     rows: List<TaskWidgetRow>,
     overflowCount: Int,
     overflowLabel: String,
+    terminalOverflowLabel: String,
     layout: TaskWidgetLayout,
     metrics: TaskWidgetMetrics,
     openAction: Action,
     modifier: GlanceModifier = GlanceModifier,
 ) {
-    val totalCount = rows.size + overflowCount
-    val rowCapacity = metrics.visibleRowCapacity
-    val visibleTaskSlots =
-        if (totalCount > rowCapacity && rowCapacity > 1) rowCapacity - 1 else rowCapacity
-    val visibleRows = rows.take(visibleTaskSlots)
-    val hiddenCount = (totalCount - visibleRows.size).coerceAtLeast(0)
+    val scrollItems = taskWidgetScrollItems(
+        rows = rows,
+        overflowCount = overflowCount,
+        visibleRowCapacity = metrics.visibleRowCapacity,
+    )
 
-    Column(modifier = modifier) {
-        visibleRows.forEachIndexed { index, row ->
-            TaskWidgetRow(
-                row = row,
-                layout = layout,
-                metrics = metrics,
-                openAction = openAction,
-            )
-            if (index < visibleRows.lastIndex || hiddenCount > 0) {
-                Spacer(modifier = GlanceModifier.height(metrics.rowSpacing))
+    LazyColumn(modifier = modifier) {
+        itemsIndexed(
+            items = scrollItems,
+            itemId = { index, item -> taskWidgetScrollItemId(index, item) },
+        ) { index, item ->
+            Column(modifier = GlanceModifier.fillMaxWidth()) {
+                when (item) {
+                    is TaskWidgetScrollItem.Task -> TaskWidgetRow(
+                        row = item.row,
+                        layout = layout,
+                        metrics = metrics,
+                        openAction = openAction,
+                    )
+
+                    is TaskWidgetScrollItem.OverflowMarker -> OverflowRow(
+                        label = String.format(Locale.getDefault(), overflowLabel, item.hiddenCount),
+                        metrics = metrics,
+                        openAction = openAction,
+                    )
+
+                    is TaskWidgetScrollItem.TerminalOverflow -> OverflowRow(
+                        label = String.format(
+                            Locale.getDefault(),
+                            terminalOverflowLabel,
+                            item.hiddenCount,
+                        ),
+                        metrics = metrics,
+                        openAction = openAction,
+                    )
+                }
+                if (index < scrollItems.lastIndex) {
+                    Spacer(modifier = GlanceModifier.height(metrics.rowSpacing))
+                }
             }
         }
-        if (hiddenCount > 0 && rowCapacity > 1) {
-            OverflowRow(
-                label = String.format(Locale.getDefault(), overflowLabel, hiddenCount),
-                metrics = metrics,
-                openAction = openAction,
-            )
-        }
+    }
+}
+
+private fun taskWidgetScrollItemId(index: Int, item: TaskWidgetScrollItem): Long {
+    return when (item) {
+        is TaskWidgetScrollItem.Task -> 10_000L + index
+        is TaskWidgetScrollItem.OverflowMarker -> 1L
+        is TaskWidgetScrollItem.TerminalOverflow -> 2L
     }
 }
 
@@ -519,7 +580,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             rowFontSize = 12.sp,
             rowTitleWidth = 122.dp,
             rowTitleWidthWithTrailing = 0.dp,
-            visibleRowCapacity = 2,
+            visibleRowCapacity = 6,
             messageWatermarkSize = 112.dp,
         )
 
@@ -537,7 +598,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             rowFontSize = 12.sp,
             rowTitleWidth = 184.dp,
             rowTitleWidthWithTrailing = 112.dp,
-            visibleRowCapacity = 2,
+            visibleRowCapacity = 6,
             messageWatermarkSize = 128.dp,
         )
 
@@ -555,7 +616,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             rowFontSize = 12.sp,
             rowTitleWidth = 184.dp,
             rowTitleWidthWithTrailing = 112.dp,
-            visibleRowCapacity = 3,
+            visibleRowCapacity = 6,
             messageWatermarkSize = 148.dp,
         )
 
@@ -573,7 +634,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             rowFontSize = 13.sp,
             rowTitleWidth = 184.dp,
             rowTitleWidthWithTrailing = 112.dp,
-            visibleRowCapacity = 5,
+            visibleRowCapacity = 10,
             messageWatermarkSize = 208.dp,
         )
     }
