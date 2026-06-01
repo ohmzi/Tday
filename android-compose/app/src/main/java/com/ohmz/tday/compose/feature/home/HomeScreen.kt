@@ -879,7 +879,6 @@ private fun CreateListBottomSheet(
         keyboardController?.hide()
         focusManager.clearFocus(force = true)
     }
-    val focusRequester = remember { FocusRequester() }
     var nameFieldFocused by remember { mutableStateOf(false) }
     var sheetVisible by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
@@ -909,9 +908,6 @@ private fun CreateListBottomSheet(
 
     LaunchedEffect(Unit) {
         sheetVisible = true
-        delay(500)
-        focusRequester.requestFocus()
-        keyboardController?.show()
     }
 
     Dialog(
@@ -1028,7 +1024,6 @@ private fun CreateListBottomSheet(
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .focusRequester(focusRequester)
                                         .onFocusChanged { nameFieldFocused = it.isFocused },
                                     decorationBox = { innerTextField ->
                                         Box(

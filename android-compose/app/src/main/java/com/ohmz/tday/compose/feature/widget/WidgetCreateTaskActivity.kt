@@ -129,7 +129,6 @@ private fun WidgetCreateTaskSurface(
                 lists = todoUiState.lists,
                 defaultScheduled = createTarget.showScheduleControls,
                 showScheduleControls = createTarget.showScheduleControls,
-                autoFocusTitle = createTarget.showScheduleControls,
                 presentImmediately = true,
                 onParseTaskTitleNlp = if (createTarget.showScheduleControls) {
                     todoViewModel::parseTaskTitleNlp

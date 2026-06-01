@@ -125,8 +125,9 @@ of these widget surfaces.
   Widget rows are capped at 50.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater` through a dedicated translucent widget-create activity that
-  hosts the matching in-app create-task sheet directly over the launcher with the title field
-  focused. Floater creation hides schedule controls and creates an unscheduled floater.
+  hosts the matching in-app create-task sheet directly over the launcher without auto-focusing the
+  title field or opening the keyboard. Floater creation hides schedule controls and creates an
+  unscheduled floater.
 - `OfflineCacheManager` requests widget refreshes after local cache changes, so Local Mode and
   optimistic writes update the widget without waiting for a server sync path.
 
