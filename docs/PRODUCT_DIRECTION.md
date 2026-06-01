@@ -19,8 +19,8 @@ T'Day is a private, self-hosted personal task planner that should feel immediate
 | Web SPA | Desktop planner, admin settings, release/version surfaces, full API consumer, i18n reference implementation |
 | Backend | Auth, tenant isolation, task/list/floater persistence, recurrence expansion, WebSocket events, AI summaries, mobile probe and version compatibility |
 | Shared KMP | DTOs, enums, validators, and shared route constants for backend/Android alignment; iOS mirrors these contracts in Swift models |
-| Android | Primary native mobile app using Compose, Room-backed local cache, Hilt, Retrofit, reminders, widgets, and in-app updates |
-| iOS | Primary native mobile app using SwiftUI, SwiftData-backed local cache, Observation, URLSession, reminders, widgets, and password/keychain support |
+| Android | Primary native mobile app using Compose, Room-backed local cache, Hilt, Retrofit, reminders, widgets, an internal car surface, and in-app updates |
+| iOS | Primary native mobile app using SwiftUI, SwiftData-backed local cache, Observation, URLSession, reminders, widgets, CarPlay templates, App Intents, and password/keychain support |
 
 ## Planning Model
 
@@ -45,6 +45,7 @@ Mobile is now the center of the product experience. Any user-facing Android or i
 - Keep offline notices calm and rate-limited. Do not interrupt normal use when cached data can satisfy the screen.
 - Preserve dark mode, compact layouts, and text fit. Avoid explanatory UI copy when a familiar control can do the job.
 - Treat calendar paging as a product contract: headers stay anchored, page content moves horizontally, today jumps keep the active mode, and previous-month navigation remains bounded.
+- Treat car surfaces as constrained extensions of mobile: Today/Floater only, view + complete, voice or handoff creation, no false store categorization, and no custom UI that violates CarPlay or Play policy.
 
 ## Local Mode
 
@@ -89,7 +90,7 @@ Documentation is part of the product.
 ## Near-Term Direction
 
 - Keep server/local data boundaries explicit and user-controlled.
-- Continue converging Android and iOS around Home, Floater/Anytime, Calendar, Completed, Settings, reminders, and update flows.
+- Continue converging Android and iOS around Home, Floater/Anytime, Calendar, Completed, Settings, reminders, car surfaces, and update flows.
 - Make list and floater-list behavior clear in UI and contracts.
 - Keep backend contracts stable for mobile clients; add compatibility handling before making breaking changes.
 - Prefer focused cleanup that reduces future drift: shared DTOs, mirrored cache records, platform design tokens, and documented verification commands.

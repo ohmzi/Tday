@@ -103,6 +103,7 @@ structural and content-free:
 | Reminder scheduling | `reminder.reschedule`, `reminder.cancel_all` | Counts/source only; no task titles or reminder text |
 | Calendar paging and mode changes | `calendar.page`, `calendar.mode`, `calendar.today`, `calendar.load`, `calendar.refresh` | Mode/direction/counts only; no selected date, task ID, or title |
 | Task/list drag-reschedule | `calendar.drag_reschedule`, `calendar.task.reschedule`, `task.reschedule` | Recurring/scope/source only; no task ID, title, or target date |
+| Car task surfaces | `car_surface.open`, `car_surface.switch_mode`, `car_task.voice_create`, `car_task.complete` | Platform, mode, result, and counts only; no task title, voice transcript, task ID, or local cache record |
 | Security event monitoring | `security.event` | Reason code and route template only; no IP, raw URL, email, or session value |
 
 ## Privacy Safeguards In Code

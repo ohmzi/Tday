@@ -35,6 +35,7 @@ sealed class AppRoute(val route: String) {
 
     data object Completed : AppRoute("completed")
     data object Calendar : AppRoute("calendar")
+    data object Car : AppRoute("car")
     data object Settings : AppRoute("settings")
     data object LatestRelease : AppRoute("latest-release")
 }
