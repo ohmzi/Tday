@@ -58,25 +58,9 @@ private struct HomeListIconOption {
 }
 
 private enum CreateListSheetMetrics {
-    static let initialCompactHeight: CGFloat = 620
+    static let sheetHeight: CGFloat = 620
     static let maximumHeightFraction: CGFloat = 0.7
     static let bottomContentPadding: CGFloat = 8
-}
-
-private struct CreateListSheetContentHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
-private struct CreateListSheetHeaderHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
 }
 
 private let homeScrollTopID = "home-scroll-top"
@@ -1480,13 +1464,10 @@ struct CreateListSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
-    @FocusState private var nameFieldFocused: Bool
 
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
-    @State private var headerHeight: CGFloat = 84
-    @State private var contentHeight: CGFloat = CreateListSheetMetrics.initialCompactHeight - 84
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1508,24 +1489,8 @@ struct CreateListSheet: View {
         max(1, UIScreen.main.bounds.height * CreateListSheetMetrics.maximumHeightFraction)
     }
 
-    private var measuredCompactSheetHeight: CGFloat {
-        min(max(headerHeight + contentHeight, 1), maximumSheetHeight)
-    }
-
-    private var contentNeedsScrolling: Bool {
-        headerHeight + contentHeight > maximumSheetHeight
-    }
-
-    private var compactDetent: PresentationDetent {
-        .height(measuredCompactSheetHeight)
-    }
-
-    private var typingDetent: PresentationDetent {
-        .fraction(CreateListSheetMetrics.maximumHeightFraction)
-    }
-
-    private var activeDetents: Set<PresentationDetent> {
-        nameFieldFocused ? [typingDetent] : [compactDetent]
+    private var stableSheetHeight: CGFloat {
+        min(max(CreateListSheetMetrics.sheetHeight, 1), maximumSheetHeight)
     }
 
     var body: some View {
@@ -1539,12 +1504,6 @@ struct CreateListSheet: View {
                 onConfirm: {
                     onSubmit(trimmedName, color, iconKey)
                     dismiss()
-                }
-            )
-            .background(
-                GeometryReader { proxy in
-                    Color.clear
-                        .preference(key: CreateListSheetHeaderHeightKey.self, value: ceil(proxy.size.height))
                 }
             )
 
@@ -1568,7 +1527,6 @@ struct CreateListSheet: View {
                                 prompt: Text("List name")
                                     .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
                             )
-                            .focused($nameFieldFocused)
                             .textInputAutocapitalization(.words)
                             .autocorrectionDisabled()
                             .multilineTextAlignment(.center)
@@ -1663,18 +1621,13 @@ struct CreateListSheet: View {
                 .padding(.horizontal, 18)
                 .padding(.top, 14)
                 .padding(.bottom, CreateListSheetMetrics.bottomContentPadding)
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear
-                            .preference(key: CreateListSheetContentHeightKey.self, value: ceil(proxy.size.height))
-                    }
-                )
             }
-            .scrollDisabled(!contentNeedsScrolling)
+            .scrollDismissesKeyboard(.interactively)
+            .disableVerticalScrollBounce()
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .background(colors.bottomSheetBackground.ignoresSafeArea())
-        .presentationDetents(activeDetents)
+        .presentationDetents([.height(stableSheetHeight)])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground {
@@ -1682,13 +1635,6 @@ struct CreateListSheet: View {
                 .ignoresSafeArea(.container, edges: .bottom)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .onPreferenceChange(CreateListSheetHeaderHeightKey.self) { height in
-            headerHeight = max(height, 1)
-        }
-        .onPreferenceChange(CreateListSheetContentHeightKey.self) { height in
-            contentHeight = max(height, 1)
-        }
-        .animation(.snappy(duration: 0.24), value: nameFieldFocused)
     }
 
     private func formattedOptionName(_ value: String) -> String {
