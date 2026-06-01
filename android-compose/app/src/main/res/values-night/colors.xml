@@ -5,6 +5,11 @@
     <color name="tday_widget_surface">#FF171A20</color>
     <color name="tday_widget_accent_wash">#FF18283A</color>
     <color name="tday_widget_today_accent">#FF8DC3F3</color>
+    <color name="tday_widget_floater_accent">#FF7FC7B9</color>
+    <color name="tday_widget_floater_accent_wash">#FF18322C</color>
+    <color name="tday_widget_today_feature_wash">#FF162434</color>
+    <color name="tday_widget_floater_feature_wash">#FF162B27</color>
+    <color name="tday_widget_due_chip_background">#FF222736</color>
     <color name="tday_widget_on_surface">#FFF2F5FA</color>
     <color name="tday_widget_on_surface_variant">#FFBAC3D3</color>
     <color name="tday_widget_priority_high">#FFFF6B61</color>

@@ -109,12 +109,14 @@ of these widget surfaces.
   metadata for each widget kind, while each kind renders a shared responsive Glance widget.
 - Static picker previews use RemoteViews-compatible XML, and Android 15+ generated previews are
   published from `TodayTasksWidgetPreviewPublisher` when the app starts.
-- Medium and large layouts show the title, a compact `N due` or `N open` count, and a 48dp add
-  target; compact layouts stay count-first and prioritize task titles over due-time detail.
+- Medium and large layouts show the title, a compact count pill, a native plus icon add target,
+  and dense scan-first rows; compact layouts stay count-first and prioritize task titles over
+  due-time detail.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
-- Task layouts hand the full capped widget task set to Glance `LazyColumn`, so widgets can
-  scroll in place whenever more rows exist than the visible viewport fits. If the cached model hits
-  the widget task cap, the final row shows the remaining `+N more` count.
+- Task layouts render a fixed family-specific row set for small, medium, and large widgets. Small
+  widgets show the highest-value row plus overflow, medium widgets show a short readable set, and
+  large widgets subtly emphasize the first task before the remaining rows. Hidden tasks surface as
+  the final `+N more` row.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater` through a dedicated translucent widget-create activity that
   hosts the matching in-app create-task sheet directly over the launcher with the title field
@@ -122,9 +124,9 @@ of these widget surfaces.
 - `OfflineCacheManager` requests widget refreshes after local cache changes, so Local Mode and
   optimistic writes update the widget without waiting for a server sync path.
 
-Keep future widget work responsive across compact, wide, and tall sizes, preserve 48dp touch
-targets,
-and prefer system widget bounds, dynamic color, and Material/Glance idioms over custom chrome.
+Keep future widget work responsive across compact, wide, and tall sizes, preserve large add/content
+tap targets, and prefer system widget bounds, dynamic color, and Material/Glance idioms over custom
+chrome.
 
 ## Mobile Parity
 

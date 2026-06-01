@@ -19,44 +19,69 @@
         android:paddingStart="13dp"
         android:paddingTop="6dp"
         android:paddingEnd="13dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="7dp">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="40dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:fontFamily="@font/nunito_app"
                 android:gravity="center_vertical"
-                android:includeFontPadding="false"
-                android:text="6"
-                android:textColor="@color/tday_widget_floater_accent"
-                android:textSize="24sp"
-                android:textStyle="bold" />
+                android:orientation="vertical">
 
-            <TextView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@drawable/widget_floater_add_button_background"
-                android:fontFamily="@font/nunito_app"
-                android:gravity="center"
-                android:includeFontPadding="false"
-                android:text="+"
-                android:textColor="@color/tday_widget_floater_accent"
-                android:textSize="24sp"
-                android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/nunito_app"
+                    android:includeFontPadding="false"
+                    android:text="6"
+                    android:textColor="@color/tday_widget_floater_accent"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/nunito_app"
+                    android:includeFontPadding="false"
+                    android:text="@string/widget_floater_tasks_count_unit"
+                    android:textColor="@color/tday_widget_on_surface_variant"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/widget_floater_add_button_background">
+
+                <ImageView
+                    android:layout_width="17dp"
+                    android:layout_height="17dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/widget_add_icon_floater" />
+            </FrameLayout>
         </LinearLayout>
 
+        <TextView
+            android:layout_width="1dp"
+            android:layout_height="4dp"
+            android:includeFontPadding="false"
+            android:text="" />
+
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="28dp"
+            android:layout_height="22dp"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp">
 
             <ImageView
                 android:layout_width="7dp"
@@ -81,28 +106,20 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="28dp"
+            android:layout_height="22dp"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:layout_width="7dp"
-                android:layout_height="7dp"
-                android:contentDescription="@null"
-                android:src="@drawable/widget_priority_dot_medium" />
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="2dp">
 
             <TextView
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="7dp"
-                android:layout_weight="1"
-                android:ellipsize="end"
                 android:fontFamily="@font/nunito_app"
                 android:includeFontPadding="false"
-                android:maxLines="1"
-                android:text="Queue reading"
-                android:textColor="@color/tday_widget_on_surface"
-                android:textSize="12sp"
+                android:text="+5 more"
+                android:textColor="@color/tday_widget_floater_accent"
+                android:textSize="11sp"
                 android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
