@@ -256,16 +256,22 @@ struct EmptyTaskWatermark: View {
 
     var body: some View {
         GeometryReader { proxy in
+            let screenBounds = UIScreen.main.bounds
+            let frame = proxy.frame(in: .global)
+            let targetX = screenBounds.width - (iconSize / 2) + trailingOffset - frame.minX
+            let targetY = (screenBounds.height * (2.0 / 3.0)) - frame.minY
+
             Image(systemName: systemName)
                 .font(.system(size: iconSize, weight: .regular))
                 .foregroundStyle(watermarkColor)
                 .rotationEffect(.degrees(-7))
                 .frame(width: iconSize, height: iconSize)
                 .position(
-                    x: proxy.size.width - (iconSize / 2) + trailingOffset,
-                    y: proxy.size.height * (2.0 / 3.0)
+                    x: targetX,
+                    y: targetY
                 )
         }
+        .ignoresSafeArea(.keyboard)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }

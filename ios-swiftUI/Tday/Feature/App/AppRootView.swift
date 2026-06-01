@@ -427,12 +427,16 @@ struct AppRootView: View {
 
             Spacer(minLength: 12)
 
-            TaskFloatingActionButton {
+            TaskFloatingActionButton(fillColor: rootCreateTaskFillColor) {
                 rootCreateTaskRequestID += 1
             }
             .padding(.trailing, 18)
             .padding(.vertical, 8)
         }
+    }
+
+    private var rootCreateTaskFillColor: Color {
+        rootFeedTab == .floater ? .tdayFloaterGreen : .tdayTodayBlue
     }
 
     private func handleDeepLink(_ url: URL) {

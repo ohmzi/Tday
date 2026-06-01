@@ -98,6 +98,8 @@ import com.ohmz.tday.compose.ui.component.RootCreateTaskButton
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.theme.TdayDimens
+import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
+import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import io.sentry.android.navigation.SentryNavigationListener
 import kotlin.math.roundToInt
@@ -483,6 +485,13 @@ fun TdayApp(
                                     }
 
                                     if (rootControlsVisible) {
+                                        val rootCreateTaskButtonColor =
+                                            if (rootFeedTab == RootFeedTab.FLOATER) {
+                                                TdayFloaterAccent
+                                            } else {
+                                                TdayTodayBlue
+                                            }
+
                                         RootFeedDock(
                                             activeTab = rootFeedTab,
                                             collapsed = rootDockCollapsed,
@@ -493,6 +502,7 @@ fun TdayApp(
                                         )
                                         RootCreateTaskButton(
                                             onClick = ::requestRootCreateTask,
+                                            backgroundColor = rootCreateTaskButtonColor,
                                             modifier = Modifier
                                                 .align(Alignment.BottomEnd)
                                                 .navigationBarsPadding()
