@@ -14,7 +14,8 @@ Current feature surface:
   replay.
 - Home and Floater/Anytime root feeds controlled by `RootFeedDock`.
 - Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar,
-  search, settings, reminders, Glance Today/Floater widgets, and in-app APK updates.
+  search, settings, reminders, Glance Today/Floater widgets, an internal car-mode task surface,
+  and in-app APK updates.
 - Room-backed local cache with a one-time migration from the older encrypted JSON cache.
 
 ## Module
@@ -39,6 +40,7 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 │   ├── home/          # Home root feed
 │   ├── todos/         # Todo/Floater/List screens
 │   ├── calendar/      # Month/week/day calendar
+│   ├── car/           # Internal car-mode Today/Floater surface
 │   ├── completed/     # Completed todo/floater history
 │   ├── settings/      # Settings and admin toggles
 │   ├── release/       # Latest release and APK installer
@@ -135,6 +137,14 @@ Keep future widget work responsive across compact, wide, and tall sizes, preserv
 tap targets, keep the persistent watermark calm behind both rows and empty text, reserve
 Today/Floater accent treatment for the plus add button, and prefer system widget bounds, dynamic
 color, and Material/Glance idioms over custom chrome.
+
+## Car Surface
+
+Android keeps the car task UI as an app-internal adaptive surface at `tday://car`. It does not
+declare Android Auto or Android Automotive production metadata because Google Play's current car app
+categories do not include generic task/calendar productivity apps. The surface defaults to Today,
+switches to Floater with icon-only controls, uses voice capture for the plus action when speech
+recognition is available, and falls back to the existing create-task flow otherwise.
 
 ## Mobile Parity
 

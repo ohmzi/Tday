@@ -231,6 +231,7 @@ describe("fieldEncryption", () => {
 | Guardrails: telemetry privacy | Yes | Keep Sentry privacy defaults and docs aligned |
 | Mobile Local Mode and sync behavior | Recommended | Prevent offline/local regressions |
 | Android/iOS parity for visible mobile features | Manual + tests where practical | Avoid product drift |
+| Car task surfaces | Unit tests + platform builds, manual CarPlay/voice checks where available | Store- and vehicle-safe UI depends on platform constraints |
 | CRUD routes (happy path) | Recommended | Catch regressions |
 | Error paths in routes | Recommended | Ensure proper status codes |
 
@@ -318,6 +319,7 @@ Current JVM tests cover API response helpers, offline sync state serialization, 
 | Local Mode server-only affordances | Unit/manual | High |
 | Notification scheduling logic | Unit | Medium |
 | Today/Floater widget filtering, counts, setup/empty states, layout rules, priority dots, day/night watermark rule, and refresh triggers | Unit | Medium |
+| Car surface mode mapping, empty states, accents, and voice-create fallback | Unit/manual | Medium |
 | Screen composition (renders, interactions) | Instrumented | Medium |
 | End-to-end auth flow | Instrumented | Low (manual for now) |
 
@@ -370,8 +372,9 @@ Current XCTest coverage includes API model contracts, cache mapper date parsing,
 | Reminder scheduling helpers | Unit | Medium |
 | Navigation/deep-link routing helpers | Unit | Medium |
 | Today/Floater widget snapshot schema, 50-row task cap, setup/empty states, App Group key consistency, and static best-fit overflow fallback | Unit | Medium |
+| CarPlay/App Intents mode mapping, create payloads, and entitlement-gated scene wiring | Unit/manual | Medium |
 
-For visual polish, build the app and do a simulator/device spot check when automated UI tests are not practical. Widget UI changes should get a launcher/widget-preview check on Android and a WidgetKit preview or simulator check on iOS when those surfaces are available locally.
+For visual polish, build the app and do a simulator/device spot check when automated UI tests are not practical. Widget UI changes should get a launcher/widget-preview check on Android and a WidgetKit preview or simulator check on iOS when those surfaces are available locally. Car surfaces should get voice recognition, `tday://car`, and CarPlay simulator checks when the host tooling and entitlement are available.
 
 ## Coverage Expectations
 
