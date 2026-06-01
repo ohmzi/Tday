@@ -52,16 +52,16 @@ struct CompletedScreen: View {
             }
             .background(colors.background)
             .overlay {
-                if viewModel.items.isEmpty, !viewModel.isLoading {
-                    ZStack {
-                        EmptyTaskWatermark(
-                            systemName: "checkmark",
-                            accentColor: completedAccentColor
-                        )
+                ZStack {
+                    EmptyTaskWatermark(
+                        systemName: "checkmark",
+                        accentColor: completedAccentColor
+                    )
+                    if viewModel.items.isEmpty, !viewModel.isLoading {
                         EmptyTaskBackgroundMessage(message: "No completed tasks")
                     }
-                    .allowsHitTesting(false)
                 }
+                .allowsHitTesting(false)
             }
             .navigationBackButtonBehavior()
             .navigationTitleTypography(
