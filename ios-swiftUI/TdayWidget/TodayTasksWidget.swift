@@ -193,6 +193,15 @@ private enum TaskWidgetStatus {
             self = .tasks
         }
     }
+
+    var showsMessageWatermark: Bool {
+        switch self {
+        case .setup, .empty:
+            return true
+        case .tasks:
+            return false
+        }
+    }
 }
 
 private enum TaskWidgetMode {
@@ -244,6 +253,15 @@ private enum TaskWidgetMode {
         }
     }
 
+    var emptyWatermarkSystemName: String {
+        switch self {
+        case .today:
+            return "sun.max.fill"
+        case .floater:
+            return "tray.full.fill"
+        }
+    }
+
     var addAccessibilityLabel: String {
         switch self {
         case .today:
@@ -283,17 +301,24 @@ private struct TdayTasksWidgetContent: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: metrics.contentSpacing) {
-            header
-
-            switch status {
-            case .setup:
-                message(title: "Open T'Day", subtitle: "Set up your workspace")
-            case .empty:
-                message(title: mode.emptyTitle, subtitle: mode.emptySubtitle)
-            case .tasks:
-                taskList
+        ZStack(alignment: .topLeading) {
+            if status.showsMessageWatermark {
+                messageWatermark
             }
+
+            VStack(alignment: .leading, spacing: metrics.contentSpacing) {
+                header
+
+                switch status {
+                case .setup:
+                    message(title: "Open T'Day", subtitle: "Set up your workspace")
+                case .empty:
+                    message(title: mode.emptyTitle, subtitle: mode.emptySubtitle)
+                case .tasks:
+                    taskList
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(mode.openURL)
@@ -314,12 +339,34 @@ private struct TdayTasksWidgetContent: View {
         renderingMode == .fullColor ? .secondary : .primary.opacity(0.72)
     }
 
+    private var watermarkColor: Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.08)
+        }
+        return accentColor.opacity(colorScheme == .dark ? 0.16 : 0.11)
+    }
+
     private var countText: String {
         "\(taskCount) \(mode.countUnit)"
     }
 
     private var widgetBackground: some View {
         colorScheme == .dark ? Color.tdayDarkSurface : Color.tdayLightSurface
+    }
+
+    private var messageWatermark: some View {
+        GeometryReader { proxy in
+            Image(systemName: mode.emptyWatermarkSystemName)
+                .font(.system(size: metrics.watermarkSize, weight: .regular))
+                .foregroundStyle(watermarkColor)
+                .rotationEffect(.degrees(-7))
+                .frame(width: metrics.watermarkSize, height: metrics.watermarkSize)
+                .position(
+                    x: proxy.size.width - (metrics.watermarkSize / 2) + metrics.watermarkTrailingOffset,
+                    y: proxy.size.height * metrics.watermarkVerticalFraction
+                )
+        }
+        .accessibilityHidden(true)
     }
 
     private var header: some View {
@@ -480,6 +527,9 @@ private struct WidgetLayoutMetrics {
     let rowSpacing: CGFloat
     let rowFontSize: CGFloat
     let visibleRowCapacity: Int
+    let watermarkSize: CGFloat
+    let watermarkTrailingOffset: CGFloat
+    let watermarkVerticalFraction: CGFloat
 
     init(family: WidgetFamily) {
         switch family {
@@ -492,6 +542,9 @@ private struct WidgetLayoutMetrics {
             rowSpacing = 2
             rowFontSize = 12
             visibleRowCapacity = 2
+            watermarkSize = 116
+            watermarkTrailingOffset = 18
+            watermarkVerticalFraction = 0.70
         case .systemLarge:
             contentSpacing = 8
             headerHeight = 45
@@ -501,6 +554,9 @@ private struct WidgetLayoutMetrics {
             rowSpacing = 4
             rowFontSize = 13
             visibleRowCapacity = 6
+            watermarkSize = 224
+            watermarkTrailingOffset = 28
+            watermarkVerticalFraction = 0.68
         default:
             contentSpacing = 7
             headerHeight = 42
@@ -510,6 +566,9 @@ private struct WidgetLayoutMetrics {
             rowSpacing = 3
             rowFontSize = 12
             visibleRowCapacity = 3
+            watermarkSize = 164
+            watermarkTrailingOffset = 22
+            watermarkVerticalFraction = 0.68
         }
     }
 }
