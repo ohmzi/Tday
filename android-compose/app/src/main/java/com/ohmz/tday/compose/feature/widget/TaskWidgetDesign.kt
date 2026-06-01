@@ -58,6 +58,8 @@ internal val TaskWidgetResponsiveSizes = setOf(
 internal data class TaskWidgetVisuals(
     val addButtonBackground: Int,
     val addIcon: Int,
+    val emptyWatermark: Int,
+    val setupWatermark: Int,
 )
 
 internal data class TaskWidgetRow(
@@ -123,14 +125,18 @@ internal fun TaskWidgetContent(
                 TaskWidgetContentState.SETUP -> TaskWidgetMessage(
                     title = setupTitle,
                     message = setupMessage,
+                    watermark = visuals.setupWatermark,
                     compact = layout == TaskWidgetLayout.COMPACT,
+                    metrics = metrics,
                     openAction = openAction,
                 )
 
                 TaskWidgetContentState.EMPTY -> TaskWidgetMessage(
                     title = emptyTitle,
                     message = emptyMessage,
+                    watermark = visuals.emptyWatermark,
                     compact = layout == TaskWidgetLayout.COMPACT,
+                    metrics = metrics,
                     openAction = openAction,
                 )
 
@@ -298,7 +304,9 @@ private fun TextAlign.toWidgetGravity(): Int {
 private fun TaskWidgetMessage(
     title: String,
     message: String,
+    watermark: Int,
     compact: Boolean,
+    metrics: TaskWidgetMetrics,
     openAction: Action,
 ) {
     Box(
@@ -307,6 +315,10 @@ private fun TaskWidgetMessage(
             .clickable(openAction),
         contentAlignment = Alignment.Center,
     ) {
+        TaskWidgetMessageBackground(
+            watermark = watermark,
+            metrics = metrics,
+        )
         Column(
             modifier = GlanceModifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -333,6 +345,23 @@ private fun TaskWidgetMessage(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TaskWidgetMessageBackground(
+    watermark: Int,
+    metrics: TaskWidgetMetrics,
+) {
+    Box(
+        modifier = GlanceModifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomEnd,
+    ) {
+        Image(
+            provider = ImageProvider(watermark),
+            contentDescription = null,
+            modifier = GlanceModifier.size(metrics.messageWatermarkSize),
+        )
     }
 }
 
@@ -491,6 +520,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             rowTitleWidth = 122.dp,
             rowTitleWidthWithTrailing = 0.dp,
             visibleRowCapacity = 2,
+            messageWatermarkSize = 112.dp,
         )
 
         TaskWidgetLayout.WIDE -> TaskWidgetMetrics(
@@ -508,6 +538,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             rowTitleWidth = 184.dp,
             rowTitleWidthWithTrailing = 112.dp,
             visibleRowCapacity = 2,
+            messageWatermarkSize = 128.dp,
         )
 
         TaskWidgetLayout.MEDIUM -> TaskWidgetMetrics(
@@ -525,6 +556,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             rowTitleWidth = 184.dp,
             rowTitleWidthWithTrailing = 112.dp,
             visibleRowCapacity = 3,
+            messageWatermarkSize = 148.dp,
         )
 
         TaskWidgetLayout.TALL -> TaskWidgetMetrics(
@@ -542,6 +574,7 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             rowTitleWidth = 184.dp,
             rowTitleWidthWithTrailing = 112.dp,
             visibleRowCapacity = 5,
+            messageWatermarkSize = 208.dp,
         )
     }
 }
@@ -561,4 +594,5 @@ private data class TaskWidgetMetrics(
     val rowTitleWidth: Dp,
     val rowTitleWidthWithTrailing: Dp,
     val visibleRowCapacity: Int,
+    val messageWatermarkSize: Dp,
 )

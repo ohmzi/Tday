@@ -87,6 +87,8 @@ decodes schema version 2 snapshots and keeps a legacy fallback for older payload
 - Medium and large layouts show the title, neutral count text, a mode-accented native plus icon add
   target, and dense scan-first rows; compact layouts stay count-first and prioritize task titles
   over due-time detail.
+- Empty and setup states use a subtle oversized Today/Floater watermark behind the centered message,
+  echoing the in-app empty-list background without adding extra widget controls.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater`, select the matching root feed, and immediately start the
@@ -98,8 +100,8 @@ decodes schema version 2 snapshots and keeps a legacy fallback for older payload
 
 Widget UI should keep using system WidgetKit margins/backgrounds, removable container backgrounds, and
 tinted/accented rendering support while carrying T'Day identity through rounded typography, native
-add icons, calm empty/setup states, and Today/Floater accent treatment reserved for the plus add
-button.
+add icons, calm watermark-backed empty/setup states, and Today/Floater accent treatment reserved for
+the plus add button.
 
 ## Mobile Parity
 
