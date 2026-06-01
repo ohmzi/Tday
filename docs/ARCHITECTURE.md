@@ -46,6 +46,9 @@ T'Day is a **monorepo application** with a Kotlin/Ktor backend, a React SPA fron
 - Web is the desktop/admin/broad-access client.
 - Backend owns auth, persistence, tenant isolation, server compatibility, AI summaries, and realtime events.
 - Android and iOS own the primary mobile experience and render from local cache first.
+- Car surfaces are platform-native mobile extensions: iOS uses CarPlay templates and App Intents,
+  while Android keeps an internal `tday://car` adaptive surface until Google Play supports or
+  approves a fitting task/calendar productivity car category.
 - Local Mode is a mobile-only workspace with no server dependency.
 - Server Mode uses optimistic local writes plus pending mutation replay.
 - Scheduled tasks and floaters are separate concepts; do not make `Todo.due` nullable to represent Anytime work.
@@ -297,6 +300,7 @@ com.ohmz.tday.compose/
 │   ├── todos/         # Todo/Floater list screens + ViewModel
 │   ├── completed/     # CompletedScreen + CompletedViewModel
 │   ├── calendar/      # CalendarScreen + CalendarViewModel
+│   ├── car/           # Internal Today/Floater car-mode surface
 │   ├── settings/      # SettingsScreen
 │   ├── release/       # In-app update and latest release
 │   ├── widget/        # Today Tasks Glance widget and refresh coordinator
@@ -324,6 +328,7 @@ ios-swiftUI/Tday/
 │   ├── Home/         # Home root feed
 │   ├── Todos/        # Todo/Floater management
 │   ├── Calendar/     # Calendar views
+│   ├── CarPlay/      # CarPlay templates, presenter, and App Intents
 │   ├── Completed/    # Completion history
 │   ├── Settings/     # User settings
 │   ├── Auth/         # Login/register
@@ -344,7 +349,7 @@ ios-swiftUI/Tday/
 └── AppRootView.swift # NavigationStack, root feed state, overlays, deep links
 ```
 
-The WidgetKit extension lives beside the app target at `ios-swiftUI/TdayWidget/` and is wired as the `TdayWidget` app-extension target in both `project.yml` and the Xcode project. It shares snapshots with the app through the App Group suite `group.com.ohmz.tday`. iOS tests live in `ios-swiftUI/Tests/`. Sentry Cocoa is the only notable third-party runtime dependency; core app behavior uses native frameworks.
+The WidgetKit extension lives beside the app target at `ios-swiftUI/TdayWidget/` and is wired as the `TdayWidget` app-extension target in both `project.yml` and the Xcode project. It shares snapshots with the app through the App Group suite `group.com.ohmz.tday`. The CarPlay surface lives in the app target under `ios-swiftUI/Tday/Feature/CarPlay/` and uses system templates plus App Intents; real distribution is gated on Apple granting the CarPlay entitlement. iOS tests live in `ios-swiftUI/Tests/`. Sentry Cocoa is the only notable third-party runtime dependency; core app behavior uses native frameworks.
 
 ## Database Design
 
@@ -446,6 +451,11 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 - **Android reminders**: `AlarmManager` for exact-time reminders, `WorkManager` for periodic reminder rescheduling, `BootRescheduleReceiver` for device restart recovery.
 - **iOS reminders**: `UserNotifications` scheduling and notification deep-link routing.
 - **Widgets**: Android Glance and iOS WidgetKit expose matching Today Tasks and Floater Tasks contracts. Today widgets show pending scheduled tasks due today and add through `tday://todos/create?target=today`; Floater widgets show active unscheduled floaters and add through `tday://todos/create?target=floater`. Android task bodies can scroll; iOS system-family widgets use a static best-fit fallback because WidgetKit does not support true scrolling lists.
+- **Car task surfaces**: Android exposes an internal `tday://car` route with a Compose Today/Floater
+  task surface and speech-recognition create flow. iOS exposes the same task surface through CarPlay
+  templates plus App Intents/Siri voice creation. Both use existing repositories so Local Mode,
+  optimistic writes, pending replay, widget refreshes, and completion behavior remain shared with
+  the main mobile app.
 
 ## Mobile Widgets
 

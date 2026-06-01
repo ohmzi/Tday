@@ -82,6 +82,10 @@ import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
 import com.ohmz.tday.compose.feature.calendar.CalendarScreen
 import com.ohmz.tday.compose.feature.calendar.CalendarViewModel
+import com.ohmz.tday.compose.feature.car.CarTaskMode
+import com.ohmz.tday.compose.feature.car.CarTaskSurfaceScreen
+import com.ohmz.tday.compose.feature.car.CarTaskSurfaceViewModel
+import com.ohmz.tday.compose.feature.car.rememberCarTaskVoiceCreateLauncher
 import com.ohmz.tday.compose.feature.completed.CompletedScreen
 import com.ohmz.tday.compose.feature.completed.CompletedViewModel
 import com.ohmz.tday.compose.feature.home.HomeScreen
@@ -99,8 +103,8 @@ import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
-import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import com.ohmz.tday.compose.ui.theme.TdayTheme
+import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import io.sentry.android.navigation.SentryNavigationListener
 import kotlin.math.roundToInt
 
@@ -884,6 +888,33 @@ fun TdayApp(
                                 showTaskDeletedToast()
                             }
                         },
+                    )
+                }
+
+                composable(
+                    route = AppRoute.Car.route,
+                    deepLinks = listOf(navDeepLink { uriPattern = "tday://car" }),
+                ) {
+                    val viewModel: CarTaskSurfaceViewModel = hiltViewModel()
+                    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                    val voiceLauncher = rememberCarTaskVoiceCreateLauncher(
+                        onVoiceTitle = viewModel::createFromVoice,
+                        onVoiceUnavailable = { mode ->
+                            val target = when (mode) {
+                                CarTaskMode.TODAY -> "today"
+                                CarTaskMode.FLOATER -> "floater"
+                            }
+                            navController.navigate("todos/create?target=$target") {
+                                launchSingleTop = true
+                            }
+                        },
+                    )
+                    OnRouteResume { viewModel.refresh() }
+                    CarTaskSurfaceScreen(
+                        uiState = uiState,
+                        onModeSelected = viewModel::selectMode,
+                        onCreateWithVoice = { voiceLauncher(uiState.mode) },
+                        onComplete = viewModel::complete,
                     )
                 }
 

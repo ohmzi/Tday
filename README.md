@@ -10,7 +10,7 @@ T'Day is designed to be a quiet daily planner, not a generic productivity platfo
 - Local Mode on Android and iOS for offline-only use without server setup or login.
 - Server Mode for self-hosted sync, realtime updates, encrypted sessions, and private PostgreSQL storage.
 - Local-first mobile data backed by Room on Android and SwiftData on iOS.
-- Completion history, list metadata preservation, task search, widgets, in-app update/version compatibility, and backend summaries with optional local AI via Ollama.
+- Completion history, list metadata preservation, task search, widgets, car task surfaces, in-app update/version compatibility, and backend summaries with optional local AI via Ollama.
 - 11 web locales via i18next, with mobile strings handled through platform-local patterns.
 
 ## Tech Stack
@@ -23,8 +23,8 @@ T'Day is designed to be a quiet daily planner, not a generic productivity platfo
 | Auth | Rolling JWE cookie sessions, PBKDF2 credentials, credential envelope encryption |
 | Shared Contracts | Kotlin Multiplatform DTOs, enums, validators, and route constants |
 | AI | Optional Ollama (local, default `qwen3.5:0.8b`) with backend logic fallback |
-| Android | Kotlin, Jetpack Compose, Hilt, Retrofit, Room, WorkManager, Glance widgets, Material 3 |
-| iOS | SwiftUI, SwiftData, URLSession, Observation, Keychain/cookie handling, WidgetKit widgets |
+| Android | Kotlin, Jetpack Compose, Hilt, Retrofit, Room, WorkManager, Glance widgets, internal car surface, Material 3 |
+| iOS | SwiftUI, SwiftData, URLSession, Observation, Keychain/cookie handling, WidgetKit widgets, CarPlay templates, App Intents |
 | Infra | Docker Compose, GitHub Actions CI/CD, GHCR |
 
 ## Documentation Currency
@@ -92,11 +92,11 @@ Requires a running PostgreSQL instance. The Ktor backend applies Flyway migratio
 
 ### Android
 
-Open `android-compose/` in Android Studio (SDK 35 required) and run on a device or emulator. The app can start in Local Mode or connect to a self-hosted server. See [`android-compose/README.md`](android-compose/README.md) for structure, first-launch behavior, persistence, sync, and release notes.
+Open `android-compose/` in Android Studio (SDK 35 required) and run on a device or emulator. The app can start in Local Mode or connect to a self-hosted server. See [`android-compose/README.md`](android-compose/README.md) for structure, first-launch behavior, persistence, sync, car-surface constraints, and release notes.
 
 ### iOS
 
-Open `ios-swiftUI/TdayApp.xcodeproj` in Xcode on macOS and run the `Tday` scheme. The app supports Local Mode, server workspaces, SwiftData cache, reminders, Today and Floater WidgetKit widgets, and the shared mobile feature surface. See [`ios-swiftUI/README.md`](ios-swiftUI/README.md) for structure and environment notes.
+Open `ios-swiftUI/TdayApp.xcodeproj` in Xcode on macOS and run the `Tday` scheme. The app supports Local Mode, server workspaces, SwiftData cache, reminders, Today and Floater WidgetKit widgets, CarPlay templates, and the shared mobile feature surface. See [`ios-swiftUI/README.md`](ios-swiftUI/README.md) for structure and environment notes.
 
 ## Project Structure
 

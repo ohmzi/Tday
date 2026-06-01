@@ -48,6 +48,11 @@
 		5B82443B89507719EDD7215C /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF6FD5D2845A10D7052467D /* AppContainer.swift */; };
 		5D93F6903E05BD9902C43A51 /* SystemCredentialService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BC4FF9081195466EE7C3E89 /* SystemCredentialService.swift */; };
 		5DB03218BE341B7C186F01AE /* CalendarPagingScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E5A511171F96ABDEC46926 /* CalendarPagingScrollView.swift */; };
+		B10000000000000000000021 /* CarTaskModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* CarTaskModels.swift */; };
+		B10000000000000000000022 /* CarPlayCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* CarPlayCoordinator.swift */; };
+		B10000000000000000000023 /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* CarPlaySceneDelegate.swift */; };
+		B10000000000000000000024 /* CarTaskIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* CarTaskIntents.swift */; };
+		B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* CarTaskModelsTests.swift */; };
 		64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */; };
 		701E03BE9BBC8792CAD5919C /* CreateTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFA6E39FBCB063E54C61AF7 /* CreateTaskSheet.swift */; };
 		F2C4D6E8A1B3456790ABCDE0 /* TdaySheetChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */; };
@@ -157,6 +162,11 @@
 		53EFEAE1EE18AB86477A56BC /* CalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarViewModel.swift; sourceTree = "<group>"; };
 		593DCCDF3ADC95BE1CDC78FC /* StringHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHelpers.swift; sourceTree = "<group>"; };
 		5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskReminderScheduler.swift; sourceTree = "<group>"; };
+		B10000000000000000000001 /* CarTaskModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarTaskModels.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* CarPlayCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayCoordinator.swift; sourceTree = "<group>"; };
+		B10000000000000000000003 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
+		B10000000000000000000004 /* CarTaskIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarTaskIntents.swift; sourceTree = "<group>"; };
+		B10000000000000000000005 /* CarTaskModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarTaskModelsTests.swift; sourceTree = "<group>"; };
 		6049166B683EE082F8C551DD /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
 		629820F1BA29236313992076 /* ApiModelContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModelContractTests.swift; sourceTree = "<group>"; };
 		62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListScreen.swift; sourceTree = "<group>"; };
@@ -271,6 +281,7 @@
 			children = (
 				629820F1BA29236313992076 /* ApiModelContractTests.swift */,
 				434143484D41505045525301 /* CacheMappersDateParsingTests.swift */,
+				B10000000000000000000005 /* CarTaskModelsTests.swift */,
 				4A7B9C0D1E2F3456789ABC02 /* CompletedSyncMergeTests.swift */,
 				4D2A9B7E2CE3424C9D111002 /* ConnectivityClassificationTests.swift */,
 				4F52544D434C49454E543032 /* RealtimeClientTests.swift */,
@@ -289,6 +300,17 @@
 				AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */,
 			);
 			path = Todos;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000010 /* CarPlay */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000002 /* CarPlayCoordinator.swift */,
+				B10000000000000000000003 /* CarPlaySceneDelegate.swift */,
+				B10000000000000000000004 /* CarTaskIntents.swift */,
+				B10000000000000000000001 /* CarTaskModels.swift */,
+			);
+			path = CarPlay;
 			sourceTree = "<group>";
 		};
 		2D679EC9EE22239446D1DE67 /* Fonts */ = {
@@ -350,6 +372,7 @@
 				A7F6C08DE36D993639B83726 /* App */,
 				52B2765D1F90C3C5C936DBD0 /* Auth */,
 				867DC72A3F5B3C04E5C36879 /* Calendar */,
+				B10000000000000000000010 /* CarPlay */,
 				FE3DA39BEFDCE31E8159D522 /* Completed */,
 				7BA4A69F753AF1C268BCD197 /* Home */,
 				DA05A67258F74BF398DCADA3 /* Onboarding */,
@@ -754,6 +777,7 @@
 			files = (
 				B4995200636F408E4296FF0D /* ApiModelContractTests.swift in Sources */,
 				434143484D41505045525300 /* CacheMappersDateParsingTests.swift in Sources */,
+				B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */,
 				4A7B9C0D1E2F3456789ABC01 /* CompletedSyncMergeTests.swift in Sources */,
 				4D2A9B7E2CE3424C9D111001 /* ConnectivityClassificationTests.swift in Sources */,
 				4F52544D434C49454E543031 /* RealtimeClientTests.swift in Sources */,
@@ -788,6 +812,10 @@
 				04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */,
 				91660A57CFA826E39338BD33 /* CalendarScreen.swift in Sources */,
 				64E0A2B205D80764F2BF52FB /* CalendarViewModel.swift in Sources */,
+				B10000000000000000000022 /* CarPlayCoordinator.swift in Sources */,
+				B10000000000000000000023 /* CarPlaySceneDelegate.swift in Sources */,
+				B10000000000000000000024 /* CarTaskIntents.swift in Sources */,
+				B10000000000000000000021 /* CarTaskModels.swift in Sources */,
 				9146B23E1A1F6A3A71DE7A5B /* Colors.swift in Sources */,
 				B5D28682AD0623E39CCD4F8E /* CompleteTodoUseCase.swift in Sources */,
 				271C111B35309CA229AC1400 /* CompletedRepository.swift in Sources */,
