@@ -51,7 +51,7 @@ class FloaterTasksWidgetModelTest {
 
     @Test
     fun `model caps display tasks but preserves total count`() {
-        val floaters = (0 until 25).map { index ->
+        val floaters = (0 until 55).map { index ->
             floater(id = "task-$index", title = "Task ${index.toString().padStart(2, '0')}")
         }
 
@@ -61,11 +61,11 @@ class FloaterTasksWidgetModelTest {
             workspaceConfigured = true,
         )
 
-        assertEquals(25, model.taskCount)
-        assertEquals(20, model.tasks.size)
+        assertEquals(55, model.taskCount)
+        assertEquals(50, model.tasks.size)
         assertEquals(5, model.overflowCount)
         assertEquals("task-0", model.tasks.first().id)
-        assertEquals("task-19", model.tasks.last().id)
+        assertEquals("task-49", model.tasks.last().id)
     }
 
     @Test

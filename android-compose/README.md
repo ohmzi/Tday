@@ -118,10 +118,10 @@ of these widget surfaces.
 - All widget states keep a subtle oversized Today/Floater watermark in the background; empty and
   setup states add centered message text over that persistent motif.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
-- Task layouts render a fixed size-specific row set as the widget crosses compact, wide, medium, and
-  tall responsive buckets. Compact widgets show the highest-value row plus overflow, medium widgets
-  show two rows plus overflow when more tasks remain, and large widgets show a fuller neutral list.
-  Hidden tasks surface as the final `+N more` row.
+- Task layouts keep the header and plus action fixed, then render a scrollable task body. The first
+  viewport fits the highest-value rows for the current compact, wide, medium, or tall bucket, shows
+  `+N more` when hidden tasks remain, and reveals the remaining cached rows as the user scrolls.
+  Widget rows are capped at 50, with a final neutral app handoff row when more tasks exist.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater` through a dedicated translucent widget-create activity that
   hosts the matching in-app create-task sheet directly over the launcher with the title field

@@ -334,6 +334,7 @@
     <string name="widget_today_tasks_count">%1$d due</string>
     <string name="widget_today_tasks_count_unit">due</string>
     <string name="widget_today_tasks_more">+%1$d more</string>
+    <string name="widget_tasks_more_in_tday">+%1$d more in T\'Day</string>
     <string name="widget_today_tasks_setup_title">Open T\'Day</string>
     <string name="widget_today_tasks_setup_message">Set up your workspace</string>
     <string name="widget_floater_tasks_description">Shows floater tasks at a glance</string>

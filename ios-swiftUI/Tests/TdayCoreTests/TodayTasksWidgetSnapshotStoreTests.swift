@@ -41,7 +41,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let now = Date(timeIntervalSince1970: 1_764_072_600)
         let startOfDay = calendar.startOfDay(for: now)
-        let todos = (0..<25).map { index in
+        let todos = (0..<55).map { index in
             todo(
                 id: "task-\(index)",
                 title: "Task \(index)",
@@ -55,10 +55,10 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
             calendar: calendar
         )
 
-        XCTAssertEqual(snapshot.taskCount, 25)
-        XCTAssertEqual(snapshot.tasks.count, 20)
+        XCTAssertEqual(snapshot.taskCount, 55)
+        XCTAssertEqual(snapshot.tasks.count, 50)
         XCTAssertEqual(snapshot.tasks.first?.id, "task-0")
-        XCTAssertEqual(snapshot.tasks.last?.id, "task-19")
+        XCTAssertEqual(snapshot.tasks.last?.id, "task-49")
     }
 
     func testSnapshotUsesEmptyStateForConfiguredWorkspaceWithoutTodayTasks() {
@@ -163,7 +163,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
     }
 
     func testFloaterSnapshotCapsTasksForWidgetDisplay() {
-        let floaters = (0..<25).map { index in
+        let floaters = (0..<55).map { index in
             floater(
                 id: "task-\(index)",
                 title: "Task \(String(format: "%02d", index))"
@@ -174,10 +174,10 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
             from: OfflineSyncState(floaters: floaters)
         )
 
-        XCTAssertEqual(snapshot.taskCount, 25)
-        XCTAssertEqual(snapshot.tasks.count, 20)
+        XCTAssertEqual(snapshot.taskCount, 55)
+        XCTAssertEqual(snapshot.tasks.count, 50)
         XCTAssertEqual(snapshot.tasks.first?.id, "task-0")
-        XCTAssertEqual(snapshot.tasks.last?.id, "task-19")
+        XCTAssertEqual(snapshot.tasks.last?.id, "task-49")
     }
 
     func testFloaterSnapshotUsesEmptyStateForConfiguredWorkspaceWithoutFloaterTasks() {

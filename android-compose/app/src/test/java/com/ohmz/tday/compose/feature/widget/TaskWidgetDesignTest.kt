@@ -28,4 +28,69 @@ class TaskWidgetDesignTest {
         assertEquals(true, taskWidgetShowsTrailingText(TaskWidgetLayout.MEDIUM))
         assertEquals(true, taskWidgetShowsTrailingText(TaskWidgetLayout.TALL))
     }
+
+    @Test
+    fun `scroll items place overflow marker before remaining rows`() {
+        val rows = (0 until 5).map { row("task-$it") }
+        val items = taskWidgetScrollItems(
+            rows = rows,
+            overflowCount = 0,
+            visibleRowCapacity = 3,
+        )
+
+        assertEquals(
+            listOf(
+                "task:task-0",
+                "task:task-1",
+                "more:3",
+                "task:task-2",
+                "task:task-3",
+                "task:task-4",
+            ),
+            items.map(::scrollItemLabel),
+        )
+    }
+
+    @Test
+    fun `scroll overflow marker counts all hidden tasks`() {
+        val rows = (0 until 50).map { row("task-$it") }
+        val items = taskWidgetScrollItems(
+            rows = rows,
+            overflowCount = 10,
+            visibleRowCapacity = 5,
+        )
+
+        assertEquals("more:56", scrollItemLabel(items[4]))
+    }
+
+    @Test
+    fun `scroll items include terminal overflow only for capped tasks`() {
+        val uncappedItems = taskWidgetScrollItems(
+            rows = (0 until 8).map { row("task-$it") },
+            overflowCount = 0,
+            visibleRowCapacity = 3,
+        )
+        val cappedItems = taskWidgetScrollItems(
+            rows = (0 until 50).map { row("task-$it") },
+            overflowCount = 10,
+            visibleRowCapacity = 5,
+        )
+
+        assertEquals(false, uncappedItems.any { it is TaskWidgetScrollItem.TerminalOverflow })
+        assertEquals("terminal:10", scrollItemLabel(cappedItems.last()))
+    }
+
+    private fun row(id: String) = TaskWidgetRow(
+        key = id.hashCode().toLong(),
+        title = id,
+        priority = "Low",
+    )
+
+    private fun scrollItemLabel(item: TaskWidgetScrollItem): String {
+        return when (item) {
+            is TaskWidgetScrollItem.Task -> "task:${item.row.title}"
+            is TaskWidgetScrollItem.OverflowMarker -> "more:${item.hiddenCount}"
+            is TaskWidgetScrollItem.TerminalOverflow -> "terminal:${item.hiddenCount}"
+        }
+    }
 }

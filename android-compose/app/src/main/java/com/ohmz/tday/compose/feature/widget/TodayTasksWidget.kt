@@ -50,6 +50,7 @@ class TodayTasksWidget : GlanceAppWidget() {
             addTaskLabel = context.getString(R.string.widget_today_tasks_add),
             countLabelFormat = context.getString(R.string.widget_today_tasks_count),
             moreLabelFormat = context.getString(R.string.widget_today_tasks_more),
+            moreInAppLabelFormat = context.getString(R.string.widget_tasks_more_in_tday),
         )
 
         provideContent {
@@ -73,6 +74,7 @@ class TodayTasksWidget : GlanceAppWidget() {
                     },
                     overflowCount = model.overflowCount,
                     overflowLabel = strings.moreLabelFormat,
+                    terminalOverflowLabel = strings.moreInAppLabelFormat,
                     visuals = TodayWidgetVisuals,
                     openAction = openAppAction(),
                     addAction = openCreateTodayAction(),
@@ -89,6 +91,7 @@ private data class TodayTasksWidgetStrings(
     val addTaskLabel: String,
     val countLabelFormat: String,
     val moreLabelFormat: String,
+    val moreInAppLabelFormat: String,
 )
 
 private fun TodayTasksWidgetStatus.toContentState(): TaskWidgetContentState {

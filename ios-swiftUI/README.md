@@ -94,9 +94,10 @@ decodes schema version 2 snapshots and keeps a legacy fallback for older payload
   `tday://todos/create?target=floater`, select the matching root feed, and immediately start the
   in-app create-task sheet with the title field focused. WidgetKit cannot present the app sheet over
   the Home Screen widget host, so the interaction uses a focused in-app handoff.
-- System-family WidgetKit widgets remain snapshot/glanceable. The widget stores a larger capped task
-  set, renders a fixed family-specific neutral row set, and uses tighter row metrics so medium and
-  large families surface more task context before the compact overflow row.
+- System-family WidgetKit widgets remain snapshot/glanceable because WidgetKit does not support true
+  in-widget scrolling lists. The widget stores up to 50 task rows, renders the best-fit
+  family-specific neutral row set, and keeps `+N more` as the tap-to-open cue when additional tasks
+  exist.
 
 Widget UI should keep using system WidgetKit margins/backgrounds, removable container backgrounds, and
 tinted/accented rendering support while carrying T'Day identity through rounded typography, native

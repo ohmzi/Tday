@@ -62,4 +62,4 @@ private fun floaterWidgetPriorityRank(priority: String): Int {
     }
 }
 
-const val FLOATER_TASKS_WIDGET_TASK_LIMIT = 20
+const val FLOATER_TASKS_WIDGET_TASK_LIMIT = 50
