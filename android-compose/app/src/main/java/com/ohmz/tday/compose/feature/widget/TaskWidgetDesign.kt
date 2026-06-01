@@ -1,18 +1,24 @@
 package com.ohmz.tday.compose.feature.widget
 
+import android.util.TypedValue
+import android.view.Gravity
+import android.widget.RemoteViews
+import androidx.annotation.ColorRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.Action
 import androidx.glance.action.clickable
+import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -25,15 +31,9 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.text.FontFamily
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
-import androidx.glance.text.TextStyle
 import com.ohmz.tday.compose.R
 import java.util.Locale
-
-internal val TdayWidgetFontFamily = FontFamily("Nunito")
 
 internal enum class TaskWidgetContentState {
     SETUP,
@@ -66,6 +66,11 @@ internal data class TaskWidgetRow(
     val priority: String,
     val trailingText: String? = null,
 )
+
+private enum class TaskWidgetTextColor(@ColorRes val resourceId: Int) {
+    PRIMARY(R.color.tday_widget_on_surface),
+    SECONDARY(R.color.tday_widget_on_surface_variant),
+}
 
 @Composable
 internal fun TaskWidgetContent(
@@ -163,21 +168,19 @@ private fun TaskWidgetHeader(
         if (layout == TaskWidgetLayout.COMPACT) {
             CompactCountLockup(
                 countLabel = countLabel,
-                modifier = GlanceModifier.defaultWeight(),
+                modifier = GlanceModifier.width(metrics.compactCountWidth),
             )
+            Spacer(modifier = GlanceModifier.defaultWeight())
         } else {
-            Text(
-                modifier = GlanceModifier.defaultWeight(),
+            WidgetText(
+                modifier = GlanceModifier.width(metrics.headerTitleWidth),
                 text = title,
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontFamily = TdayWidgetFontFamily,
-                    fontSize = if (layout == TaskWidgetLayout.TALL) 17.sp else 16.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
+                color = TaskWidgetTextColor.PRIMARY,
+                fontSize = if (layout == TaskWidgetLayout.TALL) 17.sp else 16.sp,
                 maxLines = 1,
+                fillBounds = true,
             )
-            Spacer(modifier = GlanceModifier.width(8.dp))
+            Spacer(modifier = GlanceModifier.defaultWeight())
             CountPill(
                 label = countLabel,
             )
@@ -201,15 +204,13 @@ private fun CompactCountLockup(
         modifier = modifier,
         contentAlignment = Alignment.CenterStart,
     ) {
-        Text(
+        WidgetText(
+            modifier = GlanceModifier.fillMaxSize(),
             text = countLabel,
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurfaceVariant,
-                fontFamily = TdayWidgetFontFamily,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-            ),
+            color = TaskWidgetTextColor.SECONDARY,
+            fontSize = 18.sp,
             maxLines = 1,
+            fillBounds = true,
         )
     }
 }
@@ -218,18 +219,14 @@ private fun CompactCountLockup(
 private fun CountPill(
     label: String,
 ) {
-    Text(
+    WidgetText(
         modifier = GlanceModifier
             .height(26.dp)
             .padding(start = 10.dp, end = 10.dp),
         text = label,
-        style = TextStyle(
-            color = GlanceTheme.colors.onSurfaceVariant,
-            fontFamily = TdayWidgetFontFamily,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        ),
+        color = TaskWidgetTextColor.SECONDARY,
+        fontSize = 12.sp,
+        textAlign = TextAlign.Center,
         maxLines = 1,
     )
 }
@@ -256,6 +253,48 @@ private fun AddButton(
 }
 
 @Composable
+private fun WidgetText(
+    text: String,
+    color: TaskWidgetTextColor,
+    fontSize: TextUnit,
+    modifier: GlanceModifier = GlanceModifier,
+    textAlign: TextAlign = TextAlign.Start,
+    maxLines: Int = 1,
+    fillBounds: Boolean = false,
+) {
+    require(fontSize.isSp) { "Widget font sizes must be expressed in sp." }
+
+    val context = LocalContext.current
+    val layoutId = if (fillBounds) {
+        R.layout.widget_nunito_text_fill
+    } else {
+        R.layout.widget_nunito_text_wrap
+    }
+    val remoteViews = RemoteViews(context.packageName, layoutId).apply {
+        setTextViewText(R.id.widget_nunito_text, text)
+        setTextViewTextSize(R.id.widget_nunito_text, TypedValue.COMPLEX_UNIT_SP, fontSize.value)
+        setTextColor(R.id.widget_nunito_text, ContextCompat.getColor(context, color.resourceId))
+        setInt(R.id.widget_nunito_text, "setGravity", textAlign.toWidgetGravity())
+        setInt(R.id.widget_nunito_text, "setMaxLines", maxLines)
+    }
+
+    AndroidRemoteViews(
+        remoteViews = remoteViews,
+        modifier = modifier,
+    )
+}
+
+private fun TextAlign.toWidgetGravity(): Int {
+    return when (this) {
+        TextAlign.Center -> Gravity.CENTER
+        TextAlign.Left -> Gravity.LEFT or Gravity.CENTER_VERTICAL
+        TextAlign.Right -> Gravity.RIGHT or Gravity.CENTER_VERTICAL
+        TextAlign.End -> Gravity.END or Gravity.CENTER_VERTICAL
+        else -> Gravity.START or Gravity.CENTER_VERTICAL
+    }
+}
+
+@Composable
 private fun TaskWidgetMessage(
     title: String,
     message: String,
@@ -272,29 +311,25 @@ private fun TaskWidgetMessage(
             modifier = GlanceModifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
+            WidgetText(
+                modifier = GlanceModifier.fillMaxWidth(),
                 text = title,
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontFamily = TdayWidgetFontFamily,
-                    fontSize = if (compact) 13.sp else 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                ),
+                color = TaskWidgetTextColor.PRIMARY,
+                fontSize = if (compact) 13.sp else 15.sp,
+                textAlign = TextAlign.Center,
                 maxLines = if (compact) 1 else 2,
+                fillBounds = true,
             )
             if (!compact) {
                 Spacer(modifier = GlanceModifier.height(3.dp))
-                Text(
+                WidgetText(
+                    modifier = GlanceModifier.fillMaxWidth(),
                     text = message,
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
-                        fontFamily = TdayWidgetFontFamily,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    ),
+                    color = TaskWidgetTextColor.SECONDARY,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
                     maxLines = 2,
+                    fillBounds = true,
                 )
             }
         }
@@ -357,18 +392,21 @@ private fun TaskWidgetRow(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val titleWidth = if (taskWidgetShowsTrailingText(layout) && row.trailingText != null) {
+            metrics.rowTitleWidthWithTrailing
+        } else {
+            metrics.rowTitleWidth
+        }
+
         PriorityDot(size = 7.dp)
         Spacer(modifier = GlanceModifier.width(7.dp))
-        Text(
-            modifier = GlanceModifier.defaultWeight(),
+        WidgetText(
+            modifier = GlanceModifier.width(titleWidth),
             text = row.title,
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurface,
-                fontFamily = TdayWidgetFontFamily,
-                fontSize = metrics.rowFontSize,
-                fontWeight = FontWeight.Bold,
-            ),
+            color = TaskWidgetTextColor.PRIMARY,
+            fontSize = metrics.rowFontSize,
             maxLines = 1,
+            fillBounds = true,
         )
         if (taskWidgetShowsTrailingText(layout) && row.trailingText != null) {
             Spacer(modifier = GlanceModifier.width(6.dp))
@@ -379,18 +417,14 @@ private fun TaskWidgetRow(
 
 @Composable
 private fun TimeChip(text: String) {
-    Text(
+    WidgetText(
         modifier = GlanceModifier
             .height(22.dp)
             .padding(start = 7.dp, end = 7.dp),
         text = text,
-        style = TextStyle(
-            color = GlanceTheme.colors.onSurfaceVariant,
-            fontFamily = TdayWidgetFontFamily,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        ),
+        color = TaskWidgetTextColor.SECONDARY,
+        fontSize = 11.sp,
+        textAlign = TextAlign.Center,
         maxLines = 1,
     )
 }
@@ -409,14 +443,10 @@ private fun OverflowRow(
             .clickable(openAction),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        WidgetText(
             text = label,
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurfaceVariant,
-                fontFamily = TdayWidgetFontFamily,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-            ),
+            color = TaskWidgetTextColor.SECONDARY,
+            fontSize = 11.sp,
             maxLines = 1,
         )
     }
@@ -451,11 +481,15 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             topPadding = 5.dp,
             bottomPadding = 6.dp,
             headerHeight = 44.dp,
+            compactCountWidth = 74.dp,
+            headerTitleWidth = 0.dp,
             addButtonSize = 42.dp,
             contentSpacing = 4.dp,
             rowHeight = 22.dp,
             rowSpacing = 2.dp,
             rowFontSize = 12.sp,
+            rowTitleWidth = 122.dp,
+            rowTitleWidthWithTrailing = 0.dp,
             visibleRowCapacity = 2,
         )
 
@@ -464,11 +498,15 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             topPadding = 6.dp,
             bottomPadding = 7.dp,
             headerHeight = 44.dp,
+            compactCountWidth = 74.dp,
+            headerTitleWidth = 112.dp,
             addButtonSize = 44.dp,
             contentSpacing = 5.dp,
             rowHeight = 23.dp,
             rowSpacing = 2.dp,
             rowFontSize = 12.sp,
+            rowTitleWidth = 184.dp,
+            rowTitleWidthWithTrailing = 112.dp,
             visibleRowCapacity = 2,
         )
 
@@ -477,11 +515,15 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             topPadding = 6.dp,
             bottomPadding = 7.dp,
             headerHeight = 44.dp,
+            compactCountWidth = 74.dp,
+            headerTitleWidth = 112.dp,
             addButtonSize = 44.dp,
             contentSpacing = 5.dp,
             rowHeight = 22.dp,
             rowSpacing = 2.dp,
             rowFontSize = 12.sp,
+            rowTitleWidth = 184.dp,
+            rowTitleWidthWithTrailing = 112.dp,
             visibleRowCapacity = 3,
         )
 
@@ -490,11 +532,15 @@ private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
             topPadding = 8.dp,
             bottomPadding = 9.dp,
             headerHeight = 48.dp,
+            compactCountWidth = 74.dp,
+            headerTitleWidth = 124.dp,
             addButtonSize = 48.dp,
             contentSpacing = 7.dp,
             rowHeight = 25.dp,
             rowSpacing = 3.dp,
             rowFontSize = 13.sp,
+            rowTitleWidth = 184.dp,
+            rowTitleWidthWithTrailing = 112.dp,
             visibleRowCapacity = 5,
         )
     }
@@ -505,10 +551,14 @@ private data class TaskWidgetMetrics(
     val topPadding: Dp,
     val bottomPadding: Dp,
     val headerHeight: Dp,
+    val compactCountWidth: Dp,
+    val headerTitleWidth: Dp,
     val addButtonSize: Dp,
     val contentSpacing: Dp,
     val rowHeight: Dp,
     val rowSpacing: Dp,
     val rowFontSize: TextUnit,
+    val rowTitleWidth: Dp,
+    val rowTitleWidthWithTrailing: Dp,
     val visibleRowCapacity: Int,
 )

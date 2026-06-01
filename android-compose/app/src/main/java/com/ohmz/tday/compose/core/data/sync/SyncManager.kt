@@ -1,8 +1,6 @@
 package com.ohmz.tday.compose.core.data.sync
 
-import android.content.Context
 import android.util.Log
-import androidx.glance.appwidget.updateAll
 import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
 import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.CachedListRecord
@@ -57,8 +55,8 @@ import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
-import com.ohmz.tday.compose.feature.widget.TodayTasksWidget
-import dagger.hilt.android.qualifiers.ApplicationContext
+import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
+import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -72,10 +70,11 @@ import javax.inject.Singleton
 
 @Singleton
 class SyncManager @Inject constructor(
-    @ApplicationContext private val context: Context,
     private val api: TdayApiService,
     private val cacheManager: OfflineCacheManager,
     private val secureConfigStore: SecureConfigStore,
+    private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
+    private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
 ) {
     private val offlineSyncFailureMutable = MutableSharedFlow<Unit>(extraBufferCapacity = 8)
     val offlineSyncFailures: SharedFlow<Unit> = offlineSyncFailureMutable.asSharedFlow()
@@ -109,7 +108,7 @@ class SyncManager @Inject constructor(
                     )
                 }
             }
-            runCatching { TodayTasksWidget().updateAll(context) }
+            refreshTaskWidgets()
             return Result.success(Unit)
         }
 
@@ -126,7 +125,7 @@ class SyncManager @Inject constructor(
                     replayPendingMutations = replayPendingMutations,
                 )
             }
-            runCatching { TodayTasksWidget().updateAll(context) }
+            refreshTaskWidgets()
             if (contactedServer || syncedRemoteData) {
                 offlineSyncSuccessMutable.tryEmit(Unit)
             }
@@ -146,6 +145,11 @@ class SyncManager @Inject constructor(
                 "Could not connect to server",
             )
         }
+    }
+
+    private suspend fun refreshTaskWidgets() {
+        runCatching { todayTasksWidgetRefresher.refreshNow() }
+        runCatching { floaterTasksWidgetRefresher.refreshNow() }
     }
 
     private suspend fun syncLocalCache(
