@@ -82,7 +82,7 @@ Every Sentry event may contain non-identifying diagnostics:
 | iOS | Sentry init, release/dist, DSN via Info.plist build settings, API/sync/realtime/local-mode breadcrumbs | New async flows use `TdayTelemetry` structural breadcrumbs |
 | Offline sync | Pending replay and Local Mode no-op breadcrumbs | New mutation types emit counts/kinds only, never payload text |
 | Mobile server setup | Probe/version breadcrumbs | New connection/version flows report phase and result class only |
-| Reminders/widgets | Reminder reschedule breadcrumbs and nonfatal capture around scheduler/boot/worker failure paths | New failure paths should capture exception type and operation |
+| Reminders/widgets | Reminder reschedule breadcrumbs and nonfatal capture around scheduler/boot/worker/widget-create failure paths | New failure paths should capture exception type and operation only |
 | Security events | Backend `eventLog` plus Sentry breadcrumbs for event code | New security events must use documented reason codes |
 
 ## Post-Sentry Feature Coverage
@@ -93,7 +93,7 @@ structural and content-free:
 | Feature Area | Current Diagnostic Events | Privacy Boundary |
 |--------------|---------------------------|------------------|
 | Local Mode | `local_mode.enter`, `local_mode.sync_noop` | No local task/list/floater content, no server upload side effect |
-| Floater / Anytime tasks | `task.create`, `task.update`, `task.complete`, `task.delete`, `todo_list.load` with `mode=floater` | No floater title, description, list ID, or local cache record |
+| Floater / Anytime tasks | `task.create`, `task.update`, `task.complete`, `task.delete`, `todo_list.load` with `mode=floater`, `widget_create_floater.submit` on widget submit failure | No floater title, description, list ID, or local cache record |
 | Floater and scheduled lists | `list.create`, `list.update`, `list.delete` with `kind=floater` or `kind=scheduled` | Only `has_color`, `has_icon`, and scoped-list booleans |
 | Offline sync replay | `sync.replay`, `sync.manual`, `server.probe` | Counts, phase, and result class only; never pending mutation payloads |
 | Credential manager / password autofill | `credential.request`, `credential.result`, `credential.save`, `credential.clear` | No email, password, server URL, credential ID, or host entered by the user |

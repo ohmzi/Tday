@@ -8,6 +8,7 @@ import com.ohmz.tday.compose.core.data.db.SyncMetadataEntity
 import com.ohmz.tday.compose.core.data.db.TdayDatabase
 import com.ohmz.tday.compose.core.data.db.toEntity
 import com.ohmz.tday.compose.core.data.db.toRecord
+import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,7 @@ class OfflineCacheManager @Inject constructor(
     private val themePreferenceStore: ThemePreferenceStore,
     private val cookieManager: CookieManager,
     private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
+    private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
 ) {
     private val todoDao = database.todoDao()
     private val floaterDao = database.floaterDao()
@@ -125,6 +127,7 @@ class OfflineCacheManager @Inject constructor(
         if (hasUiDataChanges(previous, normalizedState)) {
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
+            floaterTasksWidgetRefresher.requestRefresh()
         }
     }
 
@@ -158,6 +161,7 @@ class OfflineCacheManager @Inject constructor(
         if (hasUiDataChanges(previous, cleared)) {
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
+            floaterTasksWidgetRefresher.requestRefresh()
         }
     }
 
@@ -173,6 +177,7 @@ class OfflineCacheManager @Inject constructor(
         if (hasUiDataChanges(previous, cleared)) {
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
+            floaterTasksWidgetRefresher.requestRefresh()
         }
     }
 
