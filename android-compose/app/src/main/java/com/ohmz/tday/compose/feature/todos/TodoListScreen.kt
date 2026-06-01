@@ -1197,7 +1197,6 @@ fun TodoListScreen(
             defaultScheduled = uiState.mode != TodoListMode.FLOATER,
             showScheduleControls = uiState.mode != TodoListMode.FLOATER,
             initialDueEpochMs = quickAddDueEpochMs,
-            autoFocusTitle = openCreateTaskOnStart,
             presentImmediately = openCreateTaskOnStart,
             onParseTaskTitleNlp = if (uiState.mode == TodoListMode.FLOATER) null else onParseTaskTitleNlp,
             onDismiss = {
