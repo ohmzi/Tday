@@ -11,7 +11,7 @@ struct AppRootView: View {
     @State private var rootFeedTab: RootFeedTab = .home
     @State private var rootCreateTaskRequestID = 0
     @State private var rootCreateTaskAutoFocusRequestID = 0
-    @State private var pendingHomeCreateTaskAutoFocus: Bool?
+    @State private var pendingRootCreateTask: PendingRootCreateTask?
     @State private var rootHomeScrollToTopRequestID = 0
     @State private var rootFloaterScrollToTopRequestID = 0
     @State private var rootDockCollapsed = false
@@ -68,6 +68,7 @@ struct AppRootView: View {
                                     pullRefreshEnabled: !appViewModel.isLocalMode,
                                     usesRootFeedHeader: true,
                                     createTaskRequestID: rootCreateTaskRequestID,
+                                    autoFocusCreateTaskRequestID: rootCreateTaskAutoFocusRequestID,
                                     scrollToTopRequestID: rootFloaterScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
@@ -105,6 +106,8 @@ struct AppRootView: View {
                         case .todayTodos:
                             TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .createTodayTodo:
+                            EmptyView()
+                        case .createFloaterTodo:
                             EmptyView()
                         case .overdueTodos:
                             TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
@@ -246,7 +249,7 @@ struct AppRootView: View {
                 await appViewModel.bootstrap()
             }
             routePendingNotificationDeepLink()
-            presentPendingHomeCreateTaskIfReady()
+            presentPendingRootCreateTaskIfReady()
         }
         .onOpenURL { url in
             handleDeepLink(url)
@@ -255,20 +258,20 @@ struct AppRootView: View {
             routePendingNotificationDeepLink()
         }
         .onChange(of: appViewModel.hasCompletedInitialBootstrap) { _, _ in
-            presentPendingHomeCreateTaskIfReady()
+            presentPendingRootCreateTaskIfReady()
         }
         .onChange(of: appViewModel.isWorkspaceAvailable) { _, _ in
-            presentPendingHomeCreateTaskIfReady()
+            presentPendingRootCreateTaskIfReady()
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
                 guard hasLeftActiveScene else {
-                    presentPendingHomeCreateTaskIfReady()
+                    presentPendingRootCreateTaskIfReady()
                     return
                 }
                 hasLeftActiveScene = false
-                presentPendingHomeCreateTaskIfReady()
+                presentPendingRootCreateTaskIfReady()
                 Task {
                     await appViewModel.reconnectAfterForeground()
                 }
@@ -285,7 +288,9 @@ struct AppRootView: View {
         case .home:
             selectRootFeedTab(.home)
         case .createTodayTodo:
-            requestHomeCreateTask(autoFocusTitle: true)
+            requestRootCreateTask(on: .home, autoFocusTitle: true)
+        case .createFloaterTodo:
+            requestRootCreateTask(on: .floater, autoFocusTitle: true)
         case .floaterTodos:
             selectRootFeedTab(.floater)
         default:
@@ -315,15 +320,16 @@ struct AppRootView: View {
         }
     }
 
-    private func requestHomeCreateTask(autoFocusTitle: Bool) {
-        selectRootFeedTab(.home)
-        pendingHomeCreateTaskAutoFocus = (pendingHomeCreateTaskAutoFocus ?? false) || autoFocusTitle
-        presentPendingHomeCreateTaskIfReady()
+    private func requestRootCreateTask(on tab: RootFeedTab, autoFocusTitle: Bool) {
+        selectRootFeedTab(tab)
+        let shouldAutoFocus = (pendingRootCreateTask?.autoFocusTitle ?? false) || autoFocusTitle
+        pendingRootCreateTask = PendingRootCreateTask(tab: tab, autoFocusTitle: shouldAutoFocus)
+        presentPendingRootCreateTaskIfReady()
     }
 
-    private func presentPendingHomeCreateTaskIfReady() {
+    private func presentPendingRootCreateTaskIfReady() {
         guard
-            let autoFocusTitle = pendingHomeCreateTaskAutoFocus,
+            let request = pendingRootCreateTask,
             scenePhase == .active,
             appViewModel.hasCompletedInitialBootstrap,
             appViewModel.isWorkspaceAvailable
@@ -331,16 +337,17 @@ struct AppRootView: View {
             return
         }
 
-        pendingHomeCreateTaskAutoFocus = nil
+        pendingRootCreateTask = nil
         Task { @MainActor in
+            selectRootFeedTab(request.tab)
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(180))
             guard appViewModel.hasCompletedInitialBootstrap, appViewModel.isWorkspaceAvailable else {
-                pendingHomeCreateTaskAutoFocus = autoFocusTitle
+                pendingRootCreateTask = request
                 return
             }
             let nextRequestID = rootCreateTaskRequestID + 1
-            rootCreateTaskAutoFocusRequestID = autoFocusTitle ? nextRequestID : 0
+            rootCreateTaskAutoFocusRequestID = request.autoFocusTitle ? nextRequestID : 0
             rootCreateTaskRequestID = nextRequestID
         }
     }
@@ -356,7 +363,12 @@ struct AppRootView: View {
 
     private func setNavigationPath(_ newPath: [AppRoute]) {
         if newPath.contains(.createTodayTodo) {
-            requestHomeCreateTask(autoFocusTitle: true)
+            requestRootCreateTask(on: .home, autoFocusTitle: true)
+            return
+        }
+
+        if newPath.contains(.createFloaterTodo) {
+            requestRootCreateTask(on: .floater, autoFocusTitle: true)
             return
         }
 
@@ -387,7 +399,14 @@ struct AppRootView: View {
     private func normalizeRootNavigationPath(_ path: [AppRoute]) {
         if path.contains(.createTodayTodo) {
             DispatchQueue.main.async {
-                requestHomeCreateTask(autoFocusTitle: true)
+                requestRootCreateTask(on: .home, autoFocusTitle: true)
+            }
+            return
+        }
+
+        if path.contains(.createFloaterTodo) {
+            DispatchQueue.main.async {
+                requestRootCreateTask(on: .floater, autoFocusTitle: true)
             }
             return
         }
@@ -453,6 +472,11 @@ private struct AppSnackbar: View {
     }
 }
 
+private struct PendingRootCreateTask {
+    let tab: RootFeedTab
+    let autoFocusTitle: Bool
+}
+
 private extension AppRoute {
     var rootFeedTab: RootFeedTab? {
         switch self {
@@ -471,7 +495,7 @@ private extension AppRoute {
 
     var isCommandRoute: Bool {
         switch self {
-        case .createTodayTodo:
+        case .createTodayTodo, .createFloaterTodo:
             return true
         default:
             return false

@@ -150,3 +150,156 @@ enum TodayTasksWidgetSnapshotStore {
         return stores
     }
 }
+
+struct FloaterTasksWidgetSnapshot: Codable, Equatable {
+    let schemaVersion: Int
+    let generatedAtEpochMs: Int64
+    let title: String
+    let status: FloaterTasksWidgetSnapshotStatus
+    let taskCount: Int
+    let tasks: [FloaterTasksWidgetTaskSnapshot]
+
+    init(
+        schemaVersion: Int = FloaterTasksWidgetSnapshotStore.snapshotSchemaVersion,
+        generatedAtEpochMs: Int64,
+        title: String,
+        status: FloaterTasksWidgetSnapshotStatus,
+        taskCount: Int,
+        tasks: [FloaterTasksWidgetTaskSnapshot]
+    ) {
+        self.schemaVersion = schemaVersion
+        self.generatedAtEpochMs = generatedAtEpochMs
+        self.title = title
+        self.status = status
+        self.taskCount = taskCount
+        self.tasks = tasks
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedTasks = try container.decodeIfPresent([FloaterTasksWidgetTaskSnapshot].self, forKey: .tasks) ?? []
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        generatedAtEpochMs = try container.decode(Int64.self, forKey: .generatedAtEpochMs)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? FloaterTasksWidgetSnapshotStore.defaultTitle
+        status = (try? container.decodeIfPresent(FloaterTasksWidgetSnapshotStatus.self, forKey: .status)) ?? (decodedTasks.isEmpty ? .empty : .tasks)
+        taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
+        tasks = decodedTasks
+    }
+}
+
+struct FloaterTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
+    let id: String
+    let title: String
+    let priority: String
+}
+
+enum FloaterTasksWidgetSnapshotStatus: String, Codable, Equatable {
+    case setup
+    case empty
+    case tasks
+}
+
+enum FloaterTasksWidgetSnapshotStore {
+    static let snapshotSchemaVersion = 1
+    static let widgetKind = "FloaterTasksWidget"
+    static let appGroupSuiteName = "group.com.ohmz.tday"
+    static let snapshotKey = "tday.widget.floaterTasksSnapshot"
+    static let defaultTitle = "Floater Tasks"
+    static let taskLimit = 20
+
+    static func makeSnapshot(
+        from state: OfflineSyncState,
+        workspaceConfigured: Bool = true,
+        now: Date = Date()
+    ) -> FloaterTasksWidgetSnapshot {
+        guard workspaceConfigured else {
+            return FloaterTasksWidgetSnapshot(
+                generatedAtEpochMs: Int64(now.timeIntervalSince1970 * 1_000),
+                title: defaultTitle,
+                status: .setup,
+                taskCount: 0,
+                tasks: []
+            )
+        }
+
+        let floaterTasks = state.floaters
+            .filter { !$0.completed }
+            .sorted(by: floaterWidgetSortPrecedes)
+
+        return FloaterTasksWidgetSnapshot(
+            generatedAtEpochMs: Int64(now.timeIntervalSince1970 * 1_000),
+            title: defaultTitle,
+            status: floaterTasks.isEmpty ? .empty : .tasks,
+            taskCount: floaterTasks.count,
+            tasks: floaterTasks.prefix(taskLimit).map {
+                FloaterTasksWidgetTaskSnapshot(
+                    id: $0.id,
+                    title: $0.title,
+                    priority: $0.priority
+                )
+            }
+        )
+    }
+
+    static func saveFloaterTasks(from state: OfflineSyncState) {
+        let snapshot = makeSnapshot(from: state)
+        guard let data = try? JSONEncoder().encode(snapshot) else {
+            return
+        }
+
+        let stores = defaultsStores()
+        stores.forEach { store in
+            store.set(data, forKey: snapshotKey)
+        }
+
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadTimelines(ofKind: widgetKind)
+        #endif
+    }
+
+    static func loadSnapshot() -> FloaterTasksWidgetSnapshot? {
+        for store in defaultsStores() {
+            guard let data = store.data(forKey: snapshotKey),
+                  let snapshot = try? JSONDecoder().decode(FloaterTasksWidgetSnapshot.self, from: data) else {
+                continue
+            }
+            return snapshot
+        }
+        return nil
+    }
+
+    private static func defaultsStores() -> [UserDefaults] {
+        var stores = [UserDefaults]()
+        if let shared = UserDefaults(suiteName: appGroupSuiteName) {
+            stores.append(shared)
+        }
+        stores.append(.standard)
+        return stores
+    }
+
+    private static func floaterWidgetSortPrecedes(_ lhs: CachedFloaterRecord, _ rhs: CachedFloaterRecord) -> Bool {
+        if lhs.pinned != rhs.pinned {
+            return lhs.pinned && !rhs.pinned
+        }
+        let lhsRank = floaterWidgetPriorityRank(lhs.priority)
+        let rhsRank = floaterWidgetPriorityRank(rhs.priority)
+        if lhsRank != rhsRank {
+            return lhsRank < rhsRank
+        }
+        if lhs.title.localizedCaseInsensitiveCompare(rhs.title) != .orderedSame {
+            return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+        }
+        return lhs.id < rhs.id
+    }
+
+    private static func floaterWidgetPriorityRank(_ priority: String) -> Int {
+        switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "high", "urgent", "important":
+            return 0
+        case "medium":
+            return 1
+        default:
+            return 2
+        }
+    }
+}

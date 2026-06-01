@@ -123,6 +123,108 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotSchemaVersion, 2)
     }
 
+    func testFloaterSnapshotIncludesOnlyPendingFloaters() {
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let state = OfflineSyncState(
+            floaters: [
+                floater(id: "open", title: "Open"),
+                floater(id: "listed", title: "Listed", listId: "list-1"),
+                floater(id: "completed", title: "Completed", completed: true)
+            ]
+        )
+
+        let snapshot = FloaterTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now)
+
+        XCTAssertEqual(snapshot.schemaVersion, FloaterTasksWidgetSnapshotStore.snapshotSchemaVersion)
+        XCTAssertEqual(snapshot.title, "Floater Tasks")
+        XCTAssertEqual(snapshot.status, .tasks)
+        XCTAssertEqual(snapshot.taskCount, 2)
+        XCTAssertEqual(snapshot.tasks.map(\.id), ["listed", "open"])
+    }
+
+    func testFloaterSnapshotSortsPinnedPriorityTitleAndID() {
+        let state = OfflineSyncState(
+            floaters: [
+                floater(id: "low-a", title: "Alpha", priority: "Low"),
+                floater(id: "high-b", title: "Beta", priority: "High"),
+                floater(id: "medium-a", title: "Alpha", priority: "Medium"),
+                floater(id: "pinned-low", title: "Zulu", priority: "Low", pinned: true),
+                floater(id: "urgent-a", title: "Alpha", priority: "Urgent"),
+                floater(id: "urgent-b", title: "Alpha", priority: "Important")
+            ]
+        )
+
+        let snapshot = FloaterTasksWidgetSnapshotStore.makeSnapshot(from: state)
+
+        XCTAssertEqual(
+            snapshot.tasks.map(\.id),
+            ["pinned-low", "urgent-a", "urgent-b", "high-b", "medium-a", "low-a"]
+        )
+    }
+
+    func testFloaterSnapshotCapsTasksForWidgetDisplay() {
+        let floaters = (0..<25).map { index in
+            floater(
+                id: "task-\(index)",
+                title: "Task \(String(format: "%02d", index))"
+            )
+        }
+
+        let snapshot = FloaterTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(floaters: floaters)
+        )
+
+        XCTAssertEqual(snapshot.taskCount, 25)
+        XCTAssertEqual(snapshot.tasks.count, 20)
+        XCTAssertEqual(snapshot.tasks.first?.id, "task-0")
+        XCTAssertEqual(snapshot.tasks.last?.id, "task-19")
+    }
+
+    func testFloaterSnapshotUsesEmptyStateForConfiguredWorkspaceWithoutFloaterTasks() {
+        let snapshot = FloaterTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(),
+            now: Date(timeIntervalSince1970: 1_764_072_600)
+        )
+
+        XCTAssertEqual(snapshot.status, .empty)
+        XCTAssertEqual(snapshot.taskCount, 0)
+        XCTAssertTrue(snapshot.tasks.isEmpty)
+    }
+
+    func testFloaterSnapshotUsesSetupStateBeforeWorkspaceConfiguration() {
+        let snapshot = FloaterTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(
+                floaters: [
+                    floater(id: "floater", title: "Floater")
+                ]
+            ),
+            workspaceConfigured: false,
+            now: Date(timeIntervalSince1970: 1_764_072_600)
+        )
+
+        XCTAssertEqual(snapshot.status, .setup)
+        XCTAssertEqual(snapshot.taskCount, 0)
+        XCTAssertTrue(snapshot.tasks.isEmpty)
+    }
+
+    func testFloaterWidgetConstantsStayAlignedWithExtension() {
+        XCTAssertEqual(FloaterTasksWidgetSnapshotStore.widgetKind, "FloaterTasksWidget")
+        XCTAssertEqual(FloaterTasksWidgetSnapshotStore.appGroupSuiteName, "group.com.ohmz.tday")
+        XCTAssertEqual(FloaterTasksWidgetSnapshotStore.snapshotKey, "tday.widget.floaterTasksSnapshot")
+        XCTAssertEqual(FloaterTasksWidgetSnapshotStore.snapshotSchemaVersion, 1)
+    }
+
+    func testCreateFloaterDeepLinkRoute() {
+        XCTAssertEqual(
+            AppRoute.from(url: URL(string: "tday://todos/create?target=floater")!),
+            .createFloaterTodo
+        )
+        XCTAssertEqual(
+            AppRoute.from(url: URL(string: "tday://todos/create?target=today")!),
+            .createTodayTodo
+        )
+    }
+
     private func todo(
         id: String,
         title: String,
@@ -142,6 +244,27 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
             completed: completed,
             listId: nil,
             updatedAtEpochMs: dueEpochMs
+        )
+    }
+
+    private func floater(
+        id: String,
+        title: String,
+        priority: String = "low",
+        pinned: Bool = false,
+        completed: Bool = false,
+        listId: String? = nil
+    ) -> CachedFloaterRecord {
+        CachedFloaterRecord(
+            id: id,
+            canonicalId: id,
+            title: title,
+            description: nil,
+            priority: priority,
+            pinned: pinned,
+            completed: completed,
+            listId: listId,
+            updatedAtEpochMs: 0
         )
     }
 }
