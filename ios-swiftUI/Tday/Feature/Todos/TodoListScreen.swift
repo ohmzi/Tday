@@ -3057,25 +3057,9 @@ private struct ListDeleteConfirmationOverlay: View {
 }
 
 private enum ListSettingsSheetMetrics {
-    static let initialSheetHeight: CGFloat = 760
+    static let sheetHeight: CGFloat = 760
     static let maximumHeightFraction: CGFloat = 0.94
     static let bottomContentPadding: CGFloat = 24
-}
-
-private struct ListSettingsSheetHeaderHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
-private struct ListSettingsSheetContentHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
 }
 
 private struct ListSettingsSheet: View {
@@ -3084,13 +3068,10 @@ private struct ListSettingsSheet: View {
     let onDeleteRequest: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var tdayColors
-    @FocusState private var nameFieldFocused: Bool
 
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
-    @State private var headerHeight: CGFloat = 84
-    @State private var contentHeight: CGFloat = ListSettingsSheetMetrics.initialSheetHeight - 84
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -3112,12 +3093,8 @@ private struct ListSettingsSheet: View {
         max(1, UIScreen.main.bounds.height * ListSettingsSheetMetrics.maximumHeightFraction)
     }
 
-    private var measuredSheetHeight: CGFloat {
-        min(max(headerHeight + contentHeight, 1), maximumSheetHeight)
-    }
-
-    private var contentNeedsScrolling: Bool {
-        headerHeight + contentHeight > maximumSheetHeight
+    private var stableSheetHeight: CGFloat {
+        min(max(ListSettingsSheetMetrics.sheetHeight, 1), maximumSheetHeight)
     }
 
     var body: some View {
@@ -3129,12 +3106,6 @@ private struct ListSettingsSheet: View {
                 isConfirmEnabled: canSave,
                 onClose: { dismiss() },
                 onConfirm: submit
-            )
-            .background(
-                GeometryReader { proxy in
-                    Color.clear
-                        .preference(key: ListSettingsSheetHeaderHeightKey.self, value: ceil(proxy.size.height))
-                }
             )
 
             ScrollView(showsIndicators: false) {
@@ -3158,7 +3129,6 @@ private struct ListSettingsSheet: View {
                                 prompt: Text("List name")
                                     .foregroundStyle(tdayColors.onSurfaceVariant.opacity(0.78))
                             )
-                            .focused($nameFieldFocused)
                             .textInputAutocapitalization(.words)
                             .autocorrectionDisabled()
                             .submitLabel(.done)
@@ -3271,20 +3241,13 @@ private struct ListSettingsSheet: View {
                 .padding(.horizontal, 18)
                 .padding(.top, 14)
                 .padding(.bottom, ListSettingsSheetMetrics.bottomContentPadding)
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear
-                            .preference(key: ListSettingsSheetContentHeightKey.self, value: ceil(proxy.size.height))
-                    }
-                )
             }
-            .scrollDisabled(!contentNeedsScrolling)
             .scrollDismissesKeyboard(.interactively)
             .disableVerticalScrollBounce()
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .background(tdayColors.bottomSheetBackground.ignoresSafeArea())
-        .presentationDetents([.height(measuredSheetHeight)])
+        .presentationDetents([.height(stableSheetHeight)])
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(34)
         .presentationBackground {
@@ -3297,13 +3260,6 @@ private struct ListSettingsSheet: View {
             color = normalizedTodoListColorKey(list?.color)
             iconKey = normalizedTodoListIconKey(list?.iconKey)
         }
-        .onPreferenceChange(ListSettingsSheetHeaderHeightKey.self) { height in
-            headerHeight = max(height, 1)
-        }
-        .onPreferenceChange(ListSettingsSheetContentHeightKey.self) { height in
-            contentHeight = max(height, 1)
-        }
-        .animation(.snappy(duration: 0.24), value: measuredSheetHeight)
     }
 
     private func submit() {
