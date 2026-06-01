@@ -41,6 +41,18 @@ object TodayTasksWidgetPreviewPublisher {
             receiver = TodayTasksWidgetLargeReceiver::class.java,
             layout = R.layout.widget_today_tasks_preview_large,
         ),
+        WidgetPreviewDefinition(
+            receiver = FloaterTasksWidgetSmallReceiver::class.java,
+            layout = R.layout.widget_floater_tasks_preview_small,
+        ),
+        WidgetPreviewDefinition(
+            receiver = FloaterTasksWidgetReceiver::class.java,
+            layout = R.layout.widget_floater_tasks_preview,
+        ),
+        WidgetPreviewDefinition(
+            receiver = FloaterTasksWidgetLargeReceiver::class.java,
+            layout = R.layout.widget_floater_tasks_preview_large,
+        ),
     )
 
     private data class WidgetPreviewDefinition(

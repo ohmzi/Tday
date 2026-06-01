@@ -4,10 +4,8 @@ import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,25 +14,38 @@ class WidgetCreateTaskSubmitter @Inject constructor(
     private val todoRepository: TodoRepository,
     private val reminderScheduler: TaskReminderScheduler,
     private val todayTasksWidgetRefresher: TodayTasksWidgetRefresher,
+    private val floaterTasksWidgetRefresher: FloaterTasksWidgetRefresher,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    suspend fun submitTodayTask(payload: CreateTaskPayload) = withContext(Dispatchers.Default) {
+        if (payload.title.isBlank()) return@withContext
 
-    fun submitTodayTask(payload: CreateTaskPayload) {
-        if (payload.title.isBlank()) return
+        runCatching {
+            todoRepository.createTodo(payload)
+        }.onSuccess {
+            reminderScheduler.rescheduleAll()
+            todayTasksWidgetRefresher.refreshNow()
+        }.onFailure { error ->
+            TdayTelemetry.capture(
+                error,
+                operation = "widget_create_task.submit",
+            )
+            todayTasksWidgetRefresher.refreshNow()
+        }
+    }
 
-        scope.launch {
-            runCatching {
-                todoRepository.createTodo(payload)
-            }.onSuccess {
-                reminderScheduler.rescheduleAll()
-                todayTasksWidgetRefresher.requestRefresh()
-            }.onFailure { error ->
-                TdayTelemetry.capture(
-                    error,
-                    operation = "widget_create_task.submit",
-                )
-                todayTasksWidgetRefresher.requestRefresh()
-            }
+    suspend fun submitFloaterTask(payload: CreateTaskPayload) = withContext(Dispatchers.Default) {
+        if (payload.title.isBlank()) return@withContext
+
+        runCatching {
+            todoRepository.createFloater(payload)
+        }.onSuccess {
+            floaterTasksWidgetRefresher.refreshNow()
+        }.onFailure { error ->
+            TdayTelemetry.capture(
+                error,
+                operation = "widget_create_floater.submit",
+            )
+            floaterTasksWidgetRefresher.refreshNow()
         }
     }
 }
