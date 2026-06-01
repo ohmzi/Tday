@@ -14,7 +14,7 @@ Current feature surface:
   replay.
 - Home and Floater/Anytime root feeds controlled by `RootFeedDock`.
 - Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar,
-  search, settings, reminders, the Glance Today Tasks widget, and in-app APK updates.
+  search, settings, reminders, Glance Today/Floater widgets, and in-app APK updates.
 - Room-backed local cache with a one-time migration from the older encrypted JSON cache.
 
 ## Module
@@ -42,7 +42,7 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 │   ├── completed/     # Completed todo/floater history
 │   ├── settings/      # Settings and admin toggles
 │   ├── release/       # Latest release and APK installer
-│   └── widget/        # Today Tasks Glance widget and refresh coordinator
+│   └── widget/        # Today/Floater Glance widgets and refresh coordinators
 └── ui/
     ├── component/     # RootFeedDock, sheets, pull refresh, controls
     └── theme/         # Colors, typography, dimensions
@@ -100,25 +100,25 @@ See [`../docs/DATA_MODEL.md`](../docs/DATA_MODEL.md) for the shared cache model.
 
 ## Widgets
 
-The Today Tasks widget is implemented with Glance and the same cache-backed task model as the app.
-It shows pending scheduled tasks due today only; floaters, completed tasks, and overdue tasks stay
-out of the v1 widget surface.
+The Today Tasks and Floater Tasks widgets are implemented with Glance and the same cache-backed task
+models as the app. Today shows pending scheduled tasks due today only; Floater shows active
+unscheduled floaters across all floater lists. Completed tasks and overdue scheduled tasks stay out
+of these widget surfaces.
 
 - Android exposes small, medium, and large picker entries backed by separate AppWidget provider
-  metadata, while all three render the same responsive Glance widget.
+  metadata for each widget kind, while each kind renders a shared responsive Glance widget.
 - Static picker previews use RemoteViews-compatible XML, and Android 15+ generated previews are
   published from `TodayTasksWidgetPreviewPublisher` when the app starts.
-- Medium and large layouts show the title, a compact `N due` count, and a 48dp add target; compact
-  layouts stay count-first and prioritize task titles over due-time detail.
-- Tapping the widget body, header, empty/setup message, or task rows opens the main app.
-- All task layouts hand the full capped Today task set to Glance `LazyColumn`, so widgets can
+- Medium and large layouts show the title, a compact `N due` or `N open` count, and a 48dp add
+  target; compact layouts stay count-first and prioritize task titles over due-time detail.
+- Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
+- Task layouts hand the full capped widget task set to Glance `LazyColumn`, so widgets can
   scroll in place whenever more rows exist than the visible viewport fits. If the cached model hits
   the widget task cap, the final row shows the remaining `+N more` count.
-- The add action opens `tday://todos/create?target=today` through a dedicated translucent
-  widget-create activity that hosts the same in-app create-task sheet directly over the launcher
-  with the title field focused. Back/dismiss returns to the launcher instead of walking through the
-  app's internal task history. Submitting from this widget flow hands task creation to a background
-  submitter so the launcher widget can refresh from the latest cache after the Activity closes.
+- The add actions open `tday://todos/create?target=today` or
+  `tday://todos/create?target=floater` through a dedicated translucent widget-create activity that
+  hosts the matching in-app create-task sheet directly over the launcher with the title field
+  focused. Floater creation hides schedule controls and creates an unscheduled floater.
 - `OfflineCacheManager` requests widget refreshes after local cache changes, so Local Mode and
   optimistic writes update the widget without waiting for a server sync path.
 

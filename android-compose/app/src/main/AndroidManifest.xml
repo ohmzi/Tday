@@ -98,6 +98,42 @@
         </receiver>
 
         <receiver
+            android:name=".feature.widget.FloaterTasksWidgetSmallReceiver"
+            android:exported="true"
+            android:label="@string/widget_floater_tasks_title_small">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/floater_tasks_widget_small_info" />
+        </receiver>
+
+        <receiver
+            android:name=".feature.widget.FloaterTasksWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_floater_tasks_title_medium">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/floater_tasks_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".feature.widget.FloaterTasksWidgetLargeReceiver"
+            android:exported="true"
+            android:label="@string/widget_floater_tasks_title_large">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/floater_tasks_widget_large_info" />
+        </receiver>
+
+        <receiver
             android:name=".core.notification.BootRescheduleReceiver"
             android:exported="false">
             <intent-filter>

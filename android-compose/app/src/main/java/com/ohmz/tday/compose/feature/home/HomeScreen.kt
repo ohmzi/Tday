@@ -211,6 +211,7 @@ fun HomeScreen(
     showCreateTaskButton: Boolean = true,
     pullRefreshEnabled: Boolean = true,
     createTaskRequestKey: Int = 0,
+    onCreateTaskRequestHandled: (Int) -> Unit = {},
     scrollToTopRequestKey: Int = 0,
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
@@ -238,9 +239,7 @@ fun HomeScreen(
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
     var showSummarySheet by rememberSaveable { mutableStateOf(false) }
     var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
-    var lastHandledCreateTaskRequestKey by rememberSaveable {
-        mutableIntStateOf(createTaskRequestKey)
-    }
+    var lastHandledCreateTaskRequestKey by rememberSaveable { mutableIntStateOf(0) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     val editTargetTodo = remember(editTargetTodoId, uiState.todayTodos) {
         editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
@@ -277,8 +276,9 @@ fun HomeScreen(
         closeSearch()
     }
     LaunchedEffect(createTaskRequestKey) {
-        if (createTaskRequestKey > lastHandledCreateTaskRequestKey) {
+        if (createTaskRequestKey > 0 && createTaskRequestKey != lastHandledCreateTaskRequestKey) {
             lastHandledCreateTaskRequestKey = createTaskRequestKey
+            onCreateTaskRequestHandled(createTaskRequestKey)
             closeSearch()
             showCreateTask = true
         }
