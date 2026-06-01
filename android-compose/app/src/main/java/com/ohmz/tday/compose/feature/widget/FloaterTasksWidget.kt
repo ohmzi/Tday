@@ -20,6 +20,8 @@ import java.util.Locale
 private val FloaterWidgetVisuals = TaskWidgetVisuals(
     addButtonBackground = R.drawable.widget_floater_add_button_background,
     addIcon = R.drawable.widget_add_icon_floater,
+    emptyWatermark = R.drawable.widget_empty_watermark_floater,
+    setupWatermark = R.drawable.widget_empty_watermark_floater,
 )
 
 class FloaterTasksWidget : GlanceAppWidget() {
