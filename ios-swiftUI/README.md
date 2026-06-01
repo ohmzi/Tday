@@ -87,13 +87,15 @@ decodes schema version 2 snapshots and keeps a legacy fallback for older payload
 - Medium and large layouts show the title, neutral count text, a mode-accented native plus icon add
   target, and dense scan-first rows; compact layouts stay count-first and prioritize task titles
   over due-time detail.
-- All widget states keep a subtle oversized Today/Floater watermark in the background; empty and
-  setup states add centered message text over that persistent motif.
+- All widget states keep a subtle oversized Today/Floater watermark in the background; the Today
+  watermark follows the app title icon rule, showing the sun from 6 AM to 5:59 PM and the moon at
+  night. Empty and setup states add centered message text over that persistent motif.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater`, select the matching root feed, and immediately start the
-  in-app create-task sheet with the title field focused. WidgetKit cannot present the app sheet over
-  the Home Screen widget host, so the interaction uses a focused in-app handoff.
+  in-app create-task sheet without auto-focusing the title field or opening the keyboard. WidgetKit
+  cannot present the app sheet over the Home Screen widget host, so the interaction uses an in-app
+  handoff.
 - System-family WidgetKit widgets remain snapshot/glanceable because WidgetKit does not support true
   in-widget scrolling lists. The widget stores up to 50 task rows, renders the best-fit
   family-specific neutral row set, and keeps `+N more` as the tap-to-open cue when additional tasks

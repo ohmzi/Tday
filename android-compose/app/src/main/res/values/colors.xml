@@ -17,6 +17,7 @@
     <color name="tday_widget_surface">#FFFFFFFF</color>
     <color name="tday_widget_accent_wash">#FFEAF5FF</color>
     <color name="tday_widget_today_accent">#FF6EA8E1</color>
+    <color name="tday_widget_today_night_accent">#FFA8B8E8</color>
     <color name="tday_widget_floater_accent">#FF4D8F83</color>
     <color name="tday_widget_floater_accent_wash">#FFEAF6F1</color>
     <color name="tday_widget_today_feature_wash">#FFF3F9FF</color>

@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.feature.widget
 
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.ohmz.tday.compose.R
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -30,67 +31,24 @@ class TaskWidgetDesignTest {
     }
 
     @Test
-    fun `scroll items place overflow marker before remaining rows`() {
-        val rows = (0 until 5).map { row("task-$it") }
-        val items = taskWidgetScrollItems(
-            rows = rows,
-            overflowCount = 0,
-            visibleRowCapacity = 3,
-        )
-
+    fun `priority dot resource follows task priority`() {
+        assertEquals(R.drawable.widget_priority_dot_high, taskWidgetPriorityDotResource("High"))
+        assertEquals(R.drawable.widget_priority_dot_high, taskWidgetPriorityDotResource("urgent"))
         assertEquals(
-            listOf(
-                "task:task-0",
-                "task:task-1",
-                "more:3",
-                "task:task-2",
-                "task:task-3",
-                "task:task-4",
-            ),
-            items.map(::scrollItemLabel),
+            R.drawable.widget_priority_dot_high,
+            taskWidgetPriorityDotResource(" Important ")
         )
+        assertEquals(R.drawable.widget_priority_dot_medium, taskWidgetPriorityDotResource("Medium"))
+        assertEquals(R.drawable.widget_priority_dot_low, taskWidgetPriorityDotResource("Low"))
+        assertEquals(R.drawable.widget_priority_dot_low, taskWidgetPriorityDotResource("unknown"))
     }
 
     @Test
-    fun `scroll overflow marker counts all hidden tasks`() {
-        val rows = (0 until 50).map { row("task-$it") }
-        val items = taskWidgetScrollItems(
-            rows = rows,
-            overflowCount = 10,
-            visibleRowCapacity = 5,
-        )
-
-        assertEquals("more:56", scrollItemLabel(items[4]))
-    }
-
-    @Test
-    fun `scroll items include terminal overflow only for capped tasks`() {
-        val uncappedItems = taskWidgetScrollItems(
-            rows = (0 until 8).map { row("task-$it") },
-            overflowCount = 0,
-            visibleRowCapacity = 3,
-        )
-        val cappedItems = taskWidgetScrollItems(
-            rows = (0 until 50).map { row("task-$it") },
-            overflowCount = 10,
-            visibleRowCapacity = 5,
-        )
-
-        assertEquals(false, uncappedItems.any { it is TaskWidgetScrollItem.TerminalOverflow })
-        assertEquals("terminal:10", scrollItemLabel(cappedItems.last()))
-    }
-
-    private fun row(id: String) = TaskWidgetRow(
-        key = id.hashCode().toLong(),
-        title = id,
-        priority = "Low",
-    )
-
-    private fun scrollItemLabel(item: TaskWidgetScrollItem): String {
-        return when (item) {
-            is TaskWidgetScrollItem.Task -> "task:${item.row.title}"
-            is TaskWidgetScrollItem.OverflowMarker -> "more:${item.hiddenCount}"
-            is TaskWidgetScrollItem.TerminalOverflow -> "terminal:${item.hiddenCount}"
-        }
+    fun `today watermark uses app day and night boundary`() {
+        assertEquals(false, taskWidgetIsDaytime(5))
+        assertEquals(true, taskWidgetIsDaytime(6))
+        assertEquals(true, taskWidgetIsDaytime(17))
+        assertEquals(false, taskWidgetIsDaytime(18))
+        assertEquals(false, taskWidgetIsDaytime(23))
     }
 }

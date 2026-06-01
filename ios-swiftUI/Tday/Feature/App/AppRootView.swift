@@ -10,7 +10,6 @@ struct AppRootView: View {
     @State private var isLaunchSplashHeld = false
     @State private var rootFeedTab: RootFeedTab = .home
     @State private var rootCreateTaskRequestID = 0
-    @State private var rootCreateTaskAutoFocusRequestID = 0
     @State private var pendingRootCreateTask: PendingRootCreateTask?
     @State private var rootHomeScrollToTopRequestID = 0
     @State private var rootFloaterScrollToTopRequestID = 0
@@ -46,7 +45,6 @@ struct AppRootView: View {
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
                                     createTaskRequestID: rootCreateTaskRequestID,
-                                    autoFocusCreateTaskRequestID: rootCreateTaskAutoFocusRequestID,
                                     scrollToTopRequestID: rootHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
@@ -68,7 +66,6 @@ struct AppRootView: View {
                                     pullRefreshEnabled: !appViewModel.isLocalMode,
                                     usesRootFeedHeader: true,
                                     createTaskRequestID: rootCreateTaskRequestID,
-                                    autoFocusCreateTaskRequestID: rootCreateTaskAutoFocusRequestID,
                                     scrollToTopRequestID: rootFloaterScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
@@ -288,9 +285,9 @@ struct AppRootView: View {
         case .home:
             selectRootFeedTab(.home)
         case .createTodayTodo:
-            requestRootCreateTask(on: .home, autoFocusTitle: true)
+            requestRootCreateTask(on: .home)
         case .createFloaterTodo:
-            requestRootCreateTask(on: .floater, autoFocusTitle: true)
+            requestRootCreateTask(on: .floater)
         case .floaterTodos:
             selectRootFeedTab(.floater)
         default:
@@ -320,10 +317,9 @@ struct AppRootView: View {
         }
     }
 
-    private func requestRootCreateTask(on tab: RootFeedTab, autoFocusTitle: Bool) {
+    private func requestRootCreateTask(on tab: RootFeedTab) {
         selectRootFeedTab(tab)
-        let shouldAutoFocus = (pendingRootCreateTask?.autoFocusTitle ?? false) || autoFocusTitle
-        pendingRootCreateTask = PendingRootCreateTask(tab: tab, autoFocusTitle: shouldAutoFocus)
+        pendingRootCreateTask = PendingRootCreateTask(tab: tab)
         presentPendingRootCreateTaskIfReady()
     }
 
@@ -347,7 +343,6 @@ struct AppRootView: View {
                 return
             }
             let nextRequestID = rootCreateTaskRequestID + 1
-            rootCreateTaskAutoFocusRequestID = request.autoFocusTitle ? nextRequestID : 0
             rootCreateTaskRequestID = nextRequestID
         }
     }
@@ -363,12 +358,12 @@ struct AppRootView: View {
 
     private func setNavigationPath(_ newPath: [AppRoute]) {
         if newPath.contains(.createTodayTodo) {
-            requestRootCreateTask(on: .home, autoFocusTitle: true)
+            requestRootCreateTask(on: .home)
             return
         }
 
         if newPath.contains(.createFloaterTodo) {
-            requestRootCreateTask(on: .floater, autoFocusTitle: true)
+            requestRootCreateTask(on: .floater)
             return
         }
 
@@ -399,14 +394,14 @@ struct AppRootView: View {
     private func normalizeRootNavigationPath(_ path: [AppRoute]) {
         if path.contains(.createTodayTodo) {
             DispatchQueue.main.async {
-                requestRootCreateTask(on: .home, autoFocusTitle: true)
+                requestRootCreateTask(on: .home)
             }
             return
         }
 
         if path.contains(.createFloaterTodo) {
             DispatchQueue.main.async {
-                requestRootCreateTask(on: .floater, autoFocusTitle: true)
+                requestRootCreateTask(on: .floater)
             }
             return
         }
@@ -474,7 +469,6 @@ private struct AppSnackbar: View {
 
 private struct PendingRootCreateTask {
     let tab: RootFeedTab
-    let autoFocusTitle: Bool
 }
 
 private extension AppRoute {

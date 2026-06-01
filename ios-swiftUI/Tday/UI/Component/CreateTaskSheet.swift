@@ -30,7 +30,6 @@ struct CreateTaskSheet: View {
     let initialPayload: CreateTaskPayload?
     let defaultScheduled: Bool
     let showScheduleControls: Bool
-    let autoFocusTitle: Bool
     let onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?
     let onDismiss: () -> Void
     let onSubmit: (CreateTaskPayload) async -> Void
@@ -48,8 +47,6 @@ struct CreateTaskSheet: View {
     @State private var repeatRule: String?
     @State private var isSubmitting = false
     @State private var parserTask: Task<Void, Never>?
-    @State private var initialFocusTask: Task<Void, Never>?
-    @State private var hasRequestedInitialFocus = false
     @State private var activeSelector: CreateTaskSheetSelector?
     @State private var headerHeight: CGFloat = 84
     @State private var formHeight: CGFloat = CreateTaskSheetMetrics.initialSheetHeight - 84
@@ -98,7 +95,6 @@ struct CreateTaskSheet: View {
         initialPayload: CreateTaskPayload?,
         defaultScheduled: Bool = true,
         showScheduleControls: Bool = true,
-        autoFocusTitle: Bool = false,
         onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?,
         onDismiss: @escaping () -> Void,
         onSubmit: @escaping (CreateTaskPayload) async -> Void
@@ -109,7 +105,6 @@ struct CreateTaskSheet: View {
         self.initialPayload = initialPayload
         self.defaultScheduled = defaultScheduled
         self.showScheduleControls = showScheduleControls
-        self.autoFocusTitle = autoFocusTitle
         self.onParseTaskTitleNlp = onParseTaskTitleNlp
         self.onDismiss = onDismiss
         self.onSubmit = onSubmit
@@ -128,7 +123,6 @@ struct CreateTaskSheet: View {
             submitText: "Save",
             initialPayload: initialPayload,
             showScheduleControls: true,
-            autoFocusTitle: false,
             onParseTaskTitleNlp: onParseTaskTitleNlp,
             onDismiss: {},
             onSubmit: { payload in
@@ -250,11 +244,6 @@ struct CreateTaskSheet: View {
         }
         .task {
             hydrateFromInitialPayload()
-            scheduleInitialTitleFocus()
-        }
-        .onDisappear {
-            initialFocusTask?.cancel()
-            initialFocusTask = nil
         }
         .onChange(of: title) { _, _ in
             scheduleNlpParse()
@@ -292,37 +281,6 @@ struct CreateTaskSheet: View {
         } else {
             scheduleEnabled = false
             repeatRule = nil
-        }
-    }
-
-    private func scheduleInitialTitleFocus() {
-        guard autoFocusTitle,
-              !hasRequestedInitialFocus,
-              (initialPayload?.title.isEmpty ?? true) else {
-            return
-        }
-
-        hasRequestedInitialFocus = true
-        initialFocusTask?.cancel()
-        initialFocusTask = Task { @MainActor in
-            focusedField = .title
-
-            for (index, delay) in [
-                Duration.milliseconds(220),
-                Duration.milliseconds(260),
-                Duration.milliseconds(320),
-            ].enumerated() {
-                try? await Task.sleep(for: delay)
-                guard !Task.isCancelled else { return }
-                guard activeSelector == nil else { return }
-                guard focusedField == nil || focusedField == .title else { return }
-
-                if index > 0, focusedField == .title {
-                    focusedField = nil
-                    await Task.yield()
-                }
-                focusedField = .title
-            }
         }
     }
 

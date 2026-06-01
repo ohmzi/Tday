@@ -115,13 +115,14 @@ of these widget surfaces.
   target, and dense scan-first rows; compact layouts stay count-first and prioritize task titles
   over due-time detail. The short wide bucket also suppresses due-time chips so resized widgets keep
   long task titles readable.
-- All widget states keep a subtle oversized Today/Floater watermark in the background; empty and
-  setup states add centered message text over that persistent motif.
+- All widget states keep a subtle oversized Today/Floater watermark in the background; the Today
+  watermark follows the app title icon rule, showing the sun from 6 AM to 5:59 PM and the moon at
+  night. Empty and setup states add centered message text over that persistent motif.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
 - Task layouts keep the header and plus action fixed, then render a scrollable task body. The first
-  viewport fits the highest-value rows for the current compact, wide, medium, or tall bucket, shows
-  `+N more` when hidden tasks remain, and reveals the remaining cached rows as the user scrolls.
-  Widget rows are capped at 50, with a final neutral app handoff row when more tasks exist.
+  viewport fits the highest-value rows for the current compact, wide, medium, or tall bucket, and
+  reveals the remaining cached rows as the user scrolls. Task bullets use the task priority color.
+  Widget rows are capped at 50.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater` through a dedicated translucent widget-create activity that
   hosts the matching in-app create-task sheet directly over the launcher with the title field
