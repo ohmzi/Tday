@@ -305,7 +305,7 @@ android-compose/app/src/
 └── androidTest/    # Instrumented tests (emulator/device)
 ```
 
-Current JVM tests cover API response helpers, offline sync state serialization, encrypted credential records, Room/cache mappers, todo delete/cache behavior, task rescheduling, realtime client behavior, app/auth ViewModel state, login credential coordination, and Today/Floater widget model filtering/count/state/scroll sequencing behavior.
+Current JVM tests cover API response helpers, offline sync state serialization, encrypted credential records, Room/cache mappers, todo delete/cache behavior, task rescheduling, realtime client behavior, app/auth ViewModel state, login credential coordination, and Today/Floater widget model filtering/count/state/layout behavior.
 
 ### What Should Be Tested (Android)
 
@@ -317,7 +317,7 @@ Current JVM tests cover API response helpers, offline sync state serialization, 
 | ViewModel state transitions | Unit | High |
 | Local Mode server-only affordances | Unit/manual | High |
 | Notification scheduling logic | Unit | Medium |
-| Today/Floater widget filtering, counts, setup/empty states, scroll sequencing, and refresh triggers | Unit | Medium |
+| Today/Floater widget filtering, counts, setup/empty states, layout rules, priority dots, day/night watermark rule, and refresh triggers | Unit | Medium |
 | Screen composition (renders, interactions) | Instrumented | Medium |
 | End-to-end auth flow | Instrumented | Low (manual for now) |
 
