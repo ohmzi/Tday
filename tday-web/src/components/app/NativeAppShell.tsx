@@ -14,7 +14,10 @@ export default function NativeAppShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const counts = useNativeRouteCounts();
   const pathname = usePathname();
-  const isCreateRoute = pathname.includes("/app/add-task");
+  const showTaskFab =
+    !pathname.includes("/app/add-task") &&
+    !pathname.includes("/app/settings") &&
+    !pathname.includes("/app/admin");
 
   return (
     <div className="relative flex h-screen min-h-screen overflow-hidden bg-background text-foreground">
@@ -22,7 +25,7 @@ export default function NativeAppShell({
         {children}
       </div>
       <RootDock onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
-      {!isCreateRoute && <TaskFloatingActionButton />}
+      {showTaskFab && <TaskFloatingActionButton />}
       <MoreNavigationSheet open={moreOpen} onOpenChange={setMoreOpen} counts={counts} />
     </div>
   );

@@ -1,214 +1,29 @@
-/* ── Force calendar to fill available viewport ── */
-.rbc-calendar {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 0%;
-  min-height: 0;
-  font-family: var(--font-sans);
-  color: hsl(var(--foreground));
-}
-.rbc-month-view {
-  flex: 1 1 0%;
-  min-height: 0;
-}
-.rbc-month-row {
-  flex: 1 1 0%;
-  min-height: 0 !important;
-  overflow: hidden !important;
-}
-.rbc-time-view {
-  flex: 1 1 0%;
-  min-height: 0;
-}
-.rbc-time-content {
-  min-height: auto;
-}
-
-.rbc-selected-cell {
-  background-color: hsl(var(--accent) / 0.16) !important;
-}
-
-/* month view */
-.rbc-off-range-bg {
-  background-color: hsl(var(--muted) / 0.48);
-  color: hsl(var(--muted-foreground));
-}
-.rbc-month-row {
-  border-top: 1px solid hsl(var(--calendar-border)) !important;
-}
-.rbc-month-view {
-  border: 1px solid hsl(var(--calendar-border) / 0.82) !important;
-  border-radius: 24px;
-  background: hsl(var(--card) / 0.94);
-  box-shadow: 0 18px 42px -34px hsl(var(--shadow) / 0.62);
-  overflow: hidden;
-}
-.rbc-day-bg {
-  border-left: 1px solid hsl(var(--calendar-border)) !important;
-}
-.rbc-header {
-  border: none !important;
-  background-color: hsl(var(--muted) / 0.74) !important;
-  font-weight: 900 !important;
-}
-
-.rbc-today {
-  background-color: hsl(var(--accent) / 0.12) !important;
-}
-
-/* week / day time-view — override library defaults that clip the 2-line header */
-.rbc-time-view .rbc-header {
-  overflow: visible !important;
-  white-space: normal !important;
-  text-overflow: unset !important;
-  min-height: auto !important;
-  padding: 4px 0 6px !important;
-}
-/* Ensure the header row auto-sizes to fit content */
-.rbc-time-header-content > .rbc-row:first-child {
-  min-height: auto !important;
-}
-.rbc-time-header-content > .rbc-row:first-child .rbc-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.rbc-allday-cell {
-  margin: 0px !important;
-  padding: 1px !important;
-}
-
-.rbc-time-view {
-  border: 1px solid hsl(var(--calendar-border) / 0.82) !important;
-  border-radius: 24px;
-  background: hsl(var(--card) / 0.94);
-  box-shadow: 0 18px 42px -34px hsl(var(--shadow) / 0.62);
-  overflow: hidden;
-}
-/* Allow the time-slot body to scroll while the border-radius clips */
-.rbc-time-view .rbc-time-content {
-  overflow-y: auto;
-}
-.rbc-time-content {
-  border-top: transparent !important;
-}
-.rbc-time-slot {
-  border: 1px solid hsl(var(--calendar-border)) !important;
-}
-
-.rbc-timeslot-group {
-  border: transparent !important;
-}
-.rbc-events-container {
-  border: transparent !important;
-}
-.rbc-time-header-content {
-  border: transparent !important;
-}
-
-/* agenda view */
-
-.rbc-agenda-table {
-  border: transparent !important;
-  border-bottom: 1px solid hsl(var(--calendar-border)) !important;
-}
-.rbc-agenda-time-cell {
-  border: transparent !important;
-}
-.rbc-agenda-event-cell {
-  border: transparent !important;
-}
-
-/* calendar show more */
-.rbc-month-view .rbc-show-more {
-  background-color: transparent;
-  color: hsl(var(--foreground));
-  font-size: 0.75rem;
-  font-weight: 900;
-  display: inline-block;
-}
-
-.rbc-addons-dnd-resize-ew-anchor:first-child {
-  top: 0px !important;
-  left: -5px !important;
-}
-/* Move the Right Handle further right */
-.rbc-addons-dnd-resize-ew-anchor:last-child {
-  top: 0px !important;
-  right: -5px !important;
-}
-.rbc-addons-dnd-resize-ew-icon,
-.rbc-addons-dnd-resize-ns-icon {
-  border: 2px solid white !important;
-  height: 100% !important;
-  width: 8px !important;
-  border-radius: 4px;
-  background-color: rgba(255, 255, 255, 0.5);
-}
-.rbc-addons-dnd-resize-ew-icon:active,
-.rbc-addons-dnd-resize-ns-icon:active {
-  background-color: rgb(190, 0, 0) !important;
-}
-/* responsive drag handle size */
-@media (max-width: 400px) {
-  .rbc-addons-dnd-resize-ew-icon,
-  .rbc-addons-dnd-resize-ns-icon {
-    width: 10px !important;
-  }
-}
-
-.rbc-addons-dnd-resize-ns-anchor:first-child .rbc-addons-dnd-resize-ns-icon {
-  border-radius: 0px 0px 4px 4px !important;
-}
-
-.rbc-addons-dnd-resize-ns-anchor:last-child .rbc-addons-dnd-resize-ns-icon {
-  border-radius: 4px 4px 0px 0px !important;
-}
-
-/* ── Day view specific ── */
-.rbc-time-view .rbc-time-gutter {
-  font-size: 0.7rem;
-  color: hsl(var(--muted-foreground));
-  font-weight: 800;
-}
-@media (min-width: 640px) {
-  .rbc-time-view .rbc-time-gutter {
-    font-size: 0.8rem;
-  }
-}
-
-/* Clickable day cells in month view — show pointer cursor */
-.rbc-month-view .rbc-day-bg {
-  cursor: pointer;
-}
-.rbc-month-view .rbc-day-bg:hover {
-  background-color: hsl(var(--accent) / 0.08);
-}
-
-/* ── Calendar slide transitions ── */
-@keyframes cal-slide-in-left {
+@keyframes cal-native-slide-in-left {
   from {
-    transform: translateX(-6%);
-    opacity: 0;
+    transform: translateX(-5%);
+    opacity: 0.72;
   }
   to {
     transform: translateX(0);
     opacity: 1;
   }
 }
-@keyframes cal-slide-in-right {
+
+@keyframes cal-native-slide-in-right {
   from {
-    transform: translateX(6%);
-    opacity: 0;
+    transform: translateX(5%);
+    opacity: 0.72;
   }
   to {
     transform: translateX(0);
     opacity: 1;
   }
 }
-.cal-slide-from-left {
-  animation: cal-slide-in-left 0.3s ease-out both;
+
+.cal-native-slide-from-left {
+  animation: cal-native-slide-in-left 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
-.cal-slide-from-right {
-  animation: cal-slide-in-right 0.3s ease-out both;
+
+.cal-native-slide-from-right {
+  animation: cal-native-slide-in-right 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }

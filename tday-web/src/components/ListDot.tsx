@@ -1,7 +1,6 @@
-import React from "react";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import clsx from "clsx";
-import { Circle } from "lucide-react";
+import { getListIcon } from "@/lib/listIcons";
 
 export default function ListDot({
   id,
@@ -11,6 +10,7 @@ export default function ListDot({
   className?: string;
 }) {
   const { listMetaData } = useListMetaData();
+  const Icon = getListIcon(listMetaData[id]?.iconKey);
 
   const colorClass = clsx({
     "text-accent-red": listMetaData[id]?.color === "RED",
@@ -31,9 +31,9 @@ export default function ListDot({
   });
 
   return (
-    <Circle
+    <Icon
       className={clsx(
-        "inline-flex h-3.5 w-3.5 shrink-0 fill-current",
+        "inline-flex h-3.5 w-3.5 shrink-0 stroke-[2.4]",
         colorClass,
         className,
       )}

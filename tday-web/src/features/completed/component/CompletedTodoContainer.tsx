@@ -5,9 +5,10 @@ import { useCompletedTodo } from "../query/get-completedTodo";
 import { useGroupedHistory } from "../hooks/useGroupedHistory";
 import GroupedCompletedTodoContainer from "./GroupedContainer";
 import { useTranslation } from "react-i18next";
+import NativePageTitle from "@/components/app/NativePageTitle";
+import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
-import LineSeparator from "@/components/ui/lineSeparator";
-import { CheckCircleIcon, Search, X } from "lucide-react";
+import { CheckCircle, Search, X } from "lucide-react";
 
 const CompletedTodoContainer = () => {
   const { t: completedDict } = useTranslation("completed")
@@ -39,13 +40,11 @@ const CompletedTodoContainer = () => {
     <div className="mb-20">
       <MobileSearchHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-      <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center gap-2">
-        <CheckCircleIcon className="h-6 w-6 text-accent" />
-        <h3 className="select-none text-2xl font-semibold tracking-tight">
-          {completedDict("title")}
-        </h3>
-      </div>
-      <LineSeparator className="flex-1 border-border/70" />
+      <NativePageTitle
+        title={completedDict("title")}
+        accentColor={nativeScreenAccentColors.completed}
+        icon={CheckCircle}
+      />
 
       {searchQuery.trim() && filteredTodos.length === 0 && (
         <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">

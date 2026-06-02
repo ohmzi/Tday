@@ -4,17 +4,21 @@ import { api } from "@/lib/api-client";
 import { ListItemMetaMapType, ListItemMetaType } from "@/types";
 import type { ListColor } from "@/types";
 
+type CreateListParams = {
+  name: string;
+  color?: ListColor;
+  iconKey?: string;
+};
+
 async function postList({
   name,
   color,
-}: {
-  name: string;
-  color?: ListColor;
-}) {
+  iconKey,
+}: CreateListParams) {
   const response: { list?: ListItemMetaType } = await api.POST({
     url: "/api/list",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, color }),
+    body: JSON.stringify({ name, color, iconKey }),
   });
 
   return response.list;
@@ -30,8 +34,7 @@ export const useCreateList = () => {
     isPending: createLoading,
     isSuccess,
   } = useMutation({
-    mutationFn: (params: { name: string; color?: ListColor }) =>
-      postList({ ...params }),
+    mutationFn: (params: CreateListParams) => postList({ ...params }),
     onMutate: (newListMeta: Omit<ListItemMetaType, "id">) => {
       queryClient.cancelQueries({ queryKey: ["listMetaData"] });
       const backupListMeta = queryClient.getQueryData(["listMetaData"]);
