@@ -113,7 +113,7 @@ export default function CreateCalendarDrawer({
                     }
                 }}
             >
-                <DrawerContent className="max-h-[96vh] flex flex-col">
+                <DrawerContent className="max-h-[92dvh] flex flex-col overflow-hidden rounded-t-[28px] border-white/70 shadow-[0_24px_70px_-34px_hsl(var(--shadow)/0.82)] dark:border-white/10 sm:left-1/2 sm:right-auto sm:w-[min(720px,calc(100vw-2rem))] sm:-translate-x-1/2">
                     <DrawerHeader>
                         <DrawerTitle className="hidden">create todo</DrawerTitle>
                     </DrawerHeader>

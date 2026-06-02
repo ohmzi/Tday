@@ -4,6 +4,8 @@ import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import { Input } from "@/components/ui/input";
 import ListDot from "@/components/ListDot";
 import { useTranslation } from "react-i18next";
+import { Plus } from "lucide-react";
+import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 
 type ListDrawerProps = {
   listID: string | null;
@@ -20,7 +22,9 @@ export default function ListDrawer({
 
   const { listMetaData } = useListMetaData();
   const [search, setSearch] = useState("");
+  const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const setSelectedList = setListID ?? (() => {});
+  const normalizedSearch = search.trim();
 
   const filteredLists = useMemo(() => {
     if (!search.trim()) return Object.entries(listMetaData);
@@ -29,6 +33,15 @@ export default function ListDrawer({
       value.name.toLowerCase().includes(lowerSearch),
     );
   }, [search, listMetaData]);
+
+  const hasExactMatch = useMemo(() => {
+    if (!normalizedSearch) return false;
+    return Object.values(listMetaData).some(
+      (value) => value.name.trim().toLowerCase() === normalizedSearch.toLowerCase(),
+    );
+  }, [normalizedSearch, listMetaData]);
+
+  const canCreateList = normalizedSearch.length > 0 && !hasExactMatch;
 
   return (
     <div className={cn("max-h-[92vh]", className)}>
@@ -42,7 +55,18 @@ export default function ListDrawer({
           autoFocus
         />
 
-        {filteredLists.length === 0 && (
+        {canCreateList && (
+          <button
+            type="button"
+            onClick={() => setCreateSheetOpen(true)}
+            className="flex w-full items-center gap-2 rounded-sm p-1.5 text-left text-base hover:bg-accent/50"
+          >
+            <Plus className="h-4 w-4" />
+            Create list "{normalizedSearch}"
+          </button>
+        )}
+
+        {filteredLists.length === 0 && !canCreateList && (
           <p className="w-full py-10 text-center text-xs text-muted-foreground">
             No lists...
           </p>
@@ -73,6 +97,17 @@ export default function ListDrawer({
           </div>
         )}
       </div>
+      <ListFormSheet
+        open={createSheetOpen}
+        onOpenChange={setCreateSheetOpen}
+        initialName={normalizedSearch}
+        onSaved={(created) => {
+          if (created?.id) {
+            setSelectedList(created.id);
+          }
+          setSearch("");
+        }}
+      />
     </div>
   );
 }
