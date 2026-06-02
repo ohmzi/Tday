@@ -1,32 +1,19 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
-  Check,
   Ellipsis,
-  GripVertical,
+  Inbox,
   ListPlus,
   Moon,
   Search,
   Sun,
   X,
 } from "lucide-react";
-import ListDot from "@/components/ListDot";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
-import { useCreateList } from "@/components/Sidebar/List/query/create-list";
-import TodoCheckbox from "@/components/ui/TodoCheckbox";
+import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
-import { useTodoMutation } from "@/providers/TodoMutationProvider";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
+  type NativeRouteId,
   homeCategoryRoutes,
   isNativeRouteActive,
   useNativeRouteCounts,
@@ -34,7 +21,7 @@ import {
 import { getDisplayDate } from "@/lib/date/displayDate";
 import { Link, useLocale, usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
-import type { ListItemMetaMapType, TodoItemType } from "@/types";
+import type { ListColor } from "@/types";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { useTodo } from "@/features/todayTodos/query/get-todo";
 import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
@@ -49,8 +36,51 @@ import { useReorderTodo } from "@/features/todayTodos/query/reorder-todo";
 const topButtonClass =
   "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
 
-function normalizeListName(value: string) {
-  return value.trim();
+const todayTileColor = "#6EA8E1";
+
+const homeTileConfig: Partial<Record<NativeRouteId, { color: string; label: string }>> = {
+  scheduled: { color: "#D98F4B", label: "Scheduled" },
+  priority: { color: "#C97880", label: "Priority" },
+  overdue: { color: "#E06F66", label: "Overdue" },
+  all: { color: "#68717A", label: "All" },
+  completed: { color: "#719F84", label: "Completed" },
+  calendar: { color: "#9A89D2", label: "Calendar" },
+};
+
+const homeTileOrder: NativeRouteId[] = [
+  "scheduled",
+  "priority",
+  "overdue",
+  "all",
+  "completed",
+  "calendar",
+];
+
+const listColorCss: Record<ListColor, string> = {
+  RED: "hsl(var(--accent-red))",
+  ORANGE: "hsl(var(--accent-orange))",
+  YELLOW: "hsl(var(--accent-yellow))",
+  LIME: "hsl(var(--accent-lime))",
+  BLUE: "hsl(var(--accent-blue))",
+  PURPLE: "hsl(var(--accent-purple))",
+  PINK: "hsl(var(--accent-pink))",
+  TEAL: "hsl(var(--accent-teal))",
+  CORAL: "hsl(var(--accent-coral))",
+  GOLD: "hsl(var(--accent-gold))",
+  DEEP_BLUE: "hsl(var(--accent-deep-blue))",
+  ROSE: "hsl(var(--accent-rose))",
+  LIGHT_RED: "hsl(var(--accent-light-red))",
+  BRICK: "hsl(var(--accent-brick))",
+  SLATE: "hsl(var(--accent-slate))",
+};
+
+function renderTileOverlay() {
+  return (
+    <>
+      <div className="pointer-events-none absolute -left-14 -top-20 h-44 w-52 rounded-full bg-white/20 blur-2xl" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),rgba(231,243,255,0.10)_45%,rgba(255,242,250,0.08)_68%,transparent)]" />
+    </>
+  );
 }
 
 function formatListName(value: string) {
@@ -59,87 +89,18 @@ function formatListName(value: string) {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
-function NativeTodayTaskRow({
-  todo,
-  listMetaData,
-  locale,
-  timeZone,
-}: {
-  todo: TodoItemType;
-  listMetaData: ListItemMetaMapType;
-  locale: string;
-  timeZone?: string;
-}) {
-  const { useCompleteTodo } = useTodoMutation();
-  const { completeMutateFn } = useCompleteTodo();
-  const list = todo.listID ? listMetaData[todo.listID] : null;
-  const dueLabel = getDisplayDate(todo.due, true, locale, timeZone);
-  const isOverdue = todo.due.getTime() < Date.now();
-
-  return (
-    <div className="flex min-h-[58px] items-center gap-3 border-b border-border/70 px-4 py-2.5 last:border-b-0">
-      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-muted/70">
-        {todo.listID ? (
-          <ListDot id={todo.listID} className="text-base" />
-        ) : (
-          <span className="h-2.5 w-2.5 rounded-full bg-accent" />
-        )}
-      </span>
-      <TodoCheckbox
-        icon={Check}
-        priority={todo.priority}
-        complete={todo.completed}
-        onChange={() => completeMutateFn(todo)}
-        checked={todo.completed}
-        variant={todo.rrule ? "repeat" : "outline-solid"}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[0.98rem] font-black leading-5 text-foreground">
-          {todo.title}
-        </p>
-        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 sm:hidden">
-          <span className={cn("text-xs font-black", isOverdue ? "text-red" : "text-lime")}>
-            {dueLabel}
-          </span>
-          {list && (
-            <span className="inline-flex max-w-28 items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.15rem] text-xs font-black text-foreground/80">
-              <ListDot id={todo.listID!} className="text-xs" />
-              <span className="truncate">{list.name}</span>
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="hidden items-center gap-2 sm:flex">
-        {list && (
-          <span className="inline-flex max-w-32 items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.15rem] text-xs font-black text-foreground/80">
-            <ListDot id={todo.listID!} className="text-xs" />
-            <span className="truncate">{list.name}</span>
-          </span>
-        )}
-        <span className={cn("whitespace-nowrap text-sm font-black", isOverdue ? "text-red" : "text-muted-foreground")}>
-          {dueLabel}
-        </span>
-      </div>
-      <GripVertical className="h-5 w-5 shrink-0 text-muted-foreground/60" />
-    </div>
-  );
-}
-
 export default function NativeHomeDashboard() {
   const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
   const userTimeZone = useUserTimezone();
   const counts = useNativeRouteCounts();
-  const { todos: todayTodos, todoLoading: todayLoading } = useTodo();
+  const { todos: todayTodos } = useTodo();
   const { todos: timelineTodos } = useTodoTimeline();
   const { listMetaData } = useListMetaData();
-  const { createMutateAsync, createLoading } = useCreateList();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
-  const [newListName, setNewListName] = useState("");
-  const [createListError, setCreateListError] = useState<string | null>(null);
   const currentHour = new Date().getHours();
   const isDaytime = currentHour >= 6 && currentHour < 18;
   const titleDate = format(new Date(), "EEE, MMM d");
@@ -151,15 +112,6 @@ export default function NativeHomeDashboard() {
       .sort((a, b) => (b.todoCount ?? 0) - (a.todoCount ?? 0))
       .slice(0, 6);
   }, [listMetaData]);
-
-  const sortedTodayTodos = useMemo(() => {
-    return [...todayTodos].sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      const dueDelta = a.due.getTime() - b.due.getTime();
-      if (dueDelta !== 0) return dueDelta;
-      return a.order - b.order;
-    });
-  }, [todayTodos]);
 
   const searchableTodos = useMemo(() => {
     return timelineTodos
@@ -175,20 +127,6 @@ export default function NativeHomeDashboard() {
       })
       .slice(0, 8);
   }, [listMetaData, searchQuery, timelineTodos]);
-
-  const handleCreateList = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const name = normalizeListName(newListName);
-    if (!name) {
-      setCreateListError("List name cannot be empty");
-      return;
-    }
-
-    setCreateListError(null);
-    await createMutateAsync({ name, color: "BLUE" });
-    setNewListName("");
-    setCreateListOpen(false);
-  };
 
   return (
     <TodoMutationProvider
@@ -254,7 +192,7 @@ export default function NativeHomeDashboard() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search tasks..."
-                className="h-12 w-full rounded-2xl border border-border/70 bg-muted/55 pl-11 pr-4 text-sm font-extrabold outline-none transition-colors focus:border-accent/50 focus:bg-card"
+                className="h-12 w-full rounded-2xl border border-border/70 bg-muted/55 pl-11 pr-4 text-base font-extrabold outline-none transition-colors focus:border-accent/50 focus:bg-card md:text-sm"
               />
             </div>
             {searchQuery.trim() && (
@@ -288,103 +226,57 @@ export default function NativeHomeDashboard() {
           </section>
         )}
 
-        <section className="overflow-hidden rounded-[28px] border border-white/70 bg-card shadow-[0_18px_42px_-30px_hsl(var(--shadow)/0.6)] dark:border-white/10">
-          <Link
-            href="/app/tday"
-            className={cn(
-              "relative block overflow-hidden bg-accent px-4 py-4 text-accent-foreground sm:px-5",
-              "transition-colors duration-200 hover:bg-accent/95",
-            )}
-          >
-            <div className="pointer-events-none absolute -left-8 -top-16 h-44 w-72 rounded-full bg-white/22 blur-2xl" />
-            <div className="pointer-events-none absolute -right-14 bottom-0 h-36 w-56 rounded-full bg-white/12 blur-2xl" />
-            <div className="relative flex items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-[#F4C542] shadow-sm sm:flex">
-                  <Sun className="h-6 w-6 fill-current" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block truncate text-[1.75rem] font-black leading-8 sm:text-[2rem]">
-                    Today
-                  </span>
-                  <span className="block truncate text-sm font-black text-accent-foreground/78 sm:text-base">
-                    {titleDate}
-                  </span>
-                </span>
-              </div>
-              <span className="text-right">
-                <span className="block text-[2.5rem] font-black leading-none sm:text-[3rem]">
-                  {counts.today ?? todayTodos.length}
-                </span>
-                <span className="block text-xs font-black text-accent-foreground/78 sm:text-sm">
-                  tasks
-                </span>
-              </span>
-            </div>
-          </Link>
+        <Link
+          href="/app/tday"
+          className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+          style={{ backgroundColor: todayTileColor }}
+        >
+          {renderTileOverlay()}
+          <span className="relative truncate text-[1.38rem] font-black leading-none tracking-tight">
+            {titleDate}
+          </span>
+          <span className="relative text-[2.1rem] font-black leading-none">
+            {counts.today ?? todayTodos.length}
+          </span>
+        </Link>
 
-          <div className="bg-card">
-            {todayLoading ? (
-              <div className="px-4 py-5 text-sm font-extrabold text-muted-foreground">
-                Loading today...
-              </div>
-            ) : sortedTodayTodos.length === 0 ? (
-              <div className="px-4 py-5 text-sm font-extrabold text-muted-foreground">
-                No tasks for today
-              </div>
-            ) : (
-              sortedTodayTodos.slice(0, 4).map((todo) => (
-                <NativeTodayTaskRow
-                  key={todo.id}
-                  todo={todo}
-                  listMetaData={listMetaData}
-                  locale={locale}
-                  timeZone={userTimeZone?.timeZone ?? undefined}
-                />
-              ))
-            )}
-            {sortedTodayTodos.length > 4 && (
-              <Link
-                href="/app/tday"
-                className="block px-4 py-3 text-center text-sm font-black text-muted-foreground transition-colors hover:bg-muted/55 hover:text-foreground"
-              >
-                View {sortedTodayTodos.length - 4} more
-              </Link>
-            )}
-          </div>
-        </section>
-
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-          {homeCategoryRoutes.map((route) => {
+        <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+          {[...homeCategoryRoutes]
+            .sort((a, b) => homeTileOrder.indexOf(a.id) - homeTileOrder.indexOf(b.id))
+            .map((route) => {
             const Icon = route.icon;
             const active = isNativeRouteActive(pathname, route);
             const count = counts[route.id];
+            const tile = homeTileConfig[route.id];
 
             return (
               <Link
                 key={route.id}
                 href={route.path}
                 className={cn(
-                  "group min-h-[78px] rounded-[22px] border border-white/70 bg-card/92 p-3 sm:min-h-[94px] sm:rounded-[24px]",
-                  "shadow-[0_14px_34px_-30px_hsl(var(--shadow)/0.55)] transition-all duration-200",
-                  "hover:-translate-y-0.5 hover:bg-card dark:border-white/10",
-                  active && "ring-2 ring-accent/25",
+                  "group relative min-h-[94px] overflow-hidden rounded-[26px] p-3 text-white",
+                  "shadow-[0_14px_30px_-18px_rgba(60,70,90,0.55)] transition-transform duration-200",
+                  "hover:-translate-y-0.5 active:translate-y-0.5",
+                  active && "ring-2 ring-white/50",
                 )}
+                style={{ backgroundColor: tile?.color }}
               >
-                <div className="flex h-full items-end justify-between gap-3">
+                {renderTileOverlay()}
+                <Icon className="pointer-events-none absolute -bottom-6 -right-5 h-24 w-24 text-white/18 stroke-[1.8]" />
+                <div className="relative flex h-full flex-col justify-between">
+                  <div className="flex items-start justify-between gap-3">
+                    <Icon className="h-6 w-6 text-white stroke-[2.5]" />
+                    {count != null && (
+                      <span className="text-[1.72rem] font-black leading-none">
+                        {count}
+                      </span>
+                    )}
+                  </div>
                   <div className="min-w-0">
-                    <span className="mb-2 flex h-9 w-9 items-center justify-center rounded-2xl bg-muted/70">
-                      <Icon className={cn("h-5 w-5 stroke-[2.4]", route.accentClass)} />
-                    </span>
-                    <p className="truncate text-[1.05rem] font-black leading-5 text-foreground">
-                      {route.label}
+                    <p className="truncate text-[1.28rem] font-black leading-6 tracking-tight">
+                      {tile?.label ?? route.label}
                     </p>
                   </div>
-                  {count != null && (
-                    <span className="text-[1.65rem] font-black leading-none text-foreground">
-                      {count}
-                    </span>
-                  )}
                 </div>
               </Link>
             );
@@ -393,76 +285,39 @@ export default function NativeHomeDashboard() {
 
         {lists.length > 0 && (
           <section className="space-y-2 pb-2 pt-12 sm:pt-0">
-            <h2 className="px-1 text-[1.45rem] font-black leading-8 text-foreground">
+            <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
               My Lists
             </h2>
             <div className="space-y-2">
-              {lists.map((list) => (
-                <Link
-                  key={list.id}
-                  href={`/app/list/${list.id}`}
-                  className="flex min-h-[64px] items-center gap-3 rounded-[22px] border border-white/70 bg-card/92 px-3 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
-                >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-muted/70">
-                    <ListDot id={list.id} className="text-xl" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[1rem] font-black text-foreground">
+              {lists.map((list) => {
+                const accent = listColorCss[list.color ?? "PINK"];
+
+                return (
+                  <Link
+                    key={list.id}
+                    href={`/app/list/${list.id}`}
+                    className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+                    style={{
+                      background: `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${accent} 66%)`,
+                    }}
+                  >
+                    {renderTileOverlay()}
+                    <Inbox className="relative h-5 w-5 shrink-0 text-white stroke-[2.5]" />
+                    <span className="relative min-w-0 flex-1 truncate text-[1.38rem] font-black leading-none tracking-tight">
                       {formatListName(list.name)}
                     </span>
-                    <span className="block truncate text-xs font-extrabold text-muted-foreground">
-                      {list.todoCount ?? 0} tasks
+                    <span className="relative text-[1.5rem] font-black leading-none">
+                      {list.todoCount ?? 0}
                     </span>
-                  </span>
-                  <span className="text-lg font-black text-muted-foreground">
-                    {list.todoCount ?? 0}
-                  </span>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}
       </div>
 
-      <Dialog open={createListOpen} onOpenChange={setCreateListOpen}>
-        <DialogContent className="max-w-md rounded-[28px] border border-white/70 bg-background p-5 shadow-[0_24px_60px_-30px_hsl(var(--shadow)/0.72)] dark:border-white/10">
-          <form onSubmit={handleCreateList} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-black">New list</DialogTitle>
-              <DialogDescription className="font-extrabold">
-                Create a list for related tasks.
-              </DialogDescription>
-            </DialogHeader>
-            <Input
-              value={newListName}
-              onChange={(event) => setNewListName(event.target.value)}
-              placeholder="List name"
-              className="h-12 rounded-2xl border-border/70 bg-card text-base font-extrabold"
-              autoFocus
-            />
-            {createListError && (
-              <p className="text-sm font-extrabold text-destructive">{createListError}</p>
-            )}
-            <DialogFooter className="gap-2 sm:space-x-0">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-2xl border-border/70 bg-card px-4 font-black"
-                onClick={() => setCreateListOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={createLoading}
-                className="rounded-2xl bg-accent px-4 font-black text-accent-foreground hover:bg-accent/90"
-              >
-                {createLoading ? "Creating..." : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <ListFormSheet open={createListOpen} onOpenChange={setCreateListOpen} />
     </TodoMutationProvider>
   );
 }

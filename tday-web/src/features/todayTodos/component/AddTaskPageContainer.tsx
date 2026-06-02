@@ -8,11 +8,12 @@ import { usePrioritizeTodo } from "../query/prioritize-todo";
 import { useEditTodo } from "../query/update-todo";
 import { useEditTodoInstance } from "../query/update-todo-instance";
 import { useReorderTodo } from "../query/reorder-todo";
-import TodoFormContainer from "@/components/todo/component/TodoForm/TodoFormContainer";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
+import { Button } from "@/components/ui/button";
 
 export default function AddTaskPageContainer() {
-  const [, setDisplayForm] = useState(true);
+  const [displayForm, setDisplayForm] = useState(true);
   const { t: todayDict } = useTranslation("today");
 
   return (
@@ -31,13 +32,18 @@ export default function AddTaskPageContainer() {
         <h3 className="mb-4 select-none text-2xl font-semibold tracking-tight">
           {todayDict("addATask")}
         </h3>
-        <div className="max-w-[64rem]">
-          <TodoFormContainer
-            displayForm={true}
-            setDisplayForm={setDisplayForm}
-            persistent
-          />
-        </div>
+        <Button
+          type="button"
+          onClick={() => setDisplayForm(true)}
+          className="rounded-2xl bg-accent px-5 font-black text-accent-foreground hover:bg-accent/90"
+        >
+          {todayDict("addATask")}
+        </Button>
+        <TaskFormSheet
+          open={displayForm}
+          onOpenChange={setDisplayForm}
+          persistent
+        />
       </div>
     </TodoMutationProvider>
   );

@@ -99,7 +99,10 @@ const ModalOverlay = ({ children }: { children: React.ReactElement }) => {
 const ModalContent = ({ children, className }: { children: React.ReactNode, className?: string }) => {
     return (
         <div
-            className={cn("bg-background rounded-lg w-full max-w-lg p-6", className)}
+            className={cn(
+                "bg-background rounded-lg w-full max-w-lg p-6 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-8 duration-200",
+                className,
+            )}
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}

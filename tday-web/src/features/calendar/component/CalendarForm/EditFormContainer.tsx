@@ -1,10 +1,7 @@
 import React, { lazy, Suspense } from 'react'
-import useWindowSize from '@/hooks/useWindowSize';
 import { TodoItemType } from '@/types';
-import ModalPlaceholder from '../LoadingPlaceholders/ModalPlaceholder';
 import DrawerPlaceholder from '../LoadingPlaceholders/DrawerPlaceholder';
-const MobileDrawer = lazy(() => import("./Form/DrawerForm/EditDrawer"));
-const DesktopModal = lazy(() => import("./Form/ModalForm/EditModal"));
+const EditDrawer = lazy(() => import("./Form/DrawerForm/EditDrawer"));
 
 type EditCalendarFormContainerProps = {
     todo: TodoItemType
@@ -17,15 +14,9 @@ const EditCalendarFormContainer = ({
     displayForm,
     setDisplayForm,
 }: EditCalendarFormContainerProps) => {
-    const { width } = useWindowSize();
-    if (width > 1300) return (
-        <Suspense fallback={<ModalPlaceholder />}>
-            <DesktopModal displayForm={displayForm} setDisplayForm={setDisplayForm} todo={todo} />
-        </Suspense>
-    );
     return (
         <Suspense fallback={<DrawerPlaceholder />}>
-            <MobileDrawer displayForm={displayForm} setDisplayForm={setDisplayForm} todo={todo} />
+            <EditDrawer displayForm={displayForm} setDisplayForm={setDisplayForm} todo={todo} />
         </Suspense>
     );
 };

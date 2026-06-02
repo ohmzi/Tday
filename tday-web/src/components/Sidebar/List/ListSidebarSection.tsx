@@ -25,13 +25,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { AlertTriangle, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { listColorMap } from "@/lib/listColorMap";
 import type { ListColor } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 
 type ListSidebarSectionProps = {
   mode: "expanded" | "collapsed";
@@ -65,31 +64,6 @@ type DeleteListsResponse = {
   deletedIds?: string[];
 };
 
-async function updateList({
-  id,
-  name,
-  color,
-}: {
-  id: string;
-  name: string;
-  color?: ListColor;
-}) {
-  if (!id) {
-    throw new Error("List id is missing");
-  }
-
-  const normalizedName = normalizeListName(name);
-  if (!normalizedName) {
-    throw new Error("List name cannot be empty");
-  }
-
-  await api.PATCH({
-    url: "/api/list",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, name: normalizedName, color }),
-  });
-}
-
 async function deleteLists(ids: string[]) {
   const normalizedIds = ids.map(normalizeListName).filter(Boolean);
   if (normalizedIds.length === 0) {
@@ -121,9 +95,6 @@ export default function ListSidebarSection({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<SidebarListItem | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-  const [renameColor, setRenameColor] = useState<ListColor>("BLUE");
-  const [renameError, setRenameError] = useState<string | null>(null);
   const [bulkDeleteSelection, setBulkDeleteSelection] = useState<string[]>([]);
 
   const lists = useMemo(() => {
@@ -200,23 +171,6 @@ export default function ListSidebarSection({
     [activeListIdFromPath, invalidateListQueries, router, setActiveMenu],
   );
 
-  const updateListMutation = useMutation({
-    mutationFn: updateList,
-    onSuccess: () => {
-      invalidateListQueries();
-      setRenameDialogOpen(false);
-      setSelectedList(null);
-      setRenameValue("");
-      setRenameColor("BLUE");
-      setRenameError(null);
-    },
-    onError: (error) => {
-      setRenameError(
-        error instanceof Error ? error.message : "Failed to update list",
-      );
-    },
-  });
-
   const deleteListMutation = useMutation({
     mutationFn: async (deletedListId: string) => {
       const response = await deleteLists([deletedListId]);
@@ -281,9 +235,6 @@ export default function ListSidebarSection({
 
   const handleRenameClick = (list: SidebarListItem) => {
     setSelectedList(list);
-    setRenameValue(normalizeListName(list.name));
-    setRenameColor(list.color ?? "BLUE");
-    setRenameError(null);
     setRenameDialogOpen(true);
   };
 
@@ -313,42 +264,12 @@ export default function ListSidebarSection({
   const closeRenameDialog = () => {
     setRenameDialogOpen(false);
     setSelectedList(null);
-    setRenameValue("");
-    setRenameColor("BLUE");
-    setRenameError(null);
   };
 
   const bulkDeleteSummary =
     selectedBulkLists.length === 1
       ? formatListName(selectedBulkLists[0]?.name ?? "")
       : `${selectedBulkLists.length} lists`;
-
-  const handleRenameSubmit = () => {
-    if (!selectedList) {
-      return;
-    }
-
-    const normalizedName = normalizeListName(renameValue);
-    if (!normalizedName) {
-      setRenameError("List name cannot be empty");
-      return;
-    }
-
-    if (
-      normalizedName === normalizeListName(selectedList.name) &&
-      renameColor === (selectedList.color ?? "BLUE")
-    ) {
-      closeRenameDialog();
-      return;
-    }
-
-    setRenameError(null);
-    updateListMutation.mutate({
-      id: selectedList.id,
-      name: normalizedName,
-      color: renameColor,
-    });
-  };
 
   if (lists.length === 0) {
     return null;
@@ -509,7 +430,7 @@ export default function ListSidebarSection({
         })}
       </div>
 
-      <Dialog
+      <ListFormSheet
         open={renameDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -518,73 +439,8 @@ export default function ListSidebarSection({
           }
           setRenameDialogOpen(true);
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename List</DialogTitle>
-            <DialogDescription>Enter a new name for this list.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Input
-              value={renameValue}
-              onChange={(e) => {
-                setRenameValue(e.target.value);
-                if (renameError) {
-                  setRenameError(null);
-                }
-              }}
-              placeholder="List name"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleRenameSubmit();
-                }
-              }}
-              autoFocus
-              className={cn(
-                renameError &&
-                  "border-destructive focus-visible:ring-destructive/30",
-              )}
-            />
-            {renameError && (
-              <p className="px-1 text-xs text-destructive">{renameError}</p>
-            )}
-            <div className="space-y-2 px-1 pt-2">
-              <p className="text-xs font-medium text-muted-foreground">List color</p>
-              <div className="flex flex-wrap gap-2">
-                {listColorMap.map((colorOption) => (
-                  <button
-                    key={colorOption.value}
-                    type="button"
-                    title={colorOption.name}
-                    aria-label={`Set color ${colorOption.name}`}
-                    onClick={() => setRenameColor(colorOption.value)}
-                    className={cn(
-                      "h-6 w-6 rounded-full border transition-transform hover:scale-105",
-                      colorOption.tailwind,
-                      renameColor === colorOption.value
-                        ? "ring-2 ring-accent ring-offset-2 ring-offset-background"
-                        : "border-border/60",
-                    )}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeRenameDialog}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRenameSubmit}
-              disabled={
-                !normalizeListName(renameValue) || updateListMutation.isPending
-              }
-            >
-              {updateListMutation.isPending ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        list={selectedList}
+      />
 
       <Dialog
         open={deleteDialogOpen}
