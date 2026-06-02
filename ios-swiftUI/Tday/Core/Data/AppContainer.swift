@@ -35,10 +35,14 @@ final class AppContainer {
 
     private init() {
         secureStore = SecureStore()
+        let didClearInstallScopedValues = secureStore.clearInstallScopedValuesIfAppReinstalled()
         themeStore = ThemeStore()
         reminderPreferenceStore = ReminderPreferenceStore()
         serverURLState = ServerURLState(currentURL: secureStore.loadPersistedServerURL())
-        cookieStore = CookieStore(secureStore: secureStore)
+        cookieStore = CookieStore(
+            secureStore: secureStore,
+            clearAuthCookiesBeforeRestore: didClearInstallScopedValues
+        )
         networkConfiguration = NetworkConfiguration(
             secureStore: secureStore,
             serverURLState: serverURLState,

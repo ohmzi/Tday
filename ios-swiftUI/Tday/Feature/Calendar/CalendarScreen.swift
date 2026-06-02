@@ -345,6 +345,7 @@ struct CalendarScreen: View {
                 titleText: "New task",
                 submitText: "Create",
                 initialPayload: CreateTaskPayload(title: "", description: nil, priority: "Low", due: selectedDate, rrule: nil, listId: nil),
+                autofocusTitle: true,
                 onParseTaskTitleNlp: { title, dueRef in
                     await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },

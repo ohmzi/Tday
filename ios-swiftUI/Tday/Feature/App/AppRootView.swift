@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AppRootView: View {
     private let container: AppContainer
@@ -238,6 +239,11 @@ struct AppRootView: View {
             }
         }
         .tdayAppTheme(themeMode: appViewModel.themeMode)
+        .background(
+            TdayKeyboardPrewarmView(
+                isEnabled: scenePhase == .active
+            )
+        )
         .task {
             if !appViewModel.hasCompletedInitialBootstrap {
                 await appViewModel.bootstrap()
@@ -471,6 +477,81 @@ private struct AppSnackbar: View {
 
 private struct PendingRootCreateTask {
     let tab: RootFeedTab
+}
+
+private struct TdayKeyboardPrewarmView: UIViewRepresentable {
+    let isEnabled: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        view.alpha = 0.01
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.update(isEnabled: isEnabled, hostView: uiView)
+    }
+
+    final class Coordinator {
+        private static var didPrewarm = false
+
+        private var isScheduled = false
+        private var attempts = 0
+
+        func update(isEnabled: Bool, hostView: UIView) {
+            guard isEnabled, !Self.didPrewarm, !isScheduled else {
+                return
+            }
+            schedulePrewarm(from: hostView)
+        }
+
+        private func schedulePrewarm(from hostView: UIView) {
+            isScheduled = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self, weak hostView] in
+                guard let self else {
+                    return
+                }
+                self.isScheduled = false
+
+                guard let hostView else {
+                    return
+                }
+
+                guard let window = hostView.window else {
+                    self.attempts += 1
+                    if self.attempts < 8 {
+                        self.schedulePrewarm(from: hostView)
+                    }
+                    return
+                }
+
+                Self.didPrewarm = true
+                self.attempts = 0
+                self.prewarm(in: window)
+            }
+        }
+
+        private func prewarm(in window: UIWindow) {
+            let textField = UITextField(frame: CGRect(x: -100, y: -100, width: 1, height: 1))
+            textField.alpha = 0.01
+            textField.isUserInteractionEnabled = false
+            textField.autocorrectionType = .no
+            textField.spellCheckingType = .no
+            textField.inputView = UIView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+            window.addSubview(textField)
+
+            textField.becomeFirstResponder()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                textField.resignFirstResponder()
+                textField.removeFromSuperview()
+            }
+        }
+    }
 }
 
 private extension AppRoute {
