@@ -68,10 +68,14 @@ xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination
 ## Persistence and Sync
 
 - SwiftData stores todos, floaters, lists, floater lists, completed records, pending mutations, and sync metadata.
-- `OfflineCacheManager` posts `.offlineCacheDidChange`; ViewModels refresh from cache when it changes.
+- `OfflineCacheManager` posts `.offlineCacheDidChange`; ViewModels refresh cache-backed task data and
+  Settings sync status when it changes.
 - Repositories write optimistically to SwiftData first.
 - In Server Mode, `SyncManager` replays pending mutations and refreshes snapshots.
-- In Local Mode, pending mutations are cleared/ignored because there is no remote target.
+- In Server Mode, Settings shows Server sync status, last sync metadata, pending change count, and a
+  duplicate-safe manual sync action.
+- In Local Mode, pending mutations are cleared/ignored because there is no remote target, and Settings
+  shows the workspace as local-only.
 - Keychain-backed `SecureStore` handles server URL, cookies, credentials, theme, reminders, and mode state.
 
 See [`../docs/DATA_MODEL.md`](../docs/DATA_MODEL.md) for the shared cache model.

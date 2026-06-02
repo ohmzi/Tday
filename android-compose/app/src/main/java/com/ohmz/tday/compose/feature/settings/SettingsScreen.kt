@@ -65,11 +65,17 @@ import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.model.SessionUser
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.ui.rememberScrollCollapsingTitleScrollBehavior
+import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(
@@ -77,6 +83,7 @@ fun SettingsScreen(
     isLocalMode: Boolean = false,
     selectedThemeMode: AppThemeMode,
     selectedReminder: ReminderOption,
+    syncStatus: MobileSyncStatus,
     adminAiSummaryEnabled: Boolean?,
     isAdminAiSummaryLoading: Boolean,
     isAdminAiSummarySaving: Boolean,
@@ -88,6 +95,7 @@ fun SettingsScreen(
     versionCheckResult: VersionCheckResult? = null,
     onThemeModeSelected: (AppThemeMode) -> Unit,
     onReminderSelected: (ReminderOption) -> Unit,
+    onSyncNow: () -> Unit,
     onToggleAdminAiSummary: (Boolean) -> Unit,
     onDismissAiValidationError: () -> Unit,
     onBack: () -> Unit,
@@ -127,6 +135,11 @@ fun SettingsScreen(
                     user = user,
                 )
             }
+
+            SettingsWorkspaceSection(
+                syncStatus = syncStatus,
+                onSyncNow = onSyncNow,
+            )
 
             SettingsSectionCard {
                 SettingsSectionTitle(title = stringResource(R.string.settings_appearance))
@@ -320,6 +333,143 @@ private fun SettingsProfileCard(
             color = colorScheme.onSurface.copy(alpha = 0.58f),
         )
     }
+}
+
+@Composable
+private fun SettingsWorkspaceSection(
+    syncStatus: MobileSyncStatus,
+    onSyncNow: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    SettingsSectionCard {
+        SettingsSectionTitle(title = stringResource(R.string.settings_workspace))
+        if (syncStatus.isLocalMode) {
+            Text(
+                text = stringResource(R.string.settings_workspace_local_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Text(
+                text = stringResource(R.string.settings_workspace_local_detail),
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurface.copy(alpha = 0.62f),
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.settings_workspace_server_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Text(
+                text = syncStatusLabel(syncStatus),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (syncStatus.isOffline) {
+                    colorScheme.error
+                } else {
+                    colorScheme.onSurface.copy(alpha = 0.62f)
+                },
+            )
+            SettingsDivider()
+            SettingsSyncFactRow(
+                label = stringResource(R.string.settings_sync_last_synced_label),
+                value = lastSyncedText(syncStatus.lastSuccessfulSyncEpochMs),
+            )
+            if (syncStatus.lastSyncAttemptEpochMs > 0L &&
+                syncStatus.lastSyncAttemptEpochMs != syncStatus.lastSuccessfulSyncEpochMs
+            ) {
+                SettingsSyncFactRow(
+                    label = stringResource(R.string.settings_sync_last_attempt_label),
+                    value = formatSyncTimestamp(syncStatus.lastSyncAttemptEpochMs),
+                )
+            }
+            SettingsSyncFactRow(
+                label = stringResource(R.string.settings_sync_pending_label),
+                value = pendingChangesText(syncStatus.pendingMutationCount),
+            )
+            TextButton(
+                onClick = onSyncNow,
+                enabled = !syncStatus.isManualSyncing,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(
+                    text = if (syncStatus.isManualSyncing) {
+                        stringResource(R.string.settings_syncing_now)
+                    } else {
+                        stringResource(R.string.settings_sync_now)
+                    },
+                    fontWeight = FontWeight.ExtraBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSyncFactRow(
+    label: String,
+    value: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.56f),
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+            fontWeight = FontWeight.ExtraBold,
+        )
+    }
+}
+
+@Composable
+private fun syncStatusLabel(syncStatus: MobileSyncStatus): String {
+    return when {
+        syncStatus.isManualSyncing -> stringResource(R.string.settings_sync_status_syncing)
+        syncStatus.isOffline -> stringResource(R.string.settings_sync_status_offline)
+        syncStatus.pendingMutationCount > 0 -> stringResource(R.string.settings_sync_status_pending)
+        syncStatus.lastSuccessfulSyncEpochMs > 0L -> stringResource(R.string.settings_sync_status_synced)
+        else -> stringResource(R.string.settings_sync_status_ready)
+    }
+}
+
+@Composable
+private fun pendingChangesText(count: Int): String {
+    return when (count) {
+        0 -> stringResource(R.string.settings_sync_pending_none)
+        1 -> stringResource(R.string.settings_sync_pending_one)
+        else -> stringResource(R.string.settings_sync_pending_many, count)
+    }
+}
+
+@Composable
+private fun lastSyncedText(epochMs: Long): String {
+    return if (epochMs <= 0L) {
+        stringResource(R.string.settings_sync_last_synced_never)
+    } else {
+        formatSyncTimestamp(epochMs)
+    }
+}
+
+private fun formatSyncTimestamp(epochMs: Long): String {
+    val zone = ZoneId.systemDefault()
+    val dateTime = Instant.ofEpochMilli(epochMs).atZone(zone)
+    val today = LocalDate.now(zone)
+    val formatter = if (dateTime.toLocalDate() == today) {
+        DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+    } else {
+        DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.getDefault())
+    }
+    return dateTime.format(formatter)
 }
 
 @Composable

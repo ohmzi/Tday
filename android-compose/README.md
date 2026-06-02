@@ -69,9 +69,10 @@ cd android-compose
 The onboarding overlay offers two workspace paths:
 
 - **Local Mode**: start immediately with local data only. Pull-to-refresh, server sync, realtime
-  updates, and admin server settings are not active.
+  updates, and admin server settings are not active. Settings shows the workspace as local-only.
 - **Server Mode**: configure a self-hosted T'Day URL, verify the mobile probe/version compatibility,
-  then login/register.
+  then login/register. Settings shows Server sync status, last sync metadata, pending change count,
+  and a duplicate-safe manual sync action.
 
 Server URLs are normalized and persisted only after successful authenticated setup. Server URL
 credentials use Android Credential Manager where available, while real login credentials and cookies
@@ -93,6 +94,8 @@ are stored through encrypted local stores.
 - Room stores todos, floaters, lists, floater lists, completed records, pending mutations, and sync
   metadata.
 - `OfflineCacheManager` exposes `cacheDataVersion`; ViewModels reload from cache when it changes.
+- `OfflineCacheManager` also exposes `syncMetadataVersion` for pending-mutation and sync-timestamp
+  changes that should refresh status UI without forcing task-list reloads.
 - Repositories write optimistically to Room first.
 - In Server Mode, `SyncManager` replays pending mutations and refreshes snapshots.
 - In Local Mode, pending mutations are cleared/ignored because there is no remote target.

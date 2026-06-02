@@ -295,10 +295,28 @@
 
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Retry</string>
-    <string name="offline_banner_title">Offline mode</string>
-    <string name="offline_banner">App is in offline mode. Changes will sync when connection returns.</string>
+    <string name="offline_banner_title">You\'re offline</string>
+    <string name="offline_banner">Cached tasks are available. Changes will sync when connection returns.</string>
     <string name="offline_banner_pending_one">1 change waiting to sync</string>
     <string name="offline_banner_pending_many">%1$d changes waiting to sync</string>
+    <string name="settings_workspace">Workspace</string>
+    <string name="settings_workspace_local_title">Local workspace</string>
+    <string name="settings_workspace_local_detail">On this device only</string>
+    <string name="settings_workspace_server_title">Server sync</string>
+    <string name="settings_sync_status_ready">Ready to sync</string>
+    <string name="settings_sync_status_syncing">Syncing now</string>
+    <string name="settings_sync_status_offline">Offline. Changes will sync when connection returns.</string>
+    <string name="settings_sync_status_pending">Waiting to sync</string>
+    <string name="settings_sync_status_synced">Synced</string>
+    <string name="settings_sync_last_synced_label">Last synced</string>
+    <string name="settings_sync_last_synced_never">Not yet</string>
+    <string name="settings_sync_last_attempt_label">Last attempt</string>
+    <string name="settings_sync_pending_label">Pending</string>
+    <string name="settings_sync_pending_none">No changes waiting</string>
+    <string name="settings_sync_pending_one">1 change waiting</string>
+    <string name="settings_sync_pending_many">%1$d changes waiting</string>
+    <string name="settings_sync_now">Sync now</string>
+    <string name="settings_syncing_now">Syncing...</string>
     <string name="error_auth_expired">Session expired. Please sign in again.</string>
     <string name="error_app_outdated">This version of the app is out of date. Please update to continue.</string>
     <string name="error_server_outdated">The server needs to be updated before this app can continue.</string>

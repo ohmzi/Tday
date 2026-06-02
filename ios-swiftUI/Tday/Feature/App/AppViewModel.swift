@@ -50,6 +50,8 @@ final class AppViewModel {
     var selectedReminder: ReminderOption
     var isOffline = false
     var pendingMutationCount = 0
+    var lastSuccessfulSyncEpochMs: Int64 = 0
+    var lastSyncAttemptEpochMs: Int64 = 0
     var offlineNoticeID = 0
     var navigationPath: [AppRoute] = []
     var latestVersionName: String?
@@ -74,6 +76,17 @@ final class AppViewModel {
 
     var isWorkspaceAvailable: Bool {
         authenticated || isLocalMode
+    }
+
+    var syncStatus: MobileSyncStatus {
+        MobileSyncStatus(
+            dataMode: dataMode,
+            isOffline: isOffline,
+            isManualSyncing: isManualSyncing,
+            pendingMutationCount: pendingMutationCount,
+            lastSuccessfulSyncEpochMs: lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs: lastSyncAttemptEpochMs
+        )
     }
 
     var hasUpdate: Bool {
@@ -136,6 +149,8 @@ final class AppViewModel {
             isAdminAiSummarySaving = false
             adminAiSummaryError = nil
             pendingMutationCount = 0
+            lastSuccessfulSyncEpochMs = 0
+            lastSyncAttemptEpochMs = 0
             isOffline = false
             finishBootstrap()
             stopRealtime()
@@ -173,7 +188,7 @@ final class AppViewModel {
             }
             finishBootstrap()
             await refreshAdminAiSummarySetting()
-            refreshPendingMutationCount()
+            refreshSyncStatusFromCache()
             startRealtime()
             startSyncLoop()
             await container.reminderScheduler.requestAuthorization()
@@ -195,7 +210,7 @@ final class AppViewModel {
         isAdminAiSummaryLoading = false
         isAdminAiSummarySaving = false
         adminAiSummaryError = nil
-        refreshPendingMutationCount()
+        refreshSyncStatusFromCache()
         finishBootstrap()
         stopRealtime()
         stopSyncLoop()
@@ -239,6 +254,8 @@ final class AppViewModel {
         aiSummaryValidationError = nil
         isOffline = false
         pendingMutationCount = 0
+        lastSuccessfulSyncEpochMs = 0
+        lastSyncAttemptEpochMs = 0
         versionCheckResult = .compatible
         backendVersion = nil
         await container.reminderScheduler.requestAuthorization()
@@ -432,18 +449,23 @@ final class AppViewModel {
         cacheObservationTask = Task {
             for await _ in NotificationCenter.default.notifications(named: .offlineCacheDidChange) {
                 await MainActor.run {
-                    self.refreshPendingMutationCount()
+                    self.refreshSyncStatusFromCache()
                 }
             }
         }
     }
 
-    private func refreshPendingMutationCount() {
+    func refreshSyncStatusFromCache() {
         guard !isLocalMode else {
             pendingMutationCount = 0
+            lastSuccessfulSyncEpochMs = 0
+            lastSyncAttemptEpochMs = 0
             return
         }
-        pendingMutationCount = container.cacheManager.loadOfflineState().pendingMutations.count
+        let state = container.cacheManager.loadOfflineState()
+        pendingMutationCount = state.pendingMutations.count
+        lastSuccessfulSyncEpochMs = state.lastSuccessfulSyncEpochMs
+        lastSyncAttemptEpochMs = state.lastSyncAttemptEpochMs
     }
 
     private func startSyncLoop() {
@@ -519,11 +541,11 @@ final class AppViewModel {
         switch result {
         case .success:
             isOffline = false
-            refreshPendingMutationCount()
+            refreshSyncStatusFromCache()
         case let .failure(error):
             if isVersionGateError(error) {
                 isOffline = false
-                refreshPendingMutationCount()
+                refreshSyncStatusFromCache()
                 Task { await self.recheckVersion() }
                 return
             }
@@ -535,7 +557,7 @@ final class AppViewModel {
             if !isOffline {
                 container.snackbarManager.show(message: userFacingMessage(for: error))
             }
-            refreshPendingMutationCount()
+            refreshSyncStatusFromCache()
         }
     }
 
@@ -582,7 +604,7 @@ final class AppViewModel {
                         return
                     }
                     self.isOffline = false
-                    self.refreshPendingMutationCount()
+                    self.refreshSyncStatusFromCache()
                 }
             }
         }
