@@ -25,7 +25,11 @@ export const todoSchema = z.object({
     .string({ message: "title cannot be left empty" })
     .trim()
     .min(1, { message: "title cannot be left empty" }),
-  description: z.string().optional(),
+  // Tasks without a description carry `null` (see TodoItemType). Allowing only
+  // string | undefined caused reschedule/drag payloads built from a raw todo to
+  // fail validation, so `patchTodo` silently skipped the PATCH (the move never
+  // saved). The backend ignores a null description, leaving it unchanged.
+  description: z.string().nullable().optional(),
   priority: z.enum(["Low", "Medium", "High"], {
     errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
   }),
@@ -39,7 +43,9 @@ export const todoInstanceSchema = z.object({
     .string({ message: "title cannot be left empty" })
     .trim()
     .min(1, { message: "title cannot be left empty" }),
-  description: z.string().optional(),
+  // See todoSchema: a null description must validate so recurring-instance
+  // reschedules from a raw todo aren't silently dropped.
+  description: z.string().nullable().optional(),
   priority: z.enum(["Low", "Medium", "High"], {
     errorMap: () => ({ message: "priority must be one of: low, medium, high" }),
   }),
