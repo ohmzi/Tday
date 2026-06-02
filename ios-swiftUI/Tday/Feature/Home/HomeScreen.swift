@@ -59,7 +59,7 @@ private struct HomeListIconOption {
 
 private enum CreateListSheetMetrics {
     static let sheetHeight: CGFloat = 620
-    static let maximumHeightFraction: CGFloat = 0.7
+    static let maximumHeightFraction: CGFloat = 0.80
     static let bottomContentPadding: CGFloat = 8
 }
 
@@ -393,7 +393,7 @@ struct HomeScreen: View {
         .onDisappear {
             onRootControlsVisibleChange(true)
         }
-        .sheet(isPresented: $showingCreateTask) {
+        .createTaskSheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
                 lists: viewModel.summary.lists,
                 titleText: "New task",
@@ -408,7 +408,7 @@ struct HomeScreen: View {
                 }
             )
         }
-        .sheet(isPresented: $showingCreateList) {
+        .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
             CreateListSheet { name, color, iconKey in
                 Task {
                     await viewModel.createList(name: name, color: color, iconKey: iconKey)
@@ -420,7 +420,7 @@ struct HomeScreen: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.hidden)
         }
-        .sheet(item: $editingTodo) { todo in
+        .createTaskSheet(item: $editingTodo) { todo in
             CreateTaskSheet(
                 lists: viewModel.lists,
                 titleText: "Edit task",
@@ -1628,16 +1628,17 @@ struct CreateListSheet: View {
             .scrollDismissesKeyboard(.interactively)
             .disableVerticalScrollBounce()
         }
-        .frame(maxWidth: .infinity, alignment: .top)
-        .background(colors.bottomSheetBackground.ignoresSafeArea())
-        .presentationDetents([.height(stableSheetHeight)])
-        .presentationDragIndicator(.hidden)
-        .presentationCornerRadius(34)
-        .presentationBackground {
-            colors.bottomSheetBackground
-                .ignoresSafeArea(.container, edges: .bottom)
-        }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .frame(maxWidth: .infinity, minHeight: stableSheetHeight, maxHeight: stableSheetHeight, alignment: .top)
+        .background(colors.bottomSheetBackground)
+        .clipShape(
+            UnevenRoundedRectangle(
+                topLeadingRadius: TdaySheetMetrics.sheetCornerRadius,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: TdaySheetMetrics.sheetCornerRadius,
+                style: .continuous
+            )
+        )
     }
 
     private func formattedOptionName(_ value: String) -> String {

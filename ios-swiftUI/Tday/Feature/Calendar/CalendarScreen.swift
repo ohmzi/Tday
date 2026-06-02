@@ -339,7 +339,7 @@ struct CalendarScreen: View {
                 showingCreateTask = true
             }
         }
-        .sheet(isPresented: $showingCreateTask) {
+        .createTaskSheet(isPresented: $showingCreateTask) {
             CreateTaskSheet(
                 lists: viewModel.lists,
                 titleText: "New task",
@@ -354,7 +354,7 @@ struct CalendarScreen: View {
                 }
             )
         }
-        .sheet(item: $editingTodo) { todo in
+        .createTaskSheet(item: $editingTodo) { todo in
             CreateTaskSheet(
                 lists: viewModel.lists,
                 titleText: "Edit task",

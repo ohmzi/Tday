@@ -49,7 +49,8 @@ private struct RefreshContainerBody<Content: View>: View {
 
     @State private var pullDistance: CGFloat = 0
     @State private var localRefreshInFlight = false
-    @State private var hasTriggeredForCurrentPull = false
+    @State private var observedExternalRefresh = false
+    @State private var refreshSequence = 0
 
     init(
         isRefreshing: Bool,
@@ -71,6 +72,9 @@ private struct RefreshContainerBody<Content: View>: View {
 
     var body: some View {
         content
+            .refreshable {
+                await performRefresh()
+            }
             .background(
                 PullRefreshOffsetObserver { distance in
                     updatePullDistance(distance)
@@ -84,35 +88,32 @@ private struct RefreshContainerBody<Content: View>: View {
                 .padding(.top, 10)
                 .allowsHitTesting(false)
             }
-            .onChange(of: pullProgress) { _, progress in
-                handlePullProgressChange(progress)
-            }
-            .onChange(of: effectiveRefreshing) { _, refreshing in
-                if !refreshing && pullProgress < 0.1 {
-                    hasTriggeredForCurrentPull = false
+            .onChange(of: isRefreshing) { _, refreshing in
+                if refreshing {
+                    observedExternalRefresh = true
+                } else if observedExternalRefresh && localRefreshInFlight {
+                    localRefreshInFlight = false
                 }
             }
     }
 
-    private func handlePullProgressChange(_ progress: CGFloat) {
-        if progress < 0.1 && !effectiveRefreshing {
-            hasTriggeredForCurrentPull = false
-        }
-
-        guard progress >= 1,
-              !effectiveRefreshing,
-              !hasTriggeredForCurrentPull else {
-            return
-        }
-
-        hasTriggeredForCurrentPull = true
+    @MainActor
+    private func performRefresh() async {
+        guard !localRefreshInFlight, !isRefreshing else { return }
+        refreshSequence += 1
+        let currentRefreshSequence = refreshSequence
+        observedExternalRefresh = false
         localRefreshInFlight = true
-        Task {
-            await action()
-            await MainActor.run {
-                localRefreshInFlight = false
-            }
+
+        await action()
+
+        if !observedExternalRefresh {
+            try? await Task.sleep(nanoseconds: TdayRefreshIndicatorMetrics.handoffHoldNanoseconds)
         }
+
+        guard refreshSequence == currentRefreshSequence else { return }
+        localRefreshInFlight = false
+        observedExternalRefresh = false
     }
 
     private func updatePullDistance(_ distance: CGFloat) {
@@ -132,6 +133,7 @@ private struct RefreshContainerBody<Content: View>: View {
 
 private enum TdayRefreshIndicatorMetrics {
     static let triggerDistance: CGFloat = 112
+    static let handoffHoldNanoseconds: UInt64 = 1_500_000_000
     static let containerWidth: CGFloat = 152
     static let containerHeight: CGFloat = 58
     static let barCount = 5
@@ -142,6 +144,7 @@ private enum TdayRefreshIndicatorMetrics {
     static let cornerRadius: CGFloat = 29
     static let sweepInset: CGFloat = 11
     static let sweepHeight: CGFloat = 40
+    static let refreshingOffset: CGFloat = 20
 }
 
 private struct TdayPullRefreshIndicator: View {
@@ -158,6 +161,9 @@ private struct TdayPullRefreshIndicator: View {
         TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: !isRefreshing)) { context in
             let clampedProgress = min(max(pullProgress, 0), 1)
             let revealProgress = isRefreshing ? 1 : clampedProgress
+            let indicatorOffset = isRefreshing
+                ? TdayRefreshIndicatorMetrics.refreshingOffset
+                : -18 + (18 * revealProgress)
             let cycle = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.05) / 1.05
             let sweepTrackWidth = TdayRefreshIndicatorMetrics.containerWidth - (TdayRefreshIndicatorMetrics.sweepInset * 2)
             let refreshAccent = Color.tdayTodayBlue
@@ -206,8 +212,9 @@ private struct TdayPullRefreshIndicator: View {
             .shadow(color: refreshAccent.opacity(0.12), radius: 12, x: 0, y: 0)
             .shadow(color: Color.black.opacity(0.15), radius: 16, x: 0, y: 8)
             .opacity(visible ? Double(revealProgress) : 0)
-            .offset(y: -18 + (18 * revealProgress))
+            .offset(y: indicatorOffset)
             .animation(.easeOut(duration: 0.22), value: visible)
+            .animation(.easeOut(duration: 0.22), value: isRefreshing)
         }
     }
 

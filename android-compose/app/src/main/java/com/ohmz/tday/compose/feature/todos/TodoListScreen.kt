@@ -521,7 +521,36 @@ fun TodoListScreen(
         summaryAvailable &&
                 uiState.aiSummaryEnabled &&
                 uiState.items.isNotEmpty()
-    val showTopBarActionButton = canSummarizeCurrentMode || isListDetailScreen
+    val topBarActions = listOfNotNull(
+        if (canSummarizeCurrentMode) {
+            TodoTopBarAction(
+                icon = Icons.Rounded.AutoAwesome,
+                contentDescription = stringResource(R.string.todos_summarize),
+                onClick = { showSummarySheet = true },
+            )
+        } else {
+            null
+        },
+        if (isListDetailScreen && selectedList != null) {
+            TodoTopBarAction(
+                icon = Icons.Rounded.MoreHoriz,
+                contentDescription = stringResource(R.string.action_more_options),
+                onClick = {
+                    listSettingsTargetId = selectedList.id
+                    listSettingsName = selectedList.name
+                    listSettingsColor = normalizeTdayListColorKey(selectedList.color)
+                    listSettingsIconKey = selectedList.iconKey
+                        ?.takeIf { isTdayListIconKeySupported(it) }
+                        ?: TDAY_DEFAULT_LIST_ICON_KEY
+                    listSettingsColorTouched = false
+                    listSettingsIconTouched = false
+                    showListSettingsSheet = true
+                },
+            )
+        } else {
+            null
+        },
+    )
     val fabPressed by fabInteractionSource.collectIsPressedAsState()
     val fabScale by animateFloatAsState(
         targetValue = if (fabPressed) 0.93f else 1f,
@@ -699,32 +728,7 @@ fun TodoListScreen(
                         titleColor = titleColor,
                         titleIcon = if (uiState.mode == TodoListMode.TODAY) todayTimeIcon else null,
                         titleIconTint = todayTimeIconTint,
-                        showActionButton = showTopBarActionButton,
-                        actionIcon = if (canSummarizeCurrentMode) {
-                            Icons.Rounded.AutoAwesome
-                        } else {
-                            Icons.Rounded.MoreHoriz
-                        },
-                        actionContentDescription = if (canSummarizeCurrentMode) {
-                            stringResource(R.string.todos_summarize)
-                        } else {
-                            stringResource(R.string.action_more_options)
-                        },
-                        onAction = {
-                            if (canSummarizeCurrentMode) {
-                                showSummarySheet = true
-                            } else if (selectedList != null) {
-                                listSettingsTargetId = selectedList.id
-                                listSettingsName = selectedList.name
-                                listSettingsColor = normalizeTdayListColorKey(selectedList.color)
-                                listSettingsIconKey = selectedList.iconKey
-                                    ?.takeIf { isTdayListIconKeySupported(it) }
-                                    ?: TDAY_DEFAULT_LIST_ICON_KEY
-                                listSettingsColorTouched = false
-                                listSettingsIconTouched = false
-                                showListSettingsSheet = true
-                            }
-                        },
+                        actions = topBarActions,
                     )
                 }
 
@@ -1937,10 +1941,7 @@ private fun TodayTopBar(
     titleColor: Color,
     titleIcon: ImageVector? = null,
     titleIconTint: Color = titleColor,
-    showActionButton: Boolean,
-    actionIcon: ImageVector,
-    actionContentDescription: String,
-    onAction: () -> Unit,
+    actions: List<TodoTopBarAction>,
 ) {
     val progress = collapseProgress.coerceIn(0f, 1f)
     val titleHandoffPoint = 0.9f
@@ -1951,6 +1952,8 @@ private fun TodayTopBar(
         ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
     val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
     val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
+    val collapsedTitleHorizontalPadding =
+        maxOf(TdayDimens.FabSize, (actions.size.coerceAtLeast(1) * 56).dp) + 12.dp
 
     Column(
         modifier = Modifier
@@ -1970,12 +1973,16 @@ private fun TodayTopBar(
                     contentDescription = stringResource(R.string.action_back),
                     isBackButton = true,
                 )
-                if (showActionButton) {
-                    TodayHeaderButton(
-                        onClick = onAction,
-                        icon = actionIcon,
-                        contentDescription = actionContentDescription,
-                    )
+                if (actions.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                        actions.forEach { action ->
+                            TodayHeaderButton(
+                                onClick = action.onClick,
+                                icon = action.icon,
+                                contentDescription = action.contentDescription,
+                            )
+                        }
+                    }
                 }
             }
             if (collapsedTitleAlpha > 0.001f) {
@@ -1986,6 +1993,9 @@ private fun TodayTopBar(
                     iconTint = titleIconTint,
                     modifier = Modifier
                         .align(Alignment.Center)
+                        .fillMaxWidth()
+                        .padding(horizontal = collapsedTitleHorizontalPadding)
+                        .wrapContentSize(Alignment.Center)
                         .graphicsLayer {
                             alpha = collapsedTitleAlpha
                             translationY = collapsedTitleShiftY
@@ -2015,6 +2025,12 @@ private fun TodayTopBar(
         }
     }
 }
+
+private data class TodoTopBarAction(
+    val icon: ImageVector,
+    val contentDescription: String,
+    val onClick: () -> Unit,
+)
 
 @Composable
 private fun TodayTitleLabel(
