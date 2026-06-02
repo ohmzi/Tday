@@ -610,7 +610,7 @@ struct TodoListScreen: View {
         rootFeedTab: RootFeedTab? = nil,
         onRootFeedTabSelected: ((RootFeedTab) -> Void)? = nil,
         showsRootControls: Bool = true,
-        pullRefreshEnabled: Bool = true,
+        pullRefreshEnabled: Bool = false,
         usesRootFeedHeader: Bool = false,
         createTaskRequestID: Int = 0,
         openCreateTaskOnAppear: Bool = false,
@@ -1719,7 +1719,6 @@ struct TodoListScreen: View {
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
-                        .disableVerticalScrollBounce()
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -1728,6 +1727,7 @@ struct TodoListScreen: View {
                 .listRowSpacing(0)
                 .listSectionSpacing(0)
                 .environment(\.defaultMinListRowHeight, 1)
+                .disableVerticalScrollBounce(!pullRefreshEnabled)
                 .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
                 .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
 
