@@ -9,6 +9,7 @@ Current feature surface:
 - Local Mode for offline-only planning without server setup.
 - Server Mode with JWE cookie auth, optimistic local writes, realtime refresh, and pending mutation replay.
 - Home and Floater/Anytime root feeds controlled by `RootFeedDock`.
+- Pull-to-refresh is a Server Mode root-feed affordance on Home and the Floater root only; detail, category, calendar, and completed screens refresh through cache observation, sync, foreground reconnect, or explicit retry actions.
 - Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar, search, settings, reminders, Today/Floater WidgetKit widgets, CarPlay templates, and Siri/App Shortcuts for car task creation.
 - SwiftData-backed local cache mirrored with Android's Room-backed `OfflineSyncState`.
 

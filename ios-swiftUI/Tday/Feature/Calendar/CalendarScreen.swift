@@ -169,7 +169,7 @@ struct CalendarScreen: View {
     @State private var pendingRescheduleDrop: CalendarTaskRescheduleDrop?
     @State private var openSwipeTaskID: String?
 
-    init(container: AppContainer, pullRefreshEnabled: Bool = true) {
+    init(container: AppContainer, pullRefreshEnabled: Bool = false) {
         self.pullRefreshEnabled = pullRefreshEnabled
         _viewModel = State(initialValue: CalendarViewModel(container: container))
     }

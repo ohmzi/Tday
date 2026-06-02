@@ -101,7 +101,7 @@ struct HomeScreen: View {
         scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
         onRootControlsVisibleChange: @escaping (Bool) -> Void = { _ in },
-        pullRefreshEnabled: Bool = true,
+        pullRefreshEnabled: Bool = false,
         summaryAvailable: Bool = true,
         onNavigate: @escaping (AppRoute) -> Void
     ) {

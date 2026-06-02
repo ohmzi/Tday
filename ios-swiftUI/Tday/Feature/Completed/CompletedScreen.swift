@@ -18,7 +18,7 @@ struct CompletedScreen: View {
     @State private var collapsedSectionIDs: Set<String> = []
     @State private var openSwipeTaskID: String?
 
-    init(container: AppContainer, pullRefreshEnabled: Bool = true) {
+    init(container: AppContainer, pullRefreshEnabled: Bool = false) {
         self.pullRefreshEnabled = pullRefreshEnabled
         _viewModel = State(initialValue: CompletedViewModel(container: container))
     }

@@ -95,25 +95,24 @@ struct AppRootView: View {
                             HomeScreen(
                                 container: container,
                                 onRootFeedTabSelected: handleRootFeedTabSelection,
-                                pullRefreshEnabled: !appViewModel.isLocalMode,
                                 summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
                             ) { nextRoute in
                                 handleRoute(nextRoute)
                             }
                         case .todayTodos:
-                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+                            TodoListScreen(container: container, mode: .today, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .createTodayTodo:
                             EmptyView()
                         case .createFloaterTodo:
                             EmptyView()
                         case .overdueTodos:
-                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+                            TodoListScreen(container: container, mode: .overdue, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .scheduledTodos:
-                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+                            TodoListScreen(container: container, mode: .scheduled, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case let .allTodos(highlightTodoId):
-                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+                            TodoListScreen(container: container, mode: .all, listId: nil, listName: nil, highlightedTodoId: highlightTodoId, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .priorityTodos:
-                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil, pullRefreshEnabled: !appViewModel.isLocalMode, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
+                            TodoListScreen(container: container, mode: .priority, listId: nil, listName: nil, highlightedTodoId: nil, summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline)
                         case .floaterTodos:
                             Color.clear
                                 .navigationBarBackButtonHidden(true)
@@ -128,7 +127,6 @@ struct AppRootView: View {
                                 listId: listId,
                                 listName: listName,
                                 highlightedTodoId: nil,
-                                pullRefreshEnabled: !appViewModel.isLocalMode,
                                 summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
                                 onListDeleted: {
                                     handleRoute(.floaterTodos)
@@ -141,16 +139,15 @@ struct AppRootView: View {
                                 listId: listId,
                                 listName: listName,
                                 highlightedTodoId: nil,
-                                pullRefreshEnabled: !appViewModel.isLocalMode,
                                 summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline,
                                 onListDeleted: {
                                     appViewModel.navigate(to: .home)
                                 }
                             )
                         case .completed:
-                            CompletedScreen(container: container, pullRefreshEnabled: !appViewModel.isLocalMode)
+                            CompletedScreen(container: container)
                         case .calendar:
-                            CalendarScreen(container: container, pullRefreshEnabled: !appViewModel.isLocalMode)
+                            CalendarScreen(container: container)
                         case .settings:
                             SettingsScreen(viewModel: appViewModel)
                         case .latestRelease:
