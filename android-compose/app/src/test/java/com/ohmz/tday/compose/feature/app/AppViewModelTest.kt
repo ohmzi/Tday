@@ -171,6 +171,9 @@ class AppViewModelTest {
         assertEquals(1, syncStatus.pendingMutationCount)
         assertEquals(1_000L, syncStatus.lastSuccessfulSyncEpochMs)
         assertEquals(2_000L, syncStatus.lastSyncAttemptEpochMs)
+
+        viewModel.logout()
+        runCurrent()
     }
 
     @Test
@@ -233,6 +236,9 @@ class AppViewModelTest {
         assertFalse(viewModel.uiState.value.isManualSyncing)
         assertEquals(3_000L, viewModel.uiState.value.syncStatus.lastSuccessfulSyncEpochMs)
         assertEquals(3_000L, viewModel.uiState.value.syncStatus.lastSyncAttemptEpochMs)
+
+        viewModel.logout()
+        runCurrent()
     }
 
     @Test
