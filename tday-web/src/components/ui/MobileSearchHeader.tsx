@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Menu, Search, X, Command } from "lucide-react";
+import { Search, X, Command } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useMenu } from "@/providers/MenuProvider";
 
 interface MobileSearchHeaderProps {
   searchQuery?: string;
@@ -15,7 +14,6 @@ export default function MobileSearchHeader({
   onSearchChange,
   placeholder = "Search tasks...",
 }: MobileSearchHeaderProps) {
-  const { setShowMenu } = useMenu();
   const [internalQuery, setInternalQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -46,39 +44,23 @@ export default function MobileSearchHeader({
     <header
       className={cn(
         "sticky top-0 z-40",
-        "flex h-16 items-center gap-3",
-        "bg-background/60 backdrop-blur-2xl",
-        "border-b border-border/30",
-        "-mx-4 px-4",
-        "sm:-mx-6 sm:px-6",
-        "lg:static lg:mx-0 lg:h-auto lg:border-0 lg:bg-transparent lg:backdrop-blur-none lg:px-0 lg:pb-2 lg:pt-4",
+        "flex items-center gap-3 py-1.5",
+        "bg-background/88 backdrop-blur-2xl",
+        "lg:static lg:bg-transparent lg:backdrop-blur-none lg:pb-2 lg:pt-2",
         "transition-all duration-300",
       )}
     >
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(
-          "lg:hidden h-10 w-10 rounded-xl",
-          "hover:bg-accent/80",
-          "transition-all duration-200",
-        )}
-        aria-label="Open menu"
-        onClick={() => setShowMenu(true)}
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-
       <div className="flex-1 flex justify-center">
         <div className="relative w-full max-w-xl">
           <div
             className={cn(
               "relative flex items-center",
-              "rounded-md",
-              "bg-muted/50",
-              "border border-border/40",
+              "rounded-2xl",
+              "bg-card/92",
+              "border border-white/70 shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)]",
               "transition-colors duration-200",
-              isSearchFocused && ["bg-card", "border-border"],
+              "dark:border-white/10",
+              isSearchFocused && ["bg-card", "border-accent/45"],
             )}
           >
             <Search
@@ -100,8 +82,8 @@ export default function MobileSearchHeader({
               className={cn(
                 "w-full h-11 pl-11 pr-24",
                 "bg-transparent",
-                "rounded-md",
-                "text-sm text-foreground",
+                "rounded-2xl",
+                "text-sm font-extrabold text-foreground",
                 "placeholder:text-muted-foreground/50",
                 "outline-none",
               )}
@@ -112,7 +94,7 @@ export default function MobileSearchHeader({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 rounded-md hover:bg-accent/50"
+                  className="h-7 w-7 rounded-full hover:bg-accent/15"
                   onClick={() => {
                     setSearchQuery("");
                     setIsSearchFocused(false);
@@ -127,9 +109,9 @@ export default function MobileSearchHeader({
                   onClick={() => searchInputRef.current?.focus()}
                   className={cn(
                     "hidden sm:flex items-center gap-1",
-                    "px-2 py-1 rounded-md",
+                    "px-2 py-1 rounded-full",
                     "bg-muted/60 text-muted-foreground/60",
-                    "text-xs font-medium",
+                    "text-xs font-black",
                     "hover:bg-muted hover:text-muted-foreground",
                     "transition-all duration-200",
                     isSearchFocused && "opacity-0 pointer-events-none",
@@ -149,8 +131,6 @@ export default function MobileSearchHeader({
           </div>
         </div>
       </div>
-
-      <div className="w-10 lg:hidden" />
     </header>
   );
 }

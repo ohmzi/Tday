@@ -1,0 +1,29 @@
+import { useState } from "react";
+import type { ReactNode } from "react";
+import { usePathname } from "@/lib/navigation";
+import MoreNavigationSheet from "./MoreNavigationSheet";
+import RootDock from "./RootDock";
+import TaskFloatingActionButton from "./TaskFloatingActionButton";
+import { useNativeRouteCounts } from "./nativeRouteConfig";
+
+export default function NativeAppShell({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const counts = useNativeRouteCounts();
+  const pathname = usePathname();
+  const isCreateRoute = pathname.includes("/app/add-task");
+
+  return (
+    <div className="relative flex h-screen min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="relative z-0 flex min-w-0 flex-1 flex-col overflow-hidden">
+        {children}
+      </div>
+      <RootDock onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
+      {!isCreateRoute && <TaskFloatingActionButton />}
+      <MoreNavigationSheet open={moreOpen} onOpenChange={setMoreOpen} counts={counts} />
+    </div>
+  );
+}

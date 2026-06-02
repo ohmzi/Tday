@@ -40,7 +40,7 @@ const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div
-            className="w-full h-full cursor-pointer z-50! text-foreground"
+            className="z-50! h-full w-full cursor-pointer text-white"
             title={todo.title}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -48,20 +48,20 @@ const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
             }}
 
           >
-            <p className="text-sm truncate max-w-full sm:max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg 2xl:max-w-xl">
+            <p className="max-w-full truncate text-xs font-black sm:max-w-xs md:max-w-sm md:text-sm lg:max-w-md xl:max-w-lg 2xl:max-w-xl">
               {todo.title}
             </p>
           </div>
         </PopoverTrigger>
 
-        <PopoverContent className="p-0 w-screen sm:w-120 md:w-100 lg:w-120 bg-popover" onMouseDown={(e) => e.stopPropagation()}>
+        <PopoverContent className="w-screen rounded-[24px] border border-white/70 bg-popover p-0 shadow-[0_24px_60px_-30px_hsl(var(--shadow)/0.72)] dark:border-white/10 sm:w-120 md:w-100 lg:w-120" onMouseDown={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className="flex gap-0 md:gap-2 p-2 justify-end ">
             {/* EDIT */}
             <Button
               variant={"ghost"}
               size={"icon"}
-              className="hover:text-foreground text-muted-foreground p-2 rounded-md hover:bg-popover-accent"
+              className="rounded-full p-2 text-muted-foreground hover:bg-popover-accent hover:text-foreground"
               onClick={() => {
                 setOpen(false);
                 setDisplayForm(true);
@@ -74,7 +74,7 @@ const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
             <Button
               variant={"destructive"}
               size={"icon"}
-              className="hover:text-foreground text-muted-foreground p-2 rounded-md hover:bg-popover-accent bg-popover"
+              className="rounded-full bg-popover p-2 text-muted-foreground hover:bg-popover-accent hover:text-foreground"
               onClick={() => {
                 setOpen(false);
                 if (todo.rrule) {
@@ -91,7 +91,7 @@ const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
             <Button
               variant={"destructive"}
               size={"icon"}
-              className="hover:text-foreground text-muted-foreground p-2 rounded-md hover:bg-popover-accent bg-popover"
+              className="rounded-full bg-popover p-2 text-muted-foreground hover:bg-popover-accent hover:text-foreground"
               onClick={() => setOpen(false)}
             >
               <X className="w-4 h-4 sm:h-5 sm:w-5" />
@@ -112,10 +112,10 @@ const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
                 )}
               />
               <div className="min-w-0">
-                <p className="text-md md:text-lg font-semibold leading-none truncate w-full">
+                <p className="text-md w-full truncate font-black leading-none md:text-lg">
                   {todo.title}
                 </p>
-                <p className="text-[0.6rem] sm:text-xs md:text-sm text-foreground">
+                <p className="text-[0.6rem] font-extrabold text-muted-foreground sm:text-xs md:text-sm">
                   {formatDueTime(todo.due)}
                 </p>
               </div>
@@ -124,7 +124,7 @@ const CalendarEvent = ({ event: todo }: EventProps<TodoItemType>) => {
             {todo.description && (
               <div className="flex gap-2 sm:gap-3 md:gap-4 items-start min-w-0">
                 <AlignCenterIcon className="w-4 h-4 text-muted-foreground shrink-0 flex-0" />
-                <p className="line-clamp-3 text-[0.7rem] md:text-sm">
+                <p className="line-clamp-3 text-[0.7rem] font-extrabold text-muted-foreground md:text-sm">
                   {todo.description}
                 </p>
               </div>

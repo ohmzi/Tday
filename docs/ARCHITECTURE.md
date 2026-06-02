@@ -211,8 +211,8 @@ tday-web/src/
 ├── router.tsx            # Route definitions (public, protected, calendar layouts)
 ├── globals.css           # Tailwind @theme tokens, CSS variables
 ├── i18n.ts               # i18next configuration (11 locales, path-based detection)
-├── components/           # Shared UI (ui/* primitives, Sidebar, auth, todo pieces)
-├── features/             # Feature modules (calendar, completed, list, release, todayTodos, user)
+├── components/           # Shared UI (ui/* primitives, native app shell, auth, todo pieces)
+├── features/             # Feature modules (calendar, completed, home, list, release, todayTodos, user)
 ├── hooks/                # Shared React hooks
 ├── lib/                  # Utilities (api-client, navigation, cache, performance, security, dates, todo)
 ├── pages/                # Route-level screens and layouts
@@ -227,6 +227,13 @@ tday-web/src/
 - **UI state**: React `useState`/`useReducer` within components. React Context for cross-cutting state (menu, preferences, todo form/mutations).
 - **Theme**: `next-themes` provider with system/light/dark modes via CSS `class` strategy.
 - **Toasts**: Sonner `<Toaster />` mounted at the app root. Components use `useToast()` hook; the `QueryCache` uses the imperative `toast` API directly.
+
+### App Shell and Navigation (Web)
+
+- Authenticated web routes render through a native-style app shell rather than the legacy visible sidebar. The shell owns the bottom `Home / Calendar / More` dock, circular create-task action, and More sheet.
+- `Home` routes to `/app/tday`, `Calendar` routes to `/app/calendar`, and `More` exposes existing secondary web routes such as Overdue, Scheduled, Priority, All Tasks, Completed, Lists, Settings, and user controls.
+- The web Home screen is a dashboard-style root feed backed by the existing scheduled todo/list queries. This pass is visual parity only; it does not add web Floater/Anytime routes or change backend/shared contracts.
+- The shell and Home tiles share web-only route metadata and counts, while feature pages continue to own their own query/mutation behavior.
 
 ### API Communication (Web)
 

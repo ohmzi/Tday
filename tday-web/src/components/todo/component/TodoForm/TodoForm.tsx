@@ -78,9 +78,9 @@ const TodoForm = ({
         onSubmit={handleForm}
         onBlur={() => setIsFocused(false)}
         className={clsx(
-          "flex w-full flex-col rounded-2xl border bg-card shadow-[0_8px_24px_hsl(var(--shadow)/0.11)] transition-colors",
+          "flex w-full flex-col rounded-[24px] border border-white/70 bg-card/95 shadow-[0_18px_42px_-32px_hsl(var(--shadow)/0.62)] transition-colors dark:border-white/10",
           !displayForm && "hidden",
-          isFocused ? "border-ring/80" : "border-border/70",
+          isFocused ? "border-accent/55" : "border-white/70 dark:border-white/10",
         )}
       >
         <div className="mb-4 flex flex-col gap-3">
@@ -100,7 +100,7 @@ const TodoForm = ({
               setDesc(e.target.value);
               adjustHeight(textareaRef);
             }}
-            className="my-1 w-full resize-none overflow-hidden bg-transparent px-3 font-light placeholder-muted-foreground focus:outline-hidden"
+            className="my-1 w-full resize-none overflow-hidden bg-transparent px-3 text-sm font-extrabold text-muted-foreground placeholder-muted-foreground/60 focus:outline-hidden"
             name="description"
             placeholder={appDict("descPlaceholder")}
           />
@@ -115,7 +115,7 @@ const TodoForm = ({
             <Button
               variant={"outline"}
               type="button"
-              className="h-fit border-border/65 bg-muted/70 py-[0.3rem]! hover:bg-muted"
+              className="h-fit rounded-2xl border-border/65 bg-muted/70 px-4 py-[0.35rem]! font-black hover:bg-muted"
               onClick={() => {
                 clearInput();
                 if (!persistent) {
@@ -130,7 +130,7 @@ const TodoForm = ({
               variant={"default"}
               disabled={title.length <= 0}
               className={clsx(
-                "h-fit py-[0.3rem]! shadow-sm",
+                "h-fit rounded-2xl bg-accent px-4 py-[0.35rem]! font-black text-accent-foreground shadow-sm hover:bg-accent/90",
                 title.length <= 0 && "disabled opacity-40 cursor-not-allowed!",
               )}
             >
