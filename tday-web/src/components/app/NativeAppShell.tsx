@@ -15,7 +15,6 @@ export default function NativeAppShell({
   const counts = useNativeRouteCounts();
   const pathname = usePathname();
   const showTaskFab =
-    !pathname.includes("/app/add-task") &&
     !pathname.includes("/app/settings") &&
     !pathname.includes("/app/admin");
 

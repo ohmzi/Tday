@@ -101,7 +101,7 @@ export const moreNavigationRoutes = nativeRoutes.filter((route) => route.id !== 
 
 export function isNativeRouteActive(pathname: string, route: NativeRouteItem) {
   if (route.id === "today") {
-    return pathname.includes("/app/tday");
+    return pathname.includes("/app/tday") || pathname.includes("/app/today");
   }
   if (route.id === "all") {
     return pathname.includes("/app/todo");
