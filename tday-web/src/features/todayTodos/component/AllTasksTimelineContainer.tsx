@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, ChevronDown, ChevronRight, Clock3, Command, Flag, Layers, Menu, Search, Sun, X } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronRight, Clock3, Command, Flag, Layers, Search, Sun, X } from "lucide-react";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
@@ -20,7 +20,6 @@ import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useMenu } from "@/providers/MenuProvider";
 import { useLocale } from "@/lib/navigation";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -360,7 +359,6 @@ const AllTasksTimelineContainer = ({
   const [searchParams] = useSearchParams();
   const { t: appDict } = useTranslation("app");
   const userTZ = useUserTimezone();
-  const { setShowMenu } = useMenu();
   const { listMetaData } = useListMetaData();
   const { todos, todoLoading } = useTodoTimeline();
   const [searchQuery, setSearchQuery] = useState("");
@@ -624,41 +622,25 @@ const AllTasksTimelineContainer = ({
         <header
           className={cn(
             "sticky top-0 z-40",
-            "flex h-16 items-center gap-3",
-            "bg-background/60 backdrop-blur-2xl",
-            "border-b border-border/30",
-            "-mx-4 px-4",
-            "sm:-mx-6 sm:px-6",
-            "lg:static lg:mx-0 lg:h-auto lg:border-0 lg:bg-transparent lg:backdrop-blur-none lg:px-0 lg:pb-2 lg:pt-4",
+            "flex items-center gap-3 py-1.5",
+            "bg-background/88 backdrop-blur-2xl",
+            "lg:static lg:bg-transparent lg:backdrop-blur-none lg:pb-2 lg:pt-2",
             "transition-all duration-300"
           )}
         >
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "lg:hidden h-10 w-10 rounded-xl",
-              "hover:bg-accent/80",
-              "transition-all duration-200",
-            )}
-            aria-label="Open menu"
-            onClick={() => setShowMenu(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
-
           <div className="flex-1 flex justify-center">
             <div className="relative w-full max-w-xl">
               <div
                 className={cn(
                   "relative flex items-center",
-                  "rounded-md",
-                  "bg-muted/50",
-                  "border border-border/40",
+                  "rounded-2xl",
+                  "bg-card/92",
+                  "border border-white/70 shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)]",
                   "transition-colors duration-200",
+                  "dark:border-white/10",
                   isSearchFocused && [
                     "bg-card",
-                    "border-border",
+                    "border-accent/45",
                   ],
                 )}
               >
@@ -681,8 +663,8 @@ const AllTasksTimelineContainer = ({
                   className={cn(
                     "w-full h-11 pl-11 pr-24",
                     "bg-transparent",
-                    "rounded-md",
-                    "text-sm text-foreground",
+                    "rounded-2xl",
+                    "text-sm font-extrabold text-foreground",
                     "placeholder:text-muted-foreground/50",
                     "outline-none",
                   )}
@@ -693,7 +675,7 @@ const AllTasksTimelineContainer = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-md hover:bg-accent/50"
+                      className="h-7 w-7 rounded-full hover:bg-accent/15"
                       onClick={() => {
                         setSearchQuery("");
                         setIsSearchFocused(false);
@@ -708,9 +690,9 @@ const AllTasksTimelineContainer = ({
                       onClick={() => searchInputRef.current?.focus()}
                       className={cn(
                         "hidden sm:flex items-center gap-1",
-                        "px-2 py-1 rounded-md",
+                        "px-2 py-1 rounded-full",
                         "bg-muted/60 text-muted-foreground/60",
-                        "text-xs font-medium",
+                        "text-xs font-black",
                         "hover:bg-muted hover:text-muted-foreground",
                         "transition-all duration-200",
                         isSearchFocused && "opacity-0 pointer-events-none",
@@ -730,8 +712,6 @@ const AllTasksTimelineContainer = ({
               </div>
             </div>
           </div>
-
-          <div className="w-10 lg:hidden" />
         </header>
 
         <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center gap-2">

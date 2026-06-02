@@ -29,9 +29,12 @@ export const calendarEventPropStyles = (
     style: {
       backgroundColor: eventBgColor,
       border: "0px solid rgba(255,255,255,0.12)",
+      borderRadius: "12px",
       outline: "none",
       display: "flex",
       justifyContent: "start",
+      padding: "2px 6px",
+      boxShadow: "0 8px 18px -14px rgba(0,0,0,0.45)",
     },
   };
 };
