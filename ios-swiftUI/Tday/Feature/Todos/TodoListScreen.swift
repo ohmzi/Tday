@@ -1072,6 +1072,7 @@ struct TodoListScreen: View {
                 RootFeedDock(
                     activeTab: rootFeedTab,
                     collapsed: shouldCollapseRootDock,
+                    accentColor: rootFeedTab == .floater ? .tdayFloaterGreen : .tdayTodayBlue,
                     onSelect: onRootFeedTabSelected
                 )
                 .padding(.leading, 18)

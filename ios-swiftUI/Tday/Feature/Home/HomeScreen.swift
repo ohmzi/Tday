@@ -295,6 +295,7 @@ struct HomeScreen: View {
                                     RootFeedDock(
                                         activeTab: .home,
                                         collapsed: shouldCollapseRootDock,
+                                        accentColor: .tdayTodayBlue,
                                         onSelect: onRootFeedTabSelected
                                     )
                                     .padding(.leading, 18)

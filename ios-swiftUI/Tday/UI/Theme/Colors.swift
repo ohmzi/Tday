@@ -3,6 +3,7 @@ import SwiftUI
 extension Color {
     static let tdayTodayBlue = Color(red: 110.0 / 255.0, green: 168.0 / 255.0, blue: 225.0 / 255.0)
     static let tdayFloaterGreen = Color(red: 77.0 / 255.0, green: 143.0 / 255.0, blue: 131.0 / 255.0)
+    static let tdayCalendarPurple = Color(red: 125.0 / 255.0, green: 103.0 / 255.0, blue: 182.0 / 255.0)
 
     static let tdayDarkBackground = Color(red: 0.02, green: 0.02, blue: 0.03)
     static let tdayDarkSurface = Color(red: 0.09, green: 0.10, blue: 0.13)
