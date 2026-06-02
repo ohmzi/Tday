@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/card";
 import { ArrowUpRight, Check, Info, Loader2, Trash2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import NativePageTitle from "@/components/app/NativePageTitle";
+import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
@@ -126,17 +128,13 @@ const ApprovedUserRow = ({
 
 /** Renders the shared admin page header. */
 const AdminPageHeader = () => (
-  <header className="mt-8 flex flex-wrap items-center justify-between gap-3 sm:mt-10 lg:mt-0">
-    <div className="space-y-1">
-      <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-        <Users className="h-5 w-5 text-accent" />
-        Admin
-      </h1>
-      <p className="text-sm text-muted-foreground">
-        Approve pending registrations and manage user access.
-      </p>
-    </div>
-  </header>
+  <NativePageTitle
+    title="Admin"
+    accentColor={nativeScreenAccentColors.settings}
+    icon={Users}
+    subtitle="Approve pending registrations and manage user access."
+    className="lg:mt-0"
+  />
 );
 
 /** Links admins into the release details page from the main admin dashboard. */

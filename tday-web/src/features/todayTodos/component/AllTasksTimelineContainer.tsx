@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, ChevronDown, ChevronRight, Clock3, Command, Flag, Layers, Search, Sun, X } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronRight, Clock3, Flag, Layers, Search, Sun, X } from "lucide-react";
+import NativePageTitle from "@/components/app/NativePageTitle";
+import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
@@ -15,11 +18,9 @@ import { usePrioritizeTodo } from "../query/prioritize-todo";
 import { useEditTodo } from "../query/update-todo";
 import { useEditTodoInstance } from "../query/update-todo-instance";
 import { useReorderTodo } from "../query/reorder-todo";
-import CreateTodoBtn from "./CreateTodoBtn";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -362,17 +363,12 @@ const AllTasksTimelineContainer = ({
   const { listMetaData } = useListMetaData();
   const { todos, todoLoading } = useTodoTimeline();
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [earlierExpanded, setEarlierExpanded] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const { icon: ScopeIcon, emptyMessage: emptyStateMessage, heading: scopeHeading } = SCOPE_CONFIG[scope];
   const pageHeading = scope === "today" || scope === "priority" ? appDict(scopeHeading) : scopeHeading;
-  const isMac =
-    typeof window !== "undefined" &&
-    navigator.userAgent.toLowerCase().includes("mac");
   const focusedTaskId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
   const focusedDateKey = useMemo(() => {
     const value = searchParams.get(TODO_FOCUS_DATE_QUERY_PARAM);
@@ -547,24 +543,6 @@ const AllTasksTimelineContainer = ({
   }, [scopeFilteredItems.length, hasMore]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-
-      if (e.key === "Escape" && (isSearchFocused || searchQuery.trim().length > 0)) {
-        setSearchQuery("");
-        setIsSearchFocused(false);
-        searchInputRef.current?.blur();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isSearchFocused, searchQuery]);
-
-  useEffect(() => {
     if (!focusedTaskId || focusedTaskIndex < 0) {
       return;
     }
@@ -619,108 +597,16 @@ const AllTasksTimelineContainer = ({
       useReorderTodo={useReorderTodo}
     >
       <div className="mb-20">
-        <header
-          className={cn(
-            "sticky top-0 z-40",
-            "flex items-center gap-3 py-1.5",
-            "bg-background/88 backdrop-blur-2xl",
-            "lg:static lg:bg-transparent lg:backdrop-blur-none lg:pb-2 lg:pt-2",
-            "transition-all duration-300"
-          )}
-        >
-          <div className="flex-1 flex justify-center">
-            <div className="relative w-full max-w-xl">
-              <div
-                className={cn(
-                  "relative flex items-center",
-                  "rounded-2xl",
-                  "bg-card/92",
-                  "border border-white/70 shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)]",
-                  "transition-colors duration-200",
-                  "dark:border-white/10",
-                  isSearchFocused && [
-                    "bg-card",
-                    "border-accent/45",
-                  ],
-                )}
-              >
-                <Search
-                  className={cn(
-                    "absolute left-4 h-4 w-4 pointer-events-none",
-                    "transition-colors duration-200",
-                    isSearchFocused ? "text-accent" : "text-muted-foreground",
-                  )}
-                />
+        <MobileSearchHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
 
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search tasks..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                  className={cn(
-                    "w-full h-11 pl-11 pr-24",
-                    "bg-transparent",
-                    "rounded-2xl",
-                    "text-base font-extrabold text-foreground md:text-sm",
-                    "placeholder:text-muted-foreground/50",
-                    "outline-none",
-                  )}
-                />
-
-                <div className="absolute right-3 flex items-center gap-2">
-                  {searchQuery ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full hover:bg-accent/15"
-                      onClick={() => {
-                        setSearchQuery("");
-                        setIsSearchFocused(false);
-                        searchInputRef.current?.blur();
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => searchInputRef.current?.focus()}
-                      className={cn(
-                        "hidden sm:flex items-center gap-1",
-                        "px-2 py-1 rounded-full",
-                        "bg-muted/60 text-muted-foreground/60",
-                        "text-xs font-black",
-                        "hover:bg-muted hover:text-muted-foreground",
-                        "transition-all duration-200",
-                        isSearchFocused && "opacity-0 pointer-events-none",
-                      )}
-                    >
-                      {isMac ? (
-                        <>
-                          <Command className="h-3 w-3" />
-                          <span>K</span>
-                        </>
-                      ) : (
-                        <span>Ctrl+K</span>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center gap-2">
-          <ScopeIcon className="h-6 w-6 text-accent" />
-          <h3 className="select-none text-2xl font-semibold tracking-tight">
-            {pageHeading}
-          </h3>
-        </div>
-        <LineSeparator className="flex-1 border-border/70" />
+        <NativePageTitle
+          title={pageHeading}
+          accentColor={timelineScopeAccentColors[scope]}
+          icon={ScopeIcon}
+        />
 
         {todoLoading && <TodoListLoading heading={pageHeading} />}
 
@@ -926,8 +812,6 @@ const AllTasksTimelineContainer = ({
             <span className="text-xs text-muted-foreground">Loading more tasks...</span>
           </div>
         )}
-
-        <CreateTodoBtn />
       </div>
     </TodoMutationProvider>
   );
