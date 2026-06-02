@@ -1,11 +1,19 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+  font-family: "Nunito";
+  src: url("./assets/fonts/Nunito.ttf") format("truetype");
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-inter);
-  --font-serif: var(--font-inter);
+  --font-sans: "Nunito", ui-rounded, system-ui, sans-serif;
+  --font-serif: "Nunito", ui-rounded, system-ui, sans-serif;
   --font-mono: var(--font-mono);
 
   --color-form-background: hsl(var(--form-background));
@@ -171,8 +179,8 @@
     --accent-orange: 28 75% 55%;
     --accent-yellow: 45 80% 55%;
     --accent-lime: 135 45% 50%;
-    --accent-blue: 210 75% 58%;
-    --accent-purple: 265 50% 60%;
+    --accent-blue: 209.74 65.71% 65.69%;
+    --accent-purple: 256.71 35.11% 55.88%;
     --accent-pink: 330 70% 60%;
     --accent-teal: 175 60% 45%;
     --accent-coral: 10 75% 60%;
@@ -183,140 +191,140 @@
     --accent-brick: 8 55% 50%;
     --accent-slate: 230 30% 35%;
 
-    --calendar-lime: 118 33% 42%;
+    --calendar-lime: 169.09 30% 43.14%;
     --calendar-orange: 33 100% 48%;
     --calendar-red: 4 90% 58%;
     --radius: 1rem;
 
-    --background: 210 36.36% 95.69%;
+    --background: 222.86 46.67% 97.06%;
     --background-cream: 0 0% 100%;
-    --foreground: 228.57 18.92% 21.76%;
-    --foreground-accent: 228.57 18.92% 17.65%;
+    --foreground: 221.74 29.11% 15.49%;
+    --foreground-accent: 221.74 29.11% 12.5%;
 
-    --lime: 118 36% 48%;
+    --lime: 169.09 30% 43.14%;
     --orange: 34 100% 42%;
 
     --red: 4 90% 62%;
     --nlp: 24 86% 82%;
 
-    --shadow: 228.57 18.92% 21.76%;
+    --shadow: 221.74 29.11% 15.49%;
     --card: 0 0% 100%;
-    --card-foreground: 228.57 18.92% 21.76%;
-    --card-foreground-muted: 217.89 19.39% 38.43%;
-    --card-muted: 213.33 24.32% 92.75%;
-    --card-accent: 210 36.36% 95.69%;
+    --card-foreground: 221.74 29.11% 15.49%;
+    --card-foreground-muted: 221.82 15.07% 42.94%;
+    --card-muted: 221.54 35.14% 92.75%;
+    --card-accent: 222.86 46.67% 97.06%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 228.57 18.92% 21.76%;
-    --popover-accent: 213.33 24.32% 92.75%;
-    --popover-border: 214.29 21.88% 87.45%;
+    --popover-foreground: 221.74 29.11% 15.49%;
+    --popover-accent: 221.54 35.14% 92.75%;
+    --popover-border: 220 28% 88%;
 
-    --primary: 228.57 18.92% 21.76%;
+    --primary: 209.74 65.71% 65.69%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217.89 19.39% 38.43%;
+    --secondary: 221.82 15.07% 42.94%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 213.33 24.32% 92.75%;
-    --muted-foreground: 217.89 19.39% 38.43%;
-    --accent: 18.19 82.89% 63.33%;
+    --muted: 221.54 35.14% 92.75%;
+    --muted-foreground: 221.82 15.07% 42.94%;
+    --accent: 209.74 65.71% 65.69%;
     --accent-foreground: 0 0% 100%;
     --destructive: 358.71 55.08% 53.33%;
-    --border: 214.29 21.88% 87.45%;
-    --border-muted: 213.33 24.32% 92.75%;
-    --input: 214.29 21.88% 87.45%;
-    --ring: 18.19 82.89% 63.33%;
+    --border: 220 28% 88%;
+    --border-muted: 221.54 35.14% 92.75%;
+    --input: 220 28% 88%;
+    --ring: 209.74 65.71% 65.69%;
 
     --sidebar: 0 0% 100%;
-    --sidebar-foreground: 228.57 18.92% 21.76%;
-    --sidebar-primary: 210 36.36% 95.69%;
-    --sidebar-primary-foreground: 228.57 18.92% 21.76%;
-    --sidebar-accent: 210 36.36% 95.69%;
-    --sidebar-accent-foreground: 228.57 18.92% 21.76%;
-    --sidebar-border: 213.33 24.32% 92.75%;
-    --sidebar-ring: 18.19 82.89% 63.33%;
+    --sidebar-foreground: 221.74 29.11% 15.49%;
+    --sidebar-primary: 222.86 46.67% 97.06%;
+    --sidebar-primary-foreground: 221.74 29.11% 15.49%;
+    --sidebar-accent: 221.54 35.14% 92.75%;
+    --sidebar-accent-foreground: 221.74 29.11% 15.49%;
+    --sidebar-border: 221.54 35.14% 92.75%;
+    --sidebar-ring: 209.74 65.71% 65.69%;
 
-    --tooltip: 213.33 24.32% 92.75%;
-    --calendar-border: 214.29 21.88% 87.45%;
+    --tooltip: 221.54 35.14% 92.75%;
+    --calendar-border: 220 28% 88%;
 
     /* form variables */
-    --form-border: 214.29 21.88% 87.45%;
-    --form-border-accent: 217.89 19.39% 38.43%;
+    --form-border: 220 28% 88%;
+    --form-border-accent: 221.82 15.07% 42.94%;
     --form-background: 0 0% 100%;
-    --form-foreground: 228.57 18.92% 21.76%;
-    --input-background: 213.33 24.32% 92.75%;
-    --form-label: 217.89 19.39% 38.43%;
-    --form-label-accent: 228.57 18.92% 21.76%;
-    --form-link: 217.89 19.39% 38.43%;
-    --form-link-accent: 228.57 18.92% 21.76%;
-    --form-button: 18.19 82.89% 63.33%;
-    --form-button-accent: 18.19 82.89% 58%;
-    --form-muted: 217.89 19.39% 38.43%;
+    --form-foreground: 221.74 29.11% 15.49%;
+    --input-background: 221.54 35.14% 92.75%;
+    --form-label: 221.82 15.07% 42.94%;
+    --form-label-accent: 221.74 29.11% 15.49%;
+    --form-link: 221.82 15.07% 42.94%;
+    --form-link-accent: 221.74 29.11% 15.49%;
+    --form-button: 209.74 65.71% 65.69%;
+    --form-button-accent: 209.74 65.71% 60%;
+    --form-muted: 221.82 15.07% 42.94%;
   }
 
   .dark {
-    --lime: 116 32% 58%;
-    --calendar-lime: 116 28% 40%;
+    --lime: 169.09 30% 50%;
+    --calendar-lime: 169.09 30% 43.14%;
     --calendar-red: 4 70% 56%;
     --calendar-orange: 30 76% 56%;
     --nlp: 18 50% 30%;
 
-    --background: 228 15.15% 12.94%;
-    --background-cream: 225 17.39% 18.04%;
-    --foreground: 0 0% 91.76%;
+    --background: 240 16.67% 2.35%;
+    --background-cream: 223.64 19.3% 11.18%;
+    --foreground: 225 57.14% 97.25%;
     --foreground-accent: 0 0% 98%;
 
-    --shadow: 228 35% 6%;
-    --card: 225 17.39% 18.04%;
-    --card-foreground: 0 0% 91.76%;
-    --card-foreground-muted: 214.29 16.47% 66.67%;
-    --card-muted: 228.57 18.92% 21.76%;
-    --card-accent: 222.35 12.78% 26.08%;
+    --shadow: 240 16.67% 2.35%;
+    --card: 223.64 19.3% 11.18%;
+    --card-foreground: 225 57.14% 97.25%;
+    --card-foreground-muted: 222.86 17.5% 68.63%;
+    --card-muted: 225 22.73% 17.25%;
+    --card-accent: 225 22.73% 17.25%;
 
-    --popover: 225 17.39% 18.04%;
-    --popover-foreground: 0 0% 91.76%;
-    --popover-accent: 228.57 18.92% 21.76%;
-    --popover-border: 222.35 12.78% 26.08%;
+    --popover: 223.64 19.3% 11.18%;
+    --popover-foreground: 225 57.14% 97.25%;
+    --popover-accent: 225 22.73% 17.25%;
+    --popover-border: 225 22.73% 17.25%;
 
-    --primary: 0 0% 91.76%;
-    --primary-foreground: 228 15.15% 12.94%;
-    --secondary: 217.89 19.39% 38.43%;
-    --secondary-foreground: 0 0% 91.76%;
+    --primary: 212.62 86.13% 66.08%;
+    --primary-foreground: 225 57.14% 97.25%;
+    --secondary: 209.74 65.71% 65.69%;
+    --secondary-foreground: 240 16.67% 2.35%;
 
-    --muted: 228.57 18.92% 21.76%;
-    --muted-foreground: 214.29 16.47% 66.67%;
-    --accent: 18.19 82.89% 63.33%;
+    --muted: 225 22.73% 17.25%;
+    --muted-foreground: 222.86 17.5% 68.63%;
+    --accent: 212.62 86.13% 66.08%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 95.35% 74.71%;
+    --destructive: 0 65.82% 69.02%;
 
-    --border: 222.35 12.78% 26.08%;
+    --border: 225 22.73% 17.25%;
     --border-muted: 225 17.39% 22%;
-    --input: 222.35 12.78% 26.08%;
-    --ring: 18.19 82.89% 63.33%;
+    --input: 225 22.73% 17.25%;
+    --ring: 212.62 86.13% 66.08%;
 
-    --sidebar: 225 17.39% 18.04%;
-    --sidebar-foreground: 0 0% 91.76%;
-    --sidebar-primary: 228.57 18.92% 21.76%;
-    --sidebar-primary-foreground: 0 0% 91.76%;
-    --sidebar-accent: 228.57 18.92% 21.76%;
-    --sidebar-accent-foreground: 0 0% 91.76%;
-    --sidebar-border: 222.35 12.78% 26.08%;
-    --sidebar-ring: 18.19 82.89% 63.33%;
+    --sidebar: 223.64 19.3% 11.18%;
+    --sidebar-foreground: 225 57.14% 97.25%;
+    --sidebar-primary: 225 22.73% 17.25%;
+    --sidebar-primary-foreground: 225 57.14% 97.25%;
+    --sidebar-accent: 225 22.73% 17.25%;
+    --sidebar-accent-foreground: 225 57.14% 97.25%;
+    --sidebar-border: 225 22.73% 17.25%;
+    --sidebar-ring: 212.62 86.13% 66.08%;
 
-    --tooltip: 228.57 18.92% 21.76%;
-    --calendar-border: 222.35 12.78% 26.08%;
+    --tooltip: 225 22.73% 17.25%;
+    --calendar-border: 225 22.73% 17.25%;
 
-    --form-border: 222.35 12.78% 26.08%;
-    --form-border-accent: 214.29 16.47% 66.67%;
-    --form-background: 225 17.39% 18.04%;
-    --form-foreground: 0 0% 91.76%;
-    --input-background: 228.57 18.92% 21.76%;
-    --form-label: 214.29 16.47% 66.67%;
-    --form-label-accent: 0 0% 91.76%;
-    --form-link: 214.29 16.47% 66.67%;
+    --form-border: 225 22.73% 17.25%;
+    --form-border-accent: 222.86 17.5% 68.63%;
+    --form-background: 223.64 19.3% 11.18%;
+    --form-foreground: 225 57.14% 97.25%;
+    --input-background: 225 22.73% 17.25%;
+    --form-label: 222.86 17.5% 68.63%;
+    --form-label-accent: 225 57.14% 97.25%;
+    --form-link: 222.86 17.5% 68.63%;
     --form-link-accent: 0 0% 98%;
-    --form-button: 18.19 82.89% 63.33%;
-    --form-button-accent: 18.19 82.89% 68%;
-    --form-muted: 214.29 16.47% 66.67%;
+    --form-button: 212.62 86.13% 66.08%;
+    --form-button-accent: 212.62 86.13% 72%;
+    --form-muted: 222.86 17.5% 68.63%;
   }
 }
 

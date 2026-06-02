@@ -20,14 +20,14 @@ export function CalendarToolbar({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 sm:gap-2">
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-9 sm:w-9"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-card/90 text-muted-foreground shadow-sm transition-colors hover:bg-card hover:text-foreground dark:border-white/10 sm:h-11 sm:w-11"
             onClick={() => onNavigate("PREV")}
             aria-label="Previous"
           >
             <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
           <button
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-9 sm:w-9"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-card/90 text-muted-foreground shadow-sm transition-colors hover:bg-card hover:text-foreground dark:border-white/10 sm:h-11 sm:w-11"
             onClick={() => onNavigate("NEXT")}
             aria-label="Next"
           >
@@ -35,33 +35,33 @@ export function CalendarToolbar({
           </button>
 
           {/* Mobile: abbreviated label */}
-          <h2 className="pl-1 text-base font-semibold tracking-tight sm:hidden">
+          <h2 className="pl-1 text-lg font-black tracking-normal sm:hidden">
             {label.split(" ")[0].slice(0, 3) + " " + label.split(" ")[1]?.slice(2)}
           </h2>
           {/* Desktop: full label */}
-          <h2 className="hidden pl-2 text-lg font-semibold tracking-tight sm:block">
+          <h2 className="hidden pl-2 text-2xl font-black tracking-normal sm:block">
             {label}
           </h2>
         </div>
 
         <button
           onClick={() => onNavigate("TODAY")}
-          className="rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:px-4 sm:py-2"
+          className="rounded-full border border-white/70 bg-card/90 px-4 py-2 text-sm font-black text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground dark:border-white/10 sm:px-5"
         >
           {appDict("today")}
         </button>
       </div>
 
       {/* Row 2 – Segmented view toggle */}
-      <div className="flex w-full rounded-xl border border-border/60 bg-muted/40 p-1">
+      <div className="flex w-full rounded-[22px] border border-white/70 bg-muted/80 p-1.5 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.5)] dark:border-white/10">
         {viewOptions.map((v) => (
           <button
             key={v}
             onClick={() => onView(v)}
             className={cn(
-              "flex-1 rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-all duration-200 sm:text-sm",
+              "flex-1 rounded-[17px] px-3 py-2 text-xs font-black capitalize transition-all duration-200 sm:text-sm",
               view === v
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
