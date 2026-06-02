@@ -83,7 +83,7 @@ export default function MobileSearchHeader({
                 "w-full h-11 pl-11 pr-24",
                 "bg-transparent",
                 "rounded-2xl",
-                "text-sm font-extrabold text-foreground",
+                "text-base font-extrabold text-foreground md:text-sm",
                 "placeholder:text-muted-foreground/50",
                 "outline-none",
               )}

@@ -1,10 +1,7 @@
-import React, { useEffect, useState, lazy, Suspense } from "react";
+import React, { useEffect, useState } from "react";
 import Plus from "@/components/ui/icon/plus";
-import TodoFormLoading from "@/components/todo/component/TodoForm/TodoFormLoading";
 import { useTranslation } from "react-i18next";
-const TodoForm = lazy(
-  () => import("@/components/todo/component/TodoForm/TodoFormContainer"),
-);
+import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
 
 const CreateTodoBtn = () => {
   const { t: todayDict } = useTranslation("today");
@@ -44,14 +41,7 @@ const CreateTodoBtn = () => {
         </p>
       </button>
 
-      {/* form */}
-      {displayForm && (
-        <div className="mt-3">
-          <Suspense fallback={<TodoFormLoading />}>
-            <TodoForm displayForm={displayForm} setDisplayForm={setDisplayForm} />
-          </Suspense>
-        </div>
-      )}
+      <TaskFormSheet open={displayForm} onOpenChange={setDisplayForm} />
     </div>
   );
 };

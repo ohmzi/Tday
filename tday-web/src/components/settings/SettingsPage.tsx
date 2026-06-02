@@ -9,9 +9,13 @@ import {
   Languages,
   Loader2,
   Lock,
+  Monitor,
+  Moon,
   Settings,
+  Sun,
   User,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import KeyboardShortcuts from "@/components/KeyboardShortcut";
 import { Link, usePathname, useLocale } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
@@ -53,6 +57,27 @@ const localeOptions = [
   { code: "pt", label: "Portuguese" },
 ] as const satisfies readonly { code: SupportedLocale; label: string }[];
 
+const themeOptions = [
+  {
+    value: "light",
+    label: "Light",
+    description: "Use the bright T'Day palette.",
+    icon: Sun,
+  },
+  {
+    value: "dark",
+    label: "Dark",
+    description: "Use the low-light T'Day palette.",
+    icon: Moon,
+  },
+  {
+    value: "system",
+    label: "System following",
+    description: "Follow this device's appearance setting.",
+    icon: Monitor,
+  },
+] as const;
+
 export default function SettingsPage() {
   const locale = useLocale();
   const pathname = usePathname();
@@ -61,6 +86,7 @@ export default function SettingsPage() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { theme = "system", resolvedTheme, setTheme } = useTheme();
 
   const [name, setName] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
@@ -255,6 +281,52 @@ export default function SettingsPage() {
               })}
             </DropdownMenuContent>
           </DropdownMenu>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
+        <CardHeader className="space-y-1">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Monitor className="h-4 w-4 text-accent" />
+            Appearance
+          </CardTitle>
+          <CardDescription>
+            Choose light, dark, or follow your system setting.
+            {theme === "system" && resolvedTheme ? ` Currently using ${resolvedTheme}.` : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {themeOptions.map((option) => {
+              const Icon = option.icon;
+              const selected = theme === option.value;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setTheme(option.value)}
+                  className={cn(
+                    "flex min-h-28 flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-colors",
+                    selected
+                      ? "border-accent/55 bg-accent/10 text-foreground ring-2 ring-accent/15"
+                      : "border-border/70 bg-background/50 text-muted-foreground hover:bg-muted/55 hover:text-foreground",
+                  )}
+                  aria-pressed={selected}
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-card shadow-sm">
+                    <Icon className={cn("h-5 w-5", selected ? "text-accent" : "text-muted-foreground")} />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-black">{option.label}</span>
+                    <span className="mt-1 block text-xs font-extrabold opacity-75">
+                      {option.description}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 

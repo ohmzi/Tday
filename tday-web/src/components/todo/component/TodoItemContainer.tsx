@@ -1,11 +1,10 @@
-import React, { useEffect, useState, lazy, Suspense } from "react";
+import React, { useEffect, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import clsx from "clsx";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TodoItemType } from "@/types";
 import GripVertical from "@/components/ui/icon/gripVertical";
-import TodoFormLoading from "./TodoForm/TodoFormLoading";
 import { Check } from "lucide-react";
 import { getDisplayDate } from "@/lib/date/displayDate";
 import { useLocale } from "@/lib/navigation";
@@ -15,8 +14,7 @@ import ListDot from "@/components/ListDot";
 import TodoItemMenuContainer from "./TodoItem/TodoMenu/TodoItemMenuContainer";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { getTodoFocusElementId } from "@/lib/todoToastNavigation";
-
-const TodoFormContainer = lazy(() => import("./TodoForm/TodoFormContainer"));
+import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
 
 
 type TodoItemContainerProps = {
@@ -75,43 +73,32 @@ export const TodoItemCard = ({
     itemElement.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlighted, itemElement]);
 
-  if (displayForm)
-    return (
-      <Suspense fallback={<TodoFormLoading />}>
-        <TodoFormContainer
-          editInstanceOnly={editInstanceOnly}
-          setEditInstanceOnly={setEditInstanceOnly}
-          displayForm={true}
-          setDisplayForm={setDisplayForm}
-          todo={todoItem}
-        />
-      </Suspense>
-    );
   return (
-    <div
-      id={getTodoFocusElementId(todoItem.id)}
-      ref={setCombinedRef}
-      style={style}
-      {...containerProps}
-      onDoubleClick={() => setDisplayForm(true)}
-      onMouseOver={() => setShowHandle(true)}
-      onMouseOut={() => setShowHandle(false)}
-      className={clsx(
-        "group relative flex max-w-full cursor-grab items-start justify-between gap-3 rounded-[20px] border border-white/70 bg-card/92 px-3 py-2.5 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 active:cursor-grabbing hover:-translate-y-0.5 hover:border-white hover:bg-card hover:shadow-[0_16px_36px_-28px_hsl(var(--shadow)/0.5)] dark:border-white/10 dark:hover:border-white/20",
-        highlighted && "border-accent/55 ring-2 ring-accent/20 shadow-[0_14px_30px_-20px_hsl(var(--accent)/0.65)]",
-        dragging
-          ? "z-30 border-border/70 bg-card/95 shadow-2xl opacity-85 touch-manipulation"
-          : "shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)]",
-      )}
-    >
+    <>
       <div
+        id={getTodoFocusElementId(todoItem.id)}
+        ref={setCombinedRef}
+        style={style}
+        {...containerProps}
+        onDoubleClick={() => setDisplayForm(true)}
+        onMouseOver={() => setShowHandle(true)}
+        onMouseOut={() => setShowHandle(false)}
         className={clsx(
-          "absolute bottom-1/2 -left-5 hidden translate-y-1/2 p-1 transition-colors sm:block",
-          showHandle ? "text-muted-foreground" : "text-transparent",
+          "group relative flex max-w-full cursor-grab items-start justify-between gap-3 rounded-[20px] border border-white/70 bg-card/92 px-3 py-2.5 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 active:cursor-grabbing hover:-translate-y-0.5 hover:border-white hover:bg-card hover:shadow-[0_16px_36px_-28px_hsl(var(--shadow)/0.5)] dark:border-white/10 dark:hover:border-white/20",
+          highlighted && "border-accent/55 ring-2 ring-accent/20 shadow-[0_14px_30px_-20px_hsl(var(--accent)/0.65)]",
+          dragging
+            ? "z-30 border-border/70 bg-card/95 shadow-2xl opacity-85 touch-manipulation"
+            : "shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)]",
         )}
       >
-        <GripVertical className="h-4 w-4" />
-      </div>
+        <div
+          className={clsx(
+            "absolute bottom-1/2 -left-5 hidden translate-y-1/2 p-1 transition-colors sm:block",
+            showHandle ? "text-muted-foreground" : "text-transparent",
+          )}
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
 
       <div className="flex items-start gap-3">
         <div className="pt-0.5">
@@ -153,16 +140,24 @@ export const TodoItemCard = ({
         </div>
       </div>
 
-      <div>
-        <TodoItemMenuContainer
-          displayMenu={showHandle}
-          className={clsx("flex items-center gap-2 transition-opacity", !showHandle && "opacity-0")}
-          todo={todoItem}
-          setDisplayForm={setDisplayForm}
-          setEditInstanceOnly={setEditInstanceOnly}
-        />
+        <div>
+          <TodoItemMenuContainer
+            displayMenu={showHandle}
+            className={clsx("flex items-center gap-2 transition-opacity", !showHandle && "opacity-0")}
+            todo={todoItem}
+            setDisplayForm={setDisplayForm}
+            setEditInstanceOnly={setEditInstanceOnly}
+          />
+        </div>
       </div>
-    </div>
+      <TaskFormSheet
+        open={displayForm}
+        onOpenChange={setDisplayForm}
+        todo={todoItem}
+        editInstanceOnly={editInstanceOnly}
+        setEditInstanceOnly={setEditInstanceOnly}
+      />
+    </>
   );
 };
 
