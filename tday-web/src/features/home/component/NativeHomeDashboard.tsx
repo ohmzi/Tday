@@ -144,7 +144,7 @@ export default function NativeHomeDashboard() {
     >
       <div className="flex w-full flex-col gap-4 sm:gap-5">
         <header className="relative flex min-h-14 items-center justify-between gap-3">
-          <NativeAppBrandButton variant="prominent" className="min-w-0 flex-1" />
+          <NativeAppBrandButton className="min-w-0" />
 
           <div className="flex shrink-0 items-center gap-2">
             <button
