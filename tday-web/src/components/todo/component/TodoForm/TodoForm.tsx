@@ -21,6 +21,7 @@ interface TodoFormProps {
   displayForm: boolean;
   setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
   persistent?: boolean;
+  surface?: "card" | "sheet";
 }
 
 const TodoForm = ({
@@ -29,6 +30,7 @@ const TodoForm = ({
   displayForm,
   setDisplayForm,
   persistent = false,
+  surface = "card",
 }: TodoFormProps) => {
   const {
     todoItem: todo,
@@ -78,9 +80,12 @@ const TodoForm = ({
         onSubmit={handleForm}
         onBlur={() => setIsFocused(false)}
         className={clsx(
-          "flex w-full flex-col rounded-[24px] border border-white/70 bg-card/95 shadow-[0_18px_42px_-32px_hsl(var(--shadow)/0.62)] transition-colors dark:border-white/10",
+          surface === "sheet"
+            ? "flex w-full flex-col bg-transparent"
+            : "flex w-full flex-col rounded-[24px] border border-white/70 bg-card/95 shadow-[0_18px_42px_-32px_hsl(var(--shadow)/0.62)] transition-colors animate-in fade-in-0 slide-in-from-bottom-4 duration-200 dark:border-white/10",
           !displayForm && "hidden",
-          isFocused ? "border-accent/55" : "border-white/70 dark:border-white/10",
+          surface === "card" &&
+            (isFocused ? "border-accent/55" : "border-white/70 dark:border-white/10"),
         )}
       >
         <div className="mb-4 flex flex-col gap-3">
