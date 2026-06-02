@@ -56,6 +56,7 @@ type SidebarListItem = {
   id: string;
   name: string;
   color?: ListColor;
+  iconKey?: string | null;
   todoCount: number;
 };
 
@@ -104,6 +105,7 @@ export default function ListSidebarSection({
         id,
         name: value.name,
         color: value.color,
+        iconKey: value.iconKey,
         todoCount: value.todoCount ?? 0,
       }));
   }, [listMetaData]);
