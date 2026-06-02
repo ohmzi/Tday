@@ -222,7 +222,7 @@ export default function NativeHomeDashboard() {
         )}
 
         <Link
-          href="/app/tday"
+          href="/app/today"
           className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
           style={{ backgroundColor: todayTileColor }}
         >
