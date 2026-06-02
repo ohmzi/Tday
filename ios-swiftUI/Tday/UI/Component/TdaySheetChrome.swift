@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum TdaySheetMetrics {
     static let horizontalPadding: CGFloat = 18
@@ -201,24 +202,59 @@ extension View {
 
 private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
     let content: SheetContent
+    @State private var keyboardFrame: CGRect?
 
     init(@ViewBuilder content: () -> SheetContent) {
         self.content = content()
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Color.clear
-                .contentShape(Rectangle())
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            let keyboardBottomInset = keyboardBottomInset(for: proxy)
 
-            content
-                .frame(maxWidth: .infinity, alignment: .bottom)
+            ZStack(alignment: .bottom) {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+
+                content
+                    .frame(maxWidth: .infinity, alignment: .bottom)
+                    .offset(y: -keyboardBottomInset)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .ignoresSafeArea(.container, edges: .bottom)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .presentationBackground(.clear)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
+            updateKeyboardFrame(from: notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { notification in
+            updateKeyboardFrame(from: notification)
+        }
+    }
+
+    private func keyboardBottomInset(for proxy: GeometryProxy) -> CGFloat {
+        guard let keyboardFrame else {
+            return 0
+        }
+        let hostFrame = proxy.frame(in: .global)
+        let overlap = hostFrame.maxY - keyboardFrame.minY
+        return min(max(overlap, 0), hostFrame.height)
+    }
+
+    private func updateKeyboardFrame(from notification: Notification) {
+        guard let endFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+            return
+        }
+        let screenMaxY = UIScreen.main.bounds.maxY
+        let isHidden = endFrame.minY >= screenMaxY
+        let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0.25
+
+        withAnimation(.easeOut(duration: duration)) {
+            keyboardFrame = isHidden ? nil : endFrame
+        }
     }
 }
 
