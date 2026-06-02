@@ -538,9 +538,9 @@ private struct TdayTasksWidgetContent: View {
         }
 
         switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "high", "urgent", "important":
+        case "high", "urgent":
             return colorScheme == .dark ? .tdayPriorityHighDark : .tdayPriorityHigh
-        case "medium":
+        case "medium", "important":
             return colorScheme == .dark ? .tdayPriorityMediumDark : .tdayPriorityMedium
         default:
             return colorScheme == .dark ? .tdayPriorityLowDark : .tdayPriorityLow

@@ -107,14 +107,13 @@ func cachedFloaterSortPrecedes(_ lhs: CachedFloaterRecord, _ rhs: CachedFloaterR
 }
 
 private func floaterPriorityRank(_ priority: String) -> Int {
-    switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-    case "high", "urgent", "important":
+    if TaskPriorityDisplay.isUrgent(priority) {
         return 0
-    case "medium":
-        return 1
-    default:
-        return 2
     }
+    if TaskPriorityDisplay.isImportant(priority) {
+        return 1
+    }
+    return 2
 }
 
 func todoTimelineSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {

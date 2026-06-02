@@ -1,6 +1,8 @@
 package com.ohmz.tday.compose.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import com.ohmz.tday.compose.ui.priority.isImportantPriority
+import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import java.util.Locale
 
 data class TdayListColorOption(
@@ -48,9 +50,9 @@ val TdayListColorOptions = listOf(
 private val TdayListColorMap = TdayListColorOptions.associate { it.key to it.color }
 
 fun tdayPriorityColor(priority: String): Color {
-    return when (priority.trim().lowercase(Locale.getDefault())) {
-        "high", "urgent", "important" -> TdayPriorityHigh
-        "medium" -> TdayPriorityMedium
+    return when {
+        isUrgentPriority(priority) -> TdayPriorityHigh
+        isImportantPriority(priority) -> TdayPriorityMedium
         else -> TdayPriorityLow
     }
 }

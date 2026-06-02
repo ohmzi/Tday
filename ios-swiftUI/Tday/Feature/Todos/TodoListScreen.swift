@@ -449,7 +449,7 @@ private struct FloaterSearchResultsCard: View {
                                         .foregroundStyle(colors.onSurface)
                                         .lineLimit(1)
 
-                                    Text(list?.name ?? todo.priority)
+                                    Text(list?.name ?? TaskPriorityDisplay.label(for: todo.priority))
                                         .font(.tdayRounded(size: 12, weight: .bold))
                                         .foregroundStyle(colors.onSurfaceVariant)
                                         .lineLimit(1)
@@ -1111,7 +1111,7 @@ struct TodoListScreen: View {
             lists: viewModel.lists,
             titleText: "New task",
             submitText: "Create",
-            initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? "High" : "Low", due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
+            initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? TaskPriorityDisplay.importantValue : TaskPriorityDisplay.normalValue, due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
             defaultScheduled: viewModel.mode != .floater,
             showScheduleControls: viewModel.mode != .floater,
             autofocusTitle: true,
@@ -3683,21 +3683,21 @@ private func buildFloaterTimelineSections(items: [TodoItem]) -> [TodoTimelineSec
 
     let sectionSpecs: [(id: String, title: String, items: [TodoItem])] = [
         (
-            "floater-high",
-            "High",
-            floaterItems.filter { $0.priority.caseInsensitiveCompare("High") == .orderedSame }
+            "floater-urgent",
+            "Urgent",
+            floaterItems.filter { TaskPriorityDisplay.isUrgent($0.priority) }
         ),
         (
-            "floater-medium",
-            "Medium",
-            floaterItems.filter { $0.priority.caseInsensitiveCompare("Medium") == .orderedSame }
+            "floater-important",
+            "Important",
+            floaterItems.filter { TaskPriorityDisplay.isImportant($0.priority) }
         ),
         (
-            "floater-low",
-            "Low",
+            "floater-normal",
+            "Normal",
             floaterItems.filter {
-                $0.priority.caseInsensitiveCompare("High") != .orderedSame &&
-                    $0.priority.caseInsensitiveCompare("Medium") != .orderedSame
+                !TaskPriorityDisplay.isUrgent($0.priority) &&
+                    !TaskPriorityDisplay.isImportant($0.priority)
             }
         ),
     ]
@@ -3718,8 +3718,8 @@ private func buildFloaterTimelineSections(items: [TodoItem]) -> [TodoTimelineSec
     if sections.isEmpty {
         return [
             TodoTimelineSection(
-                id: "floater-low",
-                title: "Low",
+                id: "floater-normal",
+                title: "Normal",
                 items: [],
                 isCollapsible: false,
                 targetDate: nil
@@ -3742,14 +3742,13 @@ private func floaterTodoSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
 }
 
 private func floaterPriorityRank(_ priority: String) -> Int {
-    switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-    case "high", "urgent", "important":
+    if TaskPriorityDisplay.isUrgent(priority) {
         return 0
-    case "medium":
-        return 1
-    default:
-        return 2
     }
+    if TaskPriorityDisplay.isImportant(priority) {
+        return 1
+    }
+    return 2
 }
 
 private func scheduledSectionTitle(for date: Date, calendar: Calendar) -> String {
@@ -3950,25 +3949,23 @@ private func monthIndex(for date: Date, calendar: Calendar) -> Int {
 }
 
 func priorityColor(_ priority: String) -> Color {
-    switch priority.lowercased() {
-    case "high", "urgent", "important":
+    if TaskPriorityDisplay.isUrgent(priority) {
         return .red
-    case "medium":
-        return .orange
-    default:
-        return .blue
     }
+    if TaskPriorityDisplay.isImportant(priority) {
+        return .orange
+    }
+    return .blue
 }
 
 func priorityIndicatorSymbolName(_ priority: String) -> String? {
-    switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-    case "medium":
+    if TaskPriorityDisplay.isImportant(priority) {
         return "flag.fill"
-    case "high", "urgent", "important":
-        return "flag.fill"
-    default:
-        return nil
     }
+    if TaskPriorityDisplay.isUrgent(priority) {
+        return "flag.fill"
+    }
+    return nil
 }
 
 private func emptyTimelineMessage(for mode: TodoListMode) -> String {

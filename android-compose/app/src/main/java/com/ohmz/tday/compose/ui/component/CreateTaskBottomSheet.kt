@@ -91,6 +91,11 @@ import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.ui.priority.PRIORITY_IMPORTANT_VALUE
+import com.ohmz.tday.compose.ui.priority.PRIORITY_NORMAL_VALUE
+import com.ohmz.tday.compose.ui.priority.PRIORITY_URGENT_VALUE
+import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
+import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
@@ -113,26 +118,6 @@ private enum class RepeatPreset(
     YEARLY(R.string.create_task_repeat_yearly, "RRULE:FREQ=YEARLY;INTERVAL=1"),
 }
 
-private fun normalizePriorityValue(value: String?): String {
-    return when (value?.trim()?.lowercase()) {
-        "medium" -> PRIORITY_MEDIUM
-        "high" -> PRIORITY_HIGH
-        else -> PRIORITY_LOW
-    }
-}
-
-@StringRes
-private fun priorityLabelRes(priority: String): Int {
-    return when (priority) {
-        PRIORITY_MEDIUM -> R.string.create_task_priority_medium
-        PRIORITY_HIGH -> R.string.create_task_priority_high
-        else -> R.string.create_task_priority_low
-    }
-}
-
-private const val PRIORITY_LOW = "Low"
-private const val PRIORITY_MEDIUM = "Medium"
-private const val PRIORITY_HIGH = "High"
 private const val DEFAULT_TASK_DURATION_MS = 60L * 60L * 1000L
 private const val CREATE_TASK_SHEET_CREATE_HEIGHT_FRACTION = 0.74f
 private const val CREATE_TASK_SHEET_FLOATER_CREATE_HEIGHT_FRACTION = 0.54f
@@ -184,7 +169,7 @@ fun CreateTaskBottomSheet(
     }
     var selectedPriority by rememberSaveable(editingTask?.id, defaultPriority) {
         mutableStateOf(
-            normalizePriorityValue(editingTask?.priority ?: defaultPriority),
+            canonicalPriorityValue(editingTask?.priority ?: defaultPriority),
         )
     }
     var selectedListId by rememberSaveable(editingTask?.id, defaultListId, listIdsKey) {
@@ -241,11 +226,12 @@ fun CreateTaskBottomSheet(
     var sheetVisible by remember { mutableStateOf(presentImmediately) }
 
     val noListLabel = stringResource(R.string.create_task_no_list)
-    val priorityOptions = remember { listOf(PRIORITY_LOW, PRIORITY_MEDIUM, PRIORITY_HIGH) }
+    val priorityOptions =
+        remember { listOf(PRIORITY_NORMAL_VALUE, PRIORITY_IMPORTANT_VALUE, PRIORITY_URGENT_VALUE) }
     val priorityLabels = mapOf(
-        PRIORITY_LOW to stringResource(R.string.create_task_priority_low),
-        PRIORITY_MEDIUM to stringResource(R.string.create_task_priority_medium),
-        PRIORITY_HIGH to stringResource(R.string.create_task_priority_high),
+        PRIORITY_NORMAL_VALUE to stringResource(priorityDisplayLabelRes(PRIORITY_NORMAL_VALUE)),
+        PRIORITY_IMPORTANT_VALUE to stringResource(priorityDisplayLabelRes(PRIORITY_IMPORTANT_VALUE)),
+        PRIORITY_URGENT_VALUE to stringResource(priorityDisplayLabelRes(PRIORITY_URGENT_VALUE)),
     )
     val repeatLabels = mapOf(
         RepeatPreset.NONE to stringResource(RepeatPreset.NONE.labelRes),

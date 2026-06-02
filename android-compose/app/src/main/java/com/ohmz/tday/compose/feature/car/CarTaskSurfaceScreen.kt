@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.ui.component.RootCreateTaskButton
+import com.ohmz.tday.compose.ui.priority.priorityDisplayLabel
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 
@@ -394,7 +395,10 @@ private fun CarTaskRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val detail = listOfNotNull(item.priority, item.dueLabel).joinToString(" - ")
+                val detail = listOfNotNull(
+                    priorityDisplayLabel(item.priority),
+                    item.dueLabel
+                ).joinToString(" - ")
                 Text(
                     text = detail,
                     style = MaterialTheme.typography.bodyMedium,

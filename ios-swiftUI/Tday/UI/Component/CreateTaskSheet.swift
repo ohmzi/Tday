@@ -35,7 +35,7 @@ struct CreateTaskSheet: View {
 
     @State private var title = ""
     @State private var notes = ""
-    @State private var priority = "Low"
+    @State private var priority = TaskPriorityDisplay.normalValue
     @State private var selectedListID: String?
     @State private var dueDate = Date().addingTimeInterval(60 * 60)
     @State private var scheduleEnabled = true
@@ -45,7 +45,7 @@ struct CreateTaskSheet: View {
     @State private var activeSelector: CreateTaskSheetSelector?
     @FocusState private var focusedInputField: CreateTaskSheetInputField?
 
-    private let priorityOptions = ["Low", "Medium", "High"]
+    private let priorityOptions = TaskPriorityDisplay.options
     private let repeatOptions: [(label: String, value: String?)] = [
         ("No repeat", nil),
         ("Daily", "RRULE:FREQ=DAILY;INTERVAL=1"),
@@ -230,7 +230,7 @@ struct CreateTaskSheet: View {
                 CreateTaskSheetSelectorTriggerRow(
                     iconName: "text.badge.checkmark",
                     title: "Priority",
-                    value: priority,
+                    value: TaskPriorityDisplay.label(for: priority),
                     onTap: { activeSelector = .priority }
                 )
 
@@ -262,7 +262,7 @@ struct CreateTaskSheet: View {
         }
         title = initialPayload.title
         notes = initialPayload.description ?? ""
-        priority = initialPayload.priority
+        priority = TaskPriorityDisplay.canonicalValue(initialPayload.priority)
         selectedListID = initialPayload.listId
         if showScheduleControls, let due = initialPayload.due {
             dueDate = due
@@ -317,7 +317,7 @@ struct CreateTaskSheet: View {
         let payload = CreateTaskPayload(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             description: notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes.trimmingCharacters(in: .whitespacesAndNewlines),
-            priority: priority,
+            priority: TaskPriorityDisplay.canonicalValue(priority),
             due: showScheduleControls && scheduleEnabled ? dueDate : nil,
             rrule: showScheduleControls && scheduleEnabled ? repeatRule : nil,
             listId: selectedListID
@@ -362,16 +362,16 @@ struct CreateTaskSheet: View {
                     }
 
                 case .priority:
-                    ForEach(Array(priorityOptions.enumerated()), id: \.element) { index, option in
+                    ForEach(Array(priorityOptions.enumerated()), id: \.element.value) { index, option in
                         if index > 0 {
                             TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
                         }
                         TdayCenteredSelectorRow(
-                            title: option,
-                            swatchColor: createTaskSheetPrioritySwatchColor(option),
-                            selected: priority == option
+                            title: option.label,
+                            swatchColor: createTaskSheetPrioritySwatchColor(option.value),
+                            selected: TaskPriorityDisplay.canonicalValue(priority) == option.value
                         ) {
-                            priority = option
+                            priority = option.value
                             activeSelector = nil
                         }
                     }
@@ -813,14 +813,13 @@ private func createTaskSheetListSwatchColor(_ raw: String?) -> Color {
 }
 
 private func createTaskSheetPrioritySwatchColor(_ priority: String) -> Color {
-    switch priority.lowercased() {
-    case "high":
+    if TaskPriorityDisplay.isUrgent(priority) {
         return createTaskSheetHexColor(0xE56A6A)
-    case "medium":
-        return createTaskSheetHexColor(0xE3B368)
-    default:
-        return createTaskSheetHexColor(0x6FBF86)
     }
+    if TaskPriorityDisplay.isImportant(priority) {
+        return createTaskSheetHexColor(0xE3B368)
+    }
+    return createTaskSheetHexColor(0x6FBF86)
 }
 
 private func createTaskSheetRepeatSwatchColor(_ rrule: String?) -> Color {

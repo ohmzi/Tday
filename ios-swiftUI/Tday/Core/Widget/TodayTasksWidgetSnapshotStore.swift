@@ -293,13 +293,12 @@ enum FloaterTasksWidgetSnapshotStore {
     }
 
     private static func floaterWidgetPriorityRank(_ priority: String) -> Int {
-        switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "high", "urgent", "important":
+        if TaskPriorityDisplay.isUrgent(priority) {
             return 0
-        case "medium":
-            return 1
-        default:
-            return 2
         }
+        if TaskPriorityDisplay.isImportant(priority) {
+            return 1
+        }
+        return 2
     }
 }
