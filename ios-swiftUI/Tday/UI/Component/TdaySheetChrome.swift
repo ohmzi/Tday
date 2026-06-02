@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 enum TdaySheetMetrics {
+    static let maximumScreenHeightFraction: CGFloat = 0.80
     static let horizontalPadding: CGFloat = 18
     static let verticalPadding: CGFloat = 14
     static let sectionSpacing: CGFloat = 14
@@ -203,6 +204,7 @@ extension View {
 private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
     let content: SheetContent
     @State private var keyboardFrame: CGRect?
+    @State private var contentHeight: CGFloat = 0
 
     init(@ViewBuilder content: () -> SheetContent) {
         self.content = content()
@@ -210,7 +212,7 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let keyboardBottomInset = keyboardBottomInset(for: proxy)
+            let keyboardBottomInset = keyboardBottomInset(for: proxy, contentHeight: contentHeight)
 
             ZStack(alignment: .bottom) {
                 Color.clear
@@ -219,6 +221,14 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
 
                 content
                     .frame(maxWidth: .infinity, alignment: .bottom)
+                    .background {
+                        GeometryReader { contentProxy in
+                            Color.clear.preference(
+                                key: TdayBottomSheetContentHeightPreferenceKey.self,
+                                value: contentProxy.size.height
+                            )
+                        }
+                    }
                     .offset(y: -keyboardBottomInset)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -233,15 +243,25 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { notification in
             updateKeyboardFrame(from: notification)
         }
+        .onPreferenceChange(TdayBottomSheetContentHeightPreferenceKey.self) { height in
+            contentHeight = height
+        }
     }
 
-    private func keyboardBottomInset(for proxy: GeometryProxy) -> CGFloat {
+    private func keyboardBottomInset(for proxy: GeometryProxy, contentHeight: CGFloat) -> CGFloat {
         guard let keyboardFrame else {
             return 0
         }
         let hostFrame = proxy.frame(in: .global)
         let overlap = hostFrame.maxY - keyboardFrame.minY
-        return min(max(overlap, 0), hostFrame.height)
+        let requestedInset = min(max(overlap, 0), hostFrame.height)
+        guard contentHeight > 0 else {
+            return 0
+        }
+        let minimumSheetTop = hostFrame.height * (1 - TdaySheetMetrics.maximumScreenHeightFraction)
+        let currentSheetTop = hostFrame.height - contentHeight
+        let maximumInsetBeforeExceedingSheetLimit = max(currentSheetTop - minimumSheetTop, 0)
+        return min(requestedInset, maximumInsetBeforeExceedingSheetLimit)
     }
 
     private func updateKeyboardFrame(from notification: Notification) {
@@ -255,6 +275,14 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         withAnimation(.easeOut(duration: duration)) {
             keyboardFrame = isHidden ? nil : endFrame
         }
+    }
+}
+
+private struct TdayBottomSheetContentHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
