@@ -276,21 +276,32 @@ describe("dependency and configuration hygiene", () => {
       const pbxproj = readSource(
         path.join(MONO, "ios-swiftUI", "TdayApp.xcodeproj", "project.pbxproj"),
       );
+      const ymlMarketingVersions =
+        projectYml.match(/MARKETING_VERSION: [0-9]+\.[0-9]+\.[0-9]+/g) ?? [];
+      const ymlBuildVersions = projectYml.match(/CURRENT_PROJECT_VERSION: \d+/g) ?? [];
+      const expectedBuildConfigurationCount = ymlMarketingVersions.length * 2;
 
       expect(infoPlist).toContain(`<key>CFBundleShortVersionString</key>`);
       expect(infoPlist).toContain(`<string>${version}</string>`);
       expect(infoPlist).toContain(`<key>TdayUpdateURL</key>`);
       expect(infoPlist).toContain(`<string>${manifest.ios?.updateUrl ?? ""}</string>`);
-      expect(projectYml).toContain(`MARKETING_VERSION: ${version}`);
-      expect(projectYml).toContain(`CURRENT_PROJECT_VERSION: ${manifest.ios?.buildNumber}`);
-      expect(pbxproj.match(/MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);/g)).toEqual([
-        `MARKETING_VERSION = ${version};`,
-        `MARKETING_VERSION = ${version};`,
-      ]);
-      expect(pbxproj.match(/CURRENT_PROJECT_VERSION = \d+;/g)).toEqual([
-        `CURRENT_PROJECT_VERSION = ${manifest.ios?.buildNumber};`,
-        `CURRENT_PROJECT_VERSION = ${manifest.ios?.buildNumber};`,
-      ]);
+      expect(ymlMarketingVersions.length).toBeGreaterThan(0);
+      expect(ymlMarketingVersions).toEqual(
+        Array(ymlMarketingVersions.length).fill(`MARKETING_VERSION: ${version}`),
+      );
+      expect(ymlBuildVersions).toEqual(
+        Array(ymlMarketingVersions.length).fill(
+          `CURRENT_PROJECT_VERSION: ${manifest.ios?.buildNumber}`,
+        ),
+      );
+      expect(pbxproj.match(/MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);/g)).toEqual(
+        Array(expectedBuildConfigurationCount).fill(`MARKETING_VERSION = ${version};`),
+      );
+      expect(pbxproj.match(/CURRENT_PROJECT_VERSION = \d+;/g)).toEqual(
+        Array(expectedBuildConfigurationCount).fill(
+          `CURRENT_PROJECT_VERSION = ${manifest.ios?.buildNumber};`,
+        ),
+      );
     });
 
     it("backend compatibility examples should match version.json", () => {
