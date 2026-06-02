@@ -10,7 +10,6 @@ interface MobileSearchHeaderProps {
   placeholder?: string;
   trailingAction?: React.ReactNode;
   showBrandHome?: boolean;
-  brandVariant?: "compact" | "prominent";
 }
 
 const collapsedButtonClassName = cn(
@@ -25,7 +24,6 @@ export default function MobileSearchHeader({
   placeholder = "Search tasks...",
   trailingAction,
   showBrandHome = true,
-  brandVariant = "compact",
 }: MobileSearchHeaderProps) {
   const [internalQuery, setInternalQuery] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
@@ -102,7 +100,7 @@ export default function MobileSearchHeader({
   };
 
   const brandHome = showBrandHome ? (
-    <NativeAppBrandButton variant={brandVariant} className="min-w-0 max-w-[58%] sm:max-w-none" />
+    <NativeAppBrandButton className="min-w-0 max-w-[58%] sm:max-w-none" />
   ) : null;
 
   return (
