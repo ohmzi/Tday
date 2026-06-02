@@ -399,8 +399,9 @@ fun HomeScreen(
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
+            val isDaytime = rememberIsDaytime()
             EmptyTaskWatermark(
-                imageVector = Icons.Rounded.Inbox,
+                imageVector = if (isDaytime) Icons.Rounded.WbSunny else Icons.Rounded.NightsStay,
                 accentColor = TdayTitleIconDayAccent,
             )
 
