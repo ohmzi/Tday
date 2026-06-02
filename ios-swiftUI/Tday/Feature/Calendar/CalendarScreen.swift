@@ -107,6 +107,8 @@ private enum CalendarModeCardMetrics {
 
 private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
 private let calendarModeResizeAnimation = Animation.spring(response: 0.34, dampingFraction: 0.92, blendDuration: 0.02)
+private let calendarModeContentTransitionAnimation = Animation.easeInOut(duration: 0.18)
+private let calendarModeTransitionCleanupDelay: DispatchTimeInterval = .milliseconds(260)
 
 private struct CalendarCardChromeModifier: ViewModifier {
     @Environment(\.tdayColors) private var colors
@@ -156,7 +158,11 @@ struct CalendarScreen: View {
     @State private var selectedDate = Date()
     @State private var visibleMonth = calendarMonthStart(for: Date())
     @State private var displayMode: CalendarDisplayMode = .month
+    @State private var renderedDisplayMode: CalendarDisplayMode = .month
+    @State private var outgoingDisplayMode: CalendarDisplayMode?
     @State private var calendarCardHeight: CGFloat = CalendarModeCardMetrics.monthHeight
+    @State private var calendarModeTransitionID = 0
+    @State private var calendarModeContentTransitionProgress: CGFloat = 1
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
     @State private var calendarTitleCollapseOffset: CGFloat = 0
@@ -433,7 +439,6 @@ struct CalendarScreen: View {
 
             pendingTaskRows
         }
-        .animation(calendarModeResizeAnimation, value: calendarCardHeight)
     }
 
     @ViewBuilder
@@ -486,15 +491,31 @@ struct CalendarScreen: View {
     }
 
     private var animatedCalendarModeCard: some View {
-        calendarModeContent(for: displayMode)
+        ZStack(alignment: .top) {
+            if let outgoingDisplayMode {
+                calendarModeLayer(for: outgoingDisplayMode)
+                    .id("calendar-mode-outgoing-\(outgoingDisplayMode.rawValue)-\(calendarModeTransitionID)")
+                    .opacity(Double(1 - calendarModeContentTransitionProgress))
+                    .allowsHitTesting(false)
+            }
+
+            calendarModeLayer(for: renderedDisplayMode)
+                .id("calendar-mode-incoming-\(renderedDisplayMode.rawValue)-\(calendarModeTransitionID)")
+                .opacity(Double(calendarModeContentTransitionProgress))
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: calendarCardHeight, alignment: .top)
+        .clipped()
+        .modifier(CalendarCardChromeModifier())
+    }
+
+    private func calendarModeLayer(for mode: CalendarDisplayMode) -> some View {
+        calendarModeContent(for: mode)
             .transaction { transaction in
                 transaction.animation = nil
                 transaction.disablesAnimations = true
             }
             .frame(maxWidth: .infinity)
-            .frame(height: calendarCardHeight, alignment: .top)
-            .clipped()
-            .modifier(CalendarCardChromeModifier())
     }
 
     private func selectCalendarMode(_ mode: CalendarDisplayMode) {
@@ -504,6 +525,11 @@ struct CalendarScreen: View {
             data: ["mode": mode.rawValue]
         )
 
+        let targetHeight = calendarModeCardHeight(for: mode)
+        let previousRenderedMode = renderedDisplayMode
+        let shouldCrossfadeContent = previousRenderedMode != mode
+        calendarModeTransitionID += 1
+        let transitionID = calendarModeTransitionID
         var contentTransaction = Transaction()
         contentTransaction.disablesAnimations = true
         withTransaction(contentTransaction) {
@@ -511,10 +537,41 @@ struct CalendarScreen: View {
             if mode != .month {
                 visibleMonth = calendarMonthStart(for: selectedDate)
             }
+            if shouldCrossfadeContent {
+                outgoingDisplayMode = previousRenderedMode
+                renderedDisplayMode = mode
+                calendarModeContentTransitionProgress = 0
+            } else {
+                outgoingDisplayMode = nil
+                renderedDisplayMode = mode
+                calendarModeContentTransitionProgress = 1
+            }
         }
 
-        withAnimation(calendarModeResizeAnimation) {
-            calendarCardHeight = calendarModeCardHeight(for: mode)
+        if abs(calendarCardHeight - targetHeight) > 0.5 {
+            withAnimation(calendarModeResizeAnimation) {
+                calendarCardHeight = targetHeight
+            }
+        }
+
+        guard shouldCrossfadeContent else {
+            return
+        }
+
+        withAnimation(calendarModeContentTransitionAnimation) {
+            calendarModeContentTransitionProgress = 1
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + calendarModeTransitionCleanupDelay) {
+            guard calendarModeTransitionID == transitionID else {
+                return
+            }
+            var contentTransaction = Transaction()
+            contentTransaction.disablesAnimations = true
+            withTransaction(contentTransaction) {
+                outgoingDisplayMode = nil
+                calendarModeContentTransitionProgress = 1
+            }
         }
     }
 
