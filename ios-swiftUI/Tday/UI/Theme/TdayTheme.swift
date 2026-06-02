@@ -355,6 +355,8 @@ struct TdayNativeSegmentedControl: UIViewRepresentable {
     let labels: [String]
     let selectedIndex: Int
     let accentColor: Color
+    var controlHeight = TdayNativeSegmentedControlMetrics.height
+    var fontSize: CGFloat = 13
     let onSelect: (Int) -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -384,7 +386,7 @@ struct TdayNativeSegmentedControl: UIViewRepresentable {
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: ThickSegmentedControl, context: Context) -> CGSize? {
         CGSize(
             width: proposal.width ?? uiView.intrinsicContentSize.width,
-            height: TdayNativeSegmentedControlMetrics.height
+            height: controlHeight
         )
     }
 
@@ -410,6 +412,7 @@ struct TdayNativeSegmentedControl: UIViewRepresentable {
     }
 
     private func applySizingAndTint(to control: ThickSegmentedControl) {
+        control.preferredHeight = controlHeight
         control.overrideUserInterfaceStyle = colors.isDark ? .dark : .light
         control.backgroundColor = UIColor(colors.surfaceVariant.opacity(0.76))
         control.selectedSegmentTintColor = UIColor(colors.surface)
@@ -417,14 +420,14 @@ struct TdayNativeSegmentedControl: UIViewRepresentable {
         control.setTitleTextAttributes(
             [
                 .foregroundColor: UIColor(colors.onSurfaceVariant),
-                .font: TdayFont.uiFont(size: 13, weight: .bold)
+                .font: TdayFont.uiFont(size: fontSize, weight: .bold)
             ],
             for: .normal
         )
         control.setTitleTextAttributes(
             [
                 .foregroundColor: UIColor(accentColor),
-                .font: TdayFont.uiFont(size: 13, weight: .bold)
+                .font: TdayFont.uiFont(size: fontSize, weight: .bold)
             ],
             for: .selected
         )
@@ -444,14 +447,22 @@ struct TdayNativeSegmentedControl: UIViewRepresentable {
     }
 
     final class ThickSegmentedControl: UISegmentedControl {
+        var preferredHeight = TdayNativeSegmentedControlMetrics.height {
+            didSet {
+                if preferredHeight != oldValue {
+                    invalidateIntrinsicContentSize()
+                }
+            }
+        }
+
         override var intrinsicContentSize: CGSize {
             let baseSize = super.intrinsicContentSize
-            return CGSize(width: baseSize.width, height: TdayNativeSegmentedControlMetrics.height)
+            return CGSize(width: baseSize.width, height: preferredHeight)
         }
 
         override func sizeThatFits(_ size: CGSize) -> CGSize {
             var fittingSize = super.sizeThatFits(size)
-            fittingSize.height = TdayNativeSegmentedControlMetrics.height
+            fittingSize.height = preferredHeight
             return fittingSize
         }
     }
