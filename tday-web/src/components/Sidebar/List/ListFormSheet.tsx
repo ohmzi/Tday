@@ -286,9 +286,10 @@ export default function ListFormSheet({
                 </Button>
                 <Button
                   type="button"
+                  variant="destructive"
                   onClick={() => deleteListMutation.mutate(list.id)}
                   disabled={deleting}
-                  className="rounded-2xl bg-destructive px-5 font-black text-destructive-foreground hover:bg-destructive/90"
+                  className="rounded-2xl px-5 font-black"
                 >
                   {deleting ? "Deleting..." : "Delete list"}
                 </Button>

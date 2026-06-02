@@ -31,6 +31,26 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { useEditCalendarTodo } from "../query/update-calendar-todo";
+import { useUserTimezone } from "@/features/user/query/get-timezone";
+import { moveTodoToDay } from "@/lib/moveTodoToDay";
+import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
+import ConfirmRescheduleRecurring, {
+  type PendingReschedule,
+} from "./ConfirmationModals/ConfirmRescheduleRecurring";
 import Spinner from "@/components/ui/spinner";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import CreateCalendarFormContainer from "./CalendarForm/CreateFormContainer";
@@ -46,7 +66,7 @@ import ListDot from "@/components/ListDot";
 import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
 import { useCompleteCalendarTodo } from "../query/complete-calendar-todo";
 import { useCompleteCalendarTodoInstance } from "../query/complete-calendar-todo-instance";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Pen, RefreshCcw, Trash } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, GripVertical, Pen, RefreshCcw, Trash } from "lucide-react";
 import { isToday } from "date-fns";
 
 const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
@@ -276,6 +296,44 @@ function CalendarModeCard({
   );
 }
 
+function DroppableDayCell({
+  date,
+  disabled,
+  onSelectDate,
+  className,
+  children,
+}: {
+  date: Date;
+  disabled?: boolean;
+  onSelectDate: (date: Date) => void;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const key = dayKey(date);
+  const { setNodeRef, isOver } = useDroppable({
+    id: `day:${key}`,
+    data: { dayKey: key },
+    disabled,
+  });
+
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      disabled={disabled}
+      onClick={() => onSelectDate(date)}
+      aria-label={format(date, "PPP")}
+      className={cn(
+        className,
+        // `isOver` is only true mid-drag, so this highlights the active drop target.
+        isOver && "relative z-10 ring-2 ring-accent ring-offset-2 ring-offset-card",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 function MonthCalendarGrid({
   selectedDate,
   tasksByDay,
@@ -314,12 +372,11 @@ function MonthCalendarGrid({
           const count = tasksByDay.get(dayKey(date))?.length ?? 0;
 
           return (
-            <button
+            <DroppableDayCell
               key={date.toISOString()}
-              type="button"
+              date={date}
               disabled={disabled}
-              onClick={() => onSelectDate(date)}
-              aria-label={format(date, "PPP")}
+              onSelectDate={onSelectDate}
               className={cn(
                 "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-2xl text-center transition-colors duration-200",
                 "hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-30",
@@ -339,7 +396,7 @@ function MonthCalendarGrid({
                 {count > 0 && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
                 {taskCountText(count)}
               </span>
-            </button>
+            </DroppableDayCell>
           );
         })}
       </div>
@@ -370,10 +427,10 @@ function WeekCalendarStrip({
         const count = tasksByDay.get(dayKey(date))?.length ?? 0;
 
         return (
-          <button
+          <DroppableDayCell
             key={date.toISOString()}
-            type="button"
-            onClick={() => onSelectDate(date)}
+            date={date}
+            onSelectDate={onSelectDate}
             className={cn(
               "flex min-h-[4.8rem] flex-col items-center justify-center rounded-[20px] border text-center transition-colors duration-200",
               selected
@@ -389,7 +446,7 @@ function WeekCalendarStrip({
             <span className={cn("text-[0.68rem] font-black", count > 0 ? "opacity-90" : "opacity-0")}>
               {taskCountText(count)}
             </span>
-          </button>
+          </DroppableDayCell>
         );
       })}
     </div>
@@ -432,6 +489,10 @@ function CalendarTaskRow({
   const { t: todayDict } = useTranslation("today");
   const { mutateComplete } = useCompleteCalendarTodo();
   const { mutateComplete: mutateInstanceComplete } = useCompleteCalendarTodoInstance();
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: todo.id,
+    data: { todo },
+  });
 
   const completeTask = () => {
     if (todo.instanceDate) {
@@ -450,8 +511,23 @@ function CalendarTaskRow({
           setDisplayForm={setDisplayForm}
         />
       )}
-      <article className="group flex items-start justify-between gap-3 rounded-[20px] border border-white/70 bg-card/92 px-3 py-3 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card hover:shadow-[0_16px_36px_-28px_hsl(var(--shadow)/0.5)] dark:border-white/10 sm:px-4">
-        <div className="flex min-w-0 items-start gap-3">
+      <article
+        ref={setNodeRef}
+        className={cn(
+          "group flex items-start justify-between gap-2 rounded-[20px] border border-white/70 bg-card/92 px-2 py-3 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card hover:shadow-[0_16px_36px_-28px_hsl(var(--shadow)/0.5)] dark:border-white/10 sm:px-3",
+          isDragging && "opacity-40",
+        )}
+      >
+        <div className="flex min-w-0 items-start gap-2 sm:gap-3">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            aria-label={`Drag to reschedule ${todo.title}`}
+            className="mt-0.5 flex h-9 w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/45 transition-colors hover:text-muted-foreground active:cursor-grabbing"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
           <div className="pt-0.5">
             <TodoCheckbox
               icon={Check}
@@ -591,6 +667,62 @@ export default function CalendarClient() {
   selectedDateRef.current = selectedDate;
   viewRef.current = view;
   const minimumMonth = useMemo(() => startOfMonth(new Date()), []);
+
+  const { editCalendarTodo } = useEditCalendarTodo();
+  const { timeZone } = useUserTimezone();
+  const [activeTodo, setActiveTodo] = useState<TodoItemType | null>(null);
+  const [pendingReschedule, setPendingReschedule] = useState<PendingReschedule | null>(null);
+
+  // Match TodoGroup's sensors so long-press-to-drag feels identical app-wide.
+  // MouseSensor gets a distance threshold so a plain click on the drag handle
+  // still selects/edits instead of starting a drag.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveTodo((event.active.data.current?.todo as TodoItemType | undefined) ?? null);
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveTodo(null);
+      if (!over) return;
+
+      const todo = active.data.current?.todo as TodoItemType | undefined;
+      const data = over.data.current as { dayKey: string } | undefined;
+      if (!todo || !data) return;
+
+      const targetDayKey = data.dayKey;
+      // Compare in the same local-tz key space the droppable cells use; the cell
+      // and the task's due day must match exactly for this to be a no-op.
+      if (dayKey(todo.due) === targetDayKey) return;
+
+      // moveTodoToDay preserves time-of-day in the user's configured timezone.
+      const nextRange = moveTodoToDay(todo, targetDayKey, timeZone);
+
+      if (todo.rrule) {
+        // Recurring task: defer to the "this occurrence / all occurrences" prompt.
+        setPendingReschedule({
+          rescheduled: { ...todo, ...nextRange },
+          originalDueIso: todo.due.toISOString(),
+          rruleChecksum: todo.rrule,
+        });
+        return;
+      }
+
+      editCalendarTodo({
+        ...(todo as TodoItemTypeWithDateChecksum),
+        ...nextRange,
+        dateRangeChecksum: todo.due.toISOString(),
+        rruleChecksum: todo.rrule,
+      });
+    },
+    [editCalendarTodo, timeZone],
+  );
 
   const rangeAnchor = useMemo(() => {
     if (view === "month") return startOfMonth(selectedDate).getTime();
@@ -752,6 +884,12 @@ export default function CalendarClient() {
         accentColor={nativeScreenAccentColors.calendar}
         icon={CalendarDays}
       />
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveTodo(null)}
+      >
       <div className="relative flex w-full flex-1 flex-col gap-4 sm:gap-5">
         {calendarTodosLoading && (
           <div className="pointer-events-none absolute right-0 top-2 z-10 rounded-full border border-white/70 bg-card/90 p-2 shadow-sm dark:border-white/10">
@@ -814,6 +952,26 @@ export default function CalendarClient() {
           )}
         </section>
       </div>
+        <DragOverlay dropAnimation={null}>
+          {activeTodo ? (
+            <div className="pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] dark:border-white/10">
+              <p className="line-clamp-1 text-[0.98rem] font-black leading-5 text-foreground">
+                {activeTodo.title}
+              </p>
+              <span className="mt-1 inline-flex rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-xs font-black text-foreground/80">
+                {format(activeTodo.due, "h:mm a")}
+              </span>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+      {pendingReschedule && (
+        <ConfirmRescheduleRecurring
+          pending={pendingReschedule}
+          open={pendingReschedule !== null}
+          onClose={() => setPendingReschedule(null)}
+        />
+      )}
     </div>
   );
 }
