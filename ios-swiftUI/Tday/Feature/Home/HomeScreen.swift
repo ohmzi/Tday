@@ -168,10 +168,13 @@ struct HomeScreen: View {
                 : fallbackSearchBarFrame
 
             ZStack(alignment: .topLeading) {
-                EmptyTaskWatermark(
-                    systemName: "tray.fill",
-                    accentColor: Color.tdayTodayBlue
-                )
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    let daytime = isHomeDaytime(context.date)
+                    EmptyTaskWatermark(
+                        systemName: daytime ? "sun.max.fill" : "moon.stars.fill",
+                        accentColor: Color.tdayTodayBlue
+                    )
+                }
 
                 PullToRefreshContainer(
                     isRefreshing: viewModel.isLoading,
