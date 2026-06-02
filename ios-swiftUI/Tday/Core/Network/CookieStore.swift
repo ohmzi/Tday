@@ -21,11 +21,17 @@ final class CookieStore {
         "__Secure-authjs.session-token",
     ]
 
-    init(secureStore: SecureStore, storage: HTTPCookieStorage = .shared) {
+    init(
+        secureStore: SecureStore,
+        storage: HTTPCookieStorage = .shared,
+        clearAuthCookiesBeforeRestore: Bool = false
+    ) {
         self.secureStore = secureStore
         self.storage = storage
         storage.cookieAcceptPolicy = .always
-        secureStore.clearInstallScopedValuesIfAppReinstalled()
+        if clearAuthCookiesBeforeRestore {
+            clearAuthCookies()
+        }
         if currentAuthCookie() == nil {
             restorePersistedAuthCookie()
         }

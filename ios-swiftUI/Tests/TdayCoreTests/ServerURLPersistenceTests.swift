@@ -68,7 +68,7 @@ final class ServerURLPersistenceTests: XCTestCase {
         let url = URL(string: "https://demo.tday.example")!
         secureStore.saveServerURLSuggestion(url)
 
-        secureStore.clearInstallScopedValuesIfAppReinstalled()
+        XCTAssertTrue(secureStore.clearInstallScopedValuesIfAppReinstalled())
 
         XCTAssertEqual(secureStore.loadServerURLSuggestion(), url)
     }
@@ -79,7 +79,7 @@ final class ServerURLPersistenceTests: XCTestCase {
         secureStore.saveLastEmail("user@example.com")
         secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
 
-        secureStore.clearInstallScopedValuesIfAppReinstalled()
+        XCTAssertTrue(secureStore.clearInstallScopedValuesIfAppReinstalled())
 
         XCTAssertNil(secureStore.loadPersistedServerURL())
         XCTAssertNil(secureStore.loadLastEmail())
@@ -89,15 +89,29 @@ final class ServerURLPersistenceTests: XCTestCase {
     func testReinstallCleanupRunsOnlyOncePerInstall() {
         let url = URL(string: "https://tday.ohmz.cloud")!
 
-        secureStore.clearInstallScopedValuesIfAppReinstalled()
+        XCTAssertTrue(secureStore.clearInstallScopedValuesIfAppReinstalled())
         secureStore.savePersistedServerURL(url)
         secureStore.saveLastEmail("user@example.com")
         secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
 
-        secureStore.clearInstallScopedValuesIfAppReinstalled()
+        XCTAssertFalse(secureStore.clearInstallScopedValuesIfAppReinstalled())
 
         XCTAssertEqual(secureStore.loadPersistedServerURL(), url)
         XCTAssertEqual(secureStore.loadLastEmail(), "user@example.com")
         XCTAssertEqual(secureStore.loadPersistedAuthSessionCookieData(), Data("cookie".utf8))
+    }
+
+    func testReinstallCleanupClearsPersistedURLBeforeServerURLStateIsCreated() {
+        let url = URL(string: "https://tday.ohmz.cloud")!
+        secureStore.savePersistedServerURL(url)
+        secureStore.savePersistedAuthSessionCookieData(Data("cookie".utf8))
+
+        let didCleanInstallScopedValues = secureStore.clearInstallScopedValuesIfAppReinstalled()
+        let serverURLState = ServerURLState(currentURL: secureStore.loadPersistedServerURL())
+
+        XCTAssertTrue(didCleanInstallScopedValues)
+        XCTAssertNil(serverURLState.currentURL)
+        XCTAssertNil(secureStore.loadPersistedAuthSessionCookieData())
+        XCTAssertEqual(secureStore.appDataMode(), .unset)
     }
 }
