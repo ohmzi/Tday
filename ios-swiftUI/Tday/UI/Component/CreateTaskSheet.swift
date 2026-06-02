@@ -2,10 +2,15 @@ import SwiftUI
 import UIKit
 
 private enum CreateTaskSheetMetrics {
-    static let scheduledSheetHeight: CGFloat = 560
-    static let floaterSheetHeight: CGFloat = 420
-    static let maximumHeightFraction: CGFloat = 0.86
-    static let bottomContentPadding: CGFloat = 8
+    static let scheduledSheetHeight: CGFloat = 660
+    static let floaterSheetHeight: CGFloat = 430
+    static let maximumHeightFraction: CGFloat = 0.80
+    static let formSpacing: CGFloat = 10
+    static let bottomContentPadding: CGFloat = 12
+    static let textFieldVerticalPadding: CGFloat = 12
+    static let textFieldMinHeight: CGFloat = 52
+    static let rowVerticalPadding: CGFloat = 11
+    static let scheduledRowMinHeight: CGFloat = 64
 }
 
 struct CreateTaskSheet: View {
@@ -133,82 +138,19 @@ struct CreateTaskSheet: View {
                 }
             )
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 14) {
-                    CreateTaskSheetTextCard(
-                        title: $title,
-                        notes: $notes
-                    )
-
-                    if showScheduleControls {
-                        TdaySheetSectionTitle(text: "Schedule")
-                        TdaySheetCard {
-                            CreateTaskSheetScheduleToggleRow(
-                                isOn: $scheduleEnabled
-                            )
-
-                            if scheduleEnabled {
-                                TdaySheetDivider()
-
-                                CreateTaskSheetDueRow(
-                                    dueDate: $dueDate,
-                                    onDateTap: { activeSelector = .date },
-                                    onTimeTap: { activeSelector = .time }
-                                )
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
-                        }
-                    }
-
-                    TdaySheetSectionTitle(text: "Details")
-                    TdaySheetCard {
-                        CreateTaskSheetSelectorTriggerRow(
-                            iconName: "list.bullet",
-                            title: "List",
-                            value: selectedListName,
-                            onTap: { activeSelector = .list }
-                        )
-
-                        TdaySheetDivider()
-
-                        CreateTaskSheetSelectorTriggerRow(
-                            iconName: "text.badge.checkmark",
-                            title: "Priority",
-                            value: priority,
-                            onTap: { activeSelector = .priority }
-                        )
-
-                        if showScheduleControls {
-                            TdaySheetDivider()
-
-                            CreateTaskSheetSelectorTriggerRow(
-                                iconName: "repeat",
-                                title: "Repeat",
-                                value: selectedRepeatLabel,
-                                isEnabled: scheduleEnabled,
-                                onTap: {
-                                    guard scheduleEnabled else { return }
-                                    activeSelector = .recurrence
-                                }
-                            )
-                        }
-                    }
-                }
-                .padding(.horizontal, 18)
-                .padding(.bottom, CreateTaskSheetMetrics.bottomContentPadding)
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .disableVerticalScrollBounce()
+            formContent
         }
-        .frame(maxWidth: .infinity, alignment: .top)
-        .background(colors.bottomSheetBackground.ignoresSafeArea())
-        .presentationDetents([.height(sheetHeight)])
-        .presentationDragIndicator(.hidden)
-        .presentationCornerRadius(34)
-        .presentationBackground {
-            colors.bottomSheetBackground
-                .ignoresSafeArea(.container, edges: .bottom)
-        }
+        .frame(maxWidth: .infinity, minHeight: sheetHeight, maxHeight: sheetHeight, alignment: .top)
+        .background(colors.bottomSheetBackground)
+        .clipShape(
+            UnevenRoundedRectangle(
+                topLeadingRadius: TdaySheetMetrics.sheetCornerRadius,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: TdaySheetMetrics.sheetCornerRadius,
+                style: .continuous
+            )
+        )
         .overlay {
             if let activeSelector {
                 selectorOverlay(for: activeSelector)
@@ -228,6 +170,71 @@ struct CreateTaskSheet: View {
                 }
             }
         }
+    }
+
+    private var formContent: some View {
+        VStack(spacing: CreateTaskSheetMetrics.formSpacing) {
+            CreateTaskSheetTextCard(
+                title: $title,
+                notes: $notes
+            )
+
+            if showScheduleControls {
+                TdaySheetSectionTitle(text: "Schedule")
+                TdaySheetCard {
+                    CreateTaskSheetScheduleToggleRow(
+                        isOn: $scheduleEnabled
+                    )
+
+                    if scheduleEnabled {
+                        TdaySheetDivider()
+
+                        CreateTaskSheetDueRow(
+                            dueDate: $dueDate,
+                            onDateTap: { activeSelector = .date },
+                            onTimeTap: { activeSelector = .time }
+                        )
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
+            }
+
+            TdaySheetSectionTitle(text: "Details")
+            TdaySheetCard {
+                CreateTaskSheetSelectorTriggerRow(
+                    iconName: "list.bullet",
+                    title: "List",
+                    value: selectedListName,
+                    onTap: { activeSelector = .list }
+                )
+
+                TdaySheetDivider()
+
+                CreateTaskSheetSelectorTriggerRow(
+                    iconName: "text.badge.checkmark",
+                    title: "Priority",
+                    value: priority,
+                    onTap: { activeSelector = .priority }
+                )
+
+                if showScheduleControls {
+                    TdaySheetDivider()
+
+                    CreateTaskSheetSelectorTriggerRow(
+                        iconName: "repeat",
+                        title: "Repeat",
+                        value: selectedRepeatLabel,
+                        isEnabled: scheduleEnabled,
+                        onTap: {
+                            guard scheduleEnabled else { return }
+                            activeSelector = .recurrence
+                        }
+                    )
+                }
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.bottom, CreateTaskSheetMetrics.bottomContentPadding)
     }
 
     private func hydrateFromInitialPayload() {
@@ -368,6 +375,26 @@ struct CreateTaskSheet: View {
     }
 }
 
+extension View {
+    func createTaskSheet<SheetContent: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> SheetContent
+    ) -> some View {
+        tdayBottomSheetPresentation(isPresented: isPresented) {
+            content()
+        }
+    }
+
+    func createTaskSheet<Item: Identifiable, SheetContent: View>(
+        item: Binding<Item?>,
+        @ViewBuilder content: @escaping (Item) -> SheetContent
+    ) -> some View {
+        tdayBottomSheetPresentation(item: item) { item in
+            content(item)
+        }
+    }
+}
+
 private enum CreateTaskSheetSelector: String, Identifiable {
     case list
     case priority
@@ -465,8 +492,8 @@ private struct CreateTaskSheetTextField: View {
         .foregroundStyle(colors.onSurface)
         .tint(colors.primary)
         .padding(.horizontal, 18)
-        .padding(.vertical, 15)
-        .frame(minHeight: 56)
+        .padding(.vertical, CreateTaskSheetMetrics.textFieldVerticalPadding)
+        .frame(minHeight: CreateTaskSheetMetrics.textFieldMinHeight)
     }
 }
 
@@ -496,8 +523,8 @@ private struct CreateTaskSheetScheduleToggleRow: View {
         .toggleStyle(.switch)
         .tint(colors.primary)
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .frame(minHeight: 72)
+        .padding(.vertical, CreateTaskSheetMetrics.rowVerticalPadding)
+        .frame(minHeight: CreateTaskSheetMetrics.scheduledRowMinHeight)
     }
 }
 
@@ -521,8 +548,8 @@ private struct CreateTaskSheetDueRow: View {
             )
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .frame(minHeight: 72)
+        .padding(.vertical, CreateTaskSheetMetrics.rowVerticalPadding)
+        .frame(minHeight: CreateTaskSheetMetrics.scheduledRowMinHeight)
     }
 
     private var leadingContent: some View {
@@ -695,7 +722,7 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

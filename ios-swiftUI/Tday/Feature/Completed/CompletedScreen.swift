@@ -78,14 +78,14 @@ struct CompletedScreen: View {
                     accentColor: completedAccentColor,
                     collapseProgress: titleCollapseProgress,
                     onBack: { dismiss() },
-                    action: nil
+                    actions: []
                 )
             }
             .onChange(of: viewModel.items.map(\.id)) { _, ids in
                 guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
                 self.openSwipeTaskID = nil
             }
-            .sheet(item: $editingItem) { item in
+            .createTaskSheet(item: $editingItem) { item in
                 CreateTaskSheet(
                     lists: viewModel.lists,
                     titleText: "Edit task",

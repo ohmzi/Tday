@@ -42,7 +42,7 @@ struct SettingsScreen: View {
                 accentColor: colors.onSurface,
                 collapseProgress: titleCollapseProgress,
                 onBack: { dismiss() },
-                action: nil
+                actions: []
             )
         }
         .overlay {
@@ -555,7 +555,7 @@ struct LatestReleaseScreen: View {
                 accentColor: colors.onSurface,
                 collapseProgress: titleCollapseProgress,
                 onBack: { dismiss() },
-                action: nil
+                actions: []
             )
         }
         .task {

@@ -175,6 +175,53 @@ struct TdayCenteredSelectorCard<Content: View>: View {
     }
 }
 
+extension View {
+    func tdayBottomSheetPresentation<SheetContent: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> SheetContent
+    ) -> some View {
+        fullScreenCover(isPresented: isPresented) {
+            TdayBottomSheetPresentationHost {
+                content()
+            }
+        }
+    }
+
+    func tdayBottomSheetPresentation<Item: Identifiable, SheetContent: View>(
+        item: Binding<Item?>,
+        @ViewBuilder content: @escaping (Item) -> SheetContent
+    ) -> some View {
+        fullScreenCover(item: item) { item in
+            TdayBottomSheetPresentationHost {
+                content(item)
+            }
+        }
+    }
+}
+
+private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
+    let content: SheetContent
+
+    init(@ViewBuilder content: () -> SheetContent) {
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Color.clear
+                .contentShape(Rectangle())
+                .ignoresSafeArea()
+
+            content
+                .frame(maxWidth: .infinity, alignment: .bottom)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .ignoresSafeArea(.container, edges: .bottom)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .presentationBackground(.clear)
+    }
+}
+
 struct TdayCenteredSelectorRow: View {
     let title: String
     let swatchColor: Color

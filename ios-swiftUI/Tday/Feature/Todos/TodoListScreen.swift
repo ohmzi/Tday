@@ -757,22 +757,26 @@ struct TodoListScreen: View {
         summaryAvailable && viewModel.aiSummaryEnabled && !viewModel.items.isEmpty
     }
 
-    private var heroTopBarAction: TimelineTopBarAction? {
+    private var heroTopBarActions: [TimelineTopBarAction] {
+        var actions: [TimelineTopBarAction] = []
+
         if canSummarizeCurrentMode {
-            return TimelineTopBarAction(
+            actions.append(TimelineTopBarAction(
                 systemName: "sparkles",
                 usesCircularChrome: true,
                 action: presentSummary
-            )
+            ))
         }
+
         if isListDetailScreen {
-            return TimelineTopBarAction(
+            actions.append(TimelineTopBarAction(
                 systemName: "ellipsis",
                 usesCircularChrome: true,
                 action: { showingListSettings = true }
-            )
+            ))
         }
-        return nil
+
+        return actions
     }
 
     private var modeContent: AnyView {
@@ -911,17 +915,17 @@ struct TodoListScreen: View {
         .onDisappear {
             onRootControlsVisibleChange(true)
         }
-        .sheet(isPresented: $showingCreateTask) {
+        .createTaskSheet(isPresented: $showingCreateTask) {
             createTaskSheetContent
         }
-        .sheet(isPresented: $showingCreateList) {
+        .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
             CreateListSheet { name, color, iconKey in
                 Task {
                     await viewModel.createList(name: name, color: color, iconKey: iconKey)
                 }
             }
         }
-        .sheet(item: $editingTodo) { todo in
+        .createTaskSheet(item: $editingTodo) { todo in
             editTaskSheetContent(for: todo)
         }
         .sheet(isPresented: $showingSummary) {
@@ -986,7 +990,7 @@ struct TodoListScreen: View {
                 accentColor: modeAccentColor,
                 collapseProgress: titleCollapseProgress,
                 onBack: { dismiss() },
-                action: heroTopBarAction,
+                actions: heroTopBarActions,
                 showsTimeOfDayIcon: viewModel.mode == .today
             )
         }
@@ -2201,7 +2205,7 @@ struct TimelineTopBar: View {
     let accentColor: Color
     let collapseProgress: CGFloat
     let onBack: () -> Void
-    let action: TimelineTopBarAction?
+    let actions: [TimelineTopBarAction]
     let showsTimeOfDayIcon: Bool
     let titleRevealStart: CGFloat
     let titleRevealEnd: CGFloat
@@ -2214,7 +2218,7 @@ struct TimelineTopBar: View {
         accentColor: Color,
         collapseProgress: CGFloat,
         onBack: @escaping () -> Void,
-        action: TimelineTopBarAction?,
+        actions: [TimelineTopBarAction],
         showsTimeOfDayIcon: Bool = false,
         titleRevealStart: CGFloat = TodoTimelineMetrics.collapsedTitleRevealStart,
         titleRevealEnd: CGFloat = TodoTimelineMetrics.collapsedTitleRevealEnd,
@@ -2224,7 +2228,7 @@ struct TimelineTopBar: View {
         self.accentColor = accentColor
         self.collapseProgress = collapseProgress
         self.onBack = onBack
-        self.action = action
+        self.actions = actions
         self.showsTimeOfDayIcon = showsTimeOfDayIcon
         self.titleRevealStart = titleRevealStart
         self.titleRevealEnd = titleRevealEnd
@@ -2255,21 +2259,30 @@ struct TimelineTopBar: View {
         )
     }
 
+    private var trailingActionReservedWidth: CGFloat {
+        CGFloat(max(1, actions.count)) * TodoTimelineMetrics.topBarButtonFrame
+    }
+
     var body: some View {
         ZStack {
             HStack(spacing: 0) {
                 TimelineTopBarButton(systemName: "chevron.left", chrome: .filled, action: onBack)
                 Spacer(minLength: 0)
-                if let action {
-                    TimelineTopBarButton(
-                        systemName: action.systemName,
-                        chrome: action.usesCircularChrome ? .outlined : .plain,
-                        tint: action.tint,
-                        action: action.action
-                    )
-                } else {
+                if actions.isEmpty {
                     Color.clear
                         .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                } else {
+                    HStack(spacing: 0) {
+                        ForEach(actions.indices, id: \.self) { index in
+                            let action = actions[index]
+                            TimelineTopBarButton(
+                                systemName: action.systemName,
+                                chrome: action.usesCircularChrome ? .outlined : .plain,
+                                tint: action.tint,
+                                action: action.action
+                            )
+                        }
+                    }
                 }
             }
 
@@ -2277,7 +2290,7 @@ struct TimelineTopBar: View {
                 .opacity(revealProgress)
                 .offset(y: titleOffsetY)
                 .scaleEffect(0.985 + (0.015 * revealProgress))
-                .padding(.horizontal, TodoTimelineMetrics.topBarButtonFrame + 12)
+                .padding(.horizontal, max(TodoTimelineMetrics.topBarButtonFrame, trailingActionReservedWidth) + 12)
                 .frame(maxWidth: .infinity)
                 .allowsHitTesting(false)
         }
