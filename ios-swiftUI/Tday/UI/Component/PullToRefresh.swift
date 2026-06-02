@@ -51,6 +51,7 @@ private struct RefreshContainerBody<Content: View>: View {
     @State private var localRefreshInFlight = false
     @State private var observedExternalRefresh = false
     @State private var refreshSequence = 0
+    @State private var refreshTask: Task<Void, Never>?
 
     init(
         isRefreshing: Bool,
@@ -95,25 +96,38 @@ private struct RefreshContainerBody<Content: View>: View {
                     localRefreshInFlight = false
                 }
             }
+            .onDisappear {
+                refreshTask?.cancel()
+                refreshTask = nil
+                localRefreshInFlight = false
+                observedExternalRefresh = false
+                pullDistance = 0
+            }
     }
 
     @MainActor
     private func performRefresh() async {
-        guard !localRefreshInFlight, !isRefreshing else { return }
+        guard refreshTask == nil, !localRefreshInFlight, !isRefreshing else { return }
         refreshSequence += 1
         let currentRefreshSequence = refreshSequence
         observedExternalRefresh = false
         localRefreshInFlight = true
 
-        await action()
+        refreshTask = Task { @MainActor in
+            await action()
 
-        if !observedExternalRefresh {
-            try? await Task.sleep(nanoseconds: TdayRefreshIndicatorMetrics.handoffHoldNanoseconds)
+            if !observedExternalRefresh {
+                try? await Task.sleep(nanoseconds: TdayRefreshIndicatorMetrics.handoffHoldNanoseconds)
+            }
+
+            if refreshSequence == currentRefreshSequence {
+                localRefreshInFlight = false
+                observedExternalRefresh = false
+            }
+            refreshTask = nil
         }
 
-        guard refreshSequence == currentRefreshSequence else { return }
-        localRefreshInFlight = false
-        observedExternalRefresh = false
+        try? await Task.sleep(nanoseconds: TdayRefreshIndicatorMetrics.nativeRefreshReleaseNanoseconds)
     }
 
     private func updatePullDistance(_ distance: CGFloat) {
@@ -133,6 +147,7 @@ private struct RefreshContainerBody<Content: View>: View {
 
 private enum TdayRefreshIndicatorMetrics {
     static let triggerDistance: CGFloat = 112
+    static let nativeRefreshReleaseNanoseconds: UInt64 = 250_000_000
     static let handoffHoldNanoseconds: UInt64 = 1_500_000_000
     static let containerWidth: CGFloat = 152
     static let containerHeight: CGFloat = 58

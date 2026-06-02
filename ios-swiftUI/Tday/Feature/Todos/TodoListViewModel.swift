@@ -5,6 +5,7 @@ import Observation
 @Observable
 final class TodoListViewModel {
     private let container: AppContainer
+    private static let recentSuccessfulSyncSkipWindowMs: Int64 = 8_000
 
     var isLoading = false
     var title: String
@@ -45,6 +46,21 @@ final class TodoListViewModel {
     func refresh() async {
         TdayTelemetry.addBreadcrumb("todo_list.refresh", data: modeTelemetryData())
         isLoading = true
+        defer {
+            isLoading = false
+        }
+
+        let loadCachedState: @MainActor () -> OfflineSyncState = container.cacheManager.loadOfflineState
+        let cachedState = loadCachedState()
+        if shouldUseRecentSuccessfulSync(cachedState) {
+            hydrateFromCache(snapshot: container.todoRepository.makeTodoListCacheSnapshot(
+                from: cachedState,
+                mode: mode,
+                listId: listId
+            ))
+            return
+        }
+
         let result = await container.syncAndRefresh(
             force: true,
             replayPendingMutations: true,
@@ -54,7 +70,6 @@ final class TodoListViewModel {
             errorMessage = userFacingMessage(for: error, fallback: "Failed to load tasks.")
         }
         hydrateFromCache()
-        isLoading = false
     }
 
     func summarizeCurrentMode() async {
@@ -230,14 +245,21 @@ final class TodoListViewModel {
     }
 
     private func hydrateFromCache() {
-        if mode == .floater {
-            lists = container.floaterListRepository.fetchListsSnapshot()
-        } else {
-            lists = container.listRepository.fetchListsSnapshot()
-        }
-        items = container.todoRepository.fetchTodosSnapshot(mode: mode, listId: listId)
-        aiSummaryEnabled = container.settingsRepository.isAiSummaryEnabledSnapshot()
+        hydrateFromCache(snapshot: container.todoRepository.fetchTodoListCacheSnapshot(mode: mode, listId: listId))
+    }
+
+    private func hydrateFromCache(snapshot: TodoListCacheSnapshot) {
+        lists = snapshot.lists
+        items = snapshot.items
+        aiSummaryEnabled = snapshot.aiSummaryEnabled
         errorMessage = nil
+    }
+
+    private func shouldUseRecentSuccessfulSync(_ state: OfflineSyncState) -> Bool {
+        guard state.pendingMutations.isEmpty, state.lastSuccessfulSyncEpochMs > 0 else {
+            return false
+        }
+        return Date().epochMilliseconds - state.lastSuccessfulSyncEpochMs < Self.recentSuccessfulSyncSkipWindowMs
     }
 
     private func observeCacheChanges() {
