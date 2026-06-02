@@ -4,7 +4,7 @@ import UIKit
 private enum CreateTaskSheetMetrics {
     static let scheduledSheetHeight: CGFloat = 660
     static let floaterSheetHeight: CGFloat = 430
-    static let maximumHeightFraction: CGFloat = 0.80
+    static let maximumHeightFraction: CGFloat = TdaySheetMetrics.maximumScreenHeightFraction
     static let formSpacing: CGFloat = 10
     static let bottomContentPadding: CGFloat = 12
     static let textFieldVerticalPadding: CGFloat = 12

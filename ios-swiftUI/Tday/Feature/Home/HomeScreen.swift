@@ -59,7 +59,7 @@ private struct HomeListIconOption {
 
 private enum CreateListSheetMetrics {
     static let sheetHeight: CGFloat = 620
-    static let maximumHeightFraction: CGFloat = 0.80
+    static let maximumHeightFraction: CGFloat = TdaySheetMetrics.maximumScreenHeightFraction
     static let bottomContentPadding: CGFloat = 8
 }
 

@@ -52,6 +52,8 @@ struct RootFeedDock: View {
             labels: tabs.map(\.title),
             selectedIndex: activeIndex,
             accentColor: accentColor,
+            controlHeight: RootFeedDockMetrics.height,
+            fontSize: RootFeedDockMetrics.fontSize,
             onSelect: { index in
                 guard tabs.indices.contains(index) else {
                     return
@@ -60,10 +62,12 @@ struct RootFeedDock: View {
             }
         )
         .frame(width: RootFeedDockMetrics.width)
-        .frame(height: TdayNativeSegmentedControlMetrics.height)
+        .frame(height: RootFeedDockMetrics.height)
     }
 }
 
 private enum RootFeedDockMetrics {
     static let width: CGFloat = 212
+    static let height: CGFloat = 60
+    static let fontSize: CGFloat = 14.5
 }
