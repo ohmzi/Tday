@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
-import TodoGroup from "@/components/todo/component/TodoGroup";
-import { TodoItemType } from "@/types";
+import TimelineSections from "@/components/todo/dnd/TimelineSections";
+import { buildTimelineSections } from "@/lib/timeline/buildTimelineSections";
 import { usePinListTodo } from "../query/pin-list-todo";
 import { useCompleteListTodo } from "../query/complete-list-todo";
 import { useDeleteListTodo } from "../query/delete-list-todo";
@@ -18,23 +19,19 @@ import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ListDot from "@/components/ListDot";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/lib/navigation";
+import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { Pencil, Search, X } from "lucide-react";
 
-function compareTodosByDueDate(a: TodoItemType, b: TodoItemType) {
-    const dueDiff = a.due.getTime() - b.due.getTime();
-    if (dueDiff !== 0) return dueDiff;
-
-    const createdDiff = a.createdAt.getTime() - b.createdAt.getTime();
-    if (createdDiff !== 0) return createdDiff;
-
-    return a.title.localeCompare(b.title);
-}
-
 const ListContainer = ({ id }: { id: string }) => {
+    const locale = useLocale();
+    const userTZ = useUserTimezone();
+    const { t: appDict } = useTranslation("app");
     const { listMetaData } = useListMetaData();
     const { listTodos, listTodosLoading } = useList({ id });
     const [searchQuery, setSearchQuery] = useState("");
     const [editListOpen, setEditListOpen] = useState(false);
+    const [earlierExpanded, setEarlierExpanded] = useState(false);
 
     const filteredTodos = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -46,20 +43,21 @@ const ListContainer = ({ id }: { id: string }) => {
         });
     }, [listTodos, searchQuery]);
 
-    const dueDateOrderedTodos = useMemo(
-        () => [...filteredTodos].sort(compareTodosByDueDate),
-        [filteredTodos],
+    const timelineSections = useMemo(
+        () =>
+            buildTimelineSections({
+                todos: filteredTodos,
+                locale,
+                timeZone: userTZ?.timeZone,
+                futureOnly: false,
+                placesEarlierBeforeToday: true,
+                todayLabel: appDict("today"),
+                tomorrowLabel: appDict("tomorrow"),
+            }),
+        [appDict, filteredTodos, locale, userTZ?.timeZone],
     );
 
-    const pinnedTodos = useMemo(() =>
-        dueDateOrderedTodos.filter(({ pinned }) => pinned),
-        [dueDateOrderedTodos]
-    );
-
-    const unpinnedTodos = useMemo(() =>
-        dueDateOrderedTodos.filter(({ pinned }) => !pinned),
-        [dueDateOrderedTodos]
-    );
+    const isSearching = Boolean(searchQuery.trim());
 
     const listName = listMetaData[id]?.name?.trim() || "";
     const listColor = listMetaData[id]?.color;
@@ -118,14 +116,14 @@ const ListContainer = ({ id }: { id: string }) => {
                 {listTodosLoading && <TodoListLoading />}
 
                 {/* Empty state — no tasks yet */}
-                {!listTodosLoading && !searchQuery.trim() && listTodos.length === 0 && (
+                {!listTodosLoading && !isSearching && listTodos.length === 0 && (
                     <div className="mt-4 rounded-2xl border border-border/65 bg-card/95 px-4 py-6 text-sm text-muted-foreground">
                         No tasks in this list
                     </div>
                 )}
 
                 {/* Empty state — no search results */}
-                {!listTodosLoading && searchQuery.trim() && filteredTodos.length === 0 && (
+                {!listTodosLoading && isSearching && filteredTodos.length === 0 && (
                     <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
                         <div className="relative mb-6">
                             <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted/50">
@@ -150,18 +148,14 @@ const ListContainer = ({ id }: { id: string }) => {
                     </div>
                 )}
 
-                {/* Pinned Todos */}
-                {pinnedTodos.length > 0 && (
-                    <section className="mb-8 lg:mb-10 mt-5 sm:mt-6 lg:mt-8">
-                        <TodoGroup todos={pinnedTodos} reorderable={false} />
-                    </section>
-                )}
-
-                {/* Due-date ordered Todos */}
-                {unpinnedTodos.length > 0 && (
-                    <section className="mb-8 mt-5 sm:mt-6 lg:mb-10 lg:mt-8">
-                        <TodoGroup todos={unpinnedTodos} reorderable={false} />
-                    </section>
+                {/* Date-bucketed timeline with drag-and-drop */}
+                {!listTodosLoading && !(isSearching && filteredTodos.length === 0) && listTodos.length > 0 && (
+                    <TimelineSections
+                        sections={timelineSections}
+                        timeZone={userTZ?.timeZone}
+                        earlierExpanded={earlierExpanded}
+                        onToggleEarlier={() => setEarlierExpanded((value) => !value)}
+                    />
                 )}
             </div>
 
