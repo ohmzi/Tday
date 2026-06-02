@@ -40,7 +40,7 @@ Mobile is now the center of the product experience. Any user-facing Android or i
 
 - Build Android and iOS as siblings, not clones. Copy behavior and intent; use native APIs and local conventions.
 - Treat Home and Floater/Anytime as root feeds. `RootFeedDock` switches between them and collapses into a compact icon state while preserving quick creation.
-- Keep pull-to-refresh disabled in Local Mode and enabled for server workspaces.
+- Keep pull-to-refresh disabled in Local Mode. In Server Mode, treat it as a root-feed affordance for Home and Floater/Anytime rather than a default on detail, category, calendar, or completed screens.
 - Use local cache as the screen source of truth. Network sync updates the cache; screens observe cache changes.
 - Keep offline notices calm and rate-limited. Do not interrupt normal use when cached data can satisfy the screen.
 - Preserve dark mode, compact layouts, and text fit. Avoid explanatory UI copy when a familiar control can do the job.

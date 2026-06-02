@@ -361,8 +361,13 @@ struct ScrollBounceDisablerRow: View {
 }
 
 extension View {
-    func disableVerticalScrollBounce() -> some View {
-        background(VerticalScrollBounceDisabler())
+    @ViewBuilder
+    func disableVerticalScrollBounce(_ isDisabled: Bool = true) -> some View {
+        if isDisabled {
+            background(VerticalScrollBounceDisabler())
+        } else {
+            self
+        }
     }
 
     func onVerticalScrollOffsetChange(_ onChange: @escaping (CGFloat) -> Void) -> some View {
@@ -395,23 +400,81 @@ private struct VerticalScrollBounceDisabler: UIViewRepresentable {
         }
     }
 
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.detach()
+    }
+
     final class Coordinator: NSObject {
+        private struct BounceState {
+            var count: Int
+            let bounces: Bool
+            let alwaysBounceVertical: Bool
+        }
+
+        private static var bounceStates: [ObjectIdentifier: BounceState] = [:]
+
         private weak var observedScrollView: UIScrollView?
         private var offsetObservation: NSKeyValueObservation?
         private var isClamping = false
 
+        deinit {
+            detach()
+        }
+
         func attach(to view: UIView) {
-            guard let scrollView = view.enclosingScrollView() else { return }
+            guard let scrollView = view.nearestScrollView() else {
+                detach()
+                return
+            }
             guard observedScrollView !== scrollView else { return }
+            detach()
             observedScrollView = scrollView
+
+            let scrollViewID = ObjectIdentifier(scrollView)
+            if var state = Self.bounceStates[scrollViewID] {
+                state.count += 1
+                Self.bounceStates[scrollViewID] = state
+            } else {
+                Self.bounceStates[scrollViewID] = BounceState(
+                    count: 1,
+                    bounces: scrollView.bounces,
+                    alwaysBounceVertical: scrollView.alwaysBounceVertical
+                )
+            }
+
             scrollView.bounces = false
             scrollView.alwaysBounceVertical = false
+            clampTopOverscroll(scrollView)
 
             scrollView.panGestureRecognizer.addTarget(self, action: #selector(handlePan(_:)))
 
             offsetObservation = scrollView.observe(\.contentOffset, options: .new) { [weak self] sv, _ in
                 self?.clampTopOverscroll(sv)
             }
+        }
+
+        func detach() {
+            guard let scrollView = observedScrollView else {
+                offsetObservation = nil
+                return
+            }
+
+            scrollView.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
+            offsetObservation = nil
+
+            let scrollViewID = ObjectIdentifier(scrollView)
+            if var state = Self.bounceStates[scrollViewID] {
+                state.count -= 1
+                if state.count <= 0 {
+                    scrollView.bounces = state.bounces
+                    scrollView.alwaysBounceVertical = state.alwaysBounceVertical
+                    Self.bounceStates.removeValue(forKey: scrollViewID)
+                } else {
+                    Self.bounceStates[scrollViewID] = state
+                }
+            }
+
+            observedScrollView = nil
         }
 
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
