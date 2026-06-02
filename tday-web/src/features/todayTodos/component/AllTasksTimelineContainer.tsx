@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, ChevronDown, ChevronRight, Clock3, Flag, Layers, Search, Sun, X } from "lucide-react";
+import { CalendarClock, Clock3, Flag, Layers, Search, Sun, X } from "lucide-react";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
-import { TodoItemCard } from "@/components/todo/component/TodoItemContainer";
+import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import { TodoItemType } from "@/types";
 import { useTodoTimeline } from "../query/get-todo-timeline";
@@ -23,17 +23,13 @@ import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/lib/navigation";
 import { useSearchParams } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import { useUserPreferences } from "@/providers/UserPreferencesProvider";
-import { moveTodoToDay } from "@/lib/moveTodoToDay";
-import { useTodoMutation } from "@/providers/TodoMutationProvider";
-import { TodoItemTypeWithDateChecksum } from "../query/update-todo";
+import {
+  buildTimelineSections,
+  findSectionKeyForDayKey,
+} from "@/lib/timeline/buildTimelineSections";
 import {
   TODO_FOCUS_DATE_QUERY_PARAM,
-  TODO_FOCUS_MODE_DELETED,
-  TODO_FOCUS_MODE_QUERY_PARAM,
   TODO_FOCUS_TASK_QUERY_PARAM,
-  formatTodoFocusDateLabel,
   getTodoDateSectionId,
   getTodoDayKey,
   isTodoFocusDateKey,
@@ -57,6 +53,10 @@ type TimelineSection = {
 };
 
 type TimelineScope = "today" | "scheduled" | "all" | "priority" | "overdue";
+
+// Scopes that render the native date-bucketed timeline with drag-and-drop.
+const isTimelineScope = (scope: TimelineScope) =>
+  scope === "all" || scope === "priority" || scope === "scheduled";
 
 const getTimeZoneDate = (date: Date, timeZone?: string) =>
   new Date(date.toLocaleString("en-US", { timeZone: timeZone || "UTC" }));
@@ -192,165 +192,6 @@ const SCOPE_CONFIG: Record<TimelineScope, { icon: React.ElementType; heading: st
   priority: { icon: Flag, heading: "priority", emptyMessage: "No priority tasks" },
 };
 
-const DRAG_DISABLED_MESSAGE = "Drag disabled; a global filter is active";
-
-const ScheduledTimelineSections = ({
-  sections,
-  focusedTaskId,
-  focusedDateKey,
-  timeZone,
-}: {
-  sections: TimelineSection[];
-  focusedTaskId: string | null;
-  focusedDateKey: string | null;
-  timeZone?: string;
-}) => {
-  const { toast } = useToast();
-  const { preferences } = useUserPreferences();
-  const { useEditTodo, useEditTodoInstance } = useTodoMutation();
-  const { editTodoMutateFn } = useEditTodo();
-  const { editTodoInstanceMutateFn } = useEditTodoInstance(undefined);
-  const [draggedTodoId, setDraggedTodoId] = useState<string | null>(null);
-  const [dropSectionKey, setDropSectionKey] = useState<string | null>(null);
-
-  const todosById = useMemo(
-    () =>
-      new Map(
-        sections.flatMap((section) =>
-          section.todos.map((todo) => [todo.id, todo] as const),
-        ),
-      ),
-    [sections],
-  );
-
-  const clearDragState = useCallback(() => {
-    setDraggedTodoId(null);
-    setDropSectionKey(null);
-  }, []);
-
-  const handleMove = useCallback((todo: TodoItemType, targetSectionKey: string) => {
-    if (getTodoDayKey(todo.due, timeZone) === targetSectionKey) {
-      clearDragState();
-      return;
-    }
-
-    const nextRange = moveTodoToDay(todo, targetSectionKey, timeZone);
-
-    if (todo.rrule && todo.instanceDate) {
-      editTodoInstanceMutateFn({
-        ...todo,
-        instanceDate: todo.instanceDate ?? todo.due,
-        ...nextRange,
-      });
-      clearDragState();
-      return;
-    }
-
-    editTodoMutateFn({
-      ...(todo as TodoItemTypeWithDateChecksum),
-      ...nextRange,
-      dateRangeChecksum: todo.due.toISOString(),
-      rruleChecksum: todo.rrule,
-    });
-    clearDragState();
-  }, [clearDragState, editTodoInstanceMutateFn, editTodoMutateFn, timeZone]);
-
-  const handleDragStart = useCallback((
-    event: React.DragEvent<HTMLDivElement>,
-    todo: TodoItemType,
-    sectionKey: string,
-  ) => {
-    if (preferences?.sortBy) {
-      event.preventDefault();
-      toast({ title: DRAG_DISABLED_MESSAGE });
-      return;
-    }
-
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", todo.id);
-    setDraggedTodoId(todo.id);
-    setDropSectionKey(sectionKey);
-  }, [preferences?.sortBy, toast]);
-
-  return (
-    <>
-      {sections.map((section) => {
-        const isDropTarget = draggedTodoId !== null && dropSectionKey === section.key;
-
-        return (
-          <section
-            id={getTodoDateSectionId(section.key)}
-            key={section.key}
-            className={cn(
-              "mb-8 scroll-mt-24 rounded-3xl transition-colors lg:mb-10",
-              section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
-              isDropTarget && "bg-accent/5 ring-1 ring-accent/25",
-            )}
-            onDragEnter={() => {
-              if (draggedTodoId) {
-                setDropSectionKey(section.key);
-              }
-            }}
-            onDragOver={(event) => {
-              if (!draggedTodoId || preferences?.sortBy) {
-                return;
-              }
-
-              event.preventDefault();
-              event.dataTransfer.dropEffect = "move";
-              if (dropSectionKey !== section.key) {
-                setDropSectionKey(section.key);
-              }
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              const todoId = event.dataTransfer.getData("text/plain") || draggedTodoId;
-              const todo = todoId ? todosById.get(todoId) : null;
-              if (todo) {
-                handleMove(todo, section.key);
-              } else {
-                clearDragState();
-              }
-            }}
-          >
-            <div className="px-3 py-2 sm:px-4">
-              <div className="mb-3 mt-4 flex items-center gap-2 sm:mt-5 lg:mb-4 lg:mt-6">
-                <h3
-                  className={cn(
-                    "select-none text-lg font-semibold tracking-tight",
-                    focusedDateKey === section.key && "text-accent",
-                  )}
-                >
-                  {section.label}
-                </h3>
-                <LineSeparator className="flex-1 border-border/70" />
-              </div>
-              <div className="space-y-2">
-                {section.todos.map((todo) => (
-                  <div
-                    key={todo.id}
-                    draggable={true}
-                    onDragStart={(event) => handleDragStart(event, todo, section.key)}
-                    onDragEnd={clearDragState}
-                  >
-                    <TodoItemCard
-                      todoItem={todo}
-                      overdue={false}
-                      perTaskOverdue={section.dayDiff === 0}
-                      highlighted={focusedTaskId === todo.id}
-                      dragging={draggedTodoId === todo.id}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        );
-      })}
-    </>
-  );
-};
-
 const AllTasksTimelineContainer = ({
   scope = "today",
 }: {
@@ -364,6 +205,8 @@ const AllTasksTimelineContainer = ({
   const { todos, todoLoading } = useTodoTimeline();
   const [searchQuery, setSearchQuery] = useState("");
 
+  const timeline = isTimelineScope(scope);
+
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [earlierExpanded, setEarlierExpanded] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -374,9 +217,6 @@ const AllTasksTimelineContainer = ({
     const value = searchParams.get(TODO_FOCUS_DATE_QUERY_PARAM);
     return isTodoFocusDateKey(value) ? value : null;
   }, [searchParams]);
-  const isDeletedFocus =
-    searchParams.get(TODO_FOCUS_MODE_QUERY_PARAM) === TODO_FOCUS_MODE_DELETED;
-
   const scopedTodos = useMemo(() => {
     if (scope === "priority") return todos.filter((todo) => isPriorityTask(todo.priority));
     return todos;
@@ -438,16 +278,21 @@ const AllTasksTimelineContainer = ({
     }
     return filteredTimelineItems;
   }, [filteredTimelineItems, scope]);
-  const focusedTaskIndex = useMemo(
-    () =>
-      focusedTaskId
-        ? scopeFilteredItems.findIndex((item) => item.todo.id === focusedTaskId)
-        : -1,
-    [focusedTaskId, scopeFilteredItems],
-  );
-  const focusedTaskItem = focusedTaskIndex >= 0
-    ? scopeFilteredItems[focusedTaskIndex]
-    : null;
+
+  // The native date-bucketed timeline (All / Priority / Scheduled).
+  const timelineSections = useMemo(() => {
+    if (!timeline) return [];
+    return buildTimelineSections({
+      todos: filteredTimelineItems.map((item) => item.todo),
+      locale,
+      timeZone: userTZ?.timeZone,
+      futureOnly: scope === "scheduled",
+      placesEarlierBeforeToday: scope !== "scheduled",
+      todayLabel: appDict("today"),
+      tomorrowLabel: appDict("tomorrow"),
+    });
+  }, [appDict, filteredTimelineItems, locale, scope, timeline, userTZ?.timeZone]);
+
   const focusedDateIndex = useMemo(
     () =>
       focusedDateKey
@@ -455,15 +300,14 @@ const AllTasksTimelineContainer = ({
         : -1,
     [focusedDateKey, scopeFilteredItems],
   );
-  const showScheduledFocusEmptyState = scope === "scheduled" &&
-    Boolean(focusedDateKey) &&
-    focusedDateIndex === -1 &&
-    !searchQuery.trim();
-  const focusedDateLabel = useMemo(
-    () => (focusedDateKey ? formatTodoFocusDateLabel(focusedDateKey, locale) : null),
-    [focusedDateKey, locale],
+  const focusedTaskIndex = useMemo(
+    () =>
+      focusedTaskId
+        ? scopeFilteredItems.findIndex((item) => item.todo.id === focusedTaskId)
+        : -1,
+    [focusedTaskId, scopeFilteredItems],
   );
-
+  // ----- today / overdue paging + grouping (unchanged) -----
   const visibleTimelineItems = useMemo(
     () => scopeFilteredItems.slice(0, visibleCount),
     [scopeFilteredItems, visibleCount],
@@ -480,10 +324,6 @@ const AllTasksTimelineContainer = ({
     () => sections.filter((s) => s.dayDiff >= 0),
     [sections],
   );
-  const earlierTaskCount = useMemo(
-    () => earlierSections.reduce((sum, s) => sum + s.todos.length, 0),
-    [earlierSections],
-  );
   const hasScopedTasks = useMemo(() => {
     if (scope === "today") {
       return scopeFilteredItems.some((item) => item.dayDiff === 0);
@@ -491,13 +331,19 @@ const AllTasksTimelineContainer = ({
     return scopeFilteredItems.length > 0;
   }, [scopeFilteredItems, scope]);
 
-  const hasMore = visibleCount < scopeFilteredItems.length;
+  const hasMore = !timeline && visibleCount < scopeFilteredItems.length;
+  const isSearching = Boolean(searchQuery.trim());
+  // Timeline scopes always render their buckets (drop targets) unless an active
+  // search yielded nothing.
+  const showTimeline = timeline && !(isSearching && scopeFilteredItems.length === 0);
+  const showEmptyCard = !timeline && !todoLoading && !isSearching && !hasScopedTasks;
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [scopeFilteredItems.length]);
 
   useEffect(() => {
+    if (timeline) return;
     const targetIndex = focusedTaskIndex >= 0 ? focusedTaskIndex : focusedDateIndex;
     if (targetIndex < 0 || targetIndex < visibleCount) {
       return;
@@ -507,13 +353,16 @@ const AllTasksTimelineContainer = ({
       const nextCount = Math.ceil((targetIndex + 1) / PAGE_SIZE) * PAGE_SIZE;
       return Math.min(Math.max(prev, nextCount), scopeFilteredItems.length);
     });
-  }, [focusedDateIndex, focusedTaskIndex, scopeFilteredItems.length, visibleCount]);
+  }, [focusedDateIndex, focusedTaskIndex, scopeFilteredItems.length, timeline, visibleCount]);
 
+  // Expand Earlier when the focused task lives in the past (timeline scopes).
   useEffect(() => {
-    if (scope === "all" && focusedTaskItem?.dayDiff != null && focusedTaskItem.dayDiff < 0) {
+    if (!timeline || !focusedTaskId) return;
+    const earlier = timelineSections.find((section) => section.kind === "earlier");
+    if (earlier?.todos.some((todo) => todo.id === focusedTaskId)) {
       setEarlierExpanded(true);
     }
-  }, [focusedTaskItem?.dayDiff, scope]);
+  }, [focusedTaskId, timeline, timelineSections]);
 
   useEffect(() => {
     if (!hasMore || !sentinelRef.current) {
@@ -542,49 +391,27 @@ const AllTasksTimelineContainer = ({
     };
   }, [scopeFilteredItems.length, hasMore]);
 
+  // Scroll a focused date into view within the timeline (the bucket may be an
+  // aggregate Earlier / Rest / month section).
   useEffect(() => {
-    if (!focusedTaskId || focusedTaskIndex < 0) {
+    if (!timeline || !focusedDateKey || focusedTaskId) {
       return;
     }
-    if (focusedTaskIndex >= visibleCount) {
-      return;
-    }
-    if (scope === "all" && focusedTaskItem?.dayDiff != null && focusedTaskItem.dayDiff < 0 && !earlierExpanded) {
-      return;
-    }
+    const sectionKey = findSectionKeyForDayKey(
+      timelineSections,
+      focusedDateKey,
+      userTZ?.timeZone,
+    );
+    if (!sectionKey) return;
 
     const frame = window.requestAnimationFrame(() => {
       document
-        .getElementById(`todo-focus-${encodeURIComponent(focusedTaskId)}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [
-    earlierExpanded,
-    focusedTaskId,
-    focusedTaskIndex,
-    focusedTaskItem?.dayDiff,
-    scope,
-    visibleCount,
-  ]);
-
-  useEffect(() => {
-    if (scope !== "scheduled" || !focusedDateKey || focusedTaskId) {
-      return;
-    }
-    if (focusedDateIndex >= visibleCount && focusedDateIndex >= 0) {
-      return;
-    }
-
-    const frame = window.requestAnimationFrame(() => {
-      document
-        .getElementById(getTodoDateSectionId(focusedDateKey))
+        .getElementById(getTodoDateSectionId(sectionKey))
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [focusedDateIndex, focusedDateKey, focusedTaskId, scope, visibleCount]);
+  }, [focusedDateKey, focusedTaskId, timeline, timelineSections, userTZ?.timeZone]);
 
   return (
     <TodoMutationProvider
@@ -610,32 +437,13 @@ const AllTasksTimelineContainer = ({
 
         {todoLoading && <TodoListLoading heading={pageHeading} />}
 
-        {!todoLoading && !searchQuery.trim() && !hasScopedTasks && (
+        {showEmptyCard && (
           <div className="mt-4 rounded-2xl border border-border/65 bg-card/95 px-4 py-6 text-sm text-muted-foreground">
             {emptyStateMessage}
           </div>
         )}
 
-        {showScheduledFocusEmptyState && focusedDateKey && focusedDateLabel && (
-          <section
-            id={getTodoDateSectionId(focusedDateKey)}
-            className="mb-8 scroll-mt-24 lg:mb-10"
-          >
-            <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
-              <h3 className="select-none text-lg font-semibold tracking-tight text-accent">
-                {focusedDateLabel}
-              </h3>
-              <LineSeparator className="flex-1 border-border/70" />
-            </div>
-            <div className="rounded-2xl border border-accent/20 bg-accent/10 px-4 py-5 text-sm text-muted-foreground">
-              {isDeletedFocus
-                ? "The task is gone. No tasks remain scheduled for this date."
-                : "No tasks are scheduled for this date."}
-            </div>
-          </section>
-        )}
-
-        {!todoLoading && searchQuery.trim() && scopeFilteredItems.length === 0 && (
+        {!todoLoading && isSearching && scopeFilteredItems.length === 0 && (
           <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
             <div className="relative mb-6">
               <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted/50">
@@ -658,6 +466,17 @@ const AllTasksTimelineContainer = ({
               </button>
             </p>
           </div>
+        )}
+
+        {showTimeline && (
+          <TimelineSections
+            sections={timelineSections}
+            timeZone={userTZ?.timeZone}
+            focusedTaskId={focusedTaskId}
+            focusedDateKey={focusedDateKey}
+            earlierExpanded={earlierExpanded}
+            onToggleEarlier={() => setEarlierExpanded((value) => !value)}
+          />
         )}
 
         {scope === "overdue" &&
@@ -716,67 +535,7 @@ const AllTasksTimelineContainer = ({
             </section>
           ))}
 
-        {scope === "all" && earlierSections.length > 0 && (
-          <section className="mb-8 lg:mb-10">
-            <button
-              type="button"
-              onClick={() => setEarlierExpanded((v) => !v)}
-              className="mb-3 mt-6 flex w-full items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10"
-            >
-              {earlierExpanded ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              )}
-              <h3 className="select-none text-lg font-semibold tracking-tight">
-                Earlier
-              </h3>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                {earlierTaskCount}
-              </span>
-              <LineSeparator className="flex-1 border-border/70" />
-            </button>
-
-            {earlierExpanded &&
-              earlierSections.map((section) => (
-                  <div
-                    id={getTodoDateSectionId(section.key)}
-                    key={section.key}
-                    className="scroll-mt-24"
-                  >
-                  <div className="mb-3 flex items-center gap-2 lg:mb-4">
-                    <h4
-                      className={cn(
-                        "select-none text-base font-medium tracking-tight text-muted-foreground",
-                        focusedDateKey === section.key && "text-accent",
-                      )}
-                    >
-                      {section.label}
-                    </h4>
-                    <LineSeparator className="flex-1 border-border/70" />
-                  </div>
-                  <div className="mb-4">
-                    <TodoGroup
-                      todos={section.todos}
-                      overdue={true}
-                      highlightedTodoId={focusedTaskId}
-                    />
-                  </div>
-                </div>
-              ))}
-          </section>
-        )}
-
-        {scope === "scheduled" && (
-          <ScheduledTimelineSections
-            sections={regularSections}
-            focusedTaskId={focusedTaskId}
-            focusedDateKey={focusedDateKey}
-            timeZone={userTZ?.timeZone}
-          />
-        )}
-
-        {scope !== "overdue" && scope !== "scheduled" && regularSections.map((section) => (
+        {scope === "today" && regularSections.map((section) => (
           <section
             id={getTodoDateSectionId(section.key)}
             key={section.key}
@@ -785,7 +544,7 @@ const AllTasksTimelineContainer = ({
               section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
             )}
           >
-            {(section.dayDiff !== 0 || scope === "all") && (
+            {section.dayDiff !== 0 && (
               <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
                 <h3
                   className={cn(
