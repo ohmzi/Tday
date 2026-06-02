@@ -19,6 +19,7 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.userFacingMessage
+import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -295,11 +296,7 @@ class HomeViewModel @Inject constructor(
         val normalizedTitle = payload.title.trim()
         if (normalizedTitle.isBlank()) return
 
-        val normalizedPriority = when (payload.priority.trim()) {
-            "Medium" -> "Medium"
-            "High" -> "High"
-            else -> "Low"
-        }
+        val normalizedPriority = canonicalPriorityValue(payload.priority)
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
         val normalizedPayload = CreateTaskPayload(

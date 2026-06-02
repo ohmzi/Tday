@@ -156,13 +156,6 @@ final class CompletedRepository {
     }
 
     private func normalizedPriority(_ priority: String) -> String {
-        switch priority.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "high":
-            return "High"
-        case "medium":
-            return "Medium"
-        default:
-            return "Low"
-        }
+        TaskPriorityDisplay.canonicalValue(priority)
     }
 }
