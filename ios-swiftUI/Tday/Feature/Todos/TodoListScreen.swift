@@ -790,10 +790,7 @@ struct TodoListScreen: View {
     }
 
     var body: some View {
-        modeContent
-        .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
-            await viewModel.refresh()
-        }
+        refreshableModeContent
         .coordinateSpace(name: todoTimelineDragCoordinateSpace)
         .background(colors.background)
         .onPreferenceChange(TodoDropTargetFramePreferenceKey.self) { frames in
@@ -957,6 +954,26 @@ struct TodoListScreen: View {
             }
         } message: {
             Text("Choose whether to move only this task occurrence or the entire repeating series.")
+        }
+    }
+
+    @ViewBuilder
+    private var refreshableModeContent: some View {
+        if isRootFloaterScreen {
+            PullToRefreshContainer(
+                isRefreshing: viewModel.isLoading,
+                isEnabled: pullRefreshEnabled,
+                action: {
+                    await viewModel.refresh()
+                }
+            ) {
+                modeContent
+            }
+        } else {
+            modeContent
+                .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
+                    await viewModel.refresh()
+                }
         }
     }
 
@@ -1732,6 +1749,7 @@ struct TodoListScreen: View {
                 .contentMargins(.top, 0, for: .scrollContent)
                 .listRowSpacing(0)
                 .listSectionSpacing(0)
+                .scrollBounceBehavior(pullRefreshEnabled ? .always : .basedOnSize, axes: .vertical)
                 .environment(\.defaultMinListRowHeight, 1)
                 .disableVerticalScrollBounce(!pullRefreshEnabled)
                 .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)

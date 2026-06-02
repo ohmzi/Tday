@@ -5,6 +5,7 @@ import Observation
 @Observable
 final class HomeViewModel {
     private let container: AppContainer
+    private static let recentSuccessfulSyncSkipWindowMs: Int64 = 8_000
 
     var isLoading = true
     var summary = DashboardSummary(todayCount: 0, scheduledCount: 0, allCount: 0, priorityCount: 0, floaterCount: 0, completedCount: 0, lists: [])
@@ -42,6 +43,14 @@ final class HomeViewModel {
                 isLoading = false
             }
         }
+
+        let loadCachedState: @MainActor () -> OfflineSyncState = container.cacheManager.loadOfflineState
+        let cachedState = loadCachedState()
+        if shouldUseRecentSuccessfulSync(cachedState) {
+            refreshFromCache(snapshot: container.todoRepository.makeDashboardCacheSnapshot(from: cachedState))
+            return
+        }
+
         let result = await container.syncAndRefresh(
             force: true,
             replayPendingMutations: true,
@@ -54,12 +63,23 @@ final class HomeViewModel {
     }
 
     func refreshFromCache() {
-        summary = container.todoRepository.fetchDashboardSummarySnapshot()
-        searchableTodos = container.todoRepository.fetchTodosSnapshot(mode: .all)
-        todayTodos = container.todoRepository.fetchTodosSnapshot(mode: .today)
-        aiSummaryEnabled = container.settingsRepository.isAiSummaryEnabledSnapshot()
+        refreshFromCache(snapshot: container.todoRepository.fetchDashboardCacheSnapshot())
+    }
+
+    private func refreshFromCache(snapshot: TodoDashboardCacheSnapshot) {
+        summary = snapshot.summary
+        searchableTodos = snapshot.searchableTodos
+        todayTodos = snapshot.todayTodos
+        aiSummaryEnabled = snapshot.aiSummaryEnabled
         isLoading = activeLoadingRefreshes > 0
         errorMessage = nil
+    }
+
+    private func shouldUseRecentSuccessfulSync(_ state: OfflineSyncState) -> Bool {
+        guard state.pendingMutations.isEmpty, state.lastSuccessfulSyncEpochMs > 0 else {
+            return false
+        }
+        return Date().epochMilliseconds - state.lastSuccessfulSyncEpochMs < Self.recentSuccessfulSyncSkipWindowMs
     }
 
     func summarizeToday() async {
