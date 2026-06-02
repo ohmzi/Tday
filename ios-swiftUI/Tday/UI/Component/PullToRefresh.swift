@@ -258,15 +258,19 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {
         context.coordinator.onChange = onChange
-        DispatchQueue.main.async {
-            context.coordinator.attach(to: uiView)
-        }
+        context.coordinator.scheduleAttach(to: uiView)
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.detach()
     }
 
     final class Coordinator: NSObject {
         var onChange: (CGFloat) -> Void
         private weak var observedScrollView: UIScrollView?
+        private weak var pendingAttachView: UIView?
         private var observation: NSKeyValueObservation?
+        private var isAttachScheduled = false
         private var overscrollDistance: CGFloat = 0
         private var gesturePullDistance: CGFloat = 0
         private var pullStartTranslationY: CGFloat?
@@ -276,7 +280,31 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
         }
 
         deinit {
-            observedScrollView?.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
+            detach()
+        }
+
+        func scheduleAttach(to view: UIView) {
+            if let scrollView = view.nearestScrollView(), observedScrollView === scrollView {
+                hideNativeRefreshControl(in: scrollView)
+                return
+            }
+
+            pendingAttachView = view
+            guard !isAttachScheduled else {
+                return
+            }
+
+            isAttachScheduled = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isAttachScheduled = false
+                guard let pendingAttachView = self.pendingAttachView else {
+                    return
+                }
+                self.attach(to: pendingAttachView)
+            }
         }
 
         func attach(to view: UIView) {
@@ -299,6 +327,17 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
                 self?.overscrollDistance = max(-normalizedOffset, 0)
                 self?.emitPullDistance()
             }
+        }
+
+        func detach() {
+            observedScrollView?.panGestureRecognizer.removeTarget(self, action: #selector(handlePan(_:)))
+            observedScrollView = nil
+            pendingAttachView = nil
+            observation = nil
+            isAttachScheduled = false
+            overscrollDistance = 0
+            gesturePullDistance = 0
+            pullStartTranslationY = nil
         }
 
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {

@@ -13,6 +13,11 @@ private enum CreateTaskSheetMetrics {
     static let scheduledRowMinHeight: CGFloat = 64
 }
 
+private enum CreateTaskSheetInputField: Hashable {
+    case title
+    case notes
+}
+
 struct CreateTaskSheet: View {
     let lists: [ListSummary]
     let titleText: String
@@ -20,6 +25,7 @@ struct CreateTaskSheet: View {
     let initialPayload: CreateTaskPayload?
     let defaultScheduled: Bool
     let showScheduleControls: Bool
+    let autofocusTitle: Bool
     let onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?
     let onDismiss: () -> Void
     let onSubmit: (CreateTaskPayload) async -> Void
@@ -37,6 +43,7 @@ struct CreateTaskSheet: View {
     @State private var isSubmitting = false
     @State private var parserTask: Task<Void, Never>?
     @State private var activeSelector: CreateTaskSheetSelector?
+    @FocusState private var focusedInputField: CreateTaskSheetInputField?
 
     private let priorityOptions = ["Low", "Medium", "High"]
     private let repeatOptions: [(label: String, value: String?)] = [
@@ -84,6 +91,7 @@ struct CreateTaskSheet: View {
         initialPayload: CreateTaskPayload?,
         defaultScheduled: Bool = true,
         showScheduleControls: Bool = true,
+        autofocusTitle: Bool = false,
         onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?,
         onDismiss: @escaping () -> Void,
         onSubmit: @escaping (CreateTaskPayload) async -> Void
@@ -94,6 +102,7 @@ struct CreateTaskSheet: View {
         self.initialPayload = initialPayload
         self.defaultScheduled = defaultScheduled
         self.showScheduleControls = showScheduleControls
+        self.autofocusTitle = autofocusTitle
         self.onParseTaskTitleNlp = onParseTaskTitleNlp
         self.onDismiss = onDismiss
         self.onSubmit = onSubmit
@@ -112,6 +121,7 @@ struct CreateTaskSheet: View {
             submitText: "Save",
             initialPayload: initialPayload,
             showScheduleControls: true,
+            autofocusTitle: false,
             onParseTaskTitleNlp: onParseTaskTitleNlp,
             onDismiss: {},
             onSubmit: { payload in
@@ -158,9 +168,15 @@ struct CreateTaskSheet: View {
         }
         .task {
             hydrateFromInitialPayload()
+            focusTitleIfNeeded()
         }
         .onChange(of: title) { _, _ in
             scheduleNlpParse()
+        }
+        .onChange(of: activeSelector) { _, selector in
+            if selector != nil {
+                focusedInputField = nil
+            }
         }
         .onChange(of: scheduleEnabled) { _, isEnabled in
             if !isEnabled {
@@ -176,7 +192,8 @@ struct CreateTaskSheet: View {
         VStack(spacing: CreateTaskSheetMetrics.formSpacing) {
             CreateTaskSheetTextCard(
                 title: $title,
-                notes: $notes
+                notes: $notes,
+                focusedInputField: $focusedInputField
             )
 
             if showScheduleControls {
@@ -254,6 +271,21 @@ struct CreateTaskSheet: View {
         } else {
             scheduleEnabled = false
             repeatRule = nil
+        }
+    }
+
+    private func focusTitleIfNeeded() {
+        guard autofocusTitle else {
+            return
+        }
+
+        Task { @MainActor in
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(80))
+            guard autofocusTitle, activeSelector == nil else {
+                return
+            }
+            focusedInputField = .title
         }
     }
 
@@ -432,13 +464,16 @@ private enum CreateTaskSheetSelector: String, Identifiable {
 private struct CreateTaskSheetTextCard: View {
     @Binding var title: String
     @Binding var notes: String
+    var focusedInputField: FocusState<CreateTaskSheetInputField?>.Binding
 
     var body: some View {
         TdaySheetCard {
             CreateTaskSheetTextField(
                 placeholder: "Title",
                 text: $title,
-                lineLimit: 1 ... 1
+                lineLimit: 1 ... 1,
+                field: .title,
+                focusedInputField: focusedInputField
             )
 
             TdaySheetDivider()
@@ -446,7 +481,9 @@ private struct CreateTaskSheetTextCard: View {
             CreateTaskSheetTextField(
                 placeholder: "Notes",
                 text: $notes,
-                lineLimit: 1 ... 1
+                lineLimit: 1 ... 1,
+                field: .notes,
+                focusedInputField: focusedInputField
             )
         }
     }
@@ -456,6 +493,8 @@ private struct CreateTaskSheetTextField: View {
     let placeholder: String
     @Binding var text: String
     let lineLimit: ClosedRange<Int>
+    let field: CreateTaskSheetInputField
+    var focusedInputField: FocusState<CreateTaskSheetInputField?>.Binding
 
     @Environment(\.tdayColors) private var colors
 
@@ -478,8 +517,10 @@ private struct CreateTaskSheetTextField: View {
                 .foregroundStyle(colors.onSurfaceVariant.opacity(0.65))
         )
         .lineLimit(lineLimit)
+        .focused(focusedInputField, equals: field)
         .submitLabel(.done)
         .onSubmit {
+            focusedInputField.wrappedValue = nil
             UIApplication.shared.sendAction(
                 #selector(UIResponder.resignFirstResponder),
                 to: nil,
@@ -494,6 +535,10 @@ private struct CreateTaskSheetTextField: View {
         .padding(.horizontal, 18)
         .padding(.vertical, CreateTaskSheetMetrics.textFieldVerticalPadding)
         .frame(minHeight: CreateTaskSheetMetrics.textFieldMinHeight)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            focusedInputField.wrappedValue = field
+        }
     }
 }
 
