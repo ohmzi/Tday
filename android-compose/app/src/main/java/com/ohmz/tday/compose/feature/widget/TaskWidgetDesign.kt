@@ -37,7 +37,8 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.ohmz.tday.compose.R
-import java.util.Locale
+import com.ohmz.tday.compose.ui.priority.isImportantPriority
+import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 
 internal enum class TaskWidgetContentState {
     SETUP,
@@ -498,9 +499,9 @@ private fun PriorityDot(
 }
 
 internal fun taskWidgetPriorityDotResource(priority: String): Int {
-    return when (priority.trim().lowercase(Locale.getDefault())) {
-        "high", "urgent", "important" -> R.drawable.widget_priority_dot_high
-        "medium" -> R.drawable.widget_priority_dot_medium
+    return when {
+        isUrgentPriority(priority) -> R.drawable.widget_priority_dot_high
+        isImportantPriority(priority) -> R.drawable.widget_priority_dot_medium
         else -> R.drawable.widget_priority_dot_low
     }
 }

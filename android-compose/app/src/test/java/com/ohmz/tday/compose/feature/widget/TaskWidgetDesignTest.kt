@@ -35,7 +35,7 @@ class TaskWidgetDesignTest {
         assertEquals(R.drawable.widget_priority_dot_high, taskWidgetPriorityDotResource("High"))
         assertEquals(R.drawable.widget_priority_dot_high, taskWidgetPriorityDotResource("urgent"))
         assertEquals(
-            R.drawable.widget_priority_dot_high,
+            R.drawable.widget_priority_dot_medium,
             taskWidgetPriorityDotResource(" Important ")
         )
         assertEquals(R.drawable.widget_priority_dot_medium, taskWidgetPriorityDotResource("Medium"))

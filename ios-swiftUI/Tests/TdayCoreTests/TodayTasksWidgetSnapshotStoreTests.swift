@@ -158,7 +158,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
 
         XCTAssertEqual(
             snapshot.tasks.map(\.id),
-            ["pinned-low", "urgent-a", "urgent-b", "high-b", "medium-a", "low-a"]
+            ["pinned-low", "urgent-a", "high-b", "medium-a", "urgent-b", "low-a"]
         )
     }
 

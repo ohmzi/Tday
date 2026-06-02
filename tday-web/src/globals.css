@@ -166,6 +166,103 @@
     color: hsl(var(--accent-foreground));
   }
 
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]) {
+    --press-ripple-color: hsl(var(--foreground) / 0.16);
+    --press-shadow: 0 6px 18px -16px hsl(var(--shadow) / 0.52);
+    -webkit-tap-highlight-color: transparent;
+    isolation: isolate;
+    overflow: hidden;
+    position: relative;
+    transition-duration: 180ms;
+    transition-property: background-color, border-color, box-shadow, color, filter, opacity, scale, translate;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press])::after {
+    background: radial-gradient(circle at center, var(--press-ripple-color) 0%, transparent 64%);
+    border-radius: inherit;
+    content: "";
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    scale: 0.34;
+    transition-duration: 340ms;
+    transition-property: opacity, scale;
+    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 0;
+  }
+
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]):active {
+    box-shadow: var(--press-shadow) !important;
+    filter: saturate(0.98);
+    scale: 0.985;
+    translate: 0 1.5px;
+  }
+
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]):active::after {
+    opacity: 1;
+    scale: 1.9;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(
+        button,
+        [role="button"],
+        [class*="cursor-pointer"],
+        a[href][class*="rounded"],
+        a[href][class*="shadow"],
+        a[href][class*="bg-"],
+        [data-pressable="true"]
+      ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]) {
+      transition-duration: 0ms;
+    }
+
+    :where(
+        button,
+        [role="button"],
+        [class*="cursor-pointer"],
+        a[href][class*="rounded"],
+        a[href][class*="shadow"],
+        a[href][class*="bg-"],
+        [data-pressable="true"]
+      ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press])::after {
+      display: none;
+    }
+  }
+
   @keyframes scroll-left {
     from {
       transform: translateX(0);
