@@ -4,7 +4,9 @@ import android.content.Context
 import app.cash.turbine.test
 import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.AppDataMode
+import com.ohmz.tday.compose.core.data.MutationKind
 import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.core.data.PendingMutationRecord
 import com.ohmz.tday.compose.core.data.ThemePreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
@@ -32,6 +34,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -67,6 +70,7 @@ class AppViewModelTest {
     private val realtimeEvents = MutableSharedFlow<RealtimeEvent>()
     private val offlineSyncFailures = MutableSharedFlow<Unit>()
     private val offlineSyncSuccesses = MutableSharedFlow<Unit>()
+    private val syncMetadataVersion = MutableStateFlow(0L)
     private val restoredUser = SessionUser(
         id = "user-1",
         name = "Taylor",
@@ -85,6 +89,7 @@ class AppViewModelTest {
         every { serverConfigRepository.hasServerConfigured() } returns true
         every { serverConfigRepository.getServerUrl() } returns "https://tday.example.com"
         every { cacheManager.loadOfflineState() } returns OfflineSyncState()
+        every { cacheManager.syncMetadataVersion } returns syncMetadataVersion
         every { syncManager.offlineSyncFailures } returns offlineSyncFailures
         every { syncManager.offlineSyncSuccesses } returns offlineSyncSuccesses
         every { syncManager.hasPendingMutations() } returns false
@@ -126,11 +131,108 @@ class AppViewModelTest {
         assertFalse(viewModel.uiState.value.requiresServerSetup)
         assertFalse(viewModel.uiState.value.requiresLogin)
         assertEquals(0, viewModel.uiState.value.pendingMutationCount)
+        assertTrue(viewModel.uiState.value.syncStatus.isLocalMode)
+        assertEquals(0L, viewModel.uiState.value.syncStatus.lastSuccessfulSyncEpochMs)
+        assertEquals(0L, viewModel.uiState.value.syncStatus.lastSyncAttemptEpochMs)
 
         coVerify(exactly = 0) { authRepository.restoreSessionForBootstrap() }
         coVerify(exactly = 0) { appVersionManager.refreshServerCompatibility() }
         coVerify(exactly = 0) { syncManager.syncCachedData(any(), any(), any(), any()) }
         verify(exactly = 0) { realtimeClient.connect() }
+    }
+
+    @Test
+    fun `server bootstrap exposes sync metadata from cache`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        val cachedState = OfflineSyncState(
+            lastSuccessfulSyncEpochMs = 1_000L,
+            lastSyncAttemptEpochMs = 2_000L,
+            pendingMutations = listOf(pendingMutation("mutation-1")),
+        )
+        every { cacheManager.loadOfflineState() } returns cachedState
+        coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        val syncStatus = viewModel.uiState.value.syncStatus
+        assertFalse(syncStatus.isLocalMode)
+        assertEquals(1, syncStatus.pendingMutationCount)
+        assertEquals(1_000L, syncStatus.lastSuccessfulSyncEpochMs)
+        assertEquals(2_000L, syncStatus.lastSyncAttemptEpochMs)
+    }
+
+    @Test
+    fun `manual sync sets syncing state and ignores duplicate taps`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        var cachedState = OfflineSyncState(
+            lastSuccessfulSyncEpochMs = 1_000L,
+            lastSyncAttemptEpochMs = 1_000L,
+        )
+        every { cacheManager.loadOfflineState() } answers { cachedState }
+        coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } coAnswers {
+            kotlinx.coroutines.delay(100)
+            cachedState = OfflineSyncState(
+                lastSuccessfulSyncEpochMs = 3_000L,
+                lastSyncAttemptEpochMs = 3_000L,
+            )
+            Result.success(Unit)
+        }
+
+        val viewModel = makeViewModel()
+        runCurrent()
+
+        viewModel.syncNow()
+        runCurrent()
+        assertTrue(viewModel.uiState.value.isManualSyncing)
+
+        viewModel.syncNow()
+        runCurrent()
+        coVerify(exactly = 1) {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        }
+
+        advanceTimeBy(100)
+        runCurrent()
+
+        assertFalse(viewModel.uiState.value.isManualSyncing)
+        assertEquals(3_000L, viewModel.uiState.value.syncStatus.lastSuccessfulSyncEpochMs)
+        assertEquals(3_000L, viewModel.uiState.value.syncStatus.lastSyncAttemptEpochMs)
     }
 
     @Test
@@ -241,6 +343,14 @@ class AppViewModelTest {
         now += 1
         assertTrue(cooldown.shouldShowNotice())
     }
+
+    private fun pendingMutation(id: String): PendingMutationRecord =
+        PendingMutationRecord(
+            mutationId = id,
+            kind = MutationKind.CREATE_TODO,
+            targetId = "local-todo-1",
+            timestampEpochMs = 1L,
+        )
 
     private fun makeViewModel(): AppViewModel =
         AppViewModel(

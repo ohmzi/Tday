@@ -443,8 +443,8 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 ## Caching Strategy
 
 - **Web**: No application-level persistence cache. The shared API client uses browser `fetch` with `cache: "no-store"` for private API requests. TanStack React Query provides in-memory client-side cache with 60-second stale time.
-- **Android**: Room-backed local cache for todos, floaters, lists, completed history, pending mutations, and sync metadata. Encrypted preferences still protect credentials, cookies, server config, trust data, theme/reminder preferences, and legacy cache migration input. Cache is the source of truth for screens; network sync updates it periodically, on foreground reconnect, realtime events, and user refresh in Server Mode.
-- **iOS**: SwiftData-backed local cache with mirrored `OfflineSyncState` records. Keychain-backed stores protect server config, cookies, credentials, mode state, theme, and reminders. Cache changes notify ViewModels and widget snapshot storage, which writes the Today widget payload into the App Group defaults suite.
+- **Android**: Room-backed local cache for todos, floaters, lists, completed history, pending mutations, and sync metadata. Encrypted preferences still protect credentials, cookies, server config, trust data, theme/reminder preferences, and legacy cache migration input. Cache is the source of truth for screens; network sync updates it periodically, on foreground reconnect, realtime events, and user refresh in Server Mode. `OfflineCacheManager` separates task-data change signals from sync-metadata change signals so Settings can refresh pending counts and sync timestamps without forcing list reloads.
+- **iOS**: SwiftData-backed local cache with mirrored `OfflineSyncState` records. Keychain-backed stores protect server config, cookies, credentials, mode state, theme, and reminders. Cache changes notify ViewModels, Settings sync status, and widget snapshot storage, which writes the Today widget payload into the App Group defaults suite.
 
 ## Background Jobs
 
