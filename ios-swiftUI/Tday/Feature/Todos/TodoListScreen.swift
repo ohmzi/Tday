@@ -3128,7 +3128,7 @@ private struct ListDeleteConfirmationOverlay: View {
 
 private enum ListSettingsSheetMetrics {
     static let sheetHeight: CGFloat = 760
-    static let maximumHeightFraction: CGFloat = 0.94
+    static let maximumHeightFraction: CGFloat = TdaySheetMetrics.maximumScreenHeightFraction
     static let bottomContentPadding: CGFloat = 24
 }
 
