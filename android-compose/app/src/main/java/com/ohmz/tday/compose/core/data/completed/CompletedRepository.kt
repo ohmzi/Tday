@@ -15,6 +15,7 @@ import com.ohmz.tday.compose.core.model.DeleteCompletedTodoRequest
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.UpdateCompletedTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
+import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -99,11 +100,7 @@ class CompletedRepository @Inject constructor(
         val instanceDateEpochMs = item.instanceDate?.toEpochMilli()
         val normalizedTitle = payload.title.trim()
         if (normalizedTitle.isBlank()) return
-        val normalizedPriority = when (payload.priority.trim()) {
-            "Medium" -> "Medium"
-            "High" -> "High"
-            else -> "Low"
-        }
+        val normalizedPriority = canonicalPriorityValue(payload.priority)
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
         val timestampMs = System.currentTimeMillis()
         val resolvedCompletedId = resolveCompletedServerIdForMutation(

@@ -63,6 +63,54 @@ struct CreateTaskPayload: Equatable, Hashable, Codable {
     let listId: String?
 }
 
+enum TaskPriorityDisplay {
+    static let normalValue = "Low"
+    static let importantValue = "Medium"
+    static let urgentValue = "High"
+
+    static let normalLabel = "Normal"
+    static let importantLabel = "Important"
+    static let urgentLabel = "Urgent"
+
+    static let options: [(label: String, value: String)] = [
+        (normalLabel, normalValue),
+        (importantLabel, importantValue),
+        (urgentLabel, urgentValue),
+    ]
+
+    static func canonicalValue(_ priority: String?) -> String {
+        switch priority?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "normal", "low":
+            return normalValue
+        case "important", "medium":
+            return importantValue
+        case "urgent", "high":
+            return urgentValue
+        default:
+            return normalValue
+        }
+    }
+
+    static func label(for priority: String?) -> String {
+        switch canonicalValue(priority) {
+        case importantValue:
+            return importantLabel
+        case urgentValue:
+            return urgentLabel
+        default:
+            return normalLabel
+        }
+    }
+
+    static func isUrgent(_ priority: String?) -> Bool {
+        canonicalValue(priority) == urgentValue
+    }
+
+    static func isImportant(_ priority: String?) -> Bool {
+        canonicalValue(priority) == importantValue
+    }
+}
+
 struct TodoItem: Identifiable, Equatable, Hashable, Codable {
     let id: String
     let canonicalId: String

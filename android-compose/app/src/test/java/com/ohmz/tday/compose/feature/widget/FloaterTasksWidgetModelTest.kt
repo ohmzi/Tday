@@ -44,7 +44,7 @@ class FloaterTasksWidgetModelTest {
         )
 
         assertEquals(
-            listOf("pinned-low", "urgent-a", "urgent-b", "high-b", "medium-a", "low-a"),
+            listOf("pinned-low", "urgent-a", "high-b", "medium-a", "urgent-b", "low-a"),
             model.tasks.map { it.id },
         )
     }

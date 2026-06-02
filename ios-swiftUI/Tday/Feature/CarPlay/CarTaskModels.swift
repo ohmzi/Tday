@@ -48,7 +48,7 @@ enum CarTaskMode: String, CaseIterable, Codable, Hashable {
         CreateTaskPayload(
             title: title,
             description: nil,
-            priority: "Low",
+            priority: TaskPriorityDisplay.normalValue,
             due: self == .today ? now.addingTimeInterval(60 * 60) : nil,
             rrule: nil,
             listId: nil
@@ -100,7 +100,7 @@ func buildCarTaskSurfaceState(
 }
 
 private func carTaskDetailText(todo: TodoItem, dueLabel: String?) -> String {
-    [todo.priority, dueLabel]
+    [TaskPriorityDisplay.label(for: todo.priority), dueLabel]
         .compactMap { value in
             let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             return trimmed.isEmpty ? nil : trimmed

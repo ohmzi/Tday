@@ -43,6 +43,7 @@ import com.ohmz.tday.compose.core.model.UpdateTodoRequest
 import com.ohmz.tday.compose.core.network.TdayApiService
 import com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetRefresher
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetRefresher
+import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -116,11 +117,7 @@ class TodoRepository @Inject constructor(
         val trimmedTitle = payload.title.trim()
         if (trimmedTitle.isBlank()) return
 
-        val normalizedPriority = when (payload.priority.trim()) {
-            "Medium" -> "Medium"
-            "High" -> "High"
-            else -> "Low"
-        }
+        val normalizedPriority = canonicalPriorityValue(payload.priority)
         val normalizedDue = payload.due ?: ZonedDateTime.now(zoneId).plusHours(1).toInstant()
         val normalizedRrule = payload.rrule?.takeIf { it.isNotBlank() }
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
@@ -214,11 +211,7 @@ class TodoRepository @Inject constructor(
         val trimmedTitle = payload.title.trim()
         if (trimmedTitle.isBlank()) return
 
-        val normalizedPriority = when (payload.priority.trim()) {
-            "Medium" -> "Medium"
-            "High" -> "High"
-            else -> "Low"
-        }
+        val normalizedPriority = canonicalPriorityValue(payload.priority)
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
         val localFloaterId = "$LOCAL_FLOATER_PREFIX${UUID.randomUUID()}"
@@ -305,11 +298,7 @@ class TodoRepository @Inject constructor(
         val trimmedTitle = payload.title.trim()
         if (trimmedTitle.isBlank()) return
 
-        val normalizedPriority = when (payload.priority.trim()) {
-            "Medium" -> "Medium"
-            "High" -> "High"
-            else -> "Low"
-        }
+        val normalizedPriority = canonicalPriorityValue(payload.priority)
         val normalizedDue =
             payload.due ?: todo.due ?: ZonedDateTime.now(zoneId).plusHours(1).toInstant()
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
@@ -475,11 +464,7 @@ class TodoRepository @Inject constructor(
         val trimmedTitle = payload.title.trim()
         if (trimmedTitle.isBlank()) return
 
-        val normalizedPriority = when (payload.priority.trim()) {
-            "Medium" -> "Medium"
-            "High" -> "High"
-            else -> "Low"
-        }
+        val normalizedPriority = canonicalPriorityValue(payload.priority)
         val normalizedDescription = payload.description?.trim()?.ifBlank { null }
         val normalizedListId = payload.listId?.takeIf { it.isNotBlank() }
         val timestampMs = System.currentTimeMillis()

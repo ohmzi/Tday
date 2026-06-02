@@ -48,7 +48,7 @@ final class CarTaskModelsTests: XCTestCase {
         XCTAssertEqual(state.title, "T'Day")
         XCTAssertEqual(state.items.count, 1)
         XCTAssertEqual(state.items.first?.title, "Buy milk")
-        XCTAssertEqual(state.items.first?.detailText, "Low - 9:00 AM")
+        XCTAssertEqual(state.items.first?.detailText, "Normal - 9:00 AM")
     }
 
     func testEmptyStateWhenRowsAreCompleted() {

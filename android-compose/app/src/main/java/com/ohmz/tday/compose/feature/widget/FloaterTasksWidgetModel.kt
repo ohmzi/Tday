@@ -2,6 +2,8 @@ package com.ohmz.tday.compose.feature.widget
 
 import com.ohmz.tday.compose.core.data.CachedFloaterRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
+import com.ohmz.tday.compose.ui.priority.isImportantPriority
+import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import java.util.Locale
 
 enum class FloaterTasksWidgetStatus {
@@ -55,9 +57,9 @@ private val floaterWidgetComparator = compareByDescending<CachedFloaterRecord> {
     .thenBy { it.id }
 
 private fun floaterWidgetPriorityRank(priority: String): Int {
-    return when (priority.trim().lowercase(Locale.getDefault())) {
-        "high", "urgent", "important" -> 0
-        "medium" -> 1
+    return when {
+        isUrgentPriority(priority) -> 0
+        isImportantPriority(priority) -> 1
         else -> 2
     }
 }

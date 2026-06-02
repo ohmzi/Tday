@@ -167,6 +167,9 @@ import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
+import com.ohmz.tday.compose.ui.priority.isImportantPriority
+import com.ohmz.tday.compose.ui.priority.isUrgentPriority
+import com.ohmz.tday.compose.ui.priority.priorityDisplayLabel
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -1788,7 +1791,7 @@ private fun RootFloaterSearchResultsCard(
                                 fontWeight = FontWeight.ExtraBold,
                             )
                             Text(
-                                text = listMeta?.name ?: todo.priority,
+                                text = listMeta?.name ?: priorityDisplayLabel(todo.priority),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -3098,31 +3101,30 @@ private fun buildFloaterSections(items: List<TodoItem>): List<TodoSection> {
         )
 
     return listOfNotNull(
-        floaterItems.filter { it.priority.equals("High", ignoreCase = true) }
+        floaterItems.filter { isUrgentPriority(it.priority) }
             .takeIf { it.isNotEmpty() }
             ?.let {
                 TodoSection(
-                    key = "floater-high",
-                    title = "High",
+                    key = "floater-urgent",
+                    title = "Urgent",
                     items = it,
                 )
             },
-        floaterItems.filter { it.priority.equals("Medium", ignoreCase = true) }
+        floaterItems.filter { isImportantPriority(it.priority) }
             .takeIf { it.isNotEmpty() }
             ?.let {
                 TodoSection(
-                    key = "floater-medium",
-                    title = "Medium",
+                    key = "floater-important",
+                    title = "Important",
                     items = it,
                 )
             },
         floaterItems.filterNot {
-            it.priority.equals("High", ignoreCase = true) ||
-                    it.priority.equals("Medium", ignoreCase = true)
+            isUrgentPriority(it.priority) || isImportantPriority(it.priority)
         }.takeIf { it.isNotEmpty() }?.let {
             TodoSection(
-                key = "floater-low",
-                title = "Low",
+                key = "floater-normal",
+                title = "Normal",
                 items = it,
             )
         },
@@ -3131,8 +3133,8 @@ private fun buildFloaterSections(items: List<TodoItem>): List<TodoSection> {
 
 private fun floaterPriorityRank(priority: String): Int {
     return when {
-        priority.equals("High", ignoreCase = true) -> 0
-        priority.equals("Medium", ignoreCase = true) -> 1
+        isUrgentPriority(priority) -> 0
+        isImportantPriority(priority) -> 1
         else -> 2
     }
 }
