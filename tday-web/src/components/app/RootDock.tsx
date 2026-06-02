@@ -19,7 +19,7 @@ function activeDockTab(pathname: string): DockTab {
   if (pathname.includes("/app/calendar")) {
     return "calendar";
   }
-  if (pathname.includes("/app/tday")) {
+  if (pathname.includes("/app/tday") || pathname.includes("/app/today")) {
     return "home";
   }
   return "more";

@@ -46,10 +46,6 @@ export function resolveNativeScreenAccent(pathname: string, listColor?: ListColo
     };
   }
 
-  if (pathname.includes("/app/add-task")) {
-    return { color: nativeScreenAccentColors.today, routeId: "today" as const };
-  }
-
   if (pathname.includes("/app/admin")) {
     return { color: nativeScreenAccentColors.settings, routeId: "settings" as const };
   }

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
+import { usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { listColorMap } from "@/lib/listColorMap";
 import {
@@ -55,6 +57,14 @@ async function patchList({
   });
 }
 
+async function deleteList(id: string) {
+  await api.DELETE({
+    url: "/api/list",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ids: [id] }),
+  });
+}
+
 export default function ListFormSheet({
   open,
   onOpenChange,
@@ -66,6 +76,8 @@ export default function ListFormSheet({
 }: ListFormSheetProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const router = useRouter();
+  const pathname = usePathname();
   const { createMutateAsync, createLoading } = useCreateList();
   const isEditing = Boolean(list?.id);
   const [name, setName] = useState(initialName);
@@ -74,6 +86,7 @@ export default function ListFormSheet({
     normalizeListIconKey(list?.iconKey ?? initialIconKey),
   );
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -81,6 +94,7 @@ export default function ListFormSheet({
     setColor(list?.color ?? initialColor);
     setIconKey(normalizeListIconKey(list?.iconKey ?? initialIconKey));
     setError(null);
+    setConfirmingDelete(false);
   }, [initialColor, initialIconKey, initialName, list, open]);
 
   const selectedColor = useMemo(
@@ -109,6 +123,23 @@ export default function ListFormSheet({
     onError: (mutationError) => {
       const message =
         mutationError instanceof Error ? mutationError.message : "Failed to update list";
+      setError(message);
+      toast({ description: message, variant: "destructive" });
+    },
+  });
+
+  const deleteListMutation = useMutation({
+    mutationFn: deleteList,
+    onSuccess: async (_data, deletedId) => {
+      await invalidateListQueries();
+      onOpenChange(false);
+      if (pathname.includes(`/app/list/${deletedId}`)) {
+        router.push("/app/tday");
+      }
+    },
+    onError: (mutationError) => {
+      const message =
+        mutationError instanceof Error ? mutationError.message : "Failed to delete list";
       setError(message);
       toast({ description: message, variant: "destructive" });
     },
@@ -151,6 +182,7 @@ export default function ListFormSheet({
     }
   };
 
+  const deleting = deleteListMutation.isPending;
   const saving = createLoading || updateListMutation.isPending;
 
   return (
@@ -235,18 +267,58 @@ export default function ListFormSheet({
           <p className="text-sm font-extrabold text-destructive">{error}</p>
         ) : null}
 
+        {isEditing && list ? (
+          confirmingDelete ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+              <p className="text-sm font-extrabold text-destructive">
+                Delete &ldquo;{normalizeListName(list.name) || list.name}&rdquo; and all of
+                its tasks? This can&apos;t be undone.
+              </p>
+              <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConfirmingDelete(false)}
+                  disabled={deleting}
+                  className="rounded-2xl border-border/70 bg-card px-5 font-black"
+                >
+                  Keep list
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => deleteListMutation.mutate(list.id)}
+                  disabled={deleting}
+                  className="rounded-2xl bg-destructive px-5 font-black text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? "Deleting..." : "Delete list"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
+            >
+              <Trash2 className="h-4 w-4 stroke-[2.4]" />
+              Delete list
+            </button>
+          )
+        ) : null}
+
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
+            disabled={deleting}
             className="rounded-2xl border-border/70 bg-card px-5 font-black"
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            disabled={saving}
+            disabled={saving || deleting}
             className="rounded-2xl bg-accent px-5 font-black text-accent-foreground hover:bg-accent/90"
           >
             {saving ? "Saving..." : isEditing ? "Save" : "Create"}

@@ -118,7 +118,6 @@ export const MenuProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!mounted) return;
-    if (pathname.includes("add-task")) { setActiveMenu({ name: "AddTask" }); return; }
     if (pathname.includes("/list/")) {
       const parts = pathname.split("/");
       const listID = parts[parts.length - 1];
