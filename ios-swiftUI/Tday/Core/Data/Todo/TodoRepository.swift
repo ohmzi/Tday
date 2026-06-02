@@ -1,5 +1,18 @@
 import Foundation
 
+struct TodoDashboardCacheSnapshot {
+    let summary: DashboardSummary
+    let searchableTodos: [TodoItem]
+    let todayTodos: [TodoItem]
+    let aiSummaryEnabled: Bool
+}
+
+struct TodoListCacheSnapshot {
+    let lists: [ListSummary]
+    let items: [TodoItem]
+    let aiSummaryEnabled: Bool
+}
+
 @MainActor
 final class TodoRepository {
     private let api: TdayAPIService
@@ -26,6 +39,30 @@ final class TodoRepository {
 
     func fetchTodosSnapshot(mode: TodoListMode, listId: String? = nil) -> [TodoItem] {
         buildTodos(from: cacheManager.loadOfflineState(), mode: mode, listId: listId)
+    }
+
+    func fetchDashboardCacheSnapshot() -> TodoDashboardCacheSnapshot {
+        makeDashboardCacheSnapshot(from: cacheManager.loadOfflineState())
+    }
+
+    func makeDashboardCacheSnapshot(from state: OfflineSyncState) -> TodoDashboardCacheSnapshot {
+        buildDashboardCacheSnapshot(from: state)
+    }
+
+    func fetchTodoListCacheSnapshot(mode: TodoListMode, listId: String?) -> TodoListCacheSnapshot {
+        makeTodoListCacheSnapshot(from: cacheManager.loadOfflineState(), mode: mode, listId: listId)
+    }
+
+    func makeTodoListCacheSnapshot(
+        from state: OfflineSyncState,
+        mode: TodoListMode,
+        listId: String?
+    ) -> TodoListCacheSnapshot {
+        TodoListCacheSnapshot(
+            lists: buildListSummaries(from: state, mode: mode),
+            items: buildTodos(from: state, mode: mode, listId: listId),
+            aiSummaryEnabled: syncManager.isLocalMode ? false : state.aiSummaryEnabled
+        )
     }
 
     func createTodo(payload: CreateTaskPayload) async throws {
@@ -905,6 +942,48 @@ final class TodoRepository {
             completedCount: state.completedItems.count,
             lists: lists
         )
+    }
+
+    private func buildDashboardCacheSnapshot(from state: OfflineSyncState) -> TodoDashboardCacheSnapshot {
+        let timelineTodos = state.todos.map(todoFromCache).filter { !$0.completed && $0.due != nil }
+        let floaters = state.floaters.map(floaterFromCache).filter { !$0.completed }
+        let now = Date()
+        let todayTodos = timelineTodos.filter { isTodayTodo($0, now: now) }
+        let scheduledTodos = timelineTodos.filter { isScheduledTodo($0, now: now) }
+        let todoCountsByList = Dictionary(grouping: timelineTodos, by: \.listId).mapValues(\.count)
+        let lists = orderListsLikeWeb(state.lists).map { list in
+            listFromCache(list, todoCountOverride: todoCountsByList[list.id] ?? 0)
+        }
+        let summary = DashboardSummary(
+            todayCount: todayTodos.count,
+            scheduledCount: scheduledTodos.count,
+            allCount: timelineTodos.count,
+            priorityCount: timelineTodos.filter { isPriorityTodo($0.priority) }.count,
+            floaterCount: floaters.count,
+            completedCount: state.completedItems.count,
+            lists: lists
+        )
+
+        return TodoDashboardCacheSnapshot(
+            summary: summary,
+            searchableTodos: timelineTodos.sorted(by: todoSortPrecedes),
+            todayTodos: todayTodos.sorted(by: todoSortPrecedes),
+            aiSummaryEnabled: syncManager.isLocalMode ? false : state.aiSummaryEnabled
+        )
+    }
+
+    private func buildListSummaries(from state: OfflineSyncState, mode: TodoListMode) -> [ListSummary] {
+        if mode == .floater {
+            let floaterCounts = Dictionary(grouping: state.floaters.filter { !$0.completed }, by: { $0.listId })
+                .mapValues(\.count)
+            return orderFloaterListsLikeWeb(state.floaterLists)
+                .map { floaterListFromCache($0, todoCountOverride: floaterCounts[$0.id] ?? 0) }
+        }
+
+        let scheduledCounts = Dictionary(grouping: state.todos.filter { !$0.completed && $0.dueEpochMs != nil }, by: { $0.listId })
+            .mapValues(\.count)
+        return orderListsLikeWeb(state.lists)
+            .map { listFromCache($0, todoCountOverride: scheduledCounts[$0.id] ?? 0) }
     }
 
     private func buildTodos(from state: OfflineSyncState, mode: TodoListMode, listId: String?) -> [TodoItem] {
