@@ -67,7 +67,7 @@ struct OfflineBanner: View {
 
     private var textContent: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text("Offline mode")
+            Text("You're offline")
                 .font(.tdayRounded(.subheadline, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
             Text(subtitle)
@@ -97,7 +97,7 @@ struct OfflineBanner: View {
         if pendingMutationCount > 1 {
             return "\(pendingMutationCount) changes waiting to sync"
         }
-        return "App is in offline mode. Changes will sync when connection returns."
+        return "Cached tasks are available. Changes will sync when connection returns."
     }
 
     private var dragProgress: CGFloat {

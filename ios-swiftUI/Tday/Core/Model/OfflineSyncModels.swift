@@ -20,6 +20,100 @@ struct OfflineSyncState: Equatable, Codable {
     var aiSummaryEnabled: Bool = true
 }
 
+struct MobileSyncStatus: Equatable {
+    var dataMode: AppDataMode = .unset
+    var isOffline = false
+    var isManualSyncing = false
+    var pendingMutationCount = 0
+    var lastSuccessfulSyncEpochMs: Int64 = 0
+    var lastSyncAttemptEpochMs: Int64 = 0
+
+    var isLocalMode: Bool {
+        dataMode == .local
+    }
+
+    var title: String {
+        isLocalMode ? "Local workspace" : "Server sync"
+    }
+
+    var statusText: String {
+        if isLocalMode {
+            return "On this device only"
+        }
+        if isManualSyncing {
+            return "Syncing now"
+        }
+        if isOffline {
+            return "Offline. Changes will sync when connection returns."
+        }
+        if pendingMutationCount > 0 {
+            return "Waiting to sync"
+        }
+        if lastSuccessfulSyncEpochMs > 0 {
+            return "Synced"
+        }
+        return "Ready to sync"
+    }
+
+    var pendingText: String {
+        switch pendingMutationCount {
+        case 0:
+            return "No changes waiting"
+        case 1:
+            return "1 change waiting"
+        default:
+            return "\(pendingMutationCount) changes waiting"
+        }
+    }
+
+    func lastSyncedText(now: Date = Date(), calendar: Calendar = .current) -> String {
+        guard lastSuccessfulSyncEpochMs > 0 else {
+            return "Not yet"
+        }
+        return Self.timestampText(epochMs: lastSuccessfulSyncEpochMs, now: now, calendar: calendar)
+    }
+
+    func lastAttemptText(now: Date = Date(), calendar: Calendar = .current) -> String? {
+        guard !isLocalMode,
+              lastSyncAttemptEpochMs > 0,
+              lastSyncAttemptEpochMs != lastSuccessfulSyncEpochMs else {
+            return nil
+        }
+        return Self.timestampText(epochMs: lastSyncAttemptEpochMs, now: now, calendar: calendar)
+    }
+
+    static func timestampText(epochMs: Int64, now: Date = Date(), calendar: Calendar = .current) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(epochMs) / 1_000)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = calendar.isDate(date, inSameDayAs: now) ? "h:mm a" : "MMM d, h:mm a"
+        return formatter.string(from: date)
+    }
+}
+
+extension MobileSyncStatus {
+    init(
+        dataMode: AppDataMode,
+        isOffline: Bool = false,
+        isManualSyncing: Bool = false,
+        state: OfflineSyncState
+    ) {
+        if dataMode == .local {
+            self.init(dataMode: dataMode, isOffline: false, isManualSyncing: false)
+        } else {
+            self.init(
+                dataMode: dataMode,
+                isOffline: isOffline,
+                isManualSyncing: isManualSyncing,
+                pendingMutationCount: state.pendingMutations.count,
+                lastSuccessfulSyncEpochMs: state.lastSuccessfulSyncEpochMs,
+                lastSyncAttemptEpochMs: state.lastSyncAttemptEpochMs
+            )
+        }
+    }
+}
+
 struct CachedTodoRecord: Identifiable, Equatable, Codable {
     let id: String
     let canonicalId: String
