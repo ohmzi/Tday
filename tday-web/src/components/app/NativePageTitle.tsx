@@ -1,0 +1,42 @@
+import type { ElementType, ReactNode } from "react";
+import LineSeparator from "@/components/ui/lineSeparator";
+import { cn } from "@/lib/utils";
+
+export default function NativePageTitle({
+  title,
+  accentColor,
+  icon: Icon,
+  iconNode,
+  subtitle,
+  withSeparator = true,
+  className,
+}: {
+  title: string;
+  accentColor: string;
+  icon?: ElementType;
+  iconNode?: ReactNode;
+  subtitle?: string;
+  withSeparator?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("mt-4 sm:mt-5", className)}>
+      <div className="flex min-w-0 items-center gap-2.5">
+        {iconNode}
+        {Icon ? (
+          <Icon className="h-7 w-7 shrink-0" style={{ color: accentColor }} strokeWidth={2.4} />
+        ) : null}
+        <h1
+          className="truncate text-[1.85rem] font-black leading-tight tracking-normal sm:text-[2.15rem]"
+          style={{ color: accentColor }}
+        >
+          {title}
+        </h1>
+      </div>
+      {subtitle ? (
+        <p className="mt-1.5 text-sm font-extrabold text-muted-foreground">{subtitle}</p>
+      ) : null}
+      {withSeparator ? <LineSeparator className="mt-4 flex-1 border-border/70" /> : null}
+    </div>
+  );
+}

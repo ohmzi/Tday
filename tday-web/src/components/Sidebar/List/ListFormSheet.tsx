@@ -6,6 +6,12 @@ import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { listColorMap } from "@/lib/listColorMap";
+import {
+  DEFAULT_LIST_ICON_KEY,
+  getListIcon,
+  listIconOptions,
+  normalizeListIconKey,
+} from "@/lib/listIcons";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateList } from "@/components/Sidebar/List/query/create-list";
 import type { ListColor, ListItemMetaType } from "@/types";
@@ -14,6 +20,7 @@ type EditableList = {
   id: string;
   name: string;
   color?: ListColor;
+  iconKey?: string | null;
 };
 
 type ListFormSheetProps = {
@@ -22,6 +29,7 @@ type ListFormSheetProps = {
   list?: EditableList | null;
   initialName?: string;
   initialColor?: ListColor;
+  initialIconKey?: string;
   onSaved?: (list?: ListItemMetaType) => void;
 };
 
@@ -33,15 +41,17 @@ async function patchList({
   id,
   name,
   color,
+  iconKey,
 }: {
   id: string;
   name: string;
   color: ListColor;
+  iconKey: string;
 }) {
   await api.PATCH({
     url: "/api/list",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, name, color }),
+    body: JSON.stringify({ id, name, color, iconKey }),
   });
 }
 
@@ -51,6 +61,7 @@ export default function ListFormSheet({
   list,
   initialName = "",
   initialColor = "BLUE",
+  initialIconKey = DEFAULT_LIST_ICON_KEY,
   onSaved,
 }: ListFormSheetProps) {
   const queryClient = useQueryClient();
@@ -59,19 +70,24 @@ export default function ListFormSheet({
   const isEditing = Boolean(list?.id);
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState<ListColor>(list?.color ?? initialColor);
+  const [iconKey, setIconKey] = useState(() =>
+    normalizeListIconKey(list?.iconKey ?? initialIconKey),
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setName(list?.name ?? initialName);
     setColor(list?.color ?? initialColor);
+    setIconKey(normalizeListIconKey(list?.iconKey ?? initialIconKey));
     setError(null);
-  }, [initialColor, initialName, list, open]);
+  }, [initialColor, initialIconKey, initialName, list, open]);
 
   const selectedColor = useMemo(
     () => listColorMap.find((option) => option.value === color) ?? listColorMap[4],
     [color],
   );
+  const SelectedIcon = getListIcon(iconKey);
 
   const invalidateListQueries = async () => {
     await Promise.all([
@@ -108,20 +124,26 @@ export default function ListFormSheet({
 
     setError(null);
     if (isEditing && list) {
-      if (normalizedName === normalizeListName(list.name) && color === (list.color ?? "BLUE")) {
+      const currentIconKey = normalizeListIconKey(list.iconKey);
+      if (
+        normalizedName === normalizeListName(list.name) &&
+        color === (list.color ?? "BLUE") &&
+        iconKey === currentIconKey
+      ) {
         onOpenChange(false);
         return;
       }
-      updateListMutation.mutate({ id: list.id, name: normalizedName, color });
+      updateListMutation.mutate({ id: list.id, name: normalizedName, color, iconKey });
       return;
     }
 
     try {
-      const created = await createMutateAsync({ name: normalizedName, color });
+      const created = await createMutateAsync({ name: normalizedName, color, iconKey });
       onSaved?.(created);
       onOpenChange(false);
       setName("");
       setColor(initialColor);
+      setIconKey(normalizeListIconKey(initialIconKey));
     } catch (createError) {
       const message =
         createError instanceof Error ? createError.message : "Failed to create list";
@@ -136,17 +158,19 @@ export default function ListFormSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={isEditing ? "Edit list" : "New list"}
-      description="Name the list and choose the color shown across task views."
+      description="Name the list and choose the color and icon shown across task views."
     >
       <form className="space-y-5" onSubmit={handleSubmit}>
         <div className="rounded-[24px] border border-white/70 bg-card/92 p-4 dark:border-white/10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <span
               className={cn(
-                "h-12 w-12 rounded-2xl border border-white/70 shadow-inner dark:border-white/10",
+                "flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/70 text-white shadow-inner dark:border-white/10",
                 selectedColor.tailwind,
               )}
-            />
+            >
+              <SelectedIcon className="h-8 w-8 stroke-[2.4]" />
+            </span>
             <Input
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -176,6 +200,34 @@ export default function ListFormSheet({
                 <span className={cn("h-7 w-7 rounded-full", option.tailwind)} />
               </button>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-sm font-black text-muted-foreground">Icon</p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {listIconOptions.map((option) => {
+              const Icon = option.icon;
+              const selected = iconKey === option.key;
+
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => setIconKey(option.key)}
+                  className={cn(
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition-transform active:scale-95",
+                    selected
+                      ? "border-foreground/30 bg-accent/15 text-accent shadow-sm"
+                      : "border-border/70 bg-card/65 text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-label={`Use ${option.label} icon`}
+                  aria-pressed={selected}
+                >
+                  <Icon className="h-5 w-5 stroke-[2.4]" />
+                </button>
+              );
+            })}
           </div>
         </div>
 

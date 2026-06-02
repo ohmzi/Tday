@@ -2,11 +2,9 @@ import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   Ellipsis,
-  Inbox,
   ListPlus,
-  Moon,
+  Pencil,
   Search,
-  Sun,
   X,
 } from "lucide-react";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
@@ -19,8 +17,10 @@ import {
   useNativeRouteCounts,
 } from "@/components/app/nativeRouteConfig";
 import { getDisplayDate } from "@/lib/date/displayDate";
+import NativeAppBrandButton from "@/components/app/NativeAppBrandButton";
 import { Link, useLocale, usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
+import { getListIcon } from "@/lib/listIcons";
 import type { ListColor } from "@/types";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { useTodo } from "@/features/todayTodos/query/get-todo";
@@ -101,8 +101,12 @@ export default function NativeHomeDashboard() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
-  const currentHour = new Date().getHours();
-  const isDaytime = currentHour >= 6 && currentHour < 18;
+  const [editingList, setEditingList] = useState<{
+    id: string;
+    name: string;
+    color?: ListColor;
+    iconKey?: string | null;
+  } | null>(null);
   const titleDate = format(new Date(), "EEE, MMM d");
 
   const lists = useMemo(() => {
@@ -138,20 +142,11 @@ export default function NativeHomeDashboard() {
       usePrioritizeTodo={usePrioritizeTodo}
       useReorderTodo={useReorderTodo}
     >
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 sm:gap-5 lg:max-w-6xl">
+      <div className="flex w-full flex-col gap-4 sm:gap-5">
         <header className="relative flex min-h-14 items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            {isDaytime ? (
-              <Sun className="h-7 w-7 shrink-0 fill-[#F4C542] text-[#F4C542]" />
-            ) : (
-              <Moon className="h-7 w-7 shrink-0 fill-[#A8B8E8] text-[#A8B8E8]" />
-            )}
-            <h1 className="truncate text-[2rem] font-black leading-none tracking-normal text-foreground sm:text-[2.35rem]">
-              T&apos;Day
-            </h1>
-          </div>
+          <NativeAppBrandButton variant="prominent" className="min-w-0 flex-1" />
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               className={topButtonClass}
@@ -291,25 +286,46 @@ export default function NativeHomeDashboard() {
             <div className="space-y-2">
               {lists.map((list) => {
                 const accent = listColorCss[list.color ?? "PINK"];
+                const ListIcon = getListIcon(list.iconKey);
 
                 return (
-                  <Link
+                  <div
                     key={list.id}
-                    href={`/app/list/${list.id}`}
                     className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
                     style={{
                       background: `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${accent} 66%)`,
                     }}
                   >
                     {renderTileOverlay()}
-                    <Inbox className="relative h-5 w-5 shrink-0 text-white stroke-[2.5]" />
-                    <span className="relative min-w-0 flex-1 truncate text-[1.38rem] font-black leading-none tracking-tight">
-                      {formatListName(list.name)}
-                    </span>
-                    <span className="relative text-[1.5rem] font-black leading-none">
-                      {list.todoCount ?? 0}
-                    </span>
-                  </Link>
+                    <ListIcon className="pointer-events-none absolute -bottom-9 -right-7 h-28 w-28 text-white/18 stroke-[1.75]" />
+                    <Link
+                      href={`/app/list/${list.id}`}
+                      className="relative flex min-w-0 flex-1 items-center gap-3"
+                    >
+                      <ListIcon className="h-6 w-6 shrink-0 text-white stroke-[2.5]" />
+                      <span className="min-w-0 flex-1 truncate text-[1.38rem] font-black leading-none tracking-tight">
+                        {formatListName(list.name)}
+                      </span>
+                      <span className="text-[1.5rem] font-black leading-none">
+                        {list.todoCount ?? 0}
+                      </span>
+                    </Link>
+                    <button
+                      type="button"
+                      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/18 text-white transition-colors hover:bg-white/28 active:scale-95"
+                      onClick={() =>
+                        setEditingList({
+                          id: list.id,
+                          name: list.name,
+                          color: list.color,
+                          iconKey: list.iconKey,
+                        })
+                      }
+                      aria-label={`Edit ${formatListName(list.name)}`}
+                    >
+                      <Pencil className="h-4 w-4 stroke-[2.6]" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -318,6 +334,13 @@ export default function NativeHomeDashboard() {
       </div>
 
       <ListFormSheet open={createListOpen} onOpenChange={setCreateListOpen} />
+      <ListFormSheet
+        open={editingList !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingList(null);
+        }}
+        list={editingList}
+      />
     </TodoMutationProvider>
   );
 }

@@ -1,92 +1,577 @@
-import { CalendarToolbar } from "./CalendarToolbar";
-import { Calendar, dateFnsLocalizer, View } from "react-big-calendar";
-import "react-big-calendar/lib/css/react-big-calendar.css";
 import "../style/calendar-styles.css";
-import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
-import useWindowSize from "@/hooks/useWindowSize";
-import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import {
-  format,
-  parse,
-  startOfWeek,
-  getDay,
-  startOfMonth,
+  addDays,
+  addMonths,
+  addWeeks,
+  eachDayOfInterval,
+  endOfDay,
   endOfMonth,
   endOfWeek,
+  format,
+  isBefore,
+  isSameDay,
+  isSameMonth,
   startOfDay,
-  endOfDay,
+  startOfMonth,
+  startOfWeek,
+  subDays,
+  subMonths,
+  subWeeks,
 } from "date-fns";
-import { enUS } from "date-fns/locale/en-US";
 import { TodoItemType } from "@/types";
-import CalendarHeader, { TimeViewHeader } from "./CalendarHeader";
-import { agendaComponents } from "./CalendarAgenda";
-import CalendarEvent from "./CalendarEvent";
-import { calendarEventPropStyles } from "../lib/calendarEventPropStyles";
 import { useDateRange } from "../hooks/useDateRange";
 import { useCalendarTodo } from "../query/get-calendar-todo";
-import { useEditCalendarTodo } from "../query/update-calendar-todo";
-import { useEditCalendarTodoInstance } from "../query/update-calendar-todo-instance";
 import {
-  createContext,
-  type KeyboardEvent as ReactKeyboardEvent,
+  lazy,
+  type PointerEvent as ReactPointerEvent,
+  Suspense,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import Spinner from "@/components/ui/spinner";
-import { subMilliseconds } from "date-fns";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import CreateCalendarFormContainer from "./CalendarForm/CreateFormContainer";
+import NativePageTitle from "@/components/app/NativePageTitle";
+import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+import { useRegisterCalendarCreateAction } from "@/features/calendar/context/CalendarCreateActionContext";
+import { Button } from "@/components/ui/button";
+import TodoCheckbox from "@/components/ui/TodoCheckbox";
+import ListDot from "@/components/ListDot";
+import EditCalendarFormContainer from "./CalendarForm/EditFormContainer";
+import { useCompleteCalendarTodo } from "../query/complete-calendar-todo";
+import { useCompleteCalendarTodoInstance } from "../query/complete-calendar-todo-instance";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Pen, RefreshCcw, Trash } from "lucide-react";
+import { isToday } from "date-fns";
 
-const locales = { "en-US": enUS };
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek,
-  getDay,
-  locales,
-});
-const DnDCalendar = withDragAndDrop<TodoItemType>(Calendar);
+const ConfirmDelete = lazy(() => import("./ConfirmationModals/ConfirmDelete"));
+const ConfirmDeleteAll = lazy(() => import("./ConfirmationModals/ConfirmDeleteAll"));
 
-/* ── Context + wrapper so tapping a day cell in month view drills to day view ── */
-const DrillToDayContext = createContext<((date: Date) => void) | null>(null);
+type CalendarViewMode = "month" | "week" | "day";
+type SlideDirection = "left" | "right";
 
-function MonthDateCellWrapper({
-  children,
-  value,
-}: {
-  children: React.ReactNode;
-  value: Date;
-}) {
-  const drillToDay = useContext(DrillToDayContext);
+const viewOptions: CalendarViewMode[] = ["month", "week", "day"];
+const swipeThreshold = 48;
 
-  const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
-      event.preventDefault();
-      drillToDay?.(value);
-    }
+function dayKey(date: Date) {
+  return format(startOfDay(date), "yyyy-MM-dd");
+}
+
+function taskCountText(count: number) {
+  if (count <= 0) return "";
+  return count > 9 ? "9+" : String(count);
+}
+
+function calendarRangeFor(date: Date, view: CalendarViewMode) {
+  if (view === "month") {
+    return {
+      start: startOfWeek(startOfMonth(date)),
+      end: endOfWeek(endOfMonth(date)),
+    };
+  }
+
+  if (view === "week") {
+    return {
+      start: startOfWeek(date),
+      end: endOfWeek(date),
+    };
+  }
+
+  return {
+    start: startOfDay(date),
+    end: endOfDay(date),
   };
+}
+
+function periodDate(date: Date, view: CalendarViewMode, offset: number) {
+  if (view === "month") return offset > 0 ? addMonths(date, offset) : subMonths(date, Math.abs(offset));
+  if (view === "week") return offset > 0 ? addWeeks(date, offset) : subWeeks(date, Math.abs(offset));
+  return offset > 0 ? addDays(date, offset) : subDays(date, Math.abs(offset));
+}
+
+function canNavigateTo(date: Date, minimumMonth: Date) {
+  return !isBefore(startOfMonth(date), minimumMonth);
+}
+
+function makeMonthDays(date: Date) {
+  return eachDayOfInterval({
+    start: startOfWeek(startOfMonth(date)),
+    end: endOfWeek(endOfMonth(date)),
+  });
+}
+
+function CalendarViewSlider({
+  view,
+  onViewChange,
+}: {
+  view: CalendarViewMode;
+  onViewChange: (view: CalendarViewMode) => void;
+}) {
+  const { t: appDict } = useTranslation("app");
+  const selectedIndex = viewOptions.indexOf(view);
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label={format(value, "PPP")}
-      style={{ flex: 1, display: "flex" }}
-      onClick={() => drillToDay?.(value)}
-      onKeyDown={handleKeyDown}
-    >
-      {children}
+    <div className="relative flex w-full rounded-[25px] border border-white/70 bg-muted/80 p-1.5 shadow-[0_18px_42px_-30px_hsl(var(--shadow)/0.62)] backdrop-blur-xl dark:border-white/10">
+      <div
+        className="absolute bottom-1.5 left-1.5 top-1.5 rounded-[20px] bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)] transition-transform duration-300 ease-out"
+        style={{
+          width: "calc((100% - 0.75rem) / 3)",
+          transform: `translateX(${selectedIndex * 100}%)`,
+        }}
+      />
+      {viewOptions.map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => onViewChange(option)}
+          className={cn(
+            "relative z-10 flex h-12 flex-1 items-center justify-center rounded-[20px] px-3 text-sm font-black capitalize transition-colors duration-200",
+            option === view ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+          )}
+          aria-pressed={option === view}
+        >
+          {appDict(option)}
+        </button>
+      ))}
     </div>
   );
 }
 
+function CalendarNavButton({
+  label,
+  disabled,
+  direction,
+  onClick,
+}: {
+  label: string;
+  disabled?: boolean;
+  direction: "previous" | "next";
+  onClick: () => void;
+}) {
+  const Icon = direction === "previous" ? ChevronLeft : ChevronRight;
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-card/90 text-muted-foreground shadow-sm transition-all duration-200 hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35 dark:border-white/10 sm:h-11 sm:w-11"
+    >
+      <Icon className="h-5 w-5 stroke-[2.5]" />
+    </button>
+  );
+}
+
+function CalendarModeCard({
+  view,
+  selectedDate,
+  tasksByDay,
+  slideDirection,
+  animationKey,
+  canGoPrevious,
+  onNavigate,
+  onSelectDate,
+}: {
+  view: CalendarViewMode;
+  selectedDate: Date;
+  tasksByDay: Map<string, TodoItemType[]>;
+  slideDirection: SlideDirection | null;
+  animationKey: number;
+  canGoPrevious: boolean;
+  onNavigate: (offset: -1 | 1) => void;
+  onSelectDate: (date: Date) => void;
+}) {
+  const touchStartX = useRef<number | null>(null);
+  const swipeTrackingRef = useRef(false);
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("button")) {
+      swipeTrackingRef.current = false;
+      touchStartX.current = null;
+      return;
+    }
+    swipeTrackingRef.current = true;
+    touchStartX.current = event.clientX;
+  };
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!swipeTrackingRef.current) return;
+    const startX = touchStartX.current;
+    touchStartX.current = null;
+    swipeTrackingRef.current = false;
+    if (startX == null) return;
+
+    const delta = event.clientX - startX;
+    if (Math.abs(delta) < swipeThreshold) return;
+    onNavigate(delta < 0 ? 1 : -1);
+  };
+
+  const title =
+    view === "month"
+      ? format(selectedDate, "MMMM yyyy")
+      : view === "week"
+        ? `${format(startOfWeek(selectedDate), "MMM d")} - ${format(endOfWeek(selectedDate), "MMM d")}`
+        : format(selectedDate, "EEEE, MMM d");
+
+  return (
+    <section className="rounded-[24px] border border-white/70 bg-card/94 p-4 shadow-[0_18px_42px_-34px_hsl(var(--shadow)/0.62)] dark:border-white/10 sm:p-5">
+      <div className="mb-4 flex items-center gap-2 sm:gap-3">
+        <CalendarNavButton
+          label="Previous"
+          direction="previous"
+          disabled={!canGoPrevious}
+          onClick={() => onNavigate(-1)}
+        />
+        <div className="min-w-0 flex-1 text-center">
+          <h2 className="truncate text-xl font-black tracking-normal text-foreground sm:text-2xl">
+            {title}
+          </h2>
+        </div>
+        <CalendarNavButton
+          label="Next"
+          direction="next"
+          onClick={() => onNavigate(1)}
+        />
+      </div>
+
+      <div
+        key={animationKey}
+        className={cn(
+          "touch-pan-y",
+          slideDirection === "left" && "cal-native-slide-from-left",
+          slideDirection === "right" && "cal-native-slide-from-right",
+        )}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+      >
+        {view === "month" && (
+          <MonthCalendarGrid
+            selectedDate={selectedDate}
+            tasksByDay={tasksByDay}
+            onSelectDate={onSelectDate}
+          />
+        )}
+        {view === "week" && (
+          <WeekCalendarStrip
+            selectedDate={selectedDate}
+            tasksByDay={tasksByDay}
+            onSelectDate={onSelectDate}
+          />
+        )}
+        {view === "day" && (
+          <DayCalendarSummary
+            selectedDate={selectedDate}
+            taskCount={tasksByDay.get(dayKey(selectedDate))?.length ?? 0}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function MonthCalendarGrid({
+  selectedDate,
+  tasksByDay,
+  onSelectDate,
+}: {
+  selectedDate: Date;
+  tasksByDay: Map<string, TodoItemType[]>;
+  onSelectDate: (date: Date) => void;
+}) {
+  const today = new Date();
+  const minimumMonth = startOfMonth(today);
+  const days = makeMonthDays(selectedDate);
+  const weekdayLabels = eachDayOfInterval({
+    start: startOfWeek(today),
+    end: endOfWeek(today),
+  }).map((date) => format(date, "EEEEE"));
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-7">
+        {weekdayLabels.map((label, index) => (
+          <div
+            key={`${label}-${index}`}
+            className="text-center text-xs font-black uppercase text-muted-foreground/55"
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-2">
+        {days.map((date) => {
+          const selected = isSameDay(date, selectedDate);
+          const todayDate = isSameDay(date, today);
+          const currentMonth = isSameMonth(date, selectedDate);
+          const disabled = isBefore(startOfMonth(date), minimumMonth);
+          const count = tasksByDay.get(dayKey(date))?.length ?? 0;
+
+          return (
+            <button
+              key={date.toISOString()}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelectDate(date)}
+              aria-label={format(date, "PPP")}
+              className={cn(
+                "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-2xl text-center transition-colors duration-200",
+                "hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-30",
+                selected && "bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)] hover:bg-accent",
+                !selected && todayDate && "border border-accent/45 text-accent",
+                !selected && !todayDate && currentMonth && "text-foreground",
+                !selected && !todayDate && !currentMonth && "text-muted-foreground/45",
+              )}
+            >
+              <span className="text-lg font-black leading-none">{format(date, "d")}</span>
+              <span
+                className={cn(
+                  "mt-1 flex h-3 items-center gap-1 text-[0.62rem] font-black leading-none",
+                  selected ? "text-accent-foreground/90" : count > 0 ? "text-accent" : "text-transparent",
+                )}
+              >
+                {count > 0 && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
+                {taskCountText(count)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function WeekCalendarStrip({
+  selectedDate,
+  tasksByDay,
+  onSelectDate,
+}: {
+  selectedDate: Date;
+  tasksByDay: Map<string, TodoItemType[]>;
+  onSelectDate: (date: Date) => void;
+}) {
+  const today = new Date();
+  const days = eachDayOfInterval({
+    start: startOfWeek(selectedDate),
+    end: endOfWeek(selectedDate),
+  });
+
+  return (
+    <div className="grid grid-cols-7 gap-2">
+      {days.map((date) => {
+        const selected = isSameDay(date, selectedDate);
+        const todayDate = isSameDay(date, today);
+        const count = tasksByDay.get(dayKey(date))?.length ?? 0;
+
+        return (
+          <button
+            key={date.toISOString()}
+            type="button"
+            onClick={() => onSelectDate(date)}
+            className={cn(
+              "flex min-h-[4.8rem] flex-col items-center justify-center rounded-[20px] border text-center transition-colors duration-200",
+              selected
+                ? "border-accent bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)]"
+                : "border-white/60 bg-muted/45 text-foreground hover:bg-muted/70 dark:border-white/10",
+              !selected && todayDate && "text-accent",
+            )}
+          >
+            <span className="text-[0.65rem] font-black uppercase tracking-wide opacity-70">
+              {format(date, "EEE")}
+            </span>
+            <span className="text-xl font-black leading-tight">{format(date, "d")}</span>
+            <span className={cn("text-[0.68rem] font-black", count > 0 ? "opacity-90" : "opacity-0")}>
+              {taskCountText(count)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function DayCalendarSummary({
+  selectedDate,
+  taskCount,
+}: {
+  selectedDate: Date;
+  taskCount: number;
+}) {
+  return (
+    <div className="flex min-h-[5.2rem] items-center justify-between rounded-[22px] border border-white/60 bg-muted/45 px-5 py-4 dark:border-white/10">
+      <div>
+        <p className="text-sm font-black uppercase tracking-[0.18em] text-muted-foreground/70">
+          {format(selectedDate, "EEEE")}
+        </p>
+        <p className="text-3xl font-black text-foreground">{format(selectedDate, "MMM d")}</p>
+      </div>
+      <div className="rounded-full bg-accent/12 px-4 py-2 text-sm font-black text-accent">
+        {taskCount === 1 ? "1 task" : `${taskCount} tasks`}
+      </div>
+    </div>
+  );
+}
+
+function CalendarTaskRow({
+  todo,
+  listName,
+}: {
+  todo: TodoItemType;
+  listName?: string;
+}) {
+  const [displayForm, setDisplayForm] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const { t: appDict } = useTranslation("app");
+  const { t: todayDict } = useTranslation("today");
+  const { mutateComplete } = useCompleteCalendarTodo();
+  const { mutateComplete: mutateInstanceComplete } = useCompleteCalendarTodoInstance();
+
+  const completeTask = () => {
+    if (todo.instanceDate) {
+      mutateInstanceComplete({ todoItem: todo });
+      return;
+    }
+    mutateComplete({ todoItem: todo });
+  };
+
+  return (
+    <>
+      {displayForm && (
+        <EditCalendarFormContainer
+          todo={todo}
+          displayForm={displayForm}
+          setDisplayForm={setDisplayForm}
+        />
+      )}
+      <article className="group flex items-start justify-between gap-3 rounded-[20px] border border-white/70 bg-card/92 px-3 py-3 shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card hover:shadow-[0_16px_36px_-28px_hsl(var(--shadow)/0.5)] dark:border-white/10 sm:px-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="pt-0.5">
+            <TodoCheckbox
+              icon={Check}
+              priority={todo.priority}
+              complete={todo.completed}
+              onChange={completeTask}
+              checked={todo.completed}
+              variant={todo.rrule ? "repeat" : "outline-solid"}
+            />
+          </div>
+
+          <button
+            type="button"
+            className="min-w-0 text-left"
+            onClick={() => setDisplayForm(true)}
+          >
+            <p className="line-clamp-2 text-[0.98rem] font-black leading-5 text-foreground">
+              {todo.title}
+            </p>
+            {todo.description && (
+              <p className="mt-1 line-clamp-2 text-xs font-extrabold leading-4 text-muted-foreground">
+                {todo.description}
+              </p>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-black text-muted-foreground">
+              <span className="rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
+                {format(todo.due, "h:mm a")}
+              </span>
+              {todo.listID && (
+                <span className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
+                  <ListDot id={todo.listID} className="h-3 w-3" />
+                  <span className="max-w-32 truncate">{listName}</span>
+                </span>
+              )}
+              {todo.rrule && (
+                <span className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
+                  <RefreshCcw className="h-3 w-3" />
+                  {appDict("repeat")}
+                </span>
+              )}
+            </div>
+          </button>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1 opacity-100 sm:opacity-0 sm:transition-opacity sm:duration-200 sm:group-hover:opacity-100">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label={todayDict("menu.edit")}
+            onClick={() => setDisplayForm(true)}
+          >
+            <Pen className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full text-muted-foreground hover:bg-red/10 hover:text-red"
+            aria-label={todayDict("menu.delete")}
+            onClick={() => {
+              if (todo.rrule) {
+                setDeleteAllDialogOpen(true);
+              } else {
+                setDeleteDialogOpen(true);
+              }
+            }}
+          >
+            <Trash className="h-4 w-4" />
+          </Button>
+        </div>
+      </article>
+
+      <Suspense fallback={null}>
+        <ConfirmDelete
+          todo={todo}
+          deleteDialogOpen={deleteDialogOpen}
+          setDeleteDialogOpen={setDeleteDialogOpen}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        <ConfirmDeleteAll
+          todo={todo}
+          deleteAllDialogOpen={deleteAllDialogOpen}
+          setDeleteAllDialogOpen={setDeleteAllDialogOpen}
+        />
+      </Suspense>
+    </>
+  );
+}
+
+function CalendarTodayButton({
+  disabled,
+  onClick,
+}: {
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const { t: appDict } = useTranslation("app");
+
+  return (
+    <button
+      type="button"
+      aria-label={appDict("today")}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-card/92 text-accent shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)] transition-all duration-200 dark:border-white/10",
+        "hover:bg-card hover:shadow-[0_12px_32px_-22px_hsl(var(--shadow)/0.5)]",
+        "disabled:cursor-default disabled:opacity-40 disabled:hover:bg-card/92 disabled:hover:shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)]",
+      )}
+    >
+      <CalendarDays className="h-5 w-5 stroke-[2.4]" />
+    </button>
+  );
+}
+
 export default function CalendarClient() {
+  const { t: sidebarDict } = useTranslation("sidebar");
   const [mounted, setMounted] = useState(false);
   const [calendarRange, setCalendarRange] = useDateRange();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -94,14 +579,39 @@ export default function CalendarClient() {
     start: Date;
     end: Date;
   } | null>(null);
-  const [isTouch, setIsTouch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { todos: calendarTodos, todoLoading: calendarTodosLoading } = useCalendarTodo(calendarRange);
-  const { editCalendarTodo } = useEditCalendarTodo();
-  const { editCalendarTodoInstance } = useEditCalendarTodoInstance();
   const { listMetaData } = useListMetaData()
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [view, setView] = useState<CalendarViewMode>("month");
+  const [slideDirection, setSlideDirection] = useState<SlideDirection | null>(null);
+  const [animKey, setAnimKey] = useState(0);
+  const selectedDateRef = useRef<Date>(selectedDate);
+  const viewRef = useRef<CalendarViewMode>(view);
+  selectedDateRef.current = selectedDate;
+  viewRef.current = view;
+  const minimumMonth = useMemo(() => startOfMonth(new Date()), []);
 
-  // Filter calendar events by search query
+  const rangeAnchor = useMemo(() => {
+    if (view === "month") return startOfMonth(selectedDate).getTime();
+    if (view === "week") return startOfWeek(selectedDate).getTime();
+    return startOfDay(selectedDate).getTime();
+  }, [view, selectedDate]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const dateForRange =
+      view === "month"
+        ? startOfMonth(selectedDate)
+        : view === "week"
+          ? startOfWeek(selectedDate)
+          : selectedDate;
+    setCalendarRange(calendarRangeFor(dateForRange, view));
+  }, [rangeAnchor, selectedDate, setCalendarRange, view]);
+
   const filteredCalendarTodos = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return calendarTodos;
@@ -114,161 +624,140 @@ export default function CalendarClient() {
     });
   }, [calendarTodos, listMetaData, searchQuery]);
 
-  // --- navigation & animation state ---
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [view, setView] = useState<View>("month");
-  const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(null);
-  const [animKey, setAnimKey] = useState(0);
-  const selectedDateRef = useRef<Date | null>(null);
-  selectedDateRef.current = selectedDate;
-  // detect touch devices (disable dnd on touch screens)
-  useEffect(() => {
-    const hasTouch =
-      typeof window !== "undefined" &&
-      (navigator.maxTouchPoints > 0 || "ontouchstart" in window) &&
-      window.innerWidth <= 1024; // treat wide devices as desktop
-    setIsTouch(hasTouch);
-  }, []);
-  // Initialize on mount
-  useEffect(() => {
-    setMounted(true);
-    setSelectedDate(new Date());
-  }, []);
+  const tasksByDay = useMemo(() => {
+    const grouped = new Map<string, TodoItemType[]>();
+    filteredCalendarTodos.forEach((todo) => {
+      const key = dayKey(todo.due);
+      const items = grouped.get(key) ?? [];
+      items.push(todo);
+      grouped.set(key, items);
+    });
+    grouped.forEach((items) => {
+      items.sort((a, b) => a.due.getTime() - b.due.getTime());
+    });
+    return grouped;
+  }, [filteredCalendarTodos]);
 
-  // Trigger slide animation and navigate to a new date
-  const navigateTo = useCallback((newDate: Date, direction: "left" | "right") => {
+  const selectedDayTasks = tasksByDay.get(dayKey(selectedDate)) ?? [];
+
+  const openCreateForSelectedDate = useCallback(() => {
+    setSelectDateRange({
+      start: startOfDay(selectedDate),
+      end: endOfDay(selectedDate),
+    });
+    setShowCreateForm(true);
+  }, [selectedDate]);
+
+  useRegisterCalendarCreateAction(openCreateForSelectedDate);
+
+  const selectDate = useCallback((date: Date) => {
+    if (!canNavigateTo(date, minimumMonth)) return;
+    if (isSameDay(date, selectedDateRef.current)) return;
+    setSelectedDate(date);
+  }, [minimumMonth]);
+
+  const animateToDate = useCallback((date: Date, direction: SlideDirection) => {
+    if (!canNavigateTo(date, minimumMonth)) return;
+    if (isSameDay(date, selectedDateRef.current)) return;
     setSlideDirection(direction);
-    setAnimKey((k) => k + 1);
-    setSelectedDate(newDate);
+    setAnimKey((key) => key + 1);
+    setSelectedDate(date);
+  }, [minimumMonth]);
+
+  const navigatePeriod = useCallback((offset: -1 | 1) => {
+    const currentDate = selectedDateRef.current;
+    const currentView = viewRef.current;
+    const nextDate = periodDate(currentDate, currentView, offset);
+    animateToDate(nextDate, offset > 0 ? "right" : "left");
+  }, [animateToDate]);
+
+  const jumpToToday = useCallback(() => {
+    const today = new Date();
+    if (isSameDay(today, selectedDateRef.current)) return;
+    const direction = today < selectedDateRef.current ? "left" : "right";
+    animateToDate(today, direction);
+  }, [animateToDate]);
+
+  const changeView = useCallback((nextView: CalendarViewMode) => {
+    if (nextView === viewRef.current) return;
+    const currentIndex = viewOptions.indexOf(viewRef.current);
+    const nextIndex = viewOptions.indexOf(nextView);
+    setView(nextView);
+    setSlideDirection(nextIndex > currentIndex ? "right" : "left");
+    setAnimKey((key) => key + 1);
   }, []);
 
-  // Drill into day view — used by context wrapper for mobile taps
-  const drillToDay = useCallback(
-    (date: Date) => {
-      const direction = date < (selectedDate ?? new Date()) ? "left" : "right";
-      navigateTo(date, direction);
-      setView("day");
-      // Range will be set via updateRangeForDate after it's defined
-      setCalendarRange({ start: startOfDay(date), end: endOfDay(date) });
-    },
-    [selectedDate, navigateTo, setCalendarRange],
-  );
-
-  // Helper function to update calendar range based on date and view
-  const updateRangeForDate = useCallback((date: Date, currentView: View) => {
-    if (currentView === "month") {
-      setCalendarRange({
-        start: startOfWeek(startOfMonth(date)),
-        end: endOfWeek(endOfMonth(date)),
-      });
-    } else if (currentView === "week") {
-      setCalendarRange({
-        start: startOfWeek(date),
-        end: endOfWeek(date),
-      });
-    } else if (currentView === "day") {
-      setCalendarRange({
-        start: startOfDay(date),
-        end: endOfDay(date),
-      });
-    }
-  }, [setCalendarRange]);
-
   useEffect(() => {
-    if (!selectedDate) return;
-
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
       if (
         target?.isContentEditable ||
-        ["INPUT", "TEXTAREA"].includes(target.tagName)
-      )
+        ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)
+      ) {
         return;
-
-      const key = e.key.toLowerCase();
-      e.preventDefault();
-
-      switch (key) {
-        case "arrowleft": {
-          const d = selectedDateRef.current;
-          if (!d) break;
-          const newDate =
-            view === "month"
-              ? new Date(d.getFullYear(), d.getMonth() - 1, d.getDate())
-              : view === "week"
-                ? new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7)
-                : new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
-          navigateTo(newDate, "left");
-          updateRangeForDate(newDate, view);
-          break;
-        }
-        case "arrowright": {
-          const d = selectedDateRef.current;
-          if (!d) break;
-          const newDate =
-            view === "month"
-              ? new Date(d.getFullYear(), d.getMonth() + 1, d.getDate())
-              : view === "week"
-                ? new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7)
-                : new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
-          navigateTo(newDate, "right");
-          updateRangeForDate(newDate, view);
-          break;
-        }
-        case "t": {
-          const today = new Date();
-          const d = selectedDateRef.current;
-          const direction = d && today < d ? "left" : "right";
-          navigateTo(today, direction);
-          updateRangeForDate(today, view);
-          break;
-        }
-        case "1":
-          setView("month");
-          updateRangeForDate(selectedDate, "month");
-          break;
-        case "2":
-          setView("week");
-          updateRangeForDate(selectedDate, "week");
-          break;
-        case "3":
-          setView("day");
-          updateRangeForDate(selectedDate, "day");
-          break;
       }
+
+      const key = event.key.toLowerCase();
+      if (!["arrowleft", "arrowright", "t", "1", "2", "3", "n"].includes(key)) {
+        return;
+      }
+
+      event.preventDefault();
+      if (key === "arrowleft") navigatePeriod(-1);
+      if (key === "arrowright") navigatePeriod(1);
+      if (key === "t") jumpToToday();
+      if (key === "n") openCreateForSelectedDate();
+      if (key === "1") changeView("month");
+      if (key === "2") changeView("week");
+      if (key === "3") changeView("day");
     };
 
     document.addEventListener("keydown", handler, true);
     return () => document.removeEventListener("keydown", handler, true);
-  }, [view, selectedDate, updateRangeForDate, navigateTo]);
+  }, [changeView, jumpToToday, navigatePeriod, openCreateForSelectedDate]);
 
-  const { width } = useWindowSize();
+  const canGoPrevious = canNavigateTo(periodDate(selectedDate, view, -1), minimumMonth);
 
-  // Don't render calendar until mounted
-  if (!mounted || !selectedDate) {
+  const todayAction = (
+    <CalendarTodayButton
+      disabled={isToday(selectedDate)}
+      onClick={jumpToToday}
+    />
+  );
+
+  if (!mounted) {
     return (
-      <div className="h-full w-full flex flex-col">
-        <MobileSearchHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-        <div className="flex-1 flex items-center justify-center">
-          <Spinner className="w-14 h-14" />
+      <div className="flex h-full w-full flex-col">
+        <MobileSearchHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          trailingAction={todayAction}
+        />
+        <div className="flex flex-1 items-center justify-center">
+          <Spinner className="h-14 w-14" />
         </div>
       </div>
     );
   }
 
   return (
-    <DrillToDayContext.Provider value={drillToDay}>
-    <div className="h-full flex flex-col">
-      {calendarTodosLoading && (
-        <div className="w-full h-full bg-black/20 fixed z-100">
-          <div className="fixed top-1/2 left-1/2 -translate-y-1/2 ">
-            <Spinner className="h-20 w-20" />
+    <div className="flex min-h-full flex-col">
+      <MobileSearchHeader
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        trailingAction={todayAction}
+      />
+      <NativePageTitle
+        title={sidebarDict("calendar")}
+        accentColor={nativeScreenAccentColors.calendar}
+        icon={CalendarDays}
+      />
+      <div className="relative flex w-full flex-1 flex-col gap-4 sm:gap-5">
+        {calendarTodosLoading && (
+          <div className="pointer-events-none absolute right-0 top-2 z-10 rounded-full border border-white/70 bg-card/90 p-2 shadow-sm dark:border-white/10">
+            <Spinner className="h-5 w-5" />
           </div>
-        </div>
-      )}
-
-      <MobileSearchHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden sm:py-10">
+        )}
         {showCreateForm && selectDateRange && (
           <CreateCalendarFormContainer
             start={selectDateRange.start}
@@ -277,128 +766,54 @@ export default function CalendarClient() {
             setDisplayForm={setShowCreateForm}
           />
         )}
-        <div
-          key={animKey}
-          className={cn(
-            "flex-1 min-h-0 flex flex-col",
-            slideDirection === "left" && "cal-slide-from-left",
-            slideDirection === "right" && "cal-slide-from-right",
-          )}
-        >
-        <DnDCalendar
-          components={{
-            toolbar: CalendarToolbar,
-            header: CalendarHeader, // month view — day name only
-            agenda: agendaComponents,
-            event: CalendarEvent,
-            dateCellWrapper: MonthDateCellWrapper,
-            week: { header: TimeViewHeader },
-            day: { header: TimeViewHeader },
-          }}
-          view={view}
-          onView={(newView) => {
-            setView(newView);
-            updateRangeForDate(selectedDate, newView);
-          }}
-          date={selectedDate}
-          onNavigate={(newDate, _view, action) => {
-            const direction =
-              action === "PREV" ? "left" : action === "NEXT" ? "right"
-              : newDate < (selectedDate ?? new Date()) ? "left" : "right";
-            navigateTo(newDate, direction);
-            updateRangeForDate(newDate, view);
-          }}
-          drilldownView="day"
-          getDrilldownView={(_targetDate, currentViewName) => {
-            // Only drill down from month → day or week → day
-            if (currentViewName === "month" || currentViewName === "week") return "day";
-            return null; // no drill from day view
-          }}
-          onDrillDown={(date) => {
-            // Drill into day view with slide animation
-            const direction = date < (selectedDate ?? new Date()) ? "left" : "right";
-            navigateTo(date, direction);
-            setView("day");
-            updateRangeForDate(date, "day");
-          }}
-          selectable
-          onSelectSlot={({ start, end, action }) => {
-            if (action === "click") {
-              // In month view, tap on a day cell → switch to day view
-              if (view === "month") {
-                const direction = start < (selectedDate ?? new Date()) ? "left" : "right";
-                navigateTo(start, direction);
-                setView("day");
-                updateRangeForDate(start, "day");
-                return;
-              }
-              // In day/week views, a click opens the create form for that time slot
-              const adjustedEnd = subMilliseconds(end, 1);
-              setSelectDateRange({ start, end: adjustedEnd });
-              setShowCreateForm(true);
-              return;
-            }
-            const adjustedEnd = subMilliseconds(end, 1);
-            setSelectDateRange({ start, end: adjustedEnd });
-            setShowCreateForm(true);
-          }}
-          localizer={localizer}
-          events={filteredCalendarTodos}
-          startAccessor="due"
-          endAccessor="due"
-          draggableAccessor={() => !isTouch}
-          resizable={!isTouch}
-          step={60}
-          timeslots={1}
-          messages={{ event: "Todo" }}
-          formats={{
-            timeGutterFormat: (date) =>
-              width < 600 ? format(date, "HH:mm") : format(date, "hh:mm a"),
-            eventTimeRangeFormat: () => "",
-            // Day view header label: "Mon 13"
-            dayHeaderFormat: (date) => format(date, "EEEE, MMM d"),
-          }}
-          eventPropGetter={(event) => {
-            const listId = event.listID ?? "";
-            return calendarEventPropStyles(
-              event.priority,
-              listId ? listMetaData[listId]?.color : undefined,
-            );
-          }}
 
-          onRangeChange={setCalendarRange}
-          onEventResize={({ event: todo, ...resizeEvent }) => {
-            if (!todo.rrule) {
-              editCalendarTodo({
-                ...todo,
-                due: new Date(resizeEvent.end),
-              });
-            } else {
-              editCalendarTodoInstance({
-                ...todo,
-                instanceDate: todo.instanceDate || todo.due,
-                due: new Date(resizeEvent.end),
-              });
-            }
-          }}
-          onEventDrop={({ event: todo, ...dropEvent }) => {
-            if (!todo.rrule) {
-              editCalendarTodo({
-                ...todo,
-                due: new Date(dropEvent.end),
-              });
-            } else {
-              editCalendarTodoInstance({
-                ...todo,
-                instanceDate: todo.instanceDate || todo.due,
-                due: new Date(dropEvent.end),
-              });
-            }
-          }}
+        <CalendarViewSlider view={view} onViewChange={changeView} />
+        <CalendarModeCard
+          view={view}
+          selectedDate={selectedDate}
+          tasksByDay={tasksByDay}
+          slideDirection={slideDirection}
+          animationKey={animKey}
+          canGoPrevious={canGoPrevious}
+          onNavigate={navigatePeriod}
+          onSelectDate={selectDate}
         />
-        </div>
+
+        <section className="pb-4">
+          <div className="mb-3">
+            <h2
+              className="text-xl font-black leading-tight sm:text-[1.35rem]"
+              style={{ color: nativeScreenAccentColors.calendar }}
+            >
+              Tasks due {format(selectedDate, "EEE, MMM d")}
+            </h2>
+            {selectedDayTasks.length > 0 && (
+              <p className="mt-1 text-sm font-extrabold text-muted-foreground">
+                {selectedDayTasks.length === 1 ? "1 task" : `${selectedDayTasks.length} tasks`}
+              </p>
+            )}
+          </div>
+
+          {selectedDayTasks.length > 0 ? (
+            <div className="space-y-2">
+              {selectedDayTasks.map((todo) => (
+                <CalendarTaskRow
+                  key={todo.id}
+                  todo={todo}
+                  listName={todo.listID ? listMetaData[todo.listID]?.name : undefined}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[22px] border border-dashed border-white/70 bg-card/60 px-5 py-8 text-center shadow-[0_12px_30px_-28px_hsl(var(--shadow)/0.45)] dark:border-white/10">
+              <p className="text-base font-black text-foreground">No tasks due this day</p>
+              <p className="mt-1 text-sm font-extrabold text-muted-foreground">
+                Select another date on the calendar.
+              </p>
+            </div>
+          )}
+        </section>
       </div>
     </div>
-    </DrillToDayContext.Provider>
   );
 }

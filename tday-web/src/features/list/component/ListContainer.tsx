@@ -1,16 +1,7 @@
-import React, { useMemo, useState } from "react";
-import CreateTodoBtn from "./CreateTodoBtn";
+import { useMemo, useState } from "react";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
-import LineSeparator from "@/components/ui/lineSeparator";
-import TodoFilterBar from "./TodoFilterBar";
-import { getDisplayDate } from "@/lib/date/displayDate";
-import { useUserTimezone } from "@/features/user/query/get-timezone";
-import { useLocale } from "@/lib/navigation";
-import { RRule } from "rrule";
 import { TodoItemType } from "@/types";
-import clsx from "clsx";
-import { useUserPreferences } from "@/providers/UserPreferencesProvider";
 import { usePinListTodo } from "../query/pin-list-todo";
 import { useCompleteListTodo } from "../query/complete-list-todo";
 import { useDeleteListTodo } from "../query/delete-list-todo";
@@ -21,18 +12,29 @@ import { useReorderListTodo } from "../query/reorder-list-todo";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import { useList } from "../query/get-list-todos";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
+import NativePageTitle from "@/components/app/NativePageTitle";
+import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ListDot from "@/components/ListDot";
-import { Search, X } from "lucide-react";
+import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
+import { Button } from "@/components/ui/button";
+import { Pencil, Search, X } from "lucide-react";
+
+function compareTodosByDueDate(a: TodoItemType, b: TodoItemType) {
+    const dueDiff = a.due.getTime() - b.due.getTime();
+    if (dueDiff !== 0) return dueDiff;
+
+    const createdDiff = a.createdAt.getTime() - b.createdAt.getTime();
+    if (createdDiff !== 0) return createdDiff;
+
+    return a.title.localeCompare(b.title);
+}
 
 const ListContainer = ({ id }: { id: string }) => {
-    const locale = useLocale();
-    const userTZ = useUserTimezone()
     const { listMetaData } = useListMetaData();
-    const { preferences } = useUserPreferences();
     const { listTodos, listTodosLoading } = useList({ id });
-    const [containerHovered, setContainerHovered] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [editListOpen, setEditListOpen] = useState(false);
 
     const filteredTodos = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -44,54 +46,34 @@ const ListContainer = ({ id }: { id: string }) => {
         });
     }, [listTodos, searchQuery]);
 
+    const dueDateOrderedTodos = useMemo(
+        () => [...filteredTodos].sort(compareTodosByDueDate),
+        [filteredTodos],
+    );
+
     const pinnedTodos = useMemo(() =>
-        filteredTodos.filter(({ pinned }) => pinned),
-        [filteredTodos]
+        dueDateOrderedTodos.filter(({ pinned }) => pinned),
+        [dueDateOrderedTodos]
     );
 
     const unpinnedTodos = useMemo(() =>
-        filteredTodos.filter(({ pinned }) => !pinned),
-        [filteredTodos]
+        dueDateOrderedTodos.filter(({ pinned }) => !pinned),
+        [dueDateOrderedTodos]
     );
 
-    const priorityMap = useMemo(() => ({ "Low": 1, "Medium": 2, "High": 3 } as const), []);
-
-    const groupedTodos = useMemo(() => {
-        return Object.groupBy((unpinnedTodos), (todo) => {
-            switch (preferences?.groupBy) {
-                case "due":
-                    return getDisplayDate(todo.due, false, locale, userTZ?.timeZone);
-                case "priority":
-                    return String(todo.priority);
-                case "rrule":
-                    return todo.rrule ? new RRule(RRule.parseString(todo.rrule)).toText() : "Non repeating"
-                case "list":
-                    return todo.listID ?? "-1";
-                default:
-                    return "-1"
-            }
-        }) as Record<string, TodoItemType[]>
-    }, [unpinnedTodos, preferences?.groupBy, locale, userTZ?.timeZone])
-
-    const sortedGroupedTodos = useMemo(() => {
-        const sorted: Record<string, TodoItemType[]> = {};
-        for (const [key, todos] of Object.entries(groupedTodos)) {
-            sorted[key] = [...todos].sort((a, b) => {
-                switch (preferences?.sortBy) {
-                    case "due":
-                        return preferences.direction == "Descending" ? a.due.getTime() - b.due.getTime() : b.due.getTime() - a.due.getTime();
-                    case "priority":
-                        return preferences.direction == "Descending" ? priorityMap[a.priority] - priorityMap[b.priority] : priorityMap[b.priority] - priorityMap[a.priority];
-                    default:
-                        return a.order - b.order;
-                }
-            });
-        }
-
-        return sorted;
-    }, [groupedTodos, preferences?.sortBy, preferences?.direction, priorityMap]);
-
     const listName = listMetaData[id]?.name?.trim() || "";
+    const listColor = listMetaData[id]?.color;
+    const listAccent = listColor
+        ? listColorAccentColors[listColor]
+        : nativeScreenAccentColors.all;
+    const editableList = listMetaData[id]
+        ? {
+            id,
+            name: listMetaData[id].name,
+            color: listMetaData[id].color,
+            iconKey: listMetaData[id].iconKey,
+        }
+        : null;
 
     return (
         <TodoMutationProvider
@@ -103,7 +85,7 @@ const ListContainer = ({ id }: { id: string }) => {
             usePrioritizeTodo={usePrioritizeListTodo}
             useReorderTodo={useReorderListTodo}
         >
-            <div className="mb-20" onMouseOver={() => (setContainerHovered(true))} onMouseOut={() => setContainerHovered(false)}>
+            <div className="mb-20">
                 {/* Sticky header with mobile menu + search — matches T'Day & Completed pages */}
                 <MobileSearchHeader
                     searchQuery={searchQuery}
@@ -111,19 +93,26 @@ const ListContainer = ({ id }: { id: string }) => {
                     placeholder={`Search in ${listName}...`}
                 />
 
-                {/* List title with colored icon */}
-                <div className="mt-8 mb-4 sm:mt-10 sm:mb-5 lg:mt-16 lg:mb-6 ml-[2px] flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <ListDot id={id} className="h-6 w-6" />
-                        <h3 className="select-none text-2xl font-semibold tracking-tight">
-                            {listName}
-                        </h3>
-                    </div>
-                    <div className="hidden lg:block">
-                        <TodoFilterBar containerHovered={containerHovered} />
-                    </div>
+                <div className="flex items-start justify-between gap-3">
+                    <NativePageTitle
+                        title={listName}
+                        accentColor={listAccent}
+                        iconNode={<ListDot id={id} className="h-7 w-7 shrink-0" />}
+                        className="min-w-0 flex-1"
+                    />
+                    {editableList ? (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="mt-4 h-12 w-12 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_12px_28px_-22px_hsl(var(--shadow)/0.55)] hover:bg-card dark:border-white/10"
+                            onClick={() => setEditListOpen(true)}
+                            aria-label={`Edit ${listName || "list"}`}
+                        >
+                            <Pencil className="h-5 w-5" />
+                        </Button>
+                    ) : null}
                 </div>
-                <LineSeparator className="flex-1 border-border/70" />
 
                 {/* Loading state */}
                 {listTodosLoading && <TodoListLoading />}
@@ -164,31 +153,23 @@ const ListContainer = ({ id }: { id: string }) => {
                 {/* Pinned Todos */}
                 {pinnedTodos.length > 0 && (
                     <section className="mb-8 lg:mb-10 mt-5 sm:mt-6 lg:mt-8">
-                        <TodoGroup todos={pinnedTodos} />
+                        <TodoGroup todos={pinnedTodos} reorderable={false} />
                     </section>
                 )}
 
-                {/* Grouped Todos */}
-                {Object.entries(sortedGroupedTodos).map(([key, todo]) =>
-                    <div key={key}>
-                        <section className={clsx("mb-8 lg:mb-10", key === "-1" && "mt-5 sm:mt-6 lg:mt-8")}>
-                            {key !== "-1" && (
-                                <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
-                                    <h3 className="select-none text-lg font-semibold tracking-tight">
-                                        {key}
-                                    </h3>
-                                    <LineSeparator className="flex-1 border-border/70" />
-                                </div>
-                            )}
-                            <TodoGroup
-                                todos={todo}
-                            />
-                        </section>
-                    </div>
+                {/* Due-date ordered Todos */}
+                {unpinnedTodos.length > 0 && (
+                    <section className="mb-8 mt-5 sm:mt-6 lg:mb-10 lg:mt-8">
+                        <TodoGroup todos={unpinnedTodos} reorderable={false} />
+                    </section>
                 )}
-
-                <CreateTodoBtn listID={id} />
             </div>
+
+            <ListFormSheet
+                open={editListOpen}
+                onOpenChange={setEditListOpen}
+                list={editableList}
+            />
         </TodoMutationProvider>
     );
 };

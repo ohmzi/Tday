@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { TodoApiItemType, TodoItemType } from "@/types";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
@@ -13,6 +13,7 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
       calendarRange.start.getTime(),
       calendarRange.end.getTime(),
     ],
+    placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
     retry: 2,
     queryFn: async () => {

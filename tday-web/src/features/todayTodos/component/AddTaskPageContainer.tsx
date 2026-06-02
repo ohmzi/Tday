@@ -8,6 +8,8 @@ import { usePrioritizeTodo } from "../query/prioritize-todo";
 import { useEditTodo } from "../query/update-todo";
 import { useEditTodoInstance } from "../query/update-todo-instance";
 import { useReorderTodo } from "../query/reorder-todo";
+import NativePageTitle from "@/components/app/NativePageTitle";
+import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
 import { Button } from "@/components/ui/button";
@@ -28,10 +30,13 @@ export default function AddTaskPageContainer() {
     >
       <MobileSearchHeader />
 
-      <div className="mt-8 sm:mt-4">
-        <h3 className="mb-4 select-none text-2xl font-semibold tracking-tight">
-          {todayDict("addATask")}
-        </h3>
+      <NativePageTitle
+        title={todayDict("addATask")}
+        accentColor={nativeScreenAccentColors.today}
+        className="sm:mt-2"
+      />
+
+      <div>
         <Button
           type="button"
           onClick={() => setDisplayForm(true)}

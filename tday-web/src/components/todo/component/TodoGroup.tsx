@@ -20,12 +20,14 @@ const TodoGroup = ({
   overdue,
   perTaskOverdue,
   highlightedTodoId,
+  reorderable = true,
 }: {
   todos: TodoItemType[];
   className?: string;
   overdue?: boolean;
   perTaskOverdue?: boolean;
   highlightedTodoId?: string | null;
+  reorderable?: boolean;
 }) => {
   const { toast } = useToast()
   const { preferences } = useUserPreferences();
@@ -56,6 +58,7 @@ const TodoGroup = ({
 
   // Changes to local todo arrangement will update database
   useEffect(() => {
+    if (!reorderable || preferences?.sortBy) return;
     // Wait for [items] to sync with [todos]
     if (todos.length !== items.length) return;
     const reorderList = reorderDiff();
@@ -65,7 +68,7 @@ const TodoGroup = ({
         clearTimeout(timer);
       };
     }
-  }, [items, todos, reorderDiff, reorderMutateFn]);
+  }, [items, todos, preferences?.sortBy, reorderable, reorderDiff, reorderMutateFn]);
 
   const sensors = useSensors(
     useSensor(KeyboardSensor),
@@ -89,17 +92,23 @@ const TodoGroup = ({
     }
   }
 
-  if (!mounted || preferences?.sortBy) {
+  if (!mounted || !reorderable || preferences?.sortBy) {
+    const showDragDisabledToast = reorderable && Boolean(preferences?.sortBy);
+
     return (
       <div className={cn("space-y-2", className)}>
         {items.map((item) => (
           <div
             key={item.id}
-            draggable={true}
-            onDragStart={(e) => {
-              e.preventDefault();
-              toast({ title: "Drag disabled; a global filter is active" })
-            }}
+            draggable={showDragDisabledToast}
+            onDragStart={
+              showDragDisabledToast
+                ? (e) => {
+                    e.preventDefault();
+                    toast({ title: "Drag disabled; a global filter is active" });
+                  }
+                : undefined
+            }
           >
             <TodoItemContainer
               todoItem={item}

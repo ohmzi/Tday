@@ -37,6 +37,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
+import NativePageTitle from "@/components/app/NativePageTitle";
+import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
@@ -165,15 +167,17 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full space-y-5 pb-10">
-      <div className="lg:hidden"><MobileSearchHeader /></div>
+      <div className="lg:hidden">
+        <MobileSearchHeader />
+      </div>
 
-      <header className="mt-8 space-y-1 sm:mt-10 lg:mt-0">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
-          <Settings className="h-5 w-5 text-accent" />
-          {sidebarDict("settings")}
-        </h1>
-        <p className="text-sm text-muted-foreground">Manage your account settings</p>
-      </header>
+      <NativePageTitle
+        title={sidebarDict("settings")}
+        accentColor={nativeScreenAccentColors.settings}
+        icon={Settings}
+        subtitle="Manage your account settings"
+        className="lg:mt-0"
+      />
 
       <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
         <CardHeader className="space-y-1">

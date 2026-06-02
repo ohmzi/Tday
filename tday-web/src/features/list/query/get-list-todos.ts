@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { TodoApiItemType, TodoItemType } from "@/types";
-import { endOfToday, startOfToday } from "date-fns";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
 
 export const useList = ({ id }: { id: string }) => {
@@ -17,7 +16,7 @@ export const useList = ({ id }: { id: string }) => {
     queryFn: async ({ queryKey, signal }) => {
       const [, id] = queryKey;
       const { todos } = await api.GET({
-        url: `/api/list/${id}?start=${startOfToday().getTime()}&end=${endOfToday().getTime()}`,
+        url: `/api/list/${id}`,
         signal,
       });
 
