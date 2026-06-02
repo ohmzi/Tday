@@ -151,7 +151,7 @@ struct CalendarScreen: View {
     @State private var viewModel: CalendarViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
-    private let calendarAccentColor = Color(red: 125.0 / 255.0, green: 103.0 / 255.0, blue: 182.0 / 255.0)
+    private let calendarAccentColor = Color.tdayCalendarPurple
 
     @State private var selectedDate = Date()
     @State private var visibleMonth = calendarMonthStart(for: Date())

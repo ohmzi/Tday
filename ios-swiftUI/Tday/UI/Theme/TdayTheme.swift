@@ -423,7 +423,7 @@ struct TdayNativeSegmentedControl: UIViewRepresentable {
         )
         control.setTitleTextAttributes(
             [
-                .foregroundColor: UIColor(colors.onSurface),
+                .foregroundColor: UIColor(accentColor),
                 .font: TdayFont.uiFont(size: 13, weight: .bold)
             ],
             for: .selected

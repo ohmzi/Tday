@@ -417,6 +417,7 @@ struct AppRootView: View {
             RootFeedDock(
                 activeTab: rootFeedTab,
                 collapsed: rootDockCollapsed,
+                accentColor: rootCreateTaskFillColor,
                 onSelect: handleRootFeedTabSelection
             )
             .padding(.leading, 18)
