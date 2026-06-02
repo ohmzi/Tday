@@ -70,6 +70,8 @@ data class AppUiState(
     val selectedReminder: ReminderOption = ReminderOption.DEFAULT,
     val isOffline: Boolean = false,
     val pendingMutationCount: Int = 0,
+    val lastSuccessfulSyncEpochMs: Long = 0L,
+    val lastSyncAttemptEpochMs: Long = 0L,
     val offlineNoticeId: Long = 0L,
     val versionCheckResult: VersionCheckResult? = null,
     val backendVersion: String? = null,
@@ -81,7 +83,35 @@ data class AppUiState(
 
     val isWorkspaceAvailable: Boolean
         get() = authenticated || isLocalMode
+
+    val syncStatus: MobileSyncStatus
+        get() = MobileSyncStatus(
+            dataMode = dataMode,
+            isOffline = isOffline,
+            isManualSyncing = isManualSyncing,
+            pendingMutationCount = pendingMutationCount,
+            lastSuccessfulSyncEpochMs = lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs = lastSyncAttemptEpochMs,
+        )
 }
+
+data class MobileSyncStatus(
+    val dataMode: AppDataMode = AppDataMode.UNSET,
+    val isOffline: Boolean = false,
+    val isManualSyncing: Boolean = false,
+    val pendingMutationCount: Int = 0,
+    val lastSuccessfulSyncEpochMs: Long = 0L,
+    val lastSyncAttemptEpochMs: Long = 0L,
+) {
+    val isLocalMode: Boolean
+        get() = dataMode == AppDataMode.LOCAL
+}
+
+private data class SyncMetadataSnapshot(
+    val pendingMutationCount: Int,
+    val lastSuccessfulSyncEpochMs: Long,
+    val lastSyncAttemptEpochMs: Long,
+)
 
 internal const val OFFLINE_NOTICE_COOLDOWN_MS = 10 * 60 * 1000L
 
@@ -149,6 +179,7 @@ class AppViewModel @Inject constructor(
         }
         observeOfflineSyncFailures()
         observeOfflineSyncSuccesses()
+        observeSyncMetadataChanges()
         bootstrap()
     }
 
@@ -182,6 +213,8 @@ class AppViewModel @Inject constructor(
                         adminAiSummaryError = null,
                         isOffline = false,
                         pendingMutationCount = 0,
+                        lastSuccessfulSyncEpochMs = 0L,
+                        lastSyncAttemptEpochMs = 0L,
                         versionCheckResult = VersionCheckResult.Compatible,
                         backendVersion = null,
                         requiredUpdateRelease = null,
@@ -204,9 +237,7 @@ class AppViewModel @Inject constructor(
                 val adminUser = isAdmin(sessionUser)
                 val shouldShowOfflineNotice = sessionResult.isOffline &&
                         offlineNoticeCooldown.shouldShowNotice()
-                val pendingCount = runCatching {
-                    cacheManager.loadOfflineState().pendingMutations.size
-                }.getOrDefault(_uiState.value.pendingMutationCount)
+                val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
                 _uiState.update {
                     it.copy(
                         loading = false,
@@ -229,7 +260,9 @@ class AppViewModel @Inject constructor(
                         isAdminAiSummarySaving = false,
                         adminAiSummaryError = null,
                         isOffline = sessionResult.isOffline,
-                        pendingMutationCount = pendingCount,
+                        pendingMutationCount = syncMetadata.pendingMutationCount,
+                        lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
+                        lastSyncAttemptEpochMs = syncMetadata.lastSyncAttemptEpochMs,
                         offlineNoticeId = if (shouldShowOfflineNotice) {
                             it.offlineNoticeId + 1L
                         } else {
@@ -342,6 +375,8 @@ class AppViewModel @Inject constructor(
                 aiSummaryValidationError = null,
                 isOffline = false,
                 pendingMutationCount = 0,
+                lastSuccessfulSyncEpochMs = 0L,
+                lastSyncAttemptEpochMs = 0L,
                 versionCheckResult = VersionCheckResult.Compatible,
                 backendVersion = null,
                 requiredUpdateRelease = null,
@@ -615,6 +650,8 @@ class AppViewModel @Inject constructor(
                     aiSummaryValidationError = null,
                     isOffline = false,
                     pendingMutationCount = 0,
+                    lastSuccessfulSyncEpochMs = 0L,
+                    lastSyncAttemptEpochMs = 0L,
                     versionCheckResult = VersionCheckResult.Compatible,
                     backendVersion = null,
                     requiredUpdateRelease = null,
@@ -647,6 +684,7 @@ class AppViewModel @Inject constructor(
                         suppressAuthenticationExpired = true,
                     )
             val shouldShowOfflineNotice = isOffline && offlineNoticeCooldown.shouldShowNotice()
+            val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
             _uiState.update {
                 it.copy(
                     isManualSyncing = false,
@@ -656,9 +694,9 @@ class AppViewModel @Inject constructor(
                     } else {
                         it.offlineNoticeId
                     },
-                    pendingMutationCount = runCatching {
-                        cacheManager.loadOfflineState().pendingMutations.size
-                    }.getOrDefault(it.pendingMutationCount),
+                    pendingMutationCount = syncMetadata.pendingMutationCount,
+                    lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
+                    lastSyncAttemptEpochMs = syncMetadata.lastSyncAttemptEpochMs,
                 )
             }
             if (syncError == null && !realtimeClient.isConnected && _uiState.value.authenticated) {
@@ -745,10 +783,14 @@ class AppViewModel @Inject constructor(
         resyncJob = viewModelScope.launch {
             while (isActive) {
                 val hasPending = runCatching { syncManager.hasPendingMutations() }.getOrDefault(false)
-                val pendingCount = runCatching {
-                    cacheManager.loadOfflineState().pendingMutations.size
-                }.getOrDefault(0)
-                _uiState.update { it.copy(pendingMutationCount = pendingCount) }
+                val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
+                _uiState.update {
+                    it.copy(
+                        pendingMutationCount = syncMetadata.pendingMutationCount,
+                        lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
+                        lastSyncAttemptEpochMs = syncMetadata.lastSyncAttemptEpochMs,
+                    )
+                }
 
                 val delayMs = if (hasPending) PENDING_RESYNC_INTERVAL_MS else RESYNC_INTERVAL_MS
                 delay(delayMs)
@@ -790,6 +832,7 @@ class AppViewModel @Inject constructor(
                 showOfflineNotice &&
                 !shouldDeferOfflineState &&
                 offlineNoticeCooldown.shouldShowNotice()
+        val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
         _uiState.update {
             it.copy(
                 isOffline = when {
@@ -803,9 +846,9 @@ class AppViewModel @Inject constructor(
                 } else {
                     it.offlineNoticeId
                 },
-                pendingMutationCount = runCatching {
-                    cacheManager.loadOfflineState().pendingMutations.size
-                }.getOrDefault(it.pendingMutationCount),
+                pendingMutationCount = syncMetadata.pendingMutationCount,
+                lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
+                lastSyncAttemptEpochMs = syncMetadata.lastSyncAttemptEpochMs,
             )
         }
         if (syncError != null) {
@@ -961,21 +1004,60 @@ class AppViewModel @Inject constructor(
     private fun observeOfflineSyncSuccesses() {
         viewModelScope.launch {
             syncManager.offlineSyncSuccesses.collect {
-                val pendingCount = runCatching {
-                    cacheManager.loadOfflineState().pendingMutations.size
-                }.getOrDefault(_uiState.value.pendingMutationCount)
+                val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
                 _uiState.update {
                     if (!it.authenticated) {
                         it
                     } else {
                         it.copy(
                             isOffline = false,
-                            pendingMutationCount = pendingCount,
+                            pendingMutationCount = syncMetadata.pendingMutationCount,
+                            lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
+                            lastSyncAttemptEpochMs = syncMetadata.lastSyncAttemptEpochMs,
                         )
                     }
                 }
             }
         }
+    }
+
+    private fun observeSyncMetadataChanges() {
+        viewModelScope.launch {
+            cacheManager.syncMetadataVersion.collect {
+                refreshSyncMetadataFromCache()
+            }
+        }
+    }
+
+    private fun refreshSyncMetadataFromCache() {
+        val mode = _uiState.value.dataMode
+        val syncMetadata = syncMetadataSnapshot(mode)
+        _uiState.update {
+            it.copy(
+                pendingMutationCount = syncMetadata.pendingMutationCount,
+                lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
+                lastSyncAttemptEpochMs = syncMetadata.lastSyncAttemptEpochMs,
+            )
+        }
+    }
+
+    private fun syncMetadataSnapshot(mode: AppDataMode): SyncMetadataSnapshot {
+        if (mode != AppDataMode.SERVER) {
+            return SyncMetadataSnapshot(
+                pendingMutationCount = 0,
+                lastSuccessfulSyncEpochMs = 0L,
+                lastSyncAttemptEpochMs = 0L,
+            )
+        }
+        val state = runCatching { cacheManager.loadOfflineState() }.getOrNull()
+        return SyncMetadataSnapshot(
+            pendingMutationCount = state?.pendingMutations?.size
+                ?: _uiState.value.pendingMutationCount,
+            lastSuccessfulSyncEpochMs = state?.lastSuccessfulSyncEpochMs
+                ?: _uiState.value.lastSuccessfulSyncEpochMs,
+            lastSyncAttemptEpochMs = state?.lastSyncAttemptEpochMs
+                ?: _uiState.value.lastSyncAttemptEpochMs,
+        )
     }
 
     override fun onCleared() {

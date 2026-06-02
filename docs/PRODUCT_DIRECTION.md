@@ -55,6 +55,7 @@ Local Mode is an offline-only workspace on Android and iOS.
 - Data is written directly to the local cache.
 - Pending mutation queues are cleared/ignored because there is no remote target.
 - Server-only features such as manual sync, remote updates, admin AI settings, and pull-to-refresh should be hidden or disabled.
+- Settings should make the workspace mode explicit: Local Mode is described as on-device only, while Server Mode exposes calm sync status, last sync metadata, and pending change counts.
 - Local Mode data should not be silently uploaded later without an explicit migration/import design.
 
 Server Mode remains the authenticated self-hosted workspace:

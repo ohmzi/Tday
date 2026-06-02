@@ -43,6 +43,8 @@ class OfflineCacheManager @Inject constructor(
     private val syncMutex = Mutex()
     private val cacheDataVersionMutable = MutableStateFlow(0L)
     val cacheDataVersion: StateFlow<Long> = cacheDataVersionMutable.asStateFlow()
+    private val syncMetadataVersionMutable = MutableStateFlow(0L)
+    val syncMetadataVersion: StateFlow<Long> = syncMetadataVersionMutable.asStateFlow()
 
     @Volatile
     private var lastPersistedState: OfflineSyncState? = null
@@ -122,12 +124,18 @@ class OfflineCacheManager @Inject constructor(
         }
         if (previous == normalizedState) return
 
+        val hasUiChanges = hasUiDataChanges(previous, normalizedState)
+        val hasSyncMetadataChanges = hasSyncMetadataChanges(previous, normalizedState)
+
         persistStateToDaos(normalizedState)
         lastPersistedState = normalizedState
-        if (hasUiDataChanges(previous, normalizedState)) {
+        if (hasUiChanges) {
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
             floaterTasksWidgetRefresher.requestRefresh()
+        }
+        if (hasSyncMetadataChanges) {
+            syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
         }
     }
 
@@ -163,6 +171,9 @@ class OfflineCacheManager @Inject constructor(
             todayTasksWidgetRefresher.requestRefresh()
             floaterTasksWidgetRefresher.requestRefresh()
         }
+        if (hasSyncMetadataChanges(previous, cleared)) {
+            syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
+        }
     }
 
     fun clearSessionOnly() {
@@ -178,6 +189,9 @@ class OfflineCacheManager @Inject constructor(
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
             todayTasksWidgetRefresher.requestRefresh()
             floaterTasksWidgetRefresher.requestRefresh()
+        }
+        if (hasSyncMetadataChanges(previous, cleared)) {
+            syncMetadataVersionMutable.value = syncMetadataVersionMutable.value + 1L
         }
     }
 
@@ -222,6 +236,15 @@ class OfflineCacheManager @Inject constructor(
             previous.lists != next.lists ||
                 previous.floaterLists != next.floaterLists ||
             previous.aiSummaryEnabled != next.aiSummaryEnabled
+    }
+
+    private fun hasSyncMetadataChanges(
+        previous: OfflineSyncState,
+        next: OfflineSyncState,
+    ): Boolean {
+        return previous.lastSuccessfulSyncEpochMs != next.lastSuccessfulSyncEpochMs ||
+                previous.lastSyncAttemptEpochMs != next.lastSyncAttemptEpochMs ||
+                previous.pendingMutations != next.pendingMutations
     }
 
     private companion object {

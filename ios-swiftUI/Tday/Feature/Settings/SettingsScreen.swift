@@ -58,6 +58,7 @@ struct SettingsScreen: View {
             }
         }
         .task {
+            viewModel.refreshSyncStatusFromCache()
             await viewModel.refreshAdminAiSummarySetting()
             await viewModel.refreshVersionInfo()
         }
@@ -89,6 +90,15 @@ struct SettingsScreen: View {
                 settingsListRow {
                     SettingsProfileCard(user: viewModel.user)
                 }
+            }
+
+            settingsListRow {
+                SettingsWorkspaceCard(
+                    syncStatus: viewModel.syncStatus,
+                    onSyncNow: {
+                        Task { await viewModel.manualSync() }
+                    }
+                )
             }
 
             settingsListRow {
@@ -227,6 +237,75 @@ private struct SettingsProfileCard: View {
                 .font(.tdayRounded(size: 13, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.58))
         }
+    }
+}
+
+private struct SettingsWorkspaceCard: View {
+    let syncStatus: MobileSyncStatus
+    let onSyncNow: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        SettingsSectionCard {
+            SettingsSectionTitle("Workspace")
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(syncStatus.title)
+                    .font(.tdayRounded(size: 17, weight: .heavy))
+                    .foregroundStyle(colors.onSurface)
+
+                Text(syncStatus.statusText)
+                    .font(.tdayRounded(size: 13, weight: .bold))
+                    .foregroundStyle(syncStatus.isOffline ? colors.error : colors.onSurface.opacity(0.62))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !syncStatus.isLocalMode {
+                SettingsDivider()
+
+                SettingsSyncFactRow(label: "Last synced", value: syncStatus.lastSyncedText())
+
+                if let lastAttempt = syncStatus.lastAttemptText() {
+                    SettingsSyncFactRow(label: "Last attempt", value: lastAttempt)
+                }
+
+                SettingsSyncFactRow(label: "Pending", value: syncStatus.pendingText)
+
+                Button(action: onSyncNow) {
+                    Text(syncStatus.isManualSyncing ? "Syncing..." : "Sync now")
+                        .font(.tdayRounded(size: 14, weight: .heavy))
+                        .foregroundStyle(syncStatus.isManualSyncing ? colors.onSurface.opacity(0.45) : colors.secondary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+                .buttonStyle(.plain)
+                .disabled(syncStatus.isManualSyncing)
+            }
+        }
+    }
+}
+
+private struct SettingsSyncFactRow: View {
+    let label: String
+    let value: String
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.tdayRounded(size: 13, weight: .bold))
+                .foregroundStyle(colors.onSurface.opacity(0.56))
+
+            Spacer(minLength: 12)
+
+            Text(value)
+                .font(.tdayRounded(size: 13, weight: .heavy))
+                .foregroundStyle(colors.onSurface.opacity(0.72))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+        }
+        .frame(minHeight: 24)
     }
 }
 
