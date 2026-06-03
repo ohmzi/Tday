@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  SheetCard,
+  SheetSectionTitle,
+} from "@/components/ui/sheet-chrome";
 import { api } from "@/lib/api-client";
 import { usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
@@ -74,6 +79,7 @@ export default function ListFormSheet({
   initialIconKey = DEFAULT_LIST_ICON_KEY,
   onSaved,
 }: ListFormSheetProps) {
+  const { t: appDict } = useTranslation("app");
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
@@ -102,6 +108,7 @@ export default function ListFormSheet({
     [color],
   );
   const SelectedIcon = getListIcon(iconKey);
+  const nameColorClass = selectedColor.tailwind.replace("bg-", "text-");
 
   const invalidateListQueries = async () => {
     await Promise.all([
@@ -145,8 +152,11 @@ export default function ListFormSheet({
     },
   });
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const deleting = deleteListMutation.isPending;
+  const saving = createLoading || updateListMutation.isPending;
+  const canSubmit = Boolean(normalizeListName(name)) && !saving && !deleting;
+
+  const handleSubmit = async () => {
     const normalizedName = normalizeListName(name);
     if (!normalizedName) {
       setError("List name cannot be empty");
@@ -182,62 +192,74 @@ export default function ListFormSheet({
     }
   };
 
-  const deleting = deleteListMutation.isPending;
-  const saving = createLoading || updateListMutation.isPending;
-
   return (
     <AppBottomSheet
+      variant="native"
       open={open}
       onOpenChange={onOpenChange}
-      title={isEditing ? "Edit list" : "New list"}
-      description="Name the list and choose the color and icon shown across task views."
+      title={isEditing ? appDict("editList") : appDict("newList")}
+      onClose={() => onOpenChange(false)}
+      onConfirm={() => void handleSubmit()}
+      confirmDisabled={!canSubmit}
+      confirmLabel={appDict("save")}
+      closeLabel={appDict("cancel")}
     >
-      <form className="space-y-5" onSubmit={handleSubmit}>
-        <div className="rounded-[24px] border border-white/70 bg-card/92 p-4 dark:border-white/10">
-          <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 pb-2">
+        {/* Icon preview + name */}
+        <SheetCard className="p-[18px]">
+          <div className="flex flex-col items-center gap-4">
             <span
               className={cn(
-                "flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-white/70 text-white shadow-inner dark:border-white/10",
+                "flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-white shadow-inner",
                 selectedColor.tailwind,
               )}
             >
-              <SelectedIcon className="h-8 w-8 stroke-[2.4]" />
+              <SelectedIcon className="h-9 w-9 stroke-[2.4]" />
             </span>
             <Input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="List name"
-              className="h-12 rounded-2xl border-border/70 bg-background text-base font-extrabold"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void handleSubmit();
+                }
+              }}
+              placeholder={appDict("listName")}
+              className={cn(
+                "h-14 w-full rounded-2xl border-transparent bg-muted/60 text-center text-xl font-extrabold focus-visible:ring-0",
+                nameColorClass,
+              )}
               autoFocus
             />
           </div>
-        </div>
+        </SheetCard>
 
-        <div>
-          <p className="mb-2 text-sm font-black text-muted-foreground">Color</p>
-          <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+        {/* Color */}
+        <SheetSectionTitle>{appDict("color")}</SheetSectionTitle>
+        <SheetCard className="p-3.5">
+          <div className="flex gap-3 overflow-x-auto pb-1">
             {listColorMap.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => setColor(option.value)}
                 className={cn(
-                  "flex h-12 items-center justify-center rounded-2xl border transition-transform active:scale-95",
-                  color === option.value
-                    ? "border-foreground/50 bg-card shadow-sm"
-                    : "border-border/70 bg-card/65",
+                  "h-12 w-12 shrink-0 rounded-full transition-transform active:scale-95",
+                  option.tailwind,
+                  color === option.value && "ring-[3px] ring-foreground/30",
                 )}
                 aria-label={`Use ${option.name}`}
-              >
-                <span className={cn("h-7 w-7 rounded-full", option.tailwind)} />
-              </button>
+                aria-pressed={color === option.value}
+              />
             ))}
           </div>
-        </div>
+        </SheetCard>
 
-        <div>
-          <p className="mb-2 text-sm font-black text-muted-foreground">Icon</p>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+        {/* Icon */}
+        <SheetSectionTitle>{appDict("icon")}</SheetSectionTitle>
+        <SheetCard className="p-3.5">
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
             {listIconOptions.map((option) => {
               const Icon = option.icon;
               const selected = iconKey === option.key;
@@ -248,10 +270,10 @@ export default function ListFormSheet({
                   type="button"
                   onClick={() => setIconKey(option.key)}
                   className={cn(
-                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition-transform active:scale-95",
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
                     selected
-                      ? "border-foreground/30 bg-accent/15 text-accent shadow-sm"
-                      : "border-border/70 bg-card/65 text-muted-foreground hover:text-foreground",
+                      ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                      : "bg-muted/60 text-muted-foreground hover:text-foreground",
                   )}
                   aria-label={`Use ${option.label} icon`}
                   aria-pressed={selected}
@@ -261,10 +283,10 @@ export default function ListFormSheet({
               );
             })}
           </div>
-        </div>
+        </SheetCard>
 
         {error ? (
-          <p className="text-sm font-extrabold text-destructive">{error}</p>
+          <p className="px-1 text-sm font-extrabold text-destructive">{error}</p>
         ) : null}
 
         {isEditing && list ? (
@@ -291,7 +313,7 @@ export default function ListFormSheet({
                   disabled={deleting}
                   className="rounded-2xl px-5 font-black"
                 >
-                  {deleting ? "Deleting..." : "Delete list"}
+                  {deleting ? "Deleting..." : appDict("deleteList")}
                 </Button>
               </div>
             </div>
@@ -302,30 +324,11 @@ export default function ListFormSheet({
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
             >
               <Trash2 className="h-4 w-4 stroke-[2.4]" />
-              Delete list
+              {appDict("deleteList")}
             </button>
           )
         ) : null}
-
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={deleting}
-            className="rounded-2xl border-border/70 bg-card px-5 font-black"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={saving || deleting}
-            className="rounded-2xl bg-accent px-5 font-black text-accent-foreground hover:bg-accent/90"
-          >
-            {saving ? "Saving..." : isEditing ? "Save" : "Create"}
-          </Button>
-        </div>
-      </form>
+      </div>
     </AppBottomSheet>
   );
 }
