@@ -88,6 +88,7 @@ export const useEditTodoInstance = (
         if (setEditInstanceOnly) setEditInstanceOnly(false);
         queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
         queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
+        queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
       },
 
       onError: (error, _newTodo, context) => {
