@@ -636,12 +636,12 @@ function CalendarTodayButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-card/92 text-accent shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)] transition-all duration-200 dark:border-white/10",
+        "flex h-11 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-card/92 px-4 text-sm font-black text-accent shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)] transition-all duration-200 dark:border-white/10 sm:px-5",
         "hover:bg-card hover:shadow-[0_12px_32px_-22px_hsl(var(--shadow)/0.5)]",
         "disabled:cursor-default disabled:opacity-40 disabled:hover:bg-card/92 disabled:hover:shadow-[0_10px_30px_-24px_hsl(var(--shadow)/0.42)]",
       )}
     >
-      <CalendarDays className="h-5 w-5 stroke-[2.4]" />
+      {appDict("today")}
     </button>
   );
 }

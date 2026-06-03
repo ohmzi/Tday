@@ -1,25 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Options, RRule } from "rrule";
-import { AlignLeft, Clock, Flag, Repeat, Circle } from "lucide-react";
 import { TodoItemType } from "@/types";
+import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
+import ConfirmCancelEditDialog from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEdit";
+import { Modal, ModalOverlay, ModalContent } from "@/components/ui/Modal";
+import { SheetHeader } from "@/components/ui/sheet-chrome";
+import deriveRepeatType from "@/lib/deriveRepeatType";
+import CalendarTaskFormBody from "../CalendarTaskFormBody";
 
 type ModalDateRange = { from: Date; to: Date };
-import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
-import DateDropdownMenu from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/DateDropdown/DateDropdownMenu";
-import PriorityDropdownMenu from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/PriorityDropdown/PriorityDropdown";
-import RepeatDropdownMenu from "@/features/calendar/component/CalendarForm/FormFields/Dropdowns/RepeatDropdown/RepeatDropdownMenu";
-import ConfirmCancelEditDialog from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEdit";
-import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalFooter,
-} from "@/components/ui/Modal";
-import { Button } from "@/components/ui/button";
-import ListDropdownMenu from "@/components/todo/component/TodoForm/ListDropdownMenu";
-import NLPTitleInput from "@/components/todo/component/TodoForm/NLPTitleInput";
-import deriveRepeatType from "@/lib/deriveRepeatType";
+
 type CreateCalendarFormProps = {
   start: Date;
   end: Date;
@@ -35,20 +26,16 @@ const CreateCalendarForm = ({
 }: CreateCalendarFormProps) => {
   void start;
   const { t: appDict } = useTranslation("app");
+  const titleRef = useRef<HTMLDivElement | null>(null);
 
   const [cancelEditDialogOpen, setCancelEditDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TodoItemType["priority"]>("Low");
-  const [dateRange, setDateRange] = useState<ModalDateRange>({
-    from: end,
-    to: end,
-  });
+  const [dateRange, setDateRange] = useState<ModalDateRange>({ from: end, to: end });
   const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(null);
   const [listID, setListID] = useState<string | null>(null);
   const derivedRepeatType = deriveRepeatType({ rruleOptions });
-
-  const titleRef = useRef(null);
 
   const { createCalendarTodo, createTodoStatus } = useCreateCalendarTodo();
 
@@ -77,6 +64,18 @@ const CreateCalendarForm = ({
     setDisplayForm(false);
   };
 
+  const handleSubmit = () => {
+    if (title.trim().length <= 0) return;
+    createCalendarTodo({
+      title,
+      description,
+      priority,
+      due: dateRange.to || end,
+      rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
+      listID,
+    });
+  };
+
   return (
     <>
       <ConfirmCancelEditDialog
@@ -85,116 +84,40 @@ const CreateCalendarForm = ({
         setDisplayForm={setDisplayForm}
       />
 
-      <Modal open={displayForm} onOpenChange={(open) => {
-        if (!open) handleClose();
-      }}>
+      <Modal
+        open={displayForm}
+        onOpenChange={(open) => {
+          if (!open) handleClose();
+        }}
+      >
         <ModalOverlay>
-          <ModalContent>
-            <form
-              className="flex flex-col gap-5 mt-2 min-w-0"
-              onSubmit={(e) => {
-                e.preventDefault();
-                createCalendarTodo({
-                  title,
-                  description,
-                  priority,
-                  due: dateRange.to || end,
-                  rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
-                  listID,
-                });
-              }}
-            >
-              {/* Title */}
-              <div className="flex items-start gap-4">
-                <NLPTitleInput
-                  setListID={setListID}
-                  titleRef={titleRef}
-                  title={title}
-                  setTitle={setTitle}
-                  setDateRange={setDateRange}
-                  className="ml-9 flex-1 min-w-0 bg-transparent border-b border-border py-1 text-lg focus:outline-hidden focus:border-lime"
-                />
-              </div>
-
-              {/* Date */}
-              <div className="flex items-center gap-3">
-                <Clock className="w-4 h-4 text-muted-foreground mt-1" />
-                <div className="flex-1">
-                  <DateDropdownMenu
-                    dateRange={dateRange}
-                    setDateRange={setDateRange}
-                  />
-                </div>
-              </div>
-
-              {/* Repeat */}
-              <div className="flex items-center gap-3">
-                <Repeat className="w-4 h-4 text-muted-foreground mt-1" />
-                <div className="flex-1">
-                  <RepeatDropdownMenu
-                    rruleOptions={rruleOptions}
-                    setRruleOptions={setRruleOptions}
-                    derivedRepeatType={derivedRepeatType}
-                  />
-                </div>
-              </div>
-
-              {/* List */}
-              <div className="flex items-center gap-3">
-                <Circle className="w-4 h-4 text-muted-foreground mt-1" />
-                <div className="flex-1">
-                  <ListDropdownMenu
-                    listID={listID}
-                    setListID={setListID}
-                    className="bg-popover border text-foreground text-sm flex justify-center items-center gap-2 hover:bg-popover-border rounded-md"
-                    variant={"compact"}
-                  />
-                </div>
-              </div>
-
-              {/* Priority */}
-              <div className="flex items-center gap-3">
-                <Flag className="w-4 h-4 text-muted-foreground mt-1" />
-                <div className="flex-1">
-                  <PriorityDropdownMenu
-                    priority={priority}
-                    setPriority={setPriority}
-                  />
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="flex items-start gap-3">
-                <AlignLeft className="w-4 h-4 text-muted-foreground mt-1" />
-                <textarea
-                  className="flex-1 min-w-0 bg-sidebar border rounded-md px-3 py-2 text-sm resize-none focus:outline-hidden focus:ring-1 focus:ring-lime/80"
-                  rows={3}
-                  placeholder={appDict("descPlaceholder")}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-
-              {/* Actions */}
-              <ModalFooter>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="hover:bg-red hover:text-white"
-                  onClick={handleClose}
-                >
-                  {appDict("cancel")}
-                </Button>
-
-                <Button
-                  disabled={title.length <= 0}
-                  type="submit"
-                  className="bg-lime text-white hover:bg-lime/90"
-                >
-                  {appDict("save")}
-                </Button>
-              </ModalFooter>
-            </form>
+          <ModalContent className="max-w-lg overflow-hidden p-0">
+            <SheetHeader
+              title={appDict("newTask")}
+              onClose={handleClose}
+              onConfirm={handleSubmit}
+              confirmDisabled={title.trim().length <= 0}
+              confirmLabel={appDict("save")}
+              closeLabel={appDict("cancel")}
+            />
+            <div className="max-h-[80dvh] overflow-y-auto px-4 pb-5 sm:px-5">
+              <CalendarTaskFormBody
+                titleRef={titleRef}
+                title={title}
+                setTitle={setTitle}
+                description={description}
+                setDescription={setDescription}
+                priority={priority}
+                setPriority={setPriority}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
+                listID={listID}
+                setListID={setListID}
+                setRruleOptions={setRruleOptions}
+                derivedRepeatType={derivedRepeatType}
+                onSubmit={handleSubmit}
+              />
+            </div>
           </ModalContent>
         </ModalOverlay>
       </Modal>
@@ -203,7 +126,3 @@ const CreateCalendarForm = ({
 };
 
 export default CreateCalendarForm;
-
-
-
-

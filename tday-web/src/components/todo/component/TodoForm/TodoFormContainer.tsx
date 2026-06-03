@@ -10,7 +10,8 @@ interface TodoFormContainerProps {
   todo?: TodoItemType;
   overrideFields?: { listID?: string };
   persistent?: boolean;
-  surface?: "card" | "sheet";
+  registerSubmit?: (submit: () => void) => void;
+  onCanSubmitChange?: (canSubmit: boolean) => void;
 }
 const TodoFormContainer = ({
   editInstanceOnly,
@@ -20,7 +21,8 @@ const TodoFormContainer = ({
   todo,
   overrideFields,
   persistent,
-  surface,
+  registerSubmit,
+  onCanSubmitChange,
 }: TodoFormContainerProps) => {
   return (
     <TodoFormProvider todoItem={todo} overrideFields={overrideFields}>
@@ -30,7 +32,8 @@ const TodoFormContainer = ({
         editInstanceOnly={editInstanceOnly}
         setEditInstanceOnly={setEditInstanceOnly}
         persistent={persistent}
-        surface={surface}
+        registerSubmit={registerSubmit}
+        onCanSubmitChange={onCanSubmitChange}
       />
     </TodoFormProvider>
   );
