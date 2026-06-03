@@ -3,7 +3,6 @@ import { format } from "date-fns";
 import {
   Ellipsis,
   ListPlus,
-  Pencil,
   Search,
   X,
 } from "lucide-react";
@@ -101,12 +100,6 @@ export default function NativeHomeDashboard() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
-  const [editingList, setEditingList] = useState<{
-    id: string;
-    name: string;
-    color?: ListColor;
-    iconKey?: string | null;
-  } | null>(null);
   const titleDate = format(new Date(), "EEE, MMM d");
 
   // Per-list active task counts, derived live from the task cache (the server's
