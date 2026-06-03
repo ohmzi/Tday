@@ -59,16 +59,20 @@ export default function TodoCheckbox({
             setExpand(true);
           }}
           className={clsx(
-            "relative group w-5 h-5 rounded-full flex items-center justify-center border-[2.23px] border-foreground",
-            "hover:cursor-pointer transition-transform duration-200 ease-out hover:border-transparent",
+            "relative group w-5 h-5 rounded-full flex items-center justify-center border-[2.23px]",
+            "hover:cursor-pointer transition-all duration-200 ease-out",
+            // Empty outline when incomplete; solid green fill + white check when complete.
+            checked
+              ? "border-accent-lime bg-accent-lime"
+              : "border-foreground hover:border-transparent",
             expand && "scale-125",
           )}
         >
           <Icon
             className={clsx(
               "pointer-events-none absolute bottom-1/2 translate-y-1/2 right-1/2 translate-x-1/2",
-              "stroke-3 w-5 h-5 text-foreground",
-              checked ? "block" : "hidden group-hover:block",
+              "stroke-3 w-5 h-5",
+              checked ? "block text-white" : "hidden group-hover:block text-foreground",
             )}
           />
         </div>
@@ -81,7 +85,8 @@ export default function TodoCheckbox({
               setExpand(true);
             }}
             className={clsx(
-              "group w-[1.35rem] h-[1.35rem] flex items-center justify-center text-foreground",
+              "group w-[1.35rem] h-[1.35rem] flex items-center justify-center",
+              checked ? "text-accent-lime" : "text-foreground",
               "hover:cursor-pointer hover:stroke-transparent",
             )}
           />
@@ -89,9 +94,9 @@ export default function TodoCheckbox({
           <Icon
             className={clsx(
               "pointer-events-none absolute bottom-1/2 translate-y-1/2 right-1/2 translate-x-1/2 transition-transform duration-200 ease-out",
-              "stroke-3 w-5 h-5 text-foreground",
+              "stroke-3 w-5 h-5",
               expand && "scale-125",
-              checked ? "block" : "hidden group-hover:block",
+              checked ? "block text-accent-lime" : "hidden group-hover:block text-foreground",
             )}
           />
         </div>
