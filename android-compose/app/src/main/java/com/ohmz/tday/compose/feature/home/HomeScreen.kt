@@ -1527,8 +1527,8 @@ private fun HomeTodayCard(
                 .drawWithCache {
                     val glow = Brush.radialGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.White.copy(alpha = 0.08f),
+                            Color.White.copy(alpha = 0.1f),
+                            Color.White.copy(alpha = 0.03f),
                             Color.Transparent
                         ),
                         center = Offset(size.width * 0.22f, size.height * 0.2f),
