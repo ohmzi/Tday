@@ -1,5 +1,4 @@
 import type { ElementType, ReactNode } from "react";
-import LineSeparator from "@/components/ui/lineSeparator";
 import { cn } from "@/lib/utils";
 
 export default function NativePageTitle({
@@ -8,7 +7,6 @@ export default function NativePageTitle({
   icon: Icon,
   iconNode,
   subtitle,
-  withSeparator = true,
   className,
 }: {
   title: string;
@@ -16,7 +14,6 @@ export default function NativePageTitle({
   icon?: ElementType;
   iconNode?: ReactNode;
   subtitle?: string;
-  withSeparator?: boolean;
   className?: string;
 }) {
   return (
@@ -36,7 +33,6 @@ export default function NativePageTitle({
       {subtitle ? (
         <p className="mt-1.5 text-sm font-extrabold text-muted-foreground">{subtitle}</p>
       ) : null}
-      {withSeparator ? <LineSeparator className="mt-3 flex-1 border-border/70" /> : null}
     </div>
   );
 }
