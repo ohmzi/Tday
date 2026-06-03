@@ -323,7 +323,7 @@ private struct TdayTasksWidgetContent: View {
             case .setup:
                 message(title: "Open T'Day", subtitle: "Set up your workspace")
             case .empty:
-                message(title: mode.emptyTitle, subtitle: mode.emptySubtitle)
+                message(title: mode.emptyTitle, subtitle: "")
             case .tasks:
                 EmptyView()
             }
@@ -396,7 +396,9 @@ private struct TdayTasksWidgetContent: View {
     private var header: some View {
         HStack(spacing: 8) {
             if family == .systemSmall {
-                smallCountLabel
+                if status == .tasks {
+                    smallCountLabel
+                }
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(title)
@@ -404,7 +406,9 @@ private struct TdayTasksWidgetContent: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
 
-                    countPill
+                    if status == .tasks {
+                        countPill
+                    }
                 }
             }
 
@@ -477,7 +481,7 @@ private struct TdayTasksWidgetContent: View {
                 .lineLimit(family == .systemSmall ? 1 : 2)
                 .minimumScaleFactor(family == .systemSmall ? 0.75 : 0.85)
 
-            if family != .systemSmall {
+            if family != .systemSmall, !subtitle.isEmpty {
                 Text(subtitle)
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(secondaryTextColor)
