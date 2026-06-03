@@ -133,7 +133,6 @@ const AdminPageHeader = () => (
     accentColor={nativeScreenAccentColors.settings}
     icon={Users}
     subtitle="Approve pending registrations and manage user access."
-    className="lg:mt-0"
   />
 );
 
@@ -357,9 +356,7 @@ export default function AdminUserControl() {
 
   return (
     <div className="w-full space-y-5 pb-10">
-      <div className="lg:hidden">
-        <MobileSearchHeader />
-      </div>
+      <MobileSearchHeader />
 
       <AdminPageHeader />
 
