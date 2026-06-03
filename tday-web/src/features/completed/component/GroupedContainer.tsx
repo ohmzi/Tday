@@ -30,17 +30,17 @@ export default function GroupedCompletedTodoContainer({
       : formatDate(completedTodos[0].completedAt);
 
   return (
-    <section className="mb-8 lg:mb-10">
-      {/* Section heading — identical to Today page sections */}
-      <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
-        <h3 className="select-none text-lg font-semibold tracking-tight">
+    <section className="mb-3">
+      {/* Section heading — matches the timeline date headers */}
+      <div className="mb-1.5 mt-3 flex items-center gap-2">
+        <h3 className="select-none text-2xl font-black tracking-tight text-muted-foreground">
           {sectionLabel}
         </h3>
         <LineSeparator className="flex-1 border-border/70" />
       </div>
 
-      {/* Task cards */}
-      <div className="space-y-2">
+      {/* Flat task rows */}
+      <div className="space-y-0">
         {completedTodos.map((todo) => (
           <CompletedTodoItemContainer
             key={todo.id}

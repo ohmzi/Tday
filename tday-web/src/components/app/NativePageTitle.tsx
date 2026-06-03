@@ -24,10 +24,10 @@ export default function NativePageTitle({
       <div className="flex min-w-0 items-center gap-2.5">
         {iconNode}
         {Icon ? (
-          <Icon className="h-7 w-7 shrink-0" style={{ color: accentColor }} strokeWidth={2.4} />
+          <Icon className="h-8 w-8 shrink-0" style={{ color: accentColor }} strokeWidth={2.4} />
         ) : null}
         <h1
-          className="truncate text-[1.85rem] font-black leading-tight tracking-normal sm:text-[2.15rem]"
+          className="truncate text-[2.1rem] font-black leading-tight tracking-normal sm:text-[2.55rem]"
           style={{ color: accentColor }}
         >
           {title}
@@ -36,7 +36,7 @@ export default function NativePageTitle({
       {subtitle ? (
         <p className="mt-1.5 text-sm font-extrabold text-muted-foreground">{subtitle}</p>
       ) : null}
-      {withSeparator ? <LineSeparator className="mt-4 flex-1 border-border/70" /> : null}
+      {withSeparator ? <LineSeparator className="mt-3 flex-1 border-border/70" /> : null}
     </div>
   );
 }

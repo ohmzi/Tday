@@ -2,6 +2,26 @@ import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import clsx from "clsx";
 import { getListIcon } from "@/lib/listIcons";
 
+// Map every list color to its accent token. Normalized to uppercase so the icon
+// is tinted regardless of how the API casts the color value.
+const LIST_COLOR_CLASS: Record<string, string> = {
+  RED: "text-accent-red",
+  ORANGE: "text-accent-orange",
+  YELLOW: "text-accent-yellow",
+  LIME: "text-accent-lime",
+  BLUE: "text-accent-blue",
+  PURPLE: "text-accent-purple",
+  PINK: "text-accent-pink",
+  TEAL: "text-accent-teal",
+  CORAL: "text-accent-coral",
+  GOLD: "text-accent-gold",
+  DEEP_BLUE: "text-accent-deep-blue",
+  ROSE: "text-accent-rose",
+  LIGHT_RED: "text-accent-light-red",
+  BRICK: "text-accent-brick",
+  SLATE: "text-accent-slate",
+};
+
 export default function ListDot({
   id,
   className,
@@ -12,23 +32,10 @@ export default function ListDot({
   const { listMetaData } = useListMetaData();
   const Icon = getListIcon(listMetaData[id]?.iconKey);
 
-  const colorClass = clsx({
-    "text-accent-red": listMetaData[id]?.color === "RED",
-    "text-accent-orange": listMetaData[id]?.color === "ORANGE",
-    "text-accent-yellow": listMetaData[id]?.color === "YELLOW",
-    "text-accent-lime": listMetaData[id]?.color === "LIME",
-    "text-accent-blue": listMetaData[id]?.color === "BLUE",
-    "text-accent-purple": listMetaData[id]?.color === "PURPLE",
-    "text-accent-pink": listMetaData[id]?.color === "PINK",
-    "text-accent-teal": listMetaData[id]?.color === "TEAL",
-    "text-accent-coral": listMetaData[id]?.color === "CORAL",
-    "text-accent-gold": listMetaData[id]?.color === "GOLD",
-    "text-accent-deep-blue": listMetaData[id]?.color === "DEEP_BLUE",
-    "text-accent-rose": listMetaData[id]?.color === "ROSE",
-    "text-accent-light-red": listMetaData[id]?.color === "LIGHT_RED",
-    "text-accent-brick": listMetaData[id]?.color === "BRICK",
-    "text-accent-slate": listMetaData[id]?.color === "SLATE",
-  });
+  const colorKey = String(listMetaData[id]?.color ?? "")
+    .trim()
+    .toUpperCase();
+  const colorClass = LIST_COLOR_CLASS[colorKey] ?? "text-muted-foreground";
 
   return (
     <Icon

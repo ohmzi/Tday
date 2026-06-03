@@ -320,7 +320,7 @@ const AllTasksTimelineContainer = ({
   // The native date-bucketed timeline (All / Priority / Scheduled).
   const timelineSections = useMemo(() => {
     if (!timeline) return [];
-    return buildTimelineSections({
+    const built = buildTimelineSections({
       todos: filteredTimelineItems.map((item) => item.todo),
       locale,
       timeZone: userTZ?.timeZone,
@@ -329,6 +329,12 @@ const AllTasksTimelineContainer = ({
       todayLabel: appDict("today"),
       tomorrowLabel: appDict("tomorrow"),
     });
+    // Scheduled mirrors native: show only dates that actually have tasks (no
+    // empty Today/Tomorrow/day drop-target buckets). All/Priority keep theirs.
+    if (scope === "scheduled") {
+      return built.filter((section) => section.todos.length > 0);
+    }
+    return built;
   }, [appDict, filteredTimelineItems, locale, scope, timeline, userTZ?.timeZone]);
 
   const focusedDateIndex = useMemo(
@@ -531,8 +537,8 @@ const AllTasksTimelineContainer = ({
               <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
                 <h3
                   className={cn(
-                    "select-none text-lg font-semibold tracking-tight",
-                    focusedDateKey === section.key && "text-accent",
+                    "select-none text-2xl font-black tracking-tight",
+                    focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
                   )}
                 >
                   {section.label}
@@ -559,8 +565,8 @@ const AllTasksTimelineContainer = ({
               <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
                 <h3
                   className={cn(
-                    "select-none text-lg font-semibold tracking-tight",
-                    focusedDateKey === section.key && "text-accent",
+                    "select-none text-2xl font-black tracking-tight",
+                    focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
                   )}
                 >
                   {section.label}
@@ -589,8 +595,8 @@ const AllTasksTimelineContainer = ({
               <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
                 <h3
                   className={cn(
-                    "select-none text-lg font-semibold tracking-tight",
-                    focusedDateKey === section.key && "text-accent",
+                    "select-none text-2xl font-black tracking-tight",
+                    focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
                   )}
                 >
                   {section.label}
