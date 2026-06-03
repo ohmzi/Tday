@@ -118,7 +118,7 @@ internal fun TaskWidgetContent(
         if (state != TaskWidgetContentState.TASKS) {
             TaskWidgetMessage(
                 title = if (state == TaskWidgetContentState.SETUP) setupTitle else emptyTitle,
-                message = if (state == TaskWidgetContentState.SETUP) setupMessage else emptyMessage,
+                message = if (state == TaskWidgetContentState.SETUP) setupMessage else "",
                 compact = layout == TaskWidgetLayout.COMPACT,
                 openAction = openAction,
             )
@@ -137,6 +137,7 @@ internal fun TaskWidgetContent(
             TaskWidgetHeader(
                 title = title,
                 countLabel = countLabel,
+                showCount = state == TaskWidgetContentState.TASKS,
                 layout = layout,
                 metrics = metrics,
                 visuals = visuals,
@@ -164,6 +165,7 @@ internal fun TaskWidgetContent(
 private fun TaskWidgetHeader(
     title: String,
     countLabel: String,
+    showCount: Boolean,
     layout: TaskWidgetLayout,
     metrics: TaskWidgetMetrics,
     visuals: TaskWidgetVisuals,
@@ -181,10 +183,12 @@ private fun TaskWidgetHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (layout == TaskWidgetLayout.COMPACT) {
-                CompactCountLockup(
-                    countLabel = countLabel,
-                    modifier = GlanceModifier.defaultWeight(),
-                )
+                if (showCount) {
+                    CompactCountLockup(
+                        countLabel = countLabel,
+                        modifier = GlanceModifier.defaultWeight(),
+                    )
+                }
             } else {
                 HeaderText(
                     modifier = GlanceModifier
@@ -195,11 +199,13 @@ private fun TaskWidgetHeader(
                     fontSize = if (layout == TaskWidgetLayout.TALL) 17.sp else 16.sp,
                     maxLines = 1,
                 )
-                Spacer(modifier = GlanceModifier.width(8.dp))
-                CountPill(
-                    label = countLabel,
-                    modifier = GlanceModifier.width(metrics.headerCountWidth),
-                )
+                if (showCount) {
+                    Spacer(modifier = GlanceModifier.width(8.dp))
+                    CountPill(
+                        label = countLabel,
+                        modifier = GlanceModifier.width(metrics.headerCountWidth),
+                    )
+                }
             }
         }
 
@@ -379,7 +385,7 @@ private fun TaskWidgetMessage(
                 maxLines = if (compact) 1 else 2,
                 fillBounds = true,
             )
-            if (!compact) {
+            if (!compact && message.isNotEmpty()) {
                 Spacer(modifier = GlanceModifier.height(3.dp))
                 WidgetText(
                     modifier = GlanceModifier.fillMaxWidth(),
