@@ -22,11 +22,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/tday-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
     }
   ]
 }
