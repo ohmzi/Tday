@@ -345,21 +345,6 @@ export default function NativeHomeDashboard() {
                         {list.count}
                       </span>
                     </Link>
-                    <button
-                      type="button"
-                      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/18 text-white transition-colors hover:bg-white/28 active:scale-95"
-                      onClick={() =>
-                        setEditingList({
-                          id: list.id,
-                          name: list.name,
-                          color: list.color,
-                          iconKey: list.iconKey,
-                        })
-                      }
-                      aria-label={`Edit ${formatListName(list.name)}`}
-                    >
-                      <Pencil className="h-4 w-4 stroke-[2.6]" />
-                    </button>
                   </div>
                 );
               })}
@@ -369,13 +354,6 @@ export default function NativeHomeDashboard() {
       </div>
 
       <ListFormSheet open={createListOpen} onOpenChange={setCreateListOpen} />
-      <ListFormSheet
-        open={editingList !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditingList(null);
-        }}
-        list={editingList}
-      />
     </TodoMutationProvider>
   );
 }

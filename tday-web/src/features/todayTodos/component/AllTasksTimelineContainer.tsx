@@ -614,7 +614,7 @@ const AllTasksTimelineContainer = ({
                   {bucket.label}
                 </h3>
               </div>
-              {bucket.todos.length > 0 ? (
+              {bucket.todos.length > 0 && (
                 <TodoGroup
                   todos={bucket.todos}
                   overdue={false}
@@ -622,10 +622,6 @@ const AllTasksTimelineContainer = ({
                   highlightedTodoId={focusedTaskId}
                   showOverdueTag={false}
                 />
-              ) : (
-                <p className="px-1 pb-1 text-sm font-bold text-muted-foreground/70">
-                  Nothing scheduled
-                </p>
               )}
             </section>
           ))}
