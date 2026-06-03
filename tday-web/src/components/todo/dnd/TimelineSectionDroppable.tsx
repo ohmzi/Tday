@@ -113,7 +113,7 @@ export default function TimelineSectionDroppable({
           // dashed drop slot while a drag is actively hovering this bucket.
           isActive ? <TimelineDropPlaceholder active /> : null
         ) : (
-          <div className="space-y-0">
+          <div className="space-y-0 border-b border-border/60">
             {children}
             {isActive && <TimelineDropPlaceholder active />}
           </div>

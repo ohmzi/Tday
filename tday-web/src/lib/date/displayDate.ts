@@ -144,3 +144,20 @@ export function getDisplayDate(
   });
   return `${dateFormatter.format(date)}${timeString}`;
 }
+
+// Time-only string (e.g. "1:00 AM"), used for the native-style "Due TIME"
+// label on mobile task rows.
+export function getDisplayTime(
+  date: Date,
+  locale: string = "en",
+  timezone?: string,
+) {
+  timezone = resolveTimezone(timezone);
+  const timeFormatter = getFormatter(locale, {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: timezone,
+  });
+  return timeFormatter.format(date);
+}

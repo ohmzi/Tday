@@ -40,7 +40,7 @@ export default function GroupedCompletedTodoContainer({
       </div>
 
       {/* Flat task rows */}
-      <div className="space-y-0">
+      <div className="space-y-0 border-b border-border/60">
         {completedTodos.map((todo) => (
           <CompletedTodoItemContainer
             key={todo.id}
