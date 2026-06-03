@@ -8,6 +8,11 @@ import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
+import {
+  headerToBodyGap,
+  sectionTopGapFilled,
+  sectionTopGapFirst,
+} from "@/components/todo/dnd/timelineDndClasses";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import { TodoItemType } from "@/types";
 import { useTodoTimeline } from "../query/get-todo-timeline";
@@ -485,11 +490,11 @@ const AllTasksTimelineContainer = ({
               id={getTodoDateSectionId(section.key)}
               key={section.key}
               className={cn(
-                "mb-8 scroll-mt-24 lg:mb-10",
-                section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
+                "scroll-mt-24",
+                section.dayDiff === 0 ? sectionTopGapFirst : sectionTopGapFilled,
               )}
             >
-              <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
+              <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
                 <h3
                   className={cn(
                     "select-none text-lg font-semibold tracking-tight",
