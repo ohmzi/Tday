@@ -110,9 +110,10 @@ export const TodoItemCard = ({
         onMouseOver={() => setShowHandle(true)}
         onMouseOut={() => setShowHandle(false)}
         className={clsx(
-          // Flat native-style row with a bottom divider — no card chrome — on every
-          // breakpoint. Desktop keeps a grab cursor + subtle hover tint for affordance.
-          "group relative flex max-w-full items-center justify-between gap-3 border-b border-border/60 px-1 py-2.5",
+          // Flat native-style row — no card chrome, no per-row divider (the day
+          // group owns the divider) — on every breakpoint. Desktop keeps a grab
+          // cursor + subtle hover tint for affordance.
+          "group relative flex max-w-full items-center justify-between gap-3 px-1 py-2.5",
           "sm:cursor-grab sm:rounded-lg sm:transition-colors sm:duration-150 sm:active:cursor-grabbing sm:hover:bg-muted/40",
           highlighted && "rounded-lg bg-accent/5",
           dragging && "opacity-80",

@@ -1,6 +1,6 @@
 import { CompletedTodoItemType } from "@/types";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
-import { X } from "lucide-react";
+import { Check } from "lucide-react";
 import { useUnCompleteTodo } from "../query/uncomplete-completedTodo";
 
 export const CompletedTodoItemContainer = ({
@@ -12,11 +12,11 @@ export const CompletedTodoItemContainer = ({
   const { mutateUnComplete } = useUnCompleteTodo();
 
   return (
-    <div className="group relative flex max-w-full items-center justify-between gap-3 border-b border-border/60 px-1 py-2.5 sm:rounded-lg sm:transition-colors sm:duration-150 sm:hover:bg-muted/40">
+    <div className="group relative flex max-w-full items-center justify-between gap-3 px-1 py-2.5 sm:rounded-lg sm:transition-colors sm:duration-150 sm:hover:bg-muted/40">
       <div className="flex min-w-0 items-center gap-3">
         <div className="shrink-0">
           <TodoCheckbox
-            icon={X}
+            icon={Check}
             onChange={() => mutateUnComplete(completedTodoItem)}
             complete={true}
             checked={true}
