@@ -4,8 +4,10 @@ import {
   Ellipsis,
   ListPlus,
   Search,
+  Sun,
   X,
 } from "lucide-react";
+import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 import TodoGroup from "@/components/todo/component/TodoGroup";
@@ -156,6 +158,7 @@ export default function NativeHomeDashboard() {
       usePrioritizeTodo={usePrioritizeTodo}
       useReorderTodo={useReorderTodo}
     >
+      <ScreenWatermark icon={Sun} />
       <div className="flex w-full flex-col gap-4 sm:gap-5">
         <header className="relative flex min-h-14 items-center justify-between gap-3">
           <NativeAppBrandButton className="min-w-0" />
@@ -317,8 +320,10 @@ export default function NativeHomeDashboard() {
                 const ListIcon = getListIcon(list.iconKey);
 
                 return (
-                  <div
+                  <Link
                     key={list.id}
+                    href={`/app/list/${list.id}`}
+                    aria-label={`Open ${formatListName(list.name)}`}
                     className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
                     style={{
                       background: `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${accent} 66%)`,
@@ -326,19 +331,14 @@ export default function NativeHomeDashboard() {
                   >
                     {renderTileOverlay()}
                     <ListIcon className="pointer-events-none absolute -bottom-9 -right-7 h-28 w-28 text-white/18 stroke-[1.75]" />
-                    <Link
-                      href={`/app/list/${list.id}`}
-                      className="relative flex min-w-0 flex-1 items-center gap-3"
-                    >
-                      <ListIcon className="h-6 w-6 shrink-0 text-white stroke-[2.5]" />
-                      <span className="min-w-0 flex-1 truncate text-[1.38rem] font-black leading-none tracking-tight">
-                        {formatListName(list.name)}
-                      </span>
-                      <span className="text-[1.5rem] font-black leading-none">
-                        {list.count}
-                      </span>
-                    </Link>
-                  </div>
+                    <ListIcon className="relative h-6 w-6 shrink-0 text-white stroke-[2.5]" />
+                    <span className="relative min-w-0 flex-1 truncate text-[1.38rem] font-black leading-none tracking-tight">
+                      {formatListName(list.name)}
+                    </span>
+                    <span className="relative text-[1.5rem] font-black leading-none">
+                      {list.count}
+                    </span>
+                  </Link>
                 );
               })}
             </div>

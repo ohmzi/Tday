@@ -875,7 +875,7 @@ private struct HomeTodayCard: View {
                 shape.fill(color)
                 shape.fill(
                     RadialGradient(
-                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.08), .clear],
+                        colors: [Color.white.opacity(0.1), Color.white.opacity(0.03), .clear],
                         center: UnitPoint(x: 0.22, y: 0.2),
                         startRadius: 0,
                         endRadius: 200
@@ -1008,8 +1008,8 @@ private struct HomeCategoryTile: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Color.white.opacity(0.22),
-                                Color.white.opacity(0.08),
+                                Color.white.opacity(0.1),
+                                Color.white.opacity(0.03),
                                 .clear,
                             ],
                             center: .topLeading,
@@ -1177,8 +1177,8 @@ private struct HomeListRow: View {
                     .fill(
                         RadialGradient(
                             colors: [
-                                Color.white.opacity(0.22),
-                                Color.white.opacity(0.08),
+                                Color.white.opacity(0.1),
+                                Color.white.opacity(0.03),
                                 .clear,
                             ],
                             center: .topLeading,
