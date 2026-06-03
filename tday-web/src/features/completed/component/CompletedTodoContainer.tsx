@@ -74,8 +74,10 @@ const CompletedTodoContainer = () => {
       )}
 
       {!searchQuery.trim() && filteredTodos.length === 0 && (
-        <div className="mt-4 rounded-2xl border border-border/65 bg-card/95 px-4 py-6 text-sm text-muted-foreground">
-          No completed tasks yet
+        <div className="flex min-h-[42vh] flex-col items-center justify-center text-center">
+          <p className="text-2xl font-black text-muted-foreground/70">
+            No completed tasks yet
+          </p>
         </div>
       )}
 
