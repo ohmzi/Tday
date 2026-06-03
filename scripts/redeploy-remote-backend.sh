@@ -58,6 +58,11 @@ echo "Syncing web sources to ${REMOTE_HOST}:${REMOTE_DIR} ..."
 "${RSYNC[@]}" \
   tday-web/index.html \
   "${REMOTE_HOST}:${REMOTE_DIR}/tday-web/"
+# Static assets (icons, manifest, images) live in public/ — sync them too, with
+# --delete so removed assets (e.g. the old Logo.png) are cleared on the host.
+"${RSYNC[@]}" --delete \
+  tday-web/public/ \
+  "${REMOTE_HOST}:${REMOTE_DIR}/tday-web/public/"
 
 echo "Rebuilding backend on remote host ..."
 "${SSH[@]}" "${REMOTE_HOST}" "cd '${REMOTE_DIR}' && docker compose up -d --build tday-backend && docker compose ps tday-backend"
