@@ -67,9 +67,8 @@ const monthLabel = (year: number, month: number, currentYear: number, locale: st
   }).format(date);
 };
 
-// Within a single calendar day: pinned first, then manual order, then due time.
+// Within a single calendar day: manual order, then due time.
 const compareWithinDay = (a: TodoItemType, b: TodoItemType) => {
-  if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
   const orderDelta = a.order - b.order;
   if (orderDelta !== 0) return orderDelta;
   return a.due.getTime() - b.due.getTime();

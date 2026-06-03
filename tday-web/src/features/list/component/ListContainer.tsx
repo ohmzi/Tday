@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import { buildTimelineSections } from "@/lib/timeline/buildTimelineSections";
-import { usePinListTodo } from "../query/pin-list-todo";
 import { useCompleteListTodo } from "../query/complete-list-todo";
 import { useDeleteListTodo } from "../query/delete-list-todo";
 import { usePrioritizeListTodo } from "../query/prioritize-list-todo";
@@ -79,7 +78,6 @@ const ListContainer = ({ id }: { id: string }) => {
             useDeleteTodo={useDeleteListTodo}
             useEditTodo={useEditListTodo}
             useEditTodoInstance={useEditListTodoInstance}
-            usePinTodo={usePinListTodo}
             usePrioritizeTodo={usePrioritizeListTodo}
             useReorderTodo={useReorderListTodo}
         >

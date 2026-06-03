@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarClock, Clock3, Flag, Layers, Search, Sun, X } from "lucide-react";
 import NativePageTitle from "@/components/app/NativePageTitle";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
-import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import MobileSearchHeader, { type SearchResultItem } from "@/components/ui/MobileSearchHeader";
 import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
@@ -16,7 +16,6 @@ import {
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import { TodoItemType } from "@/types";
 import { useTodoTimeline } from "../query/get-todo-timeline";
-import { usePinTodo } from "../query/pin-todo";
 import { useCompleteTodo } from "../query/complete-todo";
 import { useDeleteTodo } from "../query/delete-todo";
 import { usePrioritizeTodo } from "../query/prioritize-todo";
@@ -26,7 +25,8 @@ import { useReorderTodo } from "../query/reorder-todo";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import { cn } from "@/lib/utils";
-import { useLocale } from "@/lib/navigation";
+import { useLocale, useRouter } from "@/lib/navigation";
+import { getDisplayDate } from "@/lib/date/displayDate";
 import { useSearchParams } from "react-router-dom";
 import {
   buildTimelineSections,
@@ -35,6 +35,7 @@ import {
 import {
   TODO_FOCUS_DATE_QUERY_PARAM,
   TODO_FOCUS_TASK_QUERY_PARAM,
+  buildTodoFocusPath,
   getTodoDateSectionId,
   getTodoDayKey,
   isTodoFocusDateKey,
@@ -132,10 +133,6 @@ const compareTimelineItems = (a: TimelineItem, b: TimelineItem) => {
     }
   }
 
-  if (a.todo.pinned !== b.todo.pinned) {
-    return a.todo.pinned ? -1 : 1;
-  }
-
   const orderDelta = a.todo.order - b.todo.order;
   if (orderDelta !== 0) {
     return orderDelta;
@@ -203,6 +200,7 @@ const AllTasksTimelineContainer = ({
   scope?: TimelineScope;
 }) => {
   const locale = useLocale();
+  const router = useRouter();
   const [searchParams] = useSearchParams();
   const { t: appDict } = useTranslation("app");
   const userTZ = useUserTimezone();
@@ -267,6 +265,41 @@ const AllTasksTimelineContainer = ({
       );
     });
   }, [listMetaData, searchQuery, timelineItems]);
+
+  // Global task search: matches across ALL dated tasks (not just this scope). Selecting a
+  // result navigates to All Tasks focused on it, reusing the existing focus/scroll mechanism.
+  const searchResults = useMemo<SearchResultItem[]>(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+    return timelineItems
+      .filter(({ todo }) => {
+        const title = todo.title.toLowerCase();
+        const description = (todo.description || "").toLowerCase();
+        const listId = todo.listID ?? "";
+        const listName = normalizeListName(listMetaData[listId]?.name).toLowerCase();
+        return (
+          title.includes(query) ||
+          description.includes(query) ||
+          listName.includes(query)
+        );
+      })
+      .slice(0, 8)
+      .map(({ todo }) => ({
+        id: todo.id,
+        title: todo.title,
+        subtitle: getDisplayDate(todo.due, true, locale, userTZ?.timeZone),
+      }));
+  }, [searchQuery, timelineItems, listMetaData, locale, userTZ?.timeZone]);
+
+  const handleSelectSearchResult = useCallback(
+    (id: string) => {
+      const item = timelineItems.find(({ todo }) => todo.id === id);
+      if (!item) return;
+      setSearchQuery("");
+      router.push(buildTodoFocusPath(item.todo, userTZ?.timeZone));
+    },
+    [router, timelineItems, userTZ?.timeZone],
+  );
 
   const scopeFilteredItems = useMemo(() => {
     if (scope === "today") {
@@ -424,7 +457,6 @@ const AllTasksTimelineContainer = ({
       useDeleteTodo={useDeleteTodo}
       useEditTodo={useEditTodo}
       useEditTodoInstance={useEditTodoInstance}
-      usePinTodo={usePinTodo}
       usePrioritizeTodo={usePrioritizeTodo}
       useReorderTodo={useReorderTodo}
     >
@@ -432,6 +464,8 @@ const AllTasksTimelineContainer = ({
         <MobileSearchHeader
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          results={searchResults}
+          onSelectResult={handleSelectSearchResult}
         />
 
         <NativePageTitle
@@ -510,6 +544,7 @@ const AllTasksTimelineContainer = ({
                 overdue={section.dayDiff < 0}
                 perTaskOverdue={section.dayDiff === 0}
                 highlightedTodoId={focusedTaskId}
+                showOverdueTag={false}
               />
             </section>
           ))}
@@ -519,9 +554,9 @@ const AllTasksTimelineContainer = ({
             <section
               id={getTodoDateSectionId(section.key)}
               key={section.key}
-              className="mb-8 scroll-mt-24 lg:mb-10"
+              className={cn("scroll-mt-24", sectionTopGapFilled)}
             >
-              <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
+              <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
                 <h3
                   className={cn(
                     "select-none text-lg font-semibold tracking-tight",
@@ -536,6 +571,7 @@ const AllTasksTimelineContainer = ({
                 todos={section.todos}
                 overdue={true}
                 highlightedTodoId={focusedTaskId}
+                showOverdueTag={false}
               />
             </section>
           ))}
@@ -545,12 +581,12 @@ const AllTasksTimelineContainer = ({
             id={getTodoDateSectionId(section.key)}
             key={section.key}
             className={cn(
-              "mb-8 scroll-mt-24 lg:mb-10",
-              section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
+              "scroll-mt-24",
+              section.dayDiff === 0 ? sectionTopGapFirst : sectionTopGapFilled,
             )}
           >
             {section.dayDiff !== 0 && (
-              <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
+              <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
                 <h3
                   className={cn(
                     "select-none text-lg font-semibold tracking-tight",

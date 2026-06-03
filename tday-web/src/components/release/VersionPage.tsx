@@ -1,11 +1,15 @@
-import { Github, Info, Loader2 } from "lucide-react";
+import { type ReactNode } from "react";
+import { ChevronLeft, Github, Info, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   WEB_VIEW_CARD_CLASS,
-  WebViewPageTemplate,
   WebViewSectionCard,
 } from "@/components/ui/WebViewPageTemplate";
+import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
+import NativePageTitle from "@/components/app/NativePageTitle";
+import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import {
   formatDisplayVersion,
   formatReleaseDate,
@@ -15,36 +19,50 @@ import { useReleaseInfo } from "@/features/release/query/get-release-info";
 
 const SURFACE_CLASS = "rounded-xl border border-border/70 bg-background/50";
 
+/** Wraps the version content in the same native screen chrome as every other app screen. */
+function VersionPageShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="w-full space-y-5 pb-10">
+      <MobileSearchHeader />
+
+      <Link
+        to="/app/admin"
+        className="inline-flex items-center gap-1 text-sm font-extrabold text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back to admin
+      </Link>
+
+      <NativePageTitle
+        title="App Version"
+        accentColor={nativeScreenAccentColors.settings}
+        icon={Info}
+        subtitle="Review the deployed build and the latest release available to admins."
+      />
+
+      <div className="space-y-5">{children}</div>
+    </div>
+  );
+}
+
 export default function VersionPage() {
   const { data: releaseInfo } = useReleaseInfo();
 
   if (!releaseInfo) {
     return (
-      <WebViewPageTemplate
-        title="App Version"
-        description="Review the deployed build and the latest release available to admins."
-        icon={Info}
-        backHref="/app/admin"
-        backLabel="Back to admin"
-      >
+      <VersionPageShell>
         <Card className={WEB_VIEW_CARD_CLASS}>
           <CardContent className="flex items-center gap-3 py-8">
             <Loader2 className="h-5 w-5 animate-spin text-accent" />
             <p className="text-sm text-muted-foreground">Loading release information…</p>
           </CardContent>
         </Card>
-      </WebViewPageTemplate>
+      </VersionPageShell>
     );
   }
 
   return (
-    <WebViewPageTemplate
-      title="App Version"
-      description="Review the deployed build and the latest release available to admins."
-      icon={Info}
-      backHref="/app/admin"
-      backLabel="Back to admin"
-    >
+    <VersionPageShell>
       <ReleaseStatusCard releaseInfo={releaseInfo} />
 
       {releaseInfo.hasUpdate && releaseInfo.latestRelease ? (
@@ -60,7 +78,7 @@ export default function VersionPage() {
         release={releaseInfo.currentRelease}
         fallbackNote="No release notes are bundled with this release yet."
       />
-    </WebViewPageTemplate>
+    </VersionPageShell>
   );
 }
 

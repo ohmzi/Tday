@@ -10,7 +10,6 @@ import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import TaskFormSheet from "@/components/todo/component/TodoForm/TaskFormSheet";
 import { useCompleteTodo } from "@/features/todayTodos/query/complete-todo";
 import { useDeleteTodo } from "@/features/todayTodos/query/delete-todo";
-import { usePinTodo } from "@/features/todayTodos/query/pin-todo";
 import { usePrioritizeTodo } from "@/features/todayTodos/query/prioritize-todo";
 import { useReorderTodo } from "@/features/todayTodos/query/reorder-todo";
 import { useEditTodo } from "@/features/todayTodos/query/update-todo";
@@ -55,7 +54,6 @@ export default function CreateTaskProvider({
         useDeleteTodo={useDeleteTodo}
         useEditTodo={useEditTodo}
         useEditTodoInstance={useEditTodoInstance}
-        usePinTodo={usePinTodo}
         usePrioritizeTodo={usePrioritizeTodo}
         useReorderTodo={useReorderTodo}
       >

@@ -20,12 +20,11 @@ export const CompletedTodoItemContainer = ({
             onChange={() => mutateUnComplete(completedTodoItem)}
             complete={true}
             checked={true}
-            priority={completedTodoItem.priority}
           />
         </div>
 
         <div className="max-w-full">
-          <p className="mb-2 select-none leading-none text-foreground">
+          <p className="mb-2 select-none leading-none text-muted-foreground line-through">
             {title}
           </p>
           {description && (
@@ -34,7 +33,7 @@ export const CompletedTodoItemContainer = ({
             </pre>
           )}
           <div className="flex flex-wrap items-center justify-start gap-2 text-xs sm:text-sm">
-            <p className="text-lime">Completed</p>
+            <p className="text-muted-foreground">Completed</p>
             {listName && (
               <p className="flex items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-foreground/80">
                 <span

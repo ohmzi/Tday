@@ -29,7 +29,6 @@ import { useCompleteTodo } from "@/features/todayTodos/query/complete-todo";
 import { useDeleteTodo } from "@/features/todayTodos/query/delete-todo";
 import { useEditTodo } from "@/features/todayTodos/query/update-todo";
 import { useEditTodoInstance } from "@/features/todayTodos/query/update-todo-instance";
-import { usePinTodo } from "@/features/todayTodos/query/pin-todo";
 import { usePrioritizeTodo } from "@/features/todayTodos/query/prioritize-todo";
 import { useReorderTodo } from "@/features/todayTodos/query/reorder-todo";
 
@@ -138,7 +137,6 @@ export default function NativeHomeDashboard() {
       useDeleteTodo={useDeleteTodo}
       useEditTodo={useEditTodo}
       useEditTodoInstance={useEditTodoInstance}
-      usePinTodo={usePinTodo}
       usePrioritizeTodo={usePrioritizeTodo}
       useReorderTodo={useReorderTodo}
     >

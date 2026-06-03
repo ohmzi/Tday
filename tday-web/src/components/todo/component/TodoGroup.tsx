@@ -21,6 +21,7 @@ const TodoGroup = ({
   perTaskOverdue,
   highlightedTodoId,
   reorderable = true,
+  showOverdueTag = true,
 }: {
   todos: TodoItemType[];
   className?: string;
@@ -28,6 +29,7 @@ const TodoGroup = ({
   perTaskOverdue?: boolean;
   highlightedTodoId?: string | null;
   reorderable?: boolean;
+  showOverdueTag?: boolean;
 }) => {
   const { toast } = useToast()
   const { preferences } = useUserPreferences();
@@ -115,6 +117,7 @@ const TodoGroup = ({
               overdue={overdue}
               perTaskOverdue={perTaskOverdue}
               highlighted={highlightedTodoId === item.id}
+              showOverdueTag={showOverdueTag}
             />
           </div>
         ))}
@@ -140,6 +143,7 @@ const TodoGroup = ({
               overdue={overdue}
               perTaskOverdue={perTaskOverdue}
               highlighted={highlightedTodoId === item.id}
+              showOverdueTag={showOverdueTag}
             />
           ))}
         </SortableContext>

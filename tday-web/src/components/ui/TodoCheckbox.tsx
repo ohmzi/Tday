@@ -6,14 +6,12 @@ export default function TodoCheckbox({
   complete,
   onChange,
   checked,
-  priority,
   icon: Icon,
   variant = "outline-solid"
 }: {
   complete: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   checked: boolean;
-  priority: "Low" | "Medium" | "High";
   icon: React.ElementType;
   variant?: "repeat" | "outline-solid";
 }) {
@@ -61,21 +59,16 @@ export default function TodoCheckbox({
             setExpand(true);
           }}
           className={clsx(
-            "relative group w-5 h-5 rounded-full flex items-center justify-center border-[2.23px]",
+            "relative group w-5 h-5 rounded-full flex items-center justify-center border-[2.23px] border-foreground",
             "hover:cursor-pointer transition-transform duration-200 ease-out hover:border-transparent",
             expand && "scale-125",
-            priority === "Low" && "border-lime ",
-            priority === "Medium" && "border-orange ",
-            priority === "High" && "border-red",
           )}
         >
           <Icon
             className={clsx(
               "pointer-events-none absolute bottom-1/2 translate-y-1/2 right-1/2 translate-x-1/2",
-              "hidden group-hover:block stroke-3 w-5 h-5",
-              priority === "Low" && "text-lime",
-              priority === "Medium" && "text-orange",
-              priority === "High" && "text-red",
+              "stroke-3 w-5 h-5 text-foreground",
+              checked ? "block" : "hidden group-hover:block",
             )}
           />
         </div>
@@ -88,22 +81,17 @@ export default function TodoCheckbox({
               setExpand(true);
             }}
             className={clsx(
-              "group w-[1.35rem] h-[1.35rem] flex items-center justify-center",
+              "group w-[1.35rem] h-[1.35rem] flex items-center justify-center text-foreground",
               "hover:cursor-pointer hover:stroke-transparent",
-              priority === "Low" && "text-lime peer-checked:bg-lime",
-              priority === "Medium" && "text-orange peer-checked:bg-orange",
-              priority === "High" && "text-red peer-checked:bg-red",
             )}
           />
 
           <Icon
             className={clsx(
               "pointer-events-none absolute bottom-1/2 translate-y-1/2 right-1/2 translate-x-1/2 transition-transform duration-200 ease-out",
-              "hidden group-hover:block stroke-3 w-5 h-5",
+              "stroke-3 w-5 h-5 text-foreground",
               expand && "scale-125",
-              priority === "Low" && "text-lime",
-              priority === "Medium" && "text-orange",
-              priority === "High" && "text-red",
+              checked ? "block" : "hidden group-hover:block",
             )}
           />
         </div>
