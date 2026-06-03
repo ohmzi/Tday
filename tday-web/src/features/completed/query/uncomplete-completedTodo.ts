@@ -40,6 +40,9 @@ export const useUnCompleteTodo = () => {
       queryClient.invalidateQueries({ queryKey: ["list"] });
       queryClient.invalidateQueries({ queryKey: ["todo"] });
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
+      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
+      // Restoring a task bumps its list's active count back up.
+      queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
     },
   });
 
