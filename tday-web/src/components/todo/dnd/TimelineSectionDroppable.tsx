@@ -8,10 +8,14 @@ import type { TimelineSection } from "@/lib/timeline/buildTimelineSections";
 import { useTimelineOverSection } from "./TimelineDndContext";
 import {
   headerActiveClass,
+  headerToBodyGap,
   placeholderActiveClass,
   placeholderBaseClass,
   placeholderRestClass,
   sectionActiveClass,
+  sectionTopGapEmpty,
+  sectionTopGapFilled,
+  sectionTopGapFirst,
 } from "./timelineDndClasses";
 
 function TimelineDropPlaceholder({ active }: { active: boolean }) {
@@ -60,13 +64,20 @@ export default function TimelineSectionDroppable({
       : focusedDateKey === section.key && "text-accent",
   );
 
+  const sectionTopGap =
+    section.dayDiff === 0
+      ? sectionTopGapFirst
+      : isEmpty
+        ? sectionTopGapEmpty
+        : sectionTopGapFilled;
+
   return (
     <section
       ref={setNodeRef}
       id={getTodoDateSectionId(section.key)}
       className={cn(
-        "mb-8 scroll-mt-24 rounded-3xl px-1 transition-all duration-200 lg:mb-10",
-        section.dayDiff === 0 && "mt-5 sm:mt-6 lg:mt-8",
+        "scroll-mt-24 rounded-3xl px-1 transition-all duration-200",
+        sectionTopGap,
         isActive && sectionActiveClass,
       )}
     >
@@ -74,7 +85,7 @@ export default function TimelineSectionDroppable({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="mb-3 mt-6 flex w-full items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10"
+          className={cn(headerToBodyGap, "flex w-full items-center gap-2")}
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -88,7 +99,7 @@ export default function TimelineSectionDroppable({
           <LineSeparator className="flex-1 border-border/70" />
         </button>
       ) : (
-        <div className="mb-3 mt-6 flex items-center gap-2 sm:mt-7 lg:mb-4 lg:mt-10">
+        <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
           <h3 className={headingClass}>{section.label}</h3>
           <LineSeparator className="flex-1 border-border/70" />
         </div>
