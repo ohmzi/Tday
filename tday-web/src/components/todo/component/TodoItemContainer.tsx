@@ -173,6 +173,8 @@ export const TodoItemCard = ({
         }
         {...containerProps}
         className={clsx(
+          // No per-row divider — the date group owns a single divider after its
+          // last task (see TodoGroup / TimelineSectionDroppable).
           "group relative max-w-full overflow-hidden sm:overflow-visible",
           dragging && "opacity-80",
         )}

@@ -1,7 +1,6 @@
 import { CompletedTodoItemType } from "@/types";
 import React from "react";
 import { CompletedTodoItemContainer } from "./ItemContainer";
-import LineSeparator from "@/components/ui/lineSeparator";
 import { useLocale } from "@/lib/navigation";
 
 type GroupedCompletedTodoContainerProps = {
@@ -36,11 +35,10 @@ export default function GroupedCompletedTodoContainer({
         <h3 className="select-none text-2xl font-black tracking-tight text-muted-foreground">
           {sectionLabel}
         </h3>
-        <LineSeparator className="flex-1 border-border/70" />
       </div>
 
-      {/* Flat task rows */}
-      <div className="space-y-0 border-b border-border/60">
+      {/* Flat task rows — one divider after the date group. */}
+      <div className="space-y-0 border-b border-border/60 pb-1">
         {completedTodos.map((todo) => (
           <CompletedTodoItemContainer
             key={todo.id}

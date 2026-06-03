@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next";
 import { CalendarClock, Clock3, Flag, Layers, Search, Sun, X } from "lucide-react";
 import NativePageTitle from "@/components/app/NativePageTitle";
+import ScreenWatermark from "@/components/app/ScreenWatermark";
 import { timelineScopeAccentColors } from "@/components/app/nativeScreenTheme";
 import MobileSearchHeader, { type SearchResultItem } from "@/components/ui/MobileSearchHeader";
-import LineSeparator from "@/components/ui/lineSeparator";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
@@ -317,6 +317,25 @@ const AllTasksTimelineContainer = ({
     return filteredTimelineItems;
   }, [filteredTimelineItems, scope]);
 
+  // Today screen: Morning (<12) / Afternoon (12–18) / Tonight (≥18), matching native.
+  const todayBuckets = useMemo(() => {
+    if (scope !== "today") return [];
+    const groups: Record<"Morning" | "Afternoon" | "Tonight", TodoItemType[]> = {
+      Morning: [],
+      Afternoon: [],
+      Tonight: [],
+    };
+    for (const item of scopeFilteredItems) {
+      const hour = getTimeZoneDate(item.todo.due, userTZ?.timeZone).getHours();
+      const label = hour < 12 ? "Morning" : hour < 18 ? "Afternoon" : "Tonight";
+      groups[label].push(item.todo);
+    }
+    return (["Morning", "Afternoon", "Tonight"] as const).map((label) => ({
+      label,
+      todos: groups[label],
+    }));
+  }, [scope, scopeFilteredItems, userTZ?.timeZone]);
+
   // The native date-bucketed timeline (All / Priority / Scheduled).
   const timelineSections = useMemo(() => {
     if (!timeline) return [];
@@ -467,6 +486,7 @@ const AllTasksTimelineContainer = ({
       useReorderTodo={useReorderTodo}
     >
       <div className="mb-20">
+        <ScreenWatermark icon={ScopeIcon} />
         <MobileSearchHeader
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -543,7 +563,6 @@ const AllTasksTimelineContainer = ({
                 >
                   {section.label}
                 </h3>
-                <LineSeparator className="flex-1 border-border/70" />
               </div>
               <TodoGroup
                 todos={section.todos}
@@ -551,6 +570,7 @@ const AllTasksTimelineContainer = ({
                 perTaskOverdue={section.dayDiff === 0}
                 highlightedTodoId={focusedTaskId}
                 showOverdueTag={false}
+                className="border-b border-border/60 pb-1"
               />
             </section>
           ))}
@@ -571,47 +591,44 @@ const AllTasksTimelineContainer = ({
                 >
                   {section.label}
                 </h3>
-                <LineSeparator className="flex-1 border-border/70" />
               </div>
               <TodoGroup
                 todos={section.todos}
                 overdue={true}
                 highlightedTodoId={focusedTaskId}
                 showOverdueTag={false}
+                className="border-b border-border/60 pb-1"
               />
             </section>
           ))}
 
-        {scope === "today" && regularSections.map((section) => (
-          <section
-            id={getTodoDateSectionId(section.key)}
-            key={section.key}
-            className={cn(
-              "scroll-mt-24",
-              section.dayDiff === 0 ? sectionTopGapFirst : sectionTopGapFilled,
-            )}
-          >
-            {section.dayDiff !== 0 && (
+        {scope === "today" &&
+          hasScopedTasks &&
+          todayBuckets.map((bucket, index) => (
+            <section
+              key={bucket.label}
+              className={cn("scroll-mt-24", index === 0 ? sectionTopGapFirst : sectionTopGapFilled)}
+            >
               <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
-                <h3
-                  className={cn(
-                    "select-none text-2xl font-black tracking-tight",
-                    focusedDateKey === section.key ? "text-accent" : "text-muted-foreground",
-                  )}
-                >
-                  {section.label}
+                <h3 className="select-none text-2xl font-black tracking-tight text-muted-foreground">
+                  {bucket.label}
                 </h3>
-                <LineSeparator className="flex-1 border-border/70" />
               </div>
-            )}
-            <TodoGroup
-              todos={section.todos}
-              overdue={false}
-              perTaskOverdue={section.dayDiff === 0}
-              highlightedTodoId={focusedTaskId}
-            />
-          </section>
-        ))}
+              {bucket.todos.length > 0 ? (
+                <TodoGroup
+                  todos={bucket.todos}
+                  overdue={false}
+                  perTaskOverdue
+                  highlightedTodoId={focusedTaskId}
+                  showOverdueTag={false}
+                />
+              ) : (
+                <p className="px-1 pb-1 text-sm font-bold text-muted-foreground/70">
+                  Nothing scheduled
+                </p>
+              )}
+            </section>
+          ))}
 
         {hasMore && (
           <div ref={sentinelRef} className="flex h-12 items-center justify-center">

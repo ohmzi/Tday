@@ -32,25 +32,75 @@ const DrawerOverlay = React.forwardRef<
 ))
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
+/**
+ * Tracks the visual viewport so bottom sheets behave consistently with the
+ * on-screen keyboard: the sheet is tall enough for its content when the keyboard
+ * is closed, and is capped + lifted above the keyboard when it opens.
+ */
+function useViewportSheetMetrics() {
+  const [metrics, setMetrics] = React.useState(() => ({
+    height: typeof window !== "undefined" ? window.innerHeight : 0,
+    keyboard: 0,
+  }));
+
+  React.useEffect(() => {
+    const vv = window.visualViewport;
+    const update = () => {
+      if (vv) {
+        const keyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        setMetrics({ height: vv.height, keyboard });
+      } else {
+        setMetrics({ height: window.innerHeight, keyboard: 0 });
+      }
+    };
+    update();
+    vv?.addEventListener("resize", update);
+    vv?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      vv?.removeEventListener("resize", update);
+      vv?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  return metrics;
+}
+
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
-    <DrawerOverlay />
-    <DrawerPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col  rounded-t-[10px] border bg-background",
-        className
-      )}
-      {...props}
-    >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
-    </DrawerPrimitive.Content>
-  </DrawerPortal>
-))
+>(({ className, children, style, ...props }, ref) => {
+  const { height, keyboard } = useViewportSheetMetrics();
+  const keyboardOpen = keyboard > 80;
+  // Closed keyboard: up to 92% of the viewport (content scrolls if longer).
+  // Open keyboard: cap at 80% of the visible area and sit above the keyboard.
+  const sheetStyle: React.CSSProperties = height
+    ? {
+        maxHeight: Math.round((keyboardOpen ? 0.8 : 0.92) * height),
+        ...(keyboardOpen ? { bottom: keyboard } : null),
+        ...style,
+      }
+    : style ?? {};
+
+  return (
+    <DrawerPortal>
+      <DrawerOverlay />
+      <DrawerPrimitive.Content
+        ref={ref}
+        style={sheetStyle}
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col  rounded-t-[10px] border bg-background",
+          className
+        )}
+        {...props}
+      >
+        <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+        {children}
+      </DrawerPrimitive.Content>
+    </DrawerPortal>
+  );
+})
 DrawerContent.displayName = "DrawerContent"
 
 const DrawerHeader = ({
