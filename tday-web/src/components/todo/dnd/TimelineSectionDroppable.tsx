@@ -58,10 +58,12 @@ export default function TimelineSectionDroppable({
   });
 
   const headingClass = cn(
-    "select-none text-lg font-semibold tracking-tight transition-colors duration-200",
+    "select-none text-2xl font-black tracking-tight transition-colors duration-200",
     isActive
       ? headerActiveClass
-      : focusedDateKey === section.key && "text-accent",
+      : focusedDateKey === section.key
+        ? "text-accent"
+        : "text-muted-foreground",
   );
 
   const sectionTopGap =
@@ -107,9 +109,11 @@ export default function TimelineSectionDroppable({
 
       {showBody &&
         (isEmpty ? (
-          <TimelineDropPlaceholder active={isActive} />
+          // Native shows empty dates as just the header — only reveal the
+          // dashed drop slot while a drag is actively hovering this bucket.
+          isActive ? <TimelineDropPlaceholder active /> : null
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-0">
             {children}
             {isActive && <TimelineDropPlaceholder active />}
           </div>

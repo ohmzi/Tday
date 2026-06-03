@@ -50,13 +50,21 @@ const monthIndexFromDayKey = (dayKey: string) => {
   return year * 12 + month;
 };
 
+// "Fri Jun 5" — weekday/month/day with the separating commas dropped to match
+// the native header style.
 const dayLabel = (dayKey: string, locale: string) =>
   new Intl.DateTimeFormat(locale, {
     weekday: "short",
     month: "short",
     day: "numeric",
     timeZone: "UTC",
-  }).format(new Date(`${dayKey}T12:00:00Z`));
+  })
+    .formatToParts(new Date(`${dayKey}T12:00:00Z`))
+    .filter((part) => !(part.type === "literal" && /,/.test(part.value)))
+    .map((part) => (part.type === "literal" ? part.value.replace(/,/g, "") : part.value))
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const monthLabel = (year: number, month: number, currentYear: number, locale: string) => {
   const date = new Date(`${year}-${pad(month)}-01T12:00:00Z`);
