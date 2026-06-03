@@ -59,6 +59,8 @@ data class AppConfig(
     val iosBundleId: String,
     val androidPackageName: String,
     val androidSha256CertFingerprints: List<String>,
+    val vapidPublicKey: String?,
+    val vapidPrivateKey: String?,
     val sentryDsn: String?,
     val sentryTracesSampleRate: Double,
     val backendVersion: String,
@@ -136,6 +138,8 @@ data class AppConfig(
                 iosBundleId = env("IOS_BUNDLE_ID", "com.ohmz.tday.ios"),
                 androidPackageName = env("ANDROID_PACKAGE_NAME", "com.ohmz.tday.compose"),
                 androidSha256CertFingerprints = envCsv("ANDROID_SHA256_CERT_FINGERPRINTS"),
+                vapidPublicKey = secret("VAPID_PUBLIC_KEY", "VAPID_PUBLIC_KEY_FILE"),
+                vapidPrivateKey = secret("VAPID_PRIVATE_KEY", "VAPID_PRIVATE_KEY_FILE"),
                 sentryDsn = env("SENTRY_DSN"),
                 sentryTracesSampleRate = envDouble("SENTRY_TRACES_SAMPLE_RATE", if (resolveEnvironmentName().equals("production", ignoreCase = true)) 0.2 else 1.0)
                     .coerceIn(0.0, 1.0),

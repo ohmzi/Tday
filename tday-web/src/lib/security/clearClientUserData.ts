@@ -20,6 +20,23 @@ export async function clearClientUserData(
 ): Promise<void> {
   if (typeof window === "undefined") return;
 
+  // Unsubscribe from push notifications before clearing storage.
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration("/");
+      const sub = await reg?.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+    }
+  } catch {
+    // Ignore push unsubscribe failures.
+  }
+
+  try {
+    window.localStorage.removeItem("tday.push-enabled");
+  } catch {
+    // Ignore storage failures.
+  }
+
   try {
     window.sessionStorage.clear();
   } catch {

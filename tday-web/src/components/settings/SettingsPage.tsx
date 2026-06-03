@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Bell,
+  BellOff,
   Check,
   Eye,
   EyeOff,
@@ -43,6 +45,7 @@ import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import type { SupportedLocale } from "@/i18n";
 
 const localeOptions = [
@@ -104,6 +107,25 @@ export default function SettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const push = usePushNotifications();
+
+  const handlePushToggle = async () => {
+    try {
+      if (push.isSubscribed) {
+        await push.unsubscribe();
+        toast({ description: "Push notifications disabled" });
+      } else {
+        await push.subscribe();
+        toast({ description: "Push notifications enabled" });
+      }
+    } catch (err) {
+      toast({
+        description: getErrorMessage(err, "Failed to update notification settings"),
+        variant: "destructive",
+      });
+    }
+  };
 
   const currentLocaleLabel =
     localeOptions.find((option) => option.code === locale)?.label || locale;
@@ -330,6 +352,39 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {push.isSupported && (
+        <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
+          <CardHeader className="space-y-1">
+            <CardTitle className="flex items-center gap-2 text-base">
+              {push.isSubscribed ? <Bell className="h-4 w-4 text-accent" /> : <BellOff className="h-4 w-4 text-accent" />}
+              Push Notifications
+            </CardTitle>
+            <CardDescription>
+              {push.permission === "denied"
+                ? "Notifications are blocked in your browser settings. Please update your browser permissions to enable them."
+                : "Receive notifications when important things happen, even when the app isn't open."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              type="button"
+              variant={push.isSubscribed ? "outline" : "default"}
+              disabled={push.isLoading || push.permission === "denied"}
+              onClick={handlePushToggle}
+              className="h-10"
+            >
+              {push.isLoading ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating...</>
+              ) : push.isSubscribed ? (
+                "Disable Notifications"
+              ) : (
+                "Enable Notifications"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
         <CardHeader className="space-y-1">
