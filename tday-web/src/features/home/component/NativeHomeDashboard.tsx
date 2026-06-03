@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
+import TodoGroup from "@/components/todo/component/TodoGroup";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import {
   type NativeRouteId,
@@ -108,13 +109,35 @@ export default function NativeHomeDashboard() {
   } | null>(null);
   const titleDate = format(new Date(), "EEE, MMM d");
 
+  // Per-list active task counts, derived live from the task cache (the server's
+  // todoCount can be stale/0). Mirrors native, which shows real counts.
+  const listCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const todo of timelineTodos) {
+      if (todo.completed || !todo.listID) continue;
+      counts[todo.listID] = (counts[todo.listID] ?? 0) + 1;
+    }
+    return counts;
+  }, [timelineTodos]);
+
   const lists = useMemo(() => {
     return Object.entries(listMetaData)
       .filter(([, list]) => Boolean(list.name?.trim()))
-      .map(([id, list]) => ({ id, ...list }))
-      .sort((a, b) => (b.todoCount ?? 0) - (a.todoCount ?? 0))
+      .map(([id, list]) => ({ id, ...list, count: listCounts[id] ?? 0 }))
+      .sort((a, b) => b.count - a.count)
       .slice(0, 6);
-  }, [listMetaData]);
+  }, [listMetaData, listCounts]);
+
+  // Today's incomplete tasks, shown inline on the home screen (same data as the
+  // Today screen), sorted by due time.
+  const todayIncomplete = useMemo(
+    () =>
+      todayTodos
+        .filter((todo) => !todo.completed)
+        .slice()
+        .sort((a, b) => a.due.getTime() - b.due.getTime()),
+    [todayTodos],
+  );
 
   const searchableTodos = useMemo(() => {
     return timelineTodos
@@ -233,6 +256,20 @@ export default function NativeHomeDashboard() {
           </span>
         </Link>
 
+        {todayIncomplete.length > 0 && (
+          <section className="space-y-1">
+            <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
+              Today
+            </h2>
+            <TodoGroup
+              todos={todayIncomplete}
+              reorderable={false}
+              perTaskOverdue
+              showOverdueTag={false}
+            />
+          </section>
+        )}
+
         <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
           {[...homeCategoryRoutes]
             .sort((a, b) => homeTileOrder.indexOf(a.id) - homeTileOrder.indexOf(b.id))
@@ -305,7 +342,7 @@ export default function NativeHomeDashboard() {
                         {formatListName(list.name)}
                       </span>
                       <span className="text-[1.5rem] font-black leading-none">
-                        {list.todoCount ?? 0}
+                        {list.count}
                       </span>
                     </Link>
                     <button

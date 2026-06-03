@@ -1,7 +1,6 @@
 import React from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import LineSeparator from "@/components/ui/lineSeparator";
 import { cn } from "@/lib/utils";
 import { getTodoDateSectionId } from "@/lib/todoToastNavigation";
 import type { TimelineSection } from "@/lib/timeline/buildTimelineSections";
@@ -98,12 +97,10 @@ export default function TimelineSectionDroppable({
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {section.todos.length}
           </span>
-          <LineSeparator className="flex-1 border-border/70" />
         </button>
       ) : (
         <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
           <h3 className={headingClass}>{section.label}</h3>
-          <LineSeparator className="flex-1 border-border/70" />
         </div>
       )}
 
@@ -113,7 +110,7 @@ export default function TimelineSectionDroppable({
           // dashed drop slot while a drag is actively hovering this bucket.
           isActive ? <TimelineDropPlaceholder active /> : null
         ) : (
-          <div className="space-y-0 border-b border-border/60">
+          <div className="space-y-0 border-b border-border/60 pb-1">
             {children}
             {isActive && <TimelineDropPlaceholder active />}
           </div>
