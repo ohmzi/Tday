@@ -54,6 +54,8 @@ export const useDeleteTodo = () => {
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
       queryClient.invalidateQueries({ queryKey: ["overdueTodo"] });
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
+      // Refresh per-list task counts shown in the sidebar / dashboard.
+      queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
     },
     onSuccess: (_data, deletedTodo) => {
       showTodoDeletedToast(deletedTodo);

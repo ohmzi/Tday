@@ -99,6 +99,8 @@ export const useCreateTodo = () => {
         queryKey: ["list", newTodo.listID],
       });
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
+      // Refresh per-list task counts shown in the sidebar / dashboard.
+      queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
     },
     onSuccess: (createdTodo: TodoItemType, newTodo) => {
       queryClient.setQueryData(["todo"], (old: TodoItemType[] = []) =>

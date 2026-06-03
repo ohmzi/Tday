@@ -73,6 +73,8 @@ export const useEditTodo = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
+      // A task may have moved lists — refresh per-list counts.
+      queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
     },
     onError: (error, _newTodo, context) => {
       queryClient.setQueryData(["todo"], context?.oldTodos);

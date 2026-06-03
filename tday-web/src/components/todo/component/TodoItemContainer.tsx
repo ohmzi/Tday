@@ -57,17 +57,20 @@ export const TodoItemCard = ({
   const [displayForm, setDisplayForm] = useState(false);
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
-  // Brief "checking off" state: strike the title through, then fade the card out, then let
-  // the complete mutation remove it from cache. Keeps the existing pop sound + checkbox pop.
-  const [completing, setCompleting] = useState(false);
-  const completeTimer = useRef<number | null>(null);
+  // Staged "checking off" sequence so each step is visible with a small gap:
+  //   checked (green tick) → struck (title line-through) → removing (fade) → remove.
+  const [completePhase, setCompletePhase] = useState<
+    "checked" | "struck" | "removing" | null
+  >(null);
+  const completeTimers = useRef<number[]>([]);
+  const completing = completePhase !== null;
 
   // Mobile swipe-to-reveal (mirrors the native slide-to-edit/delete). The row
   // foreground translates left to expose Edit + Delete. A quick horizontal swipe
   // doesn't start a drag because the DnD sensors require a ~250ms press with
   // <5px movement, which a swipe exceeds; vertical scroll/drag is preserved via
   // axis-locking and touch-action: pan-y.
-  const ACTIONS_WIDTH = 128;
+  const ACTIONS_WIDTH = 140;
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const swipeTouch = useRef<
@@ -89,6 +92,12 @@ export const TodoItemCard = ({
     const dy = t.clientY - data.y;
     if (data.axis === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
       data.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      // Claim the row: tell any other open row to close so only one is open.
+      if (data.axis === "x") {
+        window.dispatchEvent(
+          new CustomEvent("tday-swipe-open", { detail: todoItem.id }),
+        );
+      }
     }
     if (data.axis === "x") {
       setSwipeX(Math.min(0, Math.max(-ACTIONS_WIDTH, data.startX + dx)));
@@ -114,17 +123,29 @@ export const TodoItemCard = ({
       return;
     }
     if (completing) return;
-    setCompleting(true);
-    completeTimer.current = window.setTimeout(() => {
-      completeMutateFn(todoItem);
-    }, 450);
+    setCompletePhase("checked"); // 1. green tick + pop
+    completeTimers.current.push(
+      window.setTimeout(() => setCompletePhase("struck"), 280), // 2. strike the title
+      window.setTimeout(() => setCompletePhase("removing"), 620), // 3. start fading
+      window.setTimeout(() => completeMutateFn(todoItem), 960), // 4. remove from cache
+    );
   };
 
   useEffect(() => {
     return () => {
-      if (completeTimer.current) window.clearTimeout(completeTimer.current);
+      completeTimers.current.forEach((id) => window.clearTimeout(id));
     };
   }, []);
+
+  // Close this row's swipe actions when another row is swiped open.
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (id !== todoItem.id) setSwipeX(0);
+    };
+    window.addEventListener("tday-swipe-open", onOpen as EventListener);
+    return () => window.removeEventListener("tday-swipe-open", onOpen as EventListener);
+  }, [todoItem.id]);
 
   useEffect(() => {
     if (!displayForm) {
@@ -145,15 +166,20 @@ export const TodoItemCard = ({
       <div
         id={getTodoFocusElementId(todoItem.id)}
         ref={setCombinedRef}
-        style={completing ? { ...style, opacity: 0, transition: "opacity 200ms ease 280ms" } : style}
+        style={
+          completePhase === "removing"
+            ? { ...style, opacity: 0, transition: "opacity 300ms ease" }
+            : style
+        }
         {...containerProps}
         className={clsx(
           "group relative max-w-full overflow-hidden sm:overflow-visible",
           dragging && "opacity-80",
         )}
       >
-        {/* Mobile: Edit + Delete revealed behind the row by a left swipe. */}
-        <div className="absolute inset-y-0 right-0 z-0 flex sm:hidden">
+        {/* Mobile: Edit + Delete revealed behind the row by a left swipe — native
+            pill style (blue edit, red delete), white icon, label beneath. */}
+        <div className="absolute inset-y-0 right-0 z-0 flex items-center gap-3 pr-3 sm:hidden">
           <button
             type="button"
             aria-label="Edit task"
@@ -162,9 +188,15 @@ export const TodoItemCard = ({
               setDisplayForm(true);
               closeSwipe();
             }}
-            className="flex w-16 items-center justify-center bg-muted text-foreground active:bg-muted/80"
+            className="flex flex-col items-center gap-1"
           >
-            <SquarePen className="h-5 w-5" strokeWidth={1.9} />
+            <span
+              className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
+              style={{ backgroundColor: "#4C7DDE" }}
+            >
+              <SquarePen className="h-5 w-5 text-white" strokeWidth={2.2} />
+            </span>
+            <span className="text-[11px] font-bold text-muted-foreground">Edit</span>
           </button>
           <button
             type="button"
@@ -174,9 +206,15 @@ export const TodoItemCard = ({
               deleteMutateFn(todoItem);
               closeSwipe();
             }}
-            className="flex w-16 items-center justify-center bg-destructive text-white active:bg-destructive/80"
+            className="flex flex-col items-center gap-1"
           >
-            <Trash className="h-5 w-5" strokeWidth={1.9} />
+            <span
+              className="flex h-[34px] w-14 items-center justify-center rounded-[17px]"
+              style={{ backgroundColor: "#FF453A" }}
+            >
+              <Trash className="h-5 w-5 text-white" strokeWidth={2.2} />
+            </span>
+            <span className="text-[11px] font-bold text-muted-foreground">Delete</span>
           </button>
         </div>
 
@@ -230,7 +268,8 @@ export const TodoItemCard = ({
             <p
               className={clsx(
                 "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
-                completing && "text-muted-foreground line-through",
+                (completePhase === "struck" || completePhase === "removing") &&
+                  "text-muted-foreground line-through",
               )}
             >
               {title}
