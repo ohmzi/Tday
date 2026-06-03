@@ -396,10 +396,12 @@ const AllTasksTimelineContainer = ({
 
   const hasMore = !timeline && visibleCount < scopeFilteredItems.length;
   const isSearching = Boolean(searchQuery.trim());
-  // Timeline scopes always render their buckets (drop targets) unless an active
-  // search yielded nothing.
-  const showTimeline = timeline && !(isSearching && scopeFilteredItems.length === 0);
-  const showEmptyCard = !timeline && !todoLoading && !isSearching && !hasScopedTasks;
+  // Render the date buckets only when this scope actually has tasks; an empty
+  // scope shows the native-style centered empty message instead.
+  const showTimeline = timeline && hasScopedTasks;
+  // Every scope shows the same native-style centered empty message when there
+  // are no tasks (Today also keeps its Morning/Afternoon/Tonight headers above).
+  const showEmpty = !todoLoading && !isSearching && !hasScopedTasks;
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -502,12 +504,6 @@ const AllTasksTimelineContainer = ({
 
         {todoLoading && <TodoListLoading heading={pageHeading} />}
 
-        {showEmptyCard && (
-          <div className="mt-4 rounded-2xl border border-border/65 bg-card/95 px-4 py-6 text-sm text-muted-foreground">
-            {emptyStateMessage}
-          </div>
-        )}
-
         {!todoLoading && isSearching && scopeFilteredItems.length === 0 && (
           <div className="mx-auto flex min-h-[45vh] max-w-md flex-col items-center justify-center text-center">
             <div className="relative mb-6">
@@ -603,7 +599,6 @@ const AllTasksTimelineContainer = ({
           ))}
 
         {scope === "today" &&
-          hasScopedTasks &&
           todayBuckets.map((bucket, index) => (
             <section
               key={bucket.label}
@@ -625,6 +620,16 @@ const AllTasksTimelineContainer = ({
               )}
             </section>
           ))}
+
+        {/* Native-style centered empty message — for Today it sits below the
+            Morning/Afternoon/Tonight headers; for other scopes it's the only body. */}
+        {showEmpty && (
+          <div className="flex min-h-[42vh] flex-col items-center justify-center text-center">
+            <p className="text-2xl font-black text-muted-foreground/70">
+              {emptyStateMessage}
+            </p>
+          </div>
+        )}
 
         {hasMore && (
           <div ref={sentinelRef} className="flex h-12 items-center justify-center">

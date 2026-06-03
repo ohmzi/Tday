@@ -118,8 +118,10 @@ const ListContainer = ({ id }: { id: string }) => {
 
                 {/* Empty state — no tasks yet */}
                 {!listTodosLoading && !isSearching && listTodos.length === 0 && (
-                    <div className="mt-4 rounded-2xl border border-border/65 bg-card/95 px-4 py-6 text-sm text-muted-foreground">
-                        No tasks in this list
+                    <div className="flex min-h-[42vh] flex-col items-center justify-center text-center">
+                        <p className="text-2xl font-black text-muted-foreground/70">
+                            No tasks in this list
+                        </p>
                     </div>
                 )}
 
