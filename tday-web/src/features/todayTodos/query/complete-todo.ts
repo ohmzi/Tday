@@ -49,6 +49,8 @@ export const useCompleteTodo = () => {
       queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
       queryClient.invalidateQueries({ queryKey: ["completedTodo"] });
       queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
+      // Refresh per-list task counts shown in the sidebar / dashboard.
+      queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
     },
   });
 
