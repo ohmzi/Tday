@@ -282,7 +282,22 @@
       "never": "Never",
       "onDate": "On Date (inclusive)"
     },
-    "descPlaceholder": "description"
+    "descPlaceholder": "description",
+    "schedule": "Schedule",
+    "details": "Details",
+    "due": "Due",
+    "notes": "Notes",
+    "noList": "No list",
+    "noRepeat": "No repeat",
+    "color": "Color",
+    "icon": "Icon",
+    "listName": "List name",
+    "newTask": "New task",
+    "editTask": "Edit task",
+    "newList": "New list",
+    "editList": "Edit list",
+    "deleteList": "Delete list",
+    "done": "Done"
   },
   "today": {
     "saveInstance": "Save instance",

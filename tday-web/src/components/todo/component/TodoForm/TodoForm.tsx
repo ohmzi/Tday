@@ -1,27 +1,36 @@
-import clsx from "clsx";
 import React, { useEffect, useState } from "react";
-import adjustHeight from "@/components/todo/lib/adjustTextareaHeight";
+import { Calendar as CalendarIcon, Flag, List as ListIcon, Repeat } from "lucide-react";
+import { RRule } from "rrule";
 import { useToast } from "@/hooks/use-toast";
-import LineSeparator from "@/components/ui/lineSeparator";
 import { useTodoForm } from "@/providers/TodoFormProvider";
 import { useTodoFormFocusAndAutosize } from "@/components/todo/hooks/useTodoFormFocusAndAutosize";
 import { useKeyboardSubmitForm } from "@/components/todo/hooks/useKeyboardSubmitForm";
 import { useClearInput } from "@/components/todo/hooks/useClearInput";
-import { RRule } from "rrule";
-import TodoInlineActionBar from "./TodoInlineActionBar/TodoInlineActionBar";
-import { Button } from "@/components/ui/button";
-import NLPTitleInput from "./NLPTitleInput";
 import { useTranslation } from "react-i18next";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
 import { useCreateTodo } from "@/features/todayTodos/query/create-todo";
-import ListDropdownMenu from "./ListDropdownMenu";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
+import {
+  DueDateTimeControl,
+  SheetCard,
+  SheetDivider,
+  SheetRow,
+  SheetSectionTitle,
+  SheetSelectorRow,
+} from "@/components/ui/sheet-chrome";
+import ListDot from "@/components/ListDot";
+import NLPTitleInput from "./NLPTitleInput";
+import TaskSelectorOverlays, { type TaskSelector } from "./TodoFormSelectors";
+import { priorityLabelKey, repeatLabelKey } from "./labels";
+
 interface TodoFormProps {
   editInstanceOnly?: boolean;
   setEditInstanceOnly?: React.Dispatch<React.SetStateAction<boolean>>;
   displayForm: boolean;
   setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
   persistent?: boolean;
-  surface?: "card" | "sheet";
+  registerSubmit?: (submit: () => void) => void;
+  onCanSubmitChange?: (canSubmit: boolean) => void;
 }
 
 const TodoForm = ({
@@ -30,13 +39,15 @@ const TodoForm = ({
   displayForm,
   setDisplayForm,
   persistent = false,
-  surface = "card",
+  registerSubmit,
+  onCanSubmitChange,
 }: TodoFormProps) => {
   const {
     todoItem: todo,
     title,
     setTitle,
     priority,
+    setPriority,
     desc,
     setDesc,
     dateRange,
@@ -44,14 +55,15 @@ const TodoForm = ({
     listID,
     setListID,
     rruleOptions,
+    setRruleOptions,
+    derivedRepeatType,
     dateRangeChecksum,
     rruleChecksum,
   } = useTodoForm();
 
-  //adjust height of the todo description based on content size
-  const { titleRef, textareaRef } = useTodoFormFocusAndAutosize(displayForm);
-  const [isFocused, setIsFocused] = useState(false);
-  //submit form on ctrl + Enter
+  const { titleRef } = useTodoFormFocusAndAutosize(displayForm);
+  const [active, setActive] = useState<TaskSelector>(null);
+  const { listMetaData } = useListMetaData();
   useKeyboardSubmitForm(displayForm, handleForm);
   const { toast } = useToast();
   const clearInput = useClearInput(setEditInstanceOnly, titleRef);
@@ -60,7 +72,6 @@ const TodoForm = ({
   const { editTodoInstanceMutateFn } = useEditTodoInstance(setEditInstanceOnly);
   const { createMutateFn, createStatus } = useCreateTodo();
   const { t: appDict } = useTranslation("app");
-  const { t: todayDict } = useTranslation("today")
 
   useEffect(() => {
     if (!persistent && createStatus === "success") {
@@ -68,90 +79,110 @@ const TodoForm = ({
     }
   }, [createStatus, persistent, setDisplayForm]);
 
+  // Bridge submit + title-empty state up to the native sheet header.
+  useEffect(() => {
+    registerSubmit?.(handleForm);
+  });
+  useEffect(() => {
+    onCanSubmitChange?.(title.trim().length > 0);
+  }, [title, onCanSubmitChange]);
+
+  const repeatValueLabel = derivedRepeatType
+    ? appDict(repeatLabelKey[derivedRepeatType])
+    : appDict("noRepeat");
+  const selectedListName = listID ? listMetaData[listID]?.name?.trim() : null;
+
   return (
-    <div
-      className="w-full"
-      onClick={(e) => {
-        e.stopPropagation();
-      }}
-    >
-      <form
-        onFocus={() => setIsFocused(true)}
-        onSubmit={handleForm}
-        onBlur={() => setIsFocused(false)}
-        className={clsx(
-          surface === "sheet"
-            ? "flex w-full flex-col bg-transparent"
-            : "flex w-full flex-col rounded-[24px] border border-white/70 bg-card/95 shadow-[0_18px_42px_-32px_hsl(var(--shadow)/0.62)] transition-colors animate-in fade-in-0 slide-in-from-bottom-4 duration-200 dark:border-white/10",
-          !displayForm && "hidden",
-          surface === "card" &&
-            (isFocused ? "border-accent/55" : "border-white/70 dark:border-white/10"),
-        )}
-      >
-        <div className="mb-4 flex flex-col gap-3">
+    <div className="flex flex-col gap-3 pb-2">
+      {/* Title + Notes */}
+      <SheetCard>
+        <div className="px-[18px] pb-2 pt-3">
           <NLPTitleInput
-            className="mt-5 px-3"
+            className="text-lg font-black"
             title={title}
             setTitle={setTitle}
             titleRef={titleRef}
             setDateRange={setDateRange}
             onSubmit={handleForm}
           />
+        </div>
+        <SheetDivider />
+        <input
+          value={desc}
+          onChange={(e) => setDesc(e.target.value)}
+          name="description"
+          placeholder={appDict("notes")}
+          className="w-full bg-transparent px-[18px] py-3 text-base font-bold text-foreground placeholder:font-bold placeholder:text-muted-foreground/60 focus:outline-hidden"
+        />
+      </SheetCard>
 
-          <textarea
-            value={desc}
-            ref={textareaRef}
-            onChange={(e) => {
-              setDesc(e.target.value);
-              adjustHeight(textareaRef);
-            }}
-            className="my-1 w-full resize-none overflow-hidden bg-transparent px-3 text-sm font-extrabold text-muted-foreground placeholder-muted-foreground/60 focus:outline-hidden"
-            name="description"
-            placeholder={appDict("descPlaceholder")}
+      {/* Schedule */}
+      <SheetSectionTitle>{appDict("schedule")}</SheetSectionTitle>
+      <SheetCard>
+        <SheetRow icon={<CalendarIcon className="h-5 w-5" />} label={appDict("due")}>
+          <DueDateTimeControl
+            due={dateRange.to}
+            onDateClick={() => setActive("date")}
+            onTimeClick={() => setActive("time")}
           />
-          {/* DateRange, Priority, and Repeat menus */}
-          <TodoInlineActionBar />
-        </div>
-        <LineSeparator className="m-0! p-0!" />
-        {/* form footer */}
-        <div className="flex text-sm w-full justify-between items-center py-1.5 px-2">
-          <ListDropdownMenu listID={listID} setListID={setListID} />
-          <div className="flex gap-3 w-fit">
-            <Button
-              variant={"outline"}
-              type="button"
-              className="h-fit rounded-2xl border-border/65 bg-muted/70 px-4 py-[0.35rem]! font-black hover:bg-muted"
-              onClick={() => {
-                clearInput();
-                if (!persistent) {
-                  setDisplayForm(false);
-                }
-              }}
-            >
-              {appDict("cancel")}
-            </Button>
-            <Button
-              type="submit"
-              variant={"default"}
-              disabled={title.length <= 0}
-              className={clsx(
-                "h-fit rounded-2xl bg-accent px-4 py-[0.35rem]! font-black text-accent-foreground shadow-sm hover:bg-accent/90",
-                title.length <= 0 && "disabled opacity-40 cursor-not-allowed!",
-              )}
-            >
-              <p title="ctrl+enter">
-                {editInstanceOnly ? todayDict("saveInstance") : appDict("save")}
-              </p>
-            </Button>
-          </div>
+        </SheetRow>
+      </SheetCard>
 
-        </div>
-      </form>
+      {/* Details */}
+      <SheetSectionTitle>{appDict("details")}</SheetSectionTitle>
+      <SheetCard>
+        <SheetSelectorRow
+          icon={<ListIcon className="h-5 w-5" />}
+          label={appDict("list")}
+          ariaLabel={`${appDict("list")}, ${selectedListName ?? appDict("noList")}`}
+          value={
+            listID && selectedListName ? (
+              <>
+                <ListDot id={listID} className="h-3.5 w-3.5" />
+                <span className="truncate">{selectedListName}</span>
+              </>
+            ) : (
+              appDict("noList")
+            )
+          }
+          onClick={() => setActive("list")}
+        />
+        <SheetDivider />
+        <SheetSelectorRow
+          icon={<Flag className="h-5 w-5" />}
+          label={appDict("priority")}
+          ariaLabel={`${appDict("priority")}, ${appDict(priorityLabelKey[priority])}`}
+          value={appDict(priorityLabelKey[priority])}
+          onClick={() => setActive("priority")}
+        />
+        <SheetDivider />
+        <SheetSelectorRow
+          icon={<Repeat className="h-5 w-5" />}
+          label={appDict("repeat")}
+          ariaLabel={`${appDict("repeat")}, ${repeatValueLabel}`}
+          value={repeatValueLabel}
+          onClick={() => setActive("repeat")}
+        />
+      </SheetCard>
+
+      <TaskSelectorOverlays
+        active={active}
+        setActive={setActive}
+        dateRange={dateRange}
+        setDateRange={setDateRange}
+        priority={priority}
+        setPriority={setPriority}
+        listID={listID}
+        setListID={setListID}
+        setRruleOptions={setRruleOptions}
+        derivedRepeatType={derivedRepeatType}
+      />
     </div>
   );
 
   async function handleForm(e?: React.FormEvent) {
     if (e) e.preventDefault();
+    if (title.trim().length <= 0) return;
     const due = dateRange.to;
     try {
       const rrule = rruleOptions ? new RRule(rruleOptions).toString() : null;

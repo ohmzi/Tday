@@ -1,4 +1,13 @@
-import { lazy, Suspense, type Dispatch, type SetStateAction } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import { useTranslation } from "react-i18next";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import TodoFormLoading from "@/components/todo/component/TodoForm/TodoFormLoading";
 import type { TodoItemType } from "@/types";
@@ -16,7 +25,6 @@ type TaskFormSheetProps = {
   setEditInstanceOnly?: Dispatch<SetStateAction<boolean>>;
   persistent?: boolean;
   title?: string;
-  description?: string;
 };
 
 export default function TaskFormSheet({
@@ -28,17 +36,27 @@ export default function TaskFormSheet({
   setEditInstanceOnly,
   persistent,
   title,
-  description,
 }: TaskFormSheetProps) {
+  const { t: appDict } = useTranslation("app");
+  const { t: todayDict } = useTranslation("today");
+  const submitRef = useRef<(() => void) | null>(null);
+  const [canSubmit, setCanSubmit] = useState(false);
+
+  const registerSubmit = useCallback((submit: () => void) => {
+    submitRef.current = submit;
+  }, []);
+
   return (
     <AppBottomSheet
+      variant="native"
       open={open}
       onOpenChange={onOpenChange}
-      title={title ?? (todo ? "Edit task" : "New task")}
-      description={
-        description ??
-        "Set the title, schedule, repeat, list, priority, and notes in one place."
-      }
+      title={title ?? (todo ? appDict("editTask") : appDict("newTask"))}
+      onClose={() => onOpenChange(false)}
+      onConfirm={() => submitRef.current?.()}
+      confirmDisabled={!canSubmit}
+      confirmLabel={editInstanceOnly ? todayDict("saveInstance") : appDict("save")}
+      closeLabel={appDict("cancel")}
       bodyClassName="pb-6"
     >
       <Suspense fallback={<TodoFormLoading />}>
@@ -50,7 +68,8 @@ export default function TaskFormSheet({
           todo={todo}
           overrideFields={overrideFields}
           persistent={persistent}
-          surface="sheet"
+          registerSubmit={registerSubmit}
+          onCanSubmitChange={setCanSubmit}
         />
       </Suspense>
     </AppBottomSheet>

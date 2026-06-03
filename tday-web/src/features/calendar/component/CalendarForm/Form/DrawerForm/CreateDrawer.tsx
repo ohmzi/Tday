@@ -1,245 +1,121 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Options, RRule } from "rrule";
-import { Clock, Flag, Repeat, Check, Circle } from "lucide-react";
-import NestedDrawerItem from "@/components/mobile/NestedDrawerItem";
 import { TodoItemType } from "@/types";
-
-type DrawerDateRange = { from: Date; to: Date };
-import { getDisplayDate } from "@/lib/date/displayDate";
-import { useUserTimezone } from "@/features/user/query/get-timezone";
-import {
-    Drawer,
-    DrawerContent,
-    DrawerFooter,
-    DrawerHeader,
-    DrawerTitle,
-    DrawerClose,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
-import { DateDrawerMenu } from "@/features/calendar/component/CalendarForm/FormFields/Drawers/DateDrawer/DateDrawerMenu";
-import RepeatDrawerMenu from "@/features/calendar/component/CalendarForm/FormFields/Drawers/RepeatDrawer/RepeatDrawerMenu";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { SheetHeader } from "@/components/ui/sheet-chrome";
 import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
 import ConfirmCancelEditDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEditDrawer";
-import ListDrawer from "@/features/calendar/component/CalendarForm/FormFields/Drawers/ListDrawer/ListDrawer";
-import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
-import ListDot from "@/components/ListDot";
-import NLPTitleInput from "@/components/todo/component/TodoForm/NLPTitleInput";
 import deriveRepeatType from "@/lib/deriveRepeatType";
-import { useLocale } from "@/lib/navigation";
+import CalendarTaskFormBody from "../CalendarTaskFormBody";
 
-// --- Types ---
+type DrawerDateRange = { from: Date; to: Date };
+
 type CreateCalendarFormProps = {
-    start: Date;
-    end: Date;
-    displayForm: boolean;
-    setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
+  start: Date;
+  end: Date;
+  displayForm: boolean;
+  setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-// --- Main Component ---
 export default function CreateCalendarDrawer({
-    start,
-    end,
-    displayForm,
-    setDisplayForm,
+  start,
+  end,
+  displayForm,
+  setDisplayForm,
 }: CreateCalendarFormProps) {
-    void start;
-    const { t: appDict } = useTranslation("app");
-    const priorityMap = { "Low": "normal", "Medium": "important", "High": "urgent" }
-    const repeatMap = { "Daily": "everyDay", "Weekly": "everyWeek", "Monthly": "everyMonth", "Yearly": "everyYear", "Weekday": "weekdaysOnly", "Custom": "custom" }
-    const locale = useLocale();
-    const userTZ = useUserTimezone()
-    const titleRef = useRef(null);
+  void start;
+  const { t: appDict } = useTranslation("app");
+  const titleRef = useRef<HTMLDivElement | null>(null);
 
-    const { listMetaData } = useListMetaData();
-    // Form State
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [priority, setPriority] = useState<TodoItemType["priority"]>("Low");
-    const [dateRange, setDateRange] = useState<DrawerDateRange>({
-        from: end,
-        to: end,
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<TodoItemType["priority"]>("Low");
+  const [dateRange, setDateRange] = useState<DrawerDateRange>({ from: end, to: end });
+  const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(null);
+  const [listID, setListID] = useState<string | null>(null);
+  const derivedRepeatType = deriveRepeatType({ rruleOptions });
+
+  const [cancelEditDialogOpen, setCancelEditDialogOpen] = useState(false);
+  const { createCalendarTodo, createTodoStatus } = useCreateCalendarTodo();
+
+  const hasUnsavedChanges = useMemo(
+    () => title !== "" || description !== "" || priority !== "Low",
+    [title, description, priority],
+  );
+
+  useEffect(() => {
+    if (createTodoStatus === "success") setDisplayForm(false);
+  }, [createTodoStatus, setDisplayForm]);
+
+  const handleSubmit = () => {
+    if (title.trim().length <= 0) return;
+    createCalendarTodo({
+      title,
+      description,
+      priority,
+      due: dateRange.to,
+      rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
+      listID,
     });
-    const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(null);
-    const [listID, setListID] = useState<string | null>(null);
-    const derivedRepeatType = deriveRepeatType({ rruleOptions });
+  };
 
-    const [cancelEditDialogOpen, setCancelEditDialogOpen] = useState(false);
-    const { createCalendarTodo, createTodoStatus } = useCreateCalendarTodo();
+  const handleClose = () => {
+    if (hasUnsavedChanges) {
+      setCancelEditDialogOpen(true);
+      return;
+    }
+    setDisplayForm(false);
+  };
 
-    const hasUnsavedChanges = useMemo(() => {
-        return title !== "" || description !== "" || priority !== "Low";
-    }, [title, description, priority]);
+  return (
+    <>
+      <ConfirmCancelEditDrawer
+        cancelEditDialogOpen={cancelEditDialogOpen}
+        setCancelEditDialogOpen={setCancelEditDialogOpen}
+        setDisplayForm={setDisplayForm}
+      />
 
-    useEffect(() => {
-        if (createTodoStatus === "success") setDisplayForm(false);
-    }, [createTodoStatus, setDisplayForm]);
-
-    const handleSubmit = (e?: React.FormEvent) => {
-        e?.preventDefault();
-        createCalendarTodo({
-            title,
-            description,
-            priority,
-            due: dateRange.to,
-            rrule: rruleOptions ? new RRule(rruleOptions).toString() : null,
-            listID,
-        });
-    };
-
-    const handleClose = () => {
-        if (hasUnsavedChanges) {
-            setCancelEditDialogOpen(true);
-            return;
-        }
-        setDisplayForm(false);
-    };
-
-    return (
-        <>
-            <ConfirmCancelEditDrawer
-                cancelEditDialogOpen={cancelEditDialogOpen}
-                setCancelEditDialogOpen={setCancelEditDialogOpen}
-                setDisplayForm={setDisplayForm}
+      <Drawer
+        open={displayForm}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleClose();
+          } else {
+            setDisplayForm(true);
+          }
+        }}
+      >
+        <DrawerContent className="flex max-h-[92dvh] flex-col overflow-hidden rounded-t-[28px] border-white/70 shadow-[0_24px_70px_-34px_hsl(var(--shadow)/0.82)] dark:border-white/10 sm:left-1/2 sm:right-auto sm:w-[min(720px,calc(100vw-2rem))] sm:-translate-x-1/2">
+          <DrawerTitle className="sr-only">{appDict("newTask")}</DrawerTitle>
+          <SheetHeader
+            title={appDict("newTask")}
+            onClose={handleClose}
+            onConfirm={handleSubmit}
+            confirmDisabled={title.trim().length <= 0}
+            confirmLabel={appDict("save")}
+            closeLabel={appDict("cancel")}
+          />
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 sm:px-5">
+            <CalendarTaskFormBody
+              titleRef={titleRef}
+              title={title}
+              setTitle={setTitle}
+              description={description}
+              setDescription={setDescription}
+              priority={priority}
+              setPriority={setPriority}
+              dateRange={dateRange}
+              setDateRange={setDateRange}
+              listID={listID}
+              setListID={setListID}
+              setRruleOptions={setRruleOptions}
+              derivedRepeatType={derivedRepeatType}
+              onSubmit={handleSubmit}
             />
-
-            <Drawer
-                open={displayForm}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        handleClose();
-                    } else {
-                        setDisplayForm(true);
-                    }
-                }}
-            >
-                <DrawerContent className="max-h-[92dvh] flex flex-col overflow-hidden rounded-t-[28px] border-white/70 shadow-[0_24px_70px_-34px_hsl(var(--shadow)/0.82)] dark:border-white/10 sm:left-1/2 sm:right-auto sm:w-[min(720px,calc(100vw-2rem))] sm:-translate-x-1/2">
-                    <DrawerHeader>
-                        <DrawerTitle className="hidden">create todo</DrawerTitle>
-                    </DrawerHeader>
-
-                    <div className="mx-auto w-full max-w-lg overflow-y-auto p-4 pt-0">
-                        <form className="flex flex-col gap-6 mt-2" onSubmit={handleSubmit}>
-                            {/* Title Input */}
-                            <NLPTitleInput
-                                setListID={setListID}
-                                titleRef={titleRef}
-                                title={title}
-                                setTitle={setTitle}
-                                setDateRange={setDateRange}
-                                className="flex-1 min-w-0 bg-transparent border-b border-border py-1 text-lg focus:outline-hidden focus:border-lime"
-                            />
-
-                            {/* List-style Menu */}
-                            <div className="flex flex-col border rounded-md divide-y bg-secondary/20">
-                                {/* Date */}
-                                <NestedDrawerItem
-                                    title={appDict("date")}
-                                    icon={<Clock className="w-4 h-4" />}
-                                    label={getDisplayDate(dateRange.to, false, locale, userTZ?.timeZone)}
-                                >
-                                    <div className="space-y-4 w-full max-w-lg m-auto">
-                                        <DateDrawerMenu
-                                            dateRange={dateRange}
-                                            setDateRange={setDateRange}
-                                        />
-
-                                        <DrawerClose className="flex justify-center! items-center w-full" >
-                                            <div className="rounded-md w-[92%] h-fit py-1.5! text-foreground font-normal border bg-inherit hover:bg-lime/90">
-                                                {appDict("save")}
-                                            </div>
-                                        </DrawerClose>
-                                    </div>
-                                </NestedDrawerItem>
-
-                                {/* Priority */}
-                                <NestedDrawerItem
-                                    icon={<Flag className="w-4 h-4" />}
-                                    label={appDict(priorityMap[priority])}
-                                    title={appDict("priority")}
-                                >
-                                    <div className="p-4 space-y-2 w-full max-w-lg m-auto">
-                                        {Object.entries(priorityMap).map(([key, val]) => (
-                                            <button
-                                                key={key}
-                                                onClick={() => setPriority(key as "Low" | "Medium" | "High")}
-                                                data-close-on-click
-                                                className="flex items-center justify-between w-full p-2 hover:bg-accent/50 rounded-md text-base"
-                                            >
-                                                <span>{appDict(val)}</span>
-                                                {priority === key && (
-                                                    <Check className="w-4 h-4 text-lime" />
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </NestedDrawerItem>
-
-                                {/* Repeat */}
-                                <NestedDrawerItem
-                                    icon={<Repeat className="w-4 h-4" />}
-                                    label={derivedRepeatType && appDict(repeatMap[derivedRepeatType]) || "No Repeat"}
-                                    title={appDict("repeat")}
-                                >
-                                    <RepeatDrawerMenu
-                                        rruleOptions={rruleOptions}
-                                        setRruleOptions={setRruleOptions}
-                                        derivedRepeatType={derivedRepeatType}
-                                    />
-                                </NestedDrawerItem>
-
-                                {/* list */}
-                                <NestedDrawerItem
-                                    icon={<Circle className="w-4 h-4" />}
-                                    label={
-                                        listID
-                                            ?
-                                            <>
-                                                <ListDot id={listID} />
-                                                <span>{listMetaData[listID]?.name}</span>
-                                            </>
-                                            :
-                                            "No list"
-                                    }
-                                    title="List"
-                                >
-                                    <div className="p-4 space-y-2">
-                                        <ListDrawer listID={listID} setListID={setListID} />
-                                    </div>
-                                </NestedDrawerItem>
-                            </div>
-
-                            {/* Description */}
-                            <textarea
-                                className="w-full bg-secondary/40 rounded-md p-3 text-lg resize-none border max-h-[85dvh]outline-none focus:outline-hidden focus:ring-0"
-                                rows={4}
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder={appDict("descPlaceholder")}
-                            />
-
-                            <DrawerFooter className="px-0 flex-row gap-3">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    className="flex-1 h-12 rounded-md border"
-                                    onClick={handleClose}
-                                >
-                                    {appDict("cancel")}
-                                </Button>
-
-                                <Button
-                                    disabled={title.length <= 0}
-                                    onClick={handleSubmit}
-                                    className="flex-1 h-12 rounded-md bg-lime hover:bg-lime/90 text-white font-bold"
-                                >
-                                    {appDict("save")}
-                                </Button>
-                            </DrawerFooter>
-                        </form>
-                    </div>
-                </DrawerContent>
-            </Drawer>
-        </>
-    );
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </>
+  );
 }
