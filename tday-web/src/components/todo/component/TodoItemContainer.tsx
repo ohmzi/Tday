@@ -62,6 +62,47 @@ export const TodoItemCard = ({
   const [completing, setCompleting] = useState(false);
   const completeTimer = useRef<number | null>(null);
 
+  // Mobile swipe-to-reveal (mirrors the native slide-to-edit/delete). The row
+  // foreground translates left to expose Edit + Delete. A quick horizontal swipe
+  // doesn't start a drag because the DnD sensors require a ~250ms press with
+  // <5px movement, which a swipe exceeds; vertical scroll/drag is preserved via
+  // axis-locking and touch-action: pan-y.
+  const ACTIONS_WIDTH = 128;
+  const [swipeX, setSwipeX] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const swipeTouch = useRef<
+    { x: number; y: number; startX: number; axis: "x" | "y" | null } | null
+  >(null);
+
+  const closeSwipe = () => setSwipeX(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    swipeTouch.current = { x: t.clientX, y: t.clientY, startX: swipeX, axis: null };
+    setSwiping(true);
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const data = swipeTouch.current;
+    if (!data) return;
+    const t = e.touches[0];
+    const dx = t.clientX - data.x;
+    const dy = t.clientY - data.y;
+    if (data.axis === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+      data.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    }
+    if (data.axis === "x") {
+      setSwipeX(Math.min(0, Math.max(-ACTIONS_WIDTH, data.startX + dx)));
+    }
+  };
+  const handleTouchEnd = () => {
+    const data = swipeTouch.current;
+    setSwiping(false);
+    swipeTouch.current = null;
+    if (data?.axis === "x") {
+      setSwipeX((prev) => (prev < -ACTIONS_WIDTH / 2 ? -ACTIONS_WIDTH : 0));
+    }
+  };
+
   const setCombinedRef = (node: HTMLDivElement | null) => {
     setItemElement(node);
     setDragNodeRef?.(node);
@@ -106,27 +147,72 @@ export const TodoItemCard = ({
         ref={setCombinedRef}
         style={completing ? { ...style, opacity: 0, transition: "opacity 200ms ease 280ms" } : style}
         {...containerProps}
-        onDoubleClick={() => setDisplayForm(true)}
-        onMouseOver={() => setShowHandle(true)}
-        onMouseOut={() => setShowHandle(false)}
         className={clsx(
-          // Flat native-style row — no card chrome, no per-row divider (the day
-          // group owns the divider) — on every breakpoint. Desktop keeps a grab
-          // cursor + subtle hover tint for affordance.
-          "group relative flex max-w-full items-center justify-between gap-3 px-1 py-2.5",
-          "sm:cursor-grab sm:rounded-lg sm:transition-colors sm:duration-150 sm:active:cursor-grabbing sm:hover:bg-muted/40",
-          highlighted && "rounded-lg bg-accent/5",
+          "group relative max-w-full overflow-hidden sm:overflow-visible",
           dragging && "opacity-80",
         )}
       >
+        {/* Mobile: Edit + Delete revealed behind the row by a left swipe. */}
+        <div className="absolute inset-y-0 right-0 z-0 flex sm:hidden">
+          <button
+            type="button"
+            aria-label="Edit task"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => {
+              setDisplayForm(true);
+              closeSwipe();
+            }}
+            className="flex w-16 items-center justify-center bg-muted text-foreground active:bg-muted/80"
+          >
+            <SquarePen className="h-5 w-5" strokeWidth={1.9} />
+          </button>
+          <button
+            type="button"
+            aria-label="Delete task"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => {
+              deleteMutateFn(todoItem);
+              closeSwipe();
+            }}
+            className="flex w-16 items-center justify-center bg-destructive text-white active:bg-destructive/80"
+          >
+            <Trash className="h-5 w-5" strokeWidth={1.9} />
+          </button>
+        </div>
+
+        {/* Foreground row — slides left on swipe to reveal the actions. */}
         <div
+          onDoubleClick={() => setDisplayForm(true)}
+          onMouseOver={() => setShowHandle(true)}
+          onMouseOut={() => setShowHandle(false)}
+          onClick={() => {
+            if (swipeX !== 0) closeSwipe();
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{
+            transform: `translateX(${swipeX}px)`,
+            transition: swiping
+              ? "none"
+              : "transform 220ms ease, background-color 150ms ease",
+            touchAction: "pan-y",
+          }}
           className={clsx(
-            "absolute bottom-1/2 -left-5 hidden translate-y-1/2 p-1 transition-colors sm:block",
-            showHandle ? "text-muted-foreground" : "text-transparent",
+            // Flat native-style row; opaque bg masks the swipe actions when closed.
+            "relative z-10 flex items-center justify-between gap-3 bg-background px-1 py-2.5 sm:bg-transparent",
+            "sm:cursor-grab sm:rounded-lg sm:active:cursor-grabbing sm:hover:bg-muted/40",
+            highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
           )}
         >
-          <GripVertical className="h-4 w-4" />
-        </div>
+          <div
+            className={clsx(
+              "absolute bottom-1/2 -left-5 hidden translate-y-1/2 p-1 transition-colors sm:block",
+              showHandle ? "text-muted-foreground" : "text-transparent",
+            )}
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
 
       <div className="flex min-w-0 items-center gap-3">
         <div className="shrink-0">
@@ -225,6 +311,7 @@ export const TodoItemCard = ({
               <Trash className="h-4 w-4" strokeWidth={1.8} />
             </button>
           </div>
+        </div>
         </div>
       </div>
       <TaskFormSheet
