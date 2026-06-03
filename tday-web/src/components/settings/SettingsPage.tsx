@@ -167,16 +167,13 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full space-y-5 pb-10">
-      <div className="lg:hidden">
-        <MobileSearchHeader />
-      </div>
+      <MobileSearchHeader />
 
       <NativePageTitle
         title={sidebarDict("settings")}
         accentColor={nativeScreenAccentColors.settings}
         icon={Settings}
         subtitle="Manage your account settings"
-        className="lg:mt-0"
       />
 
       <Card className="rounded-2xl border-border/70 bg-card/95 mb-5">
