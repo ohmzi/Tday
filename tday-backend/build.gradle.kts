@@ -61,6 +61,8 @@ dependencies {
     implementation("org.flywaydb:flyway-core:10.22.0")
     implementation("org.flywaydb:flyway-database-postgresql:10.22.0")
 
+    implementation("nl.martijndwars:web-push:5.1.1")
+
     testImplementation("io.ktor:ktor-client-websockets-jvm")
     testImplementation("io.ktor:ktor-server-test-host-jvm")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")

@@ -41,4 +41,5 @@ val serviceModule = module {
     single<TodoNlpService> { TodoNlpServiceImpl() }
     single<RealtimeService> { RealtimeServiceImpl() }
     single<AdminService> { AdminServiceImpl() }
+    single<PushNotificationService> { PushNotificationServiceImpl(get()) }
 }

@@ -30,21 +30,21 @@ val TdaySwipeDeleteBackground = Color(0xFFFF453A)
 val TdayStatusSuccess = Color(0xFF4CAF50)
 
 val TdayListColorOptions = listOf(
-    TdayListColorOption("PINK", Color(0xFFC987A5)),
-    TdayListColorOption("GOLD", Color(0xFFC7AA63)),
-    TdayListColorOption("DEEP_BLUE", Color(0xFF6F86C6)),
-    TdayListColorOption("CORAL", Color(0xFFD39A82)),
-    TdayListColorOption("TEAL", Color(0xFF67AAA7)),
-    TdayListColorOption("SLATE", Color(0xFF7F8996)),
-    TdayListColorOption("BLUE", Color(0xFF6F9FCE)),
-    TdayListColorOption("PURPLE", Color(0xFF9A86CF)),
-    TdayListColorOption("ROSE", Color(0xFFC98299)),
-    TdayListColorOption("LIGHT_RED", Color(0xFFD58D8D)),
-    TdayListColorOption("BRICK", Color(0xFFAD786E)),
-    TdayListColorOption("YELLOW", Color(0xFFCFB866)),
-    TdayListColorOption("LIME", Color(0xFF8DBB73)),
-    TdayListColorOption("ORANGE", Color(0xFFD69B63)),
-    TdayListColorOption("RED", Color(0xFFD97873)),
+    TdayListColorOption("PINK", Color(0xFFE05299)),
+    TdayListColorOption("GOLD", Color(0xFFE8A530)),
+    TdayListColorOption("DEEP_BLUE", Color(0xFF3C9ADD)),
+    TdayListColorOption("CORAL", Color(0xFFE6664C)),
+    TdayListColorOption("TEAL", Color(0xFF2EB8AC)),
+    TdayListColorOption("SLATE", Color(0xFF3E4774)),
+    TdayListColorOption("BLUE", Color(0xFF6EA8E1)),
+    TdayListColorOption("PURPLE", Color(0xFF7D67B6)),
+    TdayListColorOption("ROSE", Color(0xFFD1617D)),
+    TdayListColorOption("LIGHT_RED", Color(0xFFE06C6C)),
+    TdayListColorOption("BRICK", Color(0xFFC64C39)),
+    TdayListColorOption("YELLOW", Color(0xFFE8BA30)),
+    TdayListColorOption("LIME", Color(0xFF46B963)),
+    TdayListColorOption("ORANGE", Color(0xFFE28736)),
+    TdayListColorOption("RED", Color(0xFFDF3A3A)),
 )
 
 private val TdayListColorMap = TdayListColorOptions.associate { it.key to it.color }

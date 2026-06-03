@@ -1654,21 +1654,21 @@ struct CreateListSheet: View {
 }
 
 private let homeListColorOptions: [HomeListColorOption] = [
-    HomeListColorOption(key: "PINK", color: Color(hex: 0xC987A5)),
-    HomeListColorOption(key: "GOLD", color: Color(hex: 0xC7AA63)),
-    HomeListColorOption(key: "DEEP_BLUE", color: Color(hex: 0x6F86C6)),
-    HomeListColorOption(key: "CORAL", color: Color(hex: 0xD39A82)),
-    HomeListColorOption(key: "TEAL", color: Color(hex: 0x67AAA7)),
-    HomeListColorOption(key: "SLATE", color: Color(hex: 0x7F8996)),
-    HomeListColorOption(key: "BLUE", color: Color(hex: 0x6F9FCE)),
-    HomeListColorOption(key: "PURPLE", color: Color(hex: 0x9A86CF)),
-    HomeListColorOption(key: "ROSE", color: Color(hex: 0xC98299)),
-    HomeListColorOption(key: "LIGHT_RED", color: Color(hex: 0xD58D8D)),
-    HomeListColorOption(key: "BRICK", color: Color(hex: 0xAD786E)),
-    HomeListColorOption(key: "YELLOW", color: Color(hex: 0xCFB866)),
-    HomeListColorOption(key: "LIME", color: Color(hex: 0x8DBB73)),
-    HomeListColorOption(key: "ORANGE", color: Color(hex: 0xD69B63)),
-    HomeListColorOption(key: "RED", color: Color(hex: 0xD97873)),
+    HomeListColorOption(key: "PINK", color: Color(hex: 0xE05299)),
+    HomeListColorOption(key: "GOLD", color: Color(hex: 0xE8A530)),
+    HomeListColorOption(key: "DEEP_BLUE", color: Color(hex: 0x3C9ADD)),
+    HomeListColorOption(key: "CORAL", color: Color(hex: 0xE6664C)),
+    HomeListColorOption(key: "TEAL", color: Color(hex: 0x2EB8AC)),
+    HomeListColorOption(key: "SLATE", color: Color(hex: 0x3E4774)),
+    HomeListColorOption(key: "BLUE", color: Color(hex: 0x6EA8E1)),
+    HomeListColorOption(key: "PURPLE", color: Color(hex: 0x7D67B6)),
+    HomeListColorOption(key: "ROSE", color: Color(hex: 0xD1617D)),
+    HomeListColorOption(key: "LIGHT_RED", color: Color(hex: 0xE06C6C)),
+    HomeListColorOption(key: "BRICK", color: Color(hex: 0xC64C39)),
+    HomeListColorOption(key: "YELLOW", color: Color(hex: 0xE8BA30)),
+    HomeListColorOption(key: "LIME", color: Color(hex: 0x46B963)),
+    HomeListColorOption(key: "ORANGE", color: Color(hex: 0xE28736)),
+    HomeListColorOption(key: "RED", color: Color(hex: 0xDF3A3A)),
 ]
 
 private let homeListIconOptions: [HomeListIconOption] = [
@@ -1752,7 +1752,7 @@ private func homeListAccentColor(for key: String?) -> Color {
     default:
         normalizedKey = key
     }
-    return homeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? Color(hex: 0xC987A5)
+    return homeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? Color(hex: 0xE05299)
 }
 
 private func homeListSymbolName(for key: String?) -> String {
